@@ -100,8 +100,11 @@ void ComputationNodeBase::ValidateMBLayout(const ComputationNodeBasePtr which, c
 #else
     // We will let this slip with a reminder, assuming that this will be caught at runtime.
     // By allowing this, users will not need ReconcileDynamicAxis() for reductions over a sequence like BS.Sequences.Last().
-    fprintf(stderr, "WARNING: %ls: Dynamic axes mismatch between %ls and %ls. If they are incompatible, this will fail later.\n",
-            NodeDescription().c_str(), which->NodeDescription().c_str(), vsWhich->NodeDescription().c_str());
+    if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
+    {
+        fprintf(stderr, "WARNING: %ls: Dynamic axes mismatch between %ls and %ls. If they are incompatible, this will fail later.\n",
+                NodeDescription().c_str(), which->NodeDescription().c_str(), vsWhich->NodeDescription().c_str());
+    }
 #endif
 }
 

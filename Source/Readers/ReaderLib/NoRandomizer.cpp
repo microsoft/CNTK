@@ -14,7 +14,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences)
     : m_deserializer(deserializer),
-      m_samplePositionInEpoch(0),
       m_currentChunkPosition(CHUNKID_MAX),
       m_globalSamplePosition(0),
       m_totalNumberOfSamples(0),
@@ -58,7 +57,7 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
         m_config.m_totalEpochSizeInSamples = m_totalNumberOfSamples;
     }
 
-    m_samplePositionInEpoch = 0;
+    m_currentSequencePositionInChunk = 0;
     m_globalSamplePosition = m_config.m_totalEpochSizeInSamples * config.m_epochIndex;
     size_t sweepSamplePosition = m_globalSamplePosition % m_totalNumberOfSamples;
 
@@ -77,35 +76,24 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
     }
 
     // Moving current sequence inside the chunk to match the sample offset.
+    // Currently linear, happens only at the border of epochs.
     size_t sampleOffsetInsideChunk = sweepSamplePosition - m_chunkSampleOffset[m_currentChunkPosition];
     size_t numberOfSamples = 0;
-    size_t sequenceId = 0;
-
-    // Currently linear, happens only at the border of epochs.
-    for (size_t i = 0; i < m_sequenceWindow.size(); ++i)
+    while (m_currentSequencePositionInChunk < m_sequenceWindow.size() &&
+           numberOfSamples < sampleOffsetInsideChunk)
     {
-        size_t sequenceSize = m_sequenceWindow[i].m_numberOfSamples;
-        if (sequenceSize + numberOfSamples > sampleOffsetInsideChunk)
-        {
-            // We have found our sequence.
-            break;
-        }
-
-        numberOfSamples += sequenceSize;
-        sequenceId++;
+        numberOfSamples += m_sequenceWindow[m_currentSequencePositionInChunk].m_numberOfSamples;
+        MoveToNextSequence();
     }
 
-    m_currentSequencePositionInChunk = sequenceId;
+    // Updating the global position
+    m_globalSamplePosition = m_globalSamplePosition - sampleOffsetInsideChunk + numberOfSamples;
     assert(m_chunkDescriptions[m_currentChunkPosition]->m_numberOfSequences > m_currentSequencePositionInChunk);
 };
 
 // Moving the cursor to the next sequence. Possibly updating the chunk information if needed.
 void NoRandomizer::MoveToNextSequence()
 {
-    SequenceDescription& sequence = m_sequenceWindow[m_currentSequencePositionInChunk];
-    m_samplePositionInEpoch += sequence.m_numberOfSamples;
-    m_globalSamplePosition += sequence.m_numberOfSamples;
-
     if (m_currentSequencePositionInChunk + 1 >= m_chunkDescriptions[m_currentChunkPosition]->m_numberOfSequences)
     {
         // Moving to the next chunk.
@@ -135,6 +123,7 @@ std::vector<SequenceDescription> NoRandomizer::GetNextSequenceDescriptions(size_
         const SequenceDescription& sequence = m_sequenceWindow[m_currentSequencePositionInChunk];
         result.push_back(sequence);
         samples -= (int)sequence.m_numberOfSamples;
+        m_globalSamplePosition += sequence.m_numberOfSamples;
 
         MoveToNextSequence();
     }
@@ -143,10 +132,15 @@ std::vector<SequenceDescription> NoRandomizer::GetNextSequenceDescriptions(size_
     return result;
 }
 
+size_t NoRandomizer::GetCurrentSamplePosition()
+{
+    return m_globalSamplePosition;
+}
+
 Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
 {
     Sequences result;
-    if (m_config.m_totalEpochSizeInSamples <= m_samplePositionInEpoch)
+    if (m_globalSamplePosition >=  m_config.m_totalEpochSizeInSamples * (m_config.m_epochIndex + 1))
     {
         result.m_endOfEpoch = true;
         return result;

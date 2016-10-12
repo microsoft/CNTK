@@ -24,7 +24,7 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
 
     auto featureStreamName = L"features";
     auto labelsStreamName = L"labels";
-    auto minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } }, 0);
+    auto minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } }, 0, false);
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
@@ -128,7 +128,8 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
 void TrainerTests()
 {
     TrainSimpleFeedForwardClassifer(DeviceDescriptor::CPUDevice());
-#ifndef CPUONLY
-    TrainMNISTClassifier(DeviceDescriptor::GPUDevice(0));
-#endif
+    if (IsGPUAvailable())
+    {
+        TrainMNISTClassifier(DeviceDescriptor::GPUDevice(0));
+    }
 }

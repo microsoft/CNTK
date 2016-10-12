@@ -72,7 +72,7 @@ def sequence_to_sequence_translator(debug_output=False):
 
     decoder_outputH = stabilize(decoder_input)
     for i in range(0, num_layers):
-        if (i == 0):
+        if (i > 0):
             recurrence_hookH = past_value
             recurrence_hookC = past_value
         else:
@@ -111,8 +111,8 @@ def sequence_to_sequence_translator(debug_output=False):
     mb_source = text_format_minibatch_source(path, [
         StreamConfiguration(feature_stream_name, input_vocab_dim, True, 'S0'),
         StreamConfiguration(labels_stream_name, label_vocab_dim, True, 'S1')], 10000)
-    features_si = mb_source.stream_info(feature_stream_name)
-    labels_si = mb_source.stream_info(labels_stream_name)
+    features_si = mb_source[feature_stream_name]
+    labels_si = mb_source[labels_stream_name]
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 72
@@ -127,8 +127,8 @@ def sequence_to_sequence_translator(debug_output=False):
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
-        arguments = {raw_input: mb[features_si].m_data,
-                     raw_labels: mb[labels_si].m_data}
+        arguments = {raw_input: mb[features_si],
+                     raw_labels: mb[labels_si]}
         trainer.train_minibatch(arguments)
 
         print_training_progress(trainer, i, training_progress_output_freq)
@@ -139,9 +139,9 @@ def sequence_to_sequence_translator(debug_output=False):
 
     test_mb_source = text_format_minibatch_source(path, [
         StreamConfiguration(feature_stream_name, input_vocab_dim, True, 'S0'),
-        StreamConfiguration(labels_stream_name, label_vocab_dim, True, 'S1')], 10000)
-    features_si = test_mb_source.stream_info(feature_stream_name)
-    labels_si = test_mb_source.stream_info(labels_stream_name)
+        StreamConfiguration(labels_stream_name, label_vocab_dim, True, 'S1')], 10000, False)
+    features_si = test_mb_source[feature_stream_name]
+    labels_si = test_mb_source[labels_stream_name]
 
     # choose this to be big enough for the longest sentence
     train_minibatch_size = 1024 
@@ -156,8 +156,8 @@ def sequence_to_sequence_translator(debug_output=False):
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be tested with
-        arguments = {raw_input: mb[features_si].m_data,
-                     raw_labels: mb[labels_si].m_data}
+        arguments = {raw_input: mb[features_si],
+                     raw_labels: mb[labels_si]}
         mb_error = trainer.test_minibatch(arguments)
 
         total_error += mb_error
@@ -171,11 +171,10 @@ def sequence_to_sequence_translator(debug_output=False):
     return total_error / i
 
 if __name__ == '__main__':
-    # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.gpu_device(0)
-    # If it is crashing, probably you don't have a GPU, so try with CPU:
+    # Specify the target device to be used for computing, if you do not want to
+    # use the best available one, e.g.
     # target_device = DeviceDescriptor.cpu_device()
-    DeviceDescriptor.set_default_device(target_device)
+    # DeviceDescriptor.set_default_device(target_device)
 
     error = sequence_to_sequence_translator()
     print("Error: %f" % error)

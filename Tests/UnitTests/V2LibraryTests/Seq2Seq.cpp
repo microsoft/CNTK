@@ -80,7 +80,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     for (size_t i = 0; i < numLayers; ++i)
     {
         std::function<FunctionPtr(const Variable&)> recurrenceHookH, recurrenceHookC;
-        if (i == 0)
+        if (i > 0)
         {
             recurrenceHookH = pastValueRecurrenceHookWithBeamSearchReordering;
             recurrenceHookC = pastValueRecurrenceHookWithBeamSearchReordering;
@@ -182,8 +182,9 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
 void TrainSequenceToSequenceTranslator()
 {
     // TODO: Also test with sparse input variables in the graph
-#ifndef CPUONLY
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, false);
-#endif
+    if (IsGPUAvailable())
+    {
+        TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, false);
+    }
     TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, true);
 }
