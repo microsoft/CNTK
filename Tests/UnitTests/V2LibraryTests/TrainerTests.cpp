@@ -125,8 +125,95 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     }
 }
 
+Trainer BuildTrainer(const FunctionPtr& function, const Variable& labels)
+{
+    LearningRatesPerSample learningRateSchedule(0.0005);
+    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(function, labels, L"lossFunction");
+    auto prediction = CNTK::ClassificationError(function, labels, L"classificationError");
+    auto learner = SGDLearner(function->Parameters(), learningRateSchedule);
+    return Trainer(function, trainingLoss, prediction, { learner }); 
+}
+
+void TestReproducibilityWithTwoIdenticalTrainers(const DeviceDescriptor& device)
+{
+    const size_t inputDim = 2000;
+    const size_t cellDim = 25;
+    const size_t hiddenDim = 25;
+    const size_t embeddingDim = 50;
+    const size_t numOutputClasses = 5;
+
+    auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, L"features");
+    auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels", { Axis::DefaultBatchAxis() });
+
+    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { L"features", inputDim, true, L"x" }, { L"labels", numOutputClasses, false, L"y" } }, 0);
+    auto featureStreamInfo = minibatchSource->StreamInfo(features);
+    auto labelStreamInfo = minibatchSource->StreamInfo(labels);
+
+    const size_t minibatchSize = 200;
+    auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+
+    auto trainer1 = BuildTrainer(LSTMSequenceClassiferNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput"), labels);
+    auto trainer2 = BuildTrainer(LSTMSequenceClassiferNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput"), labels);
+
+    for (int i = 0; i < 10; i++)
+    {
+        trainer1.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        trainer2.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+
+        double mbLoss1 = trainer1.PreviousMinibatchLossAverage();
+        double mbLoss2 = trainer2.PreviousMinibatchLossAverage();
+        if (mbLoss1 != mbLoss2)
+            throw std::runtime_error("Training losses diverged.");
+    }
+}
+
+void TestReproducibilityWithCheckpointing(const DeviceDescriptor& device)
+{
+    const size_t inputDim = 2000;
+    const size_t cellDim = 25;
+    const size_t hiddenDim = 25;
+    const size_t embeddingDim = 50;
+    const size_t numOutputClasses = 5;
+
+    auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, L"features");
+    auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels", { Axis::DefaultBatchAxis() });
+
+    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { L"features", inputDim, true, L"x" }, { L"labels", numOutputClasses, false, L"y" } }, 0);
+    auto featureStreamInfo = minibatchSource->StreamInfo(features);
+    auto labelStreamInfo = minibatchSource->StreamInfo(labels);
+
+    const size_t minibatchSize = 200;
+    auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+
+    auto classifierOutput1 = LSTMSequenceClassiferNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
+    auto trainer1 = BuildTrainer(classifierOutput1, labels);
+    trainer1.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+
+    auto modelFile = L"TestReproducibilityWithCheckpointing.model.out";
+    for (int i = 0; i < 3; ++i)
+    {
+        SaveAsLegacyModel(classifierOutput1, modelFile);
+        auto classifierOutput2 = LoadLegacyModel(DataType::Float, modelFile, DeviceDescriptor::CPUDevice());
+        auto trainer2 = BuildTrainer(classifierOutput2, labels);
+
+        for (int j = 0; j < 3; ++j)
+        {
+            trainer1.TrainMinibatch({ { classifierOutput1->Arguments()[0], minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+            trainer2.TrainMinibatch({ { classifierOutput2->Arguments()[0], minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+
+            double mbLoss1 = trainer1.PreviousMinibatchLossAverage();
+            double mbLoss2 = trainer2.PreviousMinibatchLossAverage();
+            if (mbLoss1 != mbLoss2)
+                throw std::runtime_error("Training losses diverged.");
+        }
+    }
+}
+
 void TrainerTests()
 {
+    TestReproducibilityWithTwoIdenticalTrainers(DeviceDescriptor::CPUDevice());
+    TestReproducibilityWithCheckpointing(DeviceDescriptor::CPUDevice());
+
     TrainSimpleFeedForwardClassifer(DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())
     {
