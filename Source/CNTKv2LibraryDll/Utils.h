@@ -410,5 +410,37 @@ namespace CNTK
 
         return{ uid, name };
     }
-}
 
+    inline std::vector<Axis> GetDerivedDynamicAxes(const Axis& sourceAxis, size_t multiplicativeFactor, int additiveFactor)
+    {
+        if (sourceAxis.IsStaticAxis())
+            LogicError("Static axes cannot be derived from to create new dynamic axes!");
+
+        if ((multiplicativeFactor == 0) && (additiveFactor == 0))
+            LogicError("Zero size dynamic axes are not allowed!");
+
+        // If we slice off exactly one frame off of the source axis, then we effectively delete this axis
+        if ((multiplicativeFactor == 0) && (additiveFactor == 1))
+            return {};
+
+        if ((multiplicativeFactor == 1) && (additiveFactor == 0))
+            return {sourceAxis};
+
+        std::wstring derivedDynamicAxisName = sourceAxis.Name();
+        if (multiplicativeFactor > 0)
+        {
+            derivedDynamicAxisName += L"_times_" + std::to_wstring(multiplicativeFactor);
+            if (additiveFactor > 0)
+                derivedDynamicAxisName += L"_plus_" + std::to_wstring(additiveFactor);
+            else
+                derivedDynamicAxisName += L"_minus_" + std::to_wstring(-additiveFactor);
+        }
+        else
+        {
+            assert(additiveFactor > 0);
+            derivedDynamicAxisName += L"_fixedSliceOf_" + std::to_wstring(additiveFactor);
+        }
+
+        return{ Axis(derivedDynamicAxisName, sourceAxis.IsOrdered()) };
+    }
+}
