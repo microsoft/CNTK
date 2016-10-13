@@ -27,6 +27,12 @@ checkEmptyStdout \
   "git ls-tree -r -t --name-only $gitTree | tr '[:upper:]' '[:lower:]' | sort | uniq --repeated" \
   "git ls-tree: path names that only differ in case:"
 
+# Check for illegal characters in file names (on Windows).
+# We could extend for more that we do not want.
+checkEmptyStdout \
+  "git ls-tree -r -t --name-only HEAD | grep '[\"<>|:*?\\]'" \
+  "git ls-tree: path names will illegal characters encountered:"
+
 checkEmptyStdout \
   "git grep -l \$'\t' $gitTree -- *.cpp *.h *.cu *.bat *.bs | cut -d: -f2-" \
   "files with hard tabs encountered"
