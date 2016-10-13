@@ -32,9 +32,9 @@ namespace msra { namespace math {
 // newer ones: (seems no single list available)
 // ===========================================================================
 
-// This class implements a float4 vector based on the SSE intrinsics available on intel platforms.
+// The code in this file implements a float4 vector based on the SSE intrinsics available on Intel platforms.
 // Since we don't have SSE on ARM64 (NEON has similar functionality but is not identical) we cannot
-// use the SSE implementation no ARM64.
+// use the SSE implementation on ARM64.
 // TODO: In the future, we should provide a NEON based implementation instead.
 #if defined(__aarch64__)
 typedef struct __m128_t
@@ -60,10 +60,10 @@ static __m128 _mm_load1_ps(const float *a)
 static __m128 _mm_sub_ps(const __m128 &a, const __m128 &b)
 {
     __m128 result =  {
-      (a).f[0]-(b).f[0],
-      (a).f[1]-(b).f[1],
-      (a).f[2]-(b).f[2],
-      (a).f[3]-(b).f[3] };
+      a.f[0] - b.f[0],
+      a.f[1] - b.f[1],
+      a.f[2] - b.f[2],
+      a.f[3] - b.f[3] };
 
     return result;
 }
