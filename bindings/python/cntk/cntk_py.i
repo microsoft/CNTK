@@ -1258,6 +1258,5 @@ for klass in [Function, Variable]:
 _add_eval(Function)
 
 enable_reversing_tensor_shapes_in_error_messages()
-del training_param_schedule_double
 %}
 
