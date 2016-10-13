@@ -124,6 +124,8 @@ public:
 };
 
 
+#if HAS_OPENMPI
+
 class MPIWrapperMpi : public MPIWrapper
 {
     int m_myRank;
@@ -160,6 +162,57 @@ private:
     void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/);
 
 public:
+
+    size_t NumNodesInUse() const;
+    size_t CurrentNodeRank() const;
+    bool IsMainNode() const;
+    bool IsIdle() const;
+    bool UsingAllNodes() const;
+    size_t MainNodeRank() const;
+
+    // -----------------------------------------------------------------------
+    // data-exchange functions (wrappers around MPI functions)
+    // -----------------------------------------------------------------------
+
+    int Finalize(void);
+    int Wait(MPI_Request* request, MPI_Status* status);
+    int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
+    int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
+    int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
+    int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
+
+    // allreduce of a vector
+    virtual void AllReduce(std::vector<size_t>&accumulator) const;
+    virtual void AllReduce(std::vector<int>&accumulator) const;
+    virtual void AllReduce(std::vector<double>&accumulator) const;
+    virtual void AllReduce(std::vector<float>&accumulator) const;
+
+    // for raw pointer
+    virtual void AllReduce(size_t*pData, size_t nData);
+    virtual void AllReduce(int*pData, size_t nData);
+    virtual void AllReduce(double*pData, size_t nData);
+    virtual void AllReduce(float*pData, size_t nData);
+
+    virtual void Bcast(size_t*pData, size_t nData, size_t srcRank);
+    virtual void Bcast(double*pData, size_t nData, size_t srcRank);
+    virtual void Bcast(float*pData, size_t nData, size_t srcRank);
+
+    // wait for all ranks to reach here
+    int WaitAll();
+};
+
+#endif
+
+class MPIWrapperEmpty : public MPIWrapper
+{
+public:
+    MPIWrapperEmpty();
+
+    // Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
+    // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
+    ~MPIWrapperEmpty();
 
     size_t NumNodesInUse() const;
     size_t CurrentNodeRank() const;

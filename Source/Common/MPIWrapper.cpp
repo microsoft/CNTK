@@ -9,9 +9,7 @@
 #pragma comment(lib, "msmpi.lib")
 #else
 #pragma warning(disable: 4100) // unreferenced formal parameter
-
 #define MPI_SUCCESS           0
-#define MPI_COMM_WORLD        0
 #endif
 
 #define FFLUSH_SUCCESS 0
@@ -53,33 +51,7 @@ int operator||(int rc, const MpiFail &what)
     RuntimeError("%s", what.c_str());
 }
 
-int MPIWrapperMpi::s_myRank = -1;
-std::shared_ptr<MPIWrapper> MPIWrapperMpi::s_mpi = nullptr;
-
-// Note that specifically, this function is such that it does not require
-// MPI initialization. Moreover, it can be used without actually loading any
-// MPI libs.
-// TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
-int MPIWrapper::GetTotalNumberOfMPINodes()
-{
-#if !HAS_OPENMPI
-    return 0;
-#else
-#ifdef WIN32
-    const char* p = std::getenv("PMI_SIZE");
-#else
-    const char* p = std::getenv("OMPI_COMM_WORLD_SIZE");
-#endif
-    if (!p)
-    {
-        return 0;
-    }
-    else
-    {
-        return std::stoi(string(p));
-    }
-#endif
-}
+std::shared_ptr<MPIWrapper> MPIWrapper::s_mpi = nullptr;
 
 MPIWrapperPtr MPIWrapper::GetInstance(bool create)
 {
@@ -89,7 +61,14 @@ MPIWrapperPtr MPIWrapper::GetInstance(bool create)
         if (initialized)
             LogicError("Creating MPIWrapper instance after a GetInstance call has been already made!");
         else
+#if HAS_OPENMPI
+            // TODO: at this point, we should load the correct plugin instead of
+            //       hardcoding the instanciation here (and thus assuming that
+            //       mpi libs are available during build time)
             s_mpi = std::make_shared<MPIWrapperMpi>();
+#else
+            s_mpi = std::make_shared<MPIWrapperEmpty>();
+#endif
     }
 
     initialized = true;
@@ -127,10 +106,37 @@ MPI_Datatype MPIWrapper::GetDataType(size_t *)
     return sizeof(size_t) == 4 ? MPI_UNSIGNED : MPI_LONG_LONG_INT;
 }
 
+// Note that specifically, this function is such that it does not require
+// MPI initialization. Moreover, it can be used without actually loading any
+// MPI libs.
+// TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
+int MPIWrapper::GetTotalNumberOfMPINodes()
+{
+#if !HAS_OPENMPI
+    return 0;
+#else
+#ifdef WIN32
+    const char* p = std::getenv("PMI_SIZE");
+#else
+    const char* p = std::getenv("OMPI_COMM_WORLD_SIZE");
+#endif
+    if (!p)
+    {
+        return 0;
+    }
+    else
+    {
+        return std::stoi(string(p));
+    }
+#endif
+}
 
+#if HAS_OPENMPI
     // -----------------------------------------------------------------------
     // MPIWrapper that actually calls into msmpi.dll
     // -----------------------------------------------------------------------
+
+int MPIWrapperMpi::s_myRank = -1;
 
 MPIWrapperMpi::MPIWrapperMpi()
     : m_currentComm(MPI_COMM_WORLD)
@@ -145,14 +151,9 @@ MPIWrapperMpi::MPIWrapperMpi()
     fprintf(stderr, "MPIWrapper: initializing MPI\n");
     fflush(stderr);
 
-#if HAS_OPENMPI
     MPI_Init_DL() || MpiFail("mpiaggregator: MPI_Init");
     MPI_Comm_rank(MPI_COMM_WORLD, &m_myRank);
     MPI_Comm_size(MPI_COMM_WORLD, &m_numMPINodes);
-#else
-    m_myRank = 0;
-    m_numMPINodes = 0;
-#endif
 
     m_numNodesInUse = m_numMPINodes;
 
@@ -213,9 +214,6 @@ MPIWrapperMpi::~MPIWrapperMpi()
 // MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
 int MPIWrapperMpi::MPI_Init_DL()
 {
-#if !HAS_OPENMPI
-    return MPI_SUCCESS;
-#else
 #ifdef WIN32
     __try
 #endif
@@ -243,7 +241,6 @@ int MPIWrapperMpi::MPI_Init_DL()
         return MPI_ERR_INTERN;
     }
 #endif
-#endif
 }
 
 // Workaround for the issue with MPI hanging when we have non-0 exit codes from CNTK processes
@@ -260,7 +257,6 @@ void MPIWrapperMpi::MPIWorkaroundAtExit()
 
 void MPIWrapperMpi::Ping(const char *msg) const
 {
-#if HAS_OPENMPI
 #undef USE2NDCOMM
 #ifndef USE2NDCOMM
     if (NumNodesInUse() != m_numMPINodes)
@@ -279,12 +275,10 @@ void MPIWrapperMpi::Ping(const char *msg) const
     AllReduce(handshake);
     fprintf(stderr, "ping [%s]: all %d nodes responded\n", msg, handshake[0]);
     fflush(stderr);
-#endif
 }
 
 void MPIWrapperMpi::RequestNodes(const char *msg, size_t requestednodes /*default: all*/)
 {
-#if HAS_OPENMPI
     Ping("requestnodes (before change)");
 
     // undo current split
@@ -322,7 +316,6 @@ void MPIWrapperMpi::RequestNodes(const char *msg, size_t requestednodes /*defaul
         (int)CurrentNodeRank(), IsIdle() ? "out (idle)" : "in (participating)");
     fflush(stderr);
     Ping("requestnodes (after change)");
-#endif
 }
 
 MPI_Comm MPIWrapperMpi::Communicator() const
@@ -332,84 +325,48 @@ MPI_Comm MPIWrapperMpi::Communicator() const
 
 int MPIWrapperMpi::Finalize(void)
 {
-#if HAS_OPENMPI
     return MPI_Finalize();
-#else
-    return MPI_UNDEFINED;
-#endif
 }
 
 // wait for all ranks to reach here
 int MPIWrapperMpi::WaitAll()
 {
-#if HAS_OPENMPI
     return MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
-#else
-    return MPI_UNDEFINED;
-#endif
 }
 
 int MPIWrapperMpi::Wait(MPI_Request* request, MPI_Status* status)
 {
-#if HAS_OPENMPI
     return MPI_Wait(request, status);
-#else
-    return MPI_UNDEFINED;
-#endif
 }
 
 int MPIWrapperMpi::Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status)
 {
-#if HAS_OPENMPI
     return MPI_Waitany(count, array_of_requests, index, status);
-#else
-    return MPI_UNDEFINED;
-#endif
 }
 
 int MPIWrapperMpi::Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[])
 {
-#if HAS_OPENMPI
     return MPI_Waitall(count, array_of_requests, array_of_statuses);
-#else
-    return MPI_UNDEFINED;
-#endif
 }
 
 int MPIWrapperMpi::Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Request* request)
 {
-#if HAS_OPENMPI
     return MPI_Isend(buf, count, datatype, dest, tag, m_currentComm, request);
-#else
-    return MPI_UNDEFINED;
-#endif
 }
 
 int MPIWrapperMpi::Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Status* status)
 {
-#if HAS_OPENMPI
     return MPI_Recv(buf, count, datatype, source, tag, m_currentComm, status);
-#else
-    return MPI_UNDEFINED;
-#endif
 }
 
 int MPIWrapperMpi::Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Request* request)
 {
-#if HAS_OPENMPI
     return MPI_Irecv(buf, count, datatype, source, tag, m_currentComm, request);
-#else
-    return MPI_UNDEFINED;
-#endif
 }
 
 int MPIWrapperMpi::Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Request* request)
 {
-#if HAS_OPENMPI
     return MPI_Iallreduce(sendbuf, recvbuf, count, datatype, op, m_currentComm, request);
-#else
-    return MPI_UNDEFINED;
-#endif
 }
 
 size_t MPIWrapperMpi::NumNodesInUse() const
@@ -445,7 +402,6 @@ size_t MPIWrapperMpi::MainNodeRank() const
 // allreduce of a vector
 void MPIWrapperMpi::AllReduce(std::vector<size_t>&accumulator) const
 {
-#if HAS_OPENMPI
     auto *dataptr = accumulator.data();
     size_t totalnumelements = accumulator.size();
 
@@ -454,12 +410,10 @@ void MPIWrapperMpi::AllReduce(std::vector<size_t>&accumulator) const
     {
         MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
     }
-#endif
 }
 
 void MPIWrapperMpi::AllReduce(std::vector<int>&accumulator) const
 {
-#if HAS_OPENMPI
     auto *dataptr = accumulator.data();
     size_t totalnumelements = accumulator.size();
 
@@ -468,12 +422,10 @@ void MPIWrapperMpi::AllReduce(std::vector<int>&accumulator) const
     {
         MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
     }
-#endif
 }
 
 void MPIWrapperMpi::AllReduce(std::vector<double>&accumulator) const
 {
-#if HAS_OPENMPI
     auto *dataptr = accumulator.data();
     size_t totalnumelements = accumulator.size();
 
@@ -482,12 +434,10 @@ void MPIWrapperMpi::AllReduce(std::vector<double>&accumulator) const
     {
         MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
     }
-#endif
 }
 
 void MPIWrapperMpi::AllReduce(std::vector<float>&accumulator) const
 {
-#if HAS_OPENMPI
     auto *dataptr = accumulator.data();
     size_t totalnumelements = accumulator.size();
 
@@ -496,78 +446,237 @@ void MPIWrapperMpi::AllReduce(std::vector<float>&accumulator) const
     {
         MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
     }
-#endif
 }
 
 // for raw pointer
 void MPIWrapperMpi::AllReduce(size_t*pData, size_t nData)
 {
-#if HAS_OPENMPI
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
         MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
     }
-#endif
 }
 
 void MPIWrapperMpi::AllReduce(int*pData, size_t nData)
 {
-#if HAS_OPENMPI
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
         MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
     }
-#endif
 }
 
 void MPIWrapperMpi::AllReduce(double*pData, size_t nData)
 {
-#if HAS_OPENMPI
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
         MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
     }
-#endif
 }
 
 void MPIWrapperMpi::AllReduce(float*pData, size_t nData)
 {
-#if HAS_OPENMPI
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
         MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
     }
-#endif
 }
 
 void MPIWrapperMpi::Bcast(size_t*pData, size_t nData, size_t srcRank)
 {
-#if HAS_OPENMPI
     if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
     {
         MPI_Bcast(pData, (int)nData, GetDataType(pData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
     }
-#endif
 }
 
 void MPIWrapperMpi::Bcast(double*pData, size_t nData, size_t srcRank)
 {
-#if HAS_OPENMPI
     if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
     {
         MPI_Bcast(pData, (int)nData, GetDataType(pData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
     }
-#endif
 }
 
 void MPIWrapperMpi::Bcast(float*pData, size_t nData, size_t srcRank)
 {
-#if HAS_OPENMPI
     if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
     {
         MPI_Bcast(pData, (int)nData, GetDataType(pData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
     }
-#endif
 }
+
+#endif
+
+
+    // -----------------------------------------------------------------------
+    // MPIWrapper that does nothing
+    // -----------------------------------------------------------------------
+#pragma warning(push)
+#pragma warning(disable: 4100) // parameter not used
+
+MPIWrapperEmpty::MPIWrapperEmpty()
+{
+    static bool initialized = false;
+    if (initialized)
+    {
+        LogicError("MPIWrapperEmpty: this is a singleton class that can only be instantiated once per process");
+    }
+
+    initialized = true;
+    fprintf(stderr, "MPIWrapperEmpty: initializing\n");
+    fflush(stderr);
+
+    // stagger the jobs just a little to get a sort-of deterministic order e.g. in GPU allocation when running on one machine
+    // continue 0.5 seconds apart
+    ::Sleep((DWORD)(500 * CurrentNodeRank()));
+}
+
+// Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
+// It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
+MPIWrapperEmpty::~MPIWrapperEmpty()
+{
+    fprintf(stderr, "~MPIWrapper\n");
+
+    // Do not finalize in event of an exception since calling MPI_Finalize without
+    // all pending communications being finished results in a hang
+    int rc = fflush(stderr);
+    if (!std::uncaught_exception())
+    {
+        if (rc != FFLUSH_SUCCESS)
+        {
+#ifdef _WIN32
+            RuntimeError("MPIWrapper: Failed to flush stderr, %d", ::GetLastError());
+#else
+            RuntimeError("MPIWrapper: Failed to flush stderr, %d", errno);
+#endif
+        }
+
+        Finalize();
+    }
+}
+
+int MPIWrapperEmpty::Finalize(void)
+{
+    return MPI_UNDEFINED;
+}
+
+// wait for all ranks to reach here
+int MPIWrapperEmpty::WaitAll()
+{
+    return MPI_UNDEFINED;
+}
+
+int MPIWrapperEmpty::Wait(MPI_Request* request, MPI_Status* status)
+{
+    return MPI_UNDEFINED;
+}
+
+int MPIWrapperEmpty::Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status)
+{
+    return MPI_UNDEFINED;
+}
+
+int MPIWrapperEmpty::Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[])
+{
+    return MPI_UNDEFINED;
+}
+
+int MPIWrapperEmpty::Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Request* request)
+{
+    return MPI_UNDEFINED;
+}
+
+int MPIWrapperEmpty::Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Status* status)
+{
+    return MPI_UNDEFINED;
+}
+
+int MPIWrapperEmpty::Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Request* request)
+{
+    return MPI_UNDEFINED;
+}
+
+int MPIWrapperEmpty::Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Request* request)
+{
+    return MPI_UNDEFINED;
+}
+
+size_t MPIWrapperEmpty::NumNodesInUse() const
+{
+    return 0;
+}
+
+size_t MPIWrapperEmpty::CurrentNodeRank() const
+{
+    return 0;
+}
+
+bool MPIWrapperEmpty::IsMainNode() const
+{
+    return true;
+} // we are the chosen one--do extra stuff like saving the model to disk
+
+bool MPIWrapperEmpty::IsIdle() const
+{
+    return CurrentNodeRank() >= NumNodesInUse();
+} // user had requested to not use this many nodes
+
+bool MPIWrapperEmpty::UsingAllNodes() const
+{
+    return true;
+} // all nodes participate (used to check whether we can use MPI_Allreduce directly)
+
+size_t MPIWrapperEmpty::MainNodeRank() const
+{
+    return 0;
+}
+
+// allreduce of a vector
+void MPIWrapperEmpty::AllReduce(std::vector<size_t>&accumulator) const
+{
+}
+
+void MPIWrapperEmpty::AllReduce(std::vector<int>&accumulator) const
+{
+}
+
+void MPIWrapperEmpty::AllReduce(std::vector<double>&accumulator) const
+{
+}
+
+void MPIWrapperEmpty::AllReduce(std::vector<float>&accumulator) const
+{
+}
+
+// for raw pointer
+void MPIWrapperEmpty::AllReduce(size_t*pData, size_t nData)
+{
+}
+
+void MPIWrapperEmpty::AllReduce(int*pData, size_t nData)
+{
+}
+
+void MPIWrapperEmpty::AllReduce(double*pData, size_t nData)
+{
+}
+
+void MPIWrapperEmpty::AllReduce(float*pData, size_t nData)
+{
+}
+
+void MPIWrapperEmpty::Bcast(size_t*pData, size_t nData, size_t srcRank)
+{
+}
+
+void MPIWrapperEmpty::Bcast(double*pData, size_t nData, size_t srcRank)
+{
+}
+
+void MPIWrapperEmpty::Bcast(float*pData, size_t nData, size_t srcRank)
+{
+}
+
+#pragma warning(pop)
 
 }}}
