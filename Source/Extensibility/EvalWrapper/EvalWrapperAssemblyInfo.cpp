@@ -16,4 +16,4 @@
 using namespace System;
 using namespace System::Reflection;
 
-//[assembly:AssemblyKeyFile("EvalWrapperKeyPair.snk")];
+[assembly:AssemblyKeyFile("EvalWrapperKeyPair.snk")];
