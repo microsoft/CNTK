@@ -26,16 +26,12 @@
 typedef void *MPI_Comm;
 typedef enum _MPI_Datatype { MPI_CHAR, MPI_INT, MPI_FLOAT, MPI_DOUBLE, MPI_UNSIGNED, MPI_LONG_LONG_INT } MPI_Datatype;
 
-#define MPI_COMM_WORLD        0
-#define MPI_IN_PLACE          0
-#define MPI_SUM               2
+#define MPI_IN_PLACE          ((void*)(int)-1)
+#define MPI_SUM               ((MPI_Op)0x58000003)
 
-#define MPI_SUCCESS           0
-#define MPI_STATUSES_IGNORE  -3
-#define MPI_STATUS_IGNORE    -2
-#define MPI_UNDEFINED        -1
-
-#define MPI_MAX_ERROR_STRING  64
+#define MPI_STATUSES_IGNORE  (MPI_Status*)1
+#define MPI_STATUS_IGNORE    (MPI_Status*)1
+#define MPI_UNDEFINED        (-32766)
 
 typedef int MPI_Op;
 typedef int MPI_Request;
@@ -112,15 +108,6 @@ public:
 
     static void DeleteInstance();
 
-    int Finalize(void);
-    int Wait(MPI_Request* request, MPI_Status* status);
-    int Waitany(int count, MPI_Request array_of_requests[], int* index,MPI_Status* status);
-    int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
-    int Isend(const void* buf, int count,MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
-    int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
-    int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
-    int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
-
     size_t NumNodesInUse() const;
     size_t CurrentNodeRank() const;
     bool IsMainNode() const;
@@ -131,6 +118,15 @@ public:
     // -----------------------------------------------------------------------
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
+
+    int Finalize(void);
+    int Wait(MPI_Request* request, MPI_Status* status);
+    int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
+    int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
+    int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
+    int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
 
     // helpers to determine the MPI_Datatype of a pointer
     static MPI_Datatype GetDataType(char *);

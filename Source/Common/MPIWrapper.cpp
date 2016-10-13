@@ -9,6 +9,9 @@
 #pragma comment(lib, "msmpi.lib")
 #else
 #pragma warning(disable: 4100) // unreferenced formal parameter
+
+#define MPI_SUCCESS           0
+#define MPI_COMM_WORLD        0
 #endif
 
 #define FFLUSH_SUCCESS 0
@@ -212,7 +215,7 @@ MPIWrapper::~MPIWrapper()
 #endif
         }
 
-        MPI_Finalize();
+        Finalize();
     }
 }
 
