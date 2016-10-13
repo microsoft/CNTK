@@ -89,7 +89,7 @@ def simple_mnist(debug_output=False):
         rel_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
                                 *"Image/MNIST/v0/Test-28x28_cntk_text.txt".split("/"))
     except KeyError:
-        rel_path = os.path.join(*"../../../../Examples/Image/Datasets/MMNIST/Test-28x28_cntk_text.txt".split("/"))
+        rel_path = os.path.join(*"../../../../Examples/Image/Datasets/MNIST/Test-28x28_cntk_text.txt".split("/"))
     path = os.path.normpath(os.path.join(abs_path, rel_path))
     check_path(path)
 
@@ -109,8 +109,8 @@ def simple_mnist(debug_output=False):
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be tested with
-        arguments = {input: mb[features_si].m_data,
-                     label: mb[labels_si].m_data}
+        arguments = {input: mb[features_si],
+                     label: mb[labels_si]}
         eval_error = trainer.test_minibatch(arguments)
         test_result = test_result + eval_error
 
