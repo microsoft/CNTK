@@ -228,7 +228,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         }
     }
 }
-// helper for logging
+// helper for logging. Returns false if it was not able to dynamic-cast nodep to ComputationNode<ElemType>
 template<class ElemType>
 static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
 {
@@ -238,6 +238,8 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
     let dataPtr = dumpGradient ? node->GradientPtr() : node->ValuePtr();
     if (!dataPtr)
         return true; // e.g. SEQ sentinel node
+    if (dataPtr->GetMatrixType() != MatrixType::DENSE) // for now we can only print dense matrices; since this is for debugging, don't fail just skip
+        return true;
     fprintf(stderr, "Dump --> %s%s\n", node->FormatOperationPrototype("").c_str(), dumpGradient ? " Grad" : "");
     node->WriteMinibatchWithFormatting(stderr, FrameRange(), SIZE_MAX, SIZE_MAX, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
                                        ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
