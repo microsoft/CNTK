@@ -81,13 +81,18 @@ class Function(cntk_py.Function):
         Evaluate the node using the specified `arguments` as input.
 
         Args:
-            arguments (`dict` or `tuple`): Either dictionary of bindings for
-             the input variables, in which case every sample in the data of the
-             dictionary will be interpreted as a new sequence. If `tuple`, the
-             first element will be used as arguments, and the second one will
-             be used as a list of `bool`s, denoting whether a sequence is a new
+            arguments (`dict` or `list` or `tuple`): maps variables to their
+             input data. The interpretation depends on the input type:
+               * `dict`: keys are input variable or names and values are the input data. 
+               * `list`: elements are input data in the order their respective variables have been defined in the network. 
+             In both cases, every every sample in the data will be interpreted
+             as a new sequence. To mark samples as continuations of the
+             previous sequence, specify `arguments` as `tuple`: the
+             first element will be used as `arguments`, and the second one will
+             be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
-             Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+             Data should be either NumPy arrays or a
+             :class:`cntk.io.MinibatchData` instance.
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -110,13 +115,18 @@ class Function(cntk_py.Function):
         of the function whose is_input() is true. 
 
         Args:
-            arguments (`dict` or `tuple`): Either dictionary of bindings for
-             the input variables, in which case every sample in the data of the
-             dictionary will be interpreted as a new sequence. If `tuple`, the
-             first element will be used as arguments, and the second one will
-             be used as a list of `bool`s, denoting whether a sequence is a new
+            arguments (`dict` or `list` or `tuple`): maps variables to their
+             input data. The interpretation depends on the input type:
+               * `dict`: keys are input variable or names and values are the input data. 
+               * `list`: elements are input data in the order their respective variables have been defined in the network. 
+             In both cases, every every sample in the data will be interpreted
+             as a new sequence. To mark samples as continuations of the
+             previous sequence, specify `arguments` as `tuple`: the
+             first element will be used as `arguments`, and the second one will
+             be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
-             Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+             Data should be either NumPy arrays or a
+             :class:`cntk.io.MinibatchData` instance.
             outputs (iterable): outputs to fetch values for.
             keep_for_backward (`set`): the subset of the Function's output variables
              for which gradients shall be calculated in a subsequent backward call
@@ -125,8 +135,9 @@ class Function(cntk_py.Function):
              contains the type and id of the device on which the computation is
              to be performed.
 
-        Returns: a tuple (`BackpropState`, `map` of outputs to NumPy arrays).
-            The BackpropState is a handle taken by :func:`backward`. 
+        Returns: 
+             A tuple (`BackpropState`, `map` of outputs to NumPy arrays). The
+             BackpropState is a handle taken by :func:`backward`.
         '''
         if device is None:
             from cntk import DeviceDescriptor

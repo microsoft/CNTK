@@ -326,7 +326,7 @@ def pad_to_dense(batch):
 
 def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     """
-    Convert to `:cntk:Value` with `data_type`. If the samples in `batch` have
+    Convert to :cntk:`Value` with `data_type`. If the samples in `batch` have
     different sequence lengths, pad them to max sequence length and create a
     mask.
 
@@ -435,16 +435,21 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     handed off to the `Forward` method.
 
     Args:
-        op_arguments (`:class:Function`): arguments of the root function. In
+        op_arguments (:class:`cntk.ops.functions.Function`): arguments of the root function. In
          forward pass it is typically `op.arguments()`, in backward mode it is
          `op.outputs()`
-        arguments (`dict` or `tuple`): Either dictionary of bindings for
-         the input variables, in which case every sample in the data of the
-         dictionary will be interpreted as a new sequence. If `tuple`, the
-         first element will be used as arguments, and the second one will
-         be used as a list of `bool`s, denoting whether a sequence is a new
+        arguments (`dict` or `list` or `tuple`): maps variables to their
+         input data. The interpretation depends on the input type:
+           * `dict`: keys are input variable or names and values are the input data. 
+           * `list`: elements are input data in the order their respective variables have been defined in the network. 
+         In both cases, every every sample in the data will be interpreted
+         as a new sequence. To mark samples as continuations of the
+         previous sequence, specify `arguments` as `tuple`: the
+         first element will be used as `arguments`, and the second one will
+         be used as a list of bools, denoting whether a sequence is a new
          one (`True`) or a continuation of the previous one (`False`).
-         Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+         Data should be either NumPy arrays or a
+         :class:`cntk.io.MinibatchData` instance.
         precision (`str` or `np.float32` or `np.float64`): if string it can be
          one of 'float' 'float32, 'double', 'float64', or `None`
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
@@ -691,13 +696,18 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
 
     Args:
         op (:class:`Function`): operation to evaluate
-        arguments (`dict` or `tuple`): Either dictionary of bindings for
-         the input variables, in which case every sample in the data of the
-         dictionary will be interpreted as a new sequence. If `tuple`, the
-         first element will be used as arguments, and the second one will
-         be used as a list of `bool`s, denoting whether a sequence is a new
+        arguments (`dict` or `list` or `tuple`): maps variables to their
+         input data. The interpretation depends on the input type:
+           * `dict`: keys are input variable or names and values are the input data. 
+           * `list`: elements are input data in the order their respective variables have been defined in the network. 
+         In both cases, every every sample in the data will be interpreted
+         as a new sequence. To mark samples as continuations of the
+         previous sequence, specify `arguments` as `tuple`: the
+         first element will be used as `arguments`, and the second one will
+         be used as a list of bools, denoting whether a sequence is a new
          one (`True`) or a continuation of the previous one (`False`).
-         Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+         Data should be either NumPy arrays or a
+         :class:`cntk.io.MinibatchData` instance.
         seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
@@ -705,7 +715,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
         precision (`str` or `None`): precision being 'float32', 'float64', or
          `None`, in which case it will be determined by inspecting the operator
          (costly)
-        device (`:class:cntk.DeviceDescriptor`): the device the descriptor,
+        device (:class:`cntk.DeviceDescriptor`): the device the descriptor,
          whether it is CPU or GPU (and which one)
         backward_pass (`bool`, optional): whether a backward pass is performed
 

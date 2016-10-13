@@ -23,7 +23,7 @@ class Trainer(cntk_py.Trainer):
        model (:class:`cntk.ops.function.Function`): root node of the function to train
        loss_function (:class:`cntk.ops.functions.Function`): loss function 
        eval_function (:class:`cntk.ops.functions.Function`): evaluation function
-       parameter_learners (`list`): list of learners from `:cntk:cntk.learner`
+       parameter_learners (`list`): list of learners from :cntk:`cntk.learner`
     '''
     def __init__(self, model, loss_function, eval_function, parameter_learners):
         # TODO sanitizing should be removed once Swig's typemaps are in place
@@ -37,16 +37,20 @@ class Trainer(cntk_py.Trainer):
     def train_minibatch(self, arguments, output_map=None, device=None):
         '''
         Optimize model parameters using the specified 'arguments' minibatch of training samples.
-        Returns false if all parameter learners indicate end of learning (through their Update method's return value).
 
         Args:
-            arguments (`dict` or `tuple`): Either dictionary of bindings for
-             the input variables, in which case every sample in the data of the
-             dictionary will be interpreted as a new sequence. If `tuple`, the
-             first element will be used as arguments, and the second one will
-             be used as a list of `bool`s, denoting whether a sequence is a new
+            arguments (`dict` or `list` or `tuple`): maps variables to their
+             input data. The interpretation depends on the input type:
+               * `dict`: keys are input variable or names and values are the input data. 
+               * `list`: elements are input data in the order their respective variables have been defined in the network. 
+             In both cases, every every sample in the data will be interpreted
+             as a new sequence. To mark samples as continuations of the
+             previous sequence, specify `arguments` as `tuple`: the
+             first element will be used as `arguments`, and the second one will
+             be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
-             Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+             Data should be either NumPy arrays or a
+             :class:`cntk.io.MinibatchData` instance.
             output_map (`dict` or `None`): mapping of output variables to
              `None`, which will be filled during the training run with the
              corresponding NumPy arrays.
@@ -55,7 +59,9 @@ class Trainer(cntk_py.Trainer):
              to be performed.
 
         Returns:
-            `bool`: `True` if updates have been performed
+            `bool`: `True` if updates have been performed, `False` if all
+            parameter learners indicate end of learning (through their `update`
+            method's return value).
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
@@ -79,11 +85,18 @@ class Trainer(cntk_py.Trainer):
         of samples.
 
         Args:
-            arguments (`dict` or `list` or single input): 
-              * map from input variables to the data
-              * list of inputs in the order that the function expects or 
-              * a single input, if the function only has one argument. 
-              Data should be either NumPy arrays or a :class:`cntk.io.MinibatchSource`
+            arguments (`dict` or `list` or `tuple`): maps variables to their
+             input data. The interpretation depends on the input type:
+               * `dict`: keys are input variable or names and values are the input data. 
+               * `list`: elements are input data in the order their respective variables have been defined in the network. 
+             In both cases, every every sample in the data will be interpreted
+             as a new sequence. To mark samples as continuations of the
+             previous sequence, specify `arguments` as `tuple`: the
+             first element will be used as `arguments`, and the second one will
+             be used as a list of bools, denoting whether a sequence is a new
+             one (`True`) or a continuation of the previous one (`False`).
+             Data should be either NumPy arrays or a
+             :class:`cntk.io.MinibatchData` instance.
             seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a
