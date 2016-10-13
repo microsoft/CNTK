@@ -59,6 +59,7 @@ extern int operator||(int rc, const MpiFail &what);
 class MPIWrapper;
 typedef std::shared_ptr<MPIWrapper> MPIWrapperPtr;
 
+
 class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
 {
 public:
@@ -104,6 +105,7 @@ public:
 
     // allreduce of a vector
     virtual void AllReduce(std::vector<size_t>&accumulator) const = 0;
+    virtual void AllReduce(std::vector<int>&accumulator) const = 0;
     virtual void AllReduce(std::vector<double>&accumulator) const = 0;
     virtual void AllReduce(std::vector<float>&accumulator) const = 0;
 
@@ -118,7 +120,7 @@ public:
     virtual void Bcast(float*pData, size_t nData, size_t srcRank) = 0;
 
     // wait for all ranks to reach here
-    virtual void WaitAll() = 0;
+    virtual int WaitAll() = 0;
 };
 
 
@@ -181,6 +183,7 @@ public:
 
     // allreduce of a vector
     virtual void AllReduce(std::vector<size_t>&accumulator) const;
+    virtual void AllReduce(std::vector<int>&accumulator) const;
     virtual void AllReduce(std::vector<double>&accumulator) const;
     virtual void AllReduce(std::vector<float>&accumulator) const;
 
@@ -195,7 +198,7 @@ public:
     virtual void Bcast(float*pData, size_t nData, size_t srcRank);
 
     // wait for all ranks to reach here
-    void WaitAll();
+    int WaitAll();
 };
 
 }}}

@@ -18,6 +18,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // -----------------------------------------------------------------------
+    // Generic MPIWrapper functions (not related to a specific implementation)
+    // -----------------------------------------------------------------------
 
 int operator||(int rc, const MpiFail &what)
 {
@@ -53,53 +56,81 @@ int operator||(int rc, const MpiFail &what)
 int MPIWrapperMpi::s_myRank = -1;
 std::shared_ptr<MPIWrapper> MPIWrapperMpi::s_mpi = nullptr;
 
-// MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
-int MPIWrapperMpi::MPI_Init_DL()
+// Note that specifically, this function is such that it does not require
+// MPI initialization. Moreover, it can be used without actually loading any
+// MPI libs.
+// TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
+int MPIWrapper::GetTotalNumberOfMPINodes()
 {
 #if !HAS_OPENMPI
-    return MPI_SUCCESS;
+    return 0;
 #else
 #ifdef WIN32
-    __try
+    const char* p = std::getenv("PMI_SIZE");
+#else
+    const char* p = std::getenv("OMPI_COMM_WORLD_SIZE");
 #endif
+    if (!p)
     {
-        // don't initialize if that has been done already
-        int flag = 0;
-        MPI_Initialized(&flag);
-        if (flag)
-            return MPI_SUCCESS;
-
-        int argc = 0;
-        char **argv = NULL;
-        int requiredThreadLevelSupport = MPI_THREAD_SERIALIZED;
-        int provided;
-        int ret = MPI_Init_thread(&argc, &argv, requiredThreadLevelSupport, &provided);
-        if (provided != requiredThreadLevelSupport)
-            LogicError("Failed to initialize MPI with the desired level of thread support");
-
-        return ret;
+        return 0;
     }
-#ifdef WIN32
-    __except (EXCEPTION_EXECUTE_HANDLER)
+    else
     {
-        fprintf(stderr, "mpihelper: msmpi.dll missing\n");
-        return MPI_ERR_INTERN;
+        return std::stoi(string(p));
     }
-#endif
 #endif
 }
 
-// Workaround for the issue with MPI hanging when we have non-0 exit codes from CNTK processes
-// OpenMPI has a confirmed race condition on killing child process vs. handling their non-zero exit statuses, resulting
-// in a deadlock, where all processes killed but MPI is still waiting.
-// This happens when several perfectly synchronized processes (for example on MPI barrier)
-// simulatenously exit with non-0 exit code.
-// As a workaround, we simply sleep 50*rank miliseconds, effectively "de-synchronizing processes" at exit,
-// allowing MPI to sequentially handle terminations
-void MPIWrapperMpi::MPIWorkaroundAtExit()
+MPIWrapperPtr MPIWrapper::GetInstance(bool create)
 {
-    Sleep(s_myRank * 50);
+    static bool initialized = false;
+    if (create)
+    {
+        if (initialized)
+            LogicError("Creating MPIWrapper instance after a GetInstance call has been already made!");
+        else
+            s_mpi = std::make_shared<MPIWrapperMpi>();
+    }
+
+    initialized = true;
+    return s_mpi;
 }
+
+void MPIWrapper::DeleteInstance()
+{
+    s_mpi = nullptr;
+}
+
+// helpers to determine the MPI_Datatype of a pointer
+MPI_Datatype MPIWrapper::GetDataType(char *)
+{
+    return MPI_CHAR;
+}
+
+MPI_Datatype MPIWrapper::GetDataType(int *)
+{
+    return MPI_INT;
+}
+
+MPI_Datatype MPIWrapper::GetDataType(float *)
+{
+    return MPI_FLOAT;
+}
+
+MPI_Datatype MPIWrapper::GetDataType(double *)
+{
+    return MPI_DOUBLE;
+}
+
+MPI_Datatype MPIWrapper::GetDataType(size_t *)
+{
+    return sizeof(size_t) == 4 ? MPI_UNSIGNED : MPI_LONG_LONG_INT;
+}
+
+
+    // -----------------------------------------------------------------------
+    // MPIWrapper that actually calls into msmpi.dll
+    // -----------------------------------------------------------------------
 
 MPIWrapperMpi::MPIWrapperMpi()
     : m_currentComm(MPI_COMM_WORLD)
@@ -155,31 +186,6 @@ MPIWrapperMpi::MPIWrapperMpi()
     ::Sleep((DWORD)(500 * CurrentNodeRank()));
 }
 
-// Note that specifically, this function is such that it does not require
-// MPI initialization. Moreover, it can be used without actually loading any
-// MPI libs.
-// TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
-int MPIWrapper::GetTotalNumberOfMPINodes()
-{
-#if !HAS_OPENMPI
-    return 0;
-#else
-#ifdef WIN32
-    const char* p = std::getenv("PMI_SIZE");
-#else
-    const char* p = std::getenv("OMPI_COMM_WORLD_SIZE");
-#endif
-    if (!p)
-    {
-        return 0;
-    }
-    else
-    {
-        return std::stoi(string(p));
-    }
-#endif
-}
-
 // Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
 // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
 MPIWrapperMpi::~MPIWrapperMpi()
@@ -202,6 +208,54 @@ MPIWrapperMpi::~MPIWrapperMpi()
 
         Finalize();
     }
+}
+
+// MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
+int MPIWrapperMpi::MPI_Init_DL()
+{
+#if !HAS_OPENMPI
+    return MPI_SUCCESS;
+#else
+#ifdef WIN32
+    __try
+#endif
+    {
+        // don't initialize if that has been done already
+        int flag = 0;
+        MPI_Initialized(&flag);
+        if (flag)
+            return MPI_SUCCESS;
+
+        int argc = 0;
+        char **argv = NULL;
+        int requiredThreadLevelSupport = MPI_THREAD_SERIALIZED;
+        int provided;
+        int ret = MPI_Init_thread(&argc, &argv, requiredThreadLevelSupport, &provided);
+        if (provided != requiredThreadLevelSupport)
+            LogicError("Failed to initialize MPI with the desired level of thread support");
+
+        return ret;
+    }
+#ifdef WIN32
+    __except (EXCEPTION_EXECUTE_HANDLER)
+    {
+        fprintf(stderr, "mpihelper: msmpi.dll missing\n");
+        return MPI_ERR_INTERN;
+    }
+#endif
+#endif
+}
+
+// Workaround for the issue with MPI hanging when we have non-0 exit codes from CNTK processes
+// OpenMPI has a confirmed race condition on killing child process vs. handling their non-zero exit statuses, resulting
+// in a deadlock, where all processes killed but MPI is still waiting.
+// This happens when several perfectly synchronized processes (for example on MPI barrier)
+// simulatenously exit with non-0 exit code.
+// As a workaround, we simply sleep 50*rank miliseconds, effectively "de-synchronizing processes" at exit,
+// allowing MPI to sequentially handle terminations
+void MPIWrapperMpi::MPIWorkaroundAtExit()
+{
+    Sleep(s_myRank * 50);
 }
 
 void MPIWrapperMpi::Ping(const char *msg) const
@@ -271,26 +325,6 @@ void MPIWrapperMpi::RequestNodes(const char *msg, size_t requestednodes /*defaul
 #endif
 }
 
-MPIWrapperPtr MPIWrapper::GetInstance(bool create)
-{
-    static bool initialized = false;
-    if (create)
-    {
-        if (initialized)
-            LogicError("Creating MPIWrapper instance after a GetInstance call has been already made!");
-        else
-            s_mpi = std::make_shared<MPIWrapperMpi>();
-    }
-
-    initialized = true;
-    return s_mpi;
-}
-
-void MPIWrapper::DeleteInstance()
-{
-    s_mpi = nullptr;
-}
-
 MPI_Comm MPIWrapperMpi::Communicator() const
 {
     return m_currentComm;
@@ -300,6 +334,16 @@ int MPIWrapperMpi::Finalize(void)
 {
 #if HAS_OPENMPI
     return MPI_Finalize();
+#else
+    return MPI_UNDEFINED;
+#endif
+}
+
+// wait for all ranks to reach here
+int MPIWrapperMpi::WaitAll()
+{
+#if HAS_OPENMPI
+    return MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
 #else
     return MPI_UNDEFINED;
 #endif
@@ -398,36 +442,6 @@ size_t MPIWrapperMpi::MainNodeRank() const
     return 0;
 }
 
-// -----------------------------------------------------------------------
-// data-exchange functions (wrappers around MPI functions)
-// -----------------------------------------------------------------------
-
-// helpers to determine the MPI_Datatype of a pointer
-MPI_Datatype MPIWrapper::GetDataType(char *)
-{
-    return MPI_CHAR;
-}
-
-MPI_Datatype MPIWrapper::GetDataType(int *)
-{
-    return MPI_INT;
-}
-
-MPI_Datatype MPIWrapper::GetDataType(float *)
-{
-    return MPI_FLOAT;
-}
-
-MPI_Datatype MPIWrapper::GetDataType(double *)
-{
-    return MPI_DOUBLE;
-}
-
-MPI_Datatype MPIWrapper::GetDataType(size_t *)
-{
-    return sizeof(size_t) == 4 ? MPI_UNSIGNED : MPI_LONG_LONG_INT;
-}
-
 // allreduce of a vector
 void MPIWrapperMpi::AllReduce(std::vector<size_t>&accumulator) const
 {
@@ -442,6 +456,21 @@ void MPIWrapperMpi::AllReduce(std::vector<size_t>&accumulator) const
     }
 #endif
 }
+
+void MPIWrapperMpi::AllReduce(std::vector<int>&accumulator) const
+{
+#if HAS_OPENMPI
+    auto *dataptr = accumulator.data();
+    size_t totalnumelements = accumulator.size();
+
+    // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
+    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
+    {
+        MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
+    }
+#endif
+}
+
 void MPIWrapperMpi::AllReduce(std::vector<double>&accumulator) const
 {
 #if HAS_OPENMPI
@@ -455,6 +484,7 @@ void MPIWrapperMpi::AllReduce(std::vector<double>&accumulator) const
     }
 #endif
 }
+
 void MPIWrapperMpi::AllReduce(std::vector<float>&accumulator) const
 {
 #if HAS_OPENMPI
@@ -479,6 +509,7 @@ void MPIWrapperMpi::AllReduce(size_t*pData, size_t nData)
     }
 #endif
 }
+
 void MPIWrapperMpi::AllReduce(int*pData, size_t nData)
 {
 #if HAS_OPENMPI
@@ -488,6 +519,7 @@ void MPIWrapperMpi::AllReduce(int*pData, size_t nData)
     }
 #endif
 }
+
 void MPIWrapperMpi::AllReduce(double*pData, size_t nData)
 {
 #if HAS_OPENMPI
@@ -497,6 +529,7 @@ void MPIWrapperMpi::AllReduce(double*pData, size_t nData)
     }
 #endif
 }
+
 void MPIWrapperMpi::AllReduce(float*pData, size_t nData)
 {
 #if HAS_OPENMPI
@@ -516,6 +549,7 @@ void MPIWrapperMpi::Bcast(size_t*pData, size_t nData, size_t srcRank)
     }
 #endif
 }
+
 void MPIWrapperMpi::Bcast(double*pData, size_t nData, size_t srcRank)
 {
 #if HAS_OPENMPI
@@ -525,6 +559,7 @@ void MPIWrapperMpi::Bcast(double*pData, size_t nData, size_t srcRank)
     }
 #endif
 }
+
 void MPIWrapperMpi::Bcast(float*pData, size_t nData, size_t srcRank)
 {
 #if HAS_OPENMPI
@@ -532,14 +567,6 @@ void MPIWrapperMpi::Bcast(float*pData, size_t nData, size_t srcRank)
     {
         MPI_Bcast(pData, (int)nData, GetDataType(pData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
     }
-#endif
-}
-
-// wait for all ranks to reach here
-void MPIWrapperMpi::WaitAll()
-{
-#if HAS_OPENMPI
-    MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
 #endif
 }
 
