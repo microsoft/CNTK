@@ -1356,7 +1356,7 @@ def reduce_mean(x, axis=None, name=''):
         >>> C.reduce_mean(data, 0).eval()
         array([[ 30.,  40.]], dtype=float32)
 
-        >>> C.reduce_mean(data, 0).eval()
+        >>> C.reduce_mean(data, 1).eval()
         array([[ 15.],
                [ 35.],
                [ 55.]], dtype=float32)
@@ -1551,7 +1551,7 @@ def parameter(shape=None, init=None, device=None, name=''):
 
     Examples:
         >>> init_parameter = C.parameter(shape=(3,4), init=2)
-        >>> np.asarray(init_parameter)
+        >>> np.asarray(init_parameter) # doctest: +SKIP
         array([[ 2.,  2.,  2.,  2.],
                [ 2.,  2.,  2.,  2.],
                [ 2.,  2.,  2.,  2.]], dtype=float32)
@@ -1595,7 +1595,7 @@ def constant(shape=None, value=None, device=None, name=''):
 
     Examples
         >>> constant_data = C.constant(value=[[1., 2.], [3., 4.], [5., 6.]])
-        >>> np.asarray(constant_data)
+        >>> np.asarray(constant_data) # doctest: +SKIP
         array([[ 1.,  2.],
                [ 3.,  4.],
                [ 5.,  6.]], dtype=float32)
