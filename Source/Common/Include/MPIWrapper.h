@@ -87,6 +87,9 @@ public:
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
 
+    // TODO: remove this once the 1bitsgd code is changed to use mpiwrapper only.
+    virtual MPI_Comm Communicator() const = 0;
+
     virtual int Finalize(void) = 0;
     virtual int Wait(MPI_Request* request, MPI_Status* status) = 0;
     virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status) = 0;
@@ -157,7 +160,6 @@ public:
 
 private:
     void Ping(const char *msg) const;
-    MPI_Comm Communicator() const;
 
     void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/);
 
@@ -174,14 +176,16 @@ public:
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
 
-    int Finalize(void);
-    int Wait(MPI_Request* request, MPI_Status* status);
-    int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
-    int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
-    int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
-    int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
-    int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
-    int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual MPI_Comm Communicator() const;
+
+    virtual int Finalize(void);
+    virtual int Wait(MPI_Request* request, MPI_Status* status);
+    virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
+    virtual int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
+    virtual int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
+    virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
 
     // allreduce of a vector
     virtual void AllReduce(std::vector<size_t>&accumulator) const;
@@ -225,14 +229,16 @@ public:
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
 
-    int Finalize(void);
-    int Wait(MPI_Request* request, MPI_Status* status);
-    int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
-    int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
-    int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
-    int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
-    int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
-    int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual MPI_Comm Communicator() const;
+
+    virtual int Finalize(void);
+    virtual int Wait(MPI_Request* request, MPI_Status* status);
+    virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
+    virtual int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
+    virtual int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
+    virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
 
     // allreduce of a vector
     virtual void AllReduce(std::vector<size_t>&accumulator) const;
