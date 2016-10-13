@@ -76,20 +76,18 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).constants()
 
-    def eval(self, arguments=None, seq_starts=None, device=None):
+    def eval(self, arguments=None, device=None):
         '''
         Evaluate the node using the specified `arguments` as input.
 
         Args:
-            arguments (`dict` or `list` or single input): 
-              * map from input variables to the data
-              * list of inputs in the order that the function expects or 
-              * a single input, if the function only has one argument. 
-              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
-            seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
-             treated as a new sequence. Otherwise, it is interpreted as a list of
-             Booleans that tell whether a sequence is a new sequence (`True`) or a
-             continuation of the previous one (`False`)
+            arguments (`dict` or `tuple`): Either dictionary of bindings for
+             the input variables, in which case every sample in the data of the
+             dictionary will be interpreted as a new sequence. If `tuple`, the
+             first element will be used as arguments, and the second one will
+             be used as a list of `bool`s, denoting whether a sequence is a new
+             one (`True`) or a continuation of the previous one (`False`).
+             Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -97,8 +95,7 @@ class Function(cntk_py.Function):
         Returns:
             `bool`: `True` if updates have been performed
         '''
-        _, output_map = self.forward(arguments or {}, self.outputs(),
-                                     seq_starts, device=device)
+        _, output_map = self.forward(arguments or {}, self.outputs(), device=device)
 
         if len(output_map) > 1:
             return output_map
@@ -106,21 +103,23 @@ class Function(cntk_py.Function):
             return list(output_map.values())[0]
 
     @typemap
-    def forward(self, arguments, outputs, seq_starts=None, forward_retain=None, device=None):
+    def forward(self, arguments, outputs, keep_for_backward=None, device=None):
         '''
         Computes and stores the values of speficied variables in `outputs`,
         using provided `arguments` values corresponding to each leaf `Variable`
         of the function whose is_input() is true. 
 
         Args:
-            arguments (`dict`): dictionary of bindings for the input variables
-            outputs (`list` or `tuple`): outputs to fetch values for.
-            seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
-             treated as a new sequence. Otherwise, it is interpreted as a list of
-             Booleans that tell whether a sequence is a new sequence (`True`) or a
-             continuation of the previous one (`False`)
-            forward_retain (`set`): the subset of the Function's output variables
-             for which gradients will be specified in a subsequent backward call
+            arguments (`dict` or `tuple`): Either dictionary of bindings for
+             the input variables, in which case every sample in the data of the
+             dictionary will be interpreted as a new sequence. If `tuple`, the
+             first element will be used as arguments, and the second one will
+             be used as a list of `bool`s, denoting whether a sequence is a new
+             one (`True`) or a continuation of the previous one (`False`).
+             Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+            outputs (iterable): outputs to fetch values for.
+            keep_for_backward (`set`): the subset of the Function's output variables
+             for which gradients shall be calculated in a subsequent backward call
              for backpropagation.
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
@@ -134,13 +133,12 @@ class Function(cntk_py.Function):
             device = DeviceDescriptor.use_default_device()
 
         in_var_map = sanitize_var_map(self.arguments(), arguments,
-                                      seq_starts, None, device)
-
-        forward_retain = set(forward_retain or self.outputs())
-        output_map = {v: None for v in forward_retain}
+                                      None, device)
+        output_map = {v: None for v in outputs}
+        keep_for_backward = set(keep_for_backward or {})
 
         res = super(Function, self)._forward(in_var_map, output_map, device,
-                                             forward_retain)
+                                             keep_for_backward)
 
         for k in output_map:
             output_map[k] = value_to_seq(output_map[k])

@@ -148,7 +148,6 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
 
         forward, backward = eval(dropout_node,
                                  forward_input,
-                                 None,
                                  precision,
                                  cntk_device(device_id),
                                  backward_pass=True)

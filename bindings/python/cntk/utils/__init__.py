@@ -361,6 +361,10 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     if device is None:
         device = cntk_py.DeviceDescriptor.use_default_device()
 
+    if not use_mask and seq_starts is not None:
+        raise ValueError('specification of individual sequence begins does not'
+                ' make sense when not using the sequence axis')
+
     # Use the mask, if we have additional dynamic axes besides the batch axis
     
     if use_mask:
@@ -424,7 +428,7 @@ def sanitize_function(arg):
     return arg
 
 
-def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None,
+def sanitize_var_map(op_arguments, arguments, precision=None,
                      device=None, add_batch_axis=False):
     '''
     Sanitizes a dictionary of `Variable`s to input data such that it can be
@@ -434,14 +438,13 @@ def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None,
         op_arguments (`:class:Function`): arguments of the root function. In
          forward pass it is typically `op.arguments()`, in backward mode it is
          `op.outputs()`
-        arguments (`dict` or `list`):
-          * map from input variables to the data
-          * list of inputs in the order that the function expects or
-          Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
-        seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
-         treated as a new sequence. Otherwise, it is interpreted as a list of
-         Booleans that tell whether a sequence is a new sequence (`True`) or a
-         continuation of the previous one (`False`)
+        arguments (`dict` or `tuple`): Either dictionary of bindings for
+         the input variables, in which case every sample in the data of the
+         dictionary will be interpreted as a new sequence. If `tuple`, the
+         first element will be used as arguments, and the second one will
+         be used as a list of `bool`s, denoting whether a sequence is a new
+         one (`True`) or a continuation of the previous one (`False`).
+         Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
         precision (`str` or `np.float32` or `np.float64`): if string it can be
          one of 'float' 'float32, 'double', 'float64', or `None`
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
@@ -463,7 +466,12 @@ def sanitize_var_map(op_arguments, arguments, seq_starts=None, precision=None,
         raise ValueError('your graph has %i inputs, but you specified %i' %
                          (len(op_arguments), len(arguments)))
 
-    if isinstance(arguments, (tuple, list)):
+    if isinstance(arguments, tuple):
+        arguments, seq_starts = arguments
+    else:
+        seq_starts = None
+
+    if isinstance(arguments, list):
         arguments = dict(zip(op_arguments, arguments))
 
     if isinstance(arguments, dict):
@@ -676,17 +684,20 @@ def value_to_seq(value):
     return np_data
 
 
-def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backward_pass=False):
+def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
     mainly to explore the operators and for convenient unit testing.
 
     Args:
         op (:class:`Function`): operation to evaluate
-        arguments (`dict` or `list`):
-          * map from input variables to the data
-          * list of inputs in the order that the function expects or
-          Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+        arguments (`dict` or `tuple`): Either dictionary of bindings for
+         the input variables, in which case every sample in the data of the
+         dictionary will be interpreted as a new sequence. If `tuple`, the
+         first element will be used as arguments, and the second one will
+         be used as a list of `bool`s, denoting whether a sequence is a new
+         one (`True`) or a continuation of the previous one (`False`).
+         Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
         seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
@@ -702,8 +713,7 @@ def eval(op, arguments=None, seq_starts=None, precision=None, device=None, backw
         mapping of output variables to their values.
     '''
 
-    state, forward_output = op.forward(arguments, op.outputs(), seq_starts,
-                                       device=device)
+    state, forward_output = op.forward(arguments, op.outputs(), op.outputs(), device=device)
 
     if backward_pass:
         root_gradients = {v: ones_like(o, precision) for v, o in

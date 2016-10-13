@@ -220,7 +220,7 @@ if __name__ == '__main__':
     # DeviceDescriptor.set_default_device(target_device)
 
     base_path = os.path.normpath(os.path.join(
-        *"../../../../Examples/Image/Datasets/Miscellaneous/CIFAR-10/cifar-10-batches-py".split("/")))
+        *"../../../Examples/Image/Datasets/CIFAR-10/cifar-10-batches-py".split("/")))
 
     os.chdir(os.path.join(base_path, '..'))
 
