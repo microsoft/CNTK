@@ -7,7 +7,8 @@
 import numpy as np
 import sys
 import os
-from cntk import DeviceDescriptor, Trainer, cntk_device, StreamConfiguration
+from cntk import Trainer, cntk_device, StreamConfiguration
+from cntk.device import DeviceDescriptor
 from cntk.learner import sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
 

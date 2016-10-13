@@ -9,7 +9,8 @@ import sys
 import os
 import math
 import time
-from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk import Trainer, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk.device import DeviceDescriptor
 from cntk.learner import momentums_per_sample, momentum_sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select
 

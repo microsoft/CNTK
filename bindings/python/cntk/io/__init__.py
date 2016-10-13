@@ -6,7 +6,7 @@
 
 from .. import cntk_py
 from ..utils import typemap
-
+from cntk.device import DeviceDescriptor
 MAX_UI64 = int('0xffffffffffffffff', 16)
 
 class MinibatchData(cntk_py.MinibatchData):
@@ -95,7 +95,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
             `:class:MinibatchData`
         '''
         if device is None:
-            device = cntk_py.DeviceDescriptor.use_default_device()
+            device = DeviceDescriptor.use_default_device()
 
         if minibatch_size_in_sequences is None:
             return super(MinibatchSource, self).get_next_minibatch(

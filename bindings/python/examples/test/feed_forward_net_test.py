@@ -5,7 +5,7 @@
 # ==============================================================================
 
 import numpy as np
-from cntk import DeviceDescriptor
+from cntk.device import DeviceDescriptor
 
 from examples.NumpyInterop.FeedForwardNet import ffnet
 

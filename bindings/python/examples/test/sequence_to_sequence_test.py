@@ -5,7 +5,7 @@
 # ==============================================================================
 
 import numpy as np
-from cntk import DeviceDescriptor
+from cntk.device import DeviceDescriptor
 
 from examples.Sequence2Sequence.Sequence2Sequence import sequence_to_sequence_translator
 

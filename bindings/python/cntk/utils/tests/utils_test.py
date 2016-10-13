@@ -7,7 +7,7 @@
 import numpy
 import pytest
 
-from cntk import DeviceDescriptor
+from cntk.device import DeviceDescriptor
 from cntk.tests.test_utils import precision, PRECISION_TO_TYPE
 from cntk.ops import *
 from cntk.utils import *

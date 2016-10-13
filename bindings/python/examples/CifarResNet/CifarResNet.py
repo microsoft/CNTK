@@ -7,7 +7,8 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, DeviceDescriptor
+from cntk import Trainer
+from cntk.device import DeviceDescriptor
 from cntk.learner import sgd
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, pooling, AVG_POOLING
 from cntk.io import ReaderConfig, ImageDeserializer
