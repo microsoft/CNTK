@@ -36,7 +36,7 @@ class Learner(cntk_py.Learner):
     To instantiate a concreate learner, use the factory methods in this module.
     '''
         
-    def update(gradient_values, training_sample_count):
+    def update(self, gradient_values, training_sample_count):
         '''
         Update the parameters associated with this learner. 
 
