@@ -1416,6 +1416,33 @@ def reduce_min(x, axis, name=''):
 # training ops
 ##########################################################################
 
+@typemap
+def random_sample_inclusion_frequency(x, num_samples, allow_duplicates, name=''):
+    '''
+    Compute a new tensor that randomly sets `dropout_rate`*100 percent of the
+    nodes to zero. This is commonly used to prevent overfitting during the training
+    process.
+
+    The output tensor has the same shape as `x`, but with `dropout_rate` of the
+    elements set to zero (dropped out).
+
+
+    Args:        
+        x: input tensor
+        dropout_rate (float, [0,1)): fraction of nodes to be set to zero
+        name (`str`, optional): the name of the Function instance in the network
+
+    Returns:
+        FIXME also in all of the other cases :class:`cntk.Function`
+    '''
+    if num_samples <= 0:
+        raise ValueError('num_samples must be greater that zero')
+
+    from cntk.cntk_py import random_sample_inclusion_frequency
+    x = sanitize_input(x)
+
+    return dropout(x, num_samples,allow_duplicates, name)
+
 
 @typemap
 def dropout(x, dropout_rate=0.0, name=''):
