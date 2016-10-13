@@ -97,6 +97,8 @@ namespace CNTK
             { PrimitiveOpType::TransposeAxes, L"TransposeAxes" },
             { PrimitiveOpType::Where, L"Where" },
             { PrimitiveOpType::Slice, L"Slice" },
+            { PrimitiveOpType::RandomSample, L"RandomSample" },
+            { PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency" },
             { PrimitiveOpType::Dropout, L"Dropout" },
             { PrimitiveOpType::Reshape, L"Reshape" },
             { PrimitiveOpType::Pooling, L"Pooling" },

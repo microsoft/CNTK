@@ -1417,20 +1417,18 @@ def reduce_min(x, axis, name=''):
 ##########################################################################
 
 @typemap
-def random_sample_inclusion_frequency(x, num_samples, allow_duplicates, name=''):
+def random_sample(weights, num_samples, allow_duplicates, name=''):
     '''
-    Compute a new tensor that randomly sets `dropout_rate`*100 percent of the
-    nodes to zero. This is commonly used to prevent overfitting during the training
-    process.
+    The node's value is a set of sizeOfSampledSet random samples represented by a (sparse) matrix of shape [nClasses x sizeOfSampledSet]
+    where nClasses is the number of classes (categories) to choose from. The output has no dynamic axis.
+    The samples are drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
+    We get one set of samples for per minibatch.
+    Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
 
-    The output tensor has the same shape as `x`, but with `dropout_rate` of the
-    elements set to zero (dropped out).
-
-
-    Args:        
-        x: input tensor
-        dropout_rate (float, [0,1)): fraction of nodes to be set to zero
-        name (`str`, optional): the name of the Function instance in the network
+    Args:
+    weights: input vector of sampling weights which should be nonzero positive numbers.
+    num_samples ('int'): number of expected samples
+    allow_duplicates ('bool'): If sampling is done with replacement (true) or without (false).
 
     Returns:
         FIXME also in all of the other cases :class:`cntk.Function`
@@ -1439,9 +1437,32 @@ def random_sample_inclusion_frequency(x, num_samples, allow_duplicates, name='')
         raise ValueError('num_samples must be greater that zero')
 
     from cntk.cntk_py import random_sample_inclusion_frequency
-    x = sanitize_input(x)
+    weights = sanitize_input(weights)
 
-    return dropout(x, num_samples,allow_duplicates, name)
+    return random_sample(weights, num_samples, allow_duplicates, name)
+
+
+@typemap
+def random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, name=''):
+    '''
+    For weighted sampling a the specifed sample size this node computes the expected number of occurences of each class
+    the the sampled set. Intended uses are e.g. sampled softmax, noise contrastive estimation etc. 
+
+    Args:
+    weights: input vector of sampling weights which should be nonzero positive numbers.
+    num_samples ('int'): number of expected samples
+    allow_duplicates ('bool'): If sampling is done with replacement (true) or without (false).
+
+    Returns:
+        FIXME also in all of the other cases :class:`cntk.Function`
+    '''
+    if num_samples <= 0:
+        raise ValueError('num_samples must be greater that zero')
+
+    from cntk.cntk_py import random_sample_inclusion_frequency
+    weights = sanitize_input(weights)
+
+    return random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, name)
 
 
 @typemap
