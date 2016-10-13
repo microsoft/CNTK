@@ -87,9 +87,6 @@ public:
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
 
-    // TODO: remove this once the 1bitsgd code is changed to use mpiwrapper only.
-    virtual MPI_Comm Communicator() const = 0;
-
     virtual int Finalize(void) = 0;
     virtual int Wait(MPI_Request* request, MPI_Status* status) = 0;
     virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status) = 0;
@@ -160,6 +157,7 @@ public:
 
 private:
     void Ping(const char *msg) const;
+    MPI_Comm Communicator() const;
 
     void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/);
 
@@ -175,8 +173,6 @@ public:
     // -----------------------------------------------------------------------
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
-
-    virtual MPI_Comm Communicator() const;
 
     virtual int Finalize(void);
     virtual int Wait(MPI_Request* request, MPI_Status* status);
@@ -228,8 +224,6 @@ public:
     // -----------------------------------------------------------------------
     // data-exchange functions (wrappers around MPI functions)
     // -----------------------------------------------------------------------
-
-    virtual MPI_Comm Communicator() const;
 
     virtual int Finalize(void);
     virtual int Wait(MPI_Request* request, MPI_Status* status);

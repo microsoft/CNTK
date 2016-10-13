@@ -677,11 +677,6 @@ void MPIWrapperEmpty::Bcast(float*pData, size_t nData, size_t srcRank)
 {
 }
 
-MPI_Comm MPIWrapperEmpty::Communicator() const
-{
-    return (MPI_Comm)0;
-}
-
 #pragma warning(pop)
 
 }}}
