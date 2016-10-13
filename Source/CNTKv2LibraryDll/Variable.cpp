@@ -65,6 +65,7 @@ namespace CNTK
     static const std::wstring InitializerTypeAttributeName = L"initializerType";
     static const std::wstring OutputRankAttributeName = L"outputRank";
     static const std::wstring FilterRankAttributeName = L"filterRank";
+    static const std::wstring ValueAttributeName = L"value";
     static const std::wstring ScaleAttributeName = L"scale";
     static const std::wstring RandomSeedAttributeName = L"randomSeed";
     static const std::wstring KernelWidthAttributeName = L"kernelWidth";
@@ -98,6 +99,15 @@ namespace CNTK
         initConfig[FilterRankAttributeName] = (size_t)filterRank;
         initConfig[ScaleAttributeName] = scale;
         initConfig[RandomSeedAttributeName] = (size_t)seed;
+
+        return initConfig;
+    }
+
+    ParameterInitializer ConstantInitializer(double value)
+    {
+        Dictionary initConfig;
+        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::ConstantInitializerTypeName;
+        initConfig[ValueAttributeName] = value;
 
         return initConfig;
     }
@@ -152,6 +162,10 @@ namespace CNTK
         return initConfig;
     }
 
+    Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
+        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, name, uid))
+    {}
+
     template <typename ElementType>
     /*static*/ NDArrayViewPtr Variable::CreateValueFromParameterInitializer(const NDShape& shape, const ParameterInitializer& initConfig, const DeviceDescriptor& device)
     {
@@ -159,7 +173,12 @@ namespace CNTK
         auto value = MakeSharedObject<NDArrayView>(dataType, shape, device);
         auto valueMatrix = value->template GetWritableMatrix<ElementType>();
         auto initializerType = initConfig[InitializerTypeAttributeName].Value<std::wstring>();
-        if (initializerType == Microsoft::MSR::CNTK::BilinearInitializerTypeName)
+        if (initializerType == Microsoft::MSR::CNTK::ConstantInitializerTypeName)
+        {
+            auto constantInitValue = initConfig[ValueAttributeName].Value<double>();
+            valueMatrix->SetValue((ElementType)constantInitValue);
+        }
+        else if (initializerType == Microsoft::MSR::CNTK::BilinearInitializerTypeName)
         {
             auto kernelWidth = initConfig[KernelWidthAttributeName].Value<size_t>();
             auto kernelHeight = initConfig[KernelHeightAttributeName].Value<size_t>();

@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CPPEvalClient.cpp">
+    <ClCompile Include="..\..\..\..\Examples\Evaluation\CPPEvalClient\CPPEvalClient.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

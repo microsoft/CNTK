@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <CPUMatrix.h> // For CPUMatrix::SetNumThreads
 #include <thread>
+#include "GPUMatrix.h"
+#include "Globals.h"
 
 namespace CNTK
 {
@@ -45,16 +47,44 @@ namespace CNTK
         }
 
         std::atomic<bool> s_disableAutomaticUnpackingOfPackedValues(false);
-        void DisableAutomaticUnpackingOfPackedValues()
+        void SetAutomaticUnpackingOfPackedValues(bool disable)
         {
-            s_disableAutomaticUnpackingOfPackedValues.store(true);
+            s_disableAutomaticUnpackingOfPackedValues.store(disable);
         }
 
         bool IsAutomaticUnpackingOfPackedValuesDisabled()
         {
             return s_disableAutomaticUnpackingOfPackedValues.load();
         }
+
+        std::atomic<int> s_computationNetworkTraceLevel(0);
+        void SetComputationNetworkTraceLevel(int traceLevel)
+        {
+            s_computationNetworkTraceLevel.store(traceLevel);
+        }
+
+        int GetComputationNetworkTraceLevel()
+        {
+            return s_computationNetworkTraceLevel.load();
+        }
+
+        void SetGPUMemoryAllocationTraceLevel(int traceLevel)
+        {
+            Microsoft::MSR::CNTK::TracingGPUMemoryAllocator::SetTraceLevel(traceLevel);
+        }
+
+        void ForceSynchronousCUDAKernelExecutions()
+        {
+            Microsoft::MSR::CNTK::SyncGuard::EnableSync();
+        }
+
+        void ForceDeterministicAlgorithms()
+        {
+            Microsoft::MSR::CNTK::Globals::ForceDeterministicAlgorithms();
+        }
     }
+
+    /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);
 
     /*static*/ std::atomic<bool> DeviceDescriptor::s_defaultDeviceFrozen(false);
     /*static*/ std::shared_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice;
@@ -143,6 +173,7 @@ namespace CNTK
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
     /*static*/ const std::vector<Axis> Axis::DefaultInputVariableDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
+    /*static*/ const std::vector<Axis> Axis::UnknownDynamicAxes = { Axis(SentinelStaticAxisIndexValueForUnknownAxes) };
 
     /*static*/ const Axis& Axis::DefaultDynamicAxis()
     {
@@ -162,10 +193,6 @@ namespace CNTK
         return s_allStaticAxes;
     }
 
-    /*static*/ Axis Axis::NewUniqueDynamicAxis(const std::wstring& axisNamePrefix, bool isOrderedDynamicAxis /*= true*/)
-    {
-        return Axis(s_uniqueDynamicAxisNames.NewUniqueDynamicAxisName(axisNamePrefix), isOrderedDynamicAxis);
-    }
 
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {

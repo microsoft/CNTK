@@ -5,18 +5,15 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{1a078fc2-21c0-4f42-9a5b-0e84e944bc74}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>SLUHandsOn\SLUHandsOn.py</StartupFile>
-    <SearchPath>C:\work\cntk\bindings\python;C:\work\cntk\bindings\python\examples;c:\work\CNTK\x64\Release</SearchPath>
+    <StartupFile>NumpyInterop\FeedForwardNet.py</StartupFile>
+    <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <InterpreterId>{9a7a9026-48c1-4688-9d5d-e5699d47d074}</InterpreterId>
-    <InterpreterVersion>3.5</InterpreterVersion>
+    <InterpreterId>{e91159cb-e1ee-4880-a9b1-63558527d248}</InterpreterId>
+    <InterpreterVersion>3.4</InterpreterVersion>
     <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
-    <IsWindowsApplication>False</IsWindowsApplication>
-    <InterpreterPath>c:\program files\Anaconda3\envs\cntk\python.exe</InterpreterPath>
-    <Environment>PYTHONPATH=C:\work\cntk\bindings\python;C:\work\cntk\bindings\python\examples</Environment>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
@@ -50,7 +47,7 @@
     <Folder Include="Speech\" />
   </ItemGroup>
   <ItemGroup>
-    <InterpreterReference Include="{9a7a9026-48c1-4688-9d5d-e5699d47d074}\3.5" />
+    <InterpreterReference Include="{e91159cb-e1ee-4880-a9b1-63558527d248}\3.4" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />

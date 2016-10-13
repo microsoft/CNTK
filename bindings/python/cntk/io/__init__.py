@@ -35,6 +35,9 @@ class MinibatchData(cntk_py.MinibatchData):
         '''
         return self.m_data
 
+    def __len__(self):
+        return self.num_sequences()
+
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
     Parent class of all minibatch sources. For most cases you will need the
@@ -254,12 +257,8 @@ class ImageDeserializer(Deserializer):
         Returns:
             `dict` describing the crop transform
         '''
-        trans = {}
-        trans['type'] = 'Crop'
-        trans['cropType'] = crop_type
-        trans['cropRatio'] = ratio
-        trans['jitterType'] = jitter_type
-        return trans
+        return dict(type='Crop', cropType=crop_type, cropRatio=ratio,
+                jitterType=jitter_type)
 
     @staticmethod
     def scale(width, height, channels, interpolations='linear'):
@@ -276,13 +275,8 @@ class ImageDeserializer(Deserializer):
         Returns:
             `dict` describing the scale transform
         '''
-        trans = {}
-        trans['type'] = 'Scale'
-        trans['width'] = width
-        trans['height'] = height
-        trans['channels'] = channels
-        trans['interpolations'] = interpolations
-        return trans
+        return dict(type='Scale', width=width, height=height, channels=channels,
+                interpolations=interpolations)
 
     @staticmethod
     def mean(filename):
@@ -296,10 +290,7 @@ class ImageDeserializer(Deserializer):
         Returns:
             `dict` describing the mean transform
         '''
-        trans = {}
-        trans['type'] = 'Mean'
-        trans['meanFile'] = filename
-        return trans
+        return dict(type='Mean', meanFile=filename)
 
     # TODO color transpose
 
