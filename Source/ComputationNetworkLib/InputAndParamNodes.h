@@ -14,6 +14,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+static const wchar_t* ConstantInitializerTypeName =         L"constant";
 static const wchar_t* UniformInitializerTypeName =          L"uniform";
 static const wchar_t* GaussianInitializerTypeName =         L"gaussian";
 static const wchar_t* XavierInitializerTypeName =           L"xavier";

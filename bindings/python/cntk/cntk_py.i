@@ -1,5 +1,5 @@
 %module(directors="1") cntk_py
-%feature("autodoc", "1");
+//%feature("autodoc", "1");
 
 %include "stl.i"
 %include "std_wstring.i" 
@@ -50,6 +50,7 @@
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
 %ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed;
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
+%ignore CNTK::Internal::GetComputationNetworkTraceLevel;
 
 %{
 #define SWIG_FILE_WITH_INIT
