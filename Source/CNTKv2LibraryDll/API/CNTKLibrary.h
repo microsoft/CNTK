@@ -2464,6 +2464,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in matrix multiplication operation with the specified input operands.
     /// TODO: Specify the constraints on the shapes of the operands.
+    /// TODO: Add the inputRankToMap parameter
     ///
     CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank = 1, const std::wstring& name = L"");
 

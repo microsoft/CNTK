@@ -255,32 +255,42 @@ namespace CNTK
                 placeholderReplacements[clonedInput] = replacements.at(cloneeInput);
             }
             else
-                {
+            {
                 // This is not a replacement. Lets create a fresh clone
-                if (cloneeInput.IsInput() || cloneeInput.IsConstant() || cloneeInput.IsPlaceholder())
+
+                // Is it a leaf
+                if (cloneeInput.IsInput() || cloneeInput.IsConstant() || cloneeInput.IsPlaceholder() || cloneeInput.IsParameter())
                 {
-                    clonedInput = cloneeInput.Clone();
-                    leafVariablesCloneMap[cloneeInput] = clonedInput;
-                }
-                else if (cloneeInput.IsParameter())
-                {
-                    switch (parameterCloneMethod)
+                    if (leafVariablesCloneMap.find(cloneeInput) != leafVariablesCloneMap.end())
+                        clonedInput = leafVariablesCloneMap.at(cloneeInput);
+                    else
                     {
-                    case ParameterCloningMethod::Clone:
-                        clonedInput = cloneeInput.Clone();
-                        leafVariablesCloneMap[cloneeInput] = clonedInput;
-                        break;
-                    case ParameterCloningMethod::Share:
-                        clonedInput = cloneeInput;
-                        break;
-                    case ParameterCloningMethod::Freeze:
-                        clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
-                        leafVariablesCloneMap[cloneeInput] = clonedInput;
-                        break;
-                    default:
-                        LogicError("Unknown ParameterCloningMethod");
-            }
-        }
+                        if (cloneeInput.IsParameter())
+                        {
+                            switch (parameterCloneMethod)
+                            {
+                            case ParameterCloningMethod::Clone:
+                                clonedInput = cloneeInput.Clone();
+                                leafVariablesCloneMap[cloneeInput] = clonedInput;
+                                break;
+                            case ParameterCloningMethod::Share:
+                                clonedInput = cloneeInput;
+                                break;
+                            case ParameterCloningMethod::Freeze:
+                                clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
+                                leafVariablesCloneMap[cloneeInput] = clonedInput;
+                                break;
+                            default:
+                                LogicError("Unknown ParameterCloningMethod");
+                            }
+                        }
+                        else
+                        {
+                            clonedInput = cloneeInput.Clone();
+                            leafVariablesCloneMap[cloneeInput] = clonedInput;
+                        }
+                    }
+                }
                 else
                 {
                     assert(cloneeInput.IsOutput());
@@ -821,7 +831,10 @@ namespace CNTK
     {
         auto iter = variableToNodeMap.find(variable);
         if (iter != variableToNodeMap.end())
+        {
+            isVariableRootMap[variable] = false;
             return iter->second;
+        }
 
         // The DataType, Shape and DynamicAxes of the variable must be known by now
         if (variable.GetDataType() == DataType::Unknown)
@@ -899,7 +912,8 @@ namespace CNTK
         }
 
         variableToNodeMap[variable] = computationNodePtr;
-        isVariableRootMap[variable] = variable.IsOutput();
+        if (isVariableRootMap.find(variable) == isVariableRootMap.end())
+            isVariableRootMap[variable] = variable.IsOutput();
         return computationNodePtr;
     }
 
@@ -1277,9 +1291,8 @@ namespace CNTK
                 }
             }
 
-#ifdef _DEBUG
+            //m_computationNetwork->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
             m_computationNetwork->SetTraceLevel(1);
-#endif
             m_computationNetwork->CompileNetwork();
 
             // Verify that the shapes of the output Variables that we computed match the corresponding nodes in the ComputationNetwork

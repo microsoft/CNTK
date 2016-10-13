@@ -650,7 +650,8 @@ def eval(op, precision, device, arguments=None, backward_pass=False):
     forward_retain = set()
     for v in op.outputs():
         forward_out_var_map[v] = None  # will be populated in Forward()
-        forward_retain.add(v)
+        if backward_pass:
+            forward_retain.add(v)
 
     state = op.forward(forward_in_var_map,
                        forward_out_var_map, device, forward_retain)

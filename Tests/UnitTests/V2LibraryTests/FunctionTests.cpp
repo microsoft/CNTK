@@ -235,21 +235,17 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             size_t outputSequenceAxisLength = (axis == Axis::DefaultDynamicAxis()) ? maxSliceLength : maxActualSequenceLength;
             size_t outputBatchAxisLength = (axis == Axis::DefaultBatchAxis()) ? maxSliceLength : numSequences;
             NDShape outputShape = sliceFunc->Output().Shape().AppendShape({ outputSequenceAxisLength, outputBatchAxisLength });
-            std::vector<float> outputData(outputShape.TotalSize());
-            ValuePtr outputValue;
-            if (endAndBeginOffsetDiff > 0)
-                outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData, false));
+            std::vector<float> outputData(outputShape.TotalSize(), 0);
+            NDMaskPtr mask;
+            if (endAndBeginOffsetDiff < 0)
+            {
+                ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData, false));
+                mask = MakeSharedObject<NDMask>(std::initializer_list<size_t>({ outputSequenceAxisLength, outputBatchAxisLength }), device);
+            }
+            ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData, false), mask);
 
             std::unordered_map<Variable, ValuePtr> outputs = { { sliceFunc->Output(), outputValue } };
             sliceFunc->Forward({ { inputVar, sequencesValue } }, outputs, device);
-            if (endAndBeginOffsetDiff < 0)
-            {
-                Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ false);
-                outputValue = outputs.begin()->second;
-                auto cpuOutputValue = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
-                cpuOutputValue->CopyFrom(*outputValue->Data());
-                Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
-            }
 
             size_t startSequenceIdx = (axis == Axis::DefaultBatchAxis()) ? ((beginOffset >= 0) ? beginOffset : (numSequences + beginOffset)) : 0;
             size_t endSequenceIdx = (axis == Axis::DefaultBatchAxis()) ? ((endOffset > 0) ? endOffset : (numSequences + endOffset)) : numSequences;
@@ -260,11 +256,17 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
                 size_t currentSequenceLength = sequenceLengths[i];
                 size_t startFrameIdx = (axis == Axis::DefaultDynamicAxis()) ? ((beginOffset >= 0) ? beginOffset : (currentSequenceLength + beginOffset)) : 0;
                 size_t endFrameIdx = (axis == Axis::DefaultDynamicAxis()) ? ((endOffset > 0) ? endOffset : (currentSequenceLength + endOffset)) : currentSequenceLength;
-                for (size_t j = startFrameIdx; j < endFrameIdx; ++j)
+                size_t j = startFrameIdx;
+                for (; j < endFrameIdx; ++j)
                 {
                     for (size_t k = 0; k < inputShape.TotalSize(); ++k)
                         expectedOutputValues[((((i - startSequenceIdx) * outputSequenceAxisLength) + (j - startFrameIdx)) * inputShape.TotalSize()) + k] = 2 * sequences[i][(j * inputShape.TotalSize()) + k];
                 }
+
+                // Zero out the invalid portions of the actual output
+                for (; j < (outputSequenceAxisLength + startFrameIdx); ++j)
+                    for (size_t k = 0; k < inputShape.TotalSize(); ++k)
+                        outputData[((((i - startSequenceIdx) * outputSequenceAxisLength) + (j - startFrameIdx)) * inputShape.TotalSize()) + k] = 0;
             }
 
             FloatingPointVectorCompare(outputData, expectedOutputValues, "testDynamicAxisSlice: Forward prop results do not match expected results");
