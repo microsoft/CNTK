@@ -37,15 +37,7 @@ typedef enum _MPI_Datatype { MPI_CHAR, MPI_INT, MPI_FLOAT, MPI_DOUBLE, MPI_UNSIG
 
 #define MPI_MAX_ERROR_STRING  64
 
-#define MPI_Finalize()                      MPI_SUCCESS
-#define MPI_Wait(a, b)                      (a), (b), MPI_UNDEFINED
-#define MPI_Waitany(a, b, c, d)             (a), (b), (c), (d), MPI_UNDEFINED
-#define MPI_Waitall(a, b, c)                (a), (b), (c), MPI_UNDEFINED
-#define MPI_Isend(a, b, c, d, e, f, g)      (a), (b), (c), (d), (e), (f), MPI_UNDEFINED
-#define MPI_Recv(a, b, c, d, e, f, g)       (a), (b), (c), (d), (e), (f), (g), MPI_UNDEFINED
-#define MPI_Irecv(a, b, c, d, e, f, g)      (a), (b), (c), (d), (e), (f), (g), MPI_UNDEFINED
-#define MPI_Iallreduce(a, b, c, d, e, f, g) (a), (b), (c), (d), (e), (f), (g), MPI_UNDEFINED
-
+typedef int MPI_Op;
 typedef int MPI_Request;
 typedef void *MPI_Status;
 #endif
@@ -110,6 +102,7 @@ public:
 
 private:
     void Ping(const char *msg) const;
+    MPI_Comm Communicator() const;
 
     void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/);
 
@@ -119,7 +112,15 @@ public:
 
     static void DeleteInstance();
 
-    MPI_Comm Communicator() const;
+    int Finalize(void);
+    int Wait(MPI_Request* request, MPI_Status* status);
+    int Waitany(int count, MPI_Request array_of_requests[], int* index,MPI_Status* status);
+    int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
+    int Isend(const void* buf, int count,MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
+    int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
+
     size_t NumNodesInUse() const;
     size_t CurrentNodeRank() const;
     bool IsMainNode() const;

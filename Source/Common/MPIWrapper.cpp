@@ -308,6 +308,78 @@ MPI_Comm MPIWrapper::Communicator() const
     return m_currentComm;
 }
 
+int MPIWrapper::Finalize(void)
+{
+#if HAS_OPENMPI
+    return MPI_Finalize();
+#else
+    return MPI_UNDEFINED;
+#endif
+}
+
+int MPIWrapper::Wait(MPI_Request* request, MPI_Status* status)
+{
+#if HAS_OPENMPI
+    return MPI_Wait(request, status);
+#else
+    return MPI_UNDEFINED;
+#endif
+}
+
+int MPIWrapper::Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status)
+{
+#if HAS_OPENMPI
+    return MPI_Waitany(count, array_of_requests, index, status);
+#else
+    return MPI_UNDEFINED;
+#endif
+}
+
+int MPIWrapper::Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[])
+{
+#if HAS_OPENMPI
+    return MPI_Waitall(count, array_of_requests, array_of_statuses);
+#else
+    return MPI_UNDEFINED;
+#endif
+}
+
+int MPIWrapper::Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Request* request)
+{
+#if HAS_OPENMPI
+    return MPI_Isend(buf, count, datatype, dest, tag, m_currentComm, request);
+#else
+    return MPI_UNDEFINED;
+#endif
+}
+
+int MPIWrapper::Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Status* status)
+{
+#if HAS_OPENMPI
+    return MPI_Recv(buf, count, datatype, source, tag, m_currentComm, status);
+#else
+    return MPI_UNDEFINED;
+#endif
+}
+
+int MPIWrapper::Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Request* request)
+{
+#if HAS_OPENMPI
+    return MPI_Irecv(buf, count, datatype, source, tag, m_currentComm, request);
+#else
+    return MPI_UNDEFINED;
+#endif
+}
+
+int MPIWrapper::Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Request* request)
+{
+#if HAS_OPENMPI
+    return MPI_Iallreduce(sendbuf, recvbuf, count, datatype, op, m_currentComm, request);
+#else
+    return MPI_UNDEFINED;
+#endif
+}
+
 size_t MPIWrapper::NumNodesInUse() const
 {
     return m_numNodesInUse;
