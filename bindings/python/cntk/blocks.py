@@ -77,6 +77,7 @@ def _apply(f, args):
             return (args,)
         return functools.reduce(operator.add, [(flatten_tuple(item)) for item in args])
     args = list(flatten_tuple(args))
+    # TODO: This should go into Function.replace_placeholders()
     def _output_of(arg):  # helper to get the output of an arg; use arg itself if no output() method (that'd be a Variable)
         try:
             return arg.output()
@@ -125,6 +126,8 @@ def Placeholder(_inf, name='placeholder'):
     print("new " + _node_description(p))
     return p
 
+# TODO: Let's not encourage users to use combine([f]) as a workaround for identity/pass, but rather have it as a first-class operator implemented that we then use. [Willi]
+#       If we have Function identity, in same pattern as e.g. sigmoid, then that would suffice.
 def Identity(_inf):
     x = Placeholder(_inf=_inf, name='identity_arg')
     #apply_x = combine([x])  # BUGBUG: not working

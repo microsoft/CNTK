@@ -29,13 +29,13 @@ def _Infer(shape, axis):
 # upgrade Trainer class, add new method
 def _extend_Trainer(trainer):
     class TrainerEx(trainer.__class__):
-        # new method get_next_minibatch()
+        # new method next_minibatch()
         # TODO: make this a true static method so we can say Trainer.get_next_minibatch()
-        # TODO: is the "_next" really necessary? Trainer.get_minibatch() seems sufficient
+        # TODO: decide whether this really belongs into Trainer, or elsewhere
         @staticmethod
         def next_minibatch(source, minibatch_size, input_map):
             mb = reader.get_next_minibatch(minibatch_size)
-            if len(mb) == 0:  # TODO: return None instead?
+            if not mb:
                 return (None, 0)
             else:
                 return ({ key : mb[value].m_data        for (key, value) in input_map.items() },

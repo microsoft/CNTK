@@ -22,6 +22,7 @@ from blocks import _name_and_extend_Function, _wrap_rename_Function  # (debuggin
 
 # Sequential -- composite that applies a sequence of functions onto an input
 # Sequential ([F, G, H]) === F >> G >> H
+# TODO: address this feedback: "I find this arbitrary. You can have Sequential as part of a bigger layer.  Or you can view a linear layer already as a model (which is part of the bigger model)."
 def Sequential(arrayOfFunctions, _inf):
     import functools  # reduce()
     apply_x = functools.reduce(lambda f, g: f >> g, arrayOfFunctions, Identity(_inf=_inf))

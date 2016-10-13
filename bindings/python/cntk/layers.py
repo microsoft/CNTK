@@ -93,6 +93,7 @@ def Stabilizer(_inf, steepness=4):
 
     # application
     x = Placeholder(_inf=_inf, name='stabilizer_arg')
+    # TODO: risk of confusion; can these functions be namespaced?
     beta = log (1 + exp (steepness * param)) / steepness
     apply_x = beta * x
     _name_and_extend_Function(apply_x, 'Stabilizer')

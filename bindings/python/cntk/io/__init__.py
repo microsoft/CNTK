@@ -355,6 +355,7 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
 def CNTKTextFormatMinibatchSource(path, streams, epoch_size=None):
     from utils import _ClassFromDict
     # convert streams into StreamConfiguration format
+    # TODO: stream_alias should default to 'key'
     stream_configs = [ StreamConfiguration(key, dim=value.dim, is_sparse=value.is_sparse, stream_alias=value.stream_alias) for (key, value) in streams.items() ]
     if epoch_size is not None:  # TODO: use MAX_UI64, now that we have access
         source = text_format_minibatch_source(path, stream_configs, epoch_size)
