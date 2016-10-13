@@ -1,7 +1,9 @@
 from cntk import cntk_py
 from ..utils import typemap, sanitize_var_map, value_to_seq
 
+
 class Function(cntk_py.Function):
+
     '''
     Base class of all operators.
 
@@ -16,9 +18,8 @@ class Function(cntk_py.Function):
         if len(self.outputs()) == 1:
             return getattr(self.output(), name)
 
-        raise AttributeError("'%s' object has no attribute '%s'"%\
-                (type(self), name))
-
+        raise AttributeError("'%s' object has no attribute '%s'" %
+                             (type(self), name))
 
     @typemap
     def arguments(self):
@@ -56,9 +57,11 @@ class Function(cntk_py.Function):
         Returns:
             `Function`: the cloned Function
         '''
-        if parameterCloneMethod not in set(['clone','share','freeze']):
-            raise ValueError('parameterCloneMethod must be one of clone, share, or freeze')
-        method = getattr(cntk_py,'ParameterCloningMethod_'+parameterCloneMethod.capitalize())
+        if parameterCloneMethod not in set(['clone', 'share', 'freeze']):
+            raise ValueError(
+                'parameterCloneMethod must be one of clone, share, or freeze')
+        method = getattr(
+            cntk_py, 'ParameterCloningMethod_' + parameterCloneMethod.capitalize())
         if replacements is None:
             replacements = dict()
         return super(Function, self).clone(method, replacements)
@@ -73,20 +76,23 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).constants()
 
-    def eval(self, arguments=None, seq_starts=None, device=None):
+    def eval(self, arguments=None, device=None):
         '''
         Evaluate the node using the specified `arguments` as input.
 
         Args:
-            arguments (`dict` or `list` or single input):
-              * map from input variables to the data
-              * list of inputs in the order that the function expects or
-              * a single input, if the function only has one argument.
-              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchSource`
-            seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
-             treated as a new sequence. Otherwise, it is interpreted as a list of
-             Booleans that tell whether a sequence is a new sequence (`True`) or a
-             continuation of the previous one (`False`)
+            arguments (`dict` or `list` or `tuple`): maps variables to their
+             input data. The interpretation depends on the input type:
+               * `dict`: keys are input variable or names and values are the input data.
+               * `list`: elements are input data in the order their respective variables have been defined in the network.
+             In both cases, every every sample in the data will be interpreted
+             as a new sequence. To mark samples as continuations of the
+             previous sequence, specify `arguments` as `tuple`: the
+             first element will be used as `arguments`, and the second one will
+             be used as a list of bools, denoting whether a sequence is a new
+             one (`True`) or a continuation of the previous one (`False`).
+             Data should be either NumPy arrays or a
+             :class:`cntk.io.MinibatchData` instance.
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -94,51 +100,56 @@ class Function(cntk_py.Function):
         Returns:
             `bool`: `True` if updates have been performed
         '''
-        _, output_map = self.forward(arguments or {}, self.outputs(),
-                seq_starts, device)
+        _, output_map = self.forward(arguments or {}, self.outputs(), device=device)
 
-        if len(output_map)>1:
+        if len(output_map) > 1:
             return output_map
         else:
             return list(output_map.values())[0]
 
     @typemap
-    def forward(self, arguments, outputs, seq_starts=None, device=None,
-            forward_retain=None):
+    def forward(self, arguments, outputs, keep_for_backward=None, device=None):
         '''
         Computes and stores the values of speficied variables in `outputs`,
         using provided `arguments` values corresponding to each leaf `Variable`
         of the function whose is_input() is true.
 
         Args:
-            arguments (`dict`): dictionary of bindings for the input variables
-            outputs (`list` or `tuple`): outputs to fetch values for.
-            seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
-             treated as a new sequence. Otherwise, it is interpreted as a list of
-             Booleans that tell whether a sequence is a new sequence (`True`) or a
-             continuation of the previous one (`False`)
+            arguments (`dict` or `list` or `tuple`): maps variables to their
+             input data. The interpretation depends on the input type:
+               * `dict`: keys are input variable or names and values are the input data.
+               * `list`: elements are input data in the order their respective variables have been defined in the network.
+             In both cases, every every sample in the data will be interpreted
+             as a new sequence. To mark samples as continuations of the
+             previous sequence, specify `arguments` as `tuple`: the
+             first element will be used as `arguments`, and the second one will
+             be used as a list of bools, denoting whether a sequence is a new
+             one (`True`) or a continuation of the previous one (`False`).
+             Data should be either NumPy arrays or a
+             :class:`cntk.io.MinibatchData` instance.
+            outputs (iterable): outputs to fetch values for.
+            keep_for_backward (`set`): the subset of the Function's output variables
+             for which gradients shall be calculated in a subsequent backward call
+             for backpropagation.
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
-            forward_retain (`set`): the subset of the Function's output variables
-             for which gradients will be specified in a subsequent backward call
-             for backpropagation.
 
-        Returns: a tuple (`BackpropState`, `map` of outputs to NumPy arrays).
-            The BackpropState is a handle taken by :func:`backward`.
+        Returns:
+             A tuple (`BackpropState`, `map` of outputs to NumPy arrays). The
+             BackpropState is a handle taken by :func:`backward`.
         '''
         if device is None:
             from cntk import DeviceDescriptor
             device = DeviceDescriptor.use_default_device()
 
         in_var_map = sanitize_var_map(self.arguments(), arguments,
-                seq_starts, None, device)
-
-        forward_retain = set(forward_retain or self.outputs())
-        output_map = {v:None for v in forward_retain}
+                                      None, device)
+        output_map = {v: None for v in outputs}
+        keep_for_backward = set(keep_for_backward or {})
 
         res = super(Function, self)._forward(in_var_map, output_map, device,
-                forward_retain)
+                                             keep_for_backward)
 
         for k in output_map:
             output_map[k] = value_to_seq(output_map[k])
@@ -164,7 +175,7 @@ class Function(cntk_py.Function):
             `dict`: mapping of `variables` to NumPy arrays
         '''
         root_gradients = sanitize_var_map(self.outputs(), root_gradients,
-                None, None, None)
+                                          None, None, None)
 
         var_gradients = dict((var, None) for var in variables)
 
@@ -213,25 +224,19 @@ class Function(cntk_py.Function):
     # Function.output = lambda self:get_output_and_keep_reference(self)
         # '''
         # output
-
-
         # Args:
-            # self.replace_placeholders_internal(ph_map (`ph_map:`): text
-
-
+        # self.replace_placeholders_internal(ph_map (`ph_map:`): text
         # Returns:
-            # `None`: text
+        # `None`: text
         # '''
-        # kwargs=dict(locals()); del kwargs['self']; return super(Function, self).output(**kwargs)
+        # kwargs=dict(locals()); del kwargs['self']; return super(Function,
+        # self).output(**kwargs)
 
     # @typemap
     # def output_internal(self):
         # '''
-
-
-
         # Returns:
-            # `Variable`: text
+        # `Variable`: text
         # '''
         # return super(Function, self).output_internal()
 
@@ -280,33 +285,31 @@ class Function(cntk_py.Function):
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
-        kwargs=dict(locals()); del kwargs['self']; return super(Function, self).replace_placeholder(**kwargs)
+        kwargs = dict(locals())
+        del kwargs['self']
+        return super(Function, self).replace_placeholder(**kwargs)
 
     # @typemap
     # Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
         # '''
         # replace_placeholders
-
-
         # Returns:
-            # `None`: text
+        # `None`: text
         # '''
-        # kwargs=dict(locals()); del kwargs['self']; return super(Function, self).replace_placeholders(**kwargs)
+        # kwargs=dict(locals()); del kwargs['self']; return super(Function,
+        # self).replace_placeholders(**kwargs)
 
     # @typemap
     # def replace_placeholders_internal(self, placeholderReplacements):
         # '''
         # replace_placeholders_internal
-
-
         # Args:
-            # placeholderReplacements (`dict`): text
-
-
+        # placeholderReplacements (`dict`): text
         # Returns:
-            # `FunctionPtr`: text
+        # `FunctionPtr`: text
         # '''
-        # kwargs=dict(locals()); del kwargs['self']; return super(Function, self).replace_placeholders_internal(**kwargs)
+        # kwargs=dict(locals()); del kwargs['self']; return super(Function,
+        # self).replace_placeholders_internal(**kwargs)
 
     @typemap
     def restore_from_legacy_model(self, modelFilePath):
@@ -319,7 +322,9 @@ class Function(cntk_py.Function):
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file
         '''
-        kwargs=dict(locals()); del kwargs['self']; return super(Function, self).restore_from_legacy_model(**kwargs)
+        kwargs = dict(locals())
+        del kwargs['self']
+        return super(Function, self).restore_from_legacy_model(**kwargs)
 
     @typemap
     def root_function(self):

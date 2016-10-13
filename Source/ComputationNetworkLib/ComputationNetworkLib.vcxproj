@@ -131,6 +131,7 @@
     <ClCompile Include="RNNNodes.cpp" />
     <ClCompile Include="SpecialPurposeNodes.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="TrainingNodes.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
