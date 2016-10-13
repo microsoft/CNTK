@@ -1436,7 +1436,7 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
     if num_samples <= 0:
         raise ValueError('num_samples must be greater that zero')
 
-    from cntk.cntk_py import random_sample_inclusion_frequency
+    from cntk.cntk_py import random_sample
     weights = sanitize_input(weights)
 
     return random_sample(weights, num_samples, allow_duplicates, name)
