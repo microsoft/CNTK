@@ -429,7 +429,7 @@ def sanitize_function(arg):
 
 
 def sanitize_var_map(op_arguments, arguments, precision=None,
-                     device=None, add_batch_axis=False):
+                     device=None):
     '''
     Sanitizes a dictionary of `Variable`s to input data such that it can be
     handed off to the `Forward` method.
@@ -453,7 +453,6 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
         precision (`str` or `np.float32` or `np.float64`): if string it can be
          one of 'float' 'float32, 'double', 'float64', or `None`
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
-        add_batch_axis (`bool`): data in `arguments` are single instances and a batch axis has to be added
 
     Returns:
         `dict` that maps variables to sanitized batches
@@ -523,8 +522,6 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
         if isinstance(batch, MinibatchData):
             batch = batch.data()
         elif not isinstance(batch, Value):
-            if add_batch_axis:
-                batch = [batch]
             batch = sanitize_batch(
                 var, batch, seq_starts, precision, device)
 

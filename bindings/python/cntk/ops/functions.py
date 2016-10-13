@@ -136,12 +136,15 @@ class Function(cntk_py.Function):
              Data should be either NumPy arrays or a
              :class:`cntk.io.MinibatchData` instance.
             outputs (iterable): outputs to fetch values for.
-            keep_for_backward (`set`): the subset of the Function's output variables
-             for which gradients shall be calculated in a subsequent backward call
+            keep_for_backward (`set`, default `None): the subset of the
+             Function's output variables for which gradients shall be calculated
+             in a subsequent backward call. If `None`, the returned state will
+             be `None` and a subsequent call to `backward` will not be
+             possible.
              for backpropagation.
-            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
-             contains the type and id of the device on which the computation is
-             to be performed.
+            device (:class:`cntk.DeviceDescriptor`, default `None): the device
+             descriptor that contains the type and id of the device on which the
+             computation is. If `None`, the default device is used.
 
         Returns: 
              A tuple (`BackpropState`, `map` of outputs to NumPy arrays). The
@@ -182,8 +185,7 @@ class Function(cntk_py.Function):
         Returns:
             `dict`: mapping of `variables` to NumPy arrays
         '''
-        root_gradients = sanitize_var_map(self.outputs(), root_gradients,
-                                          None, None, None)
+        root_gradients = sanitize_var_map(self.outputs(), root_gradients)
 
         var_gradients = dict((var, None) for var in variables)
 
