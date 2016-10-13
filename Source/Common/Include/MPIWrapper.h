@@ -61,14 +61,75 @@ typedef std::shared_ptr<MPIWrapper> MPIWrapperPtr;
 
 class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
 {
+public:
+    MPIWrapper() {}
+    virtual ~MPIWrapper() {}
+
+    static MPIWrapperPtr GetInstance(bool create = false);
+    static void DeleteInstance();
+    static MPIWrapperPtr s_mpi;
+
+    // Note that specifically, this function is such that it does not require
+    // MPI initialization. Moreover, it can be used without actually loading any
+    // MPI libs.
+    // TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
+    static int GetTotalNumberOfMPINodes();
+
+    virtual size_t NumNodesInUse() const = 0;
+    virtual size_t CurrentNodeRank() const = 0;
+    virtual bool IsMainNode() const = 0;
+    virtual bool IsIdle() const = 0;
+    virtual bool UsingAllNodes() const = 0;
+    virtual size_t MainNodeRank() const = 0;
+
+    // -----------------------------------------------------------------------
+    // data-exchange functions (wrappers around MPI functions)
+    // -----------------------------------------------------------------------
+
+    virtual int Finalize(void) = 0;
+    virtual int Wait(MPI_Request* request, MPI_Status* status) = 0;
+    virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status) = 0;
+    virtual int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]) = 0;
+    virtual int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request) = 0;
+    virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status) = 0;
+    virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request) = 0;
+    virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request) = 0;
+
+    // helpers to determine the MPI_Datatype of a pointer
+    static MPI_Datatype GetDataType(char *);
+    static MPI_Datatype GetDataType(int *);
+    static MPI_Datatype GetDataType(float *);
+    static MPI_Datatype GetDataType(double *);
+    static MPI_Datatype GetDataType(size_t *);
+
+    // allreduce of a vector
+    virtual void AllReduce(std::vector<size_t>&accumulator) const = 0;
+    virtual void AllReduce(std::vector<double>&accumulator) const = 0;
+    virtual void AllReduce(std::vector<float>&accumulator) const = 0;
+
+    // for raw pointer
+    virtual void AllReduce(size_t*pData, size_t nData) = 0;
+    virtual void AllReduce(int*pData, size_t nData) = 0;
+    virtual void AllReduce(double*pData, size_t nData) = 0;
+    virtual void AllReduce(float*pData, size_t nData) = 0;
+
+    virtual void Bcast(size_t*pData, size_t nData, size_t srcRank) = 0;
+    virtual void Bcast(double*pData, size_t nData, size_t srcRank) = 0;
+    virtual void Bcast(float*pData, size_t nData, size_t srcRank) = 0;
+
+    // wait for all ranks to reach here
+    virtual void WaitAll() = 0;
+};
+
+
+class MPIWrapperMpi : public MPIWrapper
+{
     int m_myRank;
     int m_numMPINodes;
     size_t m_numNodesInUse;
 
     // MPI communicator that reflects the current subset selection
     MPI_Comm m_currentComm;
-
-    static MPIWrapperPtr s_mpi;
 
     // MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
     int MPI_Init_DL();
@@ -84,17 +145,11 @@ class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
     static void MPIWorkaroundAtExit();
 
 public:
-    MPIWrapper();
-
-    // Note that specifically, this function is such that it does not require
-    // MPI initialization. Moreover, it can be used without actually loading any
-    // MPI libs.
-    // TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
-    static int GetTotalNumberOfMPINodes();
+    MPIWrapperMpi();
 
     // Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
     // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
-    ~MPIWrapper();
+    ~MPIWrapperMpi();
 
 private:
     void Ping(const char *msg) const;
@@ -103,10 +158,6 @@ private:
     void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/);
 
 public:
-
-    static MPIWrapperPtr GetInstance(bool create = false);
-
-    static void DeleteInstance();
 
     size_t NumNodesInUse() const;
     size_t CurrentNodeRank() const;
@@ -128,23 +179,20 @@ public:
     int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
     int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
 
-    // helpers to determine the MPI_Datatype of a pointer
-    static MPI_Datatype GetDataType(char *);
-    static MPI_Datatype GetDataType(int *);
-    static MPI_Datatype GetDataType(float *);
-    static MPI_Datatype GetDataType(double *);
-    static MPI_Datatype GetDataType(size_t *);
-
     // allreduce of a vector
-    template <typename VECTORLIKEOBJECT>
-    void AllReduce(VECTORLIKEOBJECT &accumulator) const;
+    virtual void AllReduce(std::vector<size_t>&accumulator) const;
+    virtual void AllReduce(std::vector<double>&accumulator) const;
+    virtual void AllReduce(std::vector<float>&accumulator) const;
 
     // for raw pointer
-    template <class ElemType>
-    void AllReduce(ElemType *pData, size_t nData);
+    virtual void AllReduce(size_t*pData, size_t nData);
+    virtual void AllReduce(int*pData, size_t nData);
+    virtual void AllReduce(double*pData, size_t nData);
+    virtual void AllReduce(float*pData, size_t nData);
 
-    template <class ElemType>
-    void Bcast(ElemType *pData, size_t nData, size_t srcRank);
+    virtual void Bcast(size_t*pData, size_t nData, size_t srcRank);
+    virtual void Bcast(double*pData, size_t nData, size_t srcRank);
+    virtual void Bcast(float*pData, size_t nData, size_t srcRank);
 
     // wait for all ranks to reach here
     void WaitAll();

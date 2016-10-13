@@ -19,21 +19,6 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 
-// =======================================================================
-// class MPIWrapper
-// =======================================================================
-template void MPIWrapper::Bcast(size_t*, size_t, size_t);
-template void MPIWrapper::Bcast(double*, size_t, size_t);
-template void MPIWrapper::Bcast(float*, size_t, size_t);
-template void MPIWrapper::AllReduce(size_t*, size_t);
-template void MPIWrapper::AllReduce(int*, size_t);
-template void MPIWrapper::AllReduce(double*, size_t);
-template void MPIWrapper::AllReduce(float*, size_t);
-template void MPIWrapper::AllReduce(std::vector<size_t>&) const;
-template void MPIWrapper::AllReduce(std::vector<double>&) const;
-template void MPIWrapper::AllReduce(std::vector<float>&) const;
-
-
 int operator||(int rc, const MpiFail &what)
 {
     if (rc == MPI_SUCCESS)
@@ -65,11 +50,11 @@ int operator||(int rc, const MpiFail &what)
     RuntimeError("%s", what.c_str());
 }
 
-int MPIWrapper::s_myRank = -1;
-std::shared_ptr<MPIWrapper> MPIWrapper::s_mpi = nullptr;
+int MPIWrapperMpi::s_myRank = -1;
+std::shared_ptr<MPIWrapper> MPIWrapperMpi::s_mpi = nullptr;
 
 // MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
-int MPIWrapper::MPI_Init_DL()
+int MPIWrapperMpi::MPI_Init_DL()
 {
 #if !HAS_OPENMPI
     return MPI_SUCCESS;
@@ -111,12 +96,12 @@ int MPIWrapper::MPI_Init_DL()
 // simulatenously exit with non-0 exit code.
 // As a workaround, we simply sleep 50*rank miliseconds, effectively "de-synchronizing processes" at exit,
 // allowing MPI to sequentially handle terminations
-void MPIWrapper::MPIWorkaroundAtExit()
+void MPIWrapperMpi::MPIWorkaroundAtExit()
 {
     Sleep(s_myRank * 50);
 }
 
-MPIWrapper::MPIWrapper()
+MPIWrapperMpi::MPIWrapperMpi()
     : m_currentComm(MPI_COMM_WORLD)
 {
     static bool initialized = false;
@@ -150,7 +135,7 @@ MPIWrapper::MPIWrapper()
 
     // Applying MPI workaround
     s_myRank = m_myRank;
-    atexit(&MPIWrapper::MPIWorkaroundAtExit);
+    atexit(&MPIWrapperMpi::MPIWorkaroundAtExit);
 
     // by default we use all of them
     RequestNodes("MPIWrapper");
@@ -197,7 +182,7 @@ int MPIWrapper::GetTotalNumberOfMPINodes()
 
 // Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
 // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
-MPIWrapper::~MPIWrapper()
+MPIWrapperMpi::~MPIWrapperMpi()
 {
     fprintf(stderr, "~MPIWrapper\n");
 
@@ -219,7 +204,7 @@ MPIWrapper::~MPIWrapper()
     }
 }
 
-void MPIWrapper::Ping(const char *msg) const
+void MPIWrapperMpi::Ping(const char *msg) const
 {
 #if HAS_OPENMPI
 #undef USE2NDCOMM
@@ -231,8 +216,8 @@ void MPIWrapper::Ping(const char *msg) const
         return;
     }
 #endif
-    std::array<int, 1> handshake;
-    handshake[0] = 1;
+    std::vector<int> handshake;
+    handshake.push_back(1);
 
     fprintf(stderr, "ping [%s]: %d nodes pinging each other\n", msg, (int)NumNodesInUse());
     fflush(stderr);
@@ -243,7 +228,7 @@ void MPIWrapper::Ping(const char *msg) const
 #endif
 }
 
-void MPIWrapper::RequestNodes(const char *msg, size_t requestednodes /*default: all*/)
+void MPIWrapperMpi::RequestNodes(const char *msg, size_t requestednodes /*default: all*/)
 {
 #if HAS_OPENMPI
     Ping("requestnodes (before change)");
@@ -294,7 +279,7 @@ MPIWrapperPtr MPIWrapper::GetInstance(bool create)
         if (initialized)
             LogicError("Creating MPIWrapper instance after a GetInstance call has been already made!");
         else
-            s_mpi = std::make_shared<MPIWrapper>();
+            s_mpi = std::make_shared<MPIWrapperMpi>();
     }
 
     initialized = true;
@@ -306,12 +291,12 @@ void MPIWrapper::DeleteInstance()
     s_mpi = nullptr;
 }
 
-MPI_Comm MPIWrapper::Communicator() const
+MPI_Comm MPIWrapperMpi::Communicator() const
 {
     return m_currentComm;
 }
 
-int MPIWrapper::Finalize(void)
+int MPIWrapperMpi::Finalize(void)
 {
 #if HAS_OPENMPI
     return MPI_Finalize();
@@ -320,7 +305,7 @@ int MPIWrapper::Finalize(void)
 #endif
 }
 
-int MPIWrapper::Wait(MPI_Request* request, MPI_Status* status)
+int MPIWrapperMpi::Wait(MPI_Request* request, MPI_Status* status)
 {
 #if HAS_OPENMPI
     return MPI_Wait(request, status);
@@ -329,7 +314,7 @@ int MPIWrapper::Wait(MPI_Request* request, MPI_Status* status)
 #endif
 }
 
-int MPIWrapper::Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status)
+int MPIWrapperMpi::Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status)
 {
 #if HAS_OPENMPI
     return MPI_Waitany(count, array_of_requests, index, status);
@@ -338,7 +323,7 @@ int MPIWrapper::Waitany(int count, MPI_Request array_of_requests[], int* index, 
 #endif
 }
 
-int MPIWrapper::Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[])
+int MPIWrapperMpi::Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[])
 {
 #if HAS_OPENMPI
     return MPI_Waitall(count, array_of_requests, array_of_statuses);
@@ -347,7 +332,7 @@ int MPIWrapper::Waitall(int count, MPI_Request array_of_requests[], MPI_Status a
 #endif
 }
 
-int MPIWrapper::Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Request* request)
+int MPIWrapperMpi::Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Request* request)
 {
 #if HAS_OPENMPI
     return MPI_Isend(buf, count, datatype, dest, tag, m_currentComm, request);
@@ -356,7 +341,7 @@ int MPIWrapper::Isend(const void* buf, int count, MPI_Datatype datatype, int des
 #endif
 }
 
-int MPIWrapper::Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Status* status)
+int MPIWrapperMpi::Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Status* status)
 {
 #if HAS_OPENMPI
     return MPI_Recv(buf, count, datatype, source, tag, m_currentComm, status);
@@ -365,7 +350,7 @@ int MPIWrapper::Recv(void* buf, int count, MPI_Datatype datatype, int source, in
 #endif
 }
 
-int MPIWrapper::Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Request* request)
+int MPIWrapperMpi::Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Request* request)
 {
 #if HAS_OPENMPI
     return MPI_Irecv(buf, count, datatype, source, tag, m_currentComm, request);
@@ -374,7 +359,7 @@ int MPIWrapper::Irecv(void* buf, int count, MPI_Datatype datatype, int source, i
 #endif
 }
 
-int MPIWrapper::Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Request* request)
+int MPIWrapperMpi::Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Request* request)
 {
 #if HAS_OPENMPI
     return MPI_Iallreduce(sendbuf, recvbuf, count, datatype, op, m_currentComm, request);
@@ -383,32 +368,32 @@ int MPIWrapper::Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Da
 #endif
 }
 
-size_t MPIWrapper::NumNodesInUse() const
+size_t MPIWrapperMpi::NumNodesInUse() const
 {
     return m_numNodesInUse;
 }
 
-size_t MPIWrapper::CurrentNodeRank() const
+size_t MPIWrapperMpi::CurrentNodeRank() const
 {
     return m_myRank;
 }
 
-bool MPIWrapper::IsMainNode() const
+bool MPIWrapperMpi::IsMainNode() const
 {
     return m_myRank == 0;
 } // we are the chosen one--do extra stuff like saving the model to disk
 
-bool MPIWrapper::IsIdle() const
+bool MPIWrapperMpi::IsIdle() const
 {
     return CurrentNodeRank() >= NumNodesInUse();
 } // user had requested to not use this many nodes
 
-bool MPIWrapper::UsingAllNodes() const
+bool MPIWrapperMpi::UsingAllNodes() const
 {
     return NumNodesInUse() == m_numMPINodes;
 } // all nodes participate (used to check whether we can use MPI_Allreduce directly)
 
-size_t MPIWrapper::MainNodeRank() const
+size_t MPIWrapperMpi::MainNodeRank() const
 {
     return 0;
 }
@@ -444,8 +429,33 @@ MPI_Datatype MPIWrapper::GetDataType(size_t *)
 }
 
 // allreduce of a vector
-template <typename VECTORLIKEOBJECT>
-void MPIWrapper::AllReduce(VECTORLIKEOBJECT &accumulator) const
+void MPIWrapperMpi::AllReduce(std::vector<size_t>&accumulator) const
+{
+#if HAS_OPENMPI
+    auto *dataptr = accumulator.data();
+    size_t totalnumelements = accumulator.size();
+
+    // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
+    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
+    {
+        MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
+    }
+#endif
+}
+void MPIWrapperMpi::AllReduce(std::vector<double>&accumulator) const
+{
+#if HAS_OPENMPI
+    auto *dataptr = accumulator.data();
+    size_t totalnumelements = accumulator.size();
+
+    // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
+    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
+    {
+        MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
+    }
+#endif
+}
+void MPIWrapperMpi::AllReduce(std::vector<float>&accumulator) const
 {
 #if HAS_OPENMPI
     auto *dataptr = accumulator.data();
@@ -460,8 +470,34 @@ void MPIWrapper::AllReduce(VECTORLIKEOBJECT &accumulator) const
 }
 
 // for raw pointer
-template <class ElemType>
-void MPIWrapper::AllReduce(ElemType *pData, size_t nData)
+void MPIWrapperMpi::AllReduce(size_t*pData, size_t nData)
+{
+#if HAS_OPENMPI
+    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
+    {
+        MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
+    }
+#endif
+}
+void MPIWrapperMpi::AllReduce(int*pData, size_t nData)
+{
+#if HAS_OPENMPI
+    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
+    {
+        MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
+    }
+#endif
+}
+void MPIWrapperMpi::AllReduce(double*pData, size_t nData)
+{
+#if HAS_OPENMPI
+    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
+    {
+        MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
+    }
+#endif
+}
+void MPIWrapperMpi::AllReduce(float*pData, size_t nData)
 {
 #if HAS_OPENMPI
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
@@ -471,8 +507,25 @@ void MPIWrapper::AllReduce(ElemType *pData, size_t nData)
 #endif
 }
 
-template <class ElemType>
-void MPIWrapper::Bcast(ElemType *pData, size_t nData, size_t srcRank)
+void MPIWrapperMpi::Bcast(size_t*pData, size_t nData, size_t srcRank)
+{
+#if HAS_OPENMPI
+    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
+    {
+        MPI_Bcast(pData, (int)nData, GetDataType(pData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
+    }
+#endif
+}
+void MPIWrapperMpi::Bcast(double*pData, size_t nData, size_t srcRank)
+{
+#if HAS_OPENMPI
+    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
+    {
+        MPI_Bcast(pData, (int)nData, GetDataType(pData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
+    }
+#endif
+}
+void MPIWrapperMpi::Bcast(float*pData, size_t nData, size_t srcRank)
 {
 #if HAS_OPENMPI
     if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
@@ -483,7 +536,7 @@ void MPIWrapper::Bcast(ElemType *pData, size_t nData, size_t srcRank)
 }
 
 // wait for all ranks to reach here
-void MPIWrapper::WaitAll()
+void MPIWrapperMpi::WaitAll()
 {
 #if HAS_OPENMPI
     MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
