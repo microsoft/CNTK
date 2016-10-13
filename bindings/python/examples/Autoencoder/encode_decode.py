@@ -26,17 +26,10 @@ for dim in layers:
     param_b = C.parameter(init=b)
     output = C.sigmoid(C.plus(C.times(x, param_W) , param_b))
     x = output
-    try:
-      shape = x.shape()
-    except AttributeError:
-      shape = x.output().shape()
+    shape = x.shape()
 encoded = x
 
-try:
-   prevDim = x.shape()[0]
-except AttributeError:
-   prevDim = x.output().shape()[0]
-
+prevDim = x.shape()[0]
 next_layers = layers[::-1][1:] + [input_dim]
 
 # Decoding layers
@@ -65,10 +58,10 @@ if __name__=='__main__':
     training_progress_output_freq = 200
 
     for i in range(0, int(num_minibatches_to_train)):
-        data = np.random.normal(0.6, 0.2, size=(input_dim))
-        f = trainer.train_minibatch(arguments={Input : [data]})
+        data = np.random.normal(0.6, 0.2, size=(input_dim)).astype(np.float32)
+        f = trainer.train_minibatch(arguments={Input : data})
         
         if i % training_progress_output_freq == 0:
             print(i, "Input: ", data)
-            print(i, "Output: ", trainer.model().eval(arguments={Input : [data]}))
+            print(i, "Output: ", trainer.model().eval(arguments={Input : data}))
             print_training_progress(trainer, i, training_progress_output_freq)
