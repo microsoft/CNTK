@@ -204,8 +204,10 @@ def cifar_resnet(base_path, debug_output=False):
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
-        arguments = {image_input: mb[
-            features_si].m_data, label_var: mb[labels_si].m_data}
+        arguments = {
+                image_input: mb[features_si], 
+                label_var: mb[labels_si]
+                }
         error = trainer.test_minibatch(arguments)
         total_error += error
 
@@ -218,7 +220,7 @@ if __name__ == '__main__':
     # DeviceDescriptor.set_default_device(target_device)
 
     base_path = os.path.normpath(os.path.join(
-        *"../../../../Examples/Image/Miscellaneous/CIFAR-10/cifar-10-batches-py".split("/")))
+        *"../../../Examples/Image/Datasets/CIFAR-10/cifar-10-batches-py".split("/")))
 
     os.chdir(os.path.join(base_path, '..'))
 
