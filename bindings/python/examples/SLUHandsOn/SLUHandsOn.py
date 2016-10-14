@@ -45,7 +45,7 @@ hidden_dim = 300
 # define the reader    #
 ########################
 
-def Reader(path):
+def create_reader(path):
     return CNTKTextFormatMinibatchSource(path, streams=Record(
         query         = StreamDef(shape=input_dim,   is_sparse=True, alias='S0'),
         intent_unused = StreamDef(shape=num_intents, is_sparse=True, alias='S1'),  # BUGBUG: unused, and should infer dim
@@ -56,7 +56,7 @@ def Reader(path):
 # define the model     #
 ########################
 
-def Model(_inf):  # TODO: all the _inf stuff will go away once dimension inference works
+def create_model(_inf):  # TODO: all the _inf stuff will go away once dimension inference works. Should this be a function then?
     return Sequential([
         Embedding(shape=emb_dim, _inf=_inf),
         Recurrence(over=LSTM(shape=hidden_dim, _inf=_inf.with_shape(emb_dim)), _inf=_inf.with_shape(emb_dim), go_backwards=False,
@@ -130,6 +130,8 @@ def train(reader, model):
             mbs += 1
         print("--- EPOCH {} DONE: loss = {:0.6f} * {}, metric = {:0.1f}% * {} ---".format(epoch+1, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
 
+    return loss_numer/loss_denom, metric_numer/metric_denom
+
 #############################
 # main function boilerplate #
 #############################
@@ -138,11 +140,11 @@ if __name__=='__main__':
     # TODO: get closure on Amit's feedback "Not the right pattern as we discussed over email. Please change to set_default_device(gpu(0))"
     set_gpu(0)
     #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
-    reader = Reader(data_dir + "/atis.train.ctf")
-    model = Model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
+    reader = create_reader(data_dir + "/atis.train.ctf")
+    model = create_model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
     # TODO: Currently this fails with a mismatch error if axes ^^ are given in opposite order. I think it shouldn't.
     # train
-    train(reader, model)
+    loss, metric = train(reader, model)
     # test (TODO)
-    reader = Reader(data_dir + "/atis.test.ctf")
+    reader = create_reader(data_dir + "/atis.test.ctf")
     #test(reader, model_dir + "/slu.cmf")  # TODO: what is the correct pattern here?
