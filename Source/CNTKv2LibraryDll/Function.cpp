@@ -508,6 +508,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUpperPad = L"upperPad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTranspose = L"transpose";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples = L"maxTempMemSizeInSamples";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameROIOutputShape = L"roiOutputShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePoolingType = L"poolingType";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePoolingWindowShape = L"poolingWindowShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSpatial = L"spatial";
@@ -677,6 +678,21 @@ namespace CNTK
             outputShape = ReshapeOutputShape(inputs[0].Shape(), newShape);
             break;
         }
+        case PrimitiveOpType::ROIPooling:
+        {
+            assert(inputs.size() == 2);
+            auto convMapShape = inputs[0].Shape();
+            auto roisShape = inputs[1].Shape();
+            auto roiOutputShape = functionConfig[PrimitiveFunction::AttributeNameROIOutputShape].Value<NDShape>();
+
+            auto outW = roiOutputShape[0];
+            auto outH = roiOutputShape[1];
+            auto numChannels = convMapShape[2];
+            auto roisPerImage = roisShape[1];
+
+            outputShape = { outW, outH, numChannels, roisPerImage };
+            break;
+        }
         case PrimitiveOpType::Pooling:
         {
             assert(inputs.size() == 1);
@@ -685,9 +701,9 @@ namespace CNTK
             auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
             auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
             auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-                NDShape outputMapCount = { 1 };
-                std::vector<bool> sharing = { true };
-                outputShape = ConvolutionOpOutputShape(op, inputs[0].Shape(), poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
+            NDShape outputMapCount = { 1 };
+            std::vector<bool> sharing = { true };
+            outputShape = ConvolutionOpOutputShape(op, inputs[0].Shape(), poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
             break;
         }
         case PrimitiveOpType::SumAll:
@@ -1389,6 +1405,12 @@ namespace CNTK
         {
             auto newShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
             computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(newShape));
+            break;
+        }
+        case PrimitiveOpType::ROIPooling:
+        {
+            auto roiOutputShape = functionConfig[PrimitiveFunction::AttributeNameROIOutputShape].Value<NDShape>();
+            computationNodePtr = New<ROIPoolingNode<ElementType>>(network->GetDeviceId(), functionName, AsTensorShape(roiOutputShape));
             break;
         }
         case PrimitiveOpType::Pooling:
@@ -2775,6 +2797,13 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
 
         return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr ROIPooling(const Variable& leftOperand, const Variable& rightOperand, const NDShape& roiOutputShape, const std::wstring& name/* = L""*/)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameROIOutputShape] = roiOutputShape;
+        return BinaryOp(PrimitiveOpType::ROIPooling, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
     FunctionPtr Pooling(const Variable& operand,

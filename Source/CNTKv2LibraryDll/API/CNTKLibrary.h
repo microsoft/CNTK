@@ -2743,6 +2743,11 @@ namespace CNTK
                                      const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
+    ///
+    CNTK_API FunctionPtr ROIPooling(const Variable& leftOperand, const Variable& rightOperand, const NDShape& roiOutputShape, const std::wstring& name = L"");
+
+    ///
     /// TODO:
     ///
     enum class PoolingType

@@ -226,7 +226,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
         transpose (bool): set to true for deconvolution.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
-         performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the inpu
+         performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
          samples.
         name (`str`, optional): the name of the Function instance in the network
     Returns:
@@ -238,6 +238,32 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                        tuple(reversed(lower_pad)), tuple(
                            reversed(upper_pad)), transpose,
                        max_temp_mem_size_in_samples, name)
+
+
+@typemap
+def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
+    '''
+    The ROI (Region of Interest) pooling operation pools over sub-regions of an input volume and produces
+    a fixed sized output volume regardless of the ROI size. It is used for example for object detection.
+
+    Each input image has a fixed number of regions of interest, which are specified as bounding boxes (x, y, w, h)
+    that are relative to the image size [W x H]. This operation can be used as a replacement for the final
+    pooling layer of an image classification network (as presented in Fast R-CNN and others).
+
+    Args:
+        conv_feature_map: a convolutional feature map as the input volume ([W x H x C x N]).
+        rois: the coordinates of the ROIs per image ([4 x roisPerImage x N]), each ROI is (x, y, w, h) relative to original image size.
+        roi_output_shape: dimensions (width x height) of the ROI pooling output shape
+        name (`str`, optional): the name of the Function instance in the network
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import roipooling
+    conv_feature_map = sanitize_input(conv_feature_map)
+    rois = sanitize_input(rois)
+    roi_output_shape = sanitize_shape(roi_output_shape)
+    return roipooling(conv_feature_map, rois, roi_output_shape, name)
+
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
