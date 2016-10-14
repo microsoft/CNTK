@@ -66,7 +66,7 @@ SEQ_TENSOR_PAIRS = [
 
 
 @pytest.mark.parametrize("left_batch, right_batch", SEQ_TENSOR_PAIRS)
-def _disabled_test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, precision):
+def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, precision):
     from .. import plus
 
     assert len(left_batch) == len(right_batch)

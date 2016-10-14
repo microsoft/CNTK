@@ -45,7 +45,7 @@ namespace CNTK
                 if (node->HasMBLayout())
                 {
                     // TODO: Currently only default dynamic axis is supported
-                    auto inputNodeInternalDynamicAxisName = node->GetMBLayout()->GetAxisName();
+                    auto inputNodeInternalDynamicAxisName = node->As<InputValueBase<ElementType>>()->GetRequestedDynamicAxis();
                     std::vector<Axis> inputVarDynamicAxes = DynamicAxesFromInternalDynamicAxisName(inputNodeInternalDynamicAxisName);
 
                     var = Variable(varShape, isSparse, AsDataType<ElementType>(), node->GetLearningRateMultiplier() != 0, varName, inputVarDynamicAxes, varUid);
@@ -79,14 +79,7 @@ namespace CNTK
         else
         {
             // This is a non-leaf node and maps to a primitive Function
-            std::vector<Axis> varDynamicAxes;;
-            if (node->HasMBLayout())
-            {
-                auto nodeInternalDynamicAxisName = node->GetMBLayout()->GetAxisName();
-                varDynamicAxes = DynamicAxesFromInternalDynamicAxisName(nodeInternalDynamicAxisName);
-            }
-
-            auto placeholderVar = PlaceholderVariable(varShape, varDynamicAxes);
+            auto placeholderVar = PlaceholderVariable(varShape);
             nodeToVariableMap[node] = placeholderVar;
 
             std::vector<Variable> inputVars(node->GetNumInputs());
@@ -133,7 +126,7 @@ namespace CNTK
             }
             else if (node->OperationName() == OperationNameOf(WhereNode))
             {
-                auto internalDynamicAxisName = node->GetMBLayout()->GetAxisName();
+                auto internalDynamicAxisName = node->As<WhereNode<ElementType>>()->DynamicAxisName();
                 std::vector<Axis> dynamicAxes = DynamicAxesFromInternalDynamicAxisName(internalDynamicAxisName);
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNewDynamicAxes] = AsDictionaryValueVector(dynamicAxes);
 

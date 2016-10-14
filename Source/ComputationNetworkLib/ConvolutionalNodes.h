@@ -150,7 +150,6 @@ public:
     size_t MaxTempMemSizeInSamples() const { return m_maxTempMemSizeInSamples; }
     PoolKind PoolingKind() const { return m_poolKind; }
 
-private:
     // bottomlessly expand shape to filterRank, then expand to inputRank using defaults or given 'from' values
     template<class V, typename T>
     static void FixVectorShape(size_t filterRank, size_t inputRank, V& shape, T deflt, const V& from = V())
@@ -165,6 +164,8 @@ private:
         while (shape.size() < inputRank)
             shape.push_back(shape.size() < from.size() ? from[shape.size()] : deflt);
     }
+
+private:
     static void FixTensorShape(size_t filterRank, size_t inputRank, TensorShape& shape, size_t deflt, const TensorShape& from = TensorShape())
     {
         auto dims = shape.GetDims();

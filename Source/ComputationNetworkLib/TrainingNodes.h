@@ -8,6 +8,8 @@
 #include "ComputationNode.h"
 #include "BatchNormalizationEngine.h"
 #include "RNGHandle.h"
+#include "CPURNGHandle.h"
+
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -17,6 +19,7 @@
 #include <stdexcept>
 #include <list>
 #include <memory>
+#include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -681,6 +684,179 @@ private:
 template class NoiseContrastiveEstimationNode<float>;
 template class NoiseContrastiveEstimationNode<double>;
 
+
+
+// Nodes using a random number generators should derive from this interface.
+// One purpuose of this interface is to have a common interface for setting the seeds when setting up a network.
+class IRngUser
+{
+public:
+    virtual RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) = 0;
+    virtual void SetRandomSeed(const unsigned long val) = 0;
+};
+
+// This implements IRngUser using RNGHandle.
+class RngUser : public IRngUser
+{
+public:
+    RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) override
+    {
+        if (!m_RNGHandle)
+            m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
+
+        return *m_RNGHandle;
+    }
+
+    // E.g. called from ComputationNetwork to make sure that CNTK running on different nodes will have different seed.
+    void SetRandomSeed(const unsigned long val) override
+    {
+        m_randomSeed = (unsigned long)val;
+
+        m_RNGHandle.reset(); // Reset handle. New handle will be generated with next call of GetRNGHandle(...).
+    }
+
+protected:
+    unsigned long m_randomSeed = 0;
+    std::shared_ptr<RNGHandle> m_RNGHandle;
+};
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+// RandomSampleNodeBase(samplingWeights, sizeOfSampledSet, allowDuplicates): 
+// Base class for RandomSampleNode and RandomSampleInclusionFrequencyNode.
+// Provides random sampling functionality.
+//
+// Parameters:
+// * Input(0) Sampling weight vector: Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * sizeOfSampledSet: Size of the sampled set.
+// * allowDuplicates: controls if sampled set is allowed to contain duplicates.
+// --------------------------------------------------------------------------------------------------------------------------------------------------
+
+template <class ElemType>
+class RandomSampleNodeBase : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>, public RngUser
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName(){return L"RandomSampleNodeBase";}
+
+public:
+    RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+        : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates)
+    {
+        SetRandomSeed((unsigned long)CreateUniqId());
+    }
+
+    RandomSampleNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
+        : RandomSampleNodeBase(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
+
+    void Save(File& fstream) const;
+
+    virtual void Load(File& fstream, size_t modelVersion) override;
+
+protected:
+
+    void UpdateWeightsPrefixSum();
+
+    // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
+    // to get the expected number of samples.
+    const std::vector<size_t> RunSampling(long& nTries);
+
+public:
+    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override {
+        // This node does not propagate gradients.
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override{}
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false;}
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override{}
+
+protected:
+    bool m_allowDuplicates; // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
+    int m_sizeOfSampledSet; // Requested size of sample in case of run-mode = CREATE_SAMPLES.
+    std::vector<double> m_samplingWeightsPrefixSum;
+};
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+// RandomSampleNode(samplingWeights, sizeOfSampledSet, allowDuplicates):
+// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix of shape [nClasses x sizeOfSampledSet] where nClasses is the number of classes (categories) to choose from.
+// The output has no dynamic axis.
+// The samples are drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
+// We get one set of samples for per minibatch.
+// Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
+//
+// Parameters:
+// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * sizeOfSampledSet: Size of the sampled set.
+// * allowDuplicates: controls if sampled set is allowed to contain duplicates.
+// --------------------------------------------------------------------------------------------------------------------------------------------------
+template<class ElemType> 
+class RandomSampleNode : public RandomSampleNodeBase<ElemType>
+{
+    typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName(){ return L"RandomSample"; }
+
+public:
+    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+        : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
+    {}
+
+    RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
+    const std::vector<size_t> GetWeightedSamples();
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+    virtual bool IsOutOfDateWrtInputs() const override;
+};
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+// RandomSampleInclusionFrequencyNode(samplingWeights, sizeOfSampledSet, allowDuplicates): 
+// Intended uses are e.g. sampled softmax, noise contrastive estimation etc where it is used together with RandomSampleNode.
+// This node estimates how often each class will occur in a set sampled with RandomSampleNode(...) on the average. 
+// If the sampling mode 'allowDuplicates = true' is choosen this is trivial and exact. 
+// For allowDuplicates = false we get some estimate. The value is updated only when the input weights change.
+//
+// Parameters:
+// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * sizeOfSampledSet: Size of the sampled set.
+// * allowDuplicates: controls if sampled set is allowed to contain duplicates.
+// --------------------------------------------------------------------------------------------------------------------------------------------------
+template<class ElemType>
+class RandomSampleInclusionFrequencyNode : public RandomSampleNodeBase<ElemType>
+{
+    typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName(){ return L"RandomSampleInclusionFrequency"; }
+public:
+    RandomSampleInclusionFrequencyNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+        : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
+    {}
+
+    RandomSampleInclusionFrequencyNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RandomSampleInclusionFrequencyNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+private:
+    // Approximates the expected number of occurences of a class in the sampled set.
+    // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
+    // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
+    // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
+    double EstimateInSampleFrequency(double p, double estimatedNumTries) const;
+
+    double EstimateNumberOfTries();
+};
+
 // -----------------------------------------------------------------------
 // ClassBasedCrossEntropyWithSoftmaxNode (labeldata(.,t), inputdata(.,t), embeddingMatrix, clsProbBeforeSoftmaxData(.,t))
 //  - Input(0) [4 x T] label in dense matrix in
@@ -692,7 +868,6 @@ template class NoiseContrastiveEstimationNode<double>;
 //  - Input(2) [hdsize x vocab_size] weight matrix in, for speed-up, as per word matrix can be simply obtained as column slice
 //  - Input(3) [nbr_cls x T] clsprob in dense matrix in. This input, if applied softmax on, is the posterior probabilty of class given observations
 // -----------------------------------------------------------------------
-
 // calculates: -sum(left_i * log(softmax_i(right))) for class given history and for word given history
 // need to provide class probabilty from external node
 template <class ElemType>
@@ -1428,7 +1603,7 @@ template class LogisticNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>
+class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>, public RngUser
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -1443,7 +1618,7 @@ public:
         : Base(deviceId, name),
           m_dropoutRate(0)
     {
-        m_randomSeed = (unsigned long) CreateUniqId();
+        SetRandomSeed((unsigned long)CreateUniqId());
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -1500,21 +1675,9 @@ public:
         m_dropoutRate = val;
     }
 
-    void SetRandomSeed(const unsigned long val)
-    {
-        m_randomSeed = (unsigned long) val;
-
-        // Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
-        // during forward propagation
-        m_RNGHandle = nullptr;
-    }
-
     RNGHandle& GetRNGHandle()
     {
-        if (m_RNGHandle == nullptr) 
-            m_RNGHandle = RNGHandle::Create(ValuePtr()->GetDeviceId(), m_randomSeed);
-
-        return *m_RNGHandle;
+        return RngUser::GetRNGHandle(ValuePtr()->GetDeviceId());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1524,7 +1687,7 @@ public:
         {
             auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
             node->m_dropoutRate = m_dropoutRate;
-            node->m_randomSeed = m_randomSeed;
+            node->SetRandomSeed(m_randomSeed);
             node->m_maskOfDropout = m_maskOfDropout;
         }
     }
@@ -1546,9 +1709,6 @@ public:
 
 private:
     double m_dropoutRate;
-    unsigned long m_randomSeed;
-    std::shared_ptr<RNGHandle> m_RNGHandle;
-
     shared_ptr<Matrix<ElemType>> m_maskOfDropout;
 };
 

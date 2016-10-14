@@ -361,6 +361,7 @@ COMPUTATION_NETWORK_LIB_SRC =\
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEditing.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkBuilder.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkScripting.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/TrainingNodes.cpp \
 
 SEQUENCE_TRAINING_LIB_SRC =\
 	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
