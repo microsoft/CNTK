@@ -191,7 +191,7 @@ def sanitize_shape(shape):
     return tuple(reversed(shape))
 
 
-def sanitize_input(arg, fallback_dtype=np.float32):
+def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """
     Convert to Variable or Constant so that it can be passed as Variable to the
     CNTK operators.
@@ -203,6 +203,7 @@ def sanitize_input(arg, fallback_dtype=np.float32):
     Args:
         arg (number, NumPy array, `Variable`, or `Function`): input
         fallback_dtype (numpy dtype): fallback dtype in case `arg` is a list
+        reshape (tuple or None): optionally reshape the argument to this shape
 
     Returns:
         Constant, if `arg` was a number or NumPy array. Variable otherwise.
@@ -230,6 +231,8 @@ def sanitize_input(arg, fallback_dtype=np.float32):
 
     if not isinstance(arg, np.ndarray):
         arg = np.asarray(arg, dtype=fallback_dtype)
+    if reshape:
+        arg = np.reshape(arg, reshape)
 
     return constant(value=arg)
 

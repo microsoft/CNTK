@@ -39,15 +39,19 @@ The above makes use of the CNTK ``minus`` node with two array constants. Every o
 pass for that node using its inputs, and returns the result of the forward pass. A slightly more interesting example that uses input variables (the 
 more common case) is as follows:
 
-    >>> i1 = cntk.input_variable((1, 2))
-    >>> i2 = cntk.input_variable((1, 2))
-    >>> cntk.squared_error(i1, i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32),  i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
+    >>> import numpy as np
+    >>> x = cntk.input_variable((1, 2))
+    >>> y = cntk.input_variable((1, 2))
+    >>> x0 = np.asarray([[2., 1.]], dtype=np.float32)
+    >>> y0 = np.asarray([[4., 6.]], dtype=np.float32)
+    >>> cntk.squared_error(x, y).eval({x:x0, y:y0})
     array([[ 29.]], dtype=float32)
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. 
-These have to be specified as minibatches. Let's take e.g. the data for `i1`: ``[[2., 1.]]`` describes the 1x2 matrix as one element in a sequence. Then we need a `[ ]` 
-pair for the sequence, and another one for the batch.
+.. I think this is confusing (four brackets in the first example?). Two brackets work the same as four.
+.. These have to be specified as minibatches. Let's take e.g. the data for `x`: ``[[2., 1.]]`` describes the 1x2 matrix as one element in a sequence. Then we need a `[ ]` 
+   pair for the sequence, and another one for the batch.
 The squared error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
 
 Overview and first run
@@ -58,7 +62,7 @@ construction. The Python bindings provide direct access to the created network g
 for more powerful and complex networks, but also for interactive Python sessions while a model is being created and debugged.
 
 CNTK2 also includes a number of ready-to-extend examples and a layers library. The latter allows one to simply build a powerful deep network by 
-snapping together levels of convolution layers, recurrent neural net layers (LSTMs, etc.), and fully-connected layers. To begin, we will take a 
+snapping together building blocks such as convolution layers, recurrent neural net layers (LSTMs, etc.), and fully-connected layers. To begin, we will take a 
 look at a standard fully connected deep network in our first basic use.
 
 First basic use
@@ -76,23 +80,23 @@ Now let's setup a network that will learn a classifier based on the example full
 ``bindings/python/examples/common/nn.py``. Here is the basic code for setting up a network that uses it::
 
     def ffnet(debug_output=True):
-        input_dim = 2
-        num_output_classes = 2
-        num_hidden_layers = 2
-        hidden_layers_dim = 50
+        inputs = 2
+        outputs = 2
+        layers = 2
+        hidden_dimension = 50
 
         # Input variables denoting the features and label data
-        input = input_variable((input_dim), np.float32)
-        label = input_variable((num_output_classes), np.float32)
+        input = input_variable((inputs), np.float32)
+        label = input_variable((outputs), np.float32)
 
         # Instantiate the feedforward classification model
-        netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
+        z = fully_connected_classifier_net(input, outputs, hidden_dimension, layers, sigmoid)
 
-        ce = cross_entropy_with_softmax(netout, label)
-        pe = classification_error(netout, label)
+        ce = cross_entropy_with_softmax(z, label)
+        pe = classification_error(z, label)
 
         # Instantiate the trainer object to drive the model training
-        trainer = Trainer(netout, ce, pe, [sgd_learner(netout.parameters(), lr=0.02)])
+        trainer = Trainer(z, ce, pe, [sgd_learner(z.parameters(), lr=0.02)])
 
         # Get minibatches of training data and perform model training
         minibatch_size = 25
@@ -101,14 +105,14 @@ Now let's setup a network that will learn a classifier based on the example full
         num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
         training_progress_output_freq = 20
 
-        for i in range(0, int(num_minibatches_to_train)):
-            features, labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
+        for i in range(num_minibatches_to_train):
+            features, labels = generate_random_data(minibatch_size, inputs, outputs)
             # Specify the mapping of input variables in the model to actual minibatch data to be trained with
             trainer.train_minibatch({input : features, label : labels})
             if debug_output:
                 print_training_progress(trainer, i, training_progress_output_freq)
         
-        test_features, test_labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
+        test_features, test_labels = generate_random_data(minibatch_size, inputs, outputs)
         avg_error = trainer.test_minibatch({input : test_features, label : test_labels})
 
 The example above sets up a 2-layer fully connected deep neural network with 50 hidden dimensions per layer. We first setup two input variables, one for 

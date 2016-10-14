@@ -586,6 +586,106 @@ def times(left, right, output_rank=1, name=''):
     right = sanitize_input(right, dtype)
     return times(right, left, output_rank, name)
 
+@typemap
+def times_transpose(left, right, name=''):
+    '''
+    The output of this operation is the product of the first (`left`) argument with the second (`right`) argument transposed.
+    The second (`right`) argument must have a rank of 1 or 2.
+    This operation is conceptually computing ``np.dot(left, right.T)`` except when `right` is a vector 
+    in which case the output is ``np.dot(left,np.reshape(right,(1,-1)).T)`` (matching numpy when `left` is a vector).
+
+    Example:
+        >>> import cntk.ops as C
+        >>> import numpy as np
+        >>> a=np.array([[1,2],[3,4]],dtype=np.float32)
+        >>> b=np.array([2,-1],dtype=np.float32)
+        >>> c=np.array([[2,-1]],dtype=np.float32)
+        >>> d=np.reshape(np.arange(24,dtype=np.float32),(4,3,2))
+        >>> print(C.times_transpose(a, a).eval())
+        [[  5.  11.]
+         [ 11.  25.]]
+        >>> print(C.times_transpose(a, b).eval())
+        [[ 0.]
+         [ 2.]]
+        >>> print(C.times_transpose(a, c).eval())
+        [[ 0.]
+         [ 2.]]
+        >>> print(C.times_transpose(b, a).eval())
+        [ 0.  2.]
+        >>> print(C.times_transpose(b, b).eval())
+        [ 5.]
+        >>> print(C.times_transpose(b, c).eval())
+        [ 5.]
+        >>> print(C.times_transpose(c, a).eval())
+        [[ 0.  2.]]
+        >>> print(C.times_transpose(c, b).eval())
+        [[ 5.]]
+        >>> print(C.times_transpose(c, c).eval())
+        [[ 5.]]
+        >>> print(C.times_transpose(d, a).eval())
+        [[[   2.    4.]
+          [   8.   18.]
+          [  14.   32.]]
+        <BLANKLINE>
+         [[  20.   46.]
+          [  26.   60.]
+          [  32.   74.]]
+        <BLANKLINE>
+         [[  38.   88.]
+          [  44.  102.]
+          [  50.  116.]]
+        <BLANKLINE>
+         [[  56.  130.]
+          [  62.  144.]
+          [  68.  158.]]]
+        >>> print(C.times_transpose(d, b).eval())
+        [[[ -1.]
+          [  1.]
+          [  3.]]
+        <BLANKLINE>
+         [[  5.]
+          [  7.]
+          [  9.]]
+        <BLANKLINE>
+         [[ 11.]
+          [ 13.]
+          [ 15.]]
+        <BLANKLINE>
+         [[ 17.]
+          [ 19.]
+          [ 21.]]]
+        >>> print(C.times_transpose(d, c).eval())
+        [[[ -1.]
+          [  1.]
+          [  3.]]
+        <BLANKLINE>
+         [[  5.]
+          [  7.]
+          [  9.]]
+        <BLANKLINE>
+         [[ 11.]
+          [ 13.]
+          [ 15.]]
+        <BLANKLINE>
+         [[ 17.]
+          [ 19.]
+          [ 21.]]]
+
+    Args:
+        left: left side tensor
+        right: right side matrix or vector
+        name (`str`, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import times_transpose
+    dtype = get_data_type(left, right)
+    left = sanitize_input(left, dtype)
+    rshape = sanitize_shape(right.shape)
+    right = sanitize_input(right, dtype, (1,rshape[0]) if len(rshape) == 1 else None)
+    return times_transpose(right, left, 1, name)
+    
 ##########################################################################
 # non_diff ops
 ##########################################################################
