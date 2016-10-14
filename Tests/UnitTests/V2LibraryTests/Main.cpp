@@ -42,7 +42,7 @@ int main()
 
     // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking 
     // which will have a silent performance degradation otherwise
-    Internal::DisableAutomaticUnpackingOfPackedValues();
+    Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
 
     NDArrayViewTests();
     TensorTests();

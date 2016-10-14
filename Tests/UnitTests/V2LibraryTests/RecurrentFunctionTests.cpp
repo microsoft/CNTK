@@ -136,7 +136,7 @@ void TestSimpleRecurrence(size_t inputDim,
 
     auto inputVar = InputVariable({ inputDim }, useSparseInputs, AsDataType<ElementType>(), true, L"input");
 
-    auto placeholder = PlaceholderVariable({ outputDim });
+    auto placeholder = PlaceholderVariable(std::initializer_list<size_t>({ outputDim }));
     auto plusOutput = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)), L"plusOutput");
     FunctionPtr placeholderReplacement;
     if (useFutureValue)
@@ -238,7 +238,7 @@ void TestSimpleRecurrence(size_t inputDim,
         ValuePtr reducedOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(reducedOutputShape, reducedOutputData.data(), reducedOutputData.size(), DeviceDescriptor::CPUDevice(), false));
 
         NDShape plusOutputShape = plusOutput->Output().Shape().AppendShape({ maxActualSequenceLength, numSequences });
-        std::vector<ElementType> plusOutputData(plusOutputShape.TotalSize());
+        std::vector<ElementType> plusOutputData(plusOutputShape.TotalSize(), 0);
         ValuePtr plusOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), MakeSharedObject<NDMask>(inputValue->Mask()->Shape(), inputValue->Mask()->Device()));
 
         std::unordered_map<Variable, ValuePtr> outputs = { { reducedOutput, reducedOutputValue }, { plusOutput, plusOutputValue } };
