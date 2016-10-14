@@ -16,24 +16,24 @@ from ...utils import sanitize_dtype_cntk, ones_like, eval
 from  cntk import random_sample_inclusion_frequency, times
 
 TEST_CASES = [
-    (np.full((4), 42), 1, True, np.full((4), 1/4), 0.0001),
-    (np.full((4), 42), 13, True, np.full((4), 13/4), 0.0001),
-    ([1,2,3], 42, True, [42/(1+2+3), 2*42/(1+2+3), 3*42/(1+2+3)], 0.0001),
-    (np.full((4), 42), 1, False, np.full((4), 1/4), 0.0001),
-#   (np.full((4), 42), 13, False, np.full((4), 13/4), 0.0001), make sure we get an exception in this case!
+    (np.full((4), 42),                                                               1,     True,   np.full((4), 1/4),                                    0.0001),
+    (np.full((4), 42),                                                              13,     True,   np.full((4), 13/4),                                   0.0001),
+    ([1,2,3],                                                                       42,     True,   [42/(1+2+3), 2*42/(1+2+3), 3*42/(1+2+3)],             0.0001),
+    (np.full((4), 42),                                                               1,     False,  np.full((4), 1/4),                                    0.0001),
+    # Use 300 weights where the first 200 hundred weights are high compared to the rest. Sample 200 without replacement. 
+    (np.concatenate((np.full((100),100),np.full((100),10),np.full((100),0.1))),    200,     False,  np.concatenate((np.full((200),1),np.full((100),0))),  0.05),
+    # Having more classes than samples is not allowed when sampling without replacment. Check if exception is thrown.
+    (np.full((4), 42),                                                              50,     False,  np.full((4), 13/4),                                   0.0001), 
 ]
 
 @pytest.mark.parametrize("weights, num_samples, allow_duplicates, expected, tolerance", TEST_CASES)
 def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, expected, tolerance, device_id, precision):
 
-    result = random_sample_inclusion_frequency(weights, num_samples, allow_duplicates).eval()
-    
-    assert np.allclose(result, expected, atol=tolerance)
-
-@pytest.mark.parametrize("weights, num_samples, allow_duplicates, expected, tolerance", TEST_CASES)
-def test_random_sample(weights, num_samples, allow_duplicates, expected, tolerance, device_id, precision):
-
-    samples = random_sample_inclusion_frequency(weights, num_samples, allow_duplicates)
-
-    
-    assert np.allclose(result, expected, atol=tolerance)
+    result = random_sample_inclusion_frequency(weights, num_samples, allow_duplicates)
+#    if num_samples < len(weights):
+    if num_samples >= len(weights) and not allow_duplicates:
+        # in case num_samples => len(weights) we expect an exception to be thrown
+        with pytest.raises(RuntimeError):
+            result.eval()
+    else:
+        assert np.allclose(result.eval(), expected, atol=tolerance)

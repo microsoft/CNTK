@@ -769,8 +769,7 @@ public:
         // This node does not propagate gradients.
     }
 
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override{}
-
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false;}
