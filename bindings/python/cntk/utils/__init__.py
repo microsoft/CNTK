@@ -273,7 +273,7 @@ def get_data_type(*args):
                 dtypes.add(np.float64)
             elif cntk_py.DataType_Float == var_type:
                 dtypes.add(np.float32)
-        else:
+            else:
                 raise ValueError('type %s is not supported'%var_type)
         else:
             # We don't know anything so we convert everything to float32. If it
@@ -370,11 +370,11 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     if use_mask:
         seq_lens = [len(seq) for seq in batch]
 
-    try:
-        num_seq = len(batch)
-    except TypeError:
-        raise ValueError('expected an object of type Value or a NumPy ' +
-                         'array and not "%s"' % type(batch))
+        try:
+            num_seq = len(batch)
+        except TypeError:
+            raise ValueError('expected an object of type Value or a NumPy ' +
+                             'array and not "%s"' % type(batch))
 
         from cntk.cntk_py import NDMask
         mask = NDMask((max(seq_lens), num_seq), device)
@@ -383,9 +383,8 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
                 mask.mark_sequence_begin((0, idx))
             elif seq_starts[idx]:
                 mask.mark_sequence_begin((0, idx))
-            # TODO: a merge caused screwed-up indentation here. Not sure if I corrected it correctly.
-            mask.invalidate_section((seq_len, idx),
-                                    (cntk_py.InferredDimension, 1))
+                mask.invalidate_section((seq_len, idx),
+                                        (cntk_py.InferredDimension, 1))
 
         # Then we pad the batch to rectangular shape
         if isinstance(batch, list):
