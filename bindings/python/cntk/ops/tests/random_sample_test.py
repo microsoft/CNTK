@@ -16,12 +16,17 @@ from ...utils import sanitize_dtype_cntk, ones_like, eval
 from  cntk import random_sample_inclusion_frequency, times
 
 TEST_CASES = [
+    # drawing 1 sample
     (np.full((4), 42.),                                                               1,     True,   np.full((4), 1/4),                                    0.0001),
+
+    # drawing 13 samples
     (np.full((4), 42.),                                                              13,     True,   np.full((4), 13/4),                                   0.0001),
-    ([1.,2.,3.],                                                                       42,     True,   [42/(1+2+3), 2*42/(1+2+3), 3*42/(1+2+3)],             0.0001),
-    (np.full((4), 42.),                                                               1,     False,  np.full((4), 1/4),                                    0.0001),
+
+    # drawing more samples that there are classes
+    ([1.,2.,3.],                                                                     42,     True,   [42/(1+2+3), 2*42/(1+2+3), 3*42/(1+2+3)],             0.0001),
+
     # Use 300 weights where the first 200 hundred weights are high compared to the rest. Sample 200 without replacement. 
-    (np.concatenate((np.full((100),100),np.full((100),10),np.full((100),0.1))),    200,     False,  np.concatenate((np.full((200),1),np.full((100),0))),  0.05),
+    (np.concatenate((np.full((100),100),np.full((100),10),np.full((100),0.1))),    200,     False,  np.concatenate((np.full((200),1),np.full((100),0))),   0.05),
     
     # Having more classes than samples is not allowed when sampling without replacment. Check if exception is thrown.
     (np.full((4), 42.),                                                              50,     False,  np.full((4), 13/4),                                   0.0001), 

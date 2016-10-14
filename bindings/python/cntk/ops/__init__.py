@@ -1443,11 +1443,11 @@ def reduce_min(x, axis=None, name=''):
 @typemap
 def random_sample(weights, num_samples, allow_duplicates, name=''):
     '''
-    The node's value is a set of sizeOfSampledSet random samples represented by a (sparse) matrix of shape [nClasses x sizeOfSampledSet]
-    where nClasses is the number of classes (categories) to choose from. The output has no dynamic axis.
-    The samples are drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
-    We get one set of samples for per minibatch.
-    Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
+    The node's value is a set of num_samples random samples represented by a (sparse) matrix of shape [len(weights) x num_samples],
+    where len(weights) is the number of classes (categories) to choose from. The output has no dynamic axis.
+    The samples are drawn according to the weight vector p(i) = weights[i] / sum(weights)
+    We get one set of samples per minibatch.
+    Intended use cases are e.g. sampled softmax, noise contrastive estimation etc.
 
     Args:
     weights: input vector of sampling weights which should be nonzero positive numbers.
@@ -1469,8 +1469,8 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
 @typemap
 def random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, name=''):
     '''
-    For weighted sampling a the specifed sample size this node computes the expected number of occurences of each class
-    the the sampled set. Intended uses are e.g. sampled softmax, noise contrastive estimation etc. 
+    For weighted sampling a the specifed sample size (num_samples) this node computes the expected number of occurences of each class
+    the the sampled set. The result only an estimate. Intended uses are e.g. sampled softmax, noise contrastive estimation etc. 
 
     Args:
     weights: input vector of sampling weights which should be nonzero positive numbers.
