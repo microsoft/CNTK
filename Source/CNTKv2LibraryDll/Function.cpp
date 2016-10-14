@@ -1001,17 +1001,17 @@ namespace CNTK
         }
         case PrimitiveOpType::RandomSample:
         {
-                                              auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
-                                              auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
-                                              computationNodePtr = New<RandomSampleNode<ElementType>>(network->GetDeviceId(), functionName, numSamples, allowDuplicates);
-                                              break;
+            auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
+            auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
+            computationNodePtr = New<RandomSampleNode<ElementType>>(network->GetDeviceId(), functionName, numSamples, allowDuplicates);
+            break;
         }
         case PrimitiveOpType::RandomSampleInclusionFrequency:
         {
-                                                                auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
-                                                                auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
-                                                                computationNodePtr = New<RandomSampleInclusionFrequencyNode<ElementType>>(network->GetDeviceId(), functionName, numSamples, allowDuplicates);
-                                                                break;
+            auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
+            auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
+            computationNodePtr = New<RandomSampleInclusionFrequencyNode<ElementType>>(network->GetDeviceId(), functionName, numSamples, allowDuplicates);
+            break;
         }
         case PrimitiveOpType::Dropout:
         {

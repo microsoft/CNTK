@@ -22,7 +22,7 @@ TEST_CASES = [
     # drawing 13 samples
     (np.full((4), 42.),                                                              13,     True,   np.full((4), 13/4),                                   0.0001),
 
-    # drawing more samples that there are classes
+    # drawing more samples than there are classes
     ([1.,2.,3.],                                                                     42,     True,   [42/(1+2+3), 2*42/(1+2+3), 3*42/(1+2+3)],             0.0001),
 
     # Use 300 weights where the first 200 hundred weights are high compared to the rest. Sample 200 without replacement. 
