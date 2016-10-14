@@ -88,6 +88,7 @@ def Embedding(shape, _inf, weights=None, init=_default_initializer, transpose=Fa
     if weights is None:  # no weights given: learn the embedding
         E = Parameter(full_shape, init=init, name='E')
     else:                # weights given: use them as constant
+        UntestedBranchError("Embedding, from constant")
         E = Constant(full_shape, init=weights, name='E')  # TODO: can 'weights' be a CNTK object already? Then how to do this?
     x = Placeholder(_inf=_inf, name='embedding_arg')
     apply_x = Function.__matmul__(E, x) if transpose else \
@@ -114,6 +115,8 @@ def Stabilizer(_inf, steepness=4):
 def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
+    if go_backwards:
+        UntestedBranchError("Recurrence, go_backwards option")
     def previous_hook(state):
         if hasattr(state, 'outputs'):
            outputs = state.outputs()

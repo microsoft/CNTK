@@ -34,6 +34,10 @@ from cntk.ops.variables import Variable
 _default_initializer = glorot_uniform()
 #_default_initializer = None
 
+def UntestedBranchError(name):
+    # pass
+    raise NotImplementedError("Untested code branch: " + name)
+
 # "upgrade" a current Function to add additional operators and methods, as a temporary stopgap
 # at end of each layer constructor, return _extend_Function(z, 'Type (for debugging)')
 # use this until __call__ is implemented in Function()
@@ -135,6 +139,11 @@ def Identity(_inf):
 def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
     has_projection = cell_shape is not None
     has_aux = False
+
+    if has_aux:
+        UntestedBranchError("LSTM, has_aux option")
+    if enable_self_stabilization:
+        UntestedBranchError("LSTM, enable_self_stabilization option")
 
     shape = _as_tuple(shape)
 
