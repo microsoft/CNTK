@@ -5,8 +5,8 @@ from fastRCNN.pascal_voc import pascal_voc # as nmsPython
 print datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
 
 # dataset name
-# datasetName = "toy"
-datasetName = "pascalVoc"
+datasetName = "toy"
+# datasetName = "pascalVoc"
 # datasetName = "pascalVoc_aeroplanesOnly"
 
 
@@ -14,7 +14,7 @@ datasetName = "pascalVoc"
 # default parameters
 ############################
 # cntk params
-cntk_nrRois = 4000  # how many ROIs to zero-pad
+cntk_nrRois = 100  # how many ROIs to zero-pad
 cntk_padWidth = 1000
 cntk_padHeight = 1000
 cntk_posOverlapThres = {"train": 0.5, "test": 0.5}  # only used for DNN training (as opposed to svm training)
