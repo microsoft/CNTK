@@ -275,6 +275,12 @@ def get_data_type(*args):
                 dtypes.add(np.float32)
         else:
                 raise ValueError('type %s is not supported'%var_type)
+        else:
+            # We don't know anything so we convert everything to float32. If it
+            # works, we know the type.
+            # TODO figure out a better/faster way.
+            np.asarray(arg, dtype=np.float32)
+            dtypes.add(np.float32)
 
     if np.float64 in dtypes:
         return np.float64
