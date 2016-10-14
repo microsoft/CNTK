@@ -24,5 +24,3 @@ ConfigDir=$TEST_DIR/
 
 # cntkrun <CNTK config file name> <additional CNTK args>
 cntkrun ir.cntk 'makeMode=true' || exit $?
-
-#TEST_DATA_DIR

@@ -1,6 +1,5 @@
 
 WorkingDir = C:\temp
-DataDir = \\storage.ccp.philly.selfhost.corp.microsoft.com\public\CNTKTestData\Text\IRMetric
 RunDir = $WorkingDir$
 ConfigDir = $WorkingDir$
 
