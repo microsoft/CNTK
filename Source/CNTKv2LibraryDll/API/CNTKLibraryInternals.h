@@ -149,6 +149,7 @@ namespace CNTK
 namespace CNTK
 {
     // Forward declarations
+    class PrimitiveFunction;
     class CompositeFunction;
     class Function;
     class Variable;
@@ -207,7 +208,16 @@ namespace CNTK
         CNTK_API void AlwaysAllowSettingDefaultDevice();
         bool IsSettingDefaultDeviceAlwaysAllowed();
 
-        CNTK_API void DisableAutomaticUnpackingOfPackedValues();
+        CNTK_API void SetAutomaticUnpackingOfPackedValues(bool disable);
         bool IsAutomaticUnpackingOfPackedValuesDisabled();
+
+        CNTK_API void SetComputationNetworkTraceLevel(int traceLevel);
+        int GetComputationNetworkTraceLevel();
+
+        CNTK_API void SetGPUMemoryAllocationTraceLevel(int traceLevel);
+
+        CNTK_API void ForceSynchronousCUDAKernelExecutions();
+
+        CNTK_API void ForceDeterministicAlgorithms();
     }
 }

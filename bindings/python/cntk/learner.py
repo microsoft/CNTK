@@ -6,6 +6,28 @@
 from . import cntk_py
 from .utils import typemap
 
+__doc__='''
+Learner tune a set of parameters during the training process. One can use
+different learners for different sets of parameters. Currently, CNTK supports
+the following learner:
+
++------------------------+
+| Learner                |
++========================+
+| AdaGrad                |
++------------------------+
+| FSAdaGrad              |
++------------------------+
+| MomentumSGD            |
++------------------------+
+| Nesterov               |
++------------------------+
+| RMSProp                |
++------------------------+
+| SGD                    |
++------------------------+
+'''
+
 class Learner(cntk_py.Learner):
     '''
     Abstraction for learning a subset of parameters of a learnable function using first order gradient values
@@ -14,7 +36,7 @@ class Learner(cntk_py.Learner):
     To instantiate a concreate learner, use the factory methods in this module.
     '''
         
-    def update(gradient_values, training_sample_count):
+    def update(self, gradient_values, training_sample_count):
         '''
         Update the parameters associated with this learner. 
 
@@ -25,7 +47,11 @@ class Learner(cntk_py.Learner):
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
         '''
-        return super(Learner, self).update(gradient_values, training_sample_count)
+        from .utils import create_NDArrayView_from_NumPy
+        var_nd_map = { var:create_NDArrayView_from_NumPy(val) for var, val in
+                gradient_values.items() }
+
+        return super(Learner, self).update(var_nd_map, training_sample_count)
 
     @typemap
     def parameters(self):

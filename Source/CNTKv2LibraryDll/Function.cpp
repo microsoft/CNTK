@@ -82,26 +82,36 @@ namespace CNTK
             }
         }
 
-        auto outputsUsingNewInputs = PrimitiveFunction::GetOutputVariables(primitiveFunction->OpType(), m_inputs, this, primitiveFunction->Attributes(), primitiveFunction->Name());
+        bool inferDimensions = (visitedFunctions[this] == 1);
+        auto outputsUsingNewInputs = PrimitiveFunction::GetOutputVariables(primitiveFunction->OpType(), m_inputs, this, primitiveFunction->m_attributes, inferDimensions, primitiveFunction->Name());
         auto currentOutputs = Outputs();
         for (size_t i = 0; i < currentOutputs.size(); ++i)
         {
             auto newOutputVar = outputsUsingNewInputs[i];
             auto currentOutputVar = currentOutputs[i];
-            if (visitedFunctions[this] > 1)
+            if (!inferDimensions)
             {
-                if ((currentOutputVar.m_dataFields->m_shape != newOutputVar.m_dataFields->m_shape) ||
-                    (currentOutputVar.m_dataFields->m_dataType != newOutputVar.m_dataFields->m_dataType) ||
-                    (currentOutputVar.m_dataFields->m_dynamicAxes != newOutputVar.m_dataFields->m_dynamicAxes))
+                if (currentOutputVar.Shape().IsUnknown())
+                    currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
+
+                if (currentOutputVar.GetDataType() == DataType::Unknown)
+                    currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
+
+                if (currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes)
+                    currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
+
+                if ((currentOutputVar.Shape() != newOutputVar.Shape()) ||
+                    (currentOutputVar.GetDataType() != newOutputVar.GetDataType()) ||
+                    (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
                 {
                     InvalidArgument("Inconsistency in output variable shape, DataType or Dynamic axes computed after replaced placeholders vs. existing output properties, for the Recurrent Function");
                 }
             }
             else
             {
-                currentOutputVar.m_dataFields->m_shape = newOutputVar.m_dataFields->m_shape;
-                currentOutputVar.m_dataFields->m_dataType = newOutputVar.m_dataFields->m_dataType;
-                currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.m_dataFields->m_dynamicAxes;
+                currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
+                currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
+                currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
             }
         }
     }
@@ -247,13 +257,16 @@ namespace CNTK
             else
                 {
                 // This is not a replacement. Lets create a fresh clone
-                if (cloneeInput.IsInput() || cloneeInput.IsConstant() || cloneeInput.IsPlaceholder())
+
+                // Is it a leaf
+                if (cloneeInput.IsInput() || cloneeInput.IsConstant() || cloneeInput.IsPlaceholder() || cloneeInput.IsParameter())
                 {
-                    clonedInput = cloneeInput.Clone();
-                    leafVariablesCloneMap[cloneeInput] = clonedInput;
-                }
-                else if (cloneeInput.IsParameter())
+                    if (leafVariablesCloneMap.find(cloneeInput) != leafVariablesCloneMap.end())
+                        clonedInput = leafVariablesCloneMap.at(cloneeInput);
+                    else
                 {
+                        if (cloneeInput.IsParameter())
+                        {
                     switch (parameterCloneMethod)
                     {
                     case ParameterCloningMethod::Clone:
@@ -271,6 +284,13 @@ namespace CNTK
                         LogicError("Unknown ParameterCloningMethod");
             }
         }
+                else
+                {
+                            clonedInput = cloneeInput.Clone();
+                            leafVariablesCloneMap[cloneeInput] = clonedInput;
+                        }
+                    }
+                }
                 else
                 {
                     assert(cloneeInput.IsOutput());
@@ -416,7 +436,12 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameEndIndex = L"endIndex";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameReductionOpName = L"reductionOpName";
 
-    /*static*/ std::vector<Variable> PrimitiveFunction::GetOutputVariables(PrimitiveOpType op, const std::vector<Variable>& inputs, Function* owner, const Dictionary& functionConfig, const std::wstring& functionName)
+    /*static*/ std::vector<Variable> PrimitiveFunction::GetOutputVariables(PrimitiveOpType op,
+                                                                           std::vector<Variable>& inputs,
+                                                                           Function* owner,
+                                                                           Dictionary& functionConfig,
+                                                                           bool inferDimensions,
+                                                                           const std::wstring& functionName)
     {
         if (op == PrimitiveOpType::Combine)
             return inputs;
@@ -426,7 +451,6 @@ namespace CNTK
         // Also, all the known DataTypes of operands should match except for constants where coercion is allowed
         DataType firstKnownInputDataType = DataType::Unknown;
         DataType outputDataType = DataType::Unknown;
-        NDShape outputShape;
         size_t i = 0;
         while (i < inputs.size())
         {
@@ -454,9 +478,6 @@ namespace CNTK
         if (outputDataType == DataType::Unknown)
             outputDataType = firstKnownInputDataType;
 
-        if (outputDataType == DataType::Unknown)
-            InvalidArgument("The DataType of all the input operands of primitive function with op type %S are unknown", PrimitiveOpTypeName(op).c_str());
-
         // We currently require that the inputs' dynamic axes if any match
         std::vector<Axis> outputDynamicAxes;
         if ((op == PrimitiveOpType::SumAll) || (op == PrimitiveOpType::SquaredError) || (op == PrimitiveOpType::CrossEntropyWithSoftmax) || (op == PrimitiveOpType::ClassificationError))
@@ -469,20 +490,33 @@ namespace CNTK
             outputDynamicAxes = inputs[1].DynamicAxes();
         else
         {
-            outputDynamicAxes = inputs[0].DynamicAxes();
+            auto allInputDynamicAxesEmpty = std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.DynamicAxes().empty(); }) == inputs.end();
+            if (!allInputDynamicAxesEmpty)
+            {
+                outputDynamicAxes = Axis::UnknownDynamicAxes;
             for (auto inputVar : inputs)
             {
                 auto currentInputDynamicAxes = inputVar.DynamicAxes();
-                if (outputDynamicAxes.empty())
+                    if (!currentInputDynamicAxes.empty() && (currentInputDynamicAxes != Axis::UnknownDynamicAxes))
+                    {
+                        if (outputDynamicAxes == Axis::UnknownDynamicAxes)
                     outputDynamicAxes = currentInputDynamicAxes;
                 else
                 {
-                    if (!currentInputDynamicAxes.empty() && (currentInputDynamicAxes != outputDynamicAxes))
+                            if (currentInputDynamicAxes != outputDynamicAxes)
                         LogicError("Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands");
                 }
             }
         }
+            }
+        }
 
+        NDShape outputShape;
+        bool areAnyInputShapesUnknown = (std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return input.Shape().IsUnknown(); }) != inputs.end());
+        if (areAnyInputShapesUnknown)
+            outputShape = NDShape::Unknown;
+        else
+        {
         switch (op)
         {
         case PrimitiveOpType::Negate:
@@ -501,10 +535,11 @@ namespace CNTK
         case PrimitiveOpType::RandomSampleInclusionFrequency:
         case PrimitiveOpType::Dropout:
         case PrimitiveOpType::Where:
-            assert(inputs.size() == 1);
-
-            outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
-            break;
+            {
+                assert(inputs.size() == 1);
+                outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
+                break;
+            }
         case PrimitiveOpType::TransposeAxes:
         {
             assert(inputs.size() == 1);
@@ -520,6 +555,7 @@ namespace CNTK
         }
         case PrimitiveOpType::Slice:
         {
+            assert(inputs.size() == 1);
             auto axis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
             int beginIndex = functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<size_t>();
             int endIndex = functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<size_t>();
@@ -563,7 +599,9 @@ namespace CNTK
             auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
             auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
             auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-            outputShape = ConvolutionOpOutputShape(inputs[0].Shape(), poolingWindowsShape, { 1 }, strides, { true }, autoPadding, lowerPad, upperPad, false);
+                NDShape outputMapCount = { 1 };
+                std::vector<bool> sharing = { true };
+                outputShape = ConvolutionOpOutputShape(op, inputs[0].Shape(), poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
             break;
         }
         case PrimitiveOpType::SumAll:
@@ -580,37 +618,45 @@ namespace CNTK
         case PrimitiveOpType::Greater:
         case PrimitiveOpType::GreaterEqual:
             assert(inputs.size() == 2);
-            outputShape = BinaryElementwiseOpOutputShape(op, inputs[0].Shape(), inputs[1].Shape());
+                outputShape = BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);
             break;
         case PrimitiveOpType::Times:
         {
             assert(inputs.size() == 2);
             size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-            outputShape = TimesOpOutputShape(inputs[0].Shape(), inputs[1].Shape(), outputRank);
+                outputShape = TimesOpOutputShape(inputs[0], inputs[1], outputRank, inferDimensions);
             break;
         }
         case PrimitiveOpType::TransposeTimes:
         {
             assert(inputs.size() == 2);
 
-            auto numLeftOperandAxes = inputs[0].Shape().Rank();
-            if (numLeftOperandAxes > 2)
+                auto transposeShapeFunc = [](const NDShape& shape) {
+                    NDShape transposedShape(std::max<size_t>(2, shape.Rank()), 1);
+                    for (size_t i = 0; i < shape.Rank(); ++i)
+                        transposedShape[transposedShape.Rank() - i - 1] = shape[i];
+
+                    return transposedShape;
+                };
+
+                if (inputs[0].Shape().Rank() > 2)
                 LogicError("TransposeTimes operation currently only supports %s operands of rank 1 or 2", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left");
 
-            NDShape transposedLeftOperandShape(2, 1);
-            for (size_t i = 0; i < numLeftOperandAxes; ++i)
-                transposedLeftOperandShape[transposedLeftOperandShape.Rank() - i - 1] = inputs[0].Shape()[i];
+                NDShape transposedLeftOperandShape = transposeShapeFunc(inputs[0].Shape());
+                Variable dummyLeftOperand = PlaceholderVariable(transposedLeftOperandShape);
+                size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
+                outputShape = TimesOpOutputShape(dummyLeftOperand, inputs[1], outputRank, inferDimensions);
+                if (dummyLeftOperand.Shape() != transposedLeftOperandShape)
+                    inputs[0].m_dataFields->m_shape = transposeShapeFunc(dummyLeftOperand.Shape());
 
-            size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-            outputShape = TimesOpOutputShape(transposedLeftOperandShape, inputs[1].Shape(), outputRank);
             break;
         }
         case PrimitiveOpType::Convolution:
         {
             assert(inputs.size() == 2);
-            auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
-            auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
-            auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                auto& strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                auto& lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
+                auto& upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
             auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
             auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
             bool transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
@@ -619,7 +665,16 @@ namespace CNTK
 
             NDShape outputMapCount, kernelShape;
             std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(inputs[0].Shape(), inputs[1].Shape());
-            outputShape = ConvolutionOpOutputShape(inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose);
+                auto originalKernelShape = kernelShape;
+                outputShape = ConvolutionOpOutputShape(op, inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, inferDimensions);
+                if (originalKernelShape != kernelShape)
+                {
+                    for (size_t i = 0; i < kernelShape.Rank(); ++i)
+                        inputs[0].m_dataFields->m_shape[i] = kernelShape[i];
+                }
+
+                functionConfig[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
+                functionConfig[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
             break;
         }
         case PrimitiveOpType::SquaredError:
@@ -651,10 +706,13 @@ namespace CNTK
             Variable initialStateVar = inputs[1];
 
             // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
-            if (inputOperandVar.DynamicAxes().size() != 2)
-                LogicError("Currently PastValue/FutureValue Function only supports input operand with with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
+                if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes) && (inputOperandVar.DynamicAxes().size() != 2))
+                    LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
 
-            outputShape = BinaryElementwiseOpOutputShape(op, inputs[0].Shape(), inputs[1].Shape());
+                if (!initialStateVar.DynamicAxes().empty())
+                    LogicError("Currently PastValue/FutureValue Function does not support initial state operand with dynamic axes!");
+
+                outputShape = BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);
             break;
         }
         case PrimitiveOpType::ReduceElements:
@@ -671,9 +729,12 @@ namespace CNTK
             break;
         }
         case PrimitiveOpType::BatchNormalization:
+            {
             assert(inputs.size() == 5);
-            outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
+                auto spatial = functionConfig[PrimitiveFunction::AttributeNameSpatial].Value<bool>();
+                outputShape = BatchNormalizationOutputShape(inputs, spatial, inferDimensions);
             break;
+            }
         case PrimitiveOpType::PackedIndex:
             outputShape = UnaryElementwiseOpOutputShape(inputs[1].Shape());
             break;
@@ -708,7 +769,7 @@ namespace CNTK
             break;
         case PrimitiveOpType::Select:
             assert(inputs.size() == 3);
-            outputShape = NaryElementwiseOpOutputShape(op, { inputs[0].Shape(), inputs[1].Shape(), inputs[2].Shape() });
+                outputShape = NaryElementwiseOpOutputShape(op, inputs, true);
             break;
         case PrimitiveOpType::Splice:
         {
@@ -721,8 +782,9 @@ namespace CNTK
             LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
             break;
         }
+        }
 
-        return{ OutputVariable(outputShape, outputDataType, owner, outputDynamicAxes, functionName.empty() ? L"" : functionName + L"_output") };
+        return { OutputVariable(outputShape, outputDataType, owner, outputDynamicAxes, functionName.empty() ? L"" : functionName + L"_output") };
     }
 
     /*static*/ const std::wstring CompositeFunction::CompositeFunctionOpName = L"CompositeFunctionOpName";
@@ -773,7 +835,23 @@ namespace CNTK
     {
         auto iter = variableToNodeMap.find(variable);
         if (iter != variableToNodeMap.end())
+        {
+            isVariableRootMap[variable] = false;
             return iter->second;
+        }
+
+        // The DataType, Shape and DynamicAxes of the variable must be known by now
+        if (variable.GetDataType() == DataType::Unknown)
+            InvalidArgument("Variable%S with unknown DataType detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+
+        if (variable.Shape().IsUnknown())
+            InvalidArgument("Variable%S with unknown shape detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+
+        if (variable.Shape().HasInferredDimension())
+            InvalidArgument("Variable%S with InferredDimension for at least one axis in it's shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+
+        if (variable.DynamicAxes() == Axis::UnknownDynamicAxes)
+            InvalidArgument("Variable%S with unknown dynamic axes detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         // Lets add a null entry in the map for this variable, to break infinite recursion when processing recurrent graphs
         variableToNodeMap[variable] = nullptr;
@@ -838,6 +916,7 @@ namespace CNTK
         }
 
         variableToNodeMap[variable] = computationNodePtr;
+        if (isVariableRootMap.find(variable) == isVariableRootMap.end())
         isVariableRootMap[variable] = variable.IsOutput();
         return computationNodePtr;
     }
@@ -1230,9 +1309,7 @@ namespace CNTK
                 }
             }
 
-#ifdef _DEBUG
-            m_computationNetwork->SetTraceLevel(1);
-#endif
+            m_computationNetwork->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
             m_computationNetwork->CompileNetwork();
 
             // Verify that the shapes of the output Variables that we computed match the corresponding nodes in the ComputationNetwork
@@ -1954,7 +2031,8 @@ namespace CNTK
 
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
-        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(op, std::vector<Variable>({ operand }), std::move(opConfig), name), name);
+        std::vector<Variable> operands = { operand };
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
     }
 
     FunctionPtr Negate(const Variable& operand, const std::wstring& name/* = L""*/)
@@ -2093,9 +2171,10 @@ namespace CNTK
         {
             if (operandAxis == axis)
             {
-                // If we are selecting just one frame from the dynamic axis, we can remove that axis
-                if ((endIndex - beginIndex) != 1)
-                    newDynamicAxes.push_back(CompositeFunction::NextAutoGeneratedDynamicAxis());
+                int sliceLength = (endIndex - beginIndex);
+                size_t multiplicativeFactor = (sliceLength > 0) ? 0 : 1;
+                auto derivedDynamicAxes = GetDerivedDynamicAxes(operandAxis, multiplicativeFactor, sliceLength);
+                std::copy(derivedDynamicAxes.begin(), derivedDynamicAxes.end(), std::back_inserter(newDynamicAxes));
             }
             else
                 newDynamicAxes.push_back(operandAxis);
@@ -2139,7 +2218,8 @@ namespace CNTK
     }
     FunctionPtr BinaryOp(PrimitiveOpType op, const Variable& leftOperand, const Variable& rightOperand, Dictionary&& opConfig, const std::wstring& name)
     {
-        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(op, std::vector<Variable>({ leftOperand, rightOperand }), std::move(opConfig), name), name);
+        std::vector<Variable> operands = { leftOperand, rightOperand };
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
     }
 
     FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
@@ -2225,9 +2305,6 @@ namespace CNTK
 
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
-        if (operand.DynamicAxes().size() != 2)
-            InvalidArgument("PastValue can only be used for operands with exactly one dynamic sequence-axis and one dynamic batch axis");
-
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOffset] = DictionaryValue(offset);
         return BinaryOp(PrimitiveOpType::PastValue, operand, initialState, std::move(additionalProperties), name);
@@ -2235,9 +2312,6 @@ namespace CNTK
 
     FunctionPtr FutureValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
-        if (operand.DynamicAxes().size() != 2)
-            InvalidArgument("FutureValue can only be used for operands with exactly one dynamic sequence-axis and one dynamic batch axis");
-
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOffset] = DictionaryValue(offset);
         return BinaryOp(PrimitiveOpType::FutureValue, operand, initialState, std::move(additionalProperties), name);
@@ -2348,8 +2422,9 @@ namespace CNTK
         additionalProperties[L"epsilon"] = epsilon;
         additionalProperties[L"useCuDNNEngine"] = useCuDNNEngine;
 
+        std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd };
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization,
-                                                                             std::vector<Variable>({ operand, scale, bias, runningMean, runningInvStd }),
+                                                                             operands,
                                                                              std::move(additionalProperties),
                                                                              name),
                                          name);
@@ -2357,13 +2432,15 @@ namespace CNTK
 
     FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name /*= L""*/)
     {
-        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Clip, std::vector<Variable>({ operand, min, max }), Dictionary(), name), name);
+        std::vector<Variable> operands = { operand, min, max };
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Clip, operands, Dictionary(), name), name);
     }
 
     FunctionPtr ElementSelect(const Variable& condition, const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name /*= L""*/)
     {
         // TODO: If the condition is a scalar constant, we can just pass-through the appropriate operand
-        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Select, std::vector<Variable>({ condition, leftOperand, rightOperand }), Dictionary(), name), name);
+        std::vector<Variable> operands = { condition, leftOperand, rightOperand };
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Select, operands, Dictionary(), name), name);
     }
 
     FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name /*= L""*/)
@@ -2374,7 +2451,8 @@ namespace CNTK
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
 
-        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Splice, operands, std::move(additionalProperties), name), name);
+        std::vector<Variable> operandsCopy = operands;
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Splice, operandsCopy, std::move(additionalProperties), name), name);
     }
 
     FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name /*= L""*/)
@@ -2388,7 +2466,8 @@ namespace CNTK
             uniqueOperands.insert(operand);
         }
 
-        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name), name);
+        std::vector<Variable> operandsCopy = operands;
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operandsCopy, Dictionary(), name), name);
     }
 
     namespace Sequence
@@ -2486,7 +2565,8 @@ namespace CNTK
 
         FunctionPtr ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name /*= L""*/)
         {
-            return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ScatterPacked, std::vector<Variable>({ operand, packedIndex, condition }), Dictionary(), name), name);
+            std::vector<Variable> operands = { operand, packedIndex, condition };
+            return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ScatterPacked, operands, Dictionary(), name), name);
         }
 
         FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand)
