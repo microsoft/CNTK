@@ -3,133 +3,6 @@ CPU info:
     Hardware threads: 1
     Total Memory: 33476764 kB
 -------------------------------------------------------------------
-<<<<<<< HEAD
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-=======
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
@@ -255,7 +128,6 @@ Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
 Set current path to: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
 Current working directory is now: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
->>>>>>> Fixing some interfaces
 WARNING: Exhausted all input expected for the current sequence while reading a floating point value at offset 43 in the input file (missing_trailing_newline.txt).
 attempt: Reached the maximum number of allowed errors while reading the input file (missing_trailing_newline.txt)., retrying 2-th time out of 5...
 WARNING: Exhausted all input expected for the current sequence while reading a floating point value at offset 43 in the input file (missing_trailing_newline.txt).
@@ -265,40 +137,22 @@ attempt: Reached the maximum number of allowed errors while reading the input fi
 WARNING: Exhausted all input expected for the current sequence while reading a floating point value at offset 43 in the input file (missing_trailing_newline.txt).
 attempt: Reached the maximum number of allowed errors while reading the input file (missing_trailing_newline.txt)., retrying 5-th time out of 5...
 WARNING: Exhausted all input expected for the current sequence while reading a floating point value at offset 43 in the input file (missing_trailing_newline.txt).
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
 Set current path to: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
 Current working directory is now: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
->>>>>>> Fixing some interfaces
 WARNING: Exhausted all input expected for the current sequence while reading a floating point value at offset 43 in the input file (missing_trailing_newline.txt).
 WARNING: Exhausted all input expected for the current sequence while reading an input row at offset 43 in the input file (missing_trailing_newline.txt). Possibly, a trailing newline is missing.
 WARNING: Could not read a row (# 2) while loading sequence (id = 1) at offset 43 in the input file (missing_trailing_newline.txt).
 WARNING: Exhausted all input expected for the current sequence (id = 1) at offset 43 in the input file (missing_trailing_newline.txt), but only read 1 out of 2 expected rows.
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
 Set current path to: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
 Current working directory is now: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
->>>>>>> Fixing some interfaces
 WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
 attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 2-th time out of 5...
 WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
@@ -308,40 +162,22 @@ attempt: Reached the maximum number of allowed errors while reading the input fi
 WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
 attempt: Reached the maximum number of allowed errors while reading the input file (contains_blank_lines.txt)., retrying 5-th time out of 5...
 WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
 Set current path to: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
 Current working directory is now: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
->>>>>>> Fixing some interfaces
 WARNING: Empty input row at offset 19 in the input file (contains_blank_lines.txt).
 WARNING: Could not read a row (# 2) while loading sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt).
 WARNING: Exhausted all input expected for the current sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt), but only read 1 out of 2 expected rows.
 WARNING: Maximum per-input number of samples for sequence (id = 1) at offset 19 in the input file (contains_blank_lines.txt) is less than expected (1 vs. 2).
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
 Set current path to: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
 Current working directory is now: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
->>>>>>> Fixing some interfaces
 WARNING: Input row at offset 27 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
 WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 27 in the input file (duplicate_inputs.txt).
 attempt: Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt)., retrying 2-th time out of 5...
@@ -356,63 +192,6 @@ WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for s
 attempt: Reached the maximum number of allowed errors while reading the input file (duplicate_inputs.txt)., retrying 5-th time out of 5...
 WARNING: Input row at offset 27 in the input file (duplicate_inputs.txt) contains more samples than expected (3 vs. 2).
 WARNING: Input ('features2') contains more samples than expected (2 vs. 1) for sequence (id = 1) at offset 27 in the input file (duplicate_inputs.txt).
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-WARNING: A dense sample at offset 6 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 0).
-WARNING: A dense sample at offset 62 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 5).
-WARNING: A dense sample at offset 478 in the input file (empty_samples.txt) has a sparse suffix (expected size = 10, actual size = 1).
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
@@ -462,7 +241,12 @@ Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/Read
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
+Set current path to: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/
+Current working directory is now: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader
+Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: C:/repo/cntk_github/CNTK/x64/release
+Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -475,28 +259,17 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-<<<<<<< HEAD
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT50B1.tmp'
-=======
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT4B05.tmp'
->>>>>>> Fixing some interfaces
+biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNTB1E3.tmp'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -505,19 +278,11 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-<<<<<<< HEAD
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT50B1.tmp'
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT4B05.tmp'
+biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNTB1E3.tmp'
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -544,17 +309,10 @@ evaluate: reading 608 frames of An4/477/477/an257-mewl-b.mfc
 evaluate: reading 78 frames of An4/454/454/an70-meht-b.mfc
 evaluate: reading 228 frames of An4/254/254/cen6-ftmj-b.mfc
 evaluate: reading 218 frames of An4/946/946/cen6-mwhw-b.mfc
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -567,17 +325,10 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 886), data subset 0 of 1, with 1 datapasses
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -590,19 +341,6 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
@@ -614,7 +352,6 @@ Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/Read
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -627,17 +364,10 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 886), data subset 0 of 1, with 1 datapasses
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -671,17 +401,10 @@ getbatch: getting randomized frames [250..500] (250 frames out of 250 requested)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
 getbatch: getting randomized frames [500..750] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
 getbatch: getting randomized frames [750..1000] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -694,28 +417,17 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-<<<<<<< HEAD
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNTC5B3.tmp'
-=======
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNTC509.tmp'
->>>>>>> Fixing some interfaces
+biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT2F13.tmp'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -724,19 +436,11 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-<<<<<<< HEAD
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNTC5B3.tmp'
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNTC509.tmp'
+biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT2F13.tmp'
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -763,17 +467,10 @@ evaluate: reading 608 frames of An4/477/477/an257-mewl-b.mfc
 evaluate: reading 78 frames of An4/454/454/an70-meht-b.mfc
 evaluate: reading 228 frames of An4/254/254/cen6-ftmj-b.mfc
 evaluate: reading 218 frames of An4/946/946/cen6-mwhw-b.mfc
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -786,17 +483,10 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 886), data subset 0 of 1, with 1 datapasses
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -809,17 +499,10 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -831,17 +514,10 @@ label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
 minibatchiterator: epoch 0: frames [0..2000] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -875,17 +551,10 @@ getbatch: getting randomized frames [250..500] (250 frames out of 250 requested)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
 getbatch: getting randomized frames [500..750] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
 getbatch: getting randomized frames [750..1000] (250 frames out of 250 requested) in sweep 0; chunks [0..0] -> chunk window [0..3)
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -898,17 +567,10 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 2, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 2, with 1 datapasses
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -921,17 +583,10 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 1 of 2, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 1 of 2, with 1 datapasses
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1072,17 +727,10 @@ getbatch: getting utterances 32..32 (268 subset of 268 frames out of 250 request
 getbatch: getting utterances 33..33 (348 subset of 348 frames out of 250 requested) in sweep 0
 getbatch: getting utterances 34..34 (258 subset of 258 frames out of 250 requested) in sweep 0
 getbatch: getting utterances 35..35 (598 subset of 598 frames out of 220 requested) in sweep 0
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1092,17 +740,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1112,17 +753,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1132,17 +766,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1152,17 +779,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1172,17 +792,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1192,17 +805,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1212,17 +818,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1232,17 +831,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1252,17 +844,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1274,17 +859,10 @@ label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
 minibatchiterator: epoch 0: frames [0..2000] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1294,17 +872,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1345,17 +916,10 @@ HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 9015
 HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
 HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
 HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1399,36 +963,16 @@ HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 9015
 HTKChunkDescription::ReleaseData: release physical chunk 1 (341 utterances, 90158 frames, 11900856 bytes)
 HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
 HTKChunkDescription::ReleaseData: release physical chunk 0 (328 utterances, 90234 frames, 11910888 bytes)
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
 Reading script file ./glob_0000.scp ... 948 entries
 HTKDataDeserializer::HTKDataDeserializer: selected 948 utterances grouped into 3 chunks, average chunk size: 316.0 utterances, 84244.7 frames (for I/O: 316.0 utterances, 84244.7 frames)
 HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
-Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
-Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
-Reading script file NonExistingScpFile ...Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
@@ -1440,7 +984,6 @@ Reading script file NonExistingScpFile ...Set current path to: C:/repo/cntk_gith
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1450,17 +993,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/Speech/AN4Corpus/v0
 Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
@@ -1470,109 +1006,6 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensio
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
 MLFDataDeserializer::MLFDataDeserializer: 948 utterances with 252734 frames in 129 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Sequence missing.jpg is not found in container images/simple.zip.
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Current working directory is now: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests/Data
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
@@ -1674,7 +1107,6 @@ Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/Read
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/iVector
 Current working directory is now: d:/TestPreparation/iVector
@@ -1692,17 +1124,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 40-dimensio
 total 9000 state names in state list ./labels.statelist
 htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
 MLFDataDeserializer::MLFDataDeserializer: 4963 utterances with 1669414 frames in 9000 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/iVector
 Current working directory is now: d:/TestPreparation/iVector
@@ -1727,17 +1152,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 100-dimensi
 total 9000 state names in state list ./labels.statelist
 htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
 MLFDataDeserializer::MLFDataDeserializer: 4963 utterances with 1669414 frames in 9000 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/iVector
 Current working directory is now: d:/TestPreparation/iVector
@@ -1762,17 +1180,10 @@ HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 100-dimensi
 total 9000 state names in state list ./labels.statelist
 htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
 MLFDataDeserializer::MLFDataDeserializer: 4963 utterances with 1669414 frames in 9000 classes
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-Executable path: C:/repo/cntk_github6/CNTK/x64/release
-Test path: C:/repo/cntk_github6/CNTK/Tests/UnitTests/ReaderTests
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
->>>>>>> Fixing some interfaces
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/iVector
 Current working directory is now: d:/TestPreparation/iVector
@@ -1783,7 +1194,7 @@ htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
 ....................................................................................................feature set 0: 1669414 frames in 4963 out of 4963 utterances
 label set 0: 9000 classes
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
-....................................................................................................Running 102 test cases...
+....................................................................................................Running 103 test cases...
 feature set 1: 1669414 frames in 4963 out of 4963 utterances
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
 minibatchiterator: epoch 0: frames [0..400] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
@@ -1799,19 +1210,11 @@ total 9000 state names in state list ./labels.statelist
 htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
 MLFDataDeserializer::MLFDataDeserializer: 4963 utterances with 1669414 frames in 9000 classes
 Legacy configuration is used for truncated BPTT mode, please adapt the config to explicitly specify truncationLength.
-<<<<<<< HEAD
-Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
-
-Test module "ReaderTests" has passed with:
-  102 test cases out of 102 passed
-  16973558 assertions out of 16973558 passed
-=======
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 
 Test module "ReaderTests" has passed with:
-  102 test cases out of 102 passed
-  16973569 assertions out of 16973569 passed
->>>>>>> Fixing some interfaces
+  103 test cases out of 103 passed
+  16973570 assertions out of 16973570 passed
 
   Test suite "ReaderTestSuite" has passed with:
     84 test cases out of 84 passed
