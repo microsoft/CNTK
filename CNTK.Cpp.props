@@ -124,7 +124,7 @@
 
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>HAS_OPENMPI=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>HAS_MPI=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
 

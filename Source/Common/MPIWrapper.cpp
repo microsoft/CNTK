@@ -5,7 +5,7 @@
 #include "Include/Basics.h"
 #include "Include/MPIWrapper.h"
 
-#if HAS_OPENMPI
+#if HAS_MPI
 #pragma comment(lib, "msmpi.lib")
 #else
 #define MPI_SUCCESS             0
@@ -16,6 +16,142 @@
 #define FFLUSH_SUCCESS          0
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+    // -----------------------------------------------------------------------
+    // Specific MPIWrapper class definitions.
+    // -----------------------------------------------------------------------
+
+#if HAS_MPI
+    class MPIWrapperMpi : public MPIWrapper
+    {
+        int m_myRank;
+        int m_numMPINodes;
+        size_t m_numNodesInUse;
+
+        // MPI communicator that reflects the current subset selection
+        MPI_Comm m_currentComm;
+
+        // MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
+        int MPI_Init_DL();
+
+        // Workaround for the issue with MPI hanging when we have non-0 exit codes from CNTK processes
+        // OpenMPI has a confirmed race condition on killing child process vs. handling their non-zero exit statuses, resulting
+        // in a deadlock, where all processes killed but MPI is still waiting.
+        // This happens when several perfectly synchronized processes (for example on MPI barrier)
+        // simulatenously exit with non-0 exit code.
+        // As a workaround, we simply sleep 50*rank miliseconds, effectively "de-synchronizing processes" at exit,
+        // allowing MPI to sequentially handle terminations
+        static int s_myRank;
+        static void MPIWorkaroundAtExit();
+
+    public:
+        MPIWrapperMpi();
+
+        // Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
+        // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
+        ~MPIWrapperMpi();
+
+    private:
+        void Ping(const char *msg) const;
+        MPI_Comm Communicator() const;
+
+        void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/);
+
+    public:
+
+        size_t NumNodesInUse() const;
+        size_t CurrentNodeRank() const;
+        bool IsMainNode() const;
+        bool IsIdle() const;
+        bool UsingAllNodes() const;
+        size_t MainNodeRank() const;
+
+        // -----------------------------------------------------------------------
+        // data-exchange functions (wrappers around MPI functions)
+        // -----------------------------------------------------------------------
+
+        virtual int Finalize(void);
+        virtual int Wait(MPI_Request* request, MPI_Status* status);
+        virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
+        virtual int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
+        virtual int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+        virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
+        virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+        virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
+        virtual int Abort(int errorcode);
+        virtual int Error_string(int errorcode, char* string, int* resultlen);
+
+        // allreduce of a vector
+        virtual void AllReduce(std::vector<size_t>& accumulator) const;
+        virtual void AllReduce(std::vector<int>& accumulator) const;
+        virtual void AllReduce(std::vector<double>& accumulator) const;
+        virtual void AllReduce(std::vector<float>& accumulator) const;
+
+        // for raw pointer
+        virtual void AllReduce(size_t* pData, size_t nData);
+        virtual void AllReduce(int* pData, size_t nData);
+        virtual void AllReduce(double* pData, size_t nData);
+        virtual void AllReduce(float* pData, size_t nData);
+
+        virtual void Bcast(size_t* pData, size_t nData, size_t srcRank);
+        virtual void Bcast(double* pData, size_t nData, size_t srcRank);
+        virtual void Bcast(float* pData, size_t nData, size_t srcRank);
+
+        // wait for all ranks to reach here
+        int WaitAll();
+};
+#endif
+
+class MPIWrapperEmpty : public MPIWrapper
+    {
+    public:
+        MPIWrapperEmpty();
+
+        // Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
+        // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
+        ~MPIWrapperEmpty();
+
+        size_t NumNodesInUse() const;
+        size_t CurrentNodeRank() const;
+        bool IsMainNode() const;
+        bool IsIdle() const;
+        bool UsingAllNodes() const;
+        size_t MainNodeRank() const;
+
+        // -----------------------------------------------------------------------
+        // data-exchange functions (wrappers around MPI functions)
+        // -----------------------------------------------------------------------
+
+        virtual int Finalize(void);
+        virtual int Wait(MPI_Request* request, MPI_Status* status);
+        virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
+        virtual int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
+        virtual int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+        virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
+        virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+        virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
+        virtual int Abort(int errorcode);
+        virtual int Error_string(int errorcode, char* string, int* resultlen);
+
+        // allreduce of a vector
+        virtual void AllReduce(std::vector<size_t>& accumulator) const;
+        virtual void AllReduce(std::vector<int>& accumulator) const;
+        virtual void AllReduce(std::vector<double>& accumulator) const;
+        virtual void AllReduce(std::vector<float>& accumulator) const;
+
+        // for raw pointer
+        virtual void AllReduce(size_t* pData, size_t nData);
+        virtual void AllReduce(int* pData, size_t nData);
+        virtual void AllReduce(double* pData, size_t nData);
+        virtual void AllReduce(float* pData, size_t nData);
+
+        virtual void Bcast(size_t* pData, size_t nData, size_t srcRank);
+        virtual void Bcast(double* pData, size_t nData, size_t srcRank);
+        virtual void Bcast(float* pData, size_t nData, size_t srcRank);
+
+        // wait for all ranks to reach here
+        int WaitAll();
+    };
 
     // -----------------------------------------------------------------------
     // Generic MPIWrapper functions (not related to a specific implementation)
@@ -64,7 +200,7 @@ MPIWrapperPtr MPIWrapper::GetInstance(bool create)
         if (initialized)
             LogicError("Creating MPIWrapper instance after a GetInstance call has been already made!");
         else
-#if HAS_OPENMPI
+#if HAS_MPI
             // TODO: at this point, we should load the correct plugin instead of
             //       hardcoding the instanciation here (and thus assuming that
             //       mpi libs are available during build time)
@@ -115,7 +251,7 @@ MPI_Datatype MPIWrapper::GetDataType(size_t *)
 // TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
 int MPIWrapper::GetTotalNumberOfMPINodes()
 {
-#if !HAS_OPENMPI
+#if !HAS_MPI
     return 0;
 #else
 #ifdef WIN32
@@ -134,7 +270,7 @@ int MPIWrapper::GetTotalNumberOfMPINodes()
 #endif
 }
 
-#if HAS_OPENMPI
+#if HAS_MPI
     // -----------------------------------------------------------------------
     // MPIWrapper that actually calls into msmpi.dll
     // -----------------------------------------------------------------------
@@ -147,11 +283,11 @@ MPIWrapperMpi::MPIWrapperMpi()
     static bool initialized = false;
     if (initialized)
     {
-        LogicError("MPIWrapper: this is a singleton class that can only be instantiated once per process");
+        LogicError("MPIWrapperMpi: this is a singleton class that can only be instantiated once per process");
     }
 
     initialized = true;
-    fprintf(stderr, "MPIWrapper: initializing MPI\n");
+    fprintf(stderr, "MPIWrapperMpi: initializing MPI\n");
     fflush(stderr);
 
     MPI_Init_DL() || MpiFail("mpiaggregator: MPI_Init");
@@ -173,7 +309,7 @@ MPIWrapperMpi::MPIWrapperMpi()
     atexit(&MPIWrapperMpi::MPIWorkaroundAtExit);
 
     // by default we use all of them
-    RequestNodes("MPIWrapper");
+    RequestNodes("MPIWrapperMpi");
 
     if (m_numMPINodes > 1)
         fprintf(stderr, "mpihelper: we are cog %d in a gearbox of %d\n", (int)m_myRank, (int)m_numMPINodes);
@@ -194,7 +330,7 @@ MPIWrapperMpi::MPIWrapperMpi()
 // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
 MPIWrapperMpi::~MPIWrapperMpi()
 {
-    fprintf(stderr, "~MPIWrapper\n");
+    fprintf(stderr, "~MPIWrapperMpi\n");
 
     // Do not finalize in event of an exception since calling MPI_Finalize without
     // all pending communications being finished results in a hang
@@ -204,9 +340,9 @@ MPIWrapperMpi::~MPIWrapperMpi()
         if (rc != FFLUSH_SUCCESS)
         {
 #ifdef _WIN32
-            RuntimeError("MPIWrapper: Failed to flush stderr, %d", ::GetLastError());
+            RuntimeError("MPIWrapperMpi: Failed to flush stderr, %d", ::GetLastError());
 #else
-            RuntimeError("MPIWrapper: Failed to flush stderr, %d", errno);
+            RuntimeError("MPIWrapperMpi: Failed to flush stderr, %d", errno);
 #endif
         }
 
@@ -414,7 +550,7 @@ size_t MPIWrapperMpi::MainNodeRank() const
 }
 
 // allreduce of a vector
-void MPIWrapperMpi::AllReduce(std::vector<size_t>&accumulator) const
+void MPIWrapperMpi::AllReduce(std::vector<size_t>& accumulator) const
 {
     auto *dataptr = accumulator.data();
     size_t totalnumelements = accumulator.size();
@@ -426,7 +562,7 @@ void MPIWrapperMpi::AllReduce(std::vector<size_t>&accumulator) const
     }
 }
 
-void MPIWrapperMpi::AllReduce(std::vector<int>&accumulator) const
+void MPIWrapperMpi::AllReduce(std::vector<int>& accumulator) const
 {
     auto *dataptr = accumulator.data();
     size_t totalnumelements = accumulator.size();
@@ -438,7 +574,7 @@ void MPIWrapperMpi::AllReduce(std::vector<int>&accumulator) const
     }
 }
 
-void MPIWrapperMpi::AllReduce(std::vector<double>&accumulator) const
+void MPIWrapperMpi::AllReduce(std::vector<double>& accumulator) const
 {
     auto *dataptr = accumulator.data();
     size_t totalnumelements = accumulator.size();
@@ -450,7 +586,7 @@ void MPIWrapperMpi::AllReduce(std::vector<double>&accumulator) const
     }
 }
 
-void MPIWrapperMpi::AllReduce(std::vector<float>&accumulator) const
+void MPIWrapperMpi::AllReduce(std::vector<float>& accumulator) const
 {
     auto *dataptr = accumulator.data();
     size_t totalnumelements = accumulator.size();
@@ -463,7 +599,7 @@ void MPIWrapperMpi::AllReduce(std::vector<float>&accumulator) const
 }
 
 // for raw pointer
-void MPIWrapperMpi::AllReduce(size_t*pData, size_t nData)
+void MPIWrapperMpi::AllReduce(size_t* pData, size_t nData)
 {
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
@@ -471,7 +607,7 @@ void MPIWrapperMpi::AllReduce(size_t*pData, size_t nData)
     }
 }
 
-void MPIWrapperMpi::AllReduce(int*pData, size_t nData)
+void MPIWrapperMpi::AllReduce(int* pData, size_t nData)
 {
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
@@ -479,7 +615,7 @@ void MPIWrapperMpi::AllReduce(int*pData, size_t nData)
     }
 }
 
-void MPIWrapperMpi::AllReduce(double*pData, size_t nData)
+void MPIWrapperMpi::AllReduce(double* pData, size_t nData)
 {
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
@@ -487,7 +623,7 @@ void MPIWrapperMpi::AllReduce(double*pData, size_t nData)
     }
 }
 
-void MPIWrapperMpi::AllReduce(float*pData, size_t nData)
+void MPIWrapperMpi::AllReduce(float* pData, size_t nData)
 {
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
@@ -495,7 +631,7 @@ void MPIWrapperMpi::AllReduce(float*pData, size_t nData)
     }
 }
 
-void MPIWrapperMpi::Bcast(size_t*pData, size_t nData, size_t srcRank)
+void MPIWrapperMpi::Bcast(size_t* pData, size_t nData, size_t srcRank)
 {
     if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
     {
@@ -503,7 +639,7 @@ void MPIWrapperMpi::Bcast(size_t*pData, size_t nData, size_t srcRank)
     }
 }
 
-void MPIWrapperMpi::Bcast(double*pData, size_t nData, size_t srcRank)
+void MPIWrapperMpi::Bcast(double* pData, size_t nData, size_t srcRank)
 {
     if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
     {
@@ -511,7 +647,7 @@ void MPIWrapperMpi::Bcast(double*pData, size_t nData, size_t srcRank)
     }
 }
 
-void MPIWrapperMpi::Bcast(float*pData, size_t nData, size_t srcRank)
+void MPIWrapperMpi::Bcast(float* pData, size_t nData, size_t srcRank)
 {
     if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
     {
@@ -662,48 +798,48 @@ size_t MPIWrapperEmpty::MainNodeRank() const
 }
 
 // allreduce of a vector
-void MPIWrapperEmpty::AllReduce(std::vector<size_t>&accumulator) const
+void MPIWrapperEmpty::AllReduce(std::vector<size_t>& accumulator) const
 {
 }
 
-void MPIWrapperEmpty::AllReduce(std::vector<int>&accumulator) const
+void MPIWrapperEmpty::AllReduce(std::vector<int>& accumulator) const
 {
 }
 
-void MPIWrapperEmpty::AllReduce(std::vector<double>&accumulator) const
+void MPIWrapperEmpty::AllReduce(std::vector<double>& accumulator) const
 {
 }
 
-void MPIWrapperEmpty::AllReduce(std::vector<float>&accumulator) const
+void MPIWrapperEmpty::AllReduce(std::vector<float>& accumulator) const
 {
 }
 
 // for raw pointer
-void MPIWrapperEmpty::AllReduce(size_t*pData, size_t nData)
+void MPIWrapperEmpty::AllReduce(size_t* pData, size_t nData)
 {
 }
 
-void MPIWrapperEmpty::AllReduce(int*pData, size_t nData)
+void MPIWrapperEmpty::AllReduce(int* pData, size_t nData)
 {
 }
 
-void MPIWrapperEmpty::AllReduce(double*pData, size_t nData)
+void MPIWrapperEmpty::AllReduce(double* pData, size_t nData)
 {
 }
 
-void MPIWrapperEmpty::AllReduce(float*pData, size_t nData)
+void MPIWrapperEmpty::AllReduce(float* pData, size_t nData)
 {
 }
 
-void MPIWrapperEmpty::Bcast(size_t*pData, size_t nData, size_t srcRank)
+void MPIWrapperEmpty::Bcast(size_t* pData, size_t nData, size_t srcRank)
 {
 }
 
-void MPIWrapperEmpty::Bcast(double*pData, size_t nData, size_t srcRank)
+void MPIWrapperEmpty::Bcast(double* pData, size_t nData, size_t srcRank)
 {
 }
 
-void MPIWrapperEmpty::Bcast(float*pData, size_t nData, size_t srcRank)
+void MPIWrapperEmpty::Bcast(float* pData, size_t nData, size_t srcRank)
 {
 }
 
