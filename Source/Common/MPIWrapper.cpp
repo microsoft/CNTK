@@ -8,17 +8,20 @@
 #if HAS_OPENMPI
 #pragma comment(lib, "msmpi.lib")
 #else
-#pragma warning(disable: 4100) // unreferenced formal parameter
-#define MPI_SUCCESS           0
+#define MPI_SUCCESS             0
+#define MPI_ERR_INTERN          1
+#define MPI_MAX_ERROR_STRING    512
 #endif
 
-#define FFLUSH_SUCCESS 0
+#define FFLUSH_SUCCESS          0
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // -----------------------------------------------------------------------
     // Generic MPIWrapper functions (not related to a specific implementation)
     // -----------------------------------------------------------------------
+
+std::shared_ptr<MPIWrapper> MPIWrapper::s_mpi = nullptr;
 
 int operator||(int rc, const MpiFail &what)
 {
@@ -30,28 +33,28 @@ int operator||(int rc, const MpiFail &what)
     fprintf(stderr, "%s, MPI error %d\n", what.c_str(), rc);
     fflush(stderr);
 
-#if HAS_OPENMPI
-    // (special case: we use that code to indicate a missing msmpi.dll...)
-    if (rc != MPI_ERR_INTERN)
+    if (MPIWrapper::s_mpi != nullptr)
     {
-        char errbuf[MPI_MAX_ERROR_STRING + 1] = { 0 };
-        int len;
-        MPI_Error_string(rc, &errbuf[0], &len);
-        fprintf(stderr, "%s, MPI error %d: %s\n", what.c_str(), rc, errbuf);
-        fflush(stderr);
+        // (special case: we use that code to indicate a missing msmpi.dll...)
+        if (rc != MPI_ERR_INTERN)
+        {
+            char errbuf[MPI_MAX_ERROR_STRING + 1] = { 0 };
+            int len = MPI_MAX_ERROR_STRING;
+            MPIWrapper::s_mpi->Error_string(rc, &errbuf[0], &len);
 
-        // we abort through this, so that the MPI system gets the memo
-        MPI_Abort(MPI_COMM_WORLD, rc);
+            fprintf(stderr, "%s, MPI error %d: %s\n", what.c_str(), rc, errbuf);
+            fflush(stderr);
 
-        // TODO: or does that only signal an issue, and we should still terminate ourselves?
-        // BUGBUG: We'd also need to Abort through the other sub-set communicator
+            // we abort through this, so that the MPI system gets the memo
+            MPIWrapper::s_mpi->Abort(rc);
+
+            // TODO: or does that only signal an issue, and we should still terminate ourselves?
+            // BUGBUG: We'd also need to Abort through the other sub-set communicator
+        }
     }
-#endif
 
     RuntimeError("%s", what.c_str());
 }
-
-std::shared_ptr<MPIWrapper> MPIWrapper::s_mpi = nullptr;
 
 MPIWrapperPtr MPIWrapper::GetInstance(bool create)
 {
@@ -369,6 +372,17 @@ int MPIWrapperMpi::Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI
     return MPI_Iallreduce(sendbuf, recvbuf, count, datatype, op, m_currentComm, request);
 }
 
+int MPIWrapperMpi::Abort(int errorcode)
+{
+    // we abort through this, so that the MPI system gets the memo
+    return MPI_Abort(MPI_COMM_WORLD, errorcode);
+}
+
+int MPIWrapperMpi::Error_string(int errorcode, char* str, int* resultlen)
+{
+    return MPI_Error_string(errorcode, str, resultlen);
+}
+
 size_t MPIWrapperMpi::NumNodesInUse() const
 {
     return m_numNodesInUse;
@@ -509,10 +523,10 @@ void MPIWrapperMpi::Bcast(float*pData, size_t nData, size_t srcRank)
 
 
     // -----------------------------------------------------------------------
-    // MPIWrapper that does nothing
+    // MPIWrapperEmpty that does nothing
     // -----------------------------------------------------------------------
 #pragma warning(push)
-#pragma warning(disable: 4100) // parameter not used
+#pragma warning(disable: 4100) // unreferenced formal parameter
 
 MPIWrapperEmpty::MPIWrapperEmpty()
 {
@@ -535,7 +549,7 @@ MPIWrapperEmpty::MPIWrapperEmpty()
 // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
 MPIWrapperEmpty::~MPIWrapperEmpty()
 {
-    fprintf(stderr, "~MPIWrapper\n");
+    fprintf(stderr, "~MPIWrapperEmpty\n");
 
     // Do not finalize in event of an exception since calling MPI_Finalize without
     // all pending communications being finished results in a hang
@@ -545,9 +559,9 @@ MPIWrapperEmpty::~MPIWrapperEmpty()
         if (rc != FFLUSH_SUCCESS)
         {
 #ifdef _WIN32
-            RuntimeError("MPIWrapper: Failed to flush stderr, %d", ::GetLastError());
+            RuntimeError("MPIWrapperEmpty: Failed to flush stderr, %d", ::GetLastError());
 #else
-            RuntimeError("MPIWrapper: Failed to flush stderr, %d", errno);
+            RuntimeError("MPIWrapperEmpty: Failed to flush stderr, %d", errno);
 #endif
         }
 
@@ -599,6 +613,22 @@ int MPIWrapperEmpty::Irecv(void* buf, int count, MPI_Datatype datatype, int sour
 int MPIWrapperEmpty::Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Request* request)
 {
     return MPI_UNDEFINED;
+}
+
+int MPIWrapperEmpty::Abort(int errorcode)
+{
+    return MPI_UNDEFINED;
+}
+
+int MPIWrapperEmpty::Error_string(int errorcode, char* str, int* resultlen)
+{
+    if (!str || !resultlen)
+    {
+        return MPI_UNDEFINED;
+    }
+
+    *resultlen = sprintf(str, "Error-%d", errorcode);
+    return MPI_SUCCESS;
 }
 
 size_t MPIWrapperEmpty::NumNodesInUse() const

@@ -95,6 +95,9 @@ public:
     virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status) = 0;
     virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request) = 0;
     virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request) = 0;
+    virtual int Abort(int errorcode) = 0;
+    virtual int Error_string(int errorcode, char* string, int* resultlen) = 0;
+
 
     // helpers to determine the MPI_Datatype of a pointer
     static MPI_Datatype GetDataType(char *);
@@ -182,6 +185,8 @@ public:
     virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
     virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
     virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual int Abort(int errorcode);
+    virtual int Error_string(int errorcode, char* string, int* resultlen);
 
     // allreduce of a vector
     virtual void AllReduce(std::vector<size_t>&accumulator) const;
@@ -233,6 +238,8 @@ public:
     virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
     virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
     virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual int Abort(int errorcode);
+    virtual int Error_string(int errorcode, char* string, int* resultlen);
 
     // allreduce of a vector
     virtual void AllReduce(std::vector<size_t>&accumulator) const;
