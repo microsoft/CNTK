@@ -26,10 +26,13 @@ TEST_CASES = [
     ([1.,2.,3.],                                                                     42,     True,   [42/(1+2+3), 2*42/(1+2+3), 3*42/(1+2+3)],             0.0001, False),
 
     # Use 300 weights where the first 200 hundred weights are high compared to the rest. Sample 200 without replacement. 
-    (np.concatenate((np.full((100),100),np.full((100),10),np.full((100),0.1))),    200,     False,  np.concatenate((np.full((200),1),np.full((100),0))),   0.05,   False),
+    (np.concatenate((np.full((100),100),np.full((100),10),np.full((100),0.1))),    200,      False,  np.concatenate((np.full((200),1),np.full((100),0))),  0.05,   False),
     
     # Having more classes than samples is not allowed when sampling without replacment. Check if exception is thrown.
     (np.full((4), 42.),                                                              50,     False,  np.full((4), 13/4),                                   0.0001, True), 
+
+    # Number of requested samples must be positive
+    ([1., 2., 3.],                                                                    0,     False,  np.full((4), 13/4),                                   0.0001, True), 
 
     # Non positive sampling weigts are not allowed.
     ([1,-1.],                                                                         1,     True,   [0],                                                  0.0001, True), 

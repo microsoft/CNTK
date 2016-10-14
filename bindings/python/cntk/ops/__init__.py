@@ -1453,15 +1453,13 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
 
     Args:
         weights: input vector of sampling weights which should be nonzero positive numbers.
-        num_samples ('int'): number of expected samples
-        allow_duplicates ('bool'): If sampling is done with replacement (true) or without (false).
+        num_samples (`int`): number of expected samples
+        allow_duplicates (`bool`): If sampling is done with replacement (True) or without (False).
 
     Returns:
-        FIXME also in all of the other cases :class:`cntk.Function`
-    '''
-    if num_samples <= 0:
-        raise ValueError('num_samples must be greater that zero')
+        :class:`cntk.ops.functions.Function`
 
+    '''
     from cntk.cntk_py import random_sample
     weights = sanitize_input(weights)
 
@@ -1471,14 +1469,15 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
 @typemap
 def random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, name=''):
     '''
-    For weighted sampling with the specifed sample size (num_samples) this node computes the expected number of occurences of each class
-    the the sampled set. The result only an estimate. Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
+    For weighted sampling with the specifed sample size (num_samples) this node computes the expected number of occurences of each class in
+    the the sampled set. In case of sampling without replacement the result only an estimate which might be quite rough in the case of small sample sizes.
+    Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
     This operation will be typically used together with 'random_sample'.
 
     Args:
         weights: input vector of sampling weights which should be nonzero positive numbers.
         num_samples ('int'): number of expected samples
-        allow_duplicates ('bool'): If sampling is done with replacement (true) or without (false).
+        allow_duplicates ('bool'): If sampling is done with replacement (True) or without (False).
 
     Examples:
         >>> import numpy as np
@@ -1500,11 +1499,8 @@ def random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, na
         0.48722463883004796
 
     Returns:
-        FIXME also in all of the other cases :class:`cntk.Function`
+        :class:`cntk.ops.functions.Function`
     '''
-    if num_samples <= 0:
-        raise ValueError('num_samples must be greater that zero')
-
     from cntk.cntk_py import random_sample_inclusion_frequency
     weights = sanitize_input(weights)
 

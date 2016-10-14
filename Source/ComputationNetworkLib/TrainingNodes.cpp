@@ -10,6 +10,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
  template<class ElemType>
  void RandomSampleNodeBase<ElemType>::Validate(bool isFinalValidationPass)
  {
+     if (m_sizeOfSampledSet == 0)
+     {
+         InvalidArgument("Number of requested samples is zero.");
+     }
+
     if (isFinalValidationPass)
     {
         // Sampling without replacement does only work when the number of requested classes is <= number of classes.
