@@ -112,7 +112,10 @@ def train(reader, model):
         loss_denom = 0
         metric_numer = 0
         metric_denom = 0
-        while t < (epoch+1) * epoch_size:
+        epoch_end = (epoch+1) * epoch_size
+        while t < epoch_end:
+            # BUGBUG: RuntimeError: GetNextMinibatch: Changing minibatch sizes across calls is currently unsupported
+            #data, num_samples = Trainer.next_minibatch(reader, min(minibatch_size, epoch_size-t), input_map)
             data, num_samples = Trainer.next_minibatch(reader, minibatch_size, input_map)
             if data is None:
                 break
