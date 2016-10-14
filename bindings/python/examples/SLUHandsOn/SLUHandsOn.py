@@ -17,34 +17,11 @@ from cntk import Trainer
 from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
 from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 
-#### some temporary bits that will become unnecessary in the future
-#from cntk.ops.functions import Function
-#from cntk.ops.variables import Variable
-
+# helper function that will go away once dimension inference works and has been updated here
 from cntk import Axis
 def _Infer(shape, axis):
     from cntk.utils import Record, _as_tuple
     return Record(shape=_as_tuple(shape), axis=axis, with_shape = lambda new_shape: _Infer(new_shape, axis))
-
-# upgrade Trainer class, add new method
-def _extend_Trainer(trainer):
-    class TrainerEx(trainer.__class__):
-        # new method next_minibatch()
-        # TODO: make this a true static method so we can say Trainer.get_next_minibatch()
-        # TODO: decide whether this really belongs into Trainer, or elsewhere
-        @staticmethod
-        def next_minibatch(source, minibatch_size, input_map):
-            mb = reader.get_next_minibatch(minibatch_size)
-            if not mb:
-                return (None, 0)
-            else:
-                #return ({ key : mb[value].m_data        for (key, value) in input_map.items() },
-                return ({ key : mb[value]       for (key, value) in input_map.items() },
-                        { key : mb[value].m_num_samples for (key, value) in input_map.items() })
-    if hasattr(trainer, 'next_minibatch'):  # already extended: don't redo
-        return trainer
-    trainer.__class__ = TrainerEx
-    return trainer
 
 #### User code begins here
 
@@ -114,11 +91,12 @@ def train(reader, model):
     momentum = 0.9**(1/minibatch_size)  # TODO: need a better way of giving traditional momentum per MB
 
     # trainer object
-    learner = fsadagrad(z.parameters(), learning_rates_per_sample(lr, units=epoch_size), momentum,
+    lr_schedule = learning_rates_per_sample(lr, units=epoch_size)
+    learner = fsadagrad(z.parameters(), lr_schedule, momentum,
                         targetAdagradAvDenom=1, clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
     trainer = Trainer(z, ce, pe, [learner])
-    _extend_Trainer(trainer)  # TODO: should be just baked in
+    #_extend_Trainer(trainer)  # TODO: should be just baked in
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -135,7 +113,7 @@ def train(reader, model):
         metric_numer = 0
         metric_denom = 0
         while t < (epoch+1) * epoch_size:
-            data, num_samples = trainer.next_minibatch(reader, minibatch_size, input_map)
+            data, num_samples = Trainer.next_minibatch(reader, minibatch_size, input_map)
             if data is None:
                 break
             trainer.train_minibatch(data)
@@ -154,11 +132,12 @@ def train(reader, model):
 #############################
 
 if __name__=='__main__':
+    # TODO: get closure on Amit's feedback "Not the right pattern as we discussed over email. Please change to set_default_device(gpu(0))"
     set_gpu(0)
-    #set_computation_network_trace_level(1)  # TODO: currently in Amit's branch only
+    #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
     reader = Reader(data_dir + "/atis.train.ctf")
     model = Model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
-    # BUGBUG: Currently this fails with a mismatch error if axes ^^ are given in opposite order
+    # TODO: Currently this fails with a mismatch error if axes ^^ are given in opposite order. I think it shouldn't.
     # train
     train(reader, model)
     # test (TODO)

@@ -208,3 +208,13 @@ class Trainer(cntk_py.Trainer):
         '''
         return super(Trainer, self).previous_minibatch_sample_count()
 
+    # helper to get next minibatch from a reader into a set of variables
+    # TODO: decide whether this really belongs into Trainer, or elsewhere
+    @staticmethod
+    def next_minibatch(source, minibatch_size, input_map):
+        mb = source.get_next_minibatch(minibatch_size)
+        if not mb:
+            return (None, 0)
+        else:
+            return ({ key : mb[value]               for (key, value) in input_map.items() },
+                    { key : mb[value].m_num_samples for (key, value) in input_map.items() })
