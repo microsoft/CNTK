@@ -14,10 +14,6 @@ from cntk.ops import parameter, input_variable, placeholder_variable, times, cro
 import itertools
 import cntk.utils
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", ".."))
-from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_value, print_training_progress, negate
-
 
 # helper to name nodes for printf debugging
 _auto_node_names = dict()

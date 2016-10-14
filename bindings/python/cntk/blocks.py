@@ -17,7 +17,7 @@ from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_pe
 from cntk.ops import parameter, constant, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _print_node
-from utils import Record, _as_tuple
+from cntk.utils import Record, _as_tuple
 from cntk.initializer import glorot_uniform
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -70,7 +70,7 @@ def _Infer(shape, axis):
 def _apply(f, args):
     import operator   # add()
     import functools  # reduce()
-    from cntk.cntk_py import ParameterCloningMethod_Share
+    from cntk.ops.functions import CloneMethod
     # flatten args to a list. Note it may be a a tuple or even a nested tree of tuples, e.g. LSTM (x, (h, c))
     def flatten_tuple(args):
         if not isinstance(args, tuple): # not a tuple: singleton; create a singleton tuple
@@ -92,7 +92,7 @@ def _apply(f, args):
     _function_name = _node_name(f)  # these are for logging/debugging only
     _function_description = _node_description(f)
     _arg_description = ", ".join([_node_name(f) for f in list(args)])
-    f = f.clone(ParameterCloningMethod_Share, dict(zip(f.placeholders(), args)))
+    f = f.clone(CloneMethod.share, dict(zip(f.placeholders(), args)))
     _name_and_extend_Function(f, _function_name)
     print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
     return f

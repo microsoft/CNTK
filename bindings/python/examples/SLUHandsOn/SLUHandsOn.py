@@ -23,7 +23,7 @@ from cntk.ops import parameter, input_variable, placeholder_variable, times, cro
 
 from cntk import Axis
 def _Infer(shape, axis):
-    from utils import Record, _as_tuple
+    from cntk.utils import Record, _as_tuple
     return Record(shape=_as_tuple(shape), axis=axis, with_shape = lambda new_shape: _Infer(new_shape, axis))
 
 # upgrade Trainer class, add new method
@@ -38,7 +38,8 @@ def _extend_Trainer(trainer):
             if not mb:
                 return (None, 0)
             else:
-                return ({ key : mb[value].m_data        for (key, value) in input_map.items() },
+                #return ({ key : mb[value].m_data        for (key, value) in input_map.items() },
+                return ({ key : mb[value]       for (key, value) in input_map.items() },
                         { key : mb[value].m_num_samples for (key, value) in input_map.items() })
     if hasattr(trainer, 'next_minibatch'):  # already extended: don't redo
         return trainer

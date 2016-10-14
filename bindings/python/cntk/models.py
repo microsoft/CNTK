@@ -16,9 +16,9 @@ import time
 #from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
 #from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _print_node
-from layers import *
-from blocks import *
-from blocks import _name_and_extend_Function, _wrap_rename_Function  # (debugging)
+from cntk.layers import *
+from cntk.blocks import *
+from cntk.blocks import _name_and_extend_Function, _wrap_rename_Function  # (debugging)
 
 # Sequential -- composite that applies a sequence of functions onto an input
 # Sequential ([F, G, H]) === F >> G >> H

@@ -59,6 +59,7 @@
     <None Include="cntk\pytest.ini" />
     <None Include="cntk\tensor.py" />
     <None Include="cntk\trainer.py" />
+    <None Include="cntk\utils\debughelpers\__init__.py" />
     <None Include="cntk\utils\persist.py" />
     <None Include="cntk\utils\swig_helper.py" />
     <None Include="cntk\utils\__init__.py" />

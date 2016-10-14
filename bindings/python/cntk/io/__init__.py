@@ -344,7 +344,7 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
 
 # wrapper around text_format_minibatch_source() that attaches a record of streams
 def CNTKTextFormatMinibatchSource(path, streams, epoch_size=None):
-    from utils import _ClassFromDict
+    from cntk.utils import _ClassFromDict
     # convert streams into StreamConfiguration format
     # TODO: stream_alias should default to 'key'
     stream_configs = [ StreamConfiguration(key, dim=value.dim, is_sparse=value.is_sparse, stream_alias=value.stream_alias) for (key, value) in streams.items() ]
@@ -359,7 +359,7 @@ def CNTKTextFormatMinibatchSource(path, streams, epoch_size=None):
 
 # stream definition for CNTKTextFormatMinibatchSource
 def StreamDef(shape, is_sparse, alias):
-    from utils import Record
+    from cntk.utils import Record
     return Record(dim=shape, is_sparse=is_sparse, stream_alias=alias)
     # TODO: why stream_alias and not alias?
     # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension

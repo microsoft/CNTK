@@ -17,9 +17,9 @@ from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_pe
 from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _print_node
-from utils import Record, _as_tuple
-from blocks import *
-from blocks import _name_and_extend_Function, _wrap_rename_Function  # (debugging)
+from cntk.utils import Record, _as_tuple
+from cntk.blocks import *
+from cntk.blocks import _name_and_extend_Function, _wrap_rename_Function  # (debugging)
 from cntk.initializer import glorot_uniform
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -31,7 +31,7 @@ from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-from blocks import _default_initializer
+from cntk.blocks import _default_initializer
 
 # Linear -- create a fully-connected linear projection layer
 # Note: shape may describe a tensor as well.
@@ -68,8 +68,20 @@ def Linear(shape, _inf, bias=True, init=_default_initializer, init_bias=0, input
     return apply_x
     # TODO: how to break after the else?
 
+def Dense(shape, _inf, bias=True, init=_default_initializer, init_bias=0, input_rank=None, map_rank=None, activation=None):
+    if activation is None:  # TODO: change default to identity once we no longer need _inf
+        activation = Identity(_inf=shape)
+    apply_x = Linear(shape, _inf, bias=bias, init=init, init_bias=init_bias, input_rank=input_rank, map_rank=map_rank) \
+           >> activation
+    # TODO: Any way to do some similar pattern ^^ without backslash?
+    _name_and_extend_Function(apply_x, 'Dense')
+    return apply_x
+
 # Embedding -- create a linear embedding layer
 # TODO: after removing loading from file, now we have two similar params, weight and init which seems redundant.
+# TODO: Once _inf is gone, change interface to pass weights as a Constant, e.g.
+#       Embedding(shape, constant(np.load('PATH')))
+#       Not nice since now we don't need the output shape either. Grmpf.
 def Embedding(shape, _inf, weights=None, init=_default_initializer, transpose=False):
     shape = _as_tuple(shape)
     full_shape = (shape + _inf.shape) if transpose else (_inf.shape + shape)
