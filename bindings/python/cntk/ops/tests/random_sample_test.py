@@ -22,8 +22,13 @@ TEST_CASES = [
     (np.full((4), 42),                                                               1,     False,  np.full((4), 1/4),                                    0.0001),
     # Use 300 weights where the first 200 hundred weights are high compared to the rest. Sample 200 without replacement. 
     (np.concatenate((np.full((100),100),np.full((100),10),np.full((100),0.1))),    200,     False,  np.concatenate((np.full((200),1),np.full((100),0))),  0.05),
+    
     # Having more classes than samples is not allowed when sampling without replacment. Check if exception is thrown.
     (np.full((4), 42),                                                              50,     False,  np.full((4), 13/4),                                   0.0001), 
+
+    # Non positive sampling weigts are not allowed.
+    ([1,-1],                                                                         1,     True,   [0],                                   0.0001), 
+    ([1,-1],                                                                         1,     False,  [0],                                   0.0001), 
 ]
 
 @pytest.mark.parametrize("weights, num_samples, allow_duplicates, expected, tolerance", TEST_CASES)
@@ -32,7 +37,11 @@ def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicate
     result = random_sample_inclusion_frequency(weights, num_samples, allow_duplicates)
 
     if num_samples >= len(weights) and not allow_duplicates:
-        # in case num_samples => len(weights) we expect an exception to be thrown
+        # num_samples => len(weights) should give an error
+        with pytest.raises(RuntimeError):
+            result.eval()
+    elif np.any(np.less_equal(weights, 0)):
+        #weights less equal zero give an error
         with pytest.raises(RuntimeError):
             result.eval()
     else:

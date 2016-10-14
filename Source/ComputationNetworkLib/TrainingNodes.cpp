@@ -59,6 +59,9 @@ void RandomSampleNodeBase<ElemType>::UpdateWeightsPrefixSum()
     for (int iClass = 0; iClass < samplingWeights.GetNumRows(); iClass++)
     {
         ElemType currentWeight = samplingWeights.GetValue(iClass, 0);
+        if (currentWeight <= 0)
+            InvalidArgument("Sampling weights contain non posistive number %f.", currentWeight);
+
         runningWeightsSum += currentWeight;
         m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
     }
