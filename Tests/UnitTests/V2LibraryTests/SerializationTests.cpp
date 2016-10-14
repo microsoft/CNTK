@@ -271,6 +271,8 @@ void TestModelSaving(const DeviceDescriptor& device)
 
 void SerializationTests()
 {
+    fprintf(stderr, "\nSerializationTests..\n");
+
     TestDictionarySerialization(4);
     TestDictionarySerialization(8);
     TestDictionarySerialization(16);

@@ -511,6 +511,8 @@ void TestShapeInference()
 
 void FunctionTests()
 {
+    fprintf(stderr, "\nFunctionTests..\n");
+
     TestShapeInference();
 
     TestSlice(2, DeviceDescriptor::CPUDevice());

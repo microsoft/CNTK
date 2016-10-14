@@ -69,7 +69,8 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     /* Decoder */
     auto beamSearchReorderHook = Constant({ 1, 1 }, 1.0f, device);
     auto decoderHistoryFromGroundTruth = labelEmbedding;
-    auto decoderInput = ElementSelect(isFirstLabel, labelSentenceStartEmbeddedScattered, PastValue(decoderHistoryFromGroundTruth));
+    auto decoderHistoryHook = Alias(decoderHistoryFromGroundTruth);
+    auto decoderInput = ElementSelect(isFirstLabel, labelSentenceStartEmbeddedScattered, PastValue(decoderHistoryHook));
 
     auto decoderOutputH = Stabilize<float>(decoderInput, device);
     FunctionPtr decoderOutputC;
@@ -131,6 +132,11 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
         errs = errsVar;
     }
 
+    // Decoder history for greedy decoding
+    auto decoderHistoryFromOutput = Hardmax(z);
+    auto decodingFunction = decoderHistoryFromOutput->Clone(ParameterCloningMethod::Share, { {decoderHistoryHook, decoderHistoryFromOutput} });
+    decodingFunction = Combine({ decodingFunction->RootFunction()->Arguments()[0] });
+
     auto featureStreamName = L"rawInput";
     auto labelStreamName = L"rawLabels";
     auto minibatchSource = TextFormatMinibatchSource(L"cmudict-0.7b.train-dev-20-21.ctf",
@@ -154,6 +160,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     size_t numMinibatchesToRestoreFromCheckpointAfter = testCheckpointing ? 20 : SIZE_MAX;
     bool restorationDone = false;
     const wchar_t* modelFile = L"seq2seq.model";
+    size_t decodingFrequency = 10;
     for (size_t i = 0; true; i++)
     {
         if (!restorationDone && (i == numMinibatchesToRestoreFromCheckpointAfter))
@@ -176,15 +183,24 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
             printf("Trainer checkpointing to path %S\n", modelFile);
             trainer.SaveCheckpoint(modelFile);
         }
+
+        if ((i % decodingFrequency) == 0)
+        {
+            std::unordered_map<Variable, ValuePtr> outputs = { { decodingFunction, nullptr }};
+            decodingFunction->Forward({ { decodingFunction->Arguments()[0], minibatchData[rawInputStreamInfo].m_data }, { decodingFunction->Arguments()[1], minibatchData[rawLabelsStreamInfo].m_data } },
+                                      outputs,
+                                      device);
+        }
     }
 }
 
 void TrainSequenceToSequenceTranslator()
 {
+    fprintf(stderr, "\nTrainSequenceToSequenceTranslator..\n");
+
     // TODO: Also test with sparse input variables in the graph
     if (IsGPUAvailable())
-    {
         TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, false);
-    }
+
     TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, true);
 }

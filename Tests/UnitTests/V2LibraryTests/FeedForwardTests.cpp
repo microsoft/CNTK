@@ -263,6 +263,8 @@ void TestTimesAndPlus(size_t inputDim,
 
 void FeedForwardTests()
 {
+    fprintf(stderr, "\nFeedForwardTests..\n");
+
     TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true, true);
     if (IsGPUAvailable())
     {

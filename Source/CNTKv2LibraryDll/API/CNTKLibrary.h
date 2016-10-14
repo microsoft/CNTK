@@ -2488,7 +2488,15 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
     ///
-    CNTK_API FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
+    ///
+    inline FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name = L"")
+    {
+        return ClassificationError(prediction, labels, /*topN =*/ 1, name);
+    }
 
     ///
     /// Create an instance of the CNTK built-in operation for getting the past value along the lone dynamic axis of the specified operand.
@@ -2632,6 +2640,11 @@ namespace CNTK
     /// of the computation graph which can be "Combine"d to create a single Function with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
     ///
     CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = L"");
+
+    ///
+    /// Creates a new Function instance which is just an alias of the specified operand.
+    ///
+    CNTK_API FunctionPtr Alias(const Variable& operand, const std::wstring& name = L"");
 
     namespace Sequence
     {
@@ -2969,6 +2982,8 @@ namespace CNTK
         FunctionPtr m_aggregatedLossFunction;
         FunctionPtr m_evaluationFunction;
         FunctionPtr m_aggregatedEvaluationFunction;
+        Variable    m_trainingSampleCountVar;
+        Variable    m_testSampleCountVar;
 
         std::unordered_set<LearnerPtr> m_parameterLearners;
 

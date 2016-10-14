@@ -454,15 +454,10 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
 
 void MultiThreadsEvaluation(bool isGPUAvailable)
 {
+    fprintf(stderr, "\nMultiThreadsEvaluation..\n");
+
 #ifndef CPUONLY
-    if (isGPUAvailable)
-    {
-        fprintf(stderr, "Run evaluation on GPU device using GPU build.\n");
-    }
-    else
-    {
-        fprintf(stderr, "Run evaluation on CPU device using GPU build.\n");
-    }
+    fprintf(stderr, "Run evaluation on %s device using GPU build.\n", isGPUAvailable ? "GPU" : "CPU");
 #else
     fprintf(stderr, "Run evaluation using CPU-only build.\n");
 #endif

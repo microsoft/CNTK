@@ -5,6 +5,8 @@ using namespace CNTK;
 
 void DeviceSelectionTests()
 {
+    fprintf(stderr, "\nTest device selection API..\n");
+
     auto cpuDevice = DeviceDescriptor::CPUDevice();
     DeviceDescriptor::SetDefaultDevice(cpuDevice);
 

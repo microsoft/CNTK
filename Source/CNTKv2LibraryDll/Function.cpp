@@ -2017,82 +2017,82 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
     }
 
-    FunctionPtr Negate(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Negate(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Negate, operand, Dictionary(), name);
     }
 
-    FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Sigmoid(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Sigmoid, operand, Dictionary(), name);
     }
 
-    FunctionPtr Tanh(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Tanh(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Tanh, operand, Dictionary(), name);
     }
 
-    FunctionPtr ReLU(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr ReLU(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::ReLU, operand, Dictionary(), name);
     }
 
-    FunctionPtr Exp(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Exp(const Variable& operand, const std::wstring& name)
         {
         return UnaryOp(PrimitiveOpType::Exp, operand, Dictionary(), name);
     }
 
-    FunctionPtr Log(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Log(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Log, operand, Dictionary(), name);
         }
 
-    FunctionPtr Square(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Square(const Variable& operand, const std::wstring& name)
     {
         return ElementTimes(operand, operand, name);
     }
 
-    FunctionPtr Sqrt(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Sqrt(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Sqrt, operand, Dictionary(), name);
     }
 
-    FunctionPtr Round(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Round(const Variable& operand, const std::wstring& name)
     {
         return Floor(Plus(operand, Constant::Scalar(operand.GetDataType(), 0.5)), name);
     }
 
-    FunctionPtr Floor(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Floor(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Floor, operand, Dictionary(), name);
     }
 
-    FunctionPtr Ceil(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Ceil(const Variable& operand, const std::wstring& name)
     {
         return Negate(Floor(Negate(operand)), name);
     }
 
-    FunctionPtr Abs(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Abs(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Abs, operand, Dictionary(), name);
     }
 
-    FunctionPtr Reciprocal(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Reciprocal(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Reciprocal, operand, Dictionary(), name);
     }
 
-    FunctionPtr Softmax(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Softmax(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Softmax, operand, Dictionary(), name);
     }
 
-    FunctionPtr Hardmax(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr Hardmax(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Hardmax, operand, Dictionary(), name);
     }
 
-    FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name /*= L""*/)
+    FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name)
     {
         if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
             LogicError("TransposeAxes currently does not support transposing dynamic axes");
@@ -2103,14 +2103,14 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::TransposeAxes, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr Transpose(const Variable& operand, const std::wstring& name /*= L""*/)
+    FunctionPtr Transpose(const Variable& operand, const std::wstring& name)
     {
         if (operand.Shape().Rank() <= 2)
             InvalidArgument("Transpose can already be called for 1D or 2D operands");
 
         return TransposeAxes(operand, Axis(0), Axis(1), name);
     }
-    FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name /*= L""*/)
+    FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name)
     {
         if (axis == Axis::DefaultBatchAxis())
             LogicError("Slice is currently unsupported along the batch axis");
@@ -2165,7 +2165,7 @@ namespace CNTK
         return Internal::Gather(operand, flags, newDynamicAxes, name);
     }
 
-    FunctionPtr Dropout(const Variable& operand, double dropoutRate, const std::wstring& name /*= L""*/)
+    FunctionPtr Dropout(const Variable& operand, double dropoutRate, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameDropoutRate] = dropoutRate;
@@ -2173,7 +2173,7 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Dropout, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr Reshape(const Variable& operand, const NDShape& newShape, const std::wstring& name /*= L""*/)
+    FunctionPtr Reshape(const Variable& operand, const NDShape& newShape, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameNewShape] = newShape;
@@ -2186,85 +2186,94 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
     }
 
-    FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
+    FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::Plus, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr Minus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
+    FunctionPtr Minus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::Minus, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr ElementTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
+    FunctionPtr ElementTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::ElementTimes, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr ElementDivide(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
+    FunctionPtr ElementDivide(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return ElementTimes(leftOperand, Reciprocal(rightOperand), name);
     }
 
-    FunctionPtr Equal(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
+    FunctionPtr Equal(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::Equal, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr NotEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
+    FunctionPtr NotEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::NotEqual, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr Less(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
+    FunctionPtr Less(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::Less, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr LessEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
+    FunctionPtr LessEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::LessEqual, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr Greater(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
+    FunctionPtr Greater(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::Greater, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr GreaterEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name/* = L""*/)
+    FunctionPtr GreaterEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::GreaterEqual, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank /*= 1*/, const std::wstring& name/* = L""*/)
+    FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank /*= 1*/, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
         return BinaryOp(PrimitiveOpType::Times, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank /*= 1*/, const std::wstring& name/* = L""*/)
+    FunctionPtr TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank /*= 1*/, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
         return BinaryOp(PrimitiveOpType::TransposeTimes, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name/* = L""*/)
+    FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name)
     {
         auto difference = Minus(prediction, targets);
         auto squaredDifference = ElementTimes(difference, difference);
         return Internal::ReduceElements(squaredDifference, PrimitiveFunction::InternalSumReductionOpName, Axis::AllStaticAxes(), name);
     }
 
-    FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
+    FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name)
     {
         return Minus(ReduceLogSum(prediction, Axis(0)), TransposeTimes(labels, prediction), name);
     }
 
-    FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name/* = L""*/)
+    FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const std::wstring& name)
     {
-        return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
+        if (topN == 0)
+            InvalidArgument("ClassificationError: The topN argument must be > 0!");
+
+        if (topN == 1)
+            return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
+        else
+        {
+            std::vector<Variable> operands = { prediction, labels, Constant::Scalar(prediction.GetDataType(), (double)topN) };
+            return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ClassificationError, operands, Dictionary(), name), name);
+        }
     }
 
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
@@ -2281,36 +2290,36 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::FutureValue, operand, initialState, std::move(additionalProperties), name);
     }
 
-    FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name/* = L""*/)
+    FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::SumAll, operand, Dictionary(), name);
     }
 
-    FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name/* = L""*/)
+    FunctionPtr ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, axis, name);
     }
 
-    FunctionPtr ReduceLogSum(const Variable& operand, const Axis& axis, const std::wstring& name/* = L""*/)
+    FunctionPtr ReduceLogSum(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalLogSumReductionOpName, axis, name);
     }
 
-    FunctionPtr ReduceMean(const Variable& operand, const Axis& axis, const std::wstring& name/* = L""*/)
+    FunctionPtr ReduceMean(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalMeanReductionOpName, axis, name);
     }
 
-    FunctionPtr ReduceMax(const Variable& operand, const Axis& axis, const std::wstring& name/* = L""*/)
+    FunctionPtr ReduceMax(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalMaxReductionOpName, axis, name);
     }
 
-    FunctionPtr ReduceMin(const Variable& operand, const Axis& axis, const std::wstring& name/* = L""*/)
+    FunctionPtr ReduceMin(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalMinReductionOpName, axis, name);
     }
-    FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name /*= L""*/)
+    FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name)
     {
         Constant meanVar(mean);
         Constant invStdDevVar(invStdDev);
@@ -2394,20 +2403,20 @@ namespace CNTK
                                          name);
     }
 
-    FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name /*= L""*/)
+    FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand, min, max };
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Clip, operands, Dictionary(), name), name);
     }
 
-    FunctionPtr ElementSelect(const Variable& condition, const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name /*= L""*/)
+    FunctionPtr ElementSelect(const Variable& condition, const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         // TODO: If the condition is a scalar constant, we can just pass-through the appropriate operand
         std::vector<Variable> operands = { condition, leftOperand, rightOperand };
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Select, operands, Dictionary(), name), name);
     }
 
-    FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name /*= L""*/)
+    FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name)
     {
         if (!axis.IsStaticAxis())
             LogicError("Splice: Currently only splicing along a static axis is supported");
@@ -2419,7 +2428,7 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Splice, operandsCopy, std::move(additionalProperties), name), name);
     }
 
-    FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name /*= L""*/)
+    FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name)
     {
         std::unordered_set<Variable> uniqueOperands;
         for (auto operand : operands)
@@ -2434,6 +2443,13 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operandsCopy, Dictionary(), name), name);
     }
 
+    FunctionPtr Alias(const Variable& operand, const std::wstring& name)
+    {
+        // TODO: This is a temporary and expensive hack until we have a real alias implementation
+        // that does not waste memory and compute cycles
+        return Plus(operand, Constant::Scalar(operand.GetDataType(), 0), name);
+    }
+
     namespace Sequence
     {
         void VerifyIsSequence(const Variable& operand)
@@ -2443,25 +2459,25 @@ namespace CNTK
                 InvalidArgument("A sequence function can only be applied on operands with at least one dynamic axis and whose first dynamic axis is ordered");
         }
 
-        FunctionPtr IsFirst(const Variable& operand, const std::wstring& name /*= L""*/)
+        FunctionPtr IsFirst(const Variable& operand, const std::wstring& name)
         {
             VerifyIsSequence(operand);
             return Internal::IsWithin(operand, 1, name);
         }
 
-        FunctionPtr IsLast(const Variable& operand, const std::wstring& name /*= L""*/)
+        FunctionPtr IsLast(const Variable& operand, const std::wstring& name)
         {
             VerifyIsSequence(operand);
             return Internal::IsWithin(operand, -1, name);
         }
 
-        FunctionPtr First(const Variable& operand, const std::wstring& name /*= L""*/)
+        FunctionPtr First(const Variable& operand, const std::wstring& name)
         {
             VerifyIsSequence(operand);
             return Slice(operand, operand.DynamicAxes()[0], 0, 1, name);
         }
 
-        FunctionPtr Last(const Variable& operand, const std::wstring& name /*= L""*/)
+        FunctionPtr Last(const Variable& operand, const std::wstring& name)
         {
             VerifyIsSequence(operand);
             return Slice(operand, operand.DynamicAxes()[0], -1, 0, name);
@@ -2478,22 +2494,22 @@ namespace CNTK
             return newDynamicAxes;
         }
 
-        FunctionPtr Where(const Variable& condition, const std::wstring& name /*= L""*/)
+        FunctionPtr Where(const Variable& condition, const std::wstring& name)
         {
             return Internal::Where(condition, WhereOpDynamicAxes(condition), name);
         }
 
-        FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::wstring& name /*= L""*/)
+        FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::wstring& name)
         {
             return Internal::Gather(operand, condition, WhereOpDynamicAxes(condition), name);
         }
 
-        FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::wstring& name /*= L""*/)
+        FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::wstring& name)
         {
             return Internal::Scatter(operand, condition, WhereOpDynamicAxes(condition), name);
         }
 
-        FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name /*= L""*/)
+        FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name)
         {
             auto dataPadded = Internal::Scatter(operand, Sequence::IsFirst(broadcastAs), broadcastAs.DynamicAxes());
             auto placeHolderOutput = PlaceholderVariable(operand.Shape(), broadcastAs.DynamicAxes());
@@ -2504,7 +2520,7 @@ namespace CNTK
 
     namespace Internal
     {
-        FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name /*= L""*/)
+        FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name)
         {
             Sequence::VerifyIsSequence(operand);
 
@@ -2517,17 +2533,17 @@ namespace CNTK
                 return FutureValue(Internal::ZeroesWithDynamicAxesLike(operand), Constant::Scalar(operand.GetDataType(), 1.0), -offset, name);
         }
 
-        FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name /*= L""*/)
+        FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name)
         {
             return BinaryOp(PrimitiveOpType::PackedIndex, operand, index, Dictionary(), name);
         }
 
-        FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name /*= L""*/)
+        FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name)
         {
             return BinaryOp(PrimitiveOpType::GatherPacked, operand, packedIndex, Dictionary(), name);
         }
 
-        FunctionPtr ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name /*= L""*/)
+        FunctionPtr ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name)
         {
             std::vector<Variable> operands = { operand, packedIndex, condition };
             return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ScatterPacked, operands, Dictionary(), name), name);
@@ -2551,24 +2567,24 @@ namespace CNTK
             }
         }
 
-        FunctionPtr Where(const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name /*= L""*/)
+        FunctionPtr Where(const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name)
         {
             auto additionalProperties = Dictionary();
             additionalProperties[PrimitiveFunction::AttributeNameNewDynamicAxes] = AsDictionaryValueVector(newDynamicAxes);
             return UnaryOp(PrimitiveOpType::Where, condition, std::move(additionalProperties), name);
         }
 
-        FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name /*= L""*/)
+        FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name)
         {
             return Internal::GatherPacked(operand, Internal::PackedIndex(/*layout of*/ operand, Where(condition, newDynamicAxes)), name);
         }
 
-        FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name /*= L""*/)
+        FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name)
         {
             return Internal::ScatterPacked(operand, Internal::PackedIndex(/*layout of*/ condition, Where(condition, newDynamicAxes)), /*layout of*/ condition, name);
         }
 
-        FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name /*= L""*/)
+        FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name)
         {
             auto additionalProperties = Dictionary();
             additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
@@ -2578,7 +2594,7 @@ namespace CNTK
             return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
         }
 
-        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name /*= L""*/)
+        FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
         {
             using namespace std::placeholders;
 

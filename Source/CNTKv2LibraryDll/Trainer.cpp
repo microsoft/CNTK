@@ -13,21 +13,38 @@ namespace CNTK
     Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::unordered_set<LearnerPtr>& parameterLearners)
         : m_model(model), m_lossFunction(lossFunction), m_evaluationFunction(evaluationFunction), m_parameterLearners(parameterLearners), m_prevMinibatchNumSamples(1)
     {
-        if (m_lossFunction->Output().DynamicAxes().empty())
-            InvalidArgument("The loss function specified in the Trainer constructor must correspond to minibatch data and have dynamic axes");
+        std::vector<Variable> combinedFunctionArgs = { m_model, m_lossFunction };
+        if (!m_lossFunction->Output().DynamicAxes().empty())
+        {
+            m_aggregatedLossFunction = ReduceSum(lossFunction);
+            combinedFunctionArgs.push_back(m_aggregatedLossFunction);
+            m_trainingSampleCountVar = m_lossFunction;
+        }
+        else
+        {
+            m_aggregatedLossFunction = m_lossFunction;
+            m_trainingSampleCountVar = m_lossFunction->RootFunction()->Inputs()[0];
+            if (model->Output() != m_trainingSampleCountVar)
+                combinedFunctionArgs.push_back(m_trainingSampleCountVar);
+        }
 
-        if (m_evaluationFunction && m_evaluationFunction->Output().DynamicAxes().empty())
-            InvalidArgument("The evaluation function specified in the Trainer constructor must correspond to minibatch data and have dynamic axes");
-
-        m_aggregatedLossFunction = ReduceSum(lossFunction);
-        if (m_evaluationFunction)
-            m_aggregatedEvaluationFunction = ReduceSum(m_evaluationFunction);
-
-        std::vector<Variable> combinedFunctionArgs = { m_model, m_aggregatedLossFunction, m_lossFunction };
         if (m_evaluationFunction)
         {
-            combinedFunctionArgs.push_back(m_aggregatedEvaluationFunction);
             combinedFunctionArgs.push_back(m_evaluationFunction);
+
+            if (!m_evaluationFunction->Output().DynamicAxes().empty())
+            {
+                m_aggregatedEvaluationFunction = ReduceSum(m_evaluationFunction);
+                combinedFunctionArgs.push_back(m_aggregatedEvaluationFunction);
+                m_testSampleCountVar = m_evaluationFunction;
+            }
+            else
+            {
+                m_aggregatedEvaluationFunction = m_evaluationFunction;
+                m_testSampleCountVar = m_evaluationFunction->RootFunction()->Inputs()[0];
+                if ((m_testSampleCountVar != m_trainingSampleCountVar) && (model->Output() != m_testSampleCountVar))
+                    combinedFunctionArgs.push_back(m_testSampleCountVar);
+            }
         }
 
         m_combinedTrainingFunction = Combine(combinedFunctionArgs);
@@ -100,10 +117,10 @@ namespace CNTK
             InvalidArgument("Trainer::TestMinibatch: Cannot test when no evaluation function was specified during 'this' trainer's construction");
 
         // TODO: Should we refactor this code that is somewhat similar to the prologue of the TrainMinibatch function
-        std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedEvaluationFunction, nullptr }, {m_evaluationFunction, nullptr} };
+        std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedEvaluationFunction, nullptr }, { m_testSampleCountVar, nullptr } };
         m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice);
 
-        auto sampleCount = GetSampleCount(m_evaluationFunction, outputs[m_evaluationFunction]);
+        auto sampleCount = GetSampleCount(m_testSampleCountVar, outputs[m_testSampleCountVar]);
         return (GetScalarValue(outputs[m_aggregatedEvaluationFunction]) / sampleCount);
     }
 
@@ -115,7 +132,7 @@ namespace CNTK
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedLossFunction, nullptr }, { m_lossFunction, nullptr } };
+        std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedLossFunction, nullptr }, { m_trainingSampleCountVar, nullptr } };
         if (m_aggregatedEvaluationFunction)
             outputs.insert({ m_aggregatedEvaluationFunction, nullptr });
 
@@ -145,7 +162,7 @@ namespace CNTK
 
         m_combinedTrainingFunction->Backward(backPropSate, { { m_aggregatedLossFunction, rootGradientValue } }, parameterGradients);
 
-        m_prevMinibatchNumSamples = GetSampleCount(m_lossFunction, outputs[m_lossFunction]);
+        m_prevMinibatchNumSamples = GetSampleCount(m_trainingSampleCountVar, outputs[m_trainingSampleCountVar]);
 
         bool anyUpdatesPerformed = false;
         for (auto learner : m_parameterLearners)

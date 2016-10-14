@@ -28,14 +28,7 @@ int main()
 {
 
 #ifndef CPUONLY
-    if (IsGPUAvailable())
-    {
-        fprintf(stderr, "Run tests on GPU device using GPU build.\n");
-    }
-    else
-    {
-        fprintf(stderr, "Run tests on CPU device using GPU build.\n");
-    }
+    fprintf(stderr, "Run tests on %s device using GPU build.\n", IsGPUAvailable() ? "GPU" : "CPU");
 #else
     fprintf(stderr, "Run tests using CPU-only build.\n");
 #endif
@@ -63,7 +56,6 @@ int main()
 
     MultiThreadsEvaluation(IsGPUAvailable());
 
-    fprintf(stderr, "Test device selection API\n");
     DeviceSelectionTests();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
