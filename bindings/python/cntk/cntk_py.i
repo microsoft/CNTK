@@ -1,4 +1,5 @@
 %module(directors="1") cntk_py
+//%feature("autodoc", "1");
 
 %include "stl.i"
 %include "std_wstring.i" 
@@ -10,8 +11,9 @@
 %include <attribute.i>
 %include <std_shared_ptr.i>
 
-%rename(output_internal) CNTK::Function::Output;
-%rename(replace_placeholders_internal) CNTK::Function::ReplacePlaceholders;
+%rename(_output) CNTK::Function::Output;
+%rename(_forward) CNTK::Function::Forward;
+%rename(_backward) CNTK::Function::Backward;
 %rename(sgd_learner) CNTK::SGDLearner;
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
@@ -48,6 +50,7 @@
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
 %ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed;
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
+%ignore CNTK::Internal::GetComputationNetworkTraceLevel;
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -133,11 +136,14 @@ def dynamic_axes(self):
         for (size_t i=0; i<rank; i++)
             dimensions.push_back(PyLong_AsLong(PyTuple_GET_ITEM($input, i)));
 
-        // TODO cleans this up?
         $1 = new CNTK::NDShape(dimensions);
      } else {
          SWIG_exception(SWIG_TypeError, "tuple expected");
      }
+}
+
+%typemap(freearg) CNTK::NDShape const & {
+    delete (CNTK::NDShape*)$1;
 }
 
 %ignore CNTK::NDShape::operator[];
@@ -202,9 +208,10 @@ def dynamic_axes(self):
     $1 = PyDict_Check($input) ? 1 : 0;
 }
 
-%typemap(in) const std::unordered_map<CNTK::Variable, const CNTK::ValuePtr>& {
+%typemap(in) const std::unordered_map<CNTK::Variable, const CNTK::ValuePtr>& (
+        std::unordered_map<CNTK::Variable, const CNTK::ValuePtr> args_map
+) {
      if (PyDict_Check($input)) {
-        std::unordered_map<CNTK::Variable, const CNTK::ValuePtr>* args_map = new std::unordered_map<CNTK::Variable, const CNTK::ValuePtr>();
 
         PyObject *key, *value;
         Py_ssize_t pos = 0;
@@ -235,19 +242,20 @@ def dynamic_axes(self):
                 value = new CNTK::ValuePtr();
             }
 
-            args_map->insert(std::make_pair(*var, *value));
+            args_map.insert(std::make_pair(*var, *value));
         }
 
-        $1 = args_map;
+        $1 = &args_map;
      } else {
          SWIG_exception(SWIG_TypeError, "dictionary expected");
      }
 }
 
 // supporting the non-const version
-%typemap(in) std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& {
+%typemap(in) std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& (
+        std::unordered_map<CNTK::Variable, CNTK::ValuePtr> args_map
+) {
      if (PyDict_Check($input)) {
-        std::unordered_map<CNTK::Variable, CNTK::ValuePtr>* args_map = new std::unordered_map<CNTK::Variable, CNTK::ValuePtr>();
 
         PyObject *key, *value;
         Py_ssize_t pos = 0;
@@ -278,10 +286,10 @@ def dynamic_axes(self):
                 value = new CNTK::ValuePtr();
             }
 
-            args_map->insert(std::make_pair(*var, *value));
+            args_map.insert(std::make_pair(*var, *value));
         }
 
-        $1 = args_map;
+        $1 = &args_map;
      } else {
          SWIG_exception(SWIG_TypeError, "dictionary expected");
      }
@@ -291,7 +299,13 @@ def dynamic_axes(self):
 // modified values and put them back into the dictionary. This is used, when
 // e.g. the user puts a variable into the dictionary, hoping that it will
 // afterwards point to the proper value.
-%typemap(argout) std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& {
+%typemap(argout) 
+    // Swig would create this conversion for the 'const' variants as well, which 
+    // we do not want. Therefor, we have to explicitly tell it for which ones it should do it.
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputsToFetch, 
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputs,
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& backPropagatedGradientValuesForInputs
+    {
      if (!PyDict_Check($input)) {
          SWIG_exception(SWIG_TypeError, "dictionary expected");
      }
@@ -333,8 +347,6 @@ def dynamic_axes(self):
             if (*cntk_var == *&it.first)
             {
                 PyDict_SetItem($input, py_key, returned_val);
-                // FIXME is this necessary?
-                Py_INCREF(returned_val);
             }
         }
     }
@@ -350,9 +362,10 @@ def dynamic_axes(self):
     $1 = PyDict_Check($input) ? 1 : 0;
 }
 
-%typemap(in)  std::unordered_map<CNTK::StreamInformation, std::pair<size_t, size_t>>& {
+%typemap(in)  std::unordered_map<CNTK::StreamInformation, std::pair<size_t, size_t>>& (
+         std::unordered_map<CNTK::StreamInformation, std::pair<size_t, size_t>> args_map
+) {
      if (PyDict_Check($input)) {
-         std::unordered_map<CNTK::StreamInformation, std::pair<size_t, size_t>>* args_map = new  std::unordered_map<CNTK::StreamInformation, std::pair<size_t, size_t>>();
 
         PyObject *key, *value;
         Py_ssize_t pos = 0;
@@ -376,14 +389,14 @@ def dynamic_axes(self):
                 size_t first_val = PyLong_AsSize_t(first);                
                 PyObject* second = PyTuple_GET_ITEM(value, 1);        
                 size_t second_val = PyLong_AsSize_t(second);
-                args_map->insert(std::make_pair(*var, std::make_pair(first_val, second_val)));
+                args_map.insert(std::make_pair(*var, std::make_pair(first_val, second_val)));
             } else {
                 SWIG_exception(SWIG_TypeError, "tuple expected");
             }
             
         }
 
-        $1 = args_map;
+        $1 = &args_map;
      } else {
          SWIG_exception(SWIG_TypeError, "dictionary expected");
      }
@@ -395,9 +408,10 @@ def dynamic_axes(self):
     $1 = PyDict_Check($input) ? 1 : 0;
 }
 
-%typemap(in)  std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>& {
+%typemap(in)  std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>& (
+         std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>> args_map 
+){
      if (PyDict_Check($input)) {
-         std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>* args_map = new  std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>();
 
         PyObject *key, *value;
         Py_ssize_t pos = 0;
@@ -445,13 +459,13 @@ def dynamic_axes(self):
                     value2 = new CNTK::NDArrayViewPtr();
                 }
 
-                args_map->insert(std::make_pair(*var, std::make_pair(*value1, *value2)));
+                args_map.insert(std::make_pair(*var, std::make_pair(*value1, *value2)));
             } else {
                 SWIG_exception(SWIG_TypeError, "tuple expected");
             }   
         }
 
-        $1 = args_map;
+        $1 = &args_map;
      } else {
          SWIG_exception(SWIG_TypeError, "dictionary expected");
      }
@@ -503,11 +517,61 @@ def dynamic_axes(self):
             if (*cntk_var == *&it.first)
             {
                 PyDict_SetItem($input, py_key, PyTuple_Pack(2, returned_val1, returned_val2));
-                // FIXME is this necessary?
-                Py_INCREF(returned_val2);
             }
         }
     }
+}
+
+//
+// Converting Python dictionary {Parameter: NDArrayViewPtr} to std::unordered_map
+//
+%typecheck(1000) const std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& {
+    // '1000' is the typecheck precedence code. It means: check after basic
+    // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+    $1 = PyDict_Check($input) ? 1 : 0;
+}
+
+%typemap(in) const std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& (
+        std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr> args_map
+) {
+     if (PyDict_Check($input)) {
+
+        PyObject *key, *value;
+        Py_ssize_t pos = 0;
+
+        while (PyDict_Next($input, &pos, &key, &value)) {
+            void *raw_var = 0 ;
+            int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
+            if (!SWIG_IsOK(res1)) {
+                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
+            }
+            if (!raw_var) {
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+            }
+
+            CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
+
+            void *raw_value = 0;
+            int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0);
+            if (!SWIG_IsOK(res2)) {
+                SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::NDArrayViewPtr"); 
+            }
+
+            CNTK::NDArrayViewPtr* value;
+            if (raw_value) {
+                value = reinterpret_cast<CNTK::NDArrayViewPtr*>(raw_value);
+            } else {
+                // We got an empty NDArrayViewPtr, which carries a nullptr.
+                value = new CNTK::NDArrayViewPtr();
+            }
+
+            args_map.insert(std::make_pair(*var, *value));
+        }
+
+        $1 = &args_map;
+     } else {
+         SWIG_exception(SWIG_TypeError, "dictionary expected");
+     }
 }
 
 //
@@ -573,9 +637,10 @@ def dynamic_axes(self):
     $1 = PySet_Check($input) ? 1 : 0;
 }
 
-%typemap(in) std::unordered_set<CNTK::Variable>& {
+%typemap(in) std::unordered_set<CNTK::Variable>& (
+        std::unordered_set<CNTK::Variable> args_set 
+) {
      if (PySet_Check($input)) {
-        std::unordered_set<CNTK::Variable>* args_set = new std::unordered_set<CNTK::Variable>();
 
         PyObject *item;
 
@@ -596,7 +661,7 @@ def dynamic_axes(self):
 
             CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
 
-            args_set->insert(*var);
+            args_set.insert(*var);
 
             Py_DECREF(item);
         }
@@ -607,7 +672,7 @@ def dynamic_axes(self):
             SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Variable"); 
         }
 
-        $1 = args_set;
+        $1 = &args_set;
 
      } else {
          SWIG_exception(SWIG_ValueError, "set expected");
@@ -623,9 +688,10 @@ def dynamic_axes(self):
     $1 = PySet_Check($input) ? 1 : 0;
 }
 
-%typemap(in) std::unordered_set<CNTK::StreamInformation>& {
+%typemap(in) std::unordered_set<CNTK::StreamInformation>& (
+        std::unordered_set<CNTK::StreamInformation> args_set 
+) {
      if (PySet_Check($input)) {
-        std::unordered_set<CNTK::StreamInformation>* args_set = new std::unordered_set<CNTK::StreamInformation>();
 
         PyObject *item;
 
@@ -646,7 +712,7 @@ def dynamic_axes(self):
 
             CNTK::StreamInformation* var = reinterpret_cast<CNTK::StreamInformation*>(raw_var);
 
-            args_set->insert(*var);
+            args_set.insert(*var);
 
             Py_DECREF(item);
         }
@@ -657,7 +723,7 @@ def dynamic_axes(self):
             SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::StreamInformation"); 
         }
 
-        $1 = args_set;
+        $1 = &args_set;
 
      } else {
          SWIG_exception(SWIG_ValueError, "set expected");
@@ -673,9 +739,10 @@ def dynamic_axes(self):
     $1 = PyList_Check($input) ? 1 : 0;
 }
 
-%typemap(in) std::unordered_set<CNTK::Parameter>& {
+%typemap(in) std::unordered_set<CNTK::Parameter>& (
+        std::unordered_set<CNTK::Parameter> args_set 
+) {
      if (PyList_Check($input)) {
-        std::unordered_set<CNTK::Parameter>* args_set = new std::unordered_set<CNTK::Parameter>();
 
         PyObject *item;
 
@@ -696,7 +763,7 @@ def dynamic_axes(self):
 
             CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
 
-            args_set->insert(*var);
+            args_set.insert(*var);
 
             Py_DECREF(item);
         }
@@ -707,7 +774,7 @@ def dynamic_axes(self):
             SWIG_exception_fail(SWIG_ValueError, "cannot convert set element to CNTK::Parameter"); 
         }
 
-        $1 = args_set;
+        $1 = &args_set;
 
      } else {
          SWIG_exception(SWIG_ValueError, "list expected");
@@ -724,9 +791,10 @@ def dynamic_axes(self):
     $1 = PyList_Check($input) ? 1 : 0;
 }
 
-%typemap(in) std::unordered_set<CNTK::LearnerPtr>& {
+%typemap(in) std::unordered_set<CNTK::LearnerPtr>& (
+        std::unordered_set<CNTK::LearnerPtr> args_set 
+) {
      if (PyList_Check($input)) {
-        std::unordered_set<CNTK::LearnerPtr>* args_set = new std::unordered_set<CNTK::LearnerPtr>();
 
         PyObject *item;
 
@@ -747,7 +815,7 @@ def dynamic_axes(self):
 
             CNTK::LearnerPtr* var = reinterpret_cast<CNTK::LearnerPtr*>(raw_var);
 
-            args_set->insert(*var);
+            args_set.insert(*var);
 
             Py_DECREF(item);
         }
@@ -758,7 +826,7 @@ def dynamic_axes(self):
             SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::LearnerPtr"); 
         }
 
-        $1 = args_set;
+        $1 = &args_set;
 
      } else {
          SWIG_exception(SWIG_ValueError, "list expected");
@@ -772,9 +840,10 @@ def dynamic_axes(self):
 }
 
 
-%typemap(in) std::unordered_map<CNTK::Variable, CNTK::Variable>& {
+%typemap(in) std::unordered_map<CNTK::Variable, CNTK::Variable>& (
+        std::unordered_map<CNTK::Variable, CNTK::Variable> args_map 
+) {
      if (PyDict_Check($input)) {
-        std::unordered_map<CNTK::Variable, CNTK::Variable>* args_map = new std::unordered_map<CNTK::Variable, CNTK::Variable>();
 
         PyObject *key, *value;
         Py_ssize_t pos = 0;
@@ -805,10 +874,10 @@ def dynamic_axes(self):
                 value = new CNTK::Variable();
             }
 
-            args_map->insert(std::make_pair(*var, *value));
+            args_map.insert(std::make_pair(*var, *value));
         }
 
-        $1 = args_map;
+        $1 = &args_map;
      } else {
          SWIG_exception(SWIG_TypeError, "dictionary expected");
      }
@@ -825,7 +894,7 @@ def dynamic_axes(self):
 %define %unordered_set_conversion(DATA_TYPE, _SWIG_TYPE)
 
 %typemap(out) std::unordered_set<CNTK::DATA_TYPE> {
-    PyObject* container = PyList_New((*&$1)->size());
+    PyObject* container = PyList_New(0);
     if (container == NULL)
     {
         SWIG_exception(SWIG_RuntimeError, "error passing set to Python");
@@ -841,8 +910,6 @@ def dynamic_axes(self):
         PyList_Append(container, item);
     }
 
-    Py_INCREF(container);
-
     $result = container;
 }
 %enddef
@@ -854,7 +921,7 @@ def dynamic_axes(self):
 %define %unordered_set_ref_conversion(DATA_TYPE, _SWIG_TYPE)
 
 %typemap(out) std::unordered_set<CNTK::DATA_TYPE>& {
-    PyObject* container = PyList_New((*&$1)->size());
+    PyObject* container = PyList_New(0);
     if (container == NULL)
     {
         SWIG_exception(SWIG_RuntimeError, "error passing set to Python");
@@ -867,13 +934,13 @@ def dynamic_axes(self):
         PyList_Append(container, item);
     }
 
-    Py_INCREF(container);
-
     $result = container;
 }
 %enddef
 
 %unordered_set_ref_conversion(StreamInformation, SWIGTYPE_p_CNTK__StreamInformation)
+%unordered_set_ref_conversion(LearnerPtr, SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t)
+%unordered_set_ref_conversion(Parameter, SWIGTYPE_p_CNTK__Parameter)
 
 // Unordered map conversion
 
@@ -897,14 +964,12 @@ def dynamic_axes(self):
         PyDict_SetItem(container, returned_var, returned_val);        
     }
 
-    Py_INCREF(container);
-
     $result = container;
 }
 %enddef
 
 %unordered_map_ref_conversion(StreamInformation, SWIGTYPE_p_CNTK__StreamInformation, MinibatchData, SWIGTYPE_p_CNTK__MinibatchData);
-
+%unordered_map_ref_conversion(Parameter, SWIGTYPE_p_CNTK__Parameter, NDArrayViewPtr, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView);
 
 %shared_ptr(CNTK::Function)
 %shared_ptr(CNTK::NDArrayView)
@@ -993,40 +1058,22 @@ def dynamic_axes(self):
 
         int typecode = PyArray_TYPE(array);
         
-        void* buf;
-
-        NDArrayView* cpuView;
+        NDArrayView* view;
         if (typecode == NPY_FLOAT)
         {
-            size_t num_bytes = num_elements * sizeof(float);
-            buf = malloc(num_bytes);
-            memcpy(buf, PyArray_DATA(array), num_bytes);
-            cpuView = new NDArrayView(NDShape(shape), (float*)buf, num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            NDArrayView  tmp(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            view = new NDArrayView(DataType::Float, tmp.Shape(), device);
+            view->CopyFrom(tmp);
         }
-
         else if (typecode == NPY_DOUBLE)
         {
-            size_t num_bytes = num_elements * sizeof(double);
-            buf = malloc(num_bytes);
-            memcpy(buf, PyArray_DATA(array), num_bytes);
-            cpuView = new NDArrayView(NDShape(shape), (double*)buf, num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            NDArrayView  tmp(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            view = new NDArrayView(DataType::Double, tmp.Shape(), device);
+            view->CopyFrom(tmp);
         }
         else
         {
             throw std::logic_error("NumPy array of type float32 or float64 expected");
-        }
-
-        NDArrayView* view;
-        if (device != DeviceDescriptor::CPUDevice())
-        {
-            DataType data_type = cpuView->GetDataType();
-            view = new NDArrayView(data_type, cpuView->Shape(), device);
-            view->CopyFrom(*cpuView);
-            delete cpuView;
-        }
-        else
-        {
-            view = cpuView;
         }
 
         return view;
@@ -1199,11 +1246,10 @@ StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and
 %pythoncode %{
 # in case of multiple outputs return the function, not the variable
 def get_output_and_keep_reference(self):
-    variable = self.output_internal()    
+    variable = self._output()    
     variable.owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
-Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
 
 from .tensor import _add_tensor_ops, _add_eval
 for klass in [Function, Variable]:

@@ -326,14 +326,11 @@ namespace CNTK
 
     inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape)
     {
-        auto outputMapCount = convolutionMapShape.SubShape(0, convolutionMapShape.Rank() - operandShape.Rank());
+        NDShape kernelShape = convolutionMapShape.SubShape(0, operandShape.Rank());
+        auto outputMapCount = convolutionMapShape.SubShape(kernelShape.Rank());
         NDShape paddedOutputMapCount(operandShape.Rank(), 1);
         for (size_t i = 0; i < outputMapCount.Rank(); ++i)
             paddedOutputMapCount[paddedOutputMapCount.Rank() - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
-        //for (size_t i = 0; i < outputMapCount.Rank(); ++i)
-        //    paddedOutputMapCount[i] = outputMapCount[i];
-
-        NDShape kernelShape = convolutionMapShape.SubShape(outputMapCount.Rank());
 
         return{ paddedOutputMapCount, kernelShape };
     }
@@ -413,5 +410,37 @@ namespace CNTK
 
         return{ uid, name };
     }
-}
 
+    inline std::vector<Axis> GetDerivedDynamicAxes(const Axis& sourceAxis, size_t multiplicativeFactor, int additiveFactor)
+    {
+        if (sourceAxis.IsStaticAxis())
+            LogicError("Static axes cannot be derived from to create new dynamic axes!");
+
+        if ((multiplicativeFactor == 0) && (additiveFactor == 0))
+            LogicError("Zero size dynamic axes are not allowed!");
+
+        // If we slice off exactly one frame off of the source axis, then we effectively delete this axis
+        if ((multiplicativeFactor == 0) && (additiveFactor == 1))
+            return {};
+
+        if ((multiplicativeFactor == 1) && (additiveFactor == 0))
+            return {sourceAxis};
+
+        std::wstring derivedDynamicAxisName = sourceAxis.Name();
+        if (multiplicativeFactor > 0)
+        {
+            derivedDynamicAxisName += L"_times_" + std::to_wstring(multiplicativeFactor);
+            if (additiveFactor > 0)
+                derivedDynamicAxisName += L"_plus_" + std::to_wstring(additiveFactor);
+            else
+                derivedDynamicAxisName += L"_minus_" + std::to_wstring(-additiveFactor);
+        }
+        else
+        {
+            assert(additiveFactor > 0);
+            derivedDynamicAxisName += L"_fixedSliceOf_" + std::to_wstring(additiveFactor);
+        }
+
+        return{ Axis(derivedDynamicAxisName, sourceAxis.IsOrdered()) };
+    }
+}

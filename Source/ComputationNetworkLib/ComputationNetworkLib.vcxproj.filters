@@ -46,6 +46,9 @@
     <ClCompile Include="RecurrentNodes.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
+    <ClCompile Include="TrainingNodes.cpp">
+      <Filter>Nodes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">

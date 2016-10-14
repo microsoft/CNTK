@@ -64,12 +64,12 @@ Constant GetProjectionMap(size_t outputDim, size_t inputDim, const DeviceDescrip
     if (inputDim > outputDim)
         throw std::runtime_error("Can only project from lower to higher dimensionality");
 
-    std::vector<float> projectionMapValues(inputDim * outputDim);
+    std::vector<float> projectionMapValues(inputDim * outputDim, 0);
     for (size_t i = 0; i < inputDim; ++i)
-        projectionMapValues[(i * outputDim) + i] = 1.0f;
+        projectionMapValues[(i * inputDim) + i] = 1.0f;
 
-    auto projectionMap = MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ outputDim, 1, 1, inputDim }), device);
-    projectionMap->CopyFrom(NDArrayView(NDShape({ outputDim, 1, 1, inputDim }), projectionMapValues));
+    auto projectionMap = MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ 1, 1, inputDim, outputDim }), device);
+    projectionMap->CopyFrom(NDArrayView(NDShape({ 1, 1, inputDim, outputDim }), projectionMapValues));
 
     return Constant(projectionMap);
 }
@@ -173,7 +173,12 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
 
 void TrainCifarResnet()
 {
-#ifndef CPUONLY
-    TrainResNetCifarClassifer(DeviceDescriptor::GPUDevice(0), true /*testSaveAndReLoad*/);
-#endif
+    if (IsGPUAvailable())
+    {
+        TrainResNetCifarClassifer(DeviceDescriptor::GPUDevice(0), true /*testSaveAndReLoad*/);
+    }
+    else
+    {
+        fprintf(stderr, "Cannot run TrainCifarResnet test on a CPU device.\n");
+    }
 }

@@ -417,8 +417,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // set dropout rate for this epoch
         // We use the same seed across workers until parallel training kicks in to ensure that the workers have identical models
         size_t parallelWorkerIdx = ((m_mpi == nullptr) || !UsingParallelTrain(i)) ? 0 : m_mpi->CurrentNodeRank();
-        size_t dropoutRandSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
-        ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropoutRandSeedBase);
+        size_t randSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
+        ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate);
+        ComputationNetwork::SetIRngUserSeed<ElemType>(net, criterionNodes[0], randSeedBase);
         ComputationNetwork::SetBatchNormalizationTimeConstants<ElemType>(net, criterionNodes[0], 
                                                                          m_batchNormalizationTimeConstant[i], prevNormalizationTimeConstant,
                                                                          m_batchNormalizationBlendTimeConstant[i], prevNormalizationBlendTimeConstant);
@@ -1387,19 +1388,12 @@ static double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
     return pow(momentumPerSample, minibatchSize);
 }
 
-// Get{Train,Eval}CriterionNodes() return a reference that is, unfortunately, dependent on the network.
-// So we hold those inside here. Not very nice. Also not thread-safe. This may go away once we fix sequence-to-sequence models properly.
-// TODO: merge them into one.
-static map<ComputationNetworkPtr, vector<ComputationNodeBasePtr>> tmpCriterionNodeSets;
-// TODO: test this, then remove this comment
-
 template <class ElemType>
 const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
 {
     if (!m_trainCriterionNodeName.empty())
     {
-        tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_trainCriterionNodeName);
-        return tmpCriterionNodeSets[net];
+        return net->CriterionNodesFrom(m_trainCriterionNodeName);
     }
     else
         return net->FinalCriterionNodes();
@@ -1410,8 +1404,7 @@ const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(
 {
     if (!m_evalCriterionNodeName.empty())
     {
-        tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_evalCriterionNodeName);
-        return tmpCriterionNodeSets[net];
+        return net->CriterionNodesFrom(m_evalCriterionNodeName);
     }
     else
         return net->EvaluationNodes();

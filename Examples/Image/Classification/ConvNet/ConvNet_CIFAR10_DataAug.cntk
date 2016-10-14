@@ -4,7 +4,7 @@ command = TrainConvNet:Eval
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = "../.." ; dataDir = "$rootDir$/DataSets/CIFAR10" ;
+rootDir = "../.." ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
 outputDir = "./Output" ;
 
 modelPath = "$outputDir$/Models/ConvNet_CIFAR10_DataAug"
@@ -17,12 +17,11 @@ TrainConvNet = {
         imageShape = 32:32:3
         labelDim = 10
 
-		featMean = 128
         featScale = 1/256
-        Normalize{m,f} = x => Constant(f) .* (x - Constant(m))
+        Normalize{f} = x => f .* x
 
         model = Sequential (
-            Normalize {featMean, featScale} :
+            Normalize {featScale} :
             ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
             ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
               MaxPoolingLayer {(3:3), stride = (2:2)} :
@@ -75,7 +74,7 @@ TrainConvNet = {
                 features = { transforms = (
                     { type = "Crop" ; cropType = "random" ; cropRatio = 0.8 ; jitterType = "uniRatio" } :
                     { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Mean" ; meanFile = "$dataDir$/CIFAR10_mean.xml" } : 
+                    { type = "Mean" ; meanFile = "$dataDir$/CIFAR-10_mean.xml" } : 
                     { type = "Transpose" }
                 )}
                 labels = { labelDim = 10 }
@@ -99,7 +98,7 @@ Eval = {
             input = {
                 features = { transforms = (
                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                   { type = "Mean"; meanFile = "$dataDir$/CIFAR10_mean.xml" } : 
+                   { type = "Mean"; meanFile = "$dataDir$/CIFAR-10_mean.xml" } : 
                    { type = "Transpose" }
                 )}
                 labels = { labelDim = 10 }

@@ -55,8 +55,8 @@ def train_sequence_classifier(debug_output=False):
         StreamConfiguration(feature_stream_name, input_dim, True, 'x'),
         StreamConfiguration(labels_stream_name, num_output_classes, False, 'y')], 0)
 
-    features_si = mb_source.stream_info(features)
-    labels_si = mb_source.stream_info(label)
+    features_si = mb_source[features]
+    labels_si = mb_source[label]
 
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(classifier_output, ce, pe,
@@ -78,8 +78,8 @@ def train_sequence_classifier(debug_output=False):
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
-        arguments = {features: mb[features_si].m_data,
-                     label: mb[labels_si].m_data}
+        arguments = {features: mb[features_si],
+                     label: mb[labels_si]}
         trainer.train_minibatch(arguments)
 
         print_training_progress(trainer, i, training_progress_output_freq)
@@ -94,11 +94,10 @@ def train_sequence_classifier(debug_output=False):
     return evaluation_average, loss_average
 
 if __name__ == '__main__':
-    # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.gpu_device(0)
-    # If it is crashing, probably you don't have a GPU, so try with CPU:
+    # Specify the target device to be used for computing, if you do not want to
+    # use the best available one, e.g.
     # target_device = DeviceDescriptor.cpu_device()
-    DeviceDescriptor.set_default_device(target_device)
+    # DeviceDescriptor.set_default_device(target_device)
 
     error, _ = train_sequence_classifier()
     print("Error: %f" % error)

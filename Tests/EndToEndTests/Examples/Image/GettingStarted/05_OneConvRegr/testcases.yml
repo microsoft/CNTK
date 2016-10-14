@@ -2,7 +2,7 @@ dataDir: ../../../../../../Examples/Image/DataSets
 
 tags:
     - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
-    - nightly-e (build_sku=='gpu') and (device=='gpu') and ((flavor=='release') or (os=='linux'))
+    - nightly-e (build_sku=='gpu') and (((device=='gpu') and (flavor=='release')) or (os=='linux' and ((flavor=='debug') ^ (device=='cpu'))))
 
 testCases:
   CNTK Run must be completed:
