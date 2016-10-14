@@ -496,7 +496,7 @@ public:
             size_t pairsCount = 0;
             ElemType discountI, discountJ;
             ElemType gainI;
-            ElemType lambdaIJ, scoreDiff;
+            ElemType lambdaIJ;
             for (auto qu : m_queryUrls)
             {
                 ElemType idealMetric = qu.m_idealMetric;
@@ -516,13 +516,11 @@ public:
                             continue;
                         }
 
-                        scoreDiff = abs(UrlI.m_score - UrlJ.m_score) + (ElemType)0.1;
-
                         // delta DCG
                         lambdaIJ = (gainI - UrlJ.m_gain) * (discountI - discountJ) / (discountI * discountJ);
 
                         // |delta NDCG|
-                        lambdaIJ = (idealMetric == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / idealMetric) / scoreDiff);
+                        lambdaIJ = (idealMetric == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / idealMetric));
 
                         // Combine lambda
                         lambdaIJ = lambdas(0, pairsCount++) * lambdaIJ;
