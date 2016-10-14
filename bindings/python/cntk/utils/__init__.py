@@ -273,15 +273,8 @@ def get_data_type(*args):
                 dtypes.add(np.float64)
             elif cntk_py.DataType_Float == var_type:
                 dtypes.add(np.float32)
-        # TODO: one of these came in through a merge, causing a syntax error. Which one is it? I will know in Codeflow
-        #else:
-        #        raise ValueError('type %s is not supported'%var_type)
         else:
-            # We don't know anything so we convert everything to float32. If it
-            # works, we know the type.
-            # TODO figure out a better/faster way.
-            np.asarray(arg, dtype=np.float32)
-            dtypes.add(np.float32)
+                raise ValueError('type %s is not supported'%var_type)
 
     if np.float64 in dtypes:
         return np.float64
@@ -736,42 +729,6 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
         return forward_output, None
 
 
-def typemap(f):
-    '''
-    Upcasts Swig types to cntk types that inherit from Swig.
-    '''
-            
-    from functools import wraps
-    @wraps(f)
-    def wrapper(*args, **kwds):
-        from cntk.ops.variables import Variable, Parameter, Constant
-        from cntk.ops.functions import Function
-        from cntk.learner import Learner
-        from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
-        typemap = { 
-                cntk_py.Variable: Variable,
-                cntk_py.Parameter: Parameter,
-                cntk_py.Constant: Constant,
-                cntk_py.Function: Function, 
-                cntk_py.Learner: Learner, 
-                cntk_py.MinibatchSource: MinibatchSource,
-                cntk_py.MinibatchData: MinibatchData,
-                cntk_py.StreamConfiguration: StreamConfiguration, 
-                }
-        result = f(*args, **kwds)
-        if isinstance(result, (tuple, list, set)):
-            for r in result:
-                r.__class__ = typemap.get(r.__class__, r.__class__)
-        elif isinstance(result, dict):
-            for k,v in result.items():
-                k.__class__ = typemap.get(k.__class__, k.__class__)
-                v.__class__ = typemap.get(v.__class__, v.__class__)
-        else:
-            result.__class__ = typemap.get(result.__class__, result.__class__)
-        return result
-    return wrapper
-
-    
 # helper to convert a dictionary into a Python class, so that the dict looks like an immutable record
 # TODO: move to utils?
 class _ClassFromDict(dict):
