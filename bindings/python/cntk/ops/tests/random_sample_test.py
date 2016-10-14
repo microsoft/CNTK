@@ -30,7 +30,7 @@ TEST_CASES = [
 def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, expected, tolerance, device_id, precision):
 
     result = random_sample_inclusion_frequency(weights, num_samples, allow_duplicates)
-#    if num_samples < len(weights):
+
     if num_samples >= len(weights) and not allow_duplicates:
         # in case num_samples => len(weights) we expect an exception to be thrown
         with pytest.raises(RuntimeError):
