@@ -100,20 +100,16 @@ def _apply(f, args):
 # some mappings to BS format
 # TODO: random init parameters: init_filter_rank=0, init_output_rank=1, init_on_cpu_only=True, random_seed=-1
 # init must be given
-def Parameter(shape, init, learning_rate_multiplier=1.0, name=''):
+def Parameter(shape, init, name=''):
     if init is None:
         raise "Parameter: init cannot be None"
-    # TODO: learning_rate_multiplier parameter missing
-    if learning_rate_multiplier != 1.0 and learning_rate_multiplier != 0.0:
-        raise "Parameter: learning_rate_multiplier cannot be anything else but 1 or 0 at present"
-    #p = parameter(shape, init=init if init is not None else 0, learning_rate_multiplier=learning_rate_multiplier, name=name) if learning_rate_multiplier != 0 else \
-    p = parameter(shape, init=init, name=name) if learning_rate_multiplier != 0 else \
-        constant (shape,      init,                                                    name=name)
+    p = parameter(shape, init=init, name=name)
     return _name_node(p, 'parameter')   # these are factory methods for things with state
 
 # TODO: parameter order; shape should be optional (only for filling a tensor with a scalar--rare case)
 def Constant(init, shape=None, name=''):
-    return Parameter(shape, init, learning_rate_multiplier=0, name=name)
+    p = constant (shape, init, name=name)
+    return _name_node(p, 'constant')   # these are factory methods for things with state
 
 def Input(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')

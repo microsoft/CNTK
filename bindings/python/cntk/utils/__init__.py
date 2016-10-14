@@ -273,8 +273,9 @@ def get_data_type(*args):
                 dtypes.add(np.float64)
             elif cntk_py.DataType_Float == var_type:
                 dtypes.add(np.float32)
-        else:
-                raise ValueError('type %s is not supported'%var_type)
+        # TODO: one of these came in through a merge, causing a syntax error. Which one is it? I will know in Codeflow
+        #else:
+        #        raise ValueError('type %s is not supported'%var_type)
         else:
             # We don't know anything so we convert everything to float32. If it
             # works, we know the type.
@@ -380,9 +381,10 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
         mask = NDMask((max(seq_lens), num_seq), device)
         for idx, seq_len in enumerate(seq_lens):
             if seq_starts is None:
-            mask.mark_sequence_begin((0, idx))
+                mask.mark_sequence_begin((0, idx))
             elif seq_starts[idx]:
                 mask.mark_sequence_begin((0, idx))
+            # TODO: a merge caused screwed-up indentation here. Not sure if I corrected it correctly.
             mask.invalidate_section((seq_len, idx),
                                     (cntk_py.InferredDimension, 1))
 
@@ -611,7 +613,7 @@ def sanitize_axis(rank, axis):
         if axis < 0:
             return cntk_py.Axis(-axis - 1)
         else:
-        return cntk_py.Axis(rank - 1 - axis)
+            return cntk_py.Axis(rank - 1 - axis)
     elif axis.is_static_axis():
         return cntk_py.Axis(rank - 1 - axis.static_axis_index())
     else:
