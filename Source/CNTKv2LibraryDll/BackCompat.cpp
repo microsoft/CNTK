@@ -182,7 +182,9 @@ namespace CNTK
                 opType = PrimitiveOpType::ScatterPacked;
             else if (node->OperationName() == OperationNameOf(TimesNode))
             {
-                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = (size_t)node->As<TimesNode<ElementType>>()->OutputRank();
+                auto timesNode = node->As<TimesNode<ElementType>>();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = timesNode->OutputRank();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInferInputRankToMap] = (size_t)timesNode->InferInputRankToMap();
                 opType = PrimitiveOpType::Times;
             }
             else if (node->OperationName() == OperationNameOf(TransposeTimesNode))

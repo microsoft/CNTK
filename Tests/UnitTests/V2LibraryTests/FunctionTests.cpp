@@ -459,61 +459,119 @@ void TestTranspose(size_t numAxes, size_t axis1, size_t axis2, const DeviceDescr
     FloatingPointVectorCompare(outputData, expectedOutputValues, "TestTimesAndPlus: Forward prop results do not match expected results");
 }
 
-void TestShapeInferenceInRecurrence(size_t inputRank, size_t outputRank)
+void TestTimesNodeShapeInference()
 {
-    auto placeholderInput = PlaceholderVariable(NDShape(inputRank));
+    auto timesNodeShapeInferenceTest = [](size_t inputRank, size_t outputRank, int inputRankToMap) {
+        size_t maxDimSize = 15;
+        NDShape outputShape(outputRank);
+        for (size_t i = 0; i < outputRank; ++i)
+            outputShape[i] = (rand() % maxDimSize) + 1;
 
-    srand(1);
+        NDShape paramShape = outputShape;
+        if (inputRankToMap > 0)
+            paramShape = paramShape.AppendShape({ NDShape::InferredDimension });
+        else
+            paramShape = paramShape.AppendShape(NDShape(inputRank));
 
-    size_t maxDimSize = 15;
-    NDShape inputShape(inputRank);
-    for (size_t i = 0; i < inputRank; ++i)
-        inputShape[i] = (rand() % maxDimSize) + 1;
+        auto timesParam = Parameter(paramShape, DataType::Float, ConstantInitializer());
 
-    NDShape outputShape(outputRank);
-    for (size_t i = 0; i < outputRank; ++i)
-        outputShape[i] = (rand() % maxDimSize) + 1;
+        auto placeholderInput = PlaceholderVariable();
+        auto timesFunction = Times(timesParam, placeholderInput, outputRank, inputRankToMap);
 
-    auto device = DeviceDescriptor::CPUDevice();
-    Parameter timesParam(outputShape.AppendShape(placeholderInput.Shape()), DataType::Float, GlorotUniformInitializer((int)outputRank), device, L"timesParameters");
-    Parameter plusParam(NDShape(outputRank, NDShape::InferredDimension), DataType::Float, ConstantInitializer(), device, L"plusParameters");
+        NDShape inputShape(inputRank);
+        for (size_t i = 0; i < inputRank; ++i)
+            inputShape[i] = (rand() % maxDimSize) + 1;
 
-    auto recurrenceForwardReference = PlaceholderVariable(NDShape(outputRank, NDShape::InferredDimension));
-    auto projectionOutput = Times(timesParam, placeholderInput, outputRank);
-    auto firstPlusOutput = Plus(recurrenceForwardReference, projectionOutput);
-    auto plusOutput = Plus(plusParam, firstPlusOutput, L"plusOutput");
-    auto placeholderReplacement = PastValue(plusOutput);
-    plusOutput = plusOutput->ReplacePlaceholders({ { recurrenceForwardReference, placeholderReplacement } });
+        auto actualInput = InputVariable(inputShape, DataType::Float);
+        timesFunction->ReplacePlaceholders({ { placeholderInput, actualInput } });
 
-    auto reducedOutput = ReduceSum(plusOutput, L"sum");
-    auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
+        // Verify that the inferred shape of the param, input and output matches expectation
+        auto expectedInputShape = inputShape;
+        auto expectedParamShape = outputShape;
+        if (inputRankToMap > 0)
+            expectedParamShape = expectedParamShape.AppendShape(inputShape.SubShape(0, inputRank - inputRankToMap));
+        else
+            expectedParamShape = expectedParamShape.AppendShape(inputShape);
 
-    auto inputVar = InputVariable(inputShape, false, DataType::Float, true, L"input", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });
-    rootFuncOriginal->ReplacePlaceholders({ { placeholderInput, inputVar } });
+        auto expectedOutputShape = outputShape;
+        if (inputRankToMap > 0)
+            expectedOutputShape = expectedOutputShape.AppendShape(inputShape.SubShape(inputRank - inputRankToMap));
 
-    if (timesParam.Shape() != outputShape.AppendShape(inputShape))
-        ReportFailure("timesParams shape does not match expectation; expected = %S, actual = %S", outputShape.AppendShape(inputShape).AsString().c_str(), timesParam.Shape().AsString().c_str());
+        auto actualInputShape = timesFunction->Arguments()[0].Shape();
+        auto actualParamShape = timesFunction->Parameters()[0].Shape();
+        auto actualOutputShape = timesFunction->Output().Shape();
 
-    if (plusParam.Shape() != outputShape)
-        ReportFailure("plusParam shape does not match expectation; expected = %S, actual = %S", outputShape.AsString().c_str(), plusParam.Shape().AsString().c_str());
+        if (actualInputShape != expectedInputShape)
+            ReportFailure("Times nodes actual input shape (%S) does not match expectation (%S)", actualInputShape.AsString().c_str(), expectedInputShape.AsString().c_str());
 
-    if (plusOutput->Output().DynamicAxes() != inputVar.DynamicAxes())
-        ReportFailure("plusOutput dynamic axes do not match expectation!");
+        if (actualParamShape != expectedParamShape)
+            ReportFailure("Times nodes actual parameter shape (%S) does not match expectation (%S)", actualParamShape.AsString().c_str(), expectedParamShape.AsString().c_str());
+
+        if (actualOutputShape != expectedOutputShape)
+            ReportFailure("Times nodes actual output shape (%S) does not match expectation (%S)", actualOutputShape.AsString().c_str(), expectedOutputShape.AsString().c_str());
+    };
+
+    timesNodeShapeInferenceTest(2, 2, -1);
+    timesNodeShapeInferenceTest(2, 1, 1);
+    timesNodeShapeInferenceTest(1, 2, 0);
+    timesNodeShapeInferenceTest(3, 2, 2);
 }
 
-void TestShapeInference()
+void TestRecurrenceShapeInference()
 {
-    TestShapeInferenceInRecurrence(1, 1);
-    TestShapeInferenceInRecurrence(2, 1);
-    TestShapeInferenceInRecurrence(1, 2);
-    TestShapeInferenceInRecurrence(2, 2);
+    auto testShapeInferenceInRecurrence = [](size_t inputRank, size_t outputRank) {
+        auto placeholderInput = PlaceholderVariable(NDShape(inputRank));
+
+        srand(1);
+
+        size_t maxDimSize = 15;
+        NDShape inputShape(inputRank);
+        for (size_t i = 0; i < inputRank; ++i)
+            inputShape[i] = (rand() % maxDimSize) + 1;
+
+        NDShape outputShape(outputRank);
+        for (size_t i = 0; i < outputRank; ++i)
+            outputShape[i] = (rand() % maxDimSize) + 1;
+
+        auto device = DeviceDescriptor::CPUDevice();
+        Parameter timesParam(outputShape.AppendShape(placeholderInput.Shape()), DataType::Float, GlorotUniformInitializer((int)outputRank), device, L"timesParameters");
+        Parameter plusParam(NDShape(outputRank, NDShape::InferredDimension), DataType::Float, ConstantInitializer(), device, L"plusParameters");
+
+        auto recurrenceForwardReference = PlaceholderVariable(NDShape(outputRank, NDShape::InferredDimension));
+        auto projectionOutput = Times(timesParam, placeholderInput, outputRank);
+        auto firstPlusOutput = Plus(recurrenceForwardReference, projectionOutput);
+        auto plusOutput = Plus(plusParam, firstPlusOutput, L"plusOutput");
+        auto placeholderReplacement = PastValue(plusOutput);
+        plusOutput = plusOutput->ReplacePlaceholders({ { recurrenceForwardReference, placeholderReplacement } });
+
+        auto reducedOutput = ReduceSum(plusOutput, L"sum");
+        auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
+
+        auto inputVar = InputVariable(inputShape, false, DataType::Float, true, L"input", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });
+        rootFuncOriginal->ReplacePlaceholders({ { placeholderInput, inputVar } });
+
+        if (timesParam.Shape() != outputShape.AppendShape(inputShape))
+            ReportFailure("timesParams shape does not match expectation; expected = %S, actual = %S", outputShape.AppendShape(inputShape).AsString().c_str(), timesParam.Shape().AsString().c_str());
+
+        if (plusParam.Shape() != outputShape)
+            ReportFailure("plusParam shape does not match expectation; expected = %S, actual = %S", outputShape.AsString().c_str(), plusParam.Shape().AsString().c_str());
+
+        if (plusOutput->Output().DynamicAxes() != inputVar.DynamicAxes())
+            ReportFailure("plusOutput dynamic axes do not match expectation!");
+    };
+
+    testShapeInferenceInRecurrence(1, 1);
+    testShapeInferenceInRecurrence(2, 1);
+    testShapeInferenceInRecurrence(1, 2);
+    testShapeInferenceInRecurrence(2, 2);
 }
 
 void FunctionTests()
 {
     fprintf(stderr, "\nFunctionTests..\n");
 
-    TestShapeInference();
+    TestTimesNodeShapeInference();
+    TestRecurrenceShapeInference();
 
     TestSlice(2, DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())

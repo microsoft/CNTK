@@ -551,6 +551,7 @@ public:
     }
 
     size_t OutputRank() const { return m_outputRank; }
+    int InferInputRankToMap() const { return m_inferInputRankToMap; }
 
 private:
     size_t m_outputRank;

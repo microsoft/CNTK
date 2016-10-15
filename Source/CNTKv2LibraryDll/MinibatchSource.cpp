@@ -70,7 +70,7 @@ namespace CNTK
     /*static*/ const std::wstring CompositeMinibatchSource::MinibatchSourcePositionAttributeName = L"minibatchSourcePosition";
 
     CompositeMinibatchSource::CompositeMinibatchSource(const Dictionary& configuration)
-        : m_epochEndReached(false), m_prevMinibatchSize(0), m_epochSize(SIZE_MAX)
+        : m_epochEndReached(false), m_prevMinibatchSize(0), m_epochSize(SIZE_MAX), m_truncationLength(0)
     {
         // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
         // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
@@ -130,6 +130,15 @@ namespace CNTK
         if (m_epochSize == 0)
             m_epochSize = Microsoft::MSR::CNTK::requestDataSize;
 
+        const wchar_t* truncatedConfigurationKey = L"truncated";
+        const wchar_t* truncationLengthConfigurationKey = L"truncationLength";
+        if (augmentedConfiguration.Contains(truncatedConfigurationKey) &&
+            augmentedConfiguration[truncatedConfigurationKey].Value<bool>() &&
+            augmentedConfiguration.Contains(truncationLengthConfigurationKey))
+        {
+            m_truncationLength = augmentedConfiguration[truncationLengthConfigurationKey].Value<size_t>();
+        }
+
         typedef Reader*(*CreateCompositeDataReaderProc)(const ConfigParameters* parameters);
         CreateCompositeDataReaderProc createReaderProc = (CreateCompositeDataReaderProc)Plugin().Load(L"CompositeDataReader", "CreateCompositeDataReader");
         std::shared_ptr<Microsoft::MSR::CNTK::Reader> compositeDataReader(createReaderProc(&config));
@@ -164,7 +173,7 @@ namespace CNTK
                 epochConfig.m_numberOfWorkers = 1;
                 epochConfig.m_workerRank = 0;
                 epochConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
-                epochConfig.m_truncationSize = 0;
+                epochConfig.m_truncationSize = m_truncationLength;
 
                 epochConfig.m_totalEpochSizeInSamples = m_epochSize;
                 epochConfig.m_epochIndex = 0;
@@ -208,7 +217,7 @@ namespace CNTK
                 newConfig.m_numberOfWorkers = 1;
                 newConfig.m_workerRank = 0;
                 newConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
-                newConfig.m_truncationSize = 0;
+                newConfig.m_truncationSize = m_truncationLength;
 
                 m_shim->SetConfiguration(newConfig, inputDescriptions);
                 m_prevMinibatchSize = minibatchSizeInSamples;

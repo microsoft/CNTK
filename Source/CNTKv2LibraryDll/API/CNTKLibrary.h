@@ -2462,11 +2462,11 @@ namespace CNTK
     CNTK_API FunctionPtr GreaterEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 
     ///
-    /// Create an instance of the CNTK built-in matrix multiplication operation with the specified input operands.
+    /// Create an instance of the CNTK built-in tensor multiplication operation with the specified input operands.
     /// TODO: Specify the constraints on the shapes of the operands.
-    /// TODO: Add the inputRankToMap parameter
+    /// TODO: Document inferInputRankToMap
     ///
-    CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank = 1, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank = 1, int inferInputRankToMap = -1, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in matrix multiplication operation with the transpose of the left input operand

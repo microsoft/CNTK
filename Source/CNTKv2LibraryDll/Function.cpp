@@ -418,6 +418,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDropoutRate = L"dropoutRate";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewShape = L"newShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOutputRank = L"outputRank";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameInferInputRankToMap = L"inferInputRankToMap";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOffset = L"offset";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameStrides = L"strides";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSharing = L"sharing";
@@ -623,8 +624,9 @@ namespace CNTK
             case PrimitiveOpType::Times:
             {
                 assert(inputs.size() == 2);
-                size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-                outputShape = TimesOpOutputShape(inputs[0], inputs[1], outputRank, inferDimensions);
+                auto outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
+                auto inferInputRankToMap = (int)functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<size_t>();
+                outputShape = TimesOpOutputShape(inputs[0], inputs[1], outputRank, inferInputRankToMap, inferDimensions);
                 break;
             }
             case PrimitiveOpType::TransposeTimes:
@@ -645,7 +647,7 @@ namespace CNTK
                 NDShape transposedLeftOperandShape = transposeShapeFunc(inputs[0].Shape());
                 Variable dummyLeftOperand = PlaceholderVariable(transposedLeftOperandShape);
                 size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-                outputShape = TimesOpOutputShape(dummyLeftOperand, inputs[1], outputRank, inferDimensions);
+                outputShape = TimesOpOutputShape(dummyLeftOperand, inputs[1], outputRank, -1, inferDimensions);
                 if (dummyLeftOperand.Shape() != transposedLeftOperandShape)
                     inputs[0].m_dataFields->m_shape = transposeShapeFunc(dummyLeftOperand.Shape());
 
@@ -1056,7 +1058,8 @@ namespace CNTK
         case PrimitiveOpType::Times:
         {
             size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-            computationNodePtr = New<TimesNode<ElementType>>(network->GetDeviceId(), functionName, outputRank);
+            auto inferInputRankToMap = (int)functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<size_t>();
+            computationNodePtr = New<TimesNode<ElementType>>(network->GetDeviceId(), functionName, outputRank, inferInputRankToMap);
             break;
         }
         case PrimitiveOpType::TransposeTimes:
@@ -2240,10 +2243,11 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::GreaterEqual, leftOperand, rightOperand, Dictionary(), name);
     }
 
-    FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank /*= 1*/, const std::wstring& name)
+    FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
+        additionalProperties[PrimitiveFunction::AttributeNameInferInputRankToMap] = (size_t)inferInputRankToMap;
         return BinaryOp(PrimitiveOpType::Times, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 

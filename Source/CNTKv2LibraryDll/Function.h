@@ -205,6 +205,7 @@ namespace CNTK
         static const std::wstring AttributeNameDropoutRate;
         static const std::wstring AttributeNameNewShape;
         static const std::wstring AttributeNameOutputRank;
+        static const std::wstring AttributeNameInferInputRankToMap;
         static const std::wstring AttributeNameOffset;
         static const std::wstring AttributeNameStrides;
         static const std::wstring AttributeNameSharing;
@@ -426,7 +427,7 @@ namespace CNTK
         }
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
-        static NDShape TimesOpOutputShape(Variable& leftOperand, Variable& rightOperand, size_t outputRank, bool inferInputDimensions)
+        static NDShape TimesOpOutputShape(Variable& leftOperand, Variable& rightOperand, size_t outputRank, int inferInputRankToMap, bool inferInputDimensions)
         {
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
@@ -437,6 +438,9 @@ namespace CNTK
             if (outputRank > leftOperandShape.Rank())
                 InvalidArgument("Output rank of times operation can at most be the rank of the %s operand", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left");
 
+            if (inferInputRankToMap >= (int)(rightOperandShape.Rank()))
+                InvalidArgument("Input map rank of times operation must be less than the rank of the %s operand", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right");
+
             size_t numReductionAxes = leftOperandShape.Rank() - outputRank;
 
             // The 'numReductionAxes' trailing dimensions of the left operand's shape must match the corresponding leading
@@ -444,6 +448,38 @@ namespace CNTK
 
             if (rightOperandShape.Rank() < numReductionAxes)
                 RuntimeError("The %s operand's rank in a times operation should not be less than #axes being reduced over!", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right");
+
+            // outputRank dimensions cannot be inferred
+            for (size_t k = 0; k < outputRank; k++)
+            {
+                if (leftOperandShape[k] == NDShape::InferredDimension)
+                    InvalidArgument("The outputRank (%d) dimensions in times operation's %s operand's shape [%S] cannot be Inferred.",
+                                    (int)outputRank,
+                                    Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left",
+                                    AsStringForErrorReporting(leftOperandShape).c_str());
+            }
+
+            // infer rank of leftOperand
+            // For purpose of dimension inference, Times() accepts an optional parameter inferInputRankToMap (default -1=unspecified).
+            // The last 'inferInputRankToMap' axes are considered those that the matrix product should keep (Times()
+            // is applied one by one, like a "map" operation) rather than reducing over.
+            // Specifically, inferInputRankToMap=0 means to reduce over all input axes, e.g. for an image input that
+            // should be flattened.
+            // Examples:
+            //  [I x Inferred] * [J x K],                    inferInputRankToMap=n/a --> Inferred  := J, result is [I x K]
+            //  [I x Inferred] * [W x H x C],                inferInputRankToMap=n/a --> Inferred  := W, result is [I x H x C] (not desired)
+            //  [I x Inferred x Inferred] * [W x H x C],     inferInputRankToMap=n/a --> Inf x Inf := [W x H], result is [I x C]
+            //  [I x Inferred] * [W x H x C],                inferInputRankToMap=0   --> Inferred  := W x H x C, result is [I] (desired)
+            //  [I x Inferred] * [W x H x C x R],            inferInputRankToMap=1   --> Inferred  := W x H x C, result is [I x R] (desired)
+            // If W's shape is too short, it will be padded with 0 (i.e. inferred in a subsequent step).
+            if (inferInputRankToMap >= 0) // if given, we pad if needed
+            {
+                while ((numReductionAxes + (size_t)inferInputRankToMap) < rightOperand.Shape().Rank())
+                {
+                    leftOperandShape = leftOperandShape.AppendShape({ NDShape::InferredDimension });
+                    numReductionAxes++;
+                }
+            }
 
             for (size_t i = 0; i < numReductionAxes; ++i)
             {

@@ -16,7 +16,7 @@ namespace CNTK
 {
     class CompositeMinibatchSource final : public MinibatchSource
     {
-        static const std::wstring CompositeMinibatchSource::MinibatchSourcePositionAttributeName;
+        static const std::wstring MinibatchSourcePositionAttributeName;
 
     public:
         CompositeMinibatchSource(const Dictionary& configuration);
@@ -45,6 +45,7 @@ namespace CNTK
         bool m_epochEndReached;
         size_t m_prevMinibatchSize;
         size_t m_epochSize;
+        size_t m_truncationLength;
         std::unordered_map<StreamInformation, MinibatchData> m_minibatchData;
         std::vector<Microsoft::MSR::CNTK::StreamDescriptionPtr> m_compositeDataReaderStreamDescs;
 
