@@ -1589,23 +1589,23 @@ def parameter(shape=None, init=None, device=None, name=''):
 
 
 @typemap
-def constant(shape=None, value=None, device=None, name=''):
+def constant(value=None, shape=None, device=None, name=''):
     '''
     It creates a constant tensor initialized from a numpy array
 
     Examples
-        >>> constant_data = C.constant(value=[[1., 2.], [3., 4.], [5., 6.]])
-        >>> np.asarray(constant_data) # doctest: +SKIP
+        >>> constant_data = C.constant([[1., 2.], [3., 4.], [5., 6.]])
+        >>> constant_data.value
         array([[ 1.,  2.],
                [ 3.,  4.],
                [ 5.,  6.]], dtype=float32)
 
     Args:
-        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
-         be inferred from ``value``.
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated for
          every element in the tensor or NumPy array.
          If ``None``, the tensor will be initialized uniformly random.
+        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
+         be inferred from ``value``.
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the Function instance in the network
     Returns:
@@ -1623,7 +1623,7 @@ def constant(shape=None, value=None, device=None, name=''):
     else:
         data_type = None
 
-    return Constant(shape, value, data_type, device, name)
+    return Constant(value, shape, data_type, device, name)
 
 ##########################################################################
 # normalization ops

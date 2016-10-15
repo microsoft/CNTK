@@ -238,7 +238,7 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
        device (`dev`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
     '''
-    def __init__(self, shape=None, value=None, data_type=None, device=None, name=''):
+    def __init__(self, value=None, shape=None, data_type=None, device=None, name=''):
 
         if data_type is None:
             if isinstance(value, np.ndarray):
