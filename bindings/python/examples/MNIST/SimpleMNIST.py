@@ -35,7 +35,7 @@ def simple_mnist(debug_output=False):
     label = input_variable(num_output_classes, np.float32)
 
     # Instantiate the feedforward classification model
-    scaled_input = element_times(constant((), 0.00390625), input)
+    scaled_input = element_times(constant(0.00390625), input)
     netout = fully_connected_classifier_net(
         scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
 
