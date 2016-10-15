@@ -79,41 +79,94 @@ Now let's setup a network that will learn a classifier based on the example full
 (``examples.common.nn.fully_connected_classifier_net``). This is defined, along with several other simple and more complex DNN building blocks in 
 ``bindings/python/examples/common/nn.py``. Here is the basic code for setting up a network that uses it::
 
-    def ffnet(debug_output=True):
+    import numpy as np
+    import cntk
+    import cntk.ops as C
+    from cntk.learner import sgd
+    from cntk.utils import get_train_loss
+    from examples.common.nn import fully_connected_classifier_net
+    
+    def generate_random_data(sample_size, feature_dim, num_classes):
+         # Create synthetic data using NumPy.
+         Y = np.random.randint(size=(sample_size, 1), low=0, high=num_classes)
+    
+         # Make sure that the data is separable
+         X = (np.random.randn(sample_size, feature_dim) + 3) * (Y + 1)
+         X = X.astype(np.float32)
+         # converting class 0 into the vector "1 0 0",
+         # class 1 into vector "0 1 0", ...
+         class_ind = [Y == class_number for class_number in range(num_classes)]
+         Y = np.asarray(np.hstack(class_ind), dtype=np.float32)
+         return X, Y
+    
+    def ffnet():
         inputs = 2
         outputs = 2
         layers = 2
         hidden_dimension = 50
-
+    
         # Input variables denoting the features and label data
-        input = input_variable((inputs), np.float32)
-        label = input_variable((outputs), np.float32)
-
+        input = C.input_variable((inputs), np.float32)
+        label = C.input_variable((outputs), np.float32)
+    
         # Instantiate the feedforward classification model
-        z = fully_connected_classifier_net(input, outputs, hidden_dimension, layers, sigmoid)
-
-        ce = cross_entropy_with_softmax(z, label)
-        pe = classification_error(z, label)
-
+        z = fully_connected_classifier_net(input, outputs, hidden_dimension, layers, C.sigmoid)
+    
+        ce = C.cross_entropy_with_softmax(z, label)
+        pe = C.classification_error(z, label)
+    
         # Instantiate the trainer object to drive the model training
-        trainer = Trainer(z, ce, pe, [sgd_learner(z.parameters(), lr=0.02)])
-
+        trainer = cntk.Trainer(z, ce, pe, [sgd(z.parameters(), lr=0.005)])
+    
         # Get minibatches of training data and perform model training
         minibatch_size = 25
-        num_samples_per_sweep = 10000
-        num_sweeps_to_train_with = 2
-        num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
-        training_progress_output_freq = 20
-
+        num_minibatches_to_train = 1024
+    
+        total_loss=0
+        l_since_last=0
+        n_since_last=0
+        examples=0
+        print(' average      since    current      examples')
+        print('    loss       last       loss              ')
+        print(' -------------------------------------------')
         for i in range(num_minibatches_to_train):
             features, labels = generate_random_data(minibatch_size, inputs, outputs)
             # Specify the mapping of input variables in the model to actual minibatch data to be trained with
             trainer.train_minibatch({input : features, label : labels})
-            if debug_output:
-                print_training_progress(trainer, i, training_progress_output_freq)
-        
+            training_loss = get_train_loss(trainer)
+            total_loss   += training_loss
+            l_since_last += training_loss
+            n_since_last += minibatch_size
+            examples     += minibatch_size
+            if (i+1) & i == 0:
+                print('{:8.3g}   {:8.3g}   {:8.3g}    {:10d}'.format(total_loss/examples, l_since_last/n_since_last, training_loss/minibatch_size, examples))
+                l_since_last = 0
+                n_since_last = 0
         test_features, test_labels = generate_random_data(minibatch_size, inputs, outputs)
         avg_error = trainer.test_minibatch({input : test_features, label : test_labels})
+        print(' error rate on an unseen minibatch: {}'.format(avg_error))
+    
+    np.random.seed(98052)
+    ffnet()
+
+
+It will generate this output::
+
+     average      since    current      examples
+        loss       last       loss
+     -------------------------------------------
+      0.0301     0.0301     0.0301            25
+      0.0298     0.0295     0.0295            50
+      0.0295     0.0293     0.0318           100
+      0.0294     0.0292     0.0292           200
+      0.0283     0.0273     0.0279           400
+      0.0276     0.0268     0.0278           800
+      0.0263     0.0251     0.0244          1600
+      0.0238     0.0213      0.018          3200
+       0.019     0.0143     0.0119          6400
+      0.0143    0.00961     0.0145         12800
+      0.0115    0.00872    0.00849         25600
+     error rate on an unseen minibatch: 0.0
 
 The example above sets up a 2-layer fully connected deep neural network with 50 hidden dimensions per layer. We first setup two input variables, one for 
 the input data and one for the labels. We then called the fully connected classifier network model function which simply sets up the required weights, 
