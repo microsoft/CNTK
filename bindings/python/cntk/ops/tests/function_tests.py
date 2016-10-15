@@ -24,7 +24,7 @@ def test_replace_placeholders():
     p = placeholder_variable(shape=(1,))
     i = input_variable(shape=(1,),
                        needs_gradient=True,
-                       name='a')
+                       name='i')
     res = p + 3
     res.replace_placeholders({p: i})
 
@@ -37,4 +37,28 @@ def test_replace_placeholders():
         res2.replace_placeholders({p: func.output()})
 
         assert res2.eval({i: [3]}) == [15]
+
+def test_cloning():
+    p = placeholder_variable(shape=(1,), name='p')
+    i = input_variable(shape=(1,),
+                       needs_gradient=True,
+                       name='i')
+    res = p + i
+
+    with pytest.raises(ValueError):
+        res.clone('freeze')
+
+    with pytest.raises(ValueError):
+        res.clone(2)
+
+    from ..functions import CloneMethod
+
+    # Test freeze
+    cloned = res.clone(CloneMethod.freeze)
+    assert cloned.inputs()[0].name() == 'p'
+    assert cloned.inputs()[0].uid() != p.uid()
+    assert cloned.inputs()[1].name() == 'i'
+    assert cloned.inputs()[1].uid() != i.uid()
+
+    # TODO test other methods
 

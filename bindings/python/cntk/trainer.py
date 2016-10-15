@@ -34,7 +34,7 @@ class Trainer(cntk_py.Trainer):
         super(Trainer, self).__init__(model, loss_function, eval_function,
                 parameter_learners)
 
-    def train_minibatch(self, arguments, output_map=None, device=None):
+    def train_minibatch(self, arguments, outputs=None, device=None):
         '''
         Optimize model parameters using the specified 'arguments' minibatch of training samples.
 
@@ -51,31 +51,35 @@ class Trainer(cntk_py.Trainer):
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
              :class:`cntk.io.MinibatchData` instance.
-            output_map (`dict` or `None`): mapping of output variables to
-             `None`, which will be filled during the training run with the
-             corresponding NumPy arrays.
+            outputs (iterable): outputs to fetch values for.
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
 
         Returns:
-            `bool`: `True` if updates have been performed, `False` if all
-            parameter learners indicate end of learning (through their `update`
-            method's return value).
+            `bool` or `tuple`: 
+            If `outputs` have not been provided, the returned value is `True`
+            if updates have been performed, `False` if all parameter learners
+            indicate end of learning (through their `update`. Otherwise, the
+            return value is a tuple of the that `bool` and a dictionary that
+            maps the variables in `outputs` to their respective NumPy arrays.
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
         arguments = sanitize_var_map(self.model().arguments(), arguments)
 
-        if output_map:
-            result = super(Trainer, self).train_minibatch(arguments,
+        if outputs:
+            output_map = {v: None for v in outputs}
+            updated = super(Trainer, self).train_minibatch(arguments,
                     output_map, device)
             for k,v in output_map.items():
                 output_map[k] = value_to_seq(v)
-        else:
-            result = super(Trainer, self).train_minibatch(arguments, device)
 
-        return result
+            return updated, output_map
+        else:
+            updated = super(Trainer, self).train_minibatch(arguments, device)
+
+        return updated
 
 
     def test_minibatch(self, arguments, seq_starts=None, device=None):

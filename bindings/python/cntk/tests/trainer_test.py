@@ -52,9 +52,8 @@ def _disabled_test_output_to_retain():
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
     z_output = z.output()
-    retain = {z_output: None}
-    trainer.train_minibatch(arguments, retain)
+    updated, var_map = trainer.train_minibatch(arguments, [z_output])
 
-    assert np.allclose(retain[z_output], np.asarray(in1_value)+10)
+    assert np.allclose(var_map[z_output], np.asarray(in1_value)+10)
 
 

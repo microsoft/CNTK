@@ -1,9 +1,14 @@
 from cntk import cntk_py
 from ..utils import typemap, sanitize_var_map, value_to_seq
+from enum import Enum, unique
 
+@unique
+class CloneMethod(Enum):
+    clone = 1
+    share = 2
+    freeze =3
 
 class Function(cntk_py.Function):
-
     '''
     Base class of all operators.
 
@@ -42,26 +47,29 @@ class Function(cntk_py.Function):
         return super(Function, self).attributes()
 
     @typemap
-    def clone(self, parameterCloneMethod='clone', replacements=None):
+    def clone(self, method=CloneMethod.freeze, replacements=None):
         '''
-        Clones the function. The parameters of the Function are either cloned, shared or frozen as specified by the
-        parameterCloneMethod argument and any variable replacements requested are applied in the cloned Function instance.
+        Clones the function. The parameters of the Function are either cloned,
+        shared or frozen as specified by the method argument and any variable
+        replacements requested are applied in the cloned Function instance.
 
         Args:
-            parameterCloneMethod (`str`): one of
+            method (:class:`cntk.ops.function.CloneMethod`): one of
              * 'clone': the returned function gets its own copy of parameters (default)
              * 'share': the returned function shares its parameters with this function
              * 'freeze': parameters are cloned and made immutable (constant).
-            replacements (`dict`): a dictionary mapping variables in this function to variables in the cloned function
+            replacements (`dict`): a dictionary mapping variables in this
+             function to variables in the cloned function
 
         Returns:
             `Function`: the cloned Function
         '''
-        if parameterCloneMethod not in set(['clone', 'share', 'freeze']):
-            raise ValueError(
-                'parameterCloneMethod must be one of clone, share, or freeze')
-        method = getattr(
-            cntk_py, 'ParameterCloningMethod_' + parameterCloneMethod.capitalize())
+        if not isinstance(method, CloneMethod):
+            raise ValueError('clone method "%s" is not supported' %
+                    str(method))
+
+        method = getattr(cntk_py,
+                'ParameterCloningMethod_' + method.name.capitalize())
         if replacements is None:
             replacements = dict()
         return super(Function, self).clone(method, replacements)
@@ -128,12 +136,15 @@ class Function(cntk_py.Function):
              Data should be either NumPy arrays or a
              :class:`cntk.io.MinibatchData` instance.
             outputs (iterable): outputs to fetch values for.
-            keep_for_backward (`set`): the subset of the Function's output variables
-             for which gradients shall be calculated in a subsequent backward call
+            keep_for_backward (`set`, default `None): the subset of the
+             Function's output variables for which gradients shall be calculated
+             in a subsequent backward call. If `None`, the returned state will
+             be `None` and a subsequent call to `backward` will not be
+             possible.
              for backpropagation.
-            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
-             contains the type and id of the device on which the computation is
-             to be performed.
+            device (:class:`cntk.DeviceDescriptor`, default `None): the device
+             descriptor that contains the type and id of the device on which the
+             computation is. If `None`, the default device is used.
 
         Returns:
              A tuple (`BackpropState`, `map` of outputs to NumPy arrays). The
@@ -148,13 +159,13 @@ class Function(cntk_py.Function):
         output_map = {v: None for v in outputs}
         keep_for_backward = set(keep_for_backward or {})
 
-        res = super(Function, self)._forward(in_var_map, output_map, device,
+        state = super(Function, self)._forward(in_var_map, output_map, device,
                                              keep_for_backward)
 
         for k in output_map:
             output_map[k] = value_to_seq(output_map[k])
 
-        return res, output_map
+        return state, output_map
 
     @typemap
     def backward(self, state, root_gradients, variables):
@@ -174,8 +185,7 @@ class Function(cntk_py.Function):
         Returns:
             `dict`: mapping of `variables` to NumPy arrays
         '''
-        root_gradients = sanitize_var_map(self.outputs(), root_gradients,
-                                          None, None, None)
+        root_gradients = sanitize_var_map(self.outputs(), root_gradients)
 
         var_gradients = dict((var, None) for var in variables)
 
