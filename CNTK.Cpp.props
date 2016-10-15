@@ -22,9 +22,8 @@
 
     <NoOptBuild>false</NoOptBuild>
     <NoOptBuild Condition="$(Configuration.Contains('NoOpt'))">true</NoOptBuild>
-
-    <NvmlInclude>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
-    <NvmlLibPath>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
+    <NvmlInclude>"D:\NVIDIA\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
+    <NvmlLibPath>"D:\NVIDIA\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
 
     <CudaVersion/>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V8_0)') And '$(CudaVersion)' == ''">8.0</CudaVersion>
