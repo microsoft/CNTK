@@ -192,30 +192,42 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto result =             ValueTensorFor(rank, fr);
-        auto input0 = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
-        auto input1 = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
-        result.AssignElementwiseProductOf(input0, input1);
+        ForwardPropImpl(*this, fr, true/*allowBroadcast*/);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        size_t rank = DetermineElementwiseTensorRank();
-        auto gradient        =                     GradientTensorFor(rank, fr);
-        auto inputGradient   =     Input(inputIndex)->GradientTensorFor(rank, fr.AllowBroadcast());
-        auto otherInputValue = Input(1 - inputIndex)->ValueTensorFor(rank, fr.AllowBroadcast());
-
-        // if reduction then mask the respective input(s) (zero out the gaps)
-        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
-            MaskMissingGradientColumnsToZero(fr);
-        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
-            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
-
-        inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
+        BackpropToImpl(*this, inputIndex, fr, true/*allowBroadcast*/);
     }
 
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
+
+    template <typename classType>
+    static void ForwardPropImpl(classType& c, const FrameRange& fr, bool allowBroadcast)
+    {
+        size_t rank = c.DetermineElementwiseTensorRank();
+        auto result =             c.ValueTensorFor(rank, fr);
+        auto input0 = c.InputRef(0).ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
+        auto input1 = c.InputRef(1).ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
+        result.AssignElementwiseProductOf(input0, input1);
+    }
+
+    template <typename classType>
+    static void BackpropToImpl(classType& c, const size_t inputIndex, const FrameRange& fr, bool allowBroadcast)
+    {
+        size_t rank = c.DetermineElementwiseTensorRank();
+        auto gradient        =                     c.GradientTensorFor(rank, fr);
+        auto inputGradient   =     c.Input(inputIndex)->GradientTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
+        auto otherInputValue = c.Input(1 - inputIndex)->ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
+
+        // if reduction then mask the respective input(s) (zero out the gaps)
+        if (c.Input(inputIndex)->ReducesInTimeWrt(c.shared_from_this()))
+            c.MaskMissingGradientColumnsToZero(fr);
+        if (c.Input(inputIndex)->ReducesInTimeWrt(c.Input(1 - inputIndex)))
+            c.Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+        inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
+    }
 };
 
 template class ElementTimesNode<float>;
@@ -235,6 +247,8 @@ template class ElementTimesNode<double>;
 template <class ElemType, bool m_transpose>
 class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
 {
+    friend class ElementTimesNode<ElemType>;
+
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;                                                                                                                           \
 
 public:
@@ -290,6 +304,33 @@ private:
         return TensorView<ElemType>(data, tensorShape);
     }
 
+    // Check if TimesNodeBase could be simplified to ElementTimes to avoid unroll when:
+    // 1. input0: DENSE, is rank-1 and transposed, or is rank-2 with Dim(0)==1
+    // 2. input1: DENSE, is rank-1
+    // 3. output: rank-1 and reduced to a scalar (Dim(0)==1)
+    // NOTE we might relax the condition on DENSE when ElementTimes support sparse in future
+    bool IsReduceableDotProduct(const FrameRange& fr)
+    {
+        const auto& shape0   = InputRef(0).GetSampleLayout();
+        const auto& shape1   = InputRef(1).GetSampleLayout();
+        const auto& shapeOut =             GetSampleLayout();
+
+        bool input0_ok =
+            ((shape0.GetRank() == 1 && m_transpose) ||
+             (shape0.GetRank() == 2 && shape0.GetDim(0) == 1)) &&
+            (InputRef(0).Value().GetMatrixType() == DENSE); // TODO: add support in ElementTimes for sparse and remove this limitation
+
+        bool input1_ok =
+            (shape1.GetRank() == 1) &&
+            (InputRef(1).Value().GetMatrixType() == DENSE);
+
+        bool outputScalar =
+            (shapeOut.GetRank() == 1) &&
+            (shapeOut.GetDim(0) == 1);
+
+        return input0_ok && input1_ok && outputScalar;
+    }
+
 public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
@@ -297,6 +338,13 @@ public:
         // This will be inefficient. We hope this will be the baseline of a future, more efficient TensorView-based implementation.
         if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
         {
+            // speed up using ElementTimes to avoid unroll if possible
+            if (IsReduceableDotProduct(fr))
+            {
+                ElementTimesNode<ElemType>::ForwardPropImpl(*this, fr, false/*allowBroadcast*/);
+                return;
+            }
+
             // recursively call ourselves for each individual time and sequence
             auto timeRange     = fr.GetTimeRange();
             auto sequenceRange = fr.GetSequenceRange();
@@ -320,6 +368,13 @@ public:
         // special treatment if A is minibatch data; see Forward() for comment
         if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
         {
+            // speed up using ElementTimes to avoid unroll if possible
+            if (IsReduceableDotProduct(fr))
+            {
+                ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, false/*allowBroadcast*/);
+                return;
+            }
+
             auto timeRange     = fr.GetTimeRange();
             auto sequenceRange = fr.GetSequenceRange();
             for (auto t = timeRange.first; t < timeRange.second; t++) // step left to right to allow to build a sparse matrix
