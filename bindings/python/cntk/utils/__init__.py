@@ -24,9 +24,9 @@ def sanitize_precision(precision):
     Returns:
         NumPy precision
     '''
-    if precision in ['float', 'float32', np.float32]:
+    if precision in [cntk_py.DataType_Float, 'float', 'float32', np.float32]:
         return np.float32
-    elif precision in ['double', 'float64', np.float64]:
+    elif precision in [cntk_py.DataType_Double, 'double', 'float64', np.float64]:
         return np.float64
     else:
         raise ValueError('precision value: "%s" is not supported' % precision)

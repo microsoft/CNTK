@@ -1157,7 +1157,7 @@ def transpose(x, axis1=0, axis2=1, name=''):
     '''
     from cntk.cntk_py import transpose_axes
     x = sanitize_input(x)
-    rank = max(x.shape().rank(), 2)
+    rank = max(len(x.shape), 2)
     axis1 = sanitize_axis(rank, axis1)
     axis2 = sanitize_axis(rank, axis2)
     return transpose_axes(x, axis1, axis2, name)
@@ -1218,7 +1218,7 @@ def slice(x, axis, begin_index, end_index, name=''):
     '''
     from cntk.cntk_py import slice
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return slice(x, axis, begin_index, end_index, name)
 
 # TODO: enable when it is exposed in c++
@@ -1262,7 +1262,7 @@ def splice(inputs, axis=0, name=''):
 
     inputs = [sanitize_input(x) for x in inputs]
 
-    rank = max([x.shape().rank() for x in inputs])
+    rank = max([len(x.shape) for x in inputs])
     axis = sanitize_axis(rank, axis)
 
     return splice(inputs, axis, name)
@@ -1318,7 +1318,7 @@ def reduce_sum(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_sum
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return reduce_sum(x, axis, name)
 
 
@@ -1340,7 +1340,7 @@ def reduce_log_sum(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_log_sum
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return reduce_log_sum(x, axis, name)
 
 
@@ -1371,7 +1371,7 @@ def reduce_mean(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_mean
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return reduce_mean(x, axis, name)
 
 
@@ -1402,7 +1402,7 @@ def reduce_max(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_max
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return reduce_max(x, axis, name)
 
 
@@ -1433,7 +1433,7 @@ def reduce_min(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_min
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return reduce_min(x, axis, name)
 
 ##########################################################################

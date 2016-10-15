@@ -302,31 +302,6 @@ class Function(cntk_py.Function):
         del kwargs['self']
         return super(Function, self).replace_placeholder(**kwargs)
 
-    # @typemap
-    # Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
-        # '''
-        # replace_placeholders
-
-        # Returns:
-        # `None`: text
-        # '''
-        # kwargs=dict(locals()); del kwargs['self']; return super(Function,
-        # self).replace_placeholders(**kwargs)
-
-    # @typemap
-    # def replace_placeholders_internal(self, placeholderReplacements):
-        # '''
-        # replace_placeholders_internal
-
-        # Args:
-        # placeholderReplacements (`dict`): text
-
-        # Returns:
-        # `FunctionPtr`: text
-        # '''
-        # kwargs=dict(locals()); del kwargs['self']; return super(Function,
-        # self).replace_placeholders_internal(**kwargs)
-
     @typemap
     def restore_from_legacy_model(self, modelFilePath):
         '''

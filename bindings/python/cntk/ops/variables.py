@@ -1,7 +1,7 @@
 import numpy as np
 from cntk import cntk_py, utils
-from cntk.tensor import TensorOpsMixin
-from ..utils import typemap
+from ..tensor import TensorOpsMixin
+from ..utils import typemap, sanitize_precision
 
 FLOAT_32 = 'float32'
 
@@ -12,7 +12,6 @@ def _sanitize_value(shape, value, dtype, device):
     if value is None:
         if shape is None:
             raise ValueError('you need to specify at least shape or value')
-        shape = utils.sanitize_shape(shape)
         ndav = utils.create_NDArrayView(shape, cntk_dtype, device)
     else:
         if not isinstance(value, np.ndarray) or value.dtype != np_dtype:
@@ -61,15 +60,12 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         '''
         return super(Variable, self).dynamic_axes()
 
-    @typemap
-    def get_data_type(self):
+    @property
+    def dtype(self):
         '''
-        Returns the data type of the data that this Variable symbolically represents
-
-        Returns:
-            `DataType`: the data type of the data that this Variable symbolically represents
+        The NumPy type of this variable. 
         '''
-        return super(Variable, self).get_data_type()
+        return sanitize_precision(self.get_data_type())
 
     @typemap
     def is_constant(self):
@@ -172,13 +168,12 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
             raise RuntimeError('called owner() on a variable that is not an output variable')
         return super(Variable, self).owner()
 
-    @typemap
+    @property
     def shape(self):
         '''
-        Returns:
-            `NDShape`: the shape of the Variable
+        The shape of this variable as a tuple.
         '''
-        return super(Variable, self).shape()
+        return super(Variable, self).shape().dimensions()
 
     @typemap
     def uid(self):
@@ -209,10 +204,10 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
             device=None, name=''):
 
         if data_type is None:
-            if not isinstance(init, np.ndarray):
-                data_type = FLOAT_32
-            else:
+            if isinstance(init, np.ndarray):
                 data_type = str(init.dtype)
+            else:
+                data_type = FLOAT_32
 
         if init is None:
             init = 0
@@ -233,6 +228,20 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
             `NDArrayView`: the current value of the parameter.
         '''
         return super(Parameter, self).value()
+
+    @property
+    def shape(self):
+        '''
+        The shape of this parameter as a tuple.
+        '''
+        return super(Parameter, self).shape().dimensions()
+
+    @property
+    def dtype(self):
+        '''
+        The NumPy type of this variable. 
+        '''
+        return sanitize_precision(self.get_data_type())
 
 class Constant(TensorOpsMixin, cntk_py.Constant):
     '''
@@ -267,3 +276,18 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
             `NDArrayView`: the value of the constant.
         '''
         return super(Constant, self).value()
+
+    @property
+    def shape(self):
+        '''
+        The shape of this constant as tuple.
+        '''
+        return super(Constant, self).shape().dimensions()
+
+    @property
+    def dtype(self):
+        '''
+        The NumPy type of this variable. 
+        '''
+        return sanitize_precision(self.get_data_type())
+
