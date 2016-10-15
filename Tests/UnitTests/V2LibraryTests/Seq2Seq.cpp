@@ -155,22 +155,27 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumPerSample, additionalOptions) });
 
     size_t outputFrequencyInMinibatches = 1;
-    size_t minibatchSize = 72;
+    size_t minibatchSize1 = 72;
+    size_t minibatchSize2 = 144;
+    size_t numMinbatchesToChangeMinibatchSizeAfter = 30;
     size_t numMinibatchesToCheckpointAfter = testCheckpointing ? 3 : SIZE_MAX;
     size_t numMinibatchesToRestoreFromCheckpointAfter = testCheckpointing ? 20 : SIZE_MAX;
     bool restorationDone = false;
     const wchar_t* modelFile = L"seq2seq.model";
     size_t decodingFrequency = 10;
+    Dictionary minibatchSourceCheckpoint;
     for (size_t i = 0; true; i++)
     {
         if (!restorationDone && (i == numMinibatchesToRestoreFromCheckpointAfter))
         {
             printf("Trainer restoring from checkpoint at path %S\n", modelFile);
             trainer.RestoreFromCheckpoint(modelFile);
+            minibatchSource->RestoreFromCheckpoint(minibatchSourceCheckpoint);
             i = numMinibatchesToCheckpointAfter;
             restorationDone = true;
         }
 
+        auto minibatchSize = (i >= numMinbatchesToChangeMinibatchSizeAfter) ? minibatchSize2 : minibatchSize1;
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         if (minibatchData.empty())
             break;
@@ -182,6 +187,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
         {
             printf("Trainer checkpointing to path %S\n", modelFile);
             trainer.SaveCheckpoint(modelFile);
+            minibatchSourceCheckpoint = minibatchSource->GetCheckpointState();
         }
 
         if ((i % decodingFrequency) == 0)

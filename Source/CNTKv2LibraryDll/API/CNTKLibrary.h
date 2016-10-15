@@ -3059,6 +3059,19 @@ namespace CNTK
         ///
         virtual ~MinibatchSource() {}
 
+        ///
+        /// Optionally overridable method to checkpoint the MinibatchSource's state.
+        ///
+        virtual Dictionary GetCheckpointState() const
+        {
+            return Dictionary();
+        }
+
+        ///
+        /// Optionally overridable method to restore the MinibatchSource's state from a previous checkpoint.
+        ///
+        virtual void RestoreFromCheckpoint(const Dictionary& /*checkpoint*/) {}
+
     public:
         ///
         /// Gets the description of the stream with given name. 
@@ -3078,8 +3091,6 @@ namespace CNTK
         /// An empty map is returned when the MinibatchSource has no more data to return.
         ///
         CNTK_API const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(size_t minibatchSizeInSamples, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
-
-        // TODO: Methods to save and restore from checkpoints
 
         // Disallow copy and move construction and assignment
         MinibatchSource(const MinibatchSource&) = delete; MinibatchSource(MinibatchSource&&) = delete; MinibatchSource& operator=(const MinibatchSource&) = delete; MinibatchSource& operator=(MinibatchSource&&) = delete;

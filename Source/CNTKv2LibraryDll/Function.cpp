@@ -265,7 +265,7 @@ namespace CNTK
                         clonedInput = leafVariablesCloneMap.at(cloneeInput);
                     else
                     {
-                        if (cloneeInput.IsParameter())
+                        if (cloneeInput.IsParameter() || cloneeInput.IsConstant())
                         {
                             switch (parameterCloneMethod)
                             {
@@ -277,7 +277,11 @@ namespace CNTK
                                 clonedInput = cloneeInput;
                                 break;
                             case ParameterCloningMethod::Freeze:
-                                clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
+                                if (cloneeInput.IsParameter())
+                                    clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
+                                else
+                                    clonedInput = Constant(Constant(cloneeInput).Value(), cloneeInput.Name());
+
                                 leafVariablesCloneMap[cloneeInput] = clonedInput;
                                 break;
                             default:

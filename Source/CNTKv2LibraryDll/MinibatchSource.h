@@ -10,11 +10,14 @@
 #include "Utils.h"
 #include "Reader.h"
 #include "ReaderShim.h"
+#include "DataReader.h"
 
 namespace CNTK
 {
     class CompositeMinibatchSource final : public MinibatchSource
     {
+        static const std::wstring CompositeMinibatchSource::MinibatchSourcePositionAttributeName;
+
     public:
         CompositeMinibatchSource(const Dictionary& configuration);
 
@@ -23,6 +26,19 @@ namespace CNTK
         virtual const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(size_t minibatchSizeInSamples,
                                                                                              size_t minibatchSizeInSequences,
                                                                                              const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) override;
+
+        virtual Dictionary GetCheckpointState() const override;
+        virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
+
+    private:
+        static Microsoft::MSR::CNTK::InputStreamDescription GetInputStreamDescription(const StreamInformation& s, const DeviceDescriptor& device)
+        {
+            assert(s.m_storageFormat == StorageFormat::Dense || s.m_storageFormat == StorageFormat::SparseCSC);
+            auto CNTKdeviceId = AsCNTKImplDeviceId(device);
+            auto CNTKMatrixType = s.m_storageFormat == StorageFormat::Dense ? Microsoft::MSR::CNTK::MatrixType::DENSE : Microsoft::MSR::CNTK::MatrixType::SPARSE;
+            auto CNTKMatrixFormat = AsCNTKImplMatrixFormat(s.m_storageFormat);
+            return Microsoft::MSR::CNTK::InputStreamDescription(s.m_name, CNTKdeviceId, CNTKMatrixType, CNTKMatrixFormat);
+        }
 
     private: 
         std::unordered_set<StreamInformation> m_streamInfos;
