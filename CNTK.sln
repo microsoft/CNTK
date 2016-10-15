@@ -1261,6 +1261,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClientTest", "Tests\E
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "CNTKv2", "bindings\python\examples\CNTKv2.pyproj", "{1A078FC2-21C0-4F42-9A5B-0E84E944BC74}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "IRMetric", "IRMetric", "{E844AB9A-A48F-4A99-9625-F528C5C46D83}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Text\IRMetric\baseline.linux.txt = Tests\EndToEndTests\Text\IRMetric\baseline.linux.txt
+		Tests\EndToEndTests\Text\IRMetric\baseline.windows.txt = Tests\EndToEndTests\Text\IRMetric\baseline.windows.txt
+		Tests\EndToEndTests\Text\IRMetric\ir.cntk = Tests\EndToEndTests\Text\IRMetric\ir.cntk
+		Tests\EndToEndTests\Text\IRMetric\run-test = Tests\EndToEndTests\Text\IRMetric\run-test
+		Tests\EndToEndTests\Text\IRMetric\testcases.yml = Tests\EndToEndTests\Text\IRMetric\testcases.yml
+	EndProjectSection
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PythonBindings", "bindings\python\PythonBindings.vcxproj", "{CD721536-CFD3-413E-A3D7-FB0FAF989635}"
 	ProjectSection(ProjectDependencies) = postProject
 		{9BD0A711-0BBD-45B6-B81C-053F03C26CFB} = {9BD0A711-0BBD-45B6-B81C-053F03C26CFB}
@@ -2384,6 +2393,7 @@ Global
 		{CCC07E8E-F33A-4AF7-9F60-93E2AA61C75E} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
 		{1C6E6C53-1AA7-4B69-913E-B97BB5A872CF} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
 		{1A078FC2-21C0-4F42-9A5B-0E84E944BC74} = {47755F2E-D674-4175-9E38-8EA053455072}
+		{E844AB9A-A48F-4A99-9625-F528C5C46D83} = {8656B71D-E24C-4AC2-8BE4-C07B415A3E15}
 		{CD721536-CFD3-413E-A3D7-FB0FAF989635} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 	EndGlobalSection
 EndGlobal
