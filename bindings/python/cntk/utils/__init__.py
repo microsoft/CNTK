@@ -193,7 +193,7 @@ def sanitize_shape(shape):
 
 def sanitize_input(arg, fallback_dtype=np.float32):
     """
-    Convert to Variable or Constant so that it can be passed as Variable to the
+    Convert to Variable so that it can be passed as Variable to the
     CNTK operators.
      * If `arg` is a NumPy array and its type is neither `np.float32` nor
       `np.float64`, it sets it to `np.float32`.
@@ -201,25 +201,29 @@ def sanitize_input(arg, fallback_dtype=np.float32):
        be returned.
 
     Args:
-        arg (number, NumPy array, `Variable`, or `Function`): input
-        fallback_dtype (numpy dtype): fallback dtype in case `arg` is a list
+        arg (number, NumPy array, :cntk:`cntk.ops.variables.Variable`, or
+         :class:`cntk.ops.functions.Function`): input
+        fallback_dtype (NumPy dtype): fallback dtype in case `arg` is a list
 
-    Returns:
-        Constant, if `arg` was a number or NumPy array. Variable otherwise.
+    Returns: 
+      Leave Constant, Parameter, and Variable as is. Return Constant, if
+      `arg` was a number or NumPy array. Variable otherwise. 
     """
 
-    from cntk.ops.variables import Constant, Variable
+    from cntk.ops.variables import Constant, Variable, Parameter
     from cntk.ops import constant
 
     # is it a Variable?
     if isinstance(arg,
-                  (Constant, Variable, cntk_py.Constant, cntk_py.Variable)):
+                  (Constant, cntk_py.Constant,
+                   Variable, cntk_py.Variable,
+                   Parameter, cntk_py.Parameter)):
         return arg
 
     # or a Function?
     if isinstance(arg, cntk_py.Function):
         try:
-            return arg.output()
+            return arg.output
         except RuntimeError:
             raise ValueError(
                 'the argument has more than one output, please provide the one you want')
@@ -263,7 +267,7 @@ def get_data_type(*args):
                     'NumPy type "%s" is not supported' % arg.dtype)
             dtypes.add(arg.dtype.type)
         elif isinstance(arg, cntk_py.Function):
-            var_outputs = arg.outputs()
+            var_outputs = arg.outputs
             if len(var_outputs) > 1:
                 raise ValueError(
                     'expected single output, but got %i' % len(var_outputs))
@@ -356,7 +360,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
             raise ValueError('only float32 and float64 are supported')
     elif isinstance(batch, list):
         if is_tensor_list(batch):
-            use_mask =  len(var.dynamic_axes()) > 1
+            use_mask =  len(var.dynamic_axes) > 1
 
     if device is None:
         device = cntk_py.DeviceDescriptor.use_default_device()
@@ -436,8 +440,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
     Args:
         op_arguments (:class:`cntk.ops.functions.Function`): arguments of the root function. In
-         forward pass it is typically `op.arguments()`, in backward mode it is
-         `op.outputs()`
+         forward pass it is typically `op.arguments`, in backward mode it is
+         `op.outputs`
         arguments (`dict` or `list` or `tuple`): maps variables to their
          input data. The interpretation depends on the input type:
            * `dict`: keys are input variable or names and values are the input data. 
@@ -479,10 +483,10 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
         arguments = dict(zip(op_arguments, arguments))
 
     if isinstance(arguments, dict):
-        arg_names = [var.name() for var in op_arguments]
+        arg_names = [var.name for var in op_arguments]
         name_counter = collections.Counter(arg_names)
 
-        var_name_map = dict((var.name(), var) for var in op_arguments)
+        var_name_map = dict((var.name, var) for var in op_arguments)
     else:
         raise ValueError('type "%s" is not supported' % type(arguments))
 
@@ -637,7 +641,7 @@ def get_train_loss(trainer):
     '''
     import copy
     # we copy the value so swig does not destroy it when we leave the scope
-    return copy.copy(trainer.previous_minibatch_loss_average())
+    return copy.copy(trainer.previous_minibatch_loss_average)
 
 
 def get_train_eval_criterion(trainer):
@@ -650,7 +654,7 @@ def get_train_eval_criterion(trainer):
     '''
     import copy
     # we copy the value so swig does not destroy it when we leave the scope
-    return copy.copy(trainer.previous_minibatch_evaluation_average())
+    return copy.copy(trainer.previous_minibatch_evaluation_average)
 
 
 def ensure_dev(ndav, dev):
@@ -720,7 +724,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
         mapping of output variables to their values.
     '''
 
-    state, forward_output = op.forward(arguments, op.outputs(), op.outputs(), device=device)
+    state, forward_output = op.forward(arguments, op.outputs, op.outputs, device=device)
 
     if backward_pass:
         root_gradients = {v: ones_like(o, precision) for v, o in

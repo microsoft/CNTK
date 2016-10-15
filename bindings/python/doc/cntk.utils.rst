@@ -12,6 +12,14 @@ cntk.utils.persist module
     :undoc-members:
     :show-inheritance:
 
+cntk.utils.swig_helper module
+-----------------------------
+
+.. automodule:: cntk.utils.swig_helper
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 
 Module contents
 ---------------

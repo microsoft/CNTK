@@ -35,3 +35,19 @@ def test_variable_shape(variable_type, shape):
         shape = (shape,)
     assert c.shape == shape, variable_type
 
+VALUES = [
+        [1], 
+        [[1],[2]], 
+        [[[1,2],[3,4],[5,6]],[[1,2],[3,4],[5,6]]]
+        ]
+
+@pytest.mark.parametrize("value", VALUES)
+def test_constant_value(value):
+    c = Constant(value=value)
+    assert np.allclose(c.value, value)
+
+@pytest.mark.parametrize("value", VALUES)
+def test_parameter_value(value):
+    c = Parameter(init=value)
+    assert np.allclose(c.value, value)
+

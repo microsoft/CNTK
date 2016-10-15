@@ -50,13 +50,11 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         super(Variable, self).__init__(shape, is_sparse,
                                        dtype, needs_gradient, name, dynamic_axes)
 
+    @property
     @typemap
     def dynamic_axes(self):
         '''
-        Returns the dynamic axes of this variable
-
-        Returns:
-            `list`: list of `:class:cntk.Axis` that are the dynamic_axes of this Variable
+        The dynamic axes of this variable.
         '''
         return super(Variable, self).dynamic_axes()
 
@@ -67,63 +65,51 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         '''
         return sanitize_precision(self.get_data_type())
 
+    @property
     @typemap
     def is_constant(self):
         '''
-        Returns True if this variable is a constant and False otherwise
-
-        Returns:
-            `bool`: True if this variable is a Constant and False otherwise
+        Whether this variable is a constant.
         '''
         return super(Variable, self).is_constant()
 
+    @property
     @typemap
     def is_input(self):
         '''
-        Returns True if this variable is an input and False otherwise
-
-        Returns:
-            `bool`: True if this variable is an input and False otherwise
+        Whether this variable is an input.
         '''
         return super(Variable, self).is_input()
 
+    @property
     @typemap
     def is_output(self):
         '''
-        Returns True if this variable is an output and False otherwise
-
-        Returns:
-            `bool`: True if this variable is an output and False otherwise
+        Whether this variable is an output.
         '''
         return super(Variable, self).is_output()
 
+    @property
     @typemap
     def is_parameter(self):
         '''
-        Returns True if this variable is a parameter and False otherwise
-
-        Returns:
-            `bool`: True if this variable is a parameter and False otherwise
+        Whether this variable is a parameter.
         '''
         return super(Variable, self).is_parameter()
 
+    @property
     @typemap
     def is_placeholder(self):
         '''
-        Returns True if this variable is a placeholder and False otherwise
-
-        Returns:
-            `bool`: True if this variable is a placeholder and False otherwise
+        Whether this variable is a placeholder.
         '''
         return super(Variable, self).is_placeholder()
 
+    @property
     @typemap
     def is_sparse(self):
         '''
-        Returns True if this variable will be bound to sparse data and False otherwise
-
-        Returns:
-            `bool`: True if this variable will be bound to sparse data
+        Whether this variable is sparse.
         '''
         return super(Variable, self).is_sparse()
 
@@ -138,31 +124,27 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         # '''
         # return super(Variable, self).kind()
 
+    @property
     @typemap
     def name(self):
         '''
-        Returns the name of this variable
-
-        Returns:
-            `str`: the name of this variable
+        The name of this variable.
         '''
         return super(Variable, self).name()
 
+    @property
     @typemap
     def needs_gradient(self):
         '''
-        Returns True if gradient computation is enabled for this variable and False otherwise.
-
-        Returns:
-            `bool`: True if gradient computation is enabled for this variable and False otherwise.
+        Whether this variable needs gradients.
         '''
         return super(Variable, self).needs_gradient()
 
+    @property
     @typemap
     def owner(self):
         '''
-        Returns:
-            `Function`: the Function object which 'this' variable is an ouptut of.
+        The function this variable is an output of.
         '''
         if self.is_output() == False:
             raise RuntimeError('called owner() on a variable that is not an output variable')
@@ -175,11 +157,11 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         '''
         return super(Variable, self).shape().dimensions()
 
+    @property
     @typemap
     def uid(self):
         '''
-        Returns:
-            `str`:  the internally generated unique name of the variable
+        The internally generated unique name of the variable.
         '''
         return super(Variable, self).uid()
 
@@ -221,13 +203,13 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
             super(Parameter, self).__init__(shape, data_type, init,
                     device, name)
 
+    @property
     @typemap
     def value(self):
         '''
-        Returns:
-            `NDArrayView`: the current value of the parameter.
+        NumPy array of the value
         '''
-        return super(Parameter, self).value()
+        return super(Parameter, self).value().to_numpy()
 
     @property
     def shape(self):
@@ -269,13 +251,13 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
 
     #TODO how to expose Scalar ?
     
+    @property
     @typemap
     def value(self):
         '''
-        Returns:
-            `NDArrayView`: the value of the constant.
+        NumPy array of the value
         '''
-        return super(Constant, self).value()
+        return super(Constant, self).value().to_numpy()
 
     @property
     def shape(self):

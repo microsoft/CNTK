@@ -199,9 +199,9 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
 
 def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurrence_hookH=past_value, recurrence_hookC=past_value):
     dh = placeholder_variable(
-        shape=(output_dim), dynamic_axes=input.dynamic_axes())
+        shape=(output_dim), dynamic_axes=input.dynamic_axes)
     dc = placeholder_variable(
-        shape=(cell_dim), dynamic_axes=input.dynamic_axes())
+        shape=(cell_dim), dynamic_axes=input.dynamic_axes)
 
     LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc)
     actualDh = recurrence_hookH(LSTMCell[0])
@@ -210,7 +210,7 @@ def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurre
     # Form the recurrence loop by replacing the dh and dc placeholders with
     # the actualDh and actualDc
     LSTMCell[0].replace_placeholders(
-        {dh: actualDh.output(), dc: actualDc.output()})
+        {dh: actualDh.output, dc: actualDc.output})
     
     return (LSTMCell[0], LSTMCell[1])
 

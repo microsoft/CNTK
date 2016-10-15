@@ -66,7 +66,7 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
-        arguments = sanitize_var_map(self.model().arguments(), arguments)
+        arguments = sanitize_var_map(self.model.arguments, arguments)
 
         if outputs:
             output_map = {v: None for v in outputs}
@@ -114,7 +114,7 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device=DeviceDescriptor.use_default_device()        
-        arguments = sanitize_var_map(self.model().arguments(), arguments,
+        arguments = sanitize_var_map(self.model.arguments, arguments,
                 seq_starts)
 
         return super(Trainer, self).test_minibatch(arguments, device)
@@ -141,70 +141,56 @@ class Trainer(cntk_py.Trainer):
 
         super(Trainer, self).restore_from_checkpoint(filename)
 
+    @property
     @typemap
     def model(self):
         '''
-        Returns the model that the trainer is training.
-
-        Returns:
-            :class:`cntk.ops.functions.Function`
+        The model that the trainer is training.
         '''
         return super(Trainer, self).model()
         
+    @property
     @typemap
     def loss_function(self):
         '''
-        Returns the loss function that the trainer is using.
-
-        Returns:
-            :class:`cntk.ops.functions.Function`
+        The loss function that the trainer is using.
         '''
         return super(Trainer, self).loss_function()
 
+    @property
     @typemap
     def evaluation_function(self):
         '''
-        Returns the evaluation function that the trainer is using.
-
-        Returns:
-            :class:`cntk.ops.functions.Function`
+        The evaluation function that the trainer is using.
         '''
         return super(Trainer, self).evaluation_function()
 
+    @property
     @typemap
     def parameter_learners(self):
         '''
-        Returns the parameter learners that the trainer is using.
-
-        Returns:
-            `list` of :class:`cntk.learner.Learner`
+        The parameter learners that the trainer is using.
         '''
         return super(Trainer, self).parameter_learners()
 
+    @property
     def previous_minibatch_loss_average(self):
         '''
-        Returns the average training loss per sample for the last minibatch trained
-
-        Returns:
-            `double`
+        The average training loss per sample for the last minibatch trained
         '''
         return super(Trainer, self).previous_minibatch_loss_average()
 
+    @property
     def previous_minibatch_evaluation_average(self):
         '''
-        Returns the average evaluation criterion value per sample for the last minibatch trained
-
-        Returns:
-            `double`
+        The average evaluation criterion value per sample for the last minibatch trained
         '''
         return super(Trainer, self).previous_minibatch_evaluation_average()
 
+    @property
     def previous_minibatch_sample_count(self):
         '''
-        Returns the number of samples in the last minibatch trained with
-
-        Returns:
-            `int`
+        The number of samples in the last minibatch trained with
         '''
         return super(Trainer, self).previous_minibatch_sample_count()
 
