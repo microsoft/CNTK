@@ -1139,7 +1139,7 @@ def reshape(x, shape, name=''):
 @typemap
 def transpose(x, axis1=0, axis2=1, name=''):
     '''
-    Reverses two axes of the tensor. The output tensor has the same data but with
+    Swaps two axes of the tensor. The output tensor has the same data but with
     `axis1` and `axis2` swapped.
 
     Examples:
@@ -1507,7 +1507,7 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.variabls.Variable`
+        :class:`cntk.ops.variables.Variable`
     '''
     from cntk.cntk_py import input_variable
     from ..utils import sanitize_shape, sanitize_dtype_cntk
@@ -1562,7 +1562,7 @@ def parameter(shape=None, init=None, device=None, name=''):
         init (scalar or NumPy array or initializer): if init is a scalar
          it will be replicated for every element in the tensor or
          NumPy array. If it is the output of an initializer form
-         `:module:cntk.initializer` it will be used to initialize the tensor at
+         :module:`cntk.initializer` it will be used to initialize the tensor at
          the first forward pass. If `None`, the tensor will be initialized
          with 0.
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
