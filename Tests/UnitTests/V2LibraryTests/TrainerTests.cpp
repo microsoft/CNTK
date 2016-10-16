@@ -71,25 +71,40 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     }
 }
 
+FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input,
+	size_t numOutputClasses,
+	size_t hiddenLayerDim,
+	size_t numHiddenLayers,
+	const DeviceDescriptor& device,
+	const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity,
+	std::wstring outputName)
+{
+	assert(numHiddenLayers >= 1);
+	auto classifierRoot = FullyConnectedDNNLayer(input, hiddenLayerDim, device, nonLinearity);
+	for (size_t i = 1; i < numHiddenLayers; ++i)
+		classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
+
+	
+	return FullyConnectedLinearLayer(classifierRoot, numOutputClasses, device, outputName);
+}
+
 void TrainMNISTClassifier(const DeviceDescriptor& device)
 {
     const size_t inputDim = 784;
     const size_t numOutputClasses = 10;
     const size_t hiddenLayerDim = 200;
 
-    auto input = InputVariable({ inputDim }, DataType::Float, L"features");
-    auto scaledInput = ElementTimes(Constant::Scalar(0.00390625f, device), input);
-    auto classifierOutput = FullyConnectedDNNLayer(scaledInput, hiddenLayerDim, device, std::bind(Sigmoid, _1, L""));
-    auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.05, 0.05, 1, device));
-    auto outputBiasParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses }, -0.05, 0.05, 1, device));
-    classifierOutput = Plus(outputBiasParam, Times(outputTimesParam, classifierOutput), L"classifierOutput");
+	auto input = InputVariable({ inputDim }, DataType::Float, L"features");
+    auto scaledInput = ElementTimes(Constant::Scalar(float(1/256.0), device), input);
+
+	auto classifierOutput = FullyConnectedFeedForwardClassifierNet(scaledInput, numOutputClasses, hiddenLayerDim, 1, device, std::bind(ReLU, _1, L""), L"classifierOutput");
 
     auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels");
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");;
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 
-    // Test save and reload of model
-    {
+   // Section below changes the training behavior ( training diverges if the section is commented out).
+   {
         Variable classifierOutputVar = classifierOutput;
         Variable trainingLossVar = trainingLoss;
         Variable predictionVar = prediction;
@@ -101,9 +116,9 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
         prediction = predictionVar;
     }
 
-    const size_t minibatchSize = 32;
-    const size_t numSamplesPerSweep = 60000;
-    const size_t numSweepsToTrainWith = 3;
+    size_t minibatchSize = 64;
+    size_t numSamplesPerSweep = 600000;
+    const size_t numSweepsToTrainWith = 1;
     const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
 
     auto featureStreamName = L"features";
@@ -113,21 +128,39 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
-    double learningRatePerSample = 0.003125;
+	LearningRatesPerSample learningRatePerSample = LearningRatesPerSample(0.01);
     Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
 
-    size_t outputFrequencyInMinibatches = 20;
+    size_t outputFrequencyInMinibatches = 500;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         trainer.TrainMinibatch({ { input, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
+
+	minibatchSize = 1024;
+	numSamplesPerSweep = 10000;
+	const size_t numMinibatchesToTest = (numSamplesPerSweep) / minibatchSize;
+
+	auto testMinibatchSource = TextFormatMinibatchSource(L"Test-28x28_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } }, SIZE_MAX, false);
+
+	double testResult = 0.0;
+
+	for (size_t i = 0; i < numMinibatchesToTest; ++i)
+	{
+		auto minibatchData = testMinibatchSource->GetNextMinibatch(minibatchSize, device);
+		auto error = trainer.TestMinibatch({ { input, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+		testResult+= error;
+	}
+
+	printf("Error: %f\n", testResult / numMinibatchesToTest);
+
 }
 
 void TrainerTests()
 {
-    TrainSimpleFeedForwardClassifer(DeviceDescriptor::CPUDevice());
+    //TrainSimpleFeedForwardClassifer(DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())
     {
         TrainMNISTClassifier(DeviceDescriptor::GPUDevice(0));
