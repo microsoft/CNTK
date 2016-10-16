@@ -27,7 +27,7 @@ public:
 
     virtual Minibatch ReadMinibatch() override;
 
-    virtual void StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) override;
+    virtual void SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) override;
 
 private:
     // Reads sequences to slot with the specified index.

@@ -4,6 +4,7 @@
 # ==============================================================================
 
 from cntk import cntk_py
+from .swig_helper import typemap
 
 def save_model(root_op, filename):
     '''
@@ -15,9 +16,10 @@ def save_model(root_op, filename):
     '''
     cntk_py.save_as_legacy_model(root_op, filename)
 
+@typemap
 def load_model(data_type, filename, device=None):
     '''
-    Load the network of `root_op` in `model_file`, that has been saved using
+    Load the network in `model_file`, that has been saved using
     `:func:save_model`.
 
     Args:

@@ -53,43 +53,10 @@ void NoRandomizer::StartEpoch(const EpochConfiguration& config)
     m_config = config;
 
     if (m_config.m_totalEpochSizeInSamples == requestDataSize)
-    {
         m_config.m_totalEpochSizeInSamples = m_totalNumberOfSamples;
-    }
 
-    m_currentSequencePositionInChunk = 0;
-    m_globalSamplePosition = m_config.m_totalEpochSizeInSamples * config.m_epochIndex;
-    size_t sweepSamplePosition = m_globalSamplePosition % m_totalNumberOfSamples;
-
-    ChunkIdType chunkIndex = GetChunkIndexOf(sweepSamplePosition);
-    if (chunkIndex != m_currentChunkPosition)
-    {
-        // unloading everything.
-        m_currentChunkId = CHUNKID_MAX;
-        m_currentChunk = nullptr;
-
-        // Need to load descriptions for the new current chunk.
-        m_currentChunkPosition = chunkIndex;
-        m_currentSequencePositionInChunk = 0;
-        m_sequenceWindow.clear();
-        m_deserializer->GetSequencesForChunk(m_currentChunkPosition, m_sequenceWindow);
-    }
-
-    // Moving current sequence inside the chunk to match the sample offset.
-    // Currently linear, happens only at the border of epochs.
-    size_t sampleOffsetInsideChunk = sweepSamplePosition - m_chunkSampleOffset[m_currentChunkPosition];
-    size_t numberOfSamples = 0;
-    while (m_currentSequencePositionInChunk < m_sequenceWindow.size() &&
-           numberOfSamples < sampleOffsetInsideChunk)
-    {
-        numberOfSamples += m_sequenceWindow[m_currentSequencePositionInChunk].m_numberOfSamples;
-        MoveToNextSequence();
-    }
-
-    // Updating the global position
-    m_globalSamplePosition = m_globalSamplePosition - sampleOffsetInsideChunk + numberOfSamples;
-    assert(m_chunkDescriptions[m_currentChunkPosition]->m_numberOfSequences > m_currentSequencePositionInChunk);
-};
+    SetCurrentSamplePosition(m_config.m_totalEpochSizeInSamples * config.m_epochIndex);
+}
 
 // Moving the cursor to the next sequence. Possibly updating the chunk information if needed.
 void NoRandomizer::MoveToNextSequence()
@@ -222,6 +189,52 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
     m_currentChunk = it->second;
 
     return result;
+}
+
+void NoRandomizer::SetCurrentSamplePosition(size_t samplePosition)
+{
+    m_currentSequencePositionInChunk = 0;
+    m_globalSamplePosition = samplePosition;
+    size_t sweepSamplePosition = m_globalSamplePosition % m_totalNumberOfSamples;
+
+    ChunkIdType chunkIndex = GetChunkIndexOf(sweepSamplePosition);
+    if (chunkIndex != m_currentChunkPosition)
+    {
+        // unloading everything.
+        m_currentChunkId = CHUNKID_MAX;
+        m_currentChunk = nullptr;
+
+        // Need to load descriptions for the new current chunk.
+        m_currentChunkPosition = chunkIndex;
+        m_currentSequencePositionInChunk = 0;
+        m_sequenceWindow.clear();
+        m_deserializer->GetSequencesForChunk(m_currentChunkPosition, m_sequenceWindow);
+    }
+
+    // Moving current sequence inside the chunk to match the sample offset.
+    // Currently linear, happens only at the border of epochs.
+    size_t sampleOffsetInsideChunk = sweepSamplePosition - m_chunkSampleOffset[m_currentChunkPosition];
+    size_t numberOfSamples = 0;
+    while (m_currentSequencePositionInChunk < m_sequenceWindow.size() &&
+        numberOfSamples < sampleOffsetInsideChunk)
+    {
+        numberOfSamples += m_sequenceWindow[m_currentSequencePositionInChunk].m_numberOfSamples;
+        MoveToNextSequence();
+    }
+
+    // Updating the global position
+    m_globalSamplePosition = m_globalSamplePosition - sampleOffsetInsideChunk + numberOfSamples;
+    assert(m_chunkDescriptions[m_currentChunkPosition]->m_numberOfSequences > m_currentSequencePositionInChunk);
+}
+
+void NoRandomizer::SetConfiguration(const ReaderConfiguration& config)
+{
+    *((ReaderConfiguration*)&m_config) = config;
+
+    // TODO: should be removed.
+    // Currently no restriction on the epoch size at all when SetConfiguration is used.
+    m_config.m_totalEpochSizeInSamples = std::numeric_limits<size_t>().max() / 2; // Make sure we do not exceed size_t
+    m_config.m_epochIndex = 0;
 }
 
 } } }
