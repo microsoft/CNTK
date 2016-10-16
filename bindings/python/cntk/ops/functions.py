@@ -5,8 +5,22 @@ from enum import Enum, unique
 @unique
 class CloneMethod(Enum):
     clone = 1
+    '''
+    New learnable Parameters are created and initialied with the current values of the
+    corresponding Parameters of the Function being cloned
+    '''
+
     share = 2
-    freeze =3
+    '''
+    Parameters are shared between the Function being cloned and the new clone
+    '''
+
+    freeze = 3
+    '''
+    Parameters are cloned and made immutable; i.e. Constants in the new clone 
+    (e.g. for use as a fixed feature extractor)
+    '''
+
 
 class Function(cntk_py.Function):
     '''

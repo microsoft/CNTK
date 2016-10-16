@@ -20,7 +20,7 @@ class Trainer(cntk_py.Trainer):
     using computed gradients.
 
     Args:
-       model (:class:`cntk.ops.function.Function`): root node of the function to train
+       model (:class:`cntk.ops.functions.Function`): root node of the function to train
        loss_function (:class:`cntk.ops.functions.Function`): loss function 
        eval_function (:class:`cntk.ops.functions.Function`): evaluation function
        parameter_learners (`list`): list of learners from :cntk:`cntk.learner`
