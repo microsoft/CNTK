@@ -33,9 +33,9 @@ def test_learner_init():
 
     res = i * w
 
-    learner = sgd(res.parameters(), lr=0.1)
+    learner = sgd(res.parameters, lr=0.1)
 
-    learner_parameter = learner.parameters()
+    learner_parameter = learner.parameters
     from ..ops.variables import Parameter
     param = learner_parameter.pop()
     assert isinstance(param, Parameter)
@@ -44,16 +44,16 @@ def test_learner_init():
     momentum_per_sample = momentums_per_sample(
         np.exp(-1.0 / momentum_time_constant))
 
-    momentum_sgd(res.parameters(), lr=0.1, momentums=momentum_per_sample)
+    momentum_sgd(res.parameters, lr=0.1, momentums=momentum_per_sample)
 
-    nesterov(res.parameters(), lr=0.1, momentums=momentum_per_sample)
+    nesterov(res.parameters, lr=0.1, momentums=momentum_per_sample)
 
-    adagrad(res.parameters(), lr=0.1, need_ave_multiplier=True)
+    adagrad(res.parameters, lr=0.1, need_ave_multiplier=True)
 
-    fsadagrad(res.parameters(), lr=0.1, momentums=momentum_per_sample)
+    fsadagrad(res.parameters, lr=0.1, momentums=momentum_per_sample)
 
     gamma, inc, dec, max, min = [0.1]*5
-    rmsprop(res.parameters(), 0.1, gamma, inc, dec, max, min, True)
+    rmsprop(res.parameters, 0.1, gamma, inc, dec, max, min, True)
 
 def test_learner_update():
     i = input_variable(shape=(1,),
@@ -63,7 +63,7 @@ def test_learner_update():
     w = parameter(shape=(1,), init=w_init)
     res = i * w
 
-    learner = sgd(res.parameters(), lr=0.1)
+    learner = sgd(res.parameters, lr=0.1)
     x = learner.update({w: np.asarray([[2.]], dtype=np.float32)}, 1)
-    assert w.value().to_numpy() < w_init
+    assert w.value < w_init
 

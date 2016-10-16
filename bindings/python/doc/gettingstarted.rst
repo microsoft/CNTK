@@ -71,9 +71,9 @@ First basic use
 The first step in training or running a network in CNTK is to decide which device it should be run on. If you have access to a GPU, training time 
 can be vastly improved. To explicitly set the device to GPU, set the target device as follows:
 
-    >>> import cntk
-    >>> target_device = cntk.DeviceDescriptor.gpu_device(0)
-    >>> cntk.DeviceDescriptor.set_default_device(target_device)
+    import cntk
+    target_device = cntk.DeviceDescriptor.gpu_device(0)
+    cntk.DeviceDescriptor.set_default_device(target_device)
 
 Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
 (``examples.common.nn.fully_connected_classifier_net``). This is defined, along with several other simple and more complex DNN building blocks in 

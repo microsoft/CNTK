@@ -1239,7 +1239,7 @@ def reshape(x, shape, name=''):
 @typemap
 def transpose(x, axis1=0, axis2=1, name=''):
     '''
-    Reverses two axes of the tensor. The output tensor has the same data but with
+    Swaps two axes of the tensor. The output tensor has the same data but with
     `axis1` and `axis2` swapped.
 
     Examples:
@@ -1257,7 +1257,7 @@ def transpose(x, axis1=0, axis2=1, name=''):
     '''
     from cntk.cntk_py import transpose_axes
     x = sanitize_input(x)
-    rank = max(x.shape().rank(), 2)
+    rank = max(len(x.shape), 2)
     axis1 = sanitize_axis(rank, axis1)
     axis2 = sanitize_axis(rank, axis2)
     return transpose_axes(x, axis1, axis2, name)
@@ -1318,7 +1318,7 @@ def slice(x, axis, begin_index, end_index, name=''):
     '''
     from cntk.cntk_py import slice
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return slice(x, axis, begin_index, end_index, name)
 
 # TODO: enable when it is exposed in c++
@@ -1362,7 +1362,7 @@ def splice(inputs, axis=0, name=''):
 
     inputs = [sanitize_input(x) for x in inputs]
 
-    rank = max([x.shape().rank() for x in inputs])
+    rank = max([len(x.shape) for x in inputs])
     axis = sanitize_axis(rank, axis)
 
     return splice(inputs, axis, name)
@@ -1418,7 +1418,7 @@ def reduce_sum(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_sum
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return reduce_sum(x, axis, name)
 
 
@@ -1440,7 +1440,7 @@ def reduce_log_sum(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_log_sum
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return reduce_log_sum(x, axis, name)
 
 
@@ -1471,7 +1471,7 @@ def reduce_mean(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_mean
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return reduce_mean(x, axis, name)
 
 
@@ -1502,7 +1502,7 @@ def reduce_max(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_max
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return reduce_max(x, axis, name)
 
 
@@ -1533,7 +1533,7 @@ def reduce_min(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_min
     x = sanitize_input(x)
-    axis = sanitize_axis(x.shape().rank(), axis)
+    axis = sanitize_axis(len(x.shape), axis)
     return reduce_min(x, axis, name)
 
 ##########################################################################
@@ -1607,7 +1607,7 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`cntk.ops.variables.Variable`
     '''
     from cntk.cntk_py import input_variable
     from ..utils import sanitize_shape, sanitize_dtype_cntk
@@ -1662,7 +1662,7 @@ def parameter(shape=None, init=None, device=None, name=''):
         init (scalar or NumPy array or initializer): if init is a scalar
          it will be replicated for every element in the tensor or
          NumPy array. If it is the output of an initializer form
-         `:module:cntk.initializer` it will be used to initialize the tensor at
+         :module:`cntk.initializer` it will be used to initialize the tensor at
          the first forward pass. If `None`, the tensor will be initialized
          with 0.
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
@@ -1689,23 +1689,23 @@ def parameter(shape=None, init=None, device=None, name=''):
 
 
 @typemap
-def constant(shape=None, value=None, device=None, name=''):
+def constant(value=None, shape=None, device=None, name=''):
     '''
     It creates a constant tensor initialized from a numpy array
 
     Examples
-        >>> constant_data = C.constant(value=[[1., 2.], [3., 4.], [5., 6.]])
-        >>> np.asarray(constant_data) # doctest: +SKIP
+        >>> constant_data = C.constant([[1., 2.], [3., 4.], [5., 6.]])
+        >>> constant_data.value
         array([[ 1.,  2.],
                [ 3.,  4.],
                [ 5.,  6.]], dtype=float32)
 
     Args:
-        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
-         be inferred from ``value``.
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated for
          every element in the tensor or NumPy array.
          If ``None``, the tensor will be initialized uniformly random.
+        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
+         be inferred from ``value``.
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the Function instance in the network
     Returns:
@@ -1723,7 +1723,7 @@ def constant(shape=None, value=None, device=None, name=''):
     else:
         data_type = None
 
-    return Constant(shape, value, data_type, device, name)
+    return Constant(value, shape, data_type, device, name)
 
 ##########################################################################
 # normalization ops

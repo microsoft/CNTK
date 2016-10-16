@@ -53,11 +53,11 @@ class Learner(cntk_py.Learner):
 
         return super(Learner, self).update(var_nd_map, training_sample_count)
 
+    @property
     @typemap
     def parameters(self):
         '''
-        Returns:
-            the set of parameters associated with this learner.
+        The set of parameters associated with this learner.
         '''
         return super(Learner, self).parameters()
 
@@ -71,9 +71,10 @@ class Learner(cntk_py.Learner):
         '''
         return super(Learner, self).reset_learning_rate()
 
+    @property
     def learning_rate(self):
         '''
-        Returns the learning rate.
+        The learning rate.
         '''
         return super(Learner, self).learning_rate()
 
