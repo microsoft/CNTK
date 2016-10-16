@@ -37,6 +37,10 @@ int main()
     // which will have a silent performance degradation otherwise
     Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
 
+    // Note: Run the device selection tests first since later tests
+    // may interfere with device selection by freezing default device
+    DeviceSelectionTests();
+
     NDArrayViewTests();
     TensorTests();
     FunctionTests();
@@ -55,8 +59,6 @@ int main()
     TrainTruncatedLSTMAcousticModelClassifer();
 
     MultiThreadsEvaluation(IsGPUAvailable());
-
-    DeviceSelectionTests();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);

@@ -540,7 +540,7 @@ def element_divide(left, right, name=''):
 
 
 @typemap
-def times(left, right, output_rank=1, name=''):
+def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
     '''
     The output of this operation is the matrix product of the two input matrices.
     It supports broadcasting. Sparse is supported in the right operand, if it is a matrix.
@@ -575,6 +575,7 @@ def times(left, right, output_rank=1, name=''):
         output_rank (`int`): in case we have tensors as arguemnts, output_rank represents
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
+        infer_input_rank_to_map ('int'): meant for internal use only. Always use default value
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
@@ -584,7 +585,7 @@ def times(left, right, output_rank=1, name=''):
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
-    return times(right, left, output_rank, name)
+    return times(right, left, output_rank, infer_input_rank_to_map, name)
 
 ##########################################################################
 # non_diff ops

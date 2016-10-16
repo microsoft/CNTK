@@ -608,12 +608,9 @@ def sanitize_axis(rank, axis):
     if axis is None:
         return cntk_py.Axis.all_static_axes()
     elif isinstance(axis, numbers.Integral):
-        if axis < 0:
-            return cntk_py.Axis(-axis - 1)
-        else:
-            return cntk_py.Axis(rank - 1 - axis)
+        return cntk_py.Axis(-axis - 1)
     elif axis.is_static_axis():
-        return cntk_py.Axis(rank - 1 - axis.static_axis_index())
+        return cntk_py.Axis(-1 - axis.static_axis_index())
     else:
         return axis
 

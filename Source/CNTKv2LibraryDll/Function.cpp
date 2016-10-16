@@ -544,11 +544,15 @@ namespace CNTK
             case PrimitiveOpType::TransposeAxes:
             {
                 assert(inputs.size() == 1);
-                auto axis1 = functionConfig[PrimitiveFunction::AttributeNameAxis1].Value<Axis>();
-                auto axis2 = functionConfig[PrimitiveFunction::AttributeNameAxis2].Value<Axis>();
+
+                auto axis1 = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis1].Value<Axis>(), inputs[0].Shape());
+                auto axis2 = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis2].Value<Axis>(), inputs[0].Shape());
 
                 if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
                     LogicError("TransposeAxes operation currently does not support transposing dynamic axes");
+
+                VerifyStaticAxis(axis1, inputs[0].Shape());
+                VerifyStaticAxis(axis2, inputs[0].Shape());
 
                 outputShape = inputs[0].Shape();
                 std::swap(outputShape[axis1.StaticAxisIndex()], outputShape[axis2.StaticAxisIndex()]);
@@ -557,14 +561,14 @@ namespace CNTK
             case PrimitiveOpType::Slice:
             {
                 assert(inputs.size() == 1);
-                auto axis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                int beginIndex = functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<size_t>();
-                int endIndex = functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<size_t>();
+                auto axis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0].Shape());
+
+                auto beginIndex = functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+                auto endIndex = functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
                 if (!axis.IsStaticAxis())
                     LogicError("Built-in Slice operation currently does not support slicing along dynamic axis");
 
-                if (axis.StaticAxisIndex() >= inputs[0].Shape().Rank())
-                    InvalidArgument("The specified axis index (%d) for the Slice operation is outside the bounds of the available axes of the input", (int)axis.StaticAxisIndex());
+                VerifyStaticAxis(axis, inputs[0].Shape());
 
                 size_t sliceAxisDim = inputs[0].Shape()[axis.StaticAxisIndex()];
                 int realBeginIndex = (beginIndex >= 0) ? beginIndex : beginIndex + sliceAxisDim;
@@ -580,7 +584,7 @@ namespace CNTK
                 auto outputTensorShape = AsTensorShape(inputs[0].Shape());
 
                 // propagate as much as we can
-                if ((axis.StaticAxisIndex() < outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim))
+                if ((axis.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim))
                     outputTensorShape.NarrowTo(axis.StaticAxisIndex(), realBeginIndex, realEndIndex);
 
                 outputShape = AsNDShape(outputTensorShape, /*allowNonFlattenableTensorShapes = */ true);
@@ -683,7 +687,10 @@ namespace CNTK
             case PrimitiveOpType::CrossEntropyWithSoftmax:
             case PrimitiveOpType::ClassificationError:
             {
-                assert(inputs.size() == 2);
+                if (op == PrimitiveOpType::ClassificationError)
+                    assert(inputs.size() >= 2);
+                else
+                    assert(inputs.size() == 2);
 
                 if ((inputs[0].Shape().Rank() > 2) || ((inputs[0].Shape().Rank() > 1) && (inputs[0].Shape()[1] != 1)))
                     InvalidArgument("The shape of input operands for the %S operation should have at most one axis", PrimitiveOpTypeName(op).c_str());
@@ -693,8 +700,8 @@ namespace CNTK
                 if (predictionShape != labelsShape)
                     RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %S operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(op).c_str());
 
-                std::vector<size_t> reductionAxes;
-                for (size_t i = 0; i < inputs[0].Shape().Rank(); ++i)
+                std::vector<int> reductionAxes;
+                for (int i = 0; i < (int)inputs[0].Shape().Rank(); ++i)
                     reductionAxes.push_back(i);
 
                 outputShape = ReductionOpOutputShape(op, predictionShape, reductionAxes, /*preserveReductionAxes =*/ false);
@@ -720,12 +727,12 @@ namespace CNTK
             case PrimitiveOpType::ReduceElements:
             {
                 assert(inputs.size() == 1);
-                auto reductionAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                auto reductionAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0].Shape());
                 if (reductionAxis == Axis::AllStaticAxes())
                     outputShape = {};
                 else
                 {
-                    std::vector<size_t> reductionAxes = { reductionAxis.StaticAxisIndex() };
+                    std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };
                     outputShape = ReductionOpOutputShape(op, inputs[0].Shape(), reductionAxes, /*preserveReductionAxes =*/ true);
                 }
                 break;
@@ -776,7 +783,15 @@ namespace CNTK
             case PrimitiveOpType::Splice:
             {
                 assert(inputs.size() >= 2);
-                Axis spliceAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
+                auto maxInputRank = MaxInputRank(inputs);
+                auto spliceAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), NDShape(maxInputRank));
+
+                if (!spliceAxis.IsStaticAxis())
+                    LogicError("Splice operation currently does not support splicing along dynamic axis");
+
+                if (spliceAxis.StaticAxisIndex() < 0)
+                    InvalidArgument("Splice: The axis argument's static axis index must be >= 0!");
+
                 outputShape = SpliceOutputShape(inputs, spliceAxis.StaticAxisIndex());
                 break;
             }
@@ -994,8 +1009,8 @@ namespace CNTK
         case PrimitiveOpType::Slice:
         {
             auto axis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-            int beginIndex = functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<size_t>();
-            int endIndex = functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<size_t>();
+            auto beginIndex = functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
+            auto endIndex = functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
 
             // Internal CNTK SliceNode takes 1 based axis indices instead of 0 based
             computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), functionName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis));
@@ -2426,9 +2441,6 @@ namespace CNTK
 
     FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name)
     {
-        if (!axis.IsStaticAxis())
-            LogicError("Splice: Currently only splicing along a static axis is supported");
-
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
 
@@ -2596,8 +2608,8 @@ namespace CNTK
         {
             auto additionalProperties = Dictionary();
             additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
-            additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = (size_t)beginIndex;
-            additionalProperties[PrimitiveFunction::AttributeNameEndIndex] = (size_t)endIndex;
+            additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = beginIndex;
+            additionalProperties[PrimitiveFunction::AttributeNameEndIndex] = endIndex;
 
             return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
         }

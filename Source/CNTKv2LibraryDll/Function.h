@@ -290,19 +290,26 @@ namespace CNTK
             return outputShape;
         }
 
+        static size_t MaxInputRank(const std::vector<Variable>& inputs)
+        {
+            size_t maxRank = 0;
+            for (int i = 0; i < inputs.size(); i++)
+            {
+                auto inputRank = inputs[i].Shape().Rank();
+                if (maxRank < inputRank)
+                    maxRank = inputRank;
+            }
+
+            return maxRank;
+        }
+
         static NDShape SpliceOutputShape(const std::vector<Variable>& inputs, size_t axis)
         {
             // We must fuse all tensor shapes
 
             // Determine maximum rank (we can stack tensors with lower rank, which will have their dimensions paded to max automatically)
-            size_t index = axis;
-            size_t maxRank = axis + 1; // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
-            for (int i = 0; i < inputs.size(); i++)
-            {
-                auto inputAxesCount = inputs[i].Shape().Rank();
-                if (maxRank < inputAxesCount)
-                    maxRank = inputAxesCount;
-            }
+            auto maxInputRank = MaxInputRank(inputs);
+            size_t maxRank = std::max<size_t>(axis + 1, maxInputRank); // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
 
             // The following loop does multiple things:
             //  - Count total dimension along index
@@ -312,6 +319,7 @@ namespace CNTK
             auto outputDims = inputs[0].Shape().AppendShape(NDShape(maxRank - inputs[0].Shape().Rank(), 1));
 
             // This dimension is created, while all others are verified for consistency
+            size_t index = axis;
             outputDims[index] = 0;
             for (int i = 0; i < inputs.size(); i++)
             {
@@ -512,7 +520,7 @@ namespace CNTK
             return leftOperandShape.SubShape(0, outputRank).AppendShape(rightOperandShape.SubShape(numReductionAxes));
         }
 
-        static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<size_t>& reductionAxes, bool preserveReductionAxes)
+        static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<int>& reductionAxes, bool preserveReductionAxes)
         {
             if (reductionAxes.size() > operandShape.Rank())
                 RuntimeError("The number of reduction axes %d exceeds the rank in the operand shape %S of the reduction operation %S",
@@ -522,7 +530,7 @@ namespace CNTK
 
             size_t numOutputAxes = operandShape.Rank() - (preserveReductionAxes ? 0 : reductionAxes.size());
             std::vector<size_t> outputDims(numOutputAxes);
-            for (size_t i = 0, j = 0; i < operandShape.Rank(); ++i)
+            for (int i = 0, j = 0; i < (int)operandShape.Rank(); ++i)
             {
                 // Skip axes being reduced over
                 if (std::find(reductionAxes.begin(), reductionAxes.end(), i) != reductionAxes.end())

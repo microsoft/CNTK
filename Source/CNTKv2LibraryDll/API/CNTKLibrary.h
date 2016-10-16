@@ -851,9 +851,10 @@ namespace CNTK
     class Axis final
     {
         CNTK_API static const std::wstring StaticAxisNamePrefix;
-        static const size_t SentinelStaticAxisIndexValueForDynamicAxes = SIZE_MAX;
-        static const size_t SentinelStaticAxisIndexValueForAllStaticAxes = SIZE_MAX - 1;
-        static const size_t SentinelStaticAxisIndexValueForUnknownAxes = SIZE_MAX - 2;
+
+        CNTK_API static const int SentinelStaticAxisIndexValueForDynamicAxes;
+        static const int SentinelStaticAxisIndexValueForAllStaticAxes;
+        static const int SentinelStaticAxisIndexValueForUnknownAxes;
 
         class UniqueDynamicAxesNames
         {
@@ -903,7 +904,7 @@ namespace CNTK
         ///
         /// Construct an Axis object denoting a static axis with the specified index.
         ///
-        explicit Axis(size_t staticAxisIdx)
+        explicit Axis(int staticAxisIdx)
             : m_staticAxisIdx(staticAxisIdx), m_isOrderedDynamicAxis(false)
         {
             m_name = StaticAxisNamePrefix + std::to_wstring(staticAxisIdx);
@@ -931,7 +932,7 @@ namespace CNTK
         ///
         /// Returns the axis index if 'this' Axis is a static axis. Throws an exception otherwise if checked == true.
         ///
-        size_t StaticAxisIndex(bool checked = true) const
+        int StaticAxisIndex(bool checked = true) const
         {
             if (checked && !IsStaticAxis())
                 InvalidArgument("Cannot query the static axis index for a non-static axis");
@@ -978,7 +979,7 @@ namespace CNTK
         CNTK_API void RegisterAxisName(const std::wstring& axisName);
 
     private:
-        size_t m_staticAxisIdx;
+        int m_staticAxisIdx;
         std::wstring m_name;
         bool m_isOrderedDynamicAxis;
     };
@@ -1015,7 +1016,7 @@ namespace CNTK
     ///
     /// A serializable value represents one of:
     /// a) Boolean
-    /// b) Signed long integer
+    /// b) Signed and unsigned long integer
     /// c) Single and double precision floating point values
     /// d) NDShape
     /// e) Axis
@@ -1031,6 +1032,7 @@ namespace CNTK
         {
             None,
             Bool,
+            Int,
             SizeT,
             Float,
             Double,
@@ -1050,6 +1052,8 @@ namespace CNTK
                 return "None";
             case Type::Bool:
                 return "Bool";
+            case Type::Int:
+                return "Int";
             case Type::SizeT:
                 return "SizeT";
             case Type::Float:
@@ -1081,6 +1085,11 @@ namespace CNTK
         DictionaryValue(bool value) : m_valueType(GetValueType<bool>())
         {
             m_data.m_boolean = value;
+        }
+
+        DictionaryValue(int value) : m_valueType(GetValueType<int>())
+        {
+            m_data.m_int = value;
         }
 
         DictionaryValue(size_t value) : m_valueType(GetValueType<size_t>())
@@ -1201,6 +1210,20 @@ namespace CNTK
             return m_data.m_boolean;
         }
 
+        template <typename T, typename std::enable_if<std::is_same<T, int>::value>::type* = nullptr>
+        const T& Value() const
+        {
+            VerifyType<T>();
+            return m_data.m_int;
+        }
+
+        template <typename T, typename std::enable_if<std::is_same<T, int>::value>::type* = nullptr>
+        T& Value()
+        {
+            VerifyType<T>();
+            return m_data.m_int;
+        }
+
         template <typename T, typename std::enable_if<std::is_same<T, size_t>::value>::type* = nullptr>
         const T& Value() const
         {
@@ -1288,18 +1311,20 @@ namespace CNTK
         static Type GetValueType()
         {
             static_assert((std::is_same<T, bool>::value ||
-                std::is_same<T, size_t>::value ||
-                std::is_same<T, float>::value ||
-                std::is_same<T, double>::value ||
-                std::is_same<T, std::wstring>::value ||
-                std::is_same<T, NDShape>::value ||
-                std::is_same<T, Axis>::value ||
-                std::is_same<T, std::vector<DictionaryValue>>::value ||
-                std::is_same<T, Dictionary>::value ||
-                std::is_same<T, NDArrayView>::value),
-                "Unsupported ValueType");
+                          std::is_same<T, int>::value ||
+                          std::is_same<T, size_t>::value ||
+                          std::is_same<T, float>::value ||
+                          std::is_same<T, double>::value ||
+                          std::is_same<T, std::wstring>::value ||
+                          std::is_same<T, NDShape>::value ||
+                          std::is_same<T, Axis>::value ||
+                          std::is_same<T, std::vector<DictionaryValue>>::value ||
+                          std::is_same<T, Dictionary>::value ||
+                          std::is_same<T, NDArrayView>::value),
+                          "Unsupported ValueType");
 
             if (std::is_same<T, bool>::value)                                      return Type::Bool;
+            if (std::is_same<T, int>::value)                                       return Type::Int;
             if (std::is_same<T, size_t>::value)                                    return Type::SizeT;
             if (std::is_same<T, float>::value)                                     return Type::Float;
             if (std::is_same<T, double>::value)                                    return Type::Double;
@@ -1345,6 +1370,7 @@ namespace CNTK
         union ValueData
         {
             bool m_boolean;
+            int m_int;
             size_t m_sizeT;
             float m_float;
             double m_double;

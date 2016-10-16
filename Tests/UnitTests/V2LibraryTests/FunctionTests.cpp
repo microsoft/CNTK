@@ -22,7 +22,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 
     // Test ReduceSum along a static axis
     {
-        auto testReduceSum = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](int reductionAxis)
+        auto testReduceSum = [&sequences, &sequenceLengths, inputShape, sequencesValue, device, sampleRank](int reductionAxis, bool useNegativeAxisIndex)
         {
             size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
@@ -34,7 +34,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
             if (reduceAll)
                 reduceSumFunc = ReduceSum(inputVar);
             else
-                reduceSumFunc = ReduceSum(inputVar, Axis(reductionAxis));
+                reduceSumFunc = ReduceSum(inputVar, Axis(useNegativeAxisIndex ? (reductionAxis - (int)sampleRank) : reductionAxis));
 
             NDShape outputShape = reduceSumFunc->Output().Shape();
             NDShape outputDataShape = outputShape;
@@ -81,20 +81,20 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
         };
 
         // Reduce over all axes
-        testReduceSum(-1);
+        testReduceSum(-1, false);
 
         int reductionAxis = 0;
-        testReduceSum(reductionAxis);
+        testReduceSum(reductionAxis, true);
 
         if (reductionAxis < (inputShape.Rank() - 1))
             reductionAxis++;
 
-        testReduceSum(reductionAxis);
+        testReduceSum(reductionAxis, false);
 
         if (reductionAxis < (inputShape.Rank() - 1))
             reductionAxis++;
 
-        testReduceSum(reductionAxis);
+        testReduceSum(reductionAxis, true);
     }
 
     // Test ReduceSum along a dynamic axis
@@ -161,13 +161,13 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
 
     // Test slice along a static axis
     {
-        auto testStaticAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](size_t sliceAxis, int beginOffset, int endOffset)
+        auto testStaticAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device, sampleRank](int sliceAxis, int beginOffset, int endOffset, bool useNegativeAxisIndex)
         {
             size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
-            auto sliceFunc = Slice(inputVar, Axis(sliceAxis), beginOffset, endOffset);
+            auto sliceFunc = Slice(inputVar, Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis), beginOffset, endOffset);
 
             NDShape outputShape = sliceFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape({ maxActualSequenceLength, numSequences });
@@ -201,18 +201,18 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             FloatingPointVectorCompare(outputData, expectedOutputValues, "testStaticAxisSlice: Forward prop results do not match expected results");
         };
 
-        size_t sliceAxis = 0;
-        testStaticAxisSlice(sliceAxis, 3, 5);
+        int sliceAxis = 0;
+        testStaticAxisSlice(sliceAxis, 3, 5, true);
 
         if (sliceAxis < (inputShape.Rank() - 1))
             sliceAxis++;
 
-        testStaticAxisSlice(sliceAxis, -1, 0);
+        testStaticAxisSlice(sliceAxis, -1, 0, false);
 
         if (sliceAxis < (inputShape.Rank() - 1))
             sliceAxis++;
 
-        testStaticAxisSlice(sliceAxis, -3, -1);
+        testStaticAxisSlice(sliceAxis, -3, -1, true);
     }
 
     // Test slice along a dynamic axis
@@ -416,7 +416,7 @@ void TestRecurrentFunctionCloning()
     CompareFunctions(clonedFunctionWithParametersShared, clonedFunctionWithParametersFrozen, ParameterCloningMethod::Freeze, cloningReplacements, visitedFunctions);
 }
 
-void TestTranspose(size_t numAxes, size_t axis1, size_t axis2, const DeviceDescriptor& device)
+void TestTranspose(size_t numAxes, int axis1, int axis2, const DeviceDescriptor& device)
 {
     srand(1);
 
@@ -462,6 +462,9 @@ void TestTranspose(size_t numAxes, size_t axis1, size_t axis2, const DeviceDescr
 void TestTimesNodeShapeInference()
 {
     auto timesNodeShapeInferenceTest = [](size_t inputRank, size_t outputRank, int inputRankToMap) {
+        
+        auto device = DeviceDescriptor::CPUDevice();
+
         size_t maxDimSize = 15;
         NDShape outputShape(outputRank);
         for (size_t i = 0; i < outputRank; ++i)
@@ -473,7 +476,7 @@ void TestTimesNodeShapeInference()
         else
             paramShape = paramShape.AppendShape(NDShape(inputRank));
 
-        auto timesParam = Parameter(paramShape, DataType::Float, ConstantInitializer());
+        auto timesParam = Parameter(paramShape, DataType::Float, ConstantInitializer(), device);
 
         auto placeholderInput = PlaceholderVariable();
         auto timesFunction = Times(timesParam, placeholderInput, outputRank, inputRankToMap);

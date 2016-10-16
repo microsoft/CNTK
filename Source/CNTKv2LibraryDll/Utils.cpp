@@ -321,7 +321,7 @@ namespace CNTK
         }
         case DictionaryValue::Type::Axis:
         {
-            size_t staticAxisIdx;
+            int staticAxisIdx;
             stream >> staticAxisIdx;
 
             std::wstring axisName;

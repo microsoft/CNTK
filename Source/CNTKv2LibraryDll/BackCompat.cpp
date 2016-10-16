@@ -189,7 +189,7 @@ namespace CNTK
             }
             else if (node->OperationName() == OperationNameOf(TransposeTimesNode))
             {
-                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = (size_t)node->As<TransposeTimesNode<ElementType>>()->OutputRank();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = node->As<TransposeTimesNode<ElementType>>()->OutputRank();
                 opType = PrimitiveOpType::TransposeTimes;
             }
             else if (node->OperationName() == OperationNameOf(PastValueNode))

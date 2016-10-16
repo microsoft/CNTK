@@ -24,9 +24,12 @@ void DeviceSelectionTests()
     
     assert(DeviceDescriptor::UseDefaultDevice() == cpuDevice);
 
-    VerifyException([&cpuDevice]() {
-        DeviceDescriptor::SetDefaultDevice(cpuDevice);
-    }, "Was able to invoke SetDefaultDevice() after UseDefaultDevice().");
+    if (DeviceDescriptor::DefaultDevice() != bestDevice)
+    {
+        VerifyException([&bestDevice]() {
+            DeviceDescriptor::SetDefaultDevice(bestDevice);
+        }, "Was able to invoke SetDefaultDevice() after UseDefaultDevice().");
+    }
 
     // Invoke BestDevice after releasing the lock in UseDefaultDevice().
     bestDevice = DeviceDescriptor::BestDevice();
