@@ -6,30 +6,26 @@
 from . import cntk_py
 from .utils import typemap
 
-__doc__='''
-An axis object describes the axis of a variable and is used for specifying the axes parameters of certain functions such as reductions.
-Besides the static axes corresponding to each of the axes of the variable's shape, variables of kind 'input' and any
-'output' variables dependent on an 'input' variable also have two additional dynamic axes whose dimensions are known only
-when the variable is bound to actual data during compute time (viz. sequence axis and batch axis denoting the axis along which
-multiple sequences are batched).
-
-Axis parameters can also be negative, which allows to refere axis starting from the last axis. Please be aware that Axis objects work
-in a column-major wise, as opposed to any other function in the library.
-'''
-
 class Axis(cntk_py.Axis):
     '''
-    Axis
+    An axis object describes the axis of a variable and is used for specifying
+    the axes parameters of certain functions such as reductions.  Besides the
+    static axes corresponding to each of the axes of the variable's shape,
+    variables of kind 'input' and any 'output' variables dependent on an
+    'input' variable also have two additional dynamic axes whose dimensions are
+    known only when the variable is bound to actual data during compute time
+    (viz. sequence axis and batch axis denoting the axis along which multiple
+            sequences are batched). 
 
+    Axis parameters can also be negative, which allows to refere axis starting
+    from the last axis. Please be aware that Axis objects work in a
+    column-major wise, as opposed to any other function in the library.
     '''
 
     def __init__(self, *args):
-        this = _cntk_py.new_Axis(*args)
-        try:
-            self.this.append(this)
-        except __builtin__.Exception:
-            self.this = this
+        super(Axis, self).__init__(*args)
 
+    @property
     def is_ordered(self):
         '''
         Returns True if the axis is ordered; i.e. if there is an ordering between the dimensions along the axis.
@@ -39,6 +35,7 @@ class Axis(cntk_py.Axis):
         '''
         return super(Axis, self).is_ordered()
 
+    @property
     def is_static_axis(self):
         '''
         Returns True if the axis is of type static and False otherwise
@@ -48,6 +45,7 @@ class Axis(cntk_py.Axis):
         '''
         return super(Axis, self).is_static_axis()
 
+    @property
     def name(self):
         '''
         Returns the name of this axis.
@@ -67,10 +65,9 @@ class Axis(cntk_py.Axis):
         Returns:
             `int`: the number with which the static axis is defined.
         '''
-        kwargs=dict(locals());
-        del kwargs['self'];
-        return super(Axis, self).static_axis_index(**kwargs)
+        return super(Axis, self).static_axis_index(checked)
 
+    @staticmethod
     @typemap
     def default_dynamic_axis():
         '''
@@ -81,6 +78,7 @@ class Axis(cntk_py.Axis):
         '''
         return cntk_py.Axis.default_dynamic_axis()
 
+    @staticmethod
     @typemap
     def default_batch_axis():
         '''
@@ -91,6 +89,7 @@ class Axis(cntk_py.Axis):
         '''
         return cntk_py.Axis.default_batch_axis()
 
+    @staticmethod
     @typemap
     def all_static_axes():
         '''
@@ -101,12 +100,16 @@ class Axis(cntk_py.Axis):
         '''
         return cntk_py.Axis.all_static_axes()
 
+    @staticmethod
     @typemap
-    def new_unique_dynamic_axis():
+    def new_unique_dynamic_axis(name):
         '''
         Returns an Axis object representing a new unique dynamic axis.
+
+        Args:
+            name (`str`): name of the dynmic axis
 
         Returns:
             :class:`cntk.axis.Axis`: new unique dynamic axis
         '''
-        return cntk_py.Axis.new_unique_dynamic_axis()
+        return cntk_py.Axis.new_unique_dynamic_axis(name)

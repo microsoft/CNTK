@@ -10,6 +10,7 @@ import numpy as np
 import scipy.sparse
 from .. import cntk_py
 from .swig_helper import typemap
+from ..axis import Axis
 
 
 def sanitize_precision(precision):
@@ -642,11 +643,11 @@ def sanitize_axis(axis):
           * `None`: denote all available axes
     '''
     if axis is None:
-        return cntk_py.Axis.all_static_axes()
+        return Axis.all_static_axes()
     elif isinstance(axis, numbers.Integral):
-        return cntk_py.Axis(-axis - 1)
-    elif axis.is_static_axis():
-        return cntk_py.Axis(-1 - axis.static_axis_index())
+        return Axis(-axis - 1)
+    elif axis.is_static_axis:
+        return Axis(-1 - axis.static_axis_index)
     else:
         return axis
 
@@ -767,42 +768,3 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
         return forward_output, None
 
 
-def typemap(f):
-    '''
-    Upcasts Swig types to cntk types that inherit from Swig.
-    '''
-
-    from functools import wraps
-    @wraps(f)
-    def wrapper(*args, **kwds):
-        from cntk.ops.variables import Variable, Parameter, Constant
-        from cntk.ops.functions import Function
-        from cntk.learner import Learner
-        from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
-        from cntk.axis import Axis
-        typemap = {
-                cntk_py.Variable: Variable,
-                cntk_py.Parameter: Parameter,
-                cntk_py.Constant: Constant,
-                cntk_py.Function: Function,
-                cntk_py.Learner: Learner,
-                cntk_py.MinibatchSource: MinibatchSource,
-                cntk_py.MinibatchData: MinibatchData,
-                cntk_py.StreamConfiguration: StreamConfiguration,
-                cntk_py.Axis: Axis,
-                }
-        result = f(*args, **kwds)
-        if isinstance(result, (tuple, list, set)):
-            for r in result:
-                r.__class__ = typemap.get(r.__class__, r.__class__)
-        elif isinstance(result, dict):
-            for k,v in result.items():
-                k.__class__ = typemap.get(k.__class__, k.__class__)
-                v.__class__ = typemap.get(v.__class__, v.__class__)
-        else:
-            try:
-                result.__class__ = typemap.get(result.__class__, result.__class__)
-            except TypeError:
-                pass
-        return result
-    return wrapper

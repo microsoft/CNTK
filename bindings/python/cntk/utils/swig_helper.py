@@ -13,6 +13,7 @@ def typemap(f):
         from cntk.ops.functions import Function
         from cntk.learner import Learner
         from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
+        from cntk.axis import Axis
         typemap = { 
                 cntk_py.Variable: Variable,
                 cntk_py.Parameter: Parameter,
@@ -22,6 +23,7 @@ def typemap(f):
                 cntk_py.MinibatchSource: MinibatchSource,
                 cntk_py.MinibatchData: MinibatchData,
                 cntk_py.StreamConfiguration: StreamConfiguration, 
+                cntk_py.Axis: Axis,
                 }
         # Some types like NumPy arrays don't let to set the __class__
         if obj.__class__ in typemap:
