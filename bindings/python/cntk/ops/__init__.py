@@ -1169,8 +1169,8 @@ def transpose(x, axis1=0, axis2=1, name=''):
 
     Args:
         x: tensor to be transposed
-        axis1 (`int` or :class:`cntk.Axis`): the axis to swap with `axis2`
-        axis2 (`int` or :class:`cntk.Axis`): the axis to swap with `axis1`
+        axis1 (`int` or :class:`cntk.axis.Axis`): the axis to swap with `axis2`
+        axis2 (`int` or :class:`cntk.axis.Axis`): the axis to swap with `axis1`
         name (`str`, optional): the name of the Function instance in the network
     Returns:
         :class:`cntk.ops.functions.Function`
@@ -1223,7 +1223,7 @@ def slice(x, axis, begin_index, end_index, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which `begin_index` and `end_index`
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which `begin_index` and `end_index`
          will be used. If it is of type `int` it will be used as a static axis.
         begin_index (`int`): the index along axis where the slicing starts
         end_index (`int`): the index along axis where the slicing ends
@@ -1269,7 +1269,7 @@ def splice(inputs, axis=-1, name=''):
 
     Args:
         inputs (`list`): tuple of input tensors
-        axis (:class:`cntk.Axis`): axis along which the concatenation will be performed
+        axis (:class:`cntk.axis.Axis`): axis along which the concatenation will be performed
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
@@ -1327,7 +1327,7 @@ def reduce_sum(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
@@ -1346,7 +1346,7 @@ def reduce_log_sum(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
         name (`str`): the name of the Function instance in the network
 
     Returns:
@@ -1377,7 +1377,7 @@ def reduce_mean(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
@@ -1408,7 +1408,7 @@ def reduce_max(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
         name (`str`): the name of the Function instance in the network
 
     Returns:
@@ -1439,7 +1439,7 @@ def reduce_min(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
         name (`str`): the name of the Function instance in the network
 
     Returns:

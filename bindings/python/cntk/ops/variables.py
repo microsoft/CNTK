@@ -15,7 +15,7 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
        needs_gradient (`bool`): if set to True any expression that contains this variable
         will also be differentiated with respect to this variable.
        is_sparse(`bool`): whether this is a sparse or dense input (or output)
-       dynamic_axes(`list` of `cntk.Axis`): the dynamic axes of this variable. These
+       dynamic_axes(`list` of :class:`cntk.axis.Axis`): the dynamic axes of this variable. These
         express dimensions that can vary across examples or minibatches.
        name(`str`): an optional name for this parameter.
     '''

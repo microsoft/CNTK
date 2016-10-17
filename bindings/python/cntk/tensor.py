@@ -6,6 +6,10 @@
 
 
 class TensorOpsMixin(object):
+    '''
+    This class defines math overloads so that CNTK nodes can be written in math
+    expressions.
+    '''
 
     # operator overload for (+) where self is the left operand
     def __add__(self, other):
