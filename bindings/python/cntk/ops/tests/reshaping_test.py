@@ -83,8 +83,7 @@ def test_op_reshape_bad_input():
 SLICE_TEST_CASES_STATIC = [
     #(input_data, slice_params(beg_index, end_index,axis), expected_result)
     ([[1, 2], [-3, 4]], (1, 2, 0), [[-3, 4]]),
-    # FIXME slicing on axes >0 is not supported yet
-    # ([[1,2],[-3,4]], (1,2,1), [[2],[4]]),
+    ([[1,2],[-3,4]], (1,2,1), [[2],[4]]),
 ]
 
 
@@ -112,16 +111,6 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
             else:
                 ax_slices.append(slice(None))  # corresponds to ':'
         return ax_slices
-
-    # slice using the overload
-    if False:  # FIXME remove ones the overloads are in place
-        # slice using the operator
-        result = C.slice(a, *slice_params)
-        ax_slices = _ax_slices(a, *slice_params)
-        result = a[ax_slices]
-
-        unittest_helper(result, None, [[expected_result]], device_id=device_id,
-                        precision=precision, clean_up=True, backward_pass=False)
 
     # Backward pass test
     # ==================
@@ -165,7 +154,6 @@ SLICE_TEST_CASES_DYNAMIC = [
 
 @pytest.mark.parametrize("input_data, slice_params, expected_result",
                          SLICE_TEST_CASES_DYNAMIC)
-# FIXME enable once the ZeroesLike RuntimeError is fixed
 def test_op_slice_sequence(input_data, slice_params, expected_result, device_id, precision):
     input_data = AA(input_data, dtype=PRECISION_TO_TYPE[precision])
 
