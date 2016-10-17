@@ -193,6 +193,9 @@ namespace CNTK
         case DictionaryValue::Type::String:
             s << value.Value<std::wstring>();
             break;
+        case DictionaryValue::Type::Int:
+            s << value.Value<int>();
+            break;
         case DictionaryValue::Type::SizeT:
             s << value.Value<size_t>();
             break;
@@ -387,7 +390,7 @@ namespace CNTK
         return UidPrefix + uid + NamePrefix + name;
     }
 
-    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, VariableKind varKind)
+    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName)
     {
         std::wstring uid, name;
         auto uidPrefixBeginPos = CNTKInternalNodeName.find(UidPrefix);
@@ -402,7 +405,15 @@ namespace CNTK
             uid = CNTKInternalNodeName.substr(uidBeginPos, namePrefixBeginPos - uidBeginPos);
             name = CNTKInternalNodeName.substr(nameBeginPos);
         }
-        else
+
+        return{ uid, name };
+    }
+
+    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, VariableKind varKind)
+    {
+        std::wstring uid, name;
+        std::tie(uid, name) = UidAndNameFromCNTKInternalNodeName(CNTKInternalNodeName);
+        if (uid == L"")
         {
             name = CNTKInternalNodeName;
             uid = Internal::GenerateUid(varKind);
@@ -410,6 +421,8 @@ namespace CNTK
 
         return{ uid, name };
     }
+
+    std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, const PrimitiveOpType& opType);
 
     inline std::vector<Axis> GetDerivedDynamicAxes(const Axis& sourceAxis, size_t multiplicativeFactor, int additiveFactor)
     {

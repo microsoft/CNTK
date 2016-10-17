@@ -95,7 +95,7 @@ void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int t
     }
 
     auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({numOutputClasses, hiddenLayersDim}, -0.5, 0.5, 1, device));
-    auto classifierFunc = Times(outputTimesParam, classifierRoot, 1, -1, L"classifierOutput");
+    auto classifierFunc = Times(outputTimesParam, classifierRoot, L"classifierOutput");
 
     // Now test the structure
     if (classifierFunc->Parameters().size() != ((numHiddenLayers * 2) + 1))

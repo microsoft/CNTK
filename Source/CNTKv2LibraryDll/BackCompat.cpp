@@ -184,7 +184,7 @@ namespace CNTK
             {
                 auto timesNode = node->As<TimesNode<ElementType>>();
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = timesNode->OutputRank();
-                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInferInputRankToMap] = (size_t)timesNode->InferInputRankToMap();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInferInputRankToMap] = timesNode->InferInputRankToMap();
                 opType = PrimitiveOpType::Times;
             }
             else if (node->OperationName() == OperationNameOf(TransposeTimesNode))
@@ -282,7 +282,10 @@ namespace CNTK
             // Let's reorder inputVars properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
             ReorderAsPrimitiveFunctionInputs(opType, inputVars);
 
-            FunctionPtr primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), node->NodeName());
+            std::wstring functionUid, functionName;
+            std::tie(functionUid, functionName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), opType);
+
+            FunctionPtr primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), functionUid, functionName);
             allPrimitiveFunctions.insert(primitiveFunction);
             var = primitiveFunction->Output();
             if (placeholderReplacements.find(placeholderVar) != placeholderReplacements.end())

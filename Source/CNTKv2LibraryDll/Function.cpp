@@ -629,7 +629,7 @@ namespace CNTK
             {
                 assert(inputs.size() == 2);
                 auto outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-                auto inferInputRankToMap = (int)functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<size_t>();
+                auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
                 outputShape = TimesOpOutputShape(inputs[0], inputs[1], outputRank, inferInputRankToMap, inferDimensions);
                 break;
             }
@@ -874,9 +874,9 @@ namespace CNTK
         variableToNodeMap[variable] = nullptr;
 
         std::shared_ptr<ComputationNode<ElementType>> computationNodePtr;
-        auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name());
         if (variable.IsParameter() || variable.IsConstant())
         {
+            auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name());
             computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(variable.Shape()));
             network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
             if (!variable.NeedsGradient())
@@ -895,6 +895,8 @@ namespace CNTK
         }
         else if (variable.IsInput())
         {
+            auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name());
+
             // TODO: Input variables currently are required to have the default batch axis
             auto dynamicAxes = variable.DynamicAxes();
             auto foundDefaultBatchAxis = std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis());
@@ -935,6 +937,7 @@ namespace CNTK
         variableToNodeMap[variable] = computationNodePtr;
         if (isVariableRootMap.find(variable) == isVariableRootMap.end())
             isVariableRootMap[variable] = variable.IsOutput();
+
         return computationNodePtr;
     }
 
@@ -947,7 +950,8 @@ namespace CNTK
     {
         ComputationNodeBasePtr computationNodePtr;
 
-        auto functionName = primitiveFunction->Name();
+        auto internalNodeName = CNTKInternalNodeNameFromUidAndName(primitiveFunction->Uid(), primitiveFunction->Name());
+
         auto& functionConfig = primitiveFunction->Attributes();
         auto functionInputs = primitiveFunction->Inputs();
         PrimitiveOpType op = primitiveFunction->OpType();
@@ -955,40 +959,40 @@ namespace CNTK
         switch (op)
         {
         case PrimitiveOpType::Negate:
-            computationNodePtr = New<NegateNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<NegateNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Sigmoid:
-            computationNodePtr = New<SigmoidNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<SigmoidNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Tanh:
-            computationNodePtr = New<TanhNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<TanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::ReLU:
-            computationNodePtr = New<RectifiedLinearNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<RectifiedLinearNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Exp:
-            computationNodePtr = New<ExpNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<ExpNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Log:
-            computationNodePtr = New<LogNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<LogNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Sqrt:
-            computationNodePtr = New<SqrtNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<SqrtNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Floor:
-            computationNodePtr = New<FloorNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<FloorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Abs:
-            computationNodePtr = New<AbsNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<AbsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Reciprocal:
-            computationNodePtr = New<ReciprocalNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<ReciprocalNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Softmax:
-            computationNodePtr = New<SoftmaxNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<SoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Hardmax:
-            computationNodePtr = New<HardmaxNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<HardmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::TransposeAxes:
         {
@@ -996,14 +1000,14 @@ namespace CNTK
             auto axis2 = functionConfig[PrimitiveFunction::AttributeNameAxis2].Value<Axis>();
 
             // The axis ids passed to the internal CNTK TransposeDimensionsNode are 1 based instead of 0 based
-            computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), functionName, AsCNTKInternalAxisIdx(axis1), AsCNTKInternalAxisIdx(axis2));
+            computationNodePtr = New<TransposeDimensionsNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(axis1), AsCNTKInternalAxisIdx(axis2));
             break;
         }
         case PrimitiveOpType::Where:
         {
             auto dynamicAxes = variable.DynamicAxes();
             auto internalCNTKWhereNodeDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes(dynamicAxes);
-            computationNodePtr = New<WhereNode<ElementType>>(network->GetDeviceId(), functionName, internalCNTKWhereNodeDynamicAxisName);
+            computationNodePtr = New<WhereNode<ElementType>>(network->GetDeviceId(), internalNodeName, internalCNTKWhereNodeDynamicAxisName);
             break;
         }
         case PrimitiveOpType::Slice:
@@ -1013,20 +1017,20 @@ namespace CNTK
             auto endIndex = functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
 
             // Internal CNTK SliceNode takes 1 based axis indices instead of 0 based
-            computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), functionName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis));
+            computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis));
             break;
         }
         case PrimitiveOpType::Dropout:
         {
             auto dropoutRate = functionConfig[PrimitiveFunction::AttributeNameDropoutRate].Value<double>();
-            computationNodePtr = New<DropoutNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<DropoutNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             computationNodePtr->As<DropoutNode<ElementType>>()->SetDropoutRate(dropoutRate);
             break;
         }
         case PrimitiveOpType::Reshape:
         {
             auto newShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
-            computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), functionName, AsTensorShape(newShape));
+            computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(newShape));
             break;
         }
         case PrimitiveOpType::Pooling:
@@ -1037,50 +1041,50 @@ namespace CNTK
             auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
             auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
             auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-            computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), functionName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
+            computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
             break;
         }
         case PrimitiveOpType::SumAll:
-            computationNodePtr = New<SumElementsNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<SumElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Plus:
-            computationNodePtr = New<PlusNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<PlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Minus:
-            computationNodePtr = New<MinusNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<MinusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::ElementTimes:
-            computationNodePtr = New<ElementTimesNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<ElementTimesNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Equal:
-            computationNodePtr = New<EqualNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<EqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::NotEqual:
-            computationNodePtr = New<NotEqualNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<NotEqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Less:
-            computationNodePtr = New<LessNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<LessNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::LessEqual:
-            computationNodePtr = New<LessEqualNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<LessEqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Greater:
-            computationNodePtr = New<GreaterNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<GreaterNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::GreaterEqual:
-            computationNodePtr = New<GreaterEqualNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<GreaterEqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Times:
         {
             size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-            auto inferInputRankToMap = (int)functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<size_t>();
-            computationNodePtr = New<TimesNode<ElementType>>(network->GetDeviceId(), functionName, outputRank, inferInputRankToMap);
+            auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
+            computationNodePtr = New<TimesNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputRank, inferInputRankToMap);
             break;
         }
         case PrimitiveOpType::TransposeTimes:
         {
             size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-            computationNodePtr = New<TransposeTimesNode<ElementType>>(network->GetDeviceId(), functionName, outputRank);
+            computationNodePtr = New<TransposeTimesNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputRank);
             break;
         }
         case PrimitiveOpType::Convolution:
@@ -1094,17 +1098,17 @@ namespace CNTK
             auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
             auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
             auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
-            computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), functionName, AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose, ImageLayoutKind::CHW, maxTempMemSizeInSamples);
+            computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose, ImageLayoutKind::CHW, maxTempMemSizeInSamples);
             break;
         }
         case PrimitiveOpType::SquaredError:
-            computationNodePtr = New<SquareErrorNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<SquareErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::CrossEntropyWithSoftmax:
-            computationNodePtr = New<CrossEntropyWithSoftmaxNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<CrossEntropyWithSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::ClassificationError:
-            computationNodePtr = New<ClassificationErrorNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<ClassificationErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::PastValue:
         case PrimitiveOpType::FutureValue:
@@ -1114,9 +1118,9 @@ namespace CNTK
 
             size_t offset = primitiveFunction->Attributes()[PrimitiveFunction::AttributeNameOffset].Value<size_t>();
             if (op == PrimitiveOpType::PastValue)
-                computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), functionName, AsTensorShape(inputOperandVar.Shape()), offset);
+                computationNodePtr = New<PastValueNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(inputOperandVar.Shape()), offset);
             else
-                computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), functionName, AsTensorShape(inputOperandVar.Shape()), offset);
+                computationNodePtr = New<FutureValueNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(inputOperandVar.Shape()), offset);
 
             break;
         }
@@ -1124,7 +1128,7 @@ namespace CNTK
         {
             auto reductionAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
             auto reductionOpName = functionConfig[PrimitiveFunction::AttributeNameReductionOpName].Value<std::wstring>();
-            computationNodePtr = New<ReduceElementsNode<ElementType>>(network->GetDeviceId(), functionName, reductionOpName, AsCNTKInternalAxisIdx(reductionAxis));
+            computationNodePtr = New<ReduceElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName, reductionOpName, AsCNTKInternalAxisIdx(reductionAxis));
             break;
         }
         case PrimitiveOpType::BatchNormalization:
@@ -1134,7 +1138,7 @@ namespace CNTK
             auto blendTimeConstant = functionConfig[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>();
             auto epsilon = functionConfig[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
             auto useCuDNNEngine = functionConfig[PrimitiveFunction::AttributeNameUseCuDNNEngine].Value<bool>();
-            computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), functionName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW);
+            computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW);
             break;
         }
         case PrimitiveOpType::Combine:
@@ -1143,24 +1147,24 @@ namespace CNTK
             computationNodePtr = variableToNodeMap[variable];
             break;
         case PrimitiveOpType::PackedIndex:
-            computationNodePtr = New<PackedIndexNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<PackedIndexNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::GatherPacked:
-            computationNodePtr = New<GatherPackedNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<GatherPackedNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::ScatterPacked:
-            computationNodePtr = New<ScatterPackedNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<ScatterPackedNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Clip:
-            computationNodePtr = New<ClipNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<ClipNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Select:
-            computationNodePtr = New<IfNode<ElementType>>(network->GetDeviceId(), functionName);
+            computationNodePtr = New<IfNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         case PrimitiveOpType::Splice:
         {
             Axis spliceAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-            computationNodePtr = New<RowStackNode<ElementType>>(network->GetDeviceId(), functionName, AsCNTKInternalAxisIdx(spliceAxis));
+            computationNodePtr = New<RowStackNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(spliceAxis));
             break;
         }
         default:
@@ -2262,7 +2266,7 @@ namespace CNTK
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
-        additionalProperties[PrimitiveFunction::AttributeNameInferInputRankToMap] = (size_t)inferInputRankToMap;
+        additionalProperties[PrimitiveFunction::AttributeNameInferInputRankToMap] = inferInputRankToMap;
         return BinaryOp(PrimitiveOpType::Times, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
@@ -2280,20 +2284,38 @@ namespace CNTK
         return Internal::ReduceElements(squaredDifference, PrimitiveFunction::InternalSumReductionOpName, Axis::AllStaticAxes(), name);
     }
 
-    FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name)
+    FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name)
     {
-        return Minus(ReduceLogSum(prediction, Axis(0)), TransposeTimes(labels, prediction), name);
+        if (axis == Axis(0))
+            return Minus(ReduceLogSum(prediction, axis), TransposeTimes(labels, prediction), name);
+        else
+            return Minus(ReduceLogSum(prediction, axis), ReduceSum(ElementTimes(labels, prediction), axis), name);
     }
 
-    FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const std::wstring& name)
+    FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const Axis& axis, const std::wstring& name)
     {
         if (topN == 0)
             InvalidArgument("ClassificationError: The topN argument must be > 0!");
 
         if (topN == 1)
-            return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
+        {
+            if (axis == Axis(0))
+                return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
+            else
+            {
+                auto axMax = ReduceMax(prediction, axis);
+                auto pred = Equal(prediction, axMax);
+                auto wrongPred = NotEqual(labels, pred);
+                auto axErr = ReduceSum(wrongPred, axis);
+                auto capErr = GreaterEqual(axErr, Constant::Scalar(prediction.GetDataType(), 1.0));
+                return ReduceMean(capErr, Axis::AllStaticAxes(), name);
+            }
+        }
         else
         {
+            if (axis != Axis(0))
+                LogicError("ClassificationError along a specific axis does not support topN!");
+
             std::vector<Variable> operands = { prediction, labels, Constant::Scalar(prediction.GetDataType(), (double)topN) };
             return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ClassificationError, operands, Dictionary(), name), name);
         }

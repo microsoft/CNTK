@@ -22,7 +22,7 @@ FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input,
         classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
 
     auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, 1, device));
-    return Times(outputTimesParam, classifierRoot, 1, -1, outputName);
+    return Times(outputTimesParam, classifierRoot, outputName);
 }
 
 std::wstring s_tempModelPath = L"feedForward.net";

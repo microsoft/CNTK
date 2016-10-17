@@ -592,12 +592,11 @@ def sanitize_dtype_cntk(dtype):
         raise ValueError('data type "%s" is not supported' % dtype)
 
 
-def sanitize_axis(rank, axis):
+def sanitize_axis(axis):
     '''
     Sanitizes the axis.
 
     Args:
-        rank (`int`): rank of the tensor on which `axis` is to be used
         axis (`:class:Axis` or `int` or `None`): the axis to be used.
           * `:class:Axis`: use axis instance directly (will convert row- to
              col-major in case of static axis.

@@ -134,6 +134,11 @@ namespace CNTK
         return primitiveOpNames.find(opType)->second;
     }
 
+    inline std::wstring GenerateUid(PrimitiveOpType opType)
+    {
+        return std::wstring(PrimitiveOpTypeName(opType)) + std::to_wstring(Internal::NewUniqueId());
+    }
+
     inline std::unordered_map<size_t, size_t> GetPrimitiveFunctionInputsToCNTKNodeInputsIndexMap(PrimitiveOpType op, size_t numFunctionInputs)
     {
         std::unordered_map<size_t, size_t> indexMap;
@@ -228,9 +233,12 @@ namespace CNTK
 
     public:
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
-            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig, true, functionName), std::move(functionConfig), nullptr, functionName), m_op(op)
-        {
-        }
+            : PrimitiveFunction(op, inputs, std::move(functionConfig), GenerateUid(op), functionName)
+        {}
+
+        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& uid, const std::wstring& functionName)
+            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig, true, functionName), std::move(functionConfig), nullptr, functionName), m_op(op), m_uid(uid)
+        {}
 
         virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& /*arguments*/,
                                          std::unordered_map<Variable, ValuePtr>& /*outputs*/,
@@ -256,6 +264,11 @@ namespace CNTK
         PrimitiveOpType OpType() const
         {
             return m_op;
+        }
+
+        std::wstring Uid() const
+        {
+            return m_uid;
         }
 
     private:
@@ -625,6 +638,7 @@ namespace CNTK
 
     private:
         PrimitiveOpType m_op;
+        std::wstring m_uid;
     };
 
     class CNTKBackPropState final : public BackPropState
