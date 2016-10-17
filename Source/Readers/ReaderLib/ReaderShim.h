@@ -29,6 +29,8 @@ class ReaderShim : public IDataReader
     friend class ::CNTK::CompositeMinibatchSource;
 public:
     explicit ReaderShim(ReaderFactory factory);
+    explicit ReaderShim(ReaderPtr reader);
+
     virtual ~ReaderShim() { }
 
     virtual void Init(const ScriptableObjects::IConfigRecord& /*config*/) override
@@ -54,6 +56,8 @@ public:
     virtual void StartMinibatchLoop(size_t mbSize, size_t epoch, const std::unordered_set<InputStreamDescription>& inputs, size_t requestedEpochSamples = requestDataSize) override;
     virtual void StartDistributedMinibatchLoop(size_t requestedMBSize, size_t epoch, size_t subsetNum, size_t numSubsets, const std::unordered_set<InputStreamDescription>& inputs, size_t requestedEpochSamples) override;
 
+    void StartEpoch(const EpochConfiguration& epoch, const std::unordered_set<InputStreamDescription>& inputs);
+
     virtual void StartMinibatchLoop(size_t, size_t, size_t) override
     {
         LogicError("Legacy StartMinibatchLoop is not implemented.");
@@ -69,6 +73,11 @@ public:
         return true;
     }
 
+    virtual bool IsLegacyReader() const override
+    {
+        return false;
+    }
+
     virtual bool GetMinibatch(StreamMinibatchInputs& matrices) override;
 
     virtual bool DataEnd() override;
@@ -76,6 +85,23 @@ public:
     void CopyMBLayoutTo(MBLayoutPtr) override;
 
     virtual size_t GetNumParallelSequencesForFixingBPTTMode() override;
+
+    virtual size_t GetCurrentSamplePosition() override;
+
+    void SetCurrentSamplePosition(size_t currentSamplePosition)
+    {
+        m_reader->SetCurrentSamplePosition(currentSamplePosition);
+    }
+
+    void SetConfiguration(const ReaderConfiguration& config, const std::map<std::wstring, int>& inputDescriptions)
+    {
+        m_reader->SetConfiguration(config, inputDescriptions);
+    }
+
+    bool IsEndOfEpoch() const
+    {
+        return m_endOfEpoch;
+    }
 
 private:
     struct PrefetchResult
@@ -120,6 +146,11 @@ private:
 
     // Device id.
     int m_deviceId;
+
+    // Current sample position of the reader on the global timeline.
+    // We have to remember the value locally before starting prefetch.
+    // The value is updated only from the main thread (in StartEpoch/GetMinibatch)
+    size_t m_currentSamplePosition;
 
     static void FillMatrixFromStream(
         StorageType type,

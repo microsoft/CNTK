@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
@@ -41,8 +45,8 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
     auto classifierOutput = LSTMNet<ElementType>(features, cellDim, hiddenDim, numOutputClasses, numLSTMLayers, device, L"classifierOutput");
 
     auto labelsVar = InputVariable({ numOutputClasses }, AsDataType<ElementType>(), L"labels");
-    auto trainingLoss = CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"lossFunction");
-    auto prediction = ClassificationError(classifierOutput, labelsVar, L"classificationError");
+    auto trainingLoss = ReduceSum(CrossEntropyWithSoftmax(classifierOutput, labelsVar), L"lossFunction");
+    auto prediction = ReduceSum(ClassificationError(classifierOutput, labelsVar), L"classificationError");
 
     auto LSTMClassifier = Combine({ trainingLoss, prediction, classifierOutput }, L"LSTMClassifier");
 
@@ -132,7 +136,7 @@ void TestSimpleRecurrence(size_t inputDim,
 
     auto inputVar = InputVariable({ inputDim }, useSparseInputs, AsDataType<ElementType>(), true, L"input");
 
-    auto placeholder = PlaceholderVariable({ outputDim });
+    auto placeholder = PlaceholderVariable(std::initializer_list<size_t>({ outputDim }));
     auto plusOutput = Plus(plusParam, Plus(placeholder, Times(timesParam, inputVar)), L"plusOutput");
     FunctionPtr placeholderReplacement;
     if (useFutureValue)
@@ -221,7 +225,10 @@ void TestSimpleRecurrence(size_t inputDim,
 
             NDMaskPtr inputMask = MakeSharedObject<NDMask>(NDShape({ maxActualSequenceLength, numSequences }), DeviceDescriptor::CPUDevice());
             for (size_t i = 0; i < numSequences; ++i)
-                inputMask->MaskSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+            {
+                inputMask->MarkSequenceBegin({0, i});
+                inputMask->InvalidateSection({ sequenceLengths[i], i }, { NDShape::InferredDimension, 1 });
+            }
 
             inputValue = MakeSharedObject<Value>(inputValueData, inputMask);
         }
@@ -231,7 +238,7 @@ void TestSimpleRecurrence(size_t inputDim,
         ValuePtr reducedOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(reducedOutputShape, reducedOutputData.data(), reducedOutputData.size(), DeviceDescriptor::CPUDevice(), false));
 
         NDShape plusOutputShape = plusOutput->Output().Shape().AppendShape({ maxActualSequenceLength, numSequences });
-        std::vector<ElementType> plusOutputData(plusOutputShape.TotalSize());
+        std::vector<ElementType> plusOutputData(plusOutputShape.TotalSize(), 0);
         ValuePtr plusOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), MakeSharedObject<NDMask>(inputValue->Mask()->Shape(), inputValue->Mask()->Device()));
 
         std::unordered_map<Variable, ValuePtr> outputs = { { reducedOutput, reducedOutputValue }, { plusOutput, plusOutputValue } };
@@ -373,19 +380,26 @@ void TestSimpleRecurrence(size_t inputDim,
 
 void RecurrentFunctionTests()
 {
+    fprintf(stderr, "\nRecurrentFunctionTests..\n");
+
     TestSimpleRecurrence<float>(2, 1, 4, 1, DeviceDescriptor::CPUDevice(), true, 3, false, false);
-#ifndef CPUONLY
-    TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), true, 5, true, false);
-#endif
+    if (IsGPUAvailable())
+    {
+        TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), true, 5, true, false);
+    }
+
     TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::CPUDevice(), false, 2, true, true);
-#ifndef CPUONLY
-    TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::GPUDevice(0), false, 3, false, true);
-    TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::GPUDevice(0), true, 3, true, true, true);
-#endif
+    if (IsGPUAvailable())
+    {
+        TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::GPUDevice(0), false, 3, false, true);
+        TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::GPUDevice(0), true, 3, true, true, true);
+    }
+
     TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::CPUDevice(), true, 2, false, true, true);
 
-#ifndef CPUONLY
-    TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0), true);
-#endif
+    if (IsGPUAvailable())
+    {
+        TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0), true);
+    }
     TestRecurrentNetworkCreation<double>(DeviceDescriptor::CPUDevice(), false);
 }

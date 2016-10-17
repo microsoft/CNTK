@@ -1007,7 +1007,7 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
         if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
             ; // layouts are compatible--you may proceed
         else
-            LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix.");
+            LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix. They are compatible though--are you missing a ReconcileDynamicAxis operation?");
     }
     // if FrameRange refers to whole minibatch (map mode)
     // or if we don't even have a layout

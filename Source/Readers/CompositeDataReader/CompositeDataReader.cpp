@@ -21,8 +21,6 @@
 #include "CorpusDescriptor.h"
 #include "ConfigUtil.h"
 #include "StringUtil.h"
-#include "CudaMemoryProvider.h"
-#include "HeapMemoryProvider.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -31,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // For more information please see its header file.
 // This method composes together packers + randomizer + a set of transformers and deserializers.
 CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
-    m_corpus(std::make_shared<CorpusDescriptor>())
+    m_corpus(std::make_shared<CorpusDescriptor>()), m_truncationLength(0)
 {
     wstring action = config(L"action", L"");
     bool isActionWrite = AreEqualIgnoreCase(action, L"write");
@@ -239,7 +237,10 @@ void CompositeDataReader::CreateTransforms(const ConfigParameters& deserializerC
         argvector<ConfigParameters> transforms = input("transforms");
         for (size_t j = 0; j < transforms.size(); ++j)
         {
-            TransformerPtr transformer = CreateTransformer(transforms[j], defaultModule, std::wstring());
+            ConfigParameters p = transforms[j];
+            p.Insert("precision", deserializerConfig("precision"));
+
+            TransformerPtr transformer = CreateTransformer(p, defaultModule, std::wstring());
             m_transforms.push_back(Transformation{transformer, inputName});
         }
 

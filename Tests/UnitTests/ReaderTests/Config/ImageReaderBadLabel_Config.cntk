@@ -30,7 +30,7 @@ Simple_Test = [
             cropType=Center
             cropRatio=1.0
             jitterType=UniRatio
-            interpolations=Linear
+            interpolations=linear
             #meanFile=$RootDir$/ImageReaderSimple_mean.xml
         ]
         labels=[

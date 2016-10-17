@@ -52,6 +52,7 @@
 #endif
 
 #define __out_z_cap(x) // a fake SAL annotation; this may come in handy some day if we try static code analysis, so I don't want to delete it
+#define FINDCLOSE_ERROR 0
 
 #include <errno.h>
 
@@ -296,7 +297,7 @@ void fsetmode(FILE* f, char type)
 
 void freadOrDie(void* ptr, size_t size, size_t count, FILE* f)
 {
-    size_t limit = READ_SIZE_LIMIT / size;  // Normalize by size, as fread() expects units, not bytes
+    size_t limit = max(READ_SIZE_LIMIT / size, (size_t)1);  // Normalize by size, as fread() expects units, not bytes
 
     // \\XXX\C$ reads are limited, with some randomness (e.g. 48 MB), on Windows 7 32 bit, so we break this into chunks of some MB. Meh.
     while (count > 0)
@@ -1712,9 +1713,14 @@ public:
     }
     ~auto_find_handle()
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
         if (h != INVALID_HANDLE_VALUE)
-            ::FindClose(h);
+        {
+            int rc = ::FindClose(h);
+            if ((rc == FINDCLOSE_ERROR) && !std::uncaught_exception())
+            {
+                RuntimeError("Release: Failed to close handle: %d", ::GetLastError());
+            }
+        }
     }
     operator HANDLE() const
     {

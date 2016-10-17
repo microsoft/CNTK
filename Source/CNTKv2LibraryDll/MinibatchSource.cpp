@@ -12,6 +12,7 @@
 #include "ReaderShim.h"
 #include "Function.h"
 #include <tuple>
+#include "Value.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -66,11 +67,14 @@ namespace CNTK
         return MinibatchSourcePtr(new CompositeMinibatchSource(configuration));
     }
 
+    /*static*/ const std::wstring CompositeMinibatchSource::MinibatchSourcePositionAttributeName = L"minibatchSourcePosition";
+
     CompositeMinibatchSource::CompositeMinibatchSource(const Dictionary& configuration)
-        : m_epochEndReached(false), m_prevMinibatchSize(0), m_epochSize(SIZE_MAX)
+        : m_epochEndReached(false), m_prevMinibatchSize(0), m_epochSize(SIZE_MAX), m_truncationLength(0)
     {
         // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
         // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
+        // TODO: This should be done in the same manner for CNTK exe as well.
         Dictionary augmentedConfiguration = configuration;
         auto& deserializerConfigurations = augmentedConfiguration[L"deserializers"].Value<std::vector<DictionaryValue>>();
         for (auto& deserializerConfig : deserializerConfigurations)
@@ -78,6 +82,8 @@ namespace CNTK
             static const std::unordered_map<std::wstring, std::wstring> deserializerTypeNameToModuleNameMap = {
                 { L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader" },
                 { L"ImageDeserializer",          L"ImageReader"          },
+                { L"HTKFeatureDeserializer",     L"HTKDeserializers"     },
+                { L"HTKMLFDeserializer",         L"HTKDeserializers"     },
             };
 
             auto& deserializerConfigDict = deserializerConfig.Value<Dictionary>();
@@ -103,6 +109,10 @@ namespace CNTK
                 }
 
             }
+
+            if (deserializerTypeNameToModuleNameMap.find(deserializerTypeName) == deserializerTypeNameToModuleNameMap.end())
+                InvalidArgument("Unknown deserializer type (%S)", deserializerTypeName.c_str());
+
             deserializerConfigDict[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
         }
 
@@ -120,13 +130,25 @@ namespace CNTK
         if (m_epochSize == 0)
             m_epochSize = Microsoft::MSR::CNTK::requestDataSize;
 
+        const wchar_t* truncatedConfigurationKey = L"truncated";
+        const wchar_t* truncationLengthConfigurationKey = L"truncationLength";
+        if (augmentedConfiguration.Contains(truncatedConfigurationKey) &&
+            augmentedConfiguration[truncatedConfigurationKey].Value<bool>() &&
+            augmentedConfiguration.Contains(truncationLengthConfigurationKey))
+        {
+            m_truncationLength = augmentedConfiguration[truncationLengthConfigurationKey].Value<size_t>();
+        }
+
         typedef Reader*(*CreateCompositeDataReaderProc)(const ConfigParameters* parameters);
         CreateCompositeDataReaderProc createReaderProc = (CreateCompositeDataReaderProc)Plugin().Load(L"CompositeDataReader", "CreateCompositeDataReader");
-        m_compositeDataReader.reset(createReaderProc(&config));
+        std::shared_ptr<Microsoft::MSR::CNTK::Reader> compositeDataReader(createReaderProc(&config));
 
-        auto compositeDataReaderStreamDescs = m_compositeDataReader->GetStreamDescriptions();
-        for (auto streamDesc : compositeDataReaderStreamDescs)
+        m_compositeDataReaderStreamDescs = compositeDataReader->GetStreamDescriptions();
+        for (auto streamDesc : m_compositeDataReaderStreamDescs)
             m_streamInfos.insert({ streamDesc->m_name, streamDesc->m_id, AsStorageFormat(streamDesc->m_storageType), AsDataType(streamDesc->m_elementType), AsNDShape(*(streamDesc->m_sampleLayout)) });
+
+        m_shim = std::shared_ptr<ReaderShim<float>>(new ReaderShim<float>(compositeDataReader), [](ReaderShim<float>* x) { x->Destroy(); });
+        m_shim->Init(config);
     }
 
     /*virtual*/ const std::unordered_map<StreamInformation, MinibatchData>&
@@ -147,60 +169,87 @@ namespace CNTK
             if (m_prevMinibatchSize == 0)
             {
                 // TODO: Add support for distributed reading
-                EpochConfiguration epochConfig = { 1, 0, minibatchSizeInSamples, m_epochSize, 0, 0 };
+                EpochConfiguration epochConfig;
+                epochConfig.m_numberOfWorkers = 1;
+                epochConfig.m_workerRank = 0;
+                epochConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
+                epochConfig.m_truncationSize = m_truncationLength;
 
-                std::map<std::wstring, int> requiredStreams;
+                epochConfig.m_totalEpochSizeInSamples = m_epochSize;
+                epochConfig.m_epochIndex = 0;
+                m_matrices.clear();
+
+                std::unordered_set<InputStreamDescription> inputs;
                 for (const auto& s : m_streamInfos)
-                    // Allocating all on CPU for now.
-                    requiredStreams[s.m_name] = CPUDEVICE;
+                {
+                    auto inputStreamDescription = GetInputStreamDescription(s, device);
+                    inputs.insert(inputStreamDescription);
 
-                m_compositeDataReader->StartEpoch(epochConfig, requiredStreams);
+                    if (s.m_elementType == DataType::Float)
+                    {
+                        auto iter = std::find_if(m_compositeDataReaderStreamDescs.begin(), m_compositeDataReaderStreamDescs.end(), [s](StreamDescriptionPtr& streamInfo) {
+                            return streamInfo->m_id == s.m_id;
+                        });
+                        assert(iter != m_compositeDataReaderStreamDescs.end());
+
+                        m_matrices.AddInput(
+                            s.m_name,
+                            std::make_shared<Matrix<float>>(0, 0, inputStreamDescription.GetDeviceId(), inputStreamDescription.GetMatrixType(), inputStreamDescription.GetMatrixFormat()),
+                            std::make_shared<MBLayout>(),
+                            *(*iter)->m_sampleLayout);
+                    }
+                    else
+                        LogicError("Input data of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
+                }
+
+                m_shim->StartEpoch(epochConfig, inputs);
                 m_prevMinibatchSize = minibatchSizeInSamples;
             }
 
             if (minibatchSizeInSamples != m_prevMinibatchSize)
-                LogicError("GetNextMinibatch: Changing minibatch sizes across calls is currently unsupported");
-
-            auto compositeReaderMinibatchData = m_compositeDataReader->ReadMinibatch();
-            m_epochEndReached = compositeReaderMinibatchData.m_endOfEpoch;
-
-            auto& streamInfos = StreamInfos();
-            auto compositeDataReaderStreamDescs = m_compositeDataReader->GetStreamDescriptions();
-            size_t numStreams = compositeDataReaderStreamDescs.size();
-            for (size_t i = 0; i < numStreams; ++i)
             {
-                auto currentStreamDesc = compositeDataReaderStreamDescs[i];
-                auto iter = std::find_if(streamInfos.begin(), streamInfos.end(), [currentStreamDesc](const StreamInformation& streamInfo) {
-                    return streamInfo.m_id == currentStreamDesc->m_id;
-                });
+                std::map<std::wstring, int> inputDescriptions;
+                for (const auto& s : m_streamInfos)
+                    inputDescriptions[s.m_name] = AsCNTKImplDeviceId(device);
 
-                if (iter == streamInfos.end())
-                    continue;
+                // TODO: Add support for distributed reading
+                ReaderConfiguration newConfig;
+                newConfig.m_numberOfWorkers = 1;
+                newConfig.m_workerRank = 0;
+                newConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
+                newConfig.m_truncationSize = m_truncationLength;
 
-                auto& currentStreamInfo = *iter;
-                auto sampleShape = AsNDShape(*(currentStreamDesc->m_sampleLayout));
+                m_shim->SetConfiguration(newConfig, inputDescriptions);
+                m_prevMinibatchSize = minibatchSizeInSamples;
+            }
+
+            auto compositeReaderMinibatchDataEmpty = m_shim->GetMinibatch(m_matrices);
+            m_epochEndReached = m_shim->IsEndOfEpoch();
+
+            for (const auto& s: m_streamInfos)
+            {
+                auto input = m_matrices.GetInput(s.m_name);
+                auto& currentStreamInfo = s;
 
                 ValuePtr minibatchValuePtr;
-                if (compositeReaderMinibatchData.m_data.empty())
+                if (!compositeReaderMinibatchDataEmpty)
                 {
-                    minibatchValuePtr = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(currentStreamInfo.m_elementType, sampleShape.AppendShape({ 0, 0 }), DeviceDescriptor::CPUDevice()));
+                    minibatchValuePtr = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(currentStreamInfo.m_elementType, s.m_sampleLayout.AppendShape({ 0, 0 }), DeviceDescriptor::CPUDevice()));
                     continue;
                 }
 
-                auto currentStreamMinibatchData = compositeReaderMinibatchData.m_data[i];
-                if (currentStreamDesc->m_elementType == ElementType::tfloat)
+                if (s.m_elementType == DataType::Float)
                 {
-                    auto CNTKMatrixType = (currentStreamDesc->m_storageType == StorageType::dense) ? DENSE : SPARSE;
-                    auto CNTKMatrixFormat = (currentStreamDesc->m_storageType == StorageType::dense) ? matrixFormatDense : matrixFormatSparseCSC;
-                    auto dataMatrix = std::make_shared<Matrix<float>>(0, 0, CPUDEVICE, CNTKMatrixType, CNTKMatrixFormat);
-                    size_t sampleSize = currentStreamDesc->m_sampleLayout->GetNumElements();
+                    auto matrixType = (s.m_storageFormat == StorageFormat::Dense) ? DENSE : SPARSE;
+                    auto matrixFormat = (s.m_storageFormat == StorageFormat::Dense) ? matrixFormatDense : matrixFormatSparseCSC;
+                    // Can we reuse this, not allocating it each time?
+                    auto dataMatrix = std::make_shared<Matrix<float>>(0, 0, input.GetMatrix<float>().GetDeviceId(), matrixType, matrixFormat);
 
-                    // TODO: Eliminate the unnecessary CPU to CPU copy
-                    ReaderShim<float>::FillMatrixFromStream(currentStreamDesc->m_storageType, dataMatrix.get(), sampleSize, currentStreamMinibatchData, nullptr);
-                    minibatchValuePtr = CompositeFunction::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(sampleShape, *dataMatrix, currentStreamMinibatchData->m_layout, false);
+                    std::swap(*dataMatrix, input.GetMatrix<float>());
+                    minibatchValuePtr = MakeSharedObject<PackedValue>(s.m_sampleLayout, dataMatrix, input.pMBLayout, /*readOnly =*/ false);
 
-                    size_t numSamples = currentStreamMinibatchData->m_layout->GetActualNumSamples();
-                    size_t numSequences = currentStreamMinibatchData->m_layout->GetNumSequences();
+                    size_t numSamples = input.pMBLayout->GetActualNumSamples();
+                    size_t numSequences = input.pMBLayout->GetNumSequences();
 
                     m_minibatchData[currentStreamInfo] = { numSequences, numSamples, minibatchValuePtr };
                 }
@@ -210,5 +259,19 @@ namespace CNTK
         }
 
         return m_minibatchData;
+    }
+
+    /*virtual*/ Dictionary CompositeMinibatchSource::GetCheckpointState() const /*override*/
+    {
+        Dictionary checkpointState;
+        checkpointState[MinibatchSourcePositionAttributeName] = m_shim->GetCurrentSamplePosition();
+
+        return checkpointState;
+    }
+
+    /*virtual*/ void CompositeMinibatchSource::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
+    {
+        auto checkpointedMinibatchSourcePosition = checkpoint[MinibatchSourcePositionAttributeName].Value<size_t>();
+        m_shim->SetCurrentSamplePosition(checkpointedMinibatchSourcePosition);
     }
 }

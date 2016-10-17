@@ -63,6 +63,9 @@ public:
         return m_deserializer->GetStreamDescriptions();
     }
 
+    // Returns current position in the global timeline. The returned value is in samples.
+    size_t GetCurrentSamplePosition() override;
+
     ~BlockRandomizer()
     {
         if (m_prefetch.valid())
@@ -70,6 +73,10 @@ public:
             m_prefetch.wait();
         }
     }
+
+    void SetCurrentSamplePosition(size_t currentSamplePosition) override;
+
+    void SetConfiguration(const ReaderConfiguration& config) override;
 
 private:
     // Load data for chunks if needed.

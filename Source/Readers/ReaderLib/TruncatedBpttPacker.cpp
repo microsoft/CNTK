@@ -6,6 +6,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 
+#include <cmath>
 #include <deque>
 #include "TruncatedBpttPacker.h"
 #include "ElementTypeUtils.h"
@@ -128,9 +129,9 @@ TruncatedBPTTPacker::TruncatedBPTTPacker(
     }
 }
 
-void TruncatedBPTTPacker::StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
+void TruncatedBPTTPacker::SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
 {
-    PackerBase::StartEpoch(config, memoryProviders);
+    PackerBase::SetConfiguration(config, memoryProviders);
 
     if (m_minibatchSize != config.m_minibatchSizeInSamples ||
         m_truncationSize != config.m_truncationSize)
@@ -148,7 +149,7 @@ void TruncatedBPTTPacker::StartEpoch(const EpochConfiguration& config, const std
         }
 
         // Estimating the number of parallel sequences to pack (slots) from the minibatch size and truncation size.
-        m_numParallelSequences = max(1, (int)floor(m_minibatchSize / m_truncationSize));
+        m_numParallelSequences = max(1, static_cast<int>(std::floor(m_minibatchSize / m_truncationSize)));
 
         if (config.m_numberOfWorkers > m_numParallelSequences)
         {

@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include "Common.h"
 #include <string>
@@ -69,12 +73,14 @@ NDArrayViewPtr CreateNDArrayView()
 {
     auto numAxes = (rng() % maxNumAxes) + 1;
     auto device = DeviceDescriptor::CPUDevice();
-#ifndef CPUONLY
-    if (rng() % 2 == 0)
+
+    if (IsGPUAvailable())
     {
-        device = DeviceDescriptor::GPUDevice(0);
+        if (rng() % 2 == 0)
+        {
+            device = DeviceDescriptor::GPUDevice(0);
+        }
     }
-#endif
 
     return (rng() % 2 == 0) ? 
         CreateNDArrayView<float>(numAxes, device) : CreateNDArrayView<double>(numAxes, device);
@@ -86,6 +92,8 @@ DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t depth)
     {
     case DictionaryValue::Type::Bool:
         return DictionaryValue(!!(rng() % 2));
+    case DictionaryValue::Type::Int:
+        return DictionaryValue(rng());
     case DictionaryValue::Type::SizeT:
         return DictionaryValue(rng());
     case DictionaryValue::Type::Float:
@@ -208,8 +216,65 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
         throw std::runtime_error("TestLearnerSerialization: original and restored from a checkpoint learners diverge.");
 }
 
+void TestModelSaving(const DeviceDescriptor& device)
+{
+    const size_t inputDim = 2000;
+    const size_t cellDim = 25;
+    const size_t hiddenDim = 25;
+    const size_t embeddingDim = 50;
+    const size_t numOutputClasses = 5;
+
+    auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, L"features");
+    auto classifierOutput = LSTMSequenceClassiferNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
+
+    auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels", { Axis::DefaultBatchAxis() });
+    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
+    auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
+
+    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { L"features", inputDim, true, L"x" }, { L"labels", numOutputClasses, false, L"y" } }, 0);
+    auto featureStreamInfo = minibatchSource->StreamInfo(features);
+    auto labelStreamInfo = minibatchSource->StreamInfo(labels);
+
+    const size_t minibatchSize = 200;
+    auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+    auto actualMBSize = minibatchData[labelStreamInfo].m_numSamples;
+
+    LearningRatesPerSample learningRateSchedule({ { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
+    auto learner = SGDLearner(classifierOutput->Parameters(), learningRateSchedule);
+    Trainer trainer(classifierOutput, trainingLoss, prediction, { learner });
+
+    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+
+    const wchar_t* modelFile = L"seq2seq.model";
+    SaveAsLegacyModel(classifierOutput, modelFile);
+
+    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    auto MB2Loss = trainer.PreviousMinibatchLossAverage();
+    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+
+    classifierOutput->RestoreFromLegacyModel(modelFile);
+
+    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    auto postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
+    FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
+
+    classifierOutput->RestoreFromLegacyModel(modelFile);
+    SaveAsLegacyModel(classifierOutput, modelFile);
+
+    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+
+    classifierOutput->RestoreFromLegacyModel(modelFile);
+
+    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
+    FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
+}
+
 void SerializationTests()
 {
+    fprintf(stderr, "\nSerializationTests..\n");
+
     TestDictionarySerialization(4);
     TestDictionarySerialization(8);
     TestDictionarySerialization(16);
@@ -217,8 +282,12 @@ void SerializationTests()
     TestLearnerSerialization<float>(5, DeviceDescriptor::CPUDevice());
     TestLearnerSerialization<double>(10, DeviceDescriptor::CPUDevice());
 
-#ifndef CPUONLY
-    TestLearnerSerialization<float>(5, DeviceDescriptor::GPUDevice(0));
-    TestLearnerSerialization<double>(10, DeviceDescriptor::GPUDevice(0));;
-#endif
+    if (IsGPUAvailable())
+    {
+        TestLearnerSerialization<float>(5, DeviceDescriptor::GPUDevice(0));
+        TestLearnerSerialization<double>(10, DeviceDescriptor::GPUDevice(0));
+        TestModelSaving(DeviceDescriptor::GPUDevice(0));
+    }
+
+    TestModelSaving(DeviceDescriptor::CPUDevice());
 }

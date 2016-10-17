@@ -30,11 +30,14 @@ namespace CNTK
         if (varOwner)
             return CompositeFunction::Create(varOwner, varOwner->Name());
         else
-            return Internal::Combine({ *this });
+            return Combine({ *this });
     }
 
     NDArrayViewPtr Variable::Value() const
     {
+        if (!IsConstant() && !IsParameter())
+            LogicError("Only Variables of kind Parameter and Constant have a Value!");
+
         if (m_dataFields->m_value == nullptr)
         {
             assert(m_dataFields->m_valueInitializer);
@@ -56,6 +59,9 @@ namespace CNTK
                 LogicError("Unsupported DataType %s", DataTypeName(GetDataType()));
                 break;
             }
+
+            m_dataFields->m_valueInitializer = nullptr;
+            m_dataFields->m_valueInitializationDevice = nullptr;
         }
 
         assert(m_dataFields->m_value != nullptr);
@@ -65,19 +71,49 @@ namespace CNTK
     static const std::wstring InitializerTypeAttributeName = L"initializerType";
     static const std::wstring OutputRankAttributeName = L"outputRank";
     static const std::wstring FilterRankAttributeName = L"filterRank";
+    static const std::wstring ValueAttributeName = L"value";
     static const std::wstring ScaleAttributeName = L"scale";
     static const std::wstring RandomSeedAttributeName = L"randomSeed";
     static const std::wstring KernelWidthAttributeName = L"kernelWidth";
     static const std::wstring KernelHeightAttributeName = L"kernelHeight";
 
-    ParameterInitializer UniformInitializer(double scale, unsigned long seed)
+    void Variable::VariableFields::SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device)
     {
-        Dictionary initConfig;
-        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::UniformInitializerTypeName;
-        initConfig[ScaleAttributeName] = scale;
-        initConfig[RandomSeedAttributeName] = (size_t)seed;
+        if (m_value != nullptr)
+            LogicError("Value initialization config cannot be set if a value already exists");
 
-        return initConfig;
+        assert(!m_valueInitializer);
+        assert(!m_valueInitializationDevice);
+
+        if (initializationConfig.Contains(FilterRankAttributeName))
+        {
+            auto filterRank = (int)initializationConfig[FilterRankAttributeName].Value<size_t>();
+            auto outputRank = (int)initializationConfig[OutputRankAttributeName].Value<size_t>();
+            if ((filterRank + outputRank) > m_shape.Rank())
+                InvalidArgument("Sum of filter rank (%d) and output rank (%d) of the parameter initializer cannot exceed the Parameter's rank(%d)", filterRank, outputRank, (int)m_shape.Rank());
+        }
+
+        m_valueInitializer.reset(new ParameterInitializer(initializationConfig));
+        m_valueInitializationDevice.reset(new DeviceDescriptor(device));
+    }
+
+    namespace Internal
+    {
+        static std::atomic<unsigned long> s_fixedRandomSeed(0);
+        void SetFixedRandomSeed(unsigned long fixedRandomSeed)
+        {
+            s_fixedRandomSeed.store(fixedRandomSeed);
+        }
+    }
+
+    static std::atomic<unsigned long> s_currentRandomSeed(1);
+    unsigned long DefaultRandomSeed()
+    {
+        auto currentFixedRandomSeed = Internal::s_fixedRandomSeed.load();
+        if (currentFixedRandomSeed != 0)
+            return currentFixedRandomSeed;
+
+        return s_currentRandomSeed++;
     }
 
     static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, int outputRank, int filterRank, double scale, unsigned long seed)
@@ -86,6 +122,25 @@ namespace CNTK
         initConfig[InitializerTypeAttributeName] = initializerTypeName;
         initConfig[OutputRankAttributeName] = (size_t)outputRank;
         initConfig[FilterRankAttributeName] = (size_t)filterRank;
+        initConfig[ScaleAttributeName] = scale;
+        initConfig[RandomSeedAttributeName] = (size_t)seed;
+
+        return initConfig;
+    }
+
+    ParameterInitializer ConstantInitializer(double value)
+    {
+        Dictionary initConfig;
+        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::ConstantInitializerTypeName;
+        initConfig[ValueAttributeName] = value;
+
+        return initConfig;
+    }
+
+    ParameterInitializer UniformInitializer(double scale, unsigned long seed)
+    {
+        Dictionary initConfig;
+        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::UniformInitializerTypeName;
         initConfig[ScaleAttributeName] = scale;
         initConfig[RandomSeedAttributeName] = (size_t)seed;
 
@@ -132,6 +187,10 @@ namespace CNTK
         return initConfig;
     }
 
+    Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
+        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, name, uid))
+    {}
+
     template <typename ElementType>
     /*static*/ NDArrayViewPtr Variable::CreateValueFromParameterInitializer(const NDShape& shape, const ParameterInitializer& initConfig, const DeviceDescriptor& device)
     {
@@ -139,7 +198,12 @@ namespace CNTK
         auto value = MakeSharedObject<NDArrayView>(dataType, shape, device);
         auto valueMatrix = value->template GetWritableMatrix<ElementType>();
         auto initializerType = initConfig[InitializerTypeAttributeName].Value<std::wstring>();
-        if (initializerType == Microsoft::MSR::CNTK::BilinearInitializerTypeName)
+        if (initializerType == Microsoft::MSR::CNTK::ConstantInitializerTypeName)
+        {
+            auto constantInitValue = initConfig[ValueAttributeName].Value<double>();
+            valueMatrix->SetValue((ElementType)constantInitValue);
+        }
+        else if (initializerType == Microsoft::MSR::CNTK::BilinearInitializerTypeName)
         {
             auto kernelWidth = initConfig[KernelWidthAttributeName].Value<size_t>();
             auto kernelHeight = initConfig[KernelHeightAttributeName].Value<size_t>();

@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
@@ -20,7 +24,7 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
 
     auto featureStreamName = L"features";
     auto labelsStreamName = L"labels";
-    auto minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } }, 0);
+    auto minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } }, 0, false);
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
@@ -123,8 +127,11 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
 
 void TrainerTests()
 {
+    fprintf(stderr, "\nTrainerTests..\n");
+
     TrainSimpleFeedForwardClassifer(DeviceDescriptor::CPUDevice());
-#ifndef CPUONLY
-    TrainMNISTClassifier(DeviceDescriptor::GPUDevice(0));
-#endif
+    if (IsGPUAvailable())
+    {
+        TrainMNISTClassifier(DeviceDescriptor::GPUDevice(0));
+    }
 }

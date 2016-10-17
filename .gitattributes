@@ -32,6 +32,7 @@ Readme text
 *.pl text
 *.ps1 text
 *.ps text
+*.i text
 
 *.sh text eol=lf
 build-and-test text eol=lf
@@ -57,6 +58,7 @@ Makefile text
 *.vssettings text
 *.csproj text
 *.props text
+*.asax text
 
 *.h text
 *.cpp text
@@ -80,6 +82,8 @@ Makefile text
 *.list text
 
 *.log text
+
+Dockerfile. text
 
 # Speech data
 mean.363 text

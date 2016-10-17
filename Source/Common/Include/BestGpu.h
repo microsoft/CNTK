@@ -48,11 +48,28 @@ class ConfigParameters;
 DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config);
 DEVICEID_TYPE DeviceFromConfig(const ScriptableObjects::IConfigRecord& config);
 
+// Returns an id of the best available (not exclusively locked) GPU device,
+// if no GPU is available, defaults to the CPU device. Additionally, it acquires
+// a lock on the selected GPU device.
+DEVICEID_TYPE GetBestDevice();
+
+// Releases previously held lock on the best GPU device, if the specified device id
+// is different from the best GPU id.
+void OnDeviceSelected(DEVICEID_TYPE deviceId);
+
 #else
+
+static inline DEVICEID_TYPE GetBestDevice()
+{
+    return CPUDEVICE;
+}
+
+static inline void OnDeviceSelected(DEVICEID_TYPE) {}
+
 template <class ConfigRecordType>
 static inline DEVICEID_TYPE DeviceFromConfig(const ConfigRecordType& /*config*/)
 {
-    return -1 /*CPUDEVICE*/;
+    return CPUDEVICE;
 } // tells runtime system to not try to use GPUs
 // TODO: find a way to use CPUDEVICE without a huge include overhead; OK so far since CPUONLY mode is sorta special...
 #endif

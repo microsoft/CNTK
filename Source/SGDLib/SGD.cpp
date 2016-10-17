@@ -153,6 +153,19 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
     }
 
+    // This code is only relevant for the new (V2) readers. It exist because of
+    // a shortcoming in DecimateMinibatchInPlace, which does not yet work when inputs 
+    // in the same minibatch have different layouts, which is something only V2 readers can
+    // produce. 
+    if (m_enableDistributedMBReadingNotSpecified && m_mpi != nullptr && !trainSetDataReader->IsLegacyReader())
+    {
+        // we're running a parallel training with a v2 reader, 
+        // auto-enable distributed reading
+        if (m_traceLevel > 0)
+            LOGPRINTF(stderr, "\"distributedMBReading\" is not explicitly specified, defaulting to 'true'.\n");
+        m_enableDistributedMBReading = true;
+    }
+
     // determine evaluationNodes from GetEvalCriterionNodes(), ensuring each criterion is only logged once
     std::vector<ComputationNodeBasePtr> evaluationNodes;
     {
@@ -345,6 +358,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                      /*out*/ totalTrainingSamplesSeen,
                                                      /*out*/ learnRatePerSample,
                                                      smoothedGradients,
+                                                     smoothedCounts,
                                                      /*out*/ prevCriterion,
                                                      /*out*/ m_prevChosenMinibatchSize);
         if (learnRateInitialized)
@@ -404,8 +418,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // set dropout rate for this epoch
         // We use the same seed across workers until parallel training kicks in to ensure that the workers have identical models
         size_t parallelWorkerIdx = ((m_mpi == nullptr) || !UsingParallelTrain(i)) ? 0 : m_mpi->CurrentNodeRank();
-        size_t dropoutRandSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
-        ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate, dropoutRandSeedBase);
+        size_t randSeedBase = (parallelWorkerIdx * m_maxEpochs) + i;
+        ComputationNetwork::SetDropoutRate<ElemType>(net, criterionNodes[0], m_dropoutRates[i], prevDropoutRate);
+        ComputationNetwork::SetIRngUserSeed<ElemType>(net, criterionNodes[0], randSeedBase);
         ComputationNetwork::SetBatchNormalizationTimeConstants<ElemType>(net, criterionNodes[0], 
                                                                          m_batchNormalizationTimeConstant[i], prevNormalizationTimeConstant,
                                                                          m_batchNormalizationBlendTimeConstant[i], prevNormalizationBlendTimeConstant);
@@ -619,6 +634,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                        /*out*/ totalTrainingSamplesSeen,
                                        /*out*/ learnRatePerSample,
                                        smoothedGradients,
+                                       smoothedCounts,
                                        /*out*/ prevCriterion,
                                        /*out*/ m_prevChosenMinibatchSize);
                     loadedPrevModel = true;
@@ -709,11 +725,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 // Set i back to the loaded model
                 i -= m_learnRateAdjustInterval;
                 LOGPRINTF(stderr, "SGD: revoke back to and update checkpoint file for epoch %d\n", i+1); // report 1 based epoch number
-                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
+                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, chosenMinibatchSize);
             }
             else
             {
-                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, chosenMinibatchSize);
+                SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, chosenMinibatchSize);
                 auto modelName = GetModelNameForEpoch(i);
                 if (m_traceLevel > 0)
                     LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
@@ -1412,19 +1428,12 @@ static double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
     return pow(momentumPerSample, minibatchSize);
 }
 
-// Get{Train,Eval}CriterionNodes() return a reference that is, unfortunately, dependent on the network.
-// So we hold those inside here. Not very nice. Also not thread-safe. This may go away once we fix sequence-to-sequence models properly.
-// TODO: merge them into one.
-static map<ComputationNetworkPtr, vector<ComputationNodeBasePtr>> tmpCriterionNodeSets;
-// TODO: test this, then remove this comment
-
 template <class ElemType>
 const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetTrainCriterionNodes(ComputationNetworkPtr net)
 {
     if (!m_trainCriterionNodeName.empty())
     {
-        tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_trainCriterionNodeName);
-        return tmpCriterionNodeSets[net];
+        return net->CriterionNodesFrom(m_trainCriterionNodeName);
     }
     else
         return net->FinalCriterionNodes();
@@ -1435,8 +1444,7 @@ const std::vector<ComputationNodeBasePtr>& SGD<ElemType>::GetEvalCriterionNodes(
 {
     if (!m_evalCriterionNodeName.empty())
     {
-        tmpCriterionNodeSets[net] = net->CriterionNodesFrom(m_evalCriterionNodeName);
-        return tmpCriterionNodeSets[net];
+        return net->CriterionNodesFrom(m_evalCriterionNodeName);
     }
     else
         return net->EvaluationNodes();
@@ -1557,6 +1565,7 @@ double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
                        /*out*/ dummyTotalTrainingSamplesSeen,
                        /*out*/ learnRate,
                        smoothedGradients,
+                       smoothedCounts,
                        /*out*/ prevCriterion,
                        /*out*/ dummyMinibatchSize);
 
@@ -1926,6 +1935,7 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
                        /*out*/ dummyTotalTrainingSamplesSeen,
                        /*out*/ dummyLearnRate,
                        smoothedGradients,
+                       smoothedCounts,
                        /*out*/ dummyPrevCriterion,
                        /*out*/ dummyMinibatchSize);
 }
@@ -2137,6 +2147,7 @@ template <class ElemType>
 void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSamplesSeen,
                                        const double learnRatePerSample,
                                        const std::list<Matrix<ElemType>>& smoothedGradients,
+                                       const std::vector<double>& smoothedCounts,
                                        const double prevCriterion,
                                        const size_t minibatchSize)
 {
@@ -2174,6 +2185,13 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
 
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"BCount");
+
+            for (auto sc : smoothedCounts)
+                fstream << sc;
+
+            fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECount");
+
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"ECKP");
             if (m_pMASGDHelper)
                 m_pMASGDHelper->SaveToCheckPoint(fstream);
@@ -2191,6 +2209,7 @@ bool SGD<ElemType>::TryLoadCheckPointInfo(const size_t epochNumber,
                                           /*out*/ size_t& totalSamplesSeen,
                                           /*out*/ double& learnRatePerSample,
                                           std::list<Matrix<ElemType>>& smoothedGradients,
+                                          std::vector<double>& smoothedCounts,
                                           /*out*/ double& prevCriterion,
                                           /*out*/ size_t& minibatchSize)
 {
@@ -2210,7 +2229,7 @@ bool SGD<ElemType>::TryLoadCheckPointInfo(const size_t epochNumber,
         return false;
     }
 
-    LoadCheckPointInfo(epochNumber, totalSamplesSeen, learnRatePerSample, smoothedGradients, prevCriterion, minibatchSize);
+    LoadCheckPointInfo(epochNumber, totalSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, minibatchSize);
     return true;
 }
 
@@ -2219,6 +2238,7 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
                                        /*out*/ size_t& totalSamplesSeen,
                                        /*out*/ double& learnRatePerSample,
                                        std::list<Matrix<ElemType>>& smoothedGradients,
+                                       std::vector<double>& smoothedCounts,
                                        /*out*/ double& prevCriterion,
                                        /*out*/ size_t& minibatchSize)
 {
@@ -2259,6 +2279,15 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
         fstream >> smoothedGradient;
     }
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
+
+    if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BCount"))
+    {
+        for (auto& sc : smoothedCounts)
+            fstream >> sc;
+        fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECount");
+    }
+    else // deal with legacy checkpoints
+        std::fill(smoothedCounts.begin(), smoothedCounts.end(), static_cast<double>(minibatchSize));
 
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECKP");
 
@@ -2733,6 +2762,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
         if (m_parallelizationStartEpochNum < 0 /* sic */)
             // Be explicit that user-facing epoch numbers are 1-based
             InvalidArgument("parallelizationStartEpoch must be greater or equal to 1");
+        m_enableDistributedMBReadingNotSpecified = !configParallelTrain.Exists(L"distributedMBReading");
         m_enableDistributedMBReading = configParallelTrain(L"distributedMBReading", false);
         m_syncStatsTrace = configParallelTrain(L"syncPerfStats", (int) 0);
 

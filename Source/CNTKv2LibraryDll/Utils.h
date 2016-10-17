@@ -32,7 +32,7 @@ namespace CNTK
     inline DEVICEID_TYPE AsCNTKImplDeviceId(const DeviceDescriptor& device)
     {
         if (device.Type() == DeviceKind::CPU)
-            return -1;
+            return CPUDEVICE;
         else if (device.Type() == DeviceKind::GPU)
             return device.Id();
         else
@@ -74,13 +74,13 @@ namespace CNTK
     inline NDShape AsNDShape(const Microsoft::MSR::CNTK::TensorShape& tensorShape, bool allowNonFlattenableTensorShapes = false)
     {
         if (!allowNonFlattenableTensorShapes)
+    {
+        // The TensorShape should be flattenable to 1D
+        for (size_t i = 1; i < tensorShape.GetRank(); ++i)
         {
-            // The TensorShape should be flattenable to 1D
-            for (size_t i = 1; i < tensorShape.GetRank(); ++i)
-            {
-                if (!tensorShape.CanFlatten(i))
-                    InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
-            }
+            if (!tensorShape.CanFlatten(i))
+                InvalidArgument("AsNDShape() can only be called for TensorShapes that can be flattened to 1D");
+        }
         }
 
         return std::vector<size_t>(tensorShape.GetDims().begin(), tensorShape.GetDims().end());
@@ -193,6 +193,9 @@ namespace CNTK
         case DictionaryValue::Type::String:
             s << value.Value<std::wstring>();
             break;
+        case DictionaryValue::Type::Int:
+            s << value.Value<int>();
+            break;
         case DictionaryValue::Type::SizeT:
             s << value.Value<size_t>();
             break;
@@ -304,16 +307,20 @@ namespace CNTK
         }
     }
 
-    inline Axis AsAxis(size_t CNTKInternalAxisIdx)
+    static size_t const CNTKInternalIdxValueForAllStaticAxes = 0;
+    inline Axis AsAxis(int CNTKInternalAxisIdx)
     {
-        if (CNTKInternalAxisIdx == 0)
-            LogicError("CNTK internal axis indices must be > 0");
+        if (CNTKInternalAxisIdx == CNTKInternalIdxValueForAllStaticAxes)
+            return Axis::AllStaticAxes();
 
         return Axis(CNTKInternalAxisIdx - 1);
     }
 
     inline int AsCNTKInternalAxisIdx(const Axis& axis)
     {
+        if (axis == Axis::AllStaticAxes())
+            return CNTKInternalIdxValueForAllStaticAxes;
+
         if (!axis.IsStaticAxis())
             LogicError("Only Axis that represent static indices can be converted to a CNTK internal axis index");
 
@@ -322,19 +329,16 @@ namespace CNTK
 
     inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape)
     {
-        auto outputMapCount = convolutionMapShape.SubShape(0, convolutionMapShape.Rank() - operandShape.Rank());
+        NDShape kernelShape = convolutionMapShape.SubShape(0, operandShape.Rank());
+        auto outputMapCount = convolutionMapShape.SubShape(kernelShape.Rank());
         NDShape paddedOutputMapCount(operandShape.Rank(), 1);
         for (size_t i = 0; i < outputMapCount.Rank(); ++i)
             paddedOutputMapCount[paddedOutputMapCount.Rank() - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
-        //for (size_t i = 0; i < outputMapCount.Rank(); ++i)
-        //    paddedOutputMapCount[i] = outputMapCount[i];
-
-        NDShape kernelShape = convolutionMapShape.SubShape(outputMapCount.Rank());
 
         return{ paddedOutputMapCount, kernelShape };
     }
 
-    inline double MomentumPerMB(double momentumPerSample, size_t minibatchSize)
+    inline double MomentumValueForMB(double momentumPerSample, size_t minibatchSize)
     {
         return std::pow(momentumPerSample, minibatchSize);
     }
@@ -368,5 +372,111 @@ namespace CNTK
         // Cast to double
         double* castValue = Copy<float, double>(source->DataBuffer<float>(), sourceSize);
         return MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
+    }
+
+    inline std::wstring ParanthesizedName(const std::wstring& name)
+    {
+        if (name.empty())
+            return name;
+
+        return L"(" + name + L")";
+    }
+
+    static const std::wstring UidPrefix = L"__v2libuid__";
+    static const std::wstring NamePrefix = L"__v2libname__";
+
+    inline std::wstring CNTKInternalNodeNameFromUidAndName(const std::wstring& uid, const std::wstring& name)
+    {
+        return UidPrefix + uid + NamePrefix + name;
+    }
+
+    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName)
+    {
+        std::wstring uid, name;
+        auto uidPrefixBeginPos = CNTKInternalNodeName.find(UidPrefix);
+        if (uidPrefixBeginPos != std::wstring::npos)
+        {
+            auto uidBeginPos = uidPrefixBeginPos + UidPrefix.length();
+            auto namePrefixBeginPos = CNTKInternalNodeName.find(NamePrefix, uidBeginPos);
+            if (namePrefixBeginPos == std::wstring::npos)
+                LogicError("CNTK internal node name found to contain uid but not name!");
+
+            auto nameBeginPos = namePrefixBeginPos + NamePrefix.length();
+            uid = CNTKInternalNodeName.substr(uidBeginPos, namePrefixBeginPos - uidBeginPos);
+            name = CNTKInternalNodeName.substr(nameBeginPos);
+        }
+
+        return{ uid, name };
+    }
+
+    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, VariableKind varKind)
+    {
+        std::wstring uid, name;
+        std::tie(uid, name) = UidAndNameFromCNTKInternalNodeName(CNTKInternalNodeName);
+        if (uid == L"")
+        {
+            name = CNTKInternalNodeName;
+            uid = Internal::GenerateUid(varKind);
+        }
+
+        return{ uid, name };
+    }
+
+    std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, const PrimitiveOpType& opType);
+
+    inline std::vector<Axis> GetDerivedDynamicAxes(const Axis& sourceAxis, size_t multiplicativeFactor, int additiveFactor)
+    {
+        if (sourceAxis.IsStaticAxis())
+            LogicError("Static axes cannot be derived from to create new dynamic axes!");
+
+        if ((multiplicativeFactor == 0) && (additiveFactor == 0))
+            LogicError("Zero size dynamic axes are not allowed!");
+
+        // If we slice off exactly one frame off of the source axis, then we effectively delete this axis
+        if ((multiplicativeFactor == 0) && (additiveFactor == 1))
+            return {};
+
+        if ((multiplicativeFactor == 1) && (additiveFactor == 0))
+            return {sourceAxis};
+
+        std::wstring derivedDynamicAxisName = sourceAxis.Name();
+        if (multiplicativeFactor > 0)
+        {
+            derivedDynamicAxisName += L"_times_" + std::to_wstring(multiplicativeFactor);
+            if (additiveFactor > 0)
+                derivedDynamicAxisName += L"_plus_" + std::to_wstring(additiveFactor);
+            else
+                derivedDynamicAxisName += L"_minus_" + std::to_wstring(-additiveFactor);
+        }
+        else
+        {
+            assert(additiveFactor > 0);
+            derivedDynamicAxisName += L"_fixedSliceOf_" + std::to_wstring(additiveFactor);
+        }
+
+        return{ Axis(derivedDynamicAxisName, sourceAxis.IsOrdered()) };
+    }
+
+    inline Axis& NormalizeStaticAxis(Axis& axis, const NDShape& operandShape)
+    {
+        if (axis != Axis::AllStaticAxes())
+        {
+            assert(axis.IsStaticAxis());
+            assert(operandShape != NDShape::Unknown);
+
+            if (axis.StaticAxisIndex() < 0)
+                axis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
+        }
+
+        return axis;
+    }
+
+    inline void VerifyStaticAxis(const Axis& axis, const NDShape& operandShape)
+    {
+        assert(axis.IsStaticAxis());
+        assert(axis.StaticAxisIndex() >= 0);
+
+        if (axis.StaticAxisIndex() >= (int)operandShape.Rank())
+            InvalidArgument("The specified axis index (%d) exceeds the static #axes (%d) of the corresponding operand", (int)axis.StaticAxisIndex(), (int)operandShape.Rank());
     }
 }
