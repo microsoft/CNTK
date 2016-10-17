@@ -25,7 +25,7 @@ from cntk.initializer import glorot_uniform
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 # TODO: move these out from examples
-from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_value, print_training_progress, negate
+#from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_value, print_training_progress, negate
 
 from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
