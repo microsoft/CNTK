@@ -129,9 +129,9 @@ TruncatedBPTTPacker::TruncatedBPTTPacker(
     }
 }
 
-void TruncatedBPTTPacker::StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
+void TruncatedBPTTPacker::SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
 {
-    PackerBase::StartEpoch(config, memoryProviders);
+    PackerBase::SetConfiguration(config, memoryProviders);
 
     if (m_minibatchSize != config.m_minibatchSizeInSamples ||
         m_truncationSize != config.m_truncationSize)

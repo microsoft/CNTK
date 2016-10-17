@@ -5,6 +5,10 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
@@ -102,12 +106,14 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
       <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</BrowseInformation>
     </ClCompile>
     <CudaCompile>
       <HostDebugInfo>false</HostDebugInfo>
     </CudaCompile>
     <Bscmake>
       <PreserveSbr Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</PreserveSbr>
+      <PreserveSbr Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</PreserveSbr>
     </Bscmake>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -152,7 +158,9 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     </CudaCompile>
     <CudaCompile Include="GPUTensor.cu">
       <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</InterleaveSourceInPTX>
+      <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</InterleaveSourceInPTX>
       <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
+      <Keep Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</Keep>
       <FileType>CppCode</FileType>
     </CudaCompile>
     <CudaCompile Include="cudalatticeops.cu">
@@ -187,7 +195,9 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <CudaCompile Include="GPUMatrix.cu">
       <FileType>CppCode</FileType>
       <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
+      <Keep Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</Keep>
       <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</InterleaveSourceInPTX>
+      <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">false</InterleaveSourceInPTX>
     </CudaCompile>
     <CudaCompile Include="GPUMatrixCUDAKernels.cuh">
       <ExcludedFromBuild>true</ExcludedFromBuild>

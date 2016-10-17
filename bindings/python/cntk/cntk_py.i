@@ -16,8 +16,10 @@
 %rename(_backward) CNTK::Function::Backward;
 %rename(sgd_learner) CNTK::SGDLearner;
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
+%rename(momentums_as_time_constants) CNTK::MomentumValuesAsTimeConstants;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
 %rename(cpu_device) CNTK::DeviceDescriptor::CPUDevice;
+%rename(times_transpose) CNTK::TransposeTimes;
 
 // if we don't except RandomUniform the corresponding template functions will not be generated
 %rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";
@@ -89,6 +91,14 @@ def dynamic_axes(self):
 }
 
 %extend CNTK::TrainingParameterSchedule<double> {
+    const double& __getitem__(size_t sampleCount) {
+        return (*($self))[sampleCount];
+    }
+}
+
+// MomentumValuesAsTimeConstants is a descendent of TrainingParameterSchedule,
+// but it does not inherit automatically functions added via %extend.
+%extend CNTK::MomentumValuesAsTimeConstants {
     const double& __getitem__(size_t sampleCount) {
         return (*($self))[sampleCount];
     }
@@ -1161,7 +1171,7 @@ def dynamic_axes(self):
 learning_rates_per_sample = training_param_schedule_double
 momentums_per_sample = training_param_schedule_double
 %}
-        
+
 // end of NDArrayView
 
 //
@@ -1251,11 +1261,14 @@ def get_output_and_keep_reference(self):
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
 
-from .tensor import _add_tensor_ops, _add_eval
+from .tensor import _add_tensor_ops, _add_eval, _add_array_interface
 for klass in [Function, Variable]:
     _add_tensor_ops(klass)
 
 _add_eval(Function)
+
+for klass in [Variable, Value, NDArrayView, NDMask]:
+    _add_array_interface(klass)
 
 enable_reversing_tensor_shapes_in_error_messages()
 %}

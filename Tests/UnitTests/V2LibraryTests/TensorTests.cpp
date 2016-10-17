@@ -119,6 +119,8 @@ void TestInfAndNans()
 
 void TensorTests()
 {
+    fprintf(stderr, "\nTensorTests..\n");
+
     // TODO: Enable after the core engine reciprocal bug of 1/0 not being INF is fixed
     //TestInfAndNans();
 

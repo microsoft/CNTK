@@ -25,7 +25,7 @@ void PackerBase::StreamBuffer::Resize(size_t newSize)
     });
 }
 
-void PackerBase::StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
+void PackerBase::SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
 {
     // Let's check that memory providers did not change at the start of new epoch.
     bool equalMemoryProviders = m_memoryProviders.size() == memoryProviders.size() &&

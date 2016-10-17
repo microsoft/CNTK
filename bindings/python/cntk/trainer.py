@@ -4,13 +4,15 @@
 # ==============================================================================
 
 from . import cntk_py
-from .cntk_py import DeviceDescriptor
+from .device import use_default_device
 from .utils import sanitize_var_map, sanitize_function, typemap, value_to_seq
 
-__doc__= '''
-A trainer supervises the overall training process and commands one or more
-:doc:`learner <cntk.learner>` that learn the parameters.
+__doc__= '''\
+A trainer encapsulates the overall training process and employs one or more
+:doc:`learners <cntk.learner>` to tune the parameters of a specified model
+using gradients of parameters w.r.t. a training objective.
 '''
+
 class Trainer(cntk_py.Trainer):
     '''
     Trainer to train the specified `model` with the specified `training_loss`
@@ -20,7 +22,7 @@ class Trainer(cntk_py.Trainer):
     using computed gradients.
 
     Args:
-       model (:class:`cntk.ops.function.Function`): root node of the function to train
+       model (:class:`cntk.ops.functions.Function`): root node of the function to train
        loss_function (:class:`cntk.ops.functions.Function`): loss function 
        eval_function (:class:`cntk.ops.functions.Function`): evaluation function
        parameter_learners (`list`): list of learners from :cntk:`cntk.learner`
@@ -65,8 +67,8 @@ class Trainer(cntk_py.Trainer):
             maps the variables in `outputs` to their respective NumPy arrays.
         '''
         if not device:
-            device=DeviceDescriptor.use_default_device()        
-        arguments = sanitize_var_map(self.model().arguments(), arguments)
+            device = use_default_device()
+        arguments = sanitize_var_map(self.model.arguments, arguments)
 
         if outputs:
             output_map = {v: None for v in outputs}
@@ -82,7 +84,7 @@ class Trainer(cntk_py.Trainer):
         return updated
 
 
-    def test_minibatch(self, arguments, seq_starts=None, device=None):
+    def test_minibatch(self, arguments, device=None):
         '''
         Test the model on the specified batch of samples using the evaluation
         Function specified during construction of the Trainer. 
@@ -101,10 +103,6 @@ class Trainer(cntk_py.Trainer):
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
              :class:`cntk.io.MinibatchData` instance.
-            seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
-             treated as a new sequence. Otherwise, it is interpreted as a list of
-             Booleans that tell whether a sequence is a new sequence (`True`) or a
-             continuation of the previous one (`False`)
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -113,9 +111,8 @@ class Trainer(cntk_py.Trainer):
               tested minibatch.
         '''
         if not device:
-            device=DeviceDescriptor.use_default_device()        
-        arguments = sanitize_var_map(self.model().arguments(), arguments,
-                seq_starts)
+            device = use_default_device()
+        arguments = sanitize_var_map(self.model.arguments, arguments)
 
         return super(Trainer, self).test_minibatch(arguments, device)
 
@@ -141,70 +138,56 @@ class Trainer(cntk_py.Trainer):
 
         super(Trainer, self).restore_from_checkpoint(filename)
 
+    @property
     @typemap
     def model(self):
         '''
-        Returns the model that the trainer is training.
-
-        Returns:
-            :class:`cntk.ops.functions.Function`
+        The model that the trainer is training.
         '''
         return super(Trainer, self).model()
         
+    @property
     @typemap
     def loss_function(self):
         '''
-        Returns the loss function that the trainer is using.
-
-        Returns:
-            :class:`cntk.ops.functions.Function`
+        The loss function that the trainer is using.
         '''
         return super(Trainer, self).loss_function()
 
+    @property
     @typemap
     def evaluation_function(self):
         '''
-        Returns the evaluation function that the trainer is using.
-
-        Returns:
-            :class:`cntk.ops.functions.Function`
+        The evaluation function that the trainer is using.
         '''
         return super(Trainer, self).evaluation_function()
 
+    @property
     @typemap
     def parameter_learners(self):
         '''
-        Returns the parameter learners that the trainer is using.
-
-        Returns:
-            `list` of :class:`cntk.learner.Learner`
+        The parameter learners that the trainer is using.
         '''
         return super(Trainer, self).parameter_learners()
 
+    @property
     def previous_minibatch_loss_average(self):
         '''
-        Returns the average training loss per sample for the last minibatch trained
-
-        Returns:
-            `double`
+        The average training loss per sample for the last minibatch trained
         '''
         return super(Trainer, self).previous_minibatch_loss_average()
 
+    @property
     def previous_minibatch_evaluation_average(self):
         '''
-        Returns the average evaluation criterion value per sample for the last minibatch trained
-
-        Returns:
-            `double`
+        The average evaluation criterion value per sample for the last minibatch trained
         '''
         return super(Trainer, self).previous_minibatch_evaluation_average()
 
+    @property
     def previous_minibatch_sample_count(self):
         '''
-        Returns the number of samples in the last minibatch trained with
-
-        Returns:
-            `int`
+        The number of samples in the last minibatch trained with
         '''
         return super(Trainer, self).previous_minibatch_sample_count()
 

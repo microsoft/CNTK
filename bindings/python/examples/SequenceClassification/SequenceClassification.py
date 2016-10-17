@@ -8,7 +8,8 @@ import numpy as np
 import sys
 import os
 import time
-from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk import Trainer, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk.device import cpu, set_default_device
 from cntk.learner import sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error
 
@@ -20,7 +21,7 @@ from examples.common.nn import LSTMP_component_with_self_stabilization, embeddin
 def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_dim, cell_dim):
     embedding_function = embedding(input, embedding_dim)
     LSTM_function = LSTMP_component_with_self_stabilization(
-        embedding_function.output(), LSTM_dim, cell_dim)[0]
+        embedding_function.output, LSTM_dim, cell_dim)[0]
     thought_vector = select_last(LSTM_function)
 
     return linear_layer(thought_vector, num_output_classes)
@@ -60,7 +61,7 @@ def train_sequence_classifier(debug_output=False):
 
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(classifier_output, ce, pe,
-                      [sgd(classifier_output.parameters(), lr=0.0005)])
+                      [sgd(classifier_output.parameters, lr=0.0005)])
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 200
@@ -71,7 +72,7 @@ def train_sequence_classifier(debug_output=False):
         training_progress_output_freq = training_progress_output_freq/3
 
     while True:
-        mb = mb_source.get_next_minibatch(minibatch_size)
+        mb = mb_source.next_minibatch(minibatch_size)
 
         if len(mb) == 0:
             break
@@ -88,16 +89,15 @@ def train_sequence_classifier(debug_output=False):
     import copy
 
     evaluation_average = copy.copy(
-        trainer.previous_minibatch_evaluation_average())
-    loss_average = copy.copy(trainer.previous_minibatch_loss_average())
+        trainer.previous_minibatch_evaluation_average)
+    loss_average = copy.copy(trainer.previous_minibatch_loss_average)
 
     return evaluation_average, loss_average
 
 if __name__ == '__main__':
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    # target_device = DeviceDescriptor.cpu_device()
-    # DeviceDescriptor.set_default_device(target_device)
+    # set_default_device(cpu())
 
     error, _ = train_sequence_classifier()
     print("Error: %f" % error)
