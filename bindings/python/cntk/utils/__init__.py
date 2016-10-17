@@ -9,7 +9,6 @@ import collections
 import numpy as np
 import scipy.sparse
 from .. import cntk_py
-from .persist import load_model, save_model
 from .swig_helper import typemap
 
 

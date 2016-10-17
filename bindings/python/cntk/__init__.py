@@ -17,6 +17,7 @@ from .initializer import *
 from .utils import *
 from .ops import *
 from .io import *
+from .persist import load_model, save_model
 
 # TODO wrap
 from .cntk_py import DeviceDescriptor, momentums_per_sample
