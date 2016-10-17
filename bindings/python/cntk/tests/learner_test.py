@@ -16,13 +16,18 @@ SCHEDULE_PARAMS = [
         (([0.2,0.4], 5), [0.2]*5+[0.4]*20),
         ]
 @pytest.mark.parametrize("params, expectation", SCHEDULE_PARAMS)
-def test_learning_rates_per_sample(params, expectation):
-    l = learning_rates_per_sample(*params)
+def test_learning_rate_schedule(params, expectation):
+    l = learning_rate_schedule(*params)
     assert [l[i] for i in range(len(expectation))] == expectation
 
+def test_momentum_schedule():
+    m = 2500
+    ms = momentum_schedule([m])
+    assert ms[0] ==  np.exp(-1.0 / np.asarray(m))
+
 @pytest.mark.parametrize("params, expectation", SCHEDULE_PARAMS)
-def test_momentums_per_sample(params, expectation):
-    l = momentums_per_sample(*params)
+def test_momentum_schedule_per_sample(params, expectation):
+    l = momentum_schedule_per_sample(*params)
     assert [l[i] for i in range(len(expectation))] == expectation
 
 def test_learner_init():
@@ -41,16 +46,16 @@ def test_learner_init():
     assert isinstance(param, Parameter)
 
     momentum_time_constant = 1100
-    momentum_per_sample = momentums_per_sample(
+    m_schedule = momentum_schedule(
         np.exp(-1.0 / momentum_time_constant))
 
-    momentum_sgd(res.parameters, lr=0.1, momentums=momentum_per_sample)
+    momentum_sgd(res.parameters, lr=0.1, momentum=m_schedule)
 
-    nesterov(res.parameters, lr=0.1, momentums=momentum_per_sample)
+    nesterov(res.parameters, lr=0.1, momentum=m_schedule)
 
     adagrad(res.parameters, lr=0.1, need_ave_multiplier=True)
 
-    fsadagrad(res.parameters, lr=0.1, momentums=momentum_per_sample)
+    fsadagrad(res.parameters, lr=0.1, momentum=m_schedule)
 
     gamma, inc, dec, max, min = [0.1]*5
     rmsprop(res.parameters, 0.1, gamma, inc, dec, max, min, True)

@@ -92,6 +92,8 @@ DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t depth)
     {
     case DictionaryValue::Type::Bool:
         return DictionaryValue(!!(rng() % 2));
+    case DictionaryValue::Type::Int:
+        return DictionaryValue(rng());
     case DictionaryValue::Type::SizeT:
         return DictionaryValue(rng());
     case DictionaryValue::Type::Float:
@@ -271,6 +273,8 @@ void TestModelSaving(const DeviceDescriptor& device)
 
 void SerializationTests()
 {
+    fprintf(stderr, "\nSerializationTests..\n");
+
     TestDictionarySerialization(4);
     TestDictionarySerialization(8);
     TestDictionarySerialization(16);

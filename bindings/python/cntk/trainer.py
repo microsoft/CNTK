@@ -4,13 +4,15 @@
 # ==============================================================================
 
 from . import cntk_py
-from .cntk_py import DeviceDescriptor
+from .device import use_default_device
 from .utils import sanitize_var_map, sanitize_function, typemap, value_to_seq
 
-__doc__= '''
-A trainer supervises the overall training process and commands one or more
-:doc:`learner <cntk.learner>` that learn the parameters.
+__doc__= '''\
+A trainer encapsulates the overall training process and employs one or more
+:doc:`learners <cntk.learner>` to tune the parameters of a specified model
+using gradients of parameters w.r.t. a training objective.
 '''
+
 class Trainer(cntk_py.Trainer):
     '''
     Trainer to train the specified `model` with the specified `training_loss`
@@ -65,7 +67,7 @@ class Trainer(cntk_py.Trainer):
             maps the variables in `outputs` to their respective NumPy arrays.
         '''
         if not device:
-            device=DeviceDescriptor.use_default_device()        
+            device = use_default_device()
         arguments = sanitize_var_map(self.model.arguments, arguments)
 
         if outputs:
@@ -82,7 +84,7 @@ class Trainer(cntk_py.Trainer):
         return updated
 
 
-    def test_minibatch(self, arguments, seq_starts=None, device=None):
+    def test_minibatch(self, arguments, device=None):
         '''
         Test the model on the specified batch of samples using the evaluation
         Function specified during construction of the Trainer. 
@@ -101,10 +103,6 @@ class Trainer(cntk_py.Trainer):
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
              :class:`cntk.io.MinibatchData` instance.
-            seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
-             treated as a new sequence. Otherwise, it is interpreted as a list of
-             Booleans that tell whether a sequence is a new sequence (`True`) or a
-             continuation of the previous one (`False`)
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -113,9 +111,8 @@ class Trainer(cntk_py.Trainer):
               tested minibatch.
         '''
         if not device:
-            device=DeviceDescriptor.use_default_device()        
-        arguments = sanitize_var_map(self.model.arguments, arguments,
-                seq_starts)
+            device = use_default_device()
+        arguments = sanitize_var_map(self.model.arguments, arguments)
 
         return super(Trainer, self).test_minibatch(arguments, device)
 

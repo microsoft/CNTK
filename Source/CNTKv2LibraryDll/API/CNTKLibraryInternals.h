@@ -154,6 +154,7 @@ namespace CNTK
     class Function;
     class Variable;
     class Axis;
+    enum class PrimitiveOpType : unsigned int;
 
     // Similar to make_shared except that it associates a custom deleter with the shared_ptr to ensure
     // that objects are deleted on the same side of the library DLL where they are allocated
@@ -219,5 +220,7 @@ namespace CNTK
         CNTK_API void ForceSynchronousCUDAKernelExecutions();
 
         CNTK_API void ForceDeterministicAlgorithms();
+
+        CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
     }
 }

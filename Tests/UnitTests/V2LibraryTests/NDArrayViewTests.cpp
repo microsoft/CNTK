@@ -188,6 +188,8 @@ void TestSparseCSCArrayView(size_t numAxes, const DeviceDescriptor& device)
 
 void NDArrayViewTests()
 {
+    fprintf(stderr, "\nNDArrayViewTests..\n");
+
     TestNDArrayView<float>(2, DeviceDescriptor::CPUDevice());
 
     if (IsGPUAvailable())
