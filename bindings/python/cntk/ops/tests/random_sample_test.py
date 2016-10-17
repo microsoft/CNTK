@@ -32,7 +32,7 @@ TEST_CASES = [
     # Number of requested samples must be positive
     ([1., 2., 3.],                                                                    0,     False,  np.full((4), 13/4),                                   0.0001, True), 
 
-    # Non positive sampling weigts are not allowed.
+    # Negative sampling weigts are not allowed.
     ([1,-1.],                                                                         1,     True,   [0],                                                  0.0001, True), 
     ([1,-1.],                                                                         1,     False,  [0],                                                  0.0001, True), 
 ]
