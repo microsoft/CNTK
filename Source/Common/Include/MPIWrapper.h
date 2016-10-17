@@ -66,6 +66,7 @@ typedef std::shared_ptr<MPIWrapper> MPIWrapperPtr;
 class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
 {
     int m_myRank;
+    std::wstring m_myName;
     int m_numMPINodes;
     size_t m_numNodesInUse;
 
@@ -145,6 +146,11 @@ public:
         // the later will be set to 1.
         assert((GetTotalNumberOfMPINodes() == 0 && m_numNodesInUse == 1) ||
                 (GetTotalNumberOfMPINodes() == m_numNodesInUse));
+
+        char name[BUFSIZ];
+        int length;
+        MPI_Get_processor_name(name, &length);
+        m_myName = std::wstring(name, name+length);
 
         // Applying MPI workaround
         s_myRank = m_myRank;
@@ -279,18 +285,19 @@ private:
 
 public:
 
+    static bool s_initialized;
+
     static MPIWrapperPtr GetInstance(bool create = false)
     {
-        static bool initialized = false;
         if (create)
         {
-            if (initialized)
+            if (s_initialized)
                 LogicError("Creating MPIWrapper instance after a GetInstance call has been already made!");
             else
                 s_mpi = std::make_shared<MPIWrapper>();
         }
 
-        initialized = true;
+        s_initialized = true;
         return s_mpi;
     }
 
@@ -310,6 +317,10 @@ public:
     size_t CurrentNodeRank() const
     {
         return m_myRank;
+    }
+    std::wstring CurrentNodeName() const
+    {
+        return m_myName;
     }
     bool IsMainNode() const
     {
@@ -362,19 +373,37 @@ public:
         size_t totalnumelements = accumulator.size();
 
         // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
-        if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
-        {
-            MPI_Allreduce(MPI_IN_PLACE, dataptr, (int) totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
-        }
+        AllReduce<typename VECTORLIKEOBJECT::value_type>(dataptr, totalnumelements);
     }
 
     // for raw pointer
     template <class ElemType>
-    void AllReduce(ElemType *pData, size_t nData)
+    void AllReduce(ElemType* sendData, size_t numElements, MPI_Op op = MPI_SUM) const
+    {
+        AllReduce<ElemType>(static_cast<ElemType*>(MPI_IN_PLACE), sendData, numElements, op);
+    }
+
+    template <class ElemType>
+    void AllReduce(ElemType *sendData, ElemType *receiveData, size_t numElements, MPI_Op op = MPI_SUM) const
     {
         if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
         {
-            MPI_Allreduce(MPI_IN_PLACE, pData, (int) nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
+            MPI_Allreduce(sendData, receiveData, (int) numElements, GetDataType(sendData), op, Communicator()) || MpiFail("AllReduce: MPI_Allreduce");
+        }
+    }
+
+    template <class ElemType> 
+    void AllReduceAsync(ElemType* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const
+    {
+        AllReduceAsync<ElemType>(static_cast<ElemType*>(MPI_IN_PLACE), sendData, numElements, request, op);
+    }
+
+    template <class ElemType>
+    void AllReduceAsync(ElemType *sendData, ElemType *receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const
+    {
+        if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
+        {
+            MPI_Iallreduce(sendData, receiveData, (int) numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
         }
     }
 
@@ -387,11 +416,25 @@ public:
         }
     }
 
+    // wait for an async request to finish
+    void Wait(MPI_Request* request)
+    {
+        MPI_Wait(request, MPI_STATUSES_IGNORE) || MpiFail("Wait: MPI_Wait");
+    }
+
+    void WaitAny(MPI_Request* requests, int numRequests, int* index)
+    {
+        MPI_Waitany(numRequests, requests, index, MPI_STATUSES_IGNORE) || MpiFail("WaitAny: MPI_Waitany");
+    }
+
     // wait for all ranks to reach here
     void WaitAll()
     {
         MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
     }
+
+
+    
 };
 
 }}}

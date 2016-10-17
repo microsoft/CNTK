@@ -4,6 +4,8 @@
 //
 #pragma once
 
+#include "V2SimpleDistGradAggregator.h"
+
 #include "Basics.h"
 #include "DataReader.h"
 #include "ComputationNode.h"
@@ -15,6 +17,7 @@
 #include "IDistGradAggregator.h"
 #include "SimpleDistGradAggregator.h"
 #include "Criterion.h"
+#include "Globals.h"
 
 #include <vector>
 #include <string>
@@ -151,7 +154,11 @@ public:
                     m_gradHeader.reset(DistGradHeader::Create(evalNodes.size()), [](DistGradHeader* ptr) {
                         DistGradHeader::Destroy(ptr);
                     });
-                    m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/);
+
+                    if (Globals::UseV2Aggregator())
+                        m_distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/, ::CNTK::MPICommunicator());
+                    else 
+                        m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/);
                 }
 
                 m_gradHeader->numEvalNode = evalNodes.size();
