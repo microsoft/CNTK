@@ -221,7 +221,9 @@ namespace CNTK
                 filterRank = (int)initConfig[FilterRankAttributeName].Value<size_t>();
             }
 
-            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitRandom(*valueMatrix, AsTensorShape(shape), initializerType, randomSeed, (ElementType)scale, filterRank, outputRank, false, AsCNTKImplDeviceId(device));
+            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitRandom(*valueMatrix, AsTensorShape(shape), initializerType, randomSeed, (ElementType)scale,
+                                                                              filterRank, outputRank, /*initOnCPUOnly=*/true,
+                                                                              AsCNTKImplDeviceId(device));
         }
 
         return value;

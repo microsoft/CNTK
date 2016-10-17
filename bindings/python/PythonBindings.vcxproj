@@ -48,6 +48,29 @@
   <ItemGroup>
     <Text Include="vsbuild.bat" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cntk\blocks.py" />
+    <None Include="cntk\cntk_py.i" />
+    <None Include="cntk\conftest.py" />
+    <None Include="cntk\initializer.py" />
+    <None Include="cntk\io\__init__.py" />
+    <None Include="cntk\layers.py" />
+    <None Include="cntk\learner.py" />
+    <None Include="cntk\models.py" />
+    <None Include="cntk\ops\functions.py" />
+    <None Include="cntk\ops\variables.py" />
+    <None Include="cntk\ops\__init__.py" />
+    <None Include="cntk\pytest.ini" />
+    <None Include="cntk\tensor.py" />
+    <None Include="cntk\trainer.py" />
+    <None Include="cntk\utils\debughelpers\__init__.py" />
+    <None Include="cntk\utils\persist.py" />
+    <None Include="cntk\utils\swig_helper.py" />
+    <None Include="cntk\utils\__init__.py" />
+    <None Include="cntk\__init__.py" />
+    <None Include="setup.py" />
+    <None Include="swig_install.sh" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

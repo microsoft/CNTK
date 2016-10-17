@@ -69,7 +69,7 @@ class Function(cntk_py.Function):
              * 'share': the returned function shares its parameters with this function
              * 'freeze': parameters are cloned and made immutable (constant).
             substitutions (`dict`): a dictionary mapping variables in this
-             function to variables in the cloned function 
+             function to variables in the cloned function
 
         Returns:
             `Function`: the cloned Function
@@ -99,7 +99,7 @@ class Function(cntk_py.Function):
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
-               * `dict`: keys are input variable or names and values are the input data.
+               * `dict`: keys are input variable or names, and values are the input data.
                * `list`: elements are input data in the order their respective variables have been defined in the network.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
@@ -126,14 +126,14 @@ class Function(cntk_py.Function):
     @typemap
     def forward(self, arguments, outputs, keep_for_backward=None, device=None):
         '''
-        Computes the values of speficied variables in `outputs`, using values 
-        provided in `arguments` that correspond to each input `Variable` of 
+        Computes the values of speficied variables in `outputs`, using values
+        provided in `arguments` that correspond to each input `Variable` of
         the function whose `is_input` is `True`.
 
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
-               * `dict`: keys are input variable or names and values are the input data.
+               * `dict`: keys are input variable or names, and values are the input data.
                * `list`: elements are input data in the order their respective variables have been defined in the network.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the

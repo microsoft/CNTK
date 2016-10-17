@@ -39,4 +39,7 @@
       <UniqueIdentifier>{ea62180a-fb06-4f33-b472-243fab69be01}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\bindings\python\cntk\PythonBindings.pyproj" />
+  </ItemGroup>
 </Project>
