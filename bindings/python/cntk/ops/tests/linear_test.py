@@ -168,8 +168,14 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):
                     left_operand, right_operand,
                     expected_forward, expected_backward)
 
-
-@pytest.mark.parametrize("operand", IDENTITY_TENSORS)
+NEGATE_TENSORS = [
+    ([30.]),
+    ([[30.]]),
+    ([[1.5, 2.1]]),
+    ([[100., 200.], [300., 400.], [10., 20.]]),
+    ([[30, 40], [1, 2], [0.1, 0.2]])
+]
+@pytest.mark.parametrize("operand", NEGATE_TENSORS)
 def test_op_negate(operand, device_id, precision):
     t = -1 * AA(operand, dtype=PRECISION_TO_TYPE[precision])
 
