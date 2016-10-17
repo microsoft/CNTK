@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE
 import cntk as C
+from cntk.axis import Axis
 from ...utils import sanitize_dtype_cntk
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
@@ -157,12 +158,12 @@ SLICE_TEST_CASES_DYNAMIC = [
 def test_op_slice_sequence(input_data, slice_params, expected_result, device_id, precision):
     input_data = AA(input_data, dtype=PRECISION_TO_TYPE[precision])
 
-    t = C.Axis.new_unique_dynamic_axis('t')
+    t = Axis.new_unique_dynamic_axis('t')
     sample_shape = input_data.shape[1:]
     a = I(shape=sample_shape,
           data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
-          dynamic_axes=[C.Axis.default_batch_axis(), t],
+          dynamic_axes=[Axis.default_batch_axis(), t],
           name='a')
 
     result = C.slice(a, axis=t, begin_index=slice_params[

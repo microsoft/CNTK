@@ -1498,7 +1498,8 @@ def dropout(x, dropout_rate=0.0, name=''):
 # variables_and_parameters ops
 ##########################################################################
 
-from cntk.cntk_py import Axis, DeviceDescriptor
+from cntk.cntk_py import DeviceDescriptor
+from cntk.axis import Axis
 
 # TODO: expose output_variable as well ?
 
