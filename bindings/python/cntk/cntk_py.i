@@ -19,6 +19,7 @@
 %rename(momentums_as_time_constants) CNTK::MomentumValuesAsTimeConstants;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
 %rename(cpu_device) CNTK::DeviceDescriptor::CPUDevice;
+%rename(times_transpose) CNTK::TransposeTimes;
 
 // if we don't except RandomUniform the corresponding template functions will not be generated
 %rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";

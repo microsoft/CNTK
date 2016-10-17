@@ -17,7 +17,7 @@ class CloneMethod(Enum):
 
     freeze = 3
     '''
-    Parameters are cloned and made immutable; i.e. Constants in the new clone 
+    Parameters are cloned and made immutable; i.e. Constants in the new clone
     (e.g. for use as a fixed feature extractor)
     '''
 
@@ -78,7 +78,7 @@ class Function(cntk_py.Function):
             raise ValueError('clone method "%s" is not supported' %
                     str(method))
 
-        method = getattr(cntk_py, 
+        method = getattr(cntk_py,
                 'ParameterCloningMethod_' + method.name.capitalize())
         if substitutions is None:
             substitutions = dict()
@@ -99,8 +99,8 @@ class Function(cntk_py.Function):
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
-               * `dict`: keys are input variable or names and values are the input data. 
-               * `list`: elements are input data in the order their respective variables have been defined in the network. 
+               * `dict`: keys are input variable or names and values are the input data.
+               * `list`: elements are input data in the order their respective variables have been defined in the network.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify `arguments` as `tuple`: the
@@ -133,8 +133,8 @@ class Function(cntk_py.Function):
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
-               * `dict`: keys are input variable or names and values are the input data. 
-               * `list`: elements are input data in the order their respective variables have been defined in the network. 
+               * `dict`: keys are input variable or names and values are the input data.
+               * `list`: elements are input data in the order their respective variables have been defined in the network.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify `arguments` as `tuple`: the
@@ -154,7 +154,7 @@ class Function(cntk_py.Function):
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
 
-        Returns: 
+        Returns:
              A tuple (`BackpropState`, `map` of outputs to NumPy arrays). The
              BackpropState is a handle taken by :func:`backward`.
         '''
@@ -185,7 +185,7 @@ class Function(cntk_py.Function):
         Args:
             state (`BackPropState`): state obtained from a previous call to the
              func:`cntk.ops.Function.forward` method on this Function for the
-             computation that this gradient backpropagation corresponds to. 
+             computation that this gradient backpropagation corresponds to.
             root_gradients (`dict`): the gradients that will be backpropagated
             variables (`set`): a list of input variables with respect to which
              the gradients have to be computed.
@@ -285,7 +285,7 @@ class Function(cntk_py.Function):
         Restore the models parameters from a saved model file
 
         Args:
-            modelFilePath (`str`): saved model path 
+            modelFilePath (`str`): saved model path
 
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file

@@ -41,7 +41,7 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
     @property
     def dtype(self):
         '''
-        The NumPy type of this variable. 
+        The NumPy type of this variable.
         '''
         return sanitize_precision(self.get_data_type())
 
@@ -97,7 +97,7 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
     # def kind(self):
         # '''
         # kind
-        
+
 
         # Returns:
             # `VariableKind`: text
@@ -201,7 +201,7 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
     @property
     def dtype(self):
         '''
-        The NumPy type of this variable. 
+        The NumPy type of this variable.
         '''
         return sanitize_precision(self.get_data_type())
 
@@ -231,7 +231,6 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
         super(Constant, self).__init__(ndav, name)
 
     #TODO how to expose Scalar ?
-    
     @property
     @typemap
     def value(self):
@@ -250,7 +249,7 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
     @property
     def dtype(self):
         '''
-        The NumPy type of this variable. 
+        The NumPy type of this variable.
         '''
         return sanitize_precision(self.get_data_type())
 

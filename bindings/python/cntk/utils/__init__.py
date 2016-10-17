@@ -192,7 +192,7 @@ def sanitize_shape(shape):
     return tuple(reversed(shape))
 
 
-def sanitize_input(arg, fallback_dtype=np.float32):
+def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """
     Convert to Variable so that it can be passed as Variable to the
     CNTK operators.
@@ -208,7 +208,7 @@ def sanitize_input(arg, fallback_dtype=np.float32):
 
     Returns:
       Leave Constant, Parameter, and Variable as is. Return Constant, if
-      `arg` was a number or NumPy array. Variable otherwise. 
+      `arg` was a number or NumPy array. Variable otherwise.
     """
 
     from cntk.ops.variables import Constant, Variable, Parameter
@@ -235,6 +235,8 @@ def sanitize_input(arg, fallback_dtype=np.float32):
 
     if not isinstance(arg, np.ndarray):
         arg = np.asarray(arg, dtype=fallback_dtype)
+    if reshape:
+        arg = np.reshape(arg, reshape)
 
     return constant(value=arg)
 
@@ -371,7 +373,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
                 ' make sense when not using the sequence axis')
 
     # Use the mask, if we have additional dynamic axes besides the batch axis
-    
+
     if use_mask:
         seq_lens = [len(seq) for seq in batch]
 
@@ -483,8 +485,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          `op.outputs`
         arguments (`dict` or `list` or `tuple`): maps variables to their
          input data. The interpretation depends on the input type:
-           * `dict`: keys are input variable or names and values are the input data. 
-           * `list`: elements are input data in the order their respective variables have been defined in the network. 
+           * `dict`: keys are input variable or names and values are the input data.
+           * `list`: elements are input data in the order their respective variables have been defined in the network.
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
          previous sequence, specify `arguments` as `tuple`: the
@@ -734,8 +736,8 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
         op (:class:`Function`): operation to evaluate
         arguments (`dict` or `list` or `tuple`): maps variables to their
          input data. The interpretation depends on the input type:
-           * `dict`: keys are input variable or names and values are the input data. 
-           * `list`: elements are input data in the order their respective variables have been defined in the network. 
+           * `dict`: keys are input variable or names and values are the input data.
+           * `list`: elements are input data in the order their respective variables have been defined in the network.
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
          previous sequence, specify `arguments` as `tuple`: the
