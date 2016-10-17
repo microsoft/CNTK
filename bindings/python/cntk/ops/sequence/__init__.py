@@ -14,8 +14,8 @@ from ...utils import sanitize_input, sanitize_shape, get_data_type, typemap
 @typemap
 def is_first(seq, name=''):
     '''
-    Returns a function that evaluates to 1 for the first element in the 
-    symbolic sequence `seq` and evaluates to 0 for all other elements
+    Returns a symbolic sequence of booleans with the same length as `seq`. The 
+    first element of the sequence is 1 and all others are 0.
 
     Example:
         >>> import cntk.ops as C
@@ -41,8 +41,8 @@ def is_first(seq, name=''):
 @typemap
 def is_last(seq, name=''):
     '''
-    Returns a function that evaluates to 1 for the last element in the 
-    symbolic sequence `seq` and evaluates to 0 for all other elements
+    Returns a symbolic sequence of booleans with the same length as `seq`. The 
+    last element of the sequence is 1 and all others are 0.
 
     Example:
         >>> import cntk.ops as C
@@ -68,8 +68,7 @@ def is_last(seq, name=''):
 @typemap
 def first(seq, name=''):
     '''
-    Returns a function that will return the first element of its 
-    symbolic input sequence `seq`
+    Returns the first element of its symbolic input sequence `seq`
 
     Example:
         >>> import cntk.ops as C
@@ -96,8 +95,7 @@ def first(seq, name=''):
 @typemap
 def last(seq, name=''):
     '''
-    Returns a function that will return the last element of its 
-    symbolic input sequence `seq`
+    Returns the last element of its symbolic input sequence `seq`
 
     Example:
         >>> import cntk.ops as C
@@ -125,8 +123,8 @@ def last(seq, name=''):
 @typemap
 def where(condition, name=''):
     '''
-    Returns a function that, given a symbolic sequence `condition` of boolean-like
-    values, will return the indices for which the values were true.
+    Given a symbolic sequence `condition` of boolean-like values, it will return
+    a new sequence containing the indices for which the values were true.
 
     Example:
         >>> import cntk.ops as C
@@ -141,7 +139,7 @@ def where(condition, name=''):
         array([[ 2.,  3.]], dtype=float32)
 
     Args:
-        condition: the symbolic tensor denoting a boolean for each element of a sequence
+        condition: the symbolic sequence of booleans
         name (str): the name of the node in the network
 
     Returns:
@@ -151,14 +149,13 @@ def where(condition, name=''):
     condition = sanitize_input(condition, get_data_type(condition))
     return where(condition, name)
 
-
 @typemap
 def gather(seq, condition, name=''):
     '''
-    Returns a function that takes two sequences of the same length and returns a new sequence whose elements 
-    are those elements of sequence `seq` whose corresponding element in `condition` is True, preserving the 
-    ordering of `seq`.
-    
+    Takes two sequences of the same length and returns a new sequence whose 
+    elements are those elements of sequence `seq` whose corresponding element 
+    in `condition` is True, preserving the ordering of `seq`.
+
     This operation is also known as stream compaction, or copy_if.
 
     Example:
@@ -176,8 +173,9 @@ def gather(seq, condition, name=''):
                  [ 22.,  23.]]]], dtype=float32)
 
     Args:
-        seq: the symbolic sequence of tensors from which elements will be selected
-        condition: the symbolic sequence of booleans which indicate which elements should be selected
+        seq: the symbolic sequence from which elements will be selected
+        condition: the symbolic sequence of booleans which indicate which 
+            elements should be selected
         name (str): the name of the node in the network
     Returns:
         :class:`cntk.Function`
@@ -191,12 +189,12 @@ def gather(seq, condition, name=''):
 @typemap
 def scatter(seq, condition, name=''):
     '''
-    Returns a function that performs the inverse of gather: The sequence `seq`
-    must have as many elements as the number of True values in the sequence `condition`.
+    Performs the inverse of gather: The sequence `seq` must have as many 
+    elements as the number of True values in the sequence `condition`.
     It will return a sequence whose length is the same as the `condition` 
     sequence with zeroes everywhere except for the locations where `condition`
-    evaluates to true in which case it will  copy the elements from seq preserving 
-    their order.
+    evaluates to True in which case it will copy the elements from `seqz 
+    preserving their order.
 
     Example:
         >>> import cntk.ops as C
@@ -224,8 +222,10 @@ def scatter(seq, condition, name=''):
                  [  0.,   0.]]]], dtype=float32)
 
     Args:
-        seq: the symbolic sequence from which elements will be copied in the output
-        condition: the symbolic sequence which denotes the locations where elements should be copied
+        seq: the symbolic sequence from which elements will be copied in the 
+            output
+        condition: the symbolic sequence which denotes the locations where 
+            elements should be copied
         name (str): the name of the node in the network
     Returns:
         :class:`cntk.Function`
@@ -270,7 +270,8 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
 
     Args:        
         operand: the symbolic tensor whose value will be broadcast
-        broadcast_as_operand: the symbolic tensor whose dynamic axes will be used to broadcast the operand
+        broadcast_as_operand: the symbolic tensor whose dynamic axes will 
+            be used to broadcast the operand
         name (str): the name of the node in the network
 
     Returns:

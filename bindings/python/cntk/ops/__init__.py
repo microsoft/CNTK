@@ -1468,7 +1468,8 @@ def reduce_sum(x, axis=None, name=''):
 @typemap
 def reduce_log_sum(x, axis=None, name=''):
     '''
-    Computes the log of the sum of the exponentiations of the input tensor's elements across the specified axis.
+    Computes the log of the sum of the exponentiations of the input tensor's 
+    elements across the specified axis.
 
     Examples:
         >>> import cntk.ops as C
@@ -1480,8 +1481,8 @@ def reduce_log_sum(x, axis=None, name=''):
         array([[ 5.45619345]], dtype=float32)
         >>> np.log(np.sum(np.exp(x0)))
         5.4561934
-        >>> lserows=C.reduce_log_sum(x,axis=0)
-        >>> lserows.eval({x:x0})
+        >>> lse_rows=C.reduce_log_sum(x,axis=0)
+        >>> lse_rows.eval({x:x0})
         array([[[[ 4.14293194,  5.14293194]]]], dtype=float32)
         >>> np.log(np.sum(np.exp(x0),axis=0))
         array([ 4.14293146,  5.14293146], dtype=float32)
