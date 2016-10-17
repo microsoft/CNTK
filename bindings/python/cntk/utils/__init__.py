@@ -8,7 +8,8 @@ import numbers
 import collections
 import numpy as np
 import scipy.sparse
-from .. import cntk_py
+from cntk import cntk_py
+from cntk.device import cpu, gpu, use_default_device
 from .persist import load_model, save_model
 from .swig_helper import typemap
 
@@ -44,9 +45,9 @@ def cntk_device(device_id):
         CNTK DeviceDescriptor
     '''
     if device_id == -1:
-        return DeviceDescriptor.cpu_device()
+        return cpu()
     else:
-        return DeviceDescriptor.gpu_device(device_id)
+        return gpu(device_id)
 
 
 def is_string(value):
@@ -273,7 +274,7 @@ def get_data_type(*args):
                 dtypes.add(np.float64)
             elif cntk_py.DataType_Float == var_type:
                 dtypes.add(np.float32)
-        else:
+            else:
                 raise ValueError('type %s is not supported'%var_type)
         else:
             # We don't know anything so we convert everything to float32. If it
@@ -370,11 +371,11 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     if use_mask:
         seq_lens = [len(seq) for seq in batch]
 
-        try:
-            num_seq = len(batch)
-        except TypeError:
-            raise ValueError('expected an object of type Value or a NumPy ' +
-                             'array and not "%s"' % type(batch))
+    try:
+        num_seq = len(batch)
+    except TypeError:
+        raise ValueError('expected an object of type Value or a NumPy ' +
+                         'array and not "%s"' % type(batch))
 
         from cntk.cntk_py import NDMask
         mask = NDMask((max(seq_lens), num_seq), device)
@@ -403,6 +404,10 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     # convert it to float32
     if np.issubdtype(batch.dtype, int):
         batch = batch.astype(np.float32)
+
+        if len(cntk_shape) == 0:
+            raise ValueError('values should be an array of input samples')
+    '''
 
     ndav = create_NDArrayView_from_NumPy(batch, device)
 
@@ -544,7 +549,7 @@ def ones_like(batch, precision):
 def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=None):
     shape = sanitize_shape(shape)
     if not dev:
-        dev = DeviceDescriptor.use_default_device()
+        dev = use_default_device()
     # FIXME only dense supported so far
     view = cntk_py.NDArrayView(
         data_type, cntk_py.StorageFormat_Dense, shape, dev)
@@ -553,7 +558,7 @@ def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=None):
 
 def create_NDArrayView_from_NumPy(nd, dev=None):
     if not dev:
-        dev = DeviceDescriptor.use_default_device()
+        dev = use_default_device()
 
     return cntk_py.NDArrayView(nd, dev, False)
 

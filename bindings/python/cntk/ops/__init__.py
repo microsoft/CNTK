@@ -1509,7 +1509,7 @@ def dropout(x, dropout_rate=0.0, name=''):
 ##########################################################################
 
 from cntk.cntk_py import Axis
-from cntk.device import DeviceDescriptor
+from cntk.device import use_default_device
 # TODO: expose output_variable as well ?
 
 # TODO: if we end up using only factory methods, we should get rid of the
@@ -1598,7 +1598,7 @@ def parameter(shape=None, init=None, device=None, name=''):
 
     from .variables import Parameter
     if not device:
-        device = DeviceDescriptor.use_default_device()
+        device = use_default_device()
 
     if np.isscalar(init) and not shape:
         shape = ()
@@ -1637,7 +1637,7 @@ def constant(shape=None, value=None, device=None, name=''):
     '''
     from .variables import Constant
     if not device:
-        device = DeviceDescriptor.use_default_device()
+        device = use_default_device()
     if np.isscalar(value) and not shape:
         shape = ()
         if isinstance(value, np.ndarray):
