@@ -1142,7 +1142,28 @@ def future_value(x, initial_state=None, time_step=1, name=''):
     value is returned.
 
     Example:
-        TBA
+        >>> import cntk.ops as C
+        >>> import numpy as np
+        >>> x = C.input_variable(shape=(3,2))
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> y = C.future_value(x)
+        >>> y.eval({x:x0})
+        array([[[[  6.,   7.],
+                 [  8.,   9.],
+                 [ 10.,  11.]],
+        <BLANKLINE>
+                [[ 12.,  13.],
+                 [ 14.,  15.],
+                 [ 16.,  17.]],
+        <BLANKLINE>
+                [[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]],
+        <BLANKLINE>
+                [[  0.,   0.],
+                 [  0.,   0.],
+                 [  0.,   0.]]]], dtype=float32)
+
     Args:
         x: the tensor (or its name) from which the future value is obtained.
         initial_state: tensor or scalar representing the initial value to be
@@ -1175,13 +1196,35 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     value is returned.
 
     Example:
-        TBA
+        >>> import cntk.ops as C
+        >>> import numpy as np
+        >>> x = C.input_variable(shape=(3,2))
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> y = C.past_value(x)
+        >>> y.eval({x:x0})
+        array([[[[  0.,   0.],
+                [  0.,   0.],
+                [  0.,   0.]],
+        <BLANKLINE>
+                [[  0.,   1.],
+                [  2.,   3.],
+                [  4.,   5.]],
+        <BLANKLINE>
+                [[  6.,   7.],
+                [  8.,   9.],
+                [ 10.,  11.]],
+        <BLANKLINE>
+                [[ 12.,  13.],
+                [ 14.,  15.],
+                [ 16.,  17.]]]], dtype=float32)
+
     Args:
         x: the tensor (or its name) from which the past value is obtained
         initial_state: tensor or scalar representing the initial value to be
         used when the input tensor is shifted in time.
         time_step (`int`): the number of time steps to look into the past (default 1)
         name (`str`, optional): the name of the Function instance in the network
+
     Returns:
         :class:`cntk.ops.functions.Function`
     '''
@@ -1425,10 +1468,23 @@ def reduce_sum(x, axis=None, name=''):
 @typemap
 def reduce_log_sum(x, axis=None, name=''):
     '''
-    Computes the log sum of the input tensor's elements across the specified axis.
+    Computes the log of the sum of the exponentiations of the input tensor's elements across the specified axis.
 
     Examples:
-        TBA
+        >>> import cntk.ops as C
+        >>> import numpy as np
+        >>> x = C.input_variable(shape=(3,2))
+        >>> x0 = np.reshape(np.arange(6.0,dtype=np.float32),(3,2))
+        >>> lse=C.reduce_log_sum(x)
+        >>> lse.eval({x:x0})
+        array([[ 5.45619345]], dtype=float32)
+        >>> np.log(np.sum(np.exp(x0)))
+        5.4561934
+        >>> lserows=C.reduce_log_sum(x,axis=0)
+        >>> lserows.eval({x:x0})
+        array([[[[ 4.14293194,  5.14293194]]]], dtype=float32)
+        >>> np.log(np.sum(np.exp(x0),axis=0))
+        array([ 4.14293146,  5.14293146], dtype=float32)
 
     Args:
         x: input tensor
