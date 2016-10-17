@@ -16,7 +16,7 @@ from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, 
 from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
 from cntk.ops import parameter, constant, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 import itertools
-from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _print_node
+from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
 from cntk.initializer import glorot_uniform
 
@@ -30,6 +30,8 @@ from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_val
 # No -> SystemError: Parent module '' not loaded, cannot perform relative import
 from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
+
+_trace_layers = True
 
 _default_initializer = glorot_uniform()
 #_default_initializer = None
@@ -54,7 +56,8 @@ def _extend_Function(f):
     if hasattr(f, '__call__'):  # already extended: don't do it again
         return f
     f.__class__ = FunctionEx
-    print("def {}".format(_node_description(f)))
+    if _trace_layers:
+        print("def {}".format(_node_description(f)))
     return f
 
 # name and extend; in this order, so that _extend_Function can print a meaningful log message
@@ -89,8 +92,6 @@ def _apply(f, args):
             return arg  # Variables have no output()
     args = [_output_of(arg) for arg in args]
     placeholders = f.placeholders()  # f parameters to fill in
-    #print (len(args))
-    #print (len(placeholders))
     if len(args) != len(placeholders):
         raise TypeError("_apply ({}): number of arguments {} must match number of placeholders {}".format(_node_description(f), len(args), len(placeholders)))
     _function_name = _node_name(f)  # these are for logging/debugging only
@@ -98,7 +99,8 @@ def _apply(f, args):
     _arg_description = ", ".join([_node_name(f) for f in list(args)])
     f = f.clone(CloneMethod.share, dict(zip(f.placeholders(), args)))
     _name_and_extend_Function(f, _function_name)
-    print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
+    if _trace_layers:
+        print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
     return f
 
 # some mappings to BS format
@@ -119,11 +121,10 @@ def Input(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')
 
 def Placeholder(_inf, name='placeholder'):
-    # BUGBUG: does not take a name parameter (but not really needed here)
-    # BUGBUG: combine() does not work either, as it generates a Function, not a Variable
     p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis, name=name)
     _name_node(p, name)
-    print("new " + _node_description(p))
+    if _trace_layers:
+        print("new " + _node_description(p))
     return p
 
 # TODO: Let's not encourage users to use combine([f]) as a workaround for identity/pass, but rather have it as a first-class operator implemented that we then use. [Willi]
@@ -216,7 +217,7 @@ def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initia
         ht
 
     _name_node(h, 'h')
-    _print_node(h)  # this looks right
+    _log_node(h)  # this looks right
     _name_node(c, 'c')
 
     # TODO: figure out how to do scoping, and also rename all the apply... to expression

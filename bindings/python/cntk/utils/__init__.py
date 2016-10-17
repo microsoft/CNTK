@@ -761,8 +761,18 @@ def _as_tuple(x):
 
 
 # top-level short-hand for selecting a GPU
-def set_gpu(gpu_id):
-    from cntk import DeviceDescriptor
-    # Specify the target device to be used for computing
-    target_device = DeviceDescriptor.gpu_device(gpu_id)
-    DeviceDescriptor.set_default_device(target_device)
+# TODO: find the right balance between conciseness and boilerplate
+#def set_gpu(gpu_id):
+#    from cntk import DeviceDescriptor
+#    # Specify the target device to be used for computing
+#    target_device = DeviceDescriptor.gpu_device(gpu_id)
+#    DeviceDescriptor.set_default_device(target_device)
+
+# helper to get next minibatch from a reader into a set of variables
+def next_minibatch(source, minibatch_size, input_map):
+    mb = source.get_next_minibatch(minibatch_size)
+    if not mb:
+        return (None, 0)
+    else:
+        return ({ key : mb[value]               for (key, value) in input_map.items() },
+                { key : mb[value].m_num_samples for (key, value) in input_map.items() })

@@ -114,8 +114,8 @@ def train(reader, model, max_epochs):
         epoch_end = (epoch+1) * epoch_size
         while t < epoch_end:
             # BUGBUG: RuntimeError: GetNextMinibatch: Changing minibatch sizes across calls is currently unsupported
-            #data, num_samples = Trainer.next_minibatch(reader, min(minibatch_size, epoch_size-t), input_map)
-            data, num_samples = Trainer.next_minibatch(reader, minibatch_size, input_map)
+            #data, num_samples = next_minibatch(reader, min(minibatch_size, epoch_size-t), input_map)
+            data, num_samples = next_minibatch(reader, minibatch_size, input_map)
             if data is None:
                 break
             trainer.train_minibatch(data)

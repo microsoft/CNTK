@@ -62,8 +62,9 @@ def _node_description(n):
         desc = "{} <{}>".format(desc, ", ".join([_node_name(func_arg) for func_arg in func_args]))
     return desc
 
-def _print_node(n):
-    print (_node_description(n))
+def _log_node(n):
+    #print (_node_description(n))
+    pass
 
 #def dump_graph(f):
 #    visited = set()
