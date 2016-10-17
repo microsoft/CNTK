@@ -10,9 +10,12 @@ import numpy as np
 from cntk import DeviceDescriptor
 
 # this emulates a "main" function for SLUHandsOn
+from examples.SLUHandsOn.SLUHandsOn import *
+from examples.SLUHandsOn.SLUHandsOn import _Infer  # TODO: remove
 def slu_hands_on():
-    import examples.SLUHandsOn.SLUHandsOn  # this runs the entire thing
-    # No, not working. Won't return anything, different scope.
+    reader = create_reader(data_dir + "/atis.train.ctf")
+    model = create_model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
+    loss, metric = train(reader, model, max_epochs=1)
     return metric, loss  # note: strange order
 
 TOLERANCE_ABSOLUTE = 1E-1
@@ -23,7 +26,8 @@ def test_seq_classification_error(device_id):
 
     evaluation_avg, loss_avg = slu_hands_on()
 
-    expected_avg = [0.55, 1.53099]
+    expected_avg = [0.15570838301766451, 0.7846451368305728]
     assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
-#test_seq_classification_error(0)  # uncomment this to run the test explicitly
+if __name__=='__main__':
+    test_seq_classification_error(0)

@@ -69,7 +69,7 @@ def create_model(_inf):  # TODO: all the _inf stuff will go away once dimension 
 # train action         #
 ########################
 
-def train(reader, model):
+def train(reader, model, max_epochs):
     # Input variables denoting the features and label data
     query       = Input(input_dim,  is_sparse=False)  # TODO: make sparse once it works
     slot_labels = Input(num_labels, is_sparse=True)
@@ -83,15 +83,14 @@ def train(reader, model):
 
     # training config
     epoch_size = 36000
-    max_epochs = 8
     minibatch_size = 70
     num_mbs_to_show_result = 100
 
-    lr = [0.003]*2+[0.0015]*12+[0.0003]
-    momentum = 0.9**(1/minibatch_size)  # TODO: need a better way of giving traditional momentum per MB
+    lr_per_sample = [0.003]*2+[0.0015]*12+[0.0003]
+    momentum = 0.9**(1/minibatch_size)  # TODO: change to time constant
 
     # trainer object
-    lr_schedule = learning_rates_per_sample(lr, units=epoch_size)
+    lr_schedule = learning_rates_per_sample(lr_per_sample, units=epoch_size)
     learner = fsadagrad(z.parameters(), lr_schedule, momentum,
                         targetAdagradAvDenom=1, clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
@@ -144,7 +143,7 @@ if __name__=='__main__':
     model = create_model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
     # TODO: Currently this fails with a mismatch error if axes ^^ are given in opposite order. I think it shouldn't.
     # train
-    loss, metric = train(reader, model)
+    train(reader, model, max_epochs=8)
     # test (TODO)
     reader = create_reader(data_dir + "/atis.test.ctf")
     #test(reader, model_dir + "/slu.cmf")  # TODO: what is the correct pattern here?
