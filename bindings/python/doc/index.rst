@@ -21,12 +21,7 @@ them on sample data in real time.
    :maxdepth: 2
 
    Getting Started <gettingstarted>
-   Graph components <graph>
-   IO <cntk.io>
-   Trainer & learners <cntk.trainer>
-   Operators <cntk.ops>   
-   Utils <cntk.utils>   
-   Module reference <modules>
+   API Reference <apireference>
 
 
 Indices and tables
