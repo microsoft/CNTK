@@ -12,7 +12,7 @@ import numpy as np
 import sys
 import os
 import time
-from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration, slice, sigmoid, tanh, past_value, future_value
 from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
 from cntk.ops import parameter, constant, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 import itertools
@@ -23,7 +23,7 @@ from cntk.initializer import glorot_uniform
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 # TODO: move these out from examples
-from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_value, print_training_progress, negate
+#from examples.common.nn import slice  #, sigmoid, log, tanh, past_value, future_value, print_training_progress, negate
 
 # TODO: As you are on the level of cntk here, you could use relative imports:
 # from .ops.functions import Function
@@ -31,7 +31,8 @@ from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_val
 from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
-_trace_layers = True
+#_trace_layers = True
+_trace_layers = False
 
 _default_initializer = glorot_uniform()
 #_default_initializer = None
@@ -217,7 +218,8 @@ def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initia
         ht
 
     _name_node(h, 'h')
-    _log_node(h)  # this looks right
+    if _trace_layers:
+        _log_node(h)  # this looks right
     _name_node(c, 'c')
 
     # TODO: figure out how to do scoping, and also rename all the apply... to expression

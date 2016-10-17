@@ -63,8 +63,7 @@ def _node_description(n):
     return desc
 
 def _log_node(n):
-    #print (_node_description(n))
-    pass
+    print (_node_description(n))
 
 #def dump_graph(f):
 #    visited = set()

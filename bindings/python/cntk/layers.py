@@ -19,7 +19,7 @@ import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
 from cntk.blocks import *
-from cntk.blocks import _name_and_extend_Function, _wrap_rename_Function  # (debugging)
+from cntk.blocks import _name_and_extend_Function, _wrap_rename_Function, _trace_layers  # (debugging)
 from cntk.initializer import glorot_uniform
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -130,13 +130,15 @@ def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
     f_x_h_c = over(x, prev_state_forward) # apply the recurrent over
     # this returns a Function (x, (h_prev, c_prev)) -> (h, c)
     h = f_x_h_c.outputs()[0]  # 'h' is a Variable (the output of a Function that computed it)
-    _log_node(h)
-    _log_node(combine([h.owner()]))
+    if _trace_layers:
+        _log_node(h)
+        _log_node(combine([h.owner()]))
     prev_state = previous_hook(f_x_h_c)  # delay (h, c)
     replacements = { value_forward: value.output() for (value_forward, value) in zip(list(prev_state_forward), list(prev_state)) }
     f_x_h_c.replace_placeholders(replacements)  # binds _h_c := prev_state
     apply_x = combine([h.owner()])     # the Function that yielded 'h', so we get to know its inputs
     # apply_x is a Function x -> h
     _name_and_extend_Function(apply_x, 'Recurrence')
-    _log_node(apply_x)
+    if _trace_layers:
+        _log_node(apply_x)
     return apply_x
