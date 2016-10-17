@@ -33,7 +33,7 @@ def create_mb_source(features_stream_name, labels_stream_name, image_height,
 
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         cifar_py3 = "" if sys.version_info.major < 3 else "_py3"
-        raise RuntimeError("File '%s' or '%s' do not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
+        raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
                            (map_file, mean_file, cifar_py3, cifar_py3))
 
     image = ImageDeserializer(map_file)
@@ -58,7 +58,7 @@ def create_test_mb_source(features_stream_name, labels_stream_name, image_height
 
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         cifar_py3 = "" if sys.version_info.major < 3 else "_py3"
-        raise RuntimeError("File '%s' or '%s' do not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
+        raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
                            (map_file, mean_file, cifar_py3, cifar_py3))
 
     image = ImageDeserializer(map_file)
@@ -219,10 +219,10 @@ if __name__ == '__main__':
     # target_device = DeviceDescriptor.cpu_device()
     # DeviceDescriptor.set_default_device(target_device)
 
-    base_path = os.path.normpath(os.path.join(
-        *"../../../Examples/Image/Datasets/CIFAR-10/cifar-10-batches-py".split("/")))
+    base_path = os.path.abspath(os.path.normpath(os.path.join(
+        *"../../../Examples/Image/Datasets/CIFAR-10/".split("/"))))
 
-    os.chdir(os.path.join(base_path, '..'))
+    os.chdir(base_path)
 
     error = cifar_resnet(base_path)
     print("Error: %f" % error)

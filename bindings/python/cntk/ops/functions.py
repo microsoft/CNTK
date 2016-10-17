@@ -24,7 +24,7 @@ class CloneMethod(Enum):
 
 class Function(cntk_py.Function):
     '''
-    Base class of all operators.
+    Base class of all primitive tensor operators.
 
     If it has only one output, one can invoke Variable methods on it, which it
     will relay to its only output.
@@ -57,7 +57,7 @@ class Function(cntk_py.Function):
         return super(Function, self).attributes()
 
     @typemap
-    def clone(self, method=CloneMethod.freeze, replacements=None):
+    def clone(self, method=CloneMethod.freeze, substitutions=None):
         '''
         Clones the function. The parameters of the Function are either cloned,
         shared or frozen as specified by the method argument and any variable
@@ -68,7 +68,7 @@ class Function(cntk_py.Function):
              * 'clone': the returned function gets its own copy of parameters (default)
              * 'share': the returned function shares its parameters with this function
              * 'freeze': parameters are cloned and made immutable (constant).
-            replacements (`dict`): a dictionary mapping variables in this
+            substitutions (`dict`): a dictionary mapping variables in this
              function to variables in the cloned function 
 
         Returns:
@@ -80,9 +80,9 @@ class Function(cntk_py.Function):
 
         method = getattr(cntk_py, 
                 'ParameterCloningMethod_' + method.name.capitalize())
-        if replacements is None:
-            replacements = dict()
-        return super(Function, self).clone(method, replacements)
+        if substitutions is None:
+            substitutions = dict()
+        return super(Function, self).clone(method, substitutions)
 
     @property
     @typemap
@@ -126,9 +126,9 @@ class Function(cntk_py.Function):
     @typemap
     def forward(self, arguments, outputs, keep_for_backward=None, device=None):
         '''
-        Computes and stores the values of speficied variables in `outputs`,
-        using provided `arguments` values corresponding to each leaf `Variable`
-        of the function whose `is_input` is `True`. 
+        Computes the values of speficied variables in `outputs`, using values 
+        provided in `arguments` that correspond to each input `Variable` of 
+        the function whose `is_input` is `True`.
 
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their

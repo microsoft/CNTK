@@ -10,7 +10,7 @@ import os
 import math
 import time
 from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
-from cntk.learner import momentums_per_sample, momentum_sgd
+from cntk.learner import momentum_schedule, momentum_sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -96,12 +96,12 @@ def sequence_to_sequence_translator(debug_output=False):
     # Instantiate the trainer object to drive the model training
     lr = 0.007
     momentum_time_constant = 1100
-    momentum_per_sample = momentums_per_sample(
+    m_schedule = momentum_schedule(
         math.exp(-1.0 / momentum_time_constant))
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
 
-    trainer = Trainer(z, ce, errs, [momentum_sgd(z.parameters, lr, momentum_per_sample, clipping_threshold_per_sample, gradient_clipping_with_truncation)])                   
+    trainer = Trainer(z, ce, errs, [momentum_sgd(z.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)])                   
 
     rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.train-dev-20-21.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)

@@ -1,28 +1,8 @@
 import numpy as np
 from cntk import cntk_py, utils
 from ..tensor import TensorOpsMixin
-from ..utils import typemap, sanitize_precision
+from ..utils import typemap, sanitize_precision, sanitize_value
 
-FLOAT_32 = 'float32'
-
-def _sanitize_value(shape, value, dtype, device):
-    np_dtype = utils.sanitize_dtype_numpy(dtype)
-    cntk_dtype = utils.sanitize_dtype_cntk(dtype)
-
-    if value is None:
-        if shape is None:
-            raise ValueError('you need to specify at least shape or value')
-        ndav = utils.create_NDArrayView(shape, cntk_dtype, device)
-    else:
-        if not isinstance(value, np.ndarray) or value.dtype != np_dtype:
-            if np.isscalar(value) and shape:
-                value = np.full(shape, value, dtype=np_dtype)
-            else:
-                value = np.asarray(value, dtype=np_dtype)
-
-        ndav = utils.create_NDArrayView_from_NumPy(value, device)
-
-    return ndav
 
 class Variable(TensorOpsMixin, cntk_py.Variable):
     '''
@@ -44,7 +24,7 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         shape = utils.sanitize_shape(shape)
 
         if data_type is None:
-            data_type = FLOAT_32
+            data_type = np.float32
         dtype = utils.sanitize_dtype_cntk(data_type)
 
         super(Variable, self).__init__(shape, is_sparse,
@@ -189,13 +169,13 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
             if isinstance(init, np.ndarray):
                 data_type = str(init.dtype)
             else:
-                data_type = FLOAT_32
+                data_type = np.float32
 
         if init is None:
             init = 0
 
         if isinstance(init, (np.ndarray, list, float, int)):
-            ndav = _sanitize_value(shape, init, data_type, device)
+            ndav = sanitize_value(shape, init, data_type, device)
             super(Parameter, self).__init__(ndav, name)
         else:
             shape = utils.sanitize_shape(shape)
@@ -244,9 +224,9 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
             if isinstance(value, np.ndarray):
                 data_type = str(value.dtype)
             else:
-                data_type = FLOAT_32
+                data_type = np.float32
                 
-        ndav = _sanitize_value(shape, value, data_type, device)
+        ndav = sanitize_value(shape, value, data_type, device)
         super(Constant, self).__init__(ndav, name)
 
     #TODO how to expose Scalar ?

@@ -168,7 +168,7 @@ class EvalMixin(object):
             arguments (`dict` or `list`): 
               * map from input variables to the data
               * list of inputs in the order that the function expects or 
-              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+              Data should be either NumPy arrays or a :class:`cntk.io.MinibatchData` instance
             seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a

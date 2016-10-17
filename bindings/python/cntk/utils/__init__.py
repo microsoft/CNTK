@@ -417,6 +417,40 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
 
     return value
 
+def sanitize_value(shape, value, dtype, device):
+    '''
+    Converts a given `value` to a :class:`Value` object that can be passed to
+    the CNTK core.
+
+    Args:
+        shape (`tuple`): shape of the value
+        value (`None` or value that can be cast to NumPy array): the value to
+         be converted
+        dtype: data type (`np.float32` or `np.float64`)
+        device (:clas:`cntk.DeviceDescriptor`): device this value should be put
+         on
+
+    Returns:
+        :class:`Value` object representing `value`
+    '''
+    np_dtype = sanitize_dtype_numpy(dtype)
+    cntk_dtype = sanitize_dtype_cntk(dtype)
+
+    if value is None:
+        if shape is None:
+            raise ValueError('you need to specify at least shape or value')
+        ndav = create_NDArrayView(shape, cntk_dtype, device)
+    else:
+        if not isinstance(value, np.ndarray) or value.dtype != np_dtype:
+            if np.isscalar(value) and shape:
+                value = np.full(shape, value, dtype=np_dtype)
+            else:
+                value = np.asarray(value, dtype=np_dtype)
+
+        ndav = create_NDArrayView_from_NumPy(value, device)
+
+    return ndav
+
 
 def sanitize_function(arg):
     '''
