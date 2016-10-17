@@ -48,3 +48,5 @@ def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicate
             result.eval()
     else:
         assert np.allclose(result.eval(), expected, atol=tolerance)
+
+# BUGBUG add test for random_sample(...) too.
