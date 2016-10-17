@@ -168,12 +168,12 @@ def gather(seq, condition, name=''):
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
         >>> y.eval({x:x0})
         array([[[[ 12.,  13.],
-                [ 14.,  15.],
-                [ 16.,  17.]],
+                 [ 14.,  15.],
+                 [ 16.,  17.]],
         <BLANKLINE>
                 [[ 18.,  19.],
-                [ 20.,  21.],
-                [ 22.,  23.]]]], dtype=float32)
+                 [ 20.,  21.],
+                 [ 22.,  23.]]]], dtype=float32)
 
     Args:
         seq: the symbolic sequence of tensors from which elements will be selected
@@ -189,36 +189,90 @@ def gather(seq, condition, name=''):
 
 
 @typemap
-def scatter(operand, condition, name=''):
+def scatter(seq, condition, name=''):
     '''
-    TBA
+    Returns a function that performs the inverse of gather: The sequence `seq`
+    must have as many elements as the number of True values in the sequence `condition`.
+    It will return a sequence whose length is the same as the `condition` 
+    sequence with zeroes everywhere except for the locations where `condition`
+    evaluates to true in which case it will  copy the elements from seq preserving 
+    their order.
 
     Example:
-        TBA
-    Args:        
-        operand: the symbolic tensor operand denoting a sequence
-        condition: the symbolic tensor operand denoting a boolean condition flag for each step of a sequence
+        >>> import cntk.ops as C
+        >>> import numpy as np
+        >>> x = C.input_variable(shape=(3,2))
+        >>> t = C.sequence.last(x)
+        >>> b = C.sequence.is_first(x)
+        >>> y = C.sequence.scatter(t, b)
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> y.eval({x:x0})
+        array([[[[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]],
+        <BLANKLINE>
+                [[  0.,   0.],
+                 [  0.,   0.],
+                 [  0.,   0.]],
+        <BLANKLINE>
+                [[  0.,   0.],
+                 [  0.,   0.],
+                 [  0.,   0.]],
+        <BLANKLINE>
+                [[  0.,   0.],
+                 [  0.,   0.],
+                 [  0.,   0.]]]], dtype=float32)
+
+    Args:
+        seq: the symbolic sequence from which elements will be copied in the output
+        condition: the symbolic sequence which denotes the locations where elements should be copied
         name (str): the name of the node in the network
     Returns:
         :class:`cntk.Function`
     '''
     from cntk.cntk_py import scatter
-    operand = sanitize_input(operand, get_data_type(operand))
+    seq = sanitize_input(seq, get_data_type(seq))
     condition = sanitize_input(condition, get_data_type(condition))
-    return scatter(operand, condition, name)
+    return scatter(seq, condition, name)
 
 
 @typemap
 def broadcast_as(operand, broadcast_as_operand, name=''):
     '''
-    TBA
+    Creates a sequence out of a non-sequence by endowing the `operand` 
+    with dynamic axes of the same type as the `broadcast_as_operand`
+    and broadcasting the value of the `operand` along those dynamic axes.
 
     Example:
-        TBA
+        >>> import cntk.ops as C
+        >>> import numpy as np
+        >>> x = C.input_variable(shape=(3,2))
+        >>> t = C.sequence.last(x)
+        >>> b = C.sequence.is_first(x)
+        >>> y = C.sequence.broadcast_as(t, b)
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> y.eval({x:x0})
+        array([[[[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]],
+        <BLANKLINE>
+                [[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]],
+        <BLANKLINE>
+                [[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]],
+        <BLANKLINE>
+                [[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]]]], dtype=float32)
+
     Args:        
-        operand: the symbolic tensor operand denoting a tensor
-        broadcast_as_operand: the symbolic tensor operand denoting a sequence per whose layout the main operand id to be broadcast
+        operand: the symbolic tensor whose value will be broadcast
+        broadcast_as_operand: the symbolic tensor whose dynamic axes will be used to broadcast the operand
         name (str): the name of the node in the network
+
     Returns:
         :class:`cntk.Function`
     '''
