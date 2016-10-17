@@ -112,8 +112,7 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device = use_default_device()
-        arguments = sanitize_var_map(self.model.arguments, arguments,
-                seq_starts)
+        arguments = sanitize_var_map(self.model.arguments, arguments)
 
         return super(Trainer, self).test_minibatch(arguments, device)
 

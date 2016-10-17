@@ -24,7 +24,7 @@ CNTK also depends on MPI (`Linux <https://github.com/Microsoft/CNTK/wiki/Setup-C
 `CUDA <https://developer.nvidia.com/cuda-downloads>`_ (if you want to use GPUs). Please see the 
 `CNTK wiki <https://github.com/Microsoft/CNTK/wiki>`_ for more information on installation.
 
-Testing your installation
+First contact
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 After installing the pip package, you can then start using CNTK from Python right away:
 
@@ -50,6 +50,18 @@ These have to be specified as minibatches. Let's take e.g. the data for `i1`: ``
 pair for the sequence, and another one for the batch.
 The squared error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
 
+As the graph nodes implement the NumPy array interface, you can easily access
+their content and use them in other NumPy operations:
+
+    >>> import cntk as C
+    >>> c = C.constant(3, shape=(2,3))
+    >>> np.asarray(c)
+    array([[ 3.,  3.,  3.],
+           [ 3.,  3.,  3.]], dtype=float32)
+    >>> np.ones_like(c)
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
+
 Overview and first run
 ----------------------
 
@@ -67,9 +79,8 @@ First basic use
 The first step in training or running a network in CNTK is to decide which device it should be run on. If you have access to a GPU, training time 
 can be vastly improved. To explicitly set the device to GPU, set the target device as follows:
 
-    import cntk
-    target_device = cntk.DeviceDescriptor.gpu_device(0)
-    cntk.DeviceDescriptor.set_default_device(target_device)
+    from cntk.device import set_default_device, gpu
+    set_default_device(gpu(0))
 
 Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
 (``examples.common.nn.fully_connected_classifier_net``). This is defined, along with several other simple and more complex DNN building blocks in 
@@ -92,7 +103,7 @@ Now let's setup a network that will learn a classifier based on the example full
         pe = classification_error(netout, label)
 
         # Instantiate the trainer object to drive the model training
-        trainer = Trainer(netout, ce, pe, [sgd_learner(netout.parameters(), lr=0.02)])
+        trainer = Trainer(netout, ce, pe, [sgd_learner(netout.parameters, lr=0.02)])
 
         # Get minibatches of training data and perform model training
         minibatch_size = 25
