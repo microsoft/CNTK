@@ -1494,11 +1494,6 @@ def reduce_log_sum(x, axis=None, name=''):
         array([[ 5.456193]], dtype=float32)
         >>> np.log(np.sum(np.exp(x0)))
         5.4561934
-        >>> lserows = C.reduce_log_sum(x,axis=0)
-        >>> lserows.eval({x:x0})
-        array([[[[ 4.142931,  5.142931]]]], dtype=float32)
-        >>> np.log(np.sum(np.exp(x0),axis=0))
-        array([ 4.142931,  5.142931], dtype=float32)
 
     Args:
         x: input tensor

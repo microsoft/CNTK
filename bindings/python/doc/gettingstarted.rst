@@ -58,7 +58,6 @@ As the graph nodes implement the NumPy array interface, you can easily access
 their content and use them in other NumPy operations:
 
     >>> import cntk as C
-    >>> C.constant(3, shape=(2,3))
     >>> c = C.constant(3, shape=(2,3))
     >>> np.asarray(c)
     array([[ 3.,  3.,  3.],
