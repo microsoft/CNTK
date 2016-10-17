@@ -178,7 +178,7 @@ def cifar_resnet(base_path, debug_output=False):
         training_progress_output_freq = training_progress_output_freq/3
 
     for i in range(0, num_mbs):
-        mb = minibatch_source.get_next_minibatch(mb_size)
+        mb = minibatch_source.next_minibatch(mb_size)
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
@@ -200,7 +200,7 @@ def cifar_resnet(base_path, debug_output=False):
 
     total_error = 0.0
     for i in range(0, num_mbs):
-        mb = test_minibatch_source.get_next_minibatch(mb_size)
+        mb = test_minibatch_source.next_minibatch(mb_size)
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with

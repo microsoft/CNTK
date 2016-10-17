@@ -74,7 +74,7 @@ def simple_mnist(debug_output=False):
         training_progress_output_freq = training_progress_output_freq/4
 
     for i in range(0, int(num_minibatches_to_train)):
-        mb = mb_source.get_next_minibatch(minibatch_size)
+        mb = mb_source.next_minibatch(minibatch_size)
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
@@ -105,7 +105,7 @@ def simple_mnist(debug_output=False):
     num_minibatches_to_test = num_samples / test_minibatch_size
     test_result = 0.0
     for i in range(0, int(num_minibatches_to_test)):
-        mb = test_mb_source.get_next_minibatch(test_minibatch_size)
+        mb = test_mb_source.next_minibatch(test_minibatch_size)
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be tested with

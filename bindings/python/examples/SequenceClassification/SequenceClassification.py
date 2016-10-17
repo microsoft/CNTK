@@ -71,7 +71,7 @@ def train_sequence_classifier(debug_output=False):
         training_progress_output_freq = training_progress_output_freq/3
 
     while True:
-        mb = mb_source.get_next_minibatch(minibatch_size)
+        mb = mb_source.next_minibatch(minibatch_size)
 
         if len(mb) == 0:
             break

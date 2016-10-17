@@ -121,7 +121,7 @@ def sequence_to_sequence_translator(debug_output=False):
         training_progress_output_freq = training_progress_output_freq/3
 
     while True:
-        mb = mb_source.get_next_minibatch(minibatch_size)
+        mb = mb_source.next_minibatch(minibatch_size)
         if len(mb) == 0:
             break
 
@@ -150,7 +150,7 @@ def sequence_to_sequence_translator(debug_output=False):
     i = 0
     total_error = 0.0
     while True:
-        mb = test_mb_source.get_next_minibatch(train_minibatch_size)
+        mb = test_mb_source.next_minibatch(train_minibatch_size)
         if len(mb) == 0:
             break
 
