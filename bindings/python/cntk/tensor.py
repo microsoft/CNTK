@@ -206,3 +206,37 @@ def _add_eval(klass):
                          (klass, overload_name))
 
     setattr(klass, overload_name, getattr(EvalMixin, overload_name))
+
+class ArrayMixin(object):
+    @property
+    def __array_interface__(self):
+        try:
+            np_array = self.to_numpy()
+        except AttributeError:
+            try:
+                np_array = self.data().to_numpy()
+            except AttributeError:
+                try:
+                    np_array = self.value().to_numpy()
+                except AttributeError:
+                    # Ideally an exception would be raised here, but getattr would swallow it
+                    # so we return None
+                    return None
+
+        interface_copy = np_array.__array_interface__
+
+        # for np arrays (other than 0-d arrays) data entry in __array_interface__ dict
+        # must be replaced with data member of array
+        if len(np_array.shape):
+            interface_copy["data"] = np_array.data
+
+        return interface_copy
+
+def _add_array_interface(klass):
+    array_interface_name = '__array_interface__'
+
+    if getattr(klass, array_interface_name, None):
+        raise ValueError('class "%s" has already an attribute "%s"' %
+                         (klass, array_interface_name))
+
+    setattr(klass, array_interface_name, getattr(ArrayMixin, array_interface_name))

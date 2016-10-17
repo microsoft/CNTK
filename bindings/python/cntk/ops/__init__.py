@@ -37,13 +37,36 @@ def combine(operands, name=''):
 
     return combine(converted_operands, name)
 
+@typemap
+def alias(x, name=''):
+    '''
+     Create a new Function instance which just aliases the specified 'x' Function/Variable
+     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified 
+     'x' Function/Variable, and has the newly specified name.
+     The purpose of this operator is to create a new distinct reference to a symbolic
+     computation which is different from the original Function/Variable that it aliases and can 
+     be used for e.g. to substitute a specific instance of the aliased Function/Variable in the
+     computation graph instead of substituting all usages of the aliased Function/Variable.
+
+    Args:
+        operand: The Function/Variable to alias
+        name (`str`, optional): the name of the Alias Function in the network
+
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import alias
+    from cntk.cntk_py import Function
+    x = sanitize_input(x)
+    return alias(x, name)
+
 ##########################################################################
 # evaluation ops
 ##########################################################################
 
 
 @typemap
-def cross_entropy_with_softmax(output_vector, target_vector, name=''):
+def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
     '''
     This operation computes the cross entropy over the softmax of the `output_vector`.
     It expects the `output_vector` as unscaled, and it computes softmax over
@@ -71,7 +94,8 @@ def cross_entropy_with_softmax(output_vector, target_vector, name=''):
     dtype = get_data_type(output_vector, target_vector)
     output_vector = sanitize_input(output_vector, dtype)
     target_vector = sanitize_input(target_vector, dtype)
-    return cross_entropy_with_softmax(output_vector, target_vector, name)
+    axis = sanitize_axis(axis)
+    return cross_entropy_with_softmax(output_vector, target_vector, axis, name)
 
 
 @typemap
@@ -106,7 +130,7 @@ def squared_error(output, target, name=''):
 
 
 @typemap
-def classification_error(output_vector, target_vector, name=''):
+def classification_error(output_vector, target_vector, axis=-1, topN=1, name=''):
     '''
     This operation computes the classification_error error. It finds the index of the highest
     value in the output_vector and compares it to the actual ground truth label
@@ -137,7 +161,8 @@ def classification_error(output_vector, target_vector, name=''):
     dtype = get_data_type(output_vector, target_vector)
     output_vector = sanitize_input(output_vector, dtype)
     target_vector = sanitize_input(target_vector, dtype)
-    return classification_error(output_vector, target_vector, name)
+    axis = sanitize_axis(axis)
+    return classification_error(output_vector, target_vector, topN, axis, name)
 
 ##########################################################################
 # convolution ops
@@ -540,7 +565,7 @@ def element_divide(left, right, name=''):
 
 
 @typemap
-def times(left, right, output_rank=1, name=''):
+def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
     '''
     The output of this operation is the matrix product of the two input matrices.
     It supports broadcasting. Sparse is supported in the right operand, if it is a matrix.
@@ -575,6 +600,7 @@ def times(left, right, output_rank=1, name=''):
         output_rank (`int`): in case we have tensors as arguemnts, output_rank represents
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
+        infer_input_rank_to_map ('int'): meant for internal use only. Always use default value
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
@@ -584,7 +610,7 @@ def times(left, right, output_rank=1, name=''):
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
-    return times(right, left, output_rank, name)
+    return times(right, left, output_rank, infer_input_rank_to_map, name)
 
 ##########################################################################
 # non_diff ops
@@ -1225,7 +1251,7 @@ def slice(x, axis, begin_index, end_index, name=''):
 
 
 @typemap
-def splice(inputs, axis=0, name=''):
+def splice(inputs, axis=-1, name=''):
     '''
     Concatenate the input tensors along an axis.
 

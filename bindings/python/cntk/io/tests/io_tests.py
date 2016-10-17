@@ -47,7 +47,7 @@ def test_text_format():
     assert labels.data().shape().dimensions() == (2, 1, num_output_classes)
     assert not labels.data().is_sparse()
 
-    assert np.allclose(labels.data().to_numpy(), 
+    assert np.allclose(np.asarray(labels),
             np.asarray([
                 [[ 1.,  0.,  0.,  0.,  0.]],
                 [[ 0.,  1.,  0.,  0.,  0.]]

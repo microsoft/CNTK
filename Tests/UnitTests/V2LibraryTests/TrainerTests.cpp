@@ -127,6 +127,8 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
 
 void TrainerTests()
 {
+    fprintf(stderr, "\nTrainerTests..\n");
+
     TrainSimpleFeedForwardClassifer(DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())
     {

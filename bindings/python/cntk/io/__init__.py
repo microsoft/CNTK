@@ -128,6 +128,24 @@ class MinibatchSource(cntk_py.MinibatchSource):
                 minibatch_size_in_samples,
                 minibatch_size_in_sequences, device)
 
+    def get_checkpoint_state(self):
+        '''
+        Gets the checkpoint state of the MinibatchSource.
+
+        Returns:
+            :class:`cntk_py.Dictionary`
+        '''
+        return super(MinibatchSource, self).get_checkpoint_state()
+
+    def restore_from_checkpoint(self, checkpoint):
+        '''
+        Restores the MinibatchSource state from the specified checkpoint.
+
+        Args:
+            checkpoint (:class:`cntk_py.Dictionary`): checkpoint to restore from
+        '''
+        super(MinibatchSource, self).restore_from_checkpoint(checkpoint)
+
 
 def _py_dict_to_cntk_dict(py_dict):
     '''

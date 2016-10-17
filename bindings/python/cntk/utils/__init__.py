@@ -630,12 +630,11 @@ def sanitize_dtype_cntk(dtype):
         raise ValueError('data type "%s" is not supported' % dtype)
 
 
-def sanitize_axis(rank, axis):
+def sanitize_axis(axis):
     '''
     Sanitizes the axis.
 
     Args:
-        rank (`int`): rank of the tensor on which `axis` is to be used
         axis (`:class:Axis` or `int` or `None`): the axis to be used.
           * `:class:Axis`: use axis instance directly (will convert row- to
              col-major in case of static axis.
@@ -646,12 +645,9 @@ def sanitize_axis(rank, axis):
     if axis is None:
         return cntk_py.Axis.all_static_axes()
     elif isinstance(axis, numbers.Integral):
-        if axis < 0:
-            return cntk_py.Axis(-axis - 1)
-        else:
-            return cntk_py.Axis(rank - 1 - axis)
+        return cntk_py.Axis(-axis - 1)
     elif axis.is_static_axis():
-        return cntk_py.Axis(rank - 1 - axis.static_axis_index())
+        return cntk_py.Axis(-1 - axis.static_axis_index())
     else:
         return axis
 
@@ -715,7 +711,7 @@ def value_to_seq(value):
         a list of NumPy arrays
     '''
 
-    np_data = value.data().to_numpy()
+    np_data = np.asarray(value)
     if value.mask():
         mask = value.mask().to_numpy()
         np_data = [seq[mask[idx] != cntk_py.MaskKind_Invalid]
