@@ -7,6 +7,11 @@
 from . import cntk_py
 
 class DeviceDescriptor(cntk_py.DeviceDescriptor):
+    '''
+    Describes a device by an unique id and its type. If the device corresponds to a GPU its type is 1,
+    otherwise, it is 0
+    '''
+
     def id(self):
         '''
         Returns id of device descriptor

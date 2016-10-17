@@ -326,7 +326,7 @@ def pad_to_dense(batch):
 
 
 def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
-    """
+    '''
     Convert to :cntk:`Value` with `data_type`. If the samples in `batch` have
     different sequence lengths, pad them to max sequence length and create a
     mask.
@@ -342,7 +342,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
 
     Returns:
         `:class:Value`: converted batch
-    """
+    '''
     from ..cntk_py import Value
 
     if isinstance(batch, Value):
@@ -371,17 +371,17 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     if use_mask:
         seq_lens = [len(seq) for seq in batch]
 
-    try:
-        num_seq = len(batch)
-    except TypeError:
-        raise ValueError('expected an object of type Value or a NumPy ' +
-                         'array and not "%s"' % type(batch))
+        try:
+            num_seq = len(batch)
+        except TypeError:
+            raise ValueError('expected an object of type Value or a NumPy ' +
+                             'array and not "%s"' % type(batch))
 
         from cntk.cntk_py import NDMask
         mask = NDMask((max(seq_lens), num_seq), device)
         for idx, seq_len in enumerate(seq_lens):
             if seq_starts is None:
-            mask.mark_sequence_begin((0, idx))
+                mask.mark_sequence_begin((0, idx))
             elif seq_starts[idx]:
                 mask.mark_sequence_begin((0, idx))
             mask.invalidate_section((seq_len, idx),
@@ -407,7 +407,6 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
 
         if len(cntk_shape) == 0:
             raise ValueError('values should be an array of input samples')
-    '''
 
     ndav = create_NDArrayView_from_NumPy(batch, device)
 
@@ -424,6 +423,7 @@ def sanitize_function(arg):
     Tries to retrieve a Function from the argument or throws an exception if
     that's not possible.
     '''
+    
     if isinstance(arg, cntk_py.Variable):
         arg = arg.owner
 

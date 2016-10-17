@@ -174,8 +174,7 @@ def sequence_to_sequence_translator(debug_output=False):
 if __name__ == '__main__':
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    # target_device = cpu()
-    # set_default_device(target_device)
+    # set_default_device(cpu())
 
     error = sequence_to_sequence_translator()
     print("Error: %f" % error)

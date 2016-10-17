@@ -19,7 +19,7 @@ TOLERANCE_ABSOLUTE = 2E-1
 def test_cifar_resnet_error(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU')
-    DeviceDescriptor.set_default_device(cntk_device(device_id))
+    set_default_device(cntk_device(device_id))
 
     try:
         base_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
