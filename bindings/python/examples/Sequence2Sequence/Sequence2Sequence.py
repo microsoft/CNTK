@@ -9,8 +9,9 @@ import sys
 import os
 import math
 import time
-from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
-from cntk.learner import momentum_schedule, momentum_sgd
+from cntk import Trainer, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk.device import cpu, set_default_device
+from cntk.learner import momentum_sgd, momentum_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -173,8 +174,7 @@ def sequence_to_sequence_translator(debug_output=False):
 if __name__ == '__main__':
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    # target_device = DeviceDescriptor.cpu_device()
-    # DeviceDescriptor.set_default_device(target_device)
+    # set_default_device(cpu())
 
     error = sequence_to_sequence_translator()
     print("Error: %f" % error)

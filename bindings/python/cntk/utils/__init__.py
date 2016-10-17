@@ -9,6 +9,7 @@ import collections
 import numpy as np
 import scipy.sparse
 from .. import cntk_py
+from cntk.device import cpu, gpu, use_default_device
 from .swig_helper import typemap
 from ..axis import Axis
 
@@ -44,9 +45,9 @@ def cntk_device(device_id):
         CNTK DeviceDescriptor
     '''
     if device_id == -1:
-        return cntk_py.DeviceDescriptor.cpu_device()
+        return cpu()
     else:
-        return cntk_py.DeviceDescriptor.gpu_device(device_id)
+        return gpu(device_id)
 
 
 def is_string(value):
@@ -167,7 +168,7 @@ def get_temp_filename(directory=None):
         be created
 
     Returns:
-        Filename of the temporary file
+        Filename of the temporary file 
     '''
     import tempfile
 
@@ -196,9 +197,9 @@ def sanitize_input(arg, fallback_dtype=np.float32):
     Convert to Variable so that it can be passed as Variable to the
     CNTK operators.
      * If `arg` is a NumPy array and its type is neither `np.float32` nor
-    `np.float64`, it sets it to `np.float32`.
+      `np.float64`, it sets it to `np.float32`.
      * If `arg` is an op, it is assumed that it has only one output, which will
-       be returned.
+      be returned.
 
     Args:
         arg (number, NumPy array, :cntk:`cntk.ops.variables.Variable`, or
@@ -329,7 +330,7 @@ def pad_to_dense(batch):
 
 
 def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
-    """
+    '''
     Convert to :cntk:`Value` with `data_type`. If the samples in `batch` have
     different sequence lengths, pad them to max sequence length and create a
     mask.
@@ -345,7 +346,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
 
     Returns:
         `:class:Value`: converted batch
-    """
+    '''
     from ..cntk_py import Value
 
     if isinstance(batch, Value):
@@ -408,6 +409,9 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     if np.issubdtype(batch.dtype, int):
         batch = batch.astype(np.float32)
 
+        if len(cntk_shape) == 0:
+            raise ValueError('values should be an array of input samples')
+
     ndav = create_NDArrayView_from_NumPy(batch, device)
 
     if use_mask:
@@ -457,6 +461,7 @@ def sanitize_function(arg):
     Tries to retrieve a Function from the argument or throws an exception if
     that's not possible.
     '''
+    
     if isinstance(arg, cntk_py.Variable):
         arg = arg.owner
 
@@ -489,7 +494,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          Data should be either NumPy arrays or a
          :class:`cntk.io.MinibatchData` instance.
         precision (`str` or `np.float32` or `np.float64`): if string it can be
-         one of 'float' 'float32, 'double', 'float64', or `None`
+         one of 'float' 'float32, 'double', 'float64', or `None` 
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
 
     Returns:
@@ -558,8 +563,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                     var, ", ".join(var_name_map.keys())))
 
         if isinstance(batch, MinibatchData):
-            batch = batch.data()
-        elif not isinstance(batch, Value):
+            batch = batch.m_data
+        elif not isinstance(batch, Value):                
             batch = sanitize_batch(
                 var, batch, seq_starts, precision, device)
 
@@ -582,7 +587,7 @@ def ones_like(batch, precision):
 def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=None):
     shape = sanitize_shape(shape)
     if not dev:
-        dev = cntk_py.DeviceDescriptor.use_default_device()
+        dev = use_default_device()
     # FIXME only dense supported so far
     view = cntk_py.NDArrayView(
         data_type, cntk_py.StorageFormat_Dense, shape, dev)
@@ -591,7 +596,7 @@ def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=None):
 
 def create_NDArrayView_from_NumPy(nd, dev=None):
     if not dev:
-        dev = cntk_py.DeviceDescriptor.use_default_device()
+        dev = use_default_device()
 
     return cntk_py.NDArrayView(nd, dev, False)
 
@@ -666,7 +671,7 @@ def get_train_loss(trainer):
     Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
         trainer (:class:`Trainer`): the trainer used.
-    Returns:
+    Returns: 
         the loss value
     '''
     import copy
@@ -679,7 +684,7 @@ def get_train_eval_criterion(trainer):
     Fetch the train evaluation criterion (e.g., classification error) from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
         trainer (:class:`Trainer`): the trainer used.
-    Returns:
+    Returns: 
         the criterion value
     '''
     import copy
@@ -723,7 +728,7 @@ def value_to_seq(value):
 def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
-    mainly to explore the operators and for convenient unit testing.
+    mainly to explore the operators and for convenient unit testing. 
 
     Args:
         op (:class:`Function`): operation to evaluate
@@ -748,9 +753,9 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
          (costly)
         device (:class:`cntk.DeviceDescriptor`): the device the descriptor,
          whether it is CPU or GPU (and which one)
-        backward_pass (`bool`, optional): whether a backward pass is performed
+        backward_pass (`bool`, optional): whether a backward pass is performed 
 
-    Returns:
+    Returns: 
         mapping of output variables to their values.
     '''
 

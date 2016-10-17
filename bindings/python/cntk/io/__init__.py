@@ -6,7 +6,7 @@
 
 from .. import cntk_py
 from ..utils import typemap
-
+from cntk.device import use_default_device
 MAX_UI64 = int('0xffffffffffffffff', 16)
 
 class MinibatchData(cntk_py.MinibatchData):
@@ -49,7 +49,7 @@ class MinibatchData(cntk_py.MinibatchData):
         return self.m_data.mask().to_numpy()
 
     def __len__(self):
-        return self.num_sequences()
+        return self.num_sequences
 
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
@@ -110,7 +110,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
             :class:`MinibatchData`
         '''
         if device is None:
-            device = cntk_py.DeviceDescriptor.use_default_device()
+            device = use_default_device()
 
         if minibatch_size_in_samples is None and \
                 minibatch_size_in_sequences is None:
@@ -161,7 +161,7 @@ def _py_dict_to_cntk_dict(py_dict):
             res[k] = cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(v))
         # TODO: add support to list of lists ?
         elif isinstance(v, list):
-            l = list()
+            l = []
             for e in v:
                 if isinstance(e, dict):
                     l.append(cntk_py.DictionaryValueFromDict(

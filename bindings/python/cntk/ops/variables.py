@@ -227,6 +227,7 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
                 data_type = np.float32
                 
         ndav = sanitize_value(shape, value, data_type, device)
+
         super(Constant, self).__init__(ndav, name)
 
     #TODO how to expose Scalar ?

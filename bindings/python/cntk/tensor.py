@@ -188,8 +188,8 @@ class EvalMixin(object):
         '''
         from .utils import eval as utils_eval
         if device is None:
-            from . import DeviceDescriptor
-            device = DeviceDescriptor.use_default_device()
+            from .device import use_default_device
+            device = use_default_device()
 
         if len(self.outputs()) != 1:
             raise ValueError(
