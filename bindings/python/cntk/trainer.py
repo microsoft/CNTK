@@ -4,7 +4,7 @@
 # ==============================================================================
 
 from . import cntk_py
-from .cntk_py import DeviceDescriptor
+from .device import use_default_device
 from .utils import sanitize_var_map, sanitize_function, typemap, value_to_seq
 
 __doc__= '''
@@ -65,7 +65,7 @@ class Trainer(cntk_py.Trainer):
             maps the variables in `outputs` to their respective NumPy arrays.
         '''
         if not device:
-            device=DeviceDescriptor.use_default_device()        
+            device = use_default_device()
         arguments = sanitize_var_map(self.model().arguments(), arguments)
 
         if outputs:
@@ -113,7 +113,7 @@ class Trainer(cntk_py.Trainer):
               tested minibatch.
         '''
         if not device:
-            device=DeviceDescriptor.use_default_device()        
+            device = use_default_device()
         arguments = sanitize_var_map(self.model().arguments(), arguments,
                 seq_starts)
 

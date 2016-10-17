@@ -24,6 +24,9 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
     <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
   </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release_NoOpt' ">
+    <OutputPath>bin\Release_NoOpt\</OutputPath>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="CifarResNet\CifarResNet.py" />
     <Compile Include="common\layers.py">

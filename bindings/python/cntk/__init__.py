@@ -17,8 +17,9 @@ from .initializer import *
 from .utils import *
 from .ops import *
 from .io import *
+from .device import *
 
 # TODO wrap
-from .cntk_py import DeviceDescriptor, momentums_per_sample
+from .cntk_py import momentums_per_sample
 
 DATATYPE = np.float32

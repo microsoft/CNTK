@@ -5,6 +5,7 @@
 
 from cntk import cntk_py
 from .swig_helper import typemap
+from cntk.device import use_default_device
 
 def save_model(root_op, filename):
     '''
@@ -33,5 +34,5 @@ def load_model(data_type, filename, device=None):
     from cntk.utils import sanitize_dtype_cntk
     data_type = sanitize_dtype_cntk(data_type)
     if not device:
-        device=cntk_py.DeviceDescriptor.use_default_device()
+        device = use_default_device()
     return cntk_py.load_legacy_model(data_type, filename)
