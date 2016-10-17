@@ -1054,8 +1054,6 @@ def element_select(flag, value_if_true, value_if_false, name=''):
 # recurrent ops
 ##########################################################################
 
-# TODO: add default value for initial_state. It should be a constant scalar
-# (0.0), using the default device
 
 @typemap
 def future_value(x, initial_state=None, time_step=1, name=''):
@@ -1067,8 +1065,6 @@ def future_value(x, initial_state=None, time_step=1, name=''):
     the current sample is the last one in the tensor) then the `initial_state`
     value is returned.
 
-    Example:
-        TBA
     Args:
         x: the tensor (or its name) from which the future value is obtained.
         initial_state: tensor or scalar representing the initial value to be
@@ -1100,8 +1096,6 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     the current sample is the first one in the tensor)  then the `initial_state`
     value is returned.
 
-    Example:
-        TBA
     Args:
         x: the tensor (or its name) from which the past value is obtained
         initial_state: tensor or scalar representing the initial value to be
@@ -1183,9 +1177,8 @@ def transpose(x, axis1=0, axis2=1, name=''):
     '''
     from cntk.cntk_py import transpose_axes
     x = sanitize_input(x)
-    rank = max(len(x.shape), 2)
-    axis1 = sanitize_axis(rank, axis1)
-    axis2 = sanitize_axis(rank, axis2)
+    axis1 = sanitize_axis(axis1)
+    axis2 = sanitize_axis(axis2)
     return transpose_axes(x, axis1, axis2, name)
 
 
@@ -1244,7 +1237,7 @@ def slice(x, axis, begin_index, end_index, name=''):
     '''
     from cntk.cntk_py import slice
     x = sanitize_input(x)
-    axis = sanitize_axis(len(x.shape), axis)
+    axis = sanitize_axis(axis)
     return slice(x, axis, begin_index, end_index, name)
 
 # TODO: enable when it is exposed in c++
@@ -1287,9 +1280,7 @@ def splice(inputs, axis=-1, name=''):
         raise ValueError('inputs has to be an iterable')
 
     inputs = [sanitize_input(x) for x in inputs]
-
-    rank = max([len(x.shape) for x in inputs])
-    axis = sanitize_axis(rank, axis)
+    axis = sanitize_axis(axis)
 
     return splice(inputs, axis, name)
 
@@ -1344,7 +1335,7 @@ def reduce_sum(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_sum
     x = sanitize_input(x)
-    axis = sanitize_axis(len(x.shape), axis)
+    axis = sanitize_axis(axis)
     return reduce_sum(x, axis, name)
 
 
@@ -1352,9 +1343,6 @@ def reduce_sum(x, axis=None, name=''):
 def reduce_log_sum(x, axis=None, name=''):
     '''
     Computes the log sum of the input tensor's elements across the specified axis.
-
-    Examples:
-        TBA
 
     Args:
         x: input tensor
@@ -1366,7 +1354,7 @@ def reduce_log_sum(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_log_sum
     x = sanitize_input(x)
-    axis = sanitize_axis(len(x.shape), axis)
+    axis = sanitize_axis(axis)
     return reduce_log_sum(x, axis, name)
 
 
@@ -1397,7 +1385,7 @@ def reduce_mean(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_mean
     x = sanitize_input(x)
-    axis = sanitize_axis(len(x.shape), axis)
+    axis = sanitize_axis(axis)
     return reduce_mean(x, axis, name)
 
 
@@ -1428,7 +1416,7 @@ def reduce_max(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_max
     x = sanitize_input(x)
-    axis = sanitize_axis(len(x.shape), axis)
+    axis = sanitize_axis(axis)
     return reduce_max(x, axis, name)
 
 
@@ -1459,7 +1447,7 @@ def reduce_min(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_min
     x = sanitize_input(x)
-    axis = sanitize_axis(len(x.shape), axis)
+    axis = sanitize_axis(axis)
     return reduce_min(x, axis, name)
 
 ##########################################################################

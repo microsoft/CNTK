@@ -217,7 +217,7 @@ class ArrayMixin(object):
                 np_array = self.data().to_numpy()
             except AttributeError:
                 try:
-                    np_array = self.value().to_numpy()
+                    np_array = self.value
                 except AttributeError:
                     # Ideally an exception would be raised here, but getattr would swallow it
                     # so we return None

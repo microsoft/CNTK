@@ -419,7 +419,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
 
 def sanitize_value(shape, value, dtype, device):
     '''
-    Converts a given `value` to a :class:`Value` object that can be passed to
+    Converts a given `value` to a :class:`NDArrayView` object that can be passed to
     the CNTK core.
 
     Args:
@@ -431,7 +431,7 @@ def sanitize_value(shape, value, dtype, device):
          on
 
     Returns:
-        :class:`Value` object representing `value`
+        :class:`NDArrayView` object representing `value`
     '''
     np_dtype = sanitize_dtype_numpy(dtype)
     cntk_dtype = sanitize_dtype_cntk(dtype)
