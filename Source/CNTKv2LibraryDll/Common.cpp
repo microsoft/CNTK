@@ -113,6 +113,9 @@ namespace CNTK
 
     /*static*/ void DeviceDescriptor::SetDefaultDevice(const DeviceDescriptor& newDefaultDevice)
     {
+        if (newDefaultDevice == DefaultDevice())
+            return;
+
         // As a testing backdoor we allow changing the default device even after being "used/frozen"
         if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
             RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
@@ -169,6 +172,10 @@ namespace CNTK
     }
 
     /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxis_";
+
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForDynamicAxes = std::numeric_limits<int>::max();
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllStaticAxes = std::numeric_limits<int>::max() - 1;
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
 
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 

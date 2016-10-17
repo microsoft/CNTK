@@ -28,5 +28,5 @@ def test_overload_exception():
 
 def test_eval_scalar():
     c = constant(value=2)
-    assert (c+3).eval() == 5
+    assert (c+3).eval() == 5.0
     assert np.all((c+[3,4]).eval() == [5,6])

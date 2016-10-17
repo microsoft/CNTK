@@ -10,7 +10,7 @@ from .cntk_py import default_param_init_scale as DefaultParamInitScale,\
         default_random_seed as DefaultRandomSeed
 
 
-def uniform(scale=DefaultParamInitScale, seed=DefaultRandomSeed):
+def uniform(scale=DefaultParamInitScale, seed=None):
     '''
     Uniform initializer
 
@@ -21,9 +21,12 @@ def uniform(scale=DefaultParamInitScale, seed=DefaultRandomSeed):
     Returns:
         initializer for `:class:cntk.variables.Parameter`
     '''
+    if seed is None:
+        seed = DefaultRandomSeed()
+
     return cntk_py.uniform_initializer(scale, seed)
 
-def gaussian(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=DefaultRandomSeed):
+def gaussian(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=None):
     '''
     Gaussian initializer
 
@@ -36,9 +39,12 @@ def gaussian(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamIni
     Returns:
         initializer for `:class:cntk.variables.Parameter`
     '''
+    if seed is None:
+        seed = DefaultRandomSeed()
+
     return cntk_py.gaussian_initializer(output_rank, filter_rank, scale, seed)
 
-def xavier(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=DefaultRandomSeed):
+def xavier(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=None):
     '''
     Xavier initializer
 
@@ -51,9 +57,12 @@ def xavier(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitF
     Returns:
         initializer for `:class:cntk.variables.Parameter`
     '''
+    if seed is None:
+        seed = DefaultRandomSeed()
+
     return cntk_py.xavier_initializer(output_rank, filter_rank, scale, seed)
 
-def glorot_uniform(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=DefaultRandomSeed):
+def glorot_uniform(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=None):
     '''
     Glorot initializer
 
@@ -66,9 +75,12 @@ def glorot_uniform(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultPa
     Returns:
         initializer for `:class:cntk.variables.Parameter`
     '''
+    if seed is None:
+        seed = DefaultRandomSeed()
+
     return cntk_py.glorot_uniform_initializer(output_rank, filter_rank, scale, seed)
 
-def glorot_normal(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=DefaultRandomSeed):
+def glorot_normal(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=None):
     '''
     initializer
 
@@ -81,9 +93,12 @@ def glorot_normal(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultPar
     Returns:
         initializer for `:class:cntk.variables.Parameter`
     '''
+    if seed is None:
+        seed = DefaultRandomSeed()
+
     return cntk_py.glorot_normal_initializer(output_rank, filter_rank, scale, seed)
 
-def he_uniform(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=DefaultRandomSeed):
+def he_uniform(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=None):
     '''
     initializer
 
@@ -96,9 +111,12 @@ def he_uniform(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamI
     Returns:
         initializer for `:class:cntk.variables.Parameter`
     '''
+    if seed is None:
+        seed = DefaultRandomSeed()
+
     return cntk_py.he_uniform_initializer(output_rank, filter_rank, scale, seed)
 
-def he_normal(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=DefaultRandomSeed):
+def he_normal(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamInitFilterRank, scale=DefaultParamInitScale, seed=None):
     '''
     initializer
 
@@ -111,6 +129,9 @@ def he_normal(output_rank=DefaultParamInitOutputRank, filter_rank=DefaultParamIn
     Returns:
         initializer for `:class:cntk.variables.Parameter`
     '''
+    if seed is None:
+        seed = DefaultRandomSeed()
+
     return cntk_py.he_normal_initializer(output_rank, filter_rank, scale, seed)
 
 def bilinear(kernel_width, kernel_height):

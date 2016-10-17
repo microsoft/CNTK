@@ -7,7 +7,7 @@
 import numpy
 import pytest
 
-from cntk import DeviceDescriptor
+from cntk.device import default
 from cntk.tests.test_utils import precision, PRECISION_TO_TYPE
 from cntk.ops import *
 from cntk.utils import *
@@ -88,5 +88,5 @@ def test_get_data_type():
             ndav64) == np.float64
 
     val32 = create_Value_from_NumPy(np.asarray([[1,2]], dtype=np.float32),
-            dev=DeviceDescriptor.default_device())
+            dev = default())
     assert get_data_type(val32, ndav64) == np.float64

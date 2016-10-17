@@ -254,7 +254,7 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
                 data_type = str(value.dtype)
             else:
                 data_type = FLOAT_32
-                
+
         ndav = _sanitize_value(shape, value, data_type, device)
         super(Constant, self).__init__(ndav, name)
 
