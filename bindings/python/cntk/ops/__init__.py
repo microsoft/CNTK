@@ -1436,25 +1436,32 @@ def reduce_min(x, axis=None, name=''):
     axis = sanitize_axis(x.shape().rank(), axis)
     return reduce_min(x, axis, name)
 
-##########################################################################
+#######################################################################
 # training ops
-##########################################################################
+#######################################################################
 
 @typemap
 def random_sample(weights, num_samples, allow_duplicates, name=''):
     '''
-    Estimates inclusion frequencies for random sampling with or without replacement.
+    Estimates inclusion frequencies for random sampling with or without
+    replacement.
 
-    The node's value is a set of num_samples random samples represented by a (sparse) matrix of shape [num_samples x len(weights)],
-    where len(weights) is the number of classes (categories) to choose from. The output has no dynamic axis.
-    The samples are drawn according to the weight vector p(i) = weights[i] / sum(weights)
+    The node's value is a set of num_samples random samples represented
+    by a (sparse) matrix of shape [num_samples x len(weights)],
+    where len(weights) is the number of classes (categories) to choose
+    from. The output has no dynamic axis.
+    The samples are drawn according to the weight vector p(i) =
+    weights[i] / sum(weights)
     We get one set of samples per minibatch.
-    Intended use cases are e.g. sampled softmax, noise contrastive estimation etc.
+    Intended use cases are e.g. sampled softmax, noise contrastive
+    estimation etc.
 
     Args:
-        weights: input vector of sampling weights which should be nonzero positive numbers.
+        weights: input vector of sampling weights which should be
+        non-negative numbers.
         num_samples (`int`): number of expected samples
-        allow_duplicates (`bool`): If sampling is done with replacement (True) or without (False).
+        allow_duplicates (`bool`): If sampling is done
+            with replacement (`True`) or without (`False`).
 
     Returns:
         :class:`cntk.ops.functions.Function`
@@ -1467,32 +1474,48 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
 
 
 @typemap
-def random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, name=''):
+def random_sample_inclusion_frequency(
+    weights, 
+    num_samples, 
+    allow_duplicates, 
+    name=''):
     '''
-    For weighted sampling with the specifed sample size (num_samples) this node computes the expected number of occurences of each class in
-    the the sampled set. In case of sampling without replacement the result only an estimate which might be quite rough in the case of small sample sizes.
-    Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
-    This operation will be typically used together with 'random_sample'.
+    For weighted sampling with the specifed sample size (`num_samples`)
+    this node computes the expected number of occurences of each class
+    in the the sampled set. In case of sampling without replacement 
+    the result is only an estimate which might be quite rough in the
+    case of small sample sizes.
+    Intended uses are e.g. sampled softmax, noise contrastive 
+    estimation etc.
+    This operation will be typically used together 
+    with `random_sample`.
 
     Args:
-        weights: input vector of sampling weights which should be nonzero positive numbers.
-        num_samples ('int'): number of expected samples
-        allow_duplicates ('bool'): If sampling is done with replacement (True) or without (False).
+        weights: input vector of sampling weights which should be 
+        non-negative numbers. 
+        num_samples (`int`): number of expected samples
+        allow_duplicates (`bool`): If sampling is done 
+            with replacement (`True`) or without (`False`).
 
     Examples:
         >>> import numpy as np
         >>> from cntk import *
-        >>> # weight vector with 100 '1000'-values followed by 100 '1' values
-        >>> weights = np.concatenate((np.full((100),1000), np.full((100),1)))
-        >>> inclusion_frequencies = random_sample_inclusion_frequency(weights, 150, True).eval()
+        >>> # weight vector with 100 '1000'-values followed 
+        by 100 '1' values
+        >>> weights = np.concatenate((np.full((100),1000), 
+        np.full((100),1)))
+        >>> inclusion_frequencies = 
+        random_sample_inclusion_frequency(weights, 150, True).eval()
         >>> inclusion_frequencies[0]
         1.4985014985014986
         >>> inclusion_frequencies[1]
         1.4985014985014986
         >>> inclusion_frequencies[110]
         0.0014985014985014985
-        >>> # when switching to sampling without duplicates samples are forst to pick the low weight classes too
-        >>> inclusion_frequencies = random_sample_inclusion_frequency(weights, 150, False).eval()
+        >>> # when switching to sampling without duplicates samples are
+        forst to pick the low weight classes too
+        >>> inclusion_frequencies 
+        = random_sample_inclusion_frequency(weights, 150, False).eval()
         >>> inclusion_frequencies[0]
         1.0
         >>> inclusion_frequencies[110]
@@ -1504,7 +1527,11 @@ def random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, na
     from cntk.cntk_py import random_sample_inclusion_frequency
     weights = sanitize_input(weights)
 
-    return random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, name)
+    return random_sample_inclusion_frequency(
+        weights, 
+        num_samples, 
+        allow_duplicates, 
+        name)
 
 
 @typemap
