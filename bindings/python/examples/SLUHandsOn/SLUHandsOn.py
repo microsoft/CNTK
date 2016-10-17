@@ -138,7 +138,7 @@ def train(reader, model):
 
 if __name__=='__main__':
     # TODO: get closure on Amit's feedback "Not the right pattern as we discussed over email. Please change to set_default_device(gpu(0))"
-    set_gpu(0)
+    #set_gpu(0)
     #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
     reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
