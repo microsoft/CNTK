@@ -522,17 +522,26 @@ public:
 
         // determine all leaves and their dependents
         dependentSet = set<ComputationNodeBasePtr>(inputNodes.begin(), inputNodes.end()); // start with the specified inputs
+        bool iterate = true;
         // determine all leaves and their dependents
-        for (let& node : allInputs)
+        // this needs outer loop to handle cyclic dependencies (PastValue) properly
+        while (iterate)
         {
-            // add parameters that are to be cloned to dependent set
-            if (parameterTreatment != ParameterTreatment::shared && node->Is<IFreezable>())
-                dependentSet.insert(node);
-            // if at least one input is in the dependent set then this node is, too
-            else
-                for (let& input : node->GetInputs())
-                    if (dependentSet.find(input) != dependentSet.end())
-                        dependentSet.insert(node);
+            iterate = false;
+            for (let& node : allInputs)
+            {
+                // add parameters that are to be cloned to dependent set
+                if (parameterTreatment != ParameterTreatment::shared && node->Is<IFreezable>())
+                    dependentSet.insert(node);
+                // if at least one input is in the dependent set then this node is, too
+                else
+                    for (let& input : node->GetInputs())
+                        if (dependentSet.find(input) != dependentSet.end() && dependentSet.find(node) == dependentSet.end())
+                        {
+                            dependentSet.insert(node);
+                            iterate = true;
+                        }
+            }
         }
 
 #if 0
