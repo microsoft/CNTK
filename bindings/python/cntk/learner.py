@@ -190,7 +190,7 @@ def momentum_schedule_per_sample(momentum, units=1):
 @typemap
 def sgd(parameters, lr, 
         l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
-        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10, 
         gradient_clipping_with_truncation=True):
     '''
     Creates an SGD learner instance to learn the parameters.
@@ -207,7 +207,7 @@ def sgd(parameters, lr,
          defaults to 0.0
         gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        clipping threshold per sample ('float', optional): clipping threshold
+        gradient_clipping_threshold_per_sample ('float', optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
@@ -221,7 +221,7 @@ def sgd(parameters, lr,
     additional_options.l1_regularization_weight = l1_regularization_weight
     additional_options.l2_regularization_weight = l2_regularization_weight
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
-    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
     return cntk_py.sgd_learner(parameters, lr, additional_options)
@@ -229,7 +229,7 @@ def sgd(parameters, lr,
 @typemap
 def momentum_sgd(parameters, lr, momentum, 
         l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
-        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10, 
         gradient_clipping_with_truncation=True):
     '''
     Creates a Momemtum SGD learner instance to learn the parameters.
@@ -247,7 +247,7 @@ def momentum_sgd(parameters, lr, momentum,
          defaults to 0.0
         gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        clipping threshold per sample ('float', optional): clipping threshold
+        gradient_clipping_threshold_per_sample ('float', optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
@@ -264,7 +264,7 @@ def momentum_sgd(parameters, lr, momentum,
     additional_options.l1_regularization_weight = l1_regularization_weight
     additional_options.l2_regularization_weight = l2_regularization_weight
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
-    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
     return cntk_py.momentum_sgd_learner(parameters, lr, momentum,
@@ -273,7 +273,7 @@ def momentum_sgd(parameters, lr, momentum,
 @typemap
 def nesterov(parameters, lr, momentum, 
         l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
-        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10, 
         gradient_clipping_with_truncation=True):
     '''
     Creates a Nesterov SGD learner instance to learn the parameters.
@@ -291,7 +291,7 @@ def nesterov(parameters, lr, momentum,
          defaults to 0.0
         gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        clipping threshold per sample ('float', optional): clipping threshold
+        gradient_clipping_threshold_per_sample ('float', optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
@@ -308,7 +308,7 @@ def nesterov(parameters, lr, momentum,
     additional_options.l1_regularization_weight = l1_regularization_weight
     additional_options.l2_regularization_weight = l2_regularization_weight
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
-    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
         
     return cntk_py.nesterov_learner(parameters, lr, momentum,
@@ -317,7 +317,7 @@ def nesterov(parameters, lr, momentum,
 @typemap
 def adagrad(parameters, lr, need_ave_multiplier=True, 
         l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
-        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10, 
         gradient_clipping_with_truncation=True):
     '''
     Creates an AdaGrad learner instance to learn the parameters.
@@ -335,7 +335,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
          defaults to 0.0
         gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        clipping threshold per sample ('float', optional): clipping threshold
+        gradient_clipping_threshold_per_sample ('float', optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
@@ -349,7 +349,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
     additional_options.l1_regularization_weight = l1_regularization_weight
     additional_options.l2_regularization_weight = l2_regularization_weight
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
-    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
         
     return cntk_py.ada_grad_learner(parameters, lr, need_ave_multiplier,
@@ -360,7 +360,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
 def fsadagrad(parameters, lr, momentum,
         targetAdagradAvDenom = 0.0025, varianceTimeConstant = 720000,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
-        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10, 
         gradient_clipping_with_truncation=True):
     '''
     Creates an FS AdaGrad learner instance to learn the parameters.
@@ -382,7 +382,7 @@ def fsadagrad(parameters, lr, momentum,
          defaults to 0.0
         gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        clipping threshold per sample ('float', optional): clipping threshold
+        gradient_clipping_threshold_per_sample ('float', optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
@@ -399,7 +399,7 @@ def fsadagrad(parameters, lr, momentum,
     additional_options.l1_regularization_weight = l1_regularization_weight
     additional_options.l2_regularization_weight = l2_regularization_weight
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
-    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
     return cntk_py.fsada_grad_learner(parameters, lr, momentum, 
@@ -411,7 +411,7 @@ def rmsprop(parameters, lr,
         gamma, inc, dec, max, min,
         need_ave_multiplier=True,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0, 
-        gaussian_noise_injection_std_dev=0.0, clipping_threshold_per_sample=1E10, 
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10, 
         gradient_clipping_with_truncation=True):
     '''
     Creates an RMSProp learner instance to learn the parameters.
@@ -433,7 +433,7 @@ def rmsprop(parameters, lr,
          defaults to 0.0
         gaussian_noise_injection_std_dev ('float', optional): the standard deviation 
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        clipping threshold per sample ('float', optional): clipping threshold
+        gradient_clipping_threshold_per_sample ('float', optional): clipping threshold
          per sample, defaults to infinity
         gradient_clipping_with_truncation ('bool', default `True`): gradient clipping
 
@@ -447,7 +447,7 @@ def rmsprop(parameters, lr,
     additional_options.l1_regularization_weight = l1_regularization_weight
     additional_options.l2_regularization_weight = l2_regularization_weight
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
-    additional_options.clipping_threshold_per_sample = clipping_threshold_per_sample
+    additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
     return cntk_py.rmsprop_learner(parameters, lr, gamma, inc, dec, max, min,
