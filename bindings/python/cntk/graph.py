@@ -37,12 +37,14 @@ def dfs_walk(node, visitor):
             except AttributeError:
                 pass
 
-        if visitor(node):
-            accum.append(node)
-
-        visited.add(node)
+    if visitor(node):
+        accum.append(node)
+	
+	visited.add(node)
 
     return accum
+
+
 
 def find_nodes_by_name(node, node_name):
     '''
