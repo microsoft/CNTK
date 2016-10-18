@@ -4,20 +4,16 @@
 # for full license information.
 # ==============================================================================
 
-import numpy as np
-import sys
 import os
-import time
 from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
 from cntk.io import CNTKTextFormatMinibatchSource, StreamDef
 from cntk import Trainer
-from cntk.learner import sgd, fsadagrad, learning_rate_schedule
+from cntk.learner import fsadagrad, learning_rate_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
 from examples.common.nn import print_training_progress
-from cntk.device import gpu, set_default_device
 
 # helper function that will go away once dimension inference works and has been updated here
 from cntk import Axis
@@ -89,11 +85,10 @@ def train(reader, model, max_epochs):
     num_mbs_to_show_result = 100
 
     lr_per_sample = [0.003]*2+[0.0015]*12+[0.0003]
-    momentum = 0.9**(1/minibatch_size)  # TODO: change to time constant
 
     # trainer object
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner = fsadagrad(z.parameters, lr_schedule, momentum,
+    learner = fsadagrad(z.parameters, lr_schedule, minibatch_size,
                         targetAdagradAvDenom=1, gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
     trainer = Trainer(z, ce, pe, [learner])
@@ -137,8 +132,6 @@ def train(reader, model, max_epochs):
 #############################
 
 def main():
-    # TODO: get closure on Amit's feedback "Not the right pattern as we discussed over email. Please change to set_default_device(gpu(0))"
-    #set_default_device(gpu(0))
     #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
     reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
@@ -149,5 +142,3 @@ def main():
     reader = create_reader(data_dir + "/atis.test.ctf")
     #test(reader, model_dir + "/slu.cmf")  # TODO: what is the correct pattern here?
 
-if __name__=='__main__':
-    main()
