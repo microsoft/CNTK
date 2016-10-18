@@ -285,7 +285,7 @@ namespace CNTK
             std::wstring functionUid, functionName;
             std::tie(functionUid, functionName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), opType);
 
-            FunctionPtr primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), functionUid, functionName);
+            FunctionPtr primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), functionName, functionUid);
             allPrimitiveFunctions.insert(primitiveFunction);
             var = primitiveFunction->Output();
             if (placeholderReplacements.find(placeholderVar) != placeholderReplacements.end())
