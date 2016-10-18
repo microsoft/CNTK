@@ -84,8 +84,11 @@ def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
 
     Args:
         output_vector: the unscaled computed output values from the network
-        target_vector: usually it is one-hot vector where the hot bit corresponds to the label index.
-        But it can be any probability distribution over the labels.
+        target_vector: usually it is one-hot vector where the hot bit
+         corresponds to the label index. But it can be any probability
+         distribution over the labels. 
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the cross
+         entropy will be computed.
         name (`str`, optional): the name of the Function instance in the network
     Returns:
         :class:`cntk.ops.functions.Function`
@@ -152,7 +155,10 @@ def classification_error(output_vector, target_vector, axis=-1, topN=1, name='')
 
     Args:
         output_vector: the output values from the network
-        target_vector: it is one-hot vector where the hot bit corresponds to the label index
+        target_vector: it is one-hot vector where the hot bit corresponds to
+         the label index.
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the
+         classification error will be computed.
         name (`str`, optional): the name of the Function instance in the network
     Returns:
         :class:`cntk.ops.functions.Function`
@@ -1410,7 +1416,8 @@ def splice(inputs, axis=-1, name=''):
 
     Args:
         inputs (`list`): tuple of input tensors
-        axis (:class:`cntk.axis.Axis`): axis along which the concatenation will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the
+         concatenation will be performed
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
