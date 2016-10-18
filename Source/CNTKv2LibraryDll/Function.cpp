@@ -1027,6 +1027,10 @@ namespace CNTK
         case PrimitiveOpType::RandomSample:
         {
             auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
+
+            if (numSamples == 0)
+                InvalidArgument("Number of requested samples is zero.");
+
             auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
             computationNodePtr = New<RandomSampleNode<ElementType>>(network->GetDeviceId(), internalNodeName, numSamples, allowDuplicates);
             break;
@@ -1034,6 +1038,10 @@ namespace CNTK
         case PrimitiveOpType::RandomSampleInclusionFrequency:
         {
             auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
+
+            if (numSamples == 0)
+                InvalidArgument("Number of requested samples is zero.");
+
             auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
             computationNodePtr = New<RandomSampleInclusionFrequencyNode<ElementType>>(network->GetDeviceId(), internalNodeName, numSamples, allowDuplicates);
             break;
