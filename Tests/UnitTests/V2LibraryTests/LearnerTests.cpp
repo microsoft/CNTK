@@ -206,6 +206,8 @@ void TestTrainingParametersSchedule()
 
 void LearnerTests()
 {
+    fprintf(stderr, "\nLearnerTests..\n");
+
     TestTrainingParametersSchedule();
 
     TestSGDLearner<double>(5, 3, DeviceDescriptor::CPUDevice());

@@ -95,7 +95,7 @@ void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int t
     }
 
     auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({numOutputClasses, hiddenLayersDim}, -0.5, 0.5, 1, device));
-    auto classifierFunc = Times(outputTimesParam, classifierRoot, 1, L"classifierOutput");
+    auto classifierFunc = Times(outputTimesParam, classifierRoot, L"classifierOutput");
 
     // Now test the structure
     if (classifierFunc->Parameters().size() != ((numHiddenLayers * 2) + 1))
@@ -454,15 +454,10 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
 
 void MultiThreadsEvaluation(bool isGPUAvailable)
 {
+    fprintf(stderr, "\nMultiThreadsEvaluation..\n");
+
 #ifndef CPUONLY
-    if (isGPUAvailable)
-    {
-        fprintf(stderr, "Run evaluation on GPU device using GPU build.\n");
-    }
-    else
-    {
-        fprintf(stderr, "Run evaluation on CPU device using GPU build.\n");
-    }
+    fprintf(stderr, "Run evaluation on %s device using GPU build.\n", isGPUAvailable ? "GPU" : "CPU");
 #else
     fprintf(stderr, "Run evaluation using CPU-only build.\n");
 #endif

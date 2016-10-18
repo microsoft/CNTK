@@ -8,6 +8,7 @@
 #include "Utils.h"
 #include <istream>
 #include <ostream>
+#include "Function.h"
 
 using namespace std;
 
@@ -168,6 +169,8 @@ namespace CNTK
         {
         case DictionaryValue::Type::Bool:
             return (m_data.m_boolean == other.m_data.m_boolean);
+        case DictionaryValue::Type::Int:
+            return (m_data.m_int == other.m_data.m_int);
         case DictionaryValue::Type::SizeT:
             return (m_data.m_sizeT == other.m_data.m_sizeT);
         case DictionaryValue::Type::Float:
@@ -291,6 +294,9 @@ namespace CNTK
         case DictionaryValue::Type::Bool:
             stream >> us.m_data.m_boolean;
             break;
+        case DictionaryValue::Type::Int:
+            stream >> us.m_data.m_int;
+            break;
         case DictionaryValue::Type::SizeT:
             stream >> us.m_data.m_sizeT;
             break;
@@ -321,7 +327,7 @@ namespace CNTK
         }
         case DictionaryValue::Type::Axis:
         {
-            size_t staticAxisIdx;
+            int staticAxisIdx;
             stream >> staticAxisIdx;
 
             std::wstring axisName;
@@ -406,6 +412,9 @@ namespace CNTK
         {
         case DictionaryValue::Type::Bool:
             stream << us.m_data.m_boolean;
+            break;
+        case DictionaryValue::Type::Int:
+            stream << us.m_data.m_int;
             break;
         case DictionaryValue::Type::SizeT:
             stream << us.m_data.m_sizeT;
@@ -596,6 +605,19 @@ namespace CNTK
             stream >> us[key];
         }
         return stream;
+    }
+
+    std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, const PrimitiveOpType& opType)
+    {
+        std::wstring uid, name;
+        std::tie(uid, name) = UidAndNameFromCNTKInternalNodeName(CNTKInternalNodeName);
+        if (uid == L"")
+        {
+            name = CNTKInternalNodeName;
+            uid = GenerateUid(opType);
+        }
+
+        return{ uid, name };
     }
 
     template <typename T>

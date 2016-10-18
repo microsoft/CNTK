@@ -7,7 +7,8 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, StreamConfiguration, DeviceDescriptor, text_format_minibatch_source
+from cntk import Trainer, StreamConfiguration, text_format_minibatch_source
+from cntk.device import cpu, set_default_device
 from cntk.learner import sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
 
@@ -121,8 +122,7 @@ def simple_mnist(debug_output=False):
 if __name__=='__main__':
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    # target_device = DeviceDescriptor.cpu_device()
-    # DeviceDescriptor.set_default_device(target_device)
+    # set_default_device(cpu())
 
     error = simple_mnist()
     print("Error: %f" % error)
