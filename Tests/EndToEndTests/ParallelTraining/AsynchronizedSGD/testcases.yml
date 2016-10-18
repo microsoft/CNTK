@@ -1,4 +1,5 @@
-# dataDir: ../../Data
+dataDir: .
+#../../Data
 
 tags:
      # running on every BVT job in 'P' (Parallel) leg in Debug-GPU and Release-CPU configurations:
