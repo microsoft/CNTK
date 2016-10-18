@@ -1065,7 +1065,7 @@ protected:
         virtual const std::wstring OperationName() const override
         {
             return L"PARTraversalFlowControlNode";
-        } 
+        }
         virtual void BeginForwardProp() override
         {
         }
