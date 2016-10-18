@@ -186,6 +186,34 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     filter, and the last one must be equal to inChannels. There are outChannels filters. I.e. for each output position, a vector of
     dimension outChannels is computed. Hence, the total number of filter parameters is (M1*M2*...*Mn) * inChannels * outChannels.
 
+    Example:
+        >>> input_raw = np.array([4.0] * 25, dtype = np.float32)
+        
+        >>> input_val = input_raw.reshape([1, 5, 5])
+        
+        >>> input_var = C.input_variable(input_val.shape)
+        
+        >>> input_val
+        array([[[ 4.,  4.,  4.,  4.,  4.],
+                [ 4.,  4.,  4.,  4.,  4.],
+                [ 4.,  4.,  4.,  4.,  4.],
+                [ 4.,  4.,  4.,  4.,  4.],
+                [ 4.,  4.,  4.,  4.,  4.]]], dtype=float32)
+        
+        >>> conv_map_val = np.array([1, 1, 1, 1], dtype = np.float32).reshape([1, 2, 2])
+        
+        >>> conv_map_val
+        array([[[ 1.,  1.],
+                [ 1.,  1.]]], dtype=float32)
+        
+        >>> conv_map = C.constant(value=conv_map_val)
+        
+        >>> C.convolution(conv_map , input_var, auto_padding = [False]).eval({input_var: input_val})
+        array([[[[[ 16.,  16.,  16.,  16.],
+                  [ 16.,  16.,  16.,  16.],
+                  [ 16.,  16.,  16.,  16.],
+                  [ 16.,  16.,  16.,  16.]]]]], dtype=float32)
+
     Args:
         convolution_map: convolution filter weights, stored as a matrix of dimensions [outChannels, (M1*M2*...*Mn)],
          where (M1*M2*...*Mn) must be the product of the kernel dimensions, e.g. 75 for a [5 x 5]-sized filter on 3
