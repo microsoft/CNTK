@@ -77,7 +77,7 @@ class Function(cntk_py.Function):
              function to variables in the cloned function
 
         Returns:
-            `Function`: the cloned Function
+            :class:`Function`: the cloned Function
         '''
         if not isinstance(method, CloneMethod):
             raise ValueError('clone method "%s" is not supported' %
@@ -93,7 +93,7 @@ class Function(cntk_py.Function):
     @typemap
     def constants(self):
         '''
-        List of all `Constant` variables of this `Function`
+        List of all `Constant` variables of this :class:`Function`
         '''
         return super(Function, self).constants()
 
@@ -277,7 +277,7 @@ class Function(cntk_py.Function):
             substitutions (:class:`cntk.ops.variables.Variable`): the variable that will replace the placeholder
 
         Returns:
-            `Function`: itself
+            :class:`Function`: itself
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
