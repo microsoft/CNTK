@@ -114,7 +114,7 @@ def Input(*args, **kwargs):
 def Placeholder(_inf=None, name='placeholder'):
     if _inf is None:
         p = placeholder_variable()
-    else:  # TODO: remove this
+    else:  # BUGBUG: This code branch is only needed for Recurrence(), and will go away completely.
         p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis, name=name)
     _name_node(p, name)
     if _trace_layers:
@@ -123,7 +123,6 @@ def Placeholder(_inf=None, name='placeholder'):
 
 # TODO: Let's not encourage users to use combine([f]) as a workaround for identity/pass, but rather have it as a first-class operator implemented that we then use. [Willi]
 #       If we have Function identity, in same pattern as e.g. sigmoid, then that would suffice.
-# Once we no longer need _inf, we can just use identity without parentheses
 def _Identity():
     x = Placeholder(name='identity_arg')
     #apply_x = combine([x])  # BUGBUG: not working
