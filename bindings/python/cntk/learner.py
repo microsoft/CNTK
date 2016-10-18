@@ -133,7 +133,7 @@ def momentum_schedule(momentum, units=1):
         >>> # Use a fixed momentum of 1100 for all samples
         >>> m = momentum_schedule(1100)
 
-        >>> # Use the learning rate 1100 for the first 1500 samples, then 0.9 for the remaining ones
+        >>> # Use the time constant 1100 for the first 1000 samples, then 1500 for the remaining ones
         >>> m = momentum_schedule([1100, 1500], 1000)
 
     Args:
