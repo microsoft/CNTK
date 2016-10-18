@@ -1251,11 +1251,14 @@ def get_output_and_keep_reference(self):
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
 
-from .tensor import _add_tensor_ops, _add_eval
+from .tensor import _add_tensor_ops, _add_eval, _add_array_interface
 for klass in [Function, Variable]:
     _add_tensor_ops(klass)
 
 _add_eval(Function)
+
+for klass in [Variable, Value, NDArrayView, NDMask]:
+    _add_array_interface(klass)
 
 enable_reversing_tensor_shapes_in_error_messages()
 %}

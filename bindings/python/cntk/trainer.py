@@ -4,7 +4,7 @@
 # ==============================================================================
 
 from . import cntk_py
-from .cntk_py import DeviceDescriptor
+from .device import use_default_device
 from .utils import sanitize_var_map, sanitize_function, typemap, value_to_seq
 
 __doc__= '''
@@ -41,7 +41,7 @@ class Trainer(cntk_py.Trainer):
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
-               * `dict`: keys are input variable or names and values are the input data. 
+               * `dict`: keys are input variable or names, and values are the input data. 
                * `list`: elements are input data in the order their respective variables have been defined in the network. 
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
@@ -65,7 +65,7 @@ class Trainer(cntk_py.Trainer):
             maps the variables in `outputs` to their respective NumPy arrays.
         '''
         if not device:
-            device=DeviceDescriptor.use_default_device()        
+            device = use_default_device()
         arguments = sanitize_var_map(self.model().arguments(), arguments)
 
         if outputs:
@@ -91,7 +91,7 @@ class Trainer(cntk_py.Trainer):
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
-               * `dict`: keys are input variable or names and values are the input data. 
+               * `dict`: keys are input variable or names, and values are the input data. 
                * `list`: elements are input data in the order their respective variables have been defined in the network. 
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
@@ -113,7 +113,7 @@ class Trainer(cntk_py.Trainer):
               tested minibatch.
         '''
         if not device:
-            device=DeviceDescriptor.use_default_device()        
+            device = use_default_device()
         arguments = sanitize_var_map(self.model().arguments(), arguments,
                 seq_starts)
 
@@ -207,4 +207,3 @@ class Trainer(cntk_py.Trainer):
             `int`
         '''
         return super(Trainer, self).previous_minibatch_sample_count()
-

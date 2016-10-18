@@ -8,7 +8,8 @@ import numbers
 import collections
 import numpy as np
 import scipy.sparse
-from .. import cntk_py
+from cntk import cntk_py
+from cntk.device import cpu, gpu, use_default_device
 from .persist import load_model, save_model
 from .swig_helper import typemap
 
@@ -44,9 +45,9 @@ def cntk_device(device_id):
         CNTK DeviceDescriptor
     '''
     if device_id == -1:
-        return cntk_py.DeviceDescriptor.cpu_device()
+        return cpu()
     else:
-        return cntk_py.DeviceDescriptor.gpu_device(device_id)
+        return gpu(device_id)
 
 
 def is_string(value):
@@ -325,7 +326,7 @@ def pad_to_dense(batch):
 
 
 def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
-    """
+    '''
     Convert to :cntk:`Value` with `data_type`. If the samples in `batch` have
     different sequence lengths, pad them to max sequence length and create a
     mask.
@@ -341,7 +342,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
 
     Returns:
         `:class:Value`: converted batch
-    """
+    '''
     from ..cntk_py import Value
 
     if isinstance(batch, Value):
@@ -404,6 +405,9 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     if np.issubdtype(batch.dtype, int):
         batch = batch.astype(np.float32)
 
+        if len(cntk_shape) == 0:
+            raise ValueError('values should be an array of input samples')
+
     ndav = create_NDArrayView_from_NumPy(batch, device)
 
     if use_mask:
@@ -419,6 +423,7 @@ def sanitize_function(arg):
     Tries to retrieve a Function from the argument or throws an exception if
     that's not possible.
     '''
+    
     if isinstance(arg, cntk_py.Variable):
         arg = arg.owner
 
@@ -440,7 +445,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          `op.outputs()`
         arguments (`dict` or `list` or `tuple`): maps variables to their
          input data. The interpretation depends on the input type:
-           * `dict`: keys are input variable or names and values are the input data. 
+           * `dict`: keys are input variable or names, and values are the input data. 
            * `list`: elements are input data in the order their respective variables have been defined in the network. 
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
@@ -544,7 +549,7 @@ def ones_like(batch, precision):
 def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=None):
     shape = sanitize_shape(shape)
     if not dev:
-        dev = cntk_py.DeviceDescriptor.use_default_device()
+        dev = use_default_device()
     # FIXME only dense supported so far
     view = cntk_py.NDArrayView(
         data_type, cntk_py.StorageFormat_Dense, shape, dev)
@@ -553,7 +558,7 @@ def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, dev=None):
 
 def create_NDArrayView_from_NumPy(nd, dev=None):
     if not dev:
-        dev = cntk_py.DeviceDescriptor.use_default_device()
+        dev = use_default_device()
 
     return cntk_py.NDArrayView(nd, dev, False)
 
@@ -592,12 +597,11 @@ def sanitize_dtype_cntk(dtype):
         raise ValueError('data type "%s" is not supported' % dtype)
 
 
-def sanitize_axis(rank, axis):
+def sanitize_axis(axis):
     '''
     Sanitizes the axis.
 
     Args:
-        rank (`int`): rank of the tensor on which `axis` is to be used
         axis (`:class:Axis` or `int` or `None`): the axis to be used.
           * `:class:Axis`: use axis instance directly (will convert row- to
              col-major in case of static axis.
@@ -608,12 +612,9 @@ def sanitize_axis(rank, axis):
     if axis is None:
         return cntk_py.Axis.all_static_axes()
     elif isinstance(axis, numbers.Integral):
-        if axis < 0:
             return cntk_py.Axis(-axis - 1)
-        else:
-            return cntk_py.Axis(rank - 1 - axis)
     elif axis.is_static_axis():
-        return cntk_py.Axis(rank - 1 - axis.static_axis_index())
+        return cntk_py.Axis(-1 - axis.static_axis_index())
     else:
         return axis
 
@@ -677,7 +678,7 @@ def value_to_seq(value):
         a list of NumPy arrays
     '''
 
-    np_data = value.data().to_numpy()
+    np_data = np.asarray(value)
     if value.mask():
         mask = value.mask().to_numpy()
         np_data = [seq[mask[idx] != cntk_py.MaskKind_Invalid]
@@ -695,7 +696,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
         op (:class:`Function`): operation to evaluate
         arguments (`dict` or `list` or `tuple`): maps variables to their
          input data. The interpretation depends on the input type:
-           * `dict`: keys are input variable or names and values are the input data. 
+           * `dict`: keys are input variable or names, and values are the input data. 
            * `list`: elements are input data in the order their respective variables have been defined in the network. 
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
@@ -732,3 +733,46 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
 
     else:
         return forward_output, None
+
+
+# helper to convert a dictionary into a Python class, so that the dict looks like an immutable record
+# TODO: move to utils?
+class _ClassFromDict(dict):
+    def __init__(self, args_dict):
+        super(_ClassFromDict, self).__init__(args_dict)
+        # TODO: try to delete __setattr__ to make it immutable
+        for key in args_dict:   # self.__dict__.update(args_dict)
+            self[key] = args_dict[key]
+    def __getattr__(self, k):
+        return self.get(k)
+    # can use __slot__ to hide __setattr__(), and cannot be extended
+    # cf. https://pypi.python.org/pypi/frozendict/0.4 
+
+
+# easier construction of records
+# e.g. r = Record(x = 13, y = 42) ; x = r.x
+def Record(**kwargs):
+    return _ClassFromDict(kwargs)
+
+
+# type-cast a shape given as a scalar into a tuple
+def _as_tuple(x):
+    return x if (isinstance(x,tuple)) else (x,)
+
+
+# top-level short-hand for selecting a GPU
+# TODO: find the right balance between conciseness and boilerplate
+#def set_gpu(gpu_id):
+#    from cntk import DeviceDescriptor
+#    # Specify the target device to be used for computing
+#    target_device = DeviceDescriptor.gpu_device(gpu_id)
+#    DeviceDescriptor.set_default_device(target_device)
+
+# helper to get next minibatch from a reader into a set of variables
+def next_minibatch(source, minibatch_size, input_map):
+    mb = source.get_next_minibatch(minibatch_size)
+    if not mb:
+        return (None, 0)
+    else:
+        return ({ key : mb[value]               for (key, value) in input_map.items() },
+                { key : mb[value].m_num_samples for (key, value) in input_map.items() })

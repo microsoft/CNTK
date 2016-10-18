@@ -35,6 +35,9 @@ namespace CNTK
 
     NDArrayViewPtr Variable::Value() const
     {
+        if (!IsConstant() && !IsParameter())
+            LogicError("Only Variables of kind Parameter and Constant have a Value!");
+
         if (m_dataFields->m_value == nullptr)
         {
             assert(m_dataFields->m_valueInitializer);
@@ -56,6 +59,9 @@ namespace CNTK
                 LogicError("Unsupported DataType %s", DataTypeName(GetDataType()));
                 break;
             }
+
+            m_dataFields->m_valueInitializer = nullptr;
+            m_dataFields->m_valueInitializationDevice = nullptr;
         }
 
         assert(m_dataFields->m_value != nullptr);
@@ -89,6 +95,25 @@ namespace CNTK
 
         m_valueInitializer.reset(new ParameterInitializer(initializationConfig));
         m_valueInitializationDevice.reset(new DeviceDescriptor(device));
+    }
+
+    namespace Internal
+    {
+        static std::atomic<unsigned long> s_fixedRandomSeed(0);
+        void SetFixedRandomSeed(unsigned long fixedRandomSeed)
+        {
+            s_fixedRandomSeed.store(fixedRandomSeed);
+        }
+    }
+
+    static std::atomic<unsigned long> s_currentRandomSeed(1);
+    unsigned long DefaultRandomSeed()
+    {
+        auto currentFixedRandomSeed = Internal::s_fixedRandomSeed.load();
+        if (currentFixedRandomSeed != 0)
+            return currentFixedRandomSeed;
+
+        return s_currentRandomSeed++;
     }
 
     static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, int outputRank, int filterRank, double scale, unsigned long seed)
@@ -196,7 +221,9 @@ namespace CNTK
                 filterRank = (int)initConfig[FilterRankAttributeName].Value<size_t>();
             }
 
-            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitRandom(*valueMatrix, AsTensorShape(shape), initializerType, randomSeed, (ElementType)scale, filterRank, outputRank, false, AsCNTKImplDeviceId(device));
+            Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitRandom(*valueMatrix, AsTensorShape(shape), initializerType, randomSeed, (ElementType)scale,
+                                                                              filterRank, outputRank, /*initOnCPUOnly=*/true,
+                                                                              AsCNTKImplDeviceId(device));
         }
 
         return value;
