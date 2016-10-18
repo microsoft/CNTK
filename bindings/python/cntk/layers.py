@@ -277,7 +277,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0):
 
     # parameters bound to this Function
     gain = Parameter((1), init=initial_scale)  # TODO: offer Softplus version for protection, as for Stabilizer
-    bias = Parameter((1), initValue = initial_bias)
+    bias = Parameter((1), init=initial_bias)
 
     # expression
     x = Placeholder(name='layer_normalization_arg')
