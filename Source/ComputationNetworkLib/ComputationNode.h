@@ -647,6 +647,8 @@ public:
             LogicError("Environment: No environment has been set.");
         return *m_environment;
     }
+
+    bool HasEnvironmentPtr() const { return m_environment.get() != nullptr; }
     ComputationEnvironmentPtr GetEnvironmentPtr() const { return m_environment; }
     void SetEnvironment(ComputationEnvironmentPtr environment) { m_environment = environment; }
 
