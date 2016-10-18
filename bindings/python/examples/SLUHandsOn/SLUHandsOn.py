@@ -14,7 +14,7 @@ from cntk.models import *  # higher abstraction level, e.g. entire standard mode
 from cntk.utils import *
 from cntk.io import CNTKTextFormatMinibatchSource, StreamDef
 from cntk import Trainer
-from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
+from cntk.learner import sgd, fsadagrad, learning_rate_schedule
 from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 from examples.common.nn import print_training_progress
 
@@ -91,7 +91,7 @@ def train(reader, model, max_epochs):
     momentum = 0.9**(1/minibatch_size)  # TODO: change to time constant
 
     # trainer object
-    lr_schedule = learning_rates_per_sample(lr_per_sample, units=epoch_size)
+    lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
     learner = fsadagrad(z.parameters(), lr_schedule, momentum,
                         targetAdagradAvDenom=1, clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
