@@ -9,12 +9,16 @@ import numpy as np
 from .. import Function
 from ..trainer import *
 from ..learner import *
-from .. import cross_entropy_with_softmax, classification_error, parameter, input_variable, times, plus
+from .. import cross_entropy_with_softmax, classification_error, parameter, \
+        input_variable, times, plus, reduce_sum
 
 def test_trainer(tmpdir):
     in1 = input_variable(shape=(1,))
     labels = input_variable(shape=(1,))
-    p = parameter(init=10)
+    p = parameter(shape=(2,))
+    z = plus(in1, reduce_sum(p), name='z')
+
+    p = parameter(shape=(10,), init=10)
     z = plus(in1, p, name='z')
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
@@ -39,8 +43,8 @@ def test_trainer(tmpdir):
 def test_output_to_retain():
     in1 = input_variable(shape=(1,))
     labels = input_variable(shape=(1,))
-    p = parameter(init=10)
-    z = plus(in1, p, name='z')
+    p = parameter(shape=(2,), init=10)
+    z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
 
@@ -54,6 +58,6 @@ def test_output_to_retain():
     z_output = z.output
     updated, var_map = trainer.train_minibatch(arguments, [z_output])
 
-    assert np.allclose(var_map[z_output], np.asarray(in1_value)+10)
+    assert np.allclose(var_map[z_output], np.asarray(in1_value)+20)
 
 
