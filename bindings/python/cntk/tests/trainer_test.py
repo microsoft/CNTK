@@ -15,11 +15,8 @@ from .. import cross_entropy_with_softmax, classification_error, parameter, \
 def test_trainer(tmpdir):
     in1 = input_variable(shape=(1,))
     labels = input_variable(shape=(1,))
-    p = parameter(shape=(2,))
+    p = parameter(shape=(2,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
-
-    p = parameter(shape=(10,), init=10)
-    z = plus(in1, p, name='z')
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
 
@@ -27,7 +24,11 @@ def test_trainer(tmpdir):
 
     trainer = Trainer(z, ce, errs, \
             [sgd(z.parameters, 0.007, m_schedule, 0.5, True)])
-    trainer.train_minibatch({in1: [[1],[2]], labels: [[0], [1]]})
+    in1_value = [[1],[2]]
+    label_value = [[0], [1]]
+    arguments = {in1: in1_value, labels: label_value}
+    z_output = z.output
+    updated, var_map = trainer.train_minibatch(arguments, [z_output])
 
     p = str(tmpdir / 'checkpoint.dat')
     trainer.save_checkpoint(p)
