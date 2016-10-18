@@ -654,7 +654,7 @@ def sanitize_axis(axis):
     elif isinstance(axis, numbers.Integral):
         return Axis(-axis - 1)
     elif axis.is_static_axis:
-        return Axis(-1 - axis.static_axis_index)
+        return Axis(-1 - axis.static_axis_index())
     else:
         return axis
 

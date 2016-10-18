@@ -74,7 +74,7 @@ class Axis(cntk_py.Axis):
         Returns an Axis object representing the default dynamic axis
 
         Returns:
-            :class:`cntk.axis.Axis`: default dynamic axis
+            :class:`Axis`: default dynamic axis
         '''
         return cntk_py.Axis.default_dynamic_axis()
 
@@ -85,7 +85,7 @@ class Axis(cntk_py.Axis):
         Returns an Axis object representing the batch axis
 
         Returns:
-            :class:`cntk.axis.Axis`: default batch axis
+            :class:`Axis`: default batch axis
         '''
         return cntk_py.Axis.default_batch_axis()
 
@@ -96,7 +96,7 @@ class Axis(cntk_py.Axis):
         Returns an Axis object representing all the static axes of an operand.
 
         Returns:
-            :class:`cntk.axis.Axis`: all static axes
+            :class:`Axis`: all static axes
         '''
         return cntk_py.Axis.all_static_axes()
 
@@ -104,12 +104,12 @@ class Axis(cntk_py.Axis):
     @typemap
     def new_unique_dynamic_axis(name):
         '''
-        Returns an Axis object representing a new unique dynamic axis.
+        Creates an Axis object representing a new unique dynamic axis.
 
         Args:
             name (`str`): name of the dynmic axis
 
         Returns:
-            :class:`cntk.axis.Axis`: new unique dynamic axis
+            :class:`Axis`: new unique dynamic axis
         '''
         return cntk_py.Axis.new_unique_dynamic_axis(name)
