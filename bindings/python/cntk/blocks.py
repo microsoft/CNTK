@@ -29,6 +29,7 @@ _trace_layers = False
 #_trace_layers = True  # uncomment this to log creation of graph through layers
 
 _default_initializer = glorot_uniform()
+_Inferred = (InferredDimension,)  # as a tuple, makes life easier
 
 def UntestedBranchError(name):
     # pass
@@ -174,13 +175,13 @@ def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer,
     cell_shape_stacked = tuple(cell_shape_list)  # patched dims with stack_axis duplicated 4 times
 
     # parameters
-    b  = Parameter(                       cell_shape_stacked, init=init_bias, name='b')                        # a bias
-    W  = Parameter((InferredDimension,) + cell_shape_stacked, init=init,      name='W')                             # input
-    A  = Parameter((InferredDimension,) + cell_shape_stacked, init=init,      name='A') if has_aux else None        # aux input (optional)
-    H  = Parameter(shape                + cell_shape_stacked, init=init,      name='H')                             # hidden-to-hidden
-    Ci = Parameter(                       cell_shape,         init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Cf = Parameter(                       cell_shape,         init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Co = Parameter(                       cell_shape,         init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    b  = Parameter(            cell_shape_stacked, init=init_bias, name='b')                        # a bias
+    W  = Parameter(_Inferred + cell_shape_stacked, init=init,      name='W')                             # input
+    A  = Parameter(_Inferred + cell_shape_stacked, init=init,      name='A') if has_aux else None        # aux input (optional)
+    H  = Parameter(shape     + cell_shape_stacked, init=init,      name='H')                             # hidden-to-hidden
+    Ci = Parameter(            cell_shape,         init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Cf = Parameter(            cell_shape,         init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Co = Parameter(            cell_shape,         init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
 
     Wmr = ParameterTensor (cell_shape + shape, init=init, init_value_scale=init_value_scale) if has_projection else None  # final projection
 

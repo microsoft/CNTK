@@ -21,7 +21,6 @@ from cntk.utils import Record, _as_tuple
 from cntk.blocks import *  # TODO: reduce to what we actually use
 from cntk.blocks import _extend_Function, _name_and_extend_Function, _wrap_rename_Function, _trace_layers  # (debugging)
 from cntk.initializer import glorot_uniform
-from _cntk_py import InferredDimension
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -32,74 +31,69 @@ from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-from cntk.blocks import _default_initializer
+from cntk.blocks import _default_initializer, _Inferred
 
 # Dense -- create a fully-connected linear projection layer with optional non-linear activation
 # Note: shape may describe a tensor as well.
-# TODO: change to new random-init descriptor
-# inputRank given: number of zeroes to add to W (mapRank must not be given)
-# mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
-# none      given: expand W to all (same as mapRank=0)
+# input_rank given: number of inferred axes to add to W (map_rank must not be given)
+# map_rank   given: expand W to leave exactly mapRank axes (input_rank must not be given)
+# none       given: expand W to all (same as map_rank=0)
 def Dense(shape, init=_default_initializer, activation=identity, input_rank=None, map_rank=None, bias=True, init_bias=0):
-    out_shape = _as_tuple(shape)
+    output_shape = _as_tuple(shape)
+
+    if input_rank is not None and map_rank is not None:
+        raise ValueError("Dense: input_rank and map_rank cannot be specified at the same time.")
+
+    # determine meaning of axes
+    # W gets dimension (input_shape + shape)
+    # where input_shape is determined as:
+    #  - by default, equal to the dimensions of the input passed to Dense()
+    #  - if input_rank is given, then the last 'input_rank' dimensions of the input
+    #  - if map_rank is given, then the first 'map_rank' dimensions of the input
+    # where input_rank and map_rank are mutuallly exclusive.
+    output_rank = len(output_shape)   # support outputs with tensor layouts
+
+    # If input_rank not given then pass a single _Inferred; map_rank if given will determine the input_rank.
+    # The dimension inference may still create multiple axes.
+    input_shape = _Inferred * (input_rank if input_rank is not None else 1)
 
     if input_rank is not None:
         UntestedBranchError("Dense, input_rank option not implemented")
-    if map_rank is not None:
+        infer_input_rank_to_map = -1 # means map_rank is not specified; input_rank rules
+    elif map_rank is None:
+        infer_input_rank_to_map = 0  # neither given: default to 'infer W to use all input dims'
+    else:
         UntestedBranchError("Dense, map_rank option not implemented")
-    # TODO: implement the full semantics of the BrainScript code
-    #inputShape =
-    #    if       BS.Constants.IsNone (inputRank) then Inferred  # not given: one Inferred, which will get expanded
-    #    else if !BS.Constants.IsNone (mapRank)   then Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
-    #    else Repeat (inputRank, Inferred)
-    #W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale}
-    #b = ParameterTensor {outDim, initValue=0}
-    #outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
-    #inferInputRankToMap =
-    #    if      !BS.Constants.IsNone (inputRank) then -1  # means not specified
-    #    else if  BS.Constants.IsNone (mapRank)   then 0   # default to 'use all input dims'
-    #    else mapRank
-    #apply (x) =
-    #    if bias
-    #    then Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap) + b
-    #    else Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap)
+        infer_input_rank_to_map = map_rank  # infer W to use all input dims except the last 'map_rank' ones
 
-    # TODO: change InferredDimension to a tuple
-    W = Parameter((InferredDimension,) + out_shape, init=init     , name='W')
-    b = Parameter(                       out_shape, init=init_bias, name='b') if bias else None
+    # parameters bound to this Function
+    W = Parameter(input_shape + output_shape, init=init     , name='W')
+    b = Parameter(              output_shape, init=init_bias, name='b') if bias else None
+
+    # expression of this function
     x = Placeholder(name='dense_arg')
-    apply_x = Function.__matmul__(x, W) + b if bias else \
-              Function.__matmul__(x, W)
+    apply_x = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
+    if b:
+        apply_x = apply_x + b
     _extend_Function(apply_x)  # (this gets us the >> operator  --TODO: remove once Function natively supports this)
     apply_x = apply_x >> activation
     _name_and_extend_Function(apply_x, 'Dense')
     return apply_x
-    # TODO: how to break after the else?
-
-#def Dense(shape, _inf, init=_default_initializer, activation=None, input_rank=None, map_rank=None, bias=True, init_bias=0):
-#    if activation is None:  # TODO: change default to identity once we no longer need _inf
-#        activation = Identity(_inf=shape)
-#    apply_x = Linear(shape, _inf, bias=bias, init=init, init_bias=init_bias, input_rank=input_rank, map_rank=map_rank) \
-#           >> activation
-#    # TODO: Any way to do some similar pattern ^^ without backslash?
-#    # TODO: merge _Linear() into here
-#    _name_and_extend_Function(apply_x, 'Dense')
-#    return apply_x
 
 # Embedding -- create a linear embedding layer
-# TODO: after removing loading from file, now we have two similar params, weight and init which seems redundant.
-# TODO: Once _inf is gone, change interface to pass weights as a Constant, e.g.
-#       Embedding(shape, constant(np.load('PATH')))
-#       Not nice since now we don't need the output shape either. Grmpf.
-def Embedding(shape, weights=None, init=_default_initializer, transpose=False):
+# To create an embedding from a file, use this:
+#   Embedding(shape, Constant(np.load('PATH')))
+# TODO: remove shape in case of Constant
+def Embedding(shape, init=_default_initializer, transpose=False):
     shape = _as_tuple(shape)
+    weights = None   # TODO: finish the Constant() thing
     if weights is None:  # no weights given: learn the embedding
-        full_shape = (InferredDimension,) + shape
+        full_shape = _Inferred + shape
         E = Parameter(full_shape, init=init, name='E')
     else:                # weights given: use them as constant
         UntestedBranchError("Embedding, from constant")
         # TODO: infer full_shape from weights? Which in turn should be a constant... lots of TODO here
-        full_shape = (shape + (InferredDimension,)) if transpose else ((InferredDimension,) + shape)
+        full_shape = (shape + _Inferred) if transpose else (_Inferred + shape)
         E = Constant(full_shape, init=weights, name='E')  # TODO: can 'weights' be a CNTK object already? Then how to do this?
     x = Placeholder(name='embedding_arg')
     apply_x = Function.__matmul__(E, x) if transpose else \
