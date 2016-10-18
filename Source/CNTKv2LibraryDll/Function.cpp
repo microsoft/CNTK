@@ -278,7 +278,7 @@ namespace CNTK
                                 break;
                             case ParameterCloningMethod::Freeze:
                                 if (cloneeInput.IsParameter())
-                                clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
+                                    clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
                                 else
                                     clonedInput = Constant(Constant(cloneeInput).Value(), cloneeInput.Name());
 
@@ -694,7 +694,7 @@ namespace CNTK
                 if (op == PrimitiveOpType::ClassificationError)
                     assert(inputs.size() >= 2);
                 else
-                assert(inputs.size() == 2);
+                    assert(inputs.size() == 2);
 
                 if ((inputs[0].Shape().Rank() > 2) || ((inputs[0].Shape().Rank() > 1) && (inputs[0].Shape()[1] != 1)))
                     InvalidArgument("The shape of input operands for the %S operation should have at most one axis", PrimitiveOpTypeName(op).c_str());
@@ -2210,7 +2210,7 @@ namespace CNTK
         return Internal::Gather(operand, flags, newDynamicAxes, name);
     }
 
-    FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name /*= L""*/)
+    FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameNumSamples] = numSamples;
@@ -2219,7 +2219,7 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::RandomSample, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name /*= L""*/)
+    FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameNumSamples] = numSamples;
@@ -2335,9 +2335,9 @@ namespace CNTK
             InvalidArgument("ClassificationError: The topN argument must be > 0!");
 
         if (topN == 1)
-    {
+        {
             if (axis == Axis(0))
-        return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
+                return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
             else
             {
                 auto axMax = ReduceMax(prediction, axis);
