@@ -9,6 +9,7 @@
 #include <memory>
 #include "Sequences.h"
 #include "TensorShape.h"
+#include <unordered_set>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -22,22 +23,30 @@ typedef std::shared_ptr<MBLayout> MBLayoutPtr;
 // Configuration for the current epoch.
 // Each time the epoch is started CNTK should provide the configuration to the reader using StartEpoch method
 // and the below structure.
-struct EpochConfiguration
+struct ReaderConfiguration
 {
     size_t m_numberOfWorkers;               // Number of the Open MPI workers for the current epoch
     size_t m_workerRank;                    // Rank of the Open MPI worker, worker rank has to be less than the number of workers
     size_t m_minibatchSizeInSamples;        // Maximum minibatch size for the epoch in samples
+    size_t m_truncationSize;                // Truncation size in samples for truncated BPTT mode.
+};
+
+// TODO: Should be deprecated.
+struct EpochConfiguration : public ReaderConfiguration
+{
     size_t m_totalEpochSizeInSamples;       // Total size of the epoch in samples
     size_t m_epochIndex;                    // Current epoch index [0 .. max number of epochs)
-    size_t m_truncationSize;                // Truncation size in samples for truncated BPTT mode.
 };
 
 // Supported primitive element types, will be extended in the future.
 enum class ElementType
 {
+    tvariant,// Used by stream definition if deserializer can expose sequences of different type.
+             // Before the sequence enters the network there should be a transform that
+             // cast all sequences from such stream to the same type (i.e. tdouble or tfloat).
     tfloat,  // single precision
     tdouble, // double precision
-    tatom    // sizeof(atom) == 1 constitute of blobs -> sequences of atoms (i.e. used for lattices, hmmm, etc.)
+    tuchar,  // unsigned char
 };
 
 // Supported storage types, will be extended in the future.
@@ -94,7 +103,6 @@ struct Minibatch
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Main Reader interface. The border interface between the CNTK and reader libraries.
-// TODO: Expect to change in a little bit: stream matrices provided by the network as input.
 //////////////////////////////////////////////////////////////////////////////////////////////////
 class Reader
 {
@@ -103,7 +111,20 @@ public:
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() = 0;
 
     // Starts a new epoch with the provided configuration
-    virtual void StartEpoch(const EpochConfiguration& config) = 0;
+    // TODO: should be deprecated, SetConfiguration should be used instead.
+    virtual void StartEpoch(const EpochConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) = 0;
+
+    // Sets a new configuration for the reader.
+    virtual void SetConfiguration(const ReaderConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) = 0;
+
+    // Returns current position in the global timeline. The returned value is in samples.
+    // TODO: Currently in case of sequence to sequence training, 
+    // TODO: the logical sequence size in samples = max(constitutuing sequences among all streams)
+    // TODO: This will change in the future.
+    virtual size_t GetCurrentSamplePosition() = 0;
+
+    // Set current global position
+    virtual void SetCurrentSamplePosition(size_t currentSamplePosition) = 0;
 
     // Reads a minibatch that contains data across all streams.
     virtual Minibatch ReadMinibatch() = 0;

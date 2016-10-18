@@ -27,6 +27,11 @@ public:
         return m_deserializer->GetStreamDescriptions();
     }
 
+    size_t GetCurrentSamplePosition() override;
+    void SetCurrentSamplePosition(size_t currentSamplePosition) override;
+
+    void SetConfiguration(const ReaderConfiguration& config) override;
+
 private:
     // Gets next sequence descriptions with total size less than sampleCount.
     std::vector<SequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
@@ -74,9 +79,6 @@ private:
     // Global sample position on the timeline.
     // TODO: possible recalculate it base on samplePositionInEpoch.
     size_t m_globalSamplePosition;
-
-    // Current sample position in the epoch.
-    size_t m_samplePositionInEpoch;
 
     // Total number of samples in the sweep.
     size_t m_totalNumberOfSamples;

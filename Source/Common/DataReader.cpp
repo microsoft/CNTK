@@ -162,6 +162,13 @@ void DataReader::StartMinibatchLoop(size_t mbSize, size_t epoch, size_t requeste
         m_dataReaders[m_ioNames[i]]->StartMinibatchLoop(mbSize, epoch, requestedEpochSamples);
 }
 
+// Same as above but with additional information about required streams.
+void DataReader::StartMinibatchLoop(size_t mbSize, size_t epoch, const std::unordered_set<InputStreamDescription>& streamDescriptions, size_t requestedEpochSamples)
+{
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+        m_dataReaders[m_ioNames[i]]->StartMinibatchLoop(mbSize, epoch, streamDescriptions, requestedEpochSamples);
+}
+
 //SupportsDistributedMBRead - Tells if the reader supports distributed minibatch reading for parallel training
 bool DataReader::SupportsDistributedMBRead() const
 {
@@ -177,6 +184,23 @@ bool DataReader::SupportsDistributedMBRead() const
     return supportsDistributedMBRead;
 }
 
+//IsLegacyReader - Returns true if one of the readers is a legacy reader, false otherwise.
+bool DataReader::IsLegacyReader() const
+{
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+    {
+        auto currReaderIter = m_dataReaders.find(m_ioNames[i]);
+        assert(currReaderIter != m_dataReaders.end());
+
+        if (currReaderIter->second->IsLegacyReader())
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 //StartDistributedMinibatchLoop - Startup a distributed minibatch loop for parallel training
 // mbSize - [in] size of the minibatch (number of frames, etc.)
 // epoch - [in] epoch number for this loop
@@ -189,6 +213,22 @@ void DataReader::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size
     {
         m_dataReaders[m_ioNames[i]]->StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, requestedEpochSamples);
     }
+}
+
+// Same as above but with additional information about required streams.
+void DataReader::StartDistributedMinibatchLoop(size_t mbSize, size_t epoch, size_t subsetNum, size_t numSubsets, const std::unordered_set<InputStreamDescription>& streamDescriptions, size_t requestedEpochSamples /* = requestDataSize*/)
+{
+    for (size_t i = 0; i < m_ioNames.size(); i++)
+    {
+        m_dataReaders[m_ioNames[i]]->StartDistributedMinibatchLoop(mbSize, epoch, subsetNum, numSubsets, streamDescriptions, requestedEpochSamples);
+    }
+}
+
+size_t DataReader::GetCurrentSamplePosition()
+{
+    // BUGBUG: composition of old readers is not supported.
+    // Returning just for the last reader.
+    return m_dataReaders[m_ioNames.back()]->GetCurrentSamplePosition();
 }
 
 // GetMinibatch - Get the next minibatch (features and labels)

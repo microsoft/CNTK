@@ -1,0 +1,45 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+set -x
+
+# This test case is to test CPPEvalClient works with the same setup of users. 
+# For that purpose, the test needs to create some models and data in the Examples directories as expected by CPPEvalClient.
+# These files are removed by Jenkins during workspace cleanup.
+
+# The eval test uses some pretrained models which are not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ -z "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+  echo This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location.
+  exit 1
+fi
+
+if [ "$OS" == "Windows_NT" ]; then
+  TestDataDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`
+else
+  TestDataDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+fi
+
+ImageDir=$TEST_ROOT_DIR/../../Examples/Image
+MnistDir=$ImageDir/DataSets/MNIST
+DataDir=$MnistDir
+ConfigDir=$MnistDir/../../GettingStarted
+OutputDir=$ConfigDir/Output
+
+cp $TestDataDir/Image/MNIST/v0/Train-28x28_cntk_text.txt $DataDir || exit $?
+
+# Train model for evaluation
+[ -d $OutputDir ] || mkdir $OutputDir || exit $?
+[ -d $OutputDir/Models ] && rm -rf $OutputDir/Models
+DeleteModelsAfterTest=0
+[ -f $ConfigDir/01_OneHidden.cntk ] || exit 1
+cntkrun 01_OneHidden.cntk "stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit $?
+ 
+if [ "$OS" == "Windows_NT" ]; then
+  $TEST_BIN_DIR/CPPEvalClientTest.exe
+else
+  $TEST_BIN_DIR/cppevalclient
+fi
+
+exit $?

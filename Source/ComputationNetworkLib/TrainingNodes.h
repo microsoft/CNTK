@@ -9,6 +9,7 @@
 #include "BatchNormalizationEngine.h"
 #include "RNGHandle.h"
 #include "InputAndParamNodes.h"
+#include "CPURNGHandle.h"
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -18,6 +19,7 @@
 #include <stdexcept>
 #include <list>
 #include <memory>
+#include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -46,9 +48,9 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
-        m_leftMinusRight->AssignDifferenceOf(Input(0)->ValueFor(fr), Input(1)->ValueFor(fr));
-        MaskMissingColumnsToZero(*m_leftMinusRight, Input(0)->GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
+        FrameRange fr(InputRef(0).GetMBLayout());
+        m_leftMinusRight->AssignDifferenceOf(InputRef(0).ValueFor(fr), InputRef(1).ValueFor(fr));
+        MaskMissingColumnsToZero(*m_leftMinusRight, InputRef(0).GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
         ElemType v = m_leftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ (I0[i] - I1[i])^2 } )
         Value().VerifySize(1, 1);
         Value().SetValue(v * v);  // Value = sum{ (I0[i] - I1[i])^2 }
@@ -59,8 +61,8 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
-        auto gradient = Input(inputIndex)->GradientFor(fr);
+        FrameRange fr(InputRef(0).GetMBLayout());
+        auto gradient = InputRef(inputIndex).GradientFor(fr);
         Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 2.0f : -2.0f, Gradient() /*1x1*/, *m_leftMinusRight, 1.0f, gradient); // O = (I0-I1)^2; dO/dI0 = 2*(I0-I1); dO/dI1 = -2*(I0-I1)
     }
 
@@ -111,12 +113,8 @@ template class SquareErrorNode<double>;
 template <class ElemType>
 class CrossEntropyWithSoftmaxNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base;
-    UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName()
-    {
-        return L"CrossEntropyWithSoftmax";
-    }
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"CrossEntropyWithSoftmax"; }
 
 public:
     DeclareConstructorFromConfigWithNumInputs(CrossEntropyWithSoftmaxNode);
@@ -127,20 +125,20 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         // left input is scalar
         if (inputIndex == 0) // left derivative
         {
 #if DUMPOUTPUT
             m_logSoftmaxOfRight->Print("CrossEntropyWithSoftmax Partial-logSoftmaxOfRight");
             Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
-            Input(0)->GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
+            InputRef(0).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-in");
 #endif
 
-            auto gradient = Input(0)->GradientFor(fr);
+            auto gradient = InputRef(0).GradientFor(fr);
             Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, Gradient() /*1x1*/, *m_logSoftmaxOfRight, 1.0f, gradient);
 #if DUMPOUTPUT
-            Input(0)->GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
+            InputRef(0).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Left-out");
 #endif
         }
 
@@ -148,18 +146,18 @@ public:
         {
 #if DUMPOUTPUT
             m_softmaxOfRight->Print("CrossEntropyWithSoftmax Partial-softmaxOfRight");
-            Input(0)->ValueFor(fr).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
+            InputRef(0).ValueFor(fr).Print("CrossEntropyWithSoftmax Partial-inputFunctionValues");
             Gradient().Print("CrossEntropyWithSoftmax Partial-gradientValues");
-            Input(1)->GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
+            InputRef(1).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right-in");
 #endif
 
-            auto gradient = Input(1)->GradientFor(fr);
-            Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, Input(0)->ValueFor(fr), gradient);
+            auto gradient = InputRef(1).GradientFor(fr);
+            Matrix<ElemType>::AddScaledDifference(Gradient(), *m_softmaxOfRight, InputRef(0).ValueFor(fr), gradient);
 #if DUMPOUTPUT
-            Input(1)->GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right");
+            InputRef(1).GradientFor(fr).Print("CrossEntropyWithSoftmaxNode Partial-Right");
 #endif
 #ifdef _DEBUG
-            Input(1)->InvalidateMissingGradientColumns(fr); // TODO: This should not be necessary.
+            InputRef(1).InvalidateMissingGradientColumns(fr); // TODO: This should not be necessary.
 #endif
         }
     }
@@ -177,17 +175,17 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         // first compute the softmax (column-wise)
         // Note that we need both log and non-log for gradient computation.
-        m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->ValueFor(fr), true);
+        m_logSoftmaxOfRight->AssignLogSoftmaxOf(InputRef(1).ValueFor(fr), true);
         // BUGBUG: No need to compute m_softmaxOfRight in ForwardProp, should be moved to BackpropTo().
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
         // flatten all gaps to zero, such that gaps will contribute zero to the sum
-        MaskMissingColumnsToZero(*m_logSoftmaxOfRight, Input(1)->GetMBLayout(), fr);
+        MaskMissingColumnsToZero(*m_logSoftmaxOfRight, InputRef(1).GetMBLayout(), fr);
         // reduce over all frames
-        Value().AssignInnerProductOfMatrices(Input(0)->MaskedValueFor(fr), *m_logSoftmaxOfRight);
+        Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr), *m_logSoftmaxOfRight);
         Value() *= -1;
 #if NANCHECK
         Value().HasNan("CrossEntropyWithSoftmax");
@@ -255,15 +253,17 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         // left Node must be a scalar
         if (inputIndex == 0) // left derivative
         {
-            BackpropToLeft(*m_logOfRight, Input(0)->GradientFor(fr), Gradient());
+            BackpropToLeft(*m_logOfRight, InputRef(0).GradientFor(fr), Gradient());
         }
         else
         {
-            BackpropToRight(*m_leftDivRight, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(1)->GradientFor(fr), Gradient());
+            // Resize m_lefDivRight as it has not been done before.
+            m_leftDivRight->Resize(InputRef(1).Value());
+            BackpropToRight(*m_leftDivRight, InputRef(0).ValueFor(fr), InputRef(1).ValueFor(fr), InputRef(1).GradientFor(fr), Gradient());
         }
     }
 
@@ -282,26 +282,26 @@ public:
                                                         const Matrix<ElemType> inputFunctionValues0, const Matrix<ElemType> inputFunctionValues1,
                                                         Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues)
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         leftDivRight.AssignElementDivisionOf(inputFunctionValues0, inputFunctionValues1);
-        MaskMissingColumnsToZero(leftDivRight, Input(0)->GetMBLayout(), fr);
+        MaskMissingColumnsToZero(leftDivRight, InputRef(0).GetMBLayout(), fr);
         Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, gradientValues /*1x1*/, leftDivRight, 1.0f, inputGradientValues);
     }
 
     virtual void UpdateFunctionMBSize() override
     {
-        m_logOfRight->Resize(Input(1)->Value());
-        m_leftDivRight->Resize(Input(1)->Value());
+        // Delay resize of m_leftDivRight to backprop, as it is not allocated for forwardprop.
+        m_logOfRight->Resize(InputRef(1).Value());
     }
 
     // -sum(left_i * log(right_i))
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
-        m_logOfRight->SetValue(Input(1)->ValueFor(fr));
+        FrameRange fr(InputRef(0).GetMBLayout());
+        m_logOfRight->SetValue(InputRef(1).ValueFor(fr));
         m_logOfRight->InplaceLog();
-        MaskMissingColumnsToZero(*m_logOfRight, Input(1)->GetMBLayout(), fr);
-        Value().AssignInnerProductOfMatrices(Input(0)->MaskedValueFor(fr), *m_logOfRight);
+        MaskMissingColumnsToZero(*m_logOfRight, InputRef(1).GetMBLayout(), fr);
+        Value().AssignInnerProductOfMatrices(InputRef(0).MaskedValueFor(fr), *m_logOfRight);
         Value() *= -1;
 #if NANCHECK
         Value().HasNan("CrossEntropy");
@@ -320,7 +320,10 @@ public:
         {
             auto node = dynamic_pointer_cast<CrossEntropyNode<ElemType>>(nodeP);
             node->m_logOfRight->SetValue(*m_logOfRight);
-            node->m_leftDivRight->SetValue(*m_leftDivRight);
+            if (m_leftDivRight != nullptr)
+            {
+                node->m_leftDivRight->SetValue(*m_leftDivRight);
+            }
         }
     }
 
@@ -376,10 +379,10 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         assert(inputIndex == 0);
         inputIndex;
-        BackpropToS(*m_gradientOfL1Norm, Input(0)->GradientFor(fr), Gradient(), Input(0)->ValueFor(fr));
+        BackpropToS(*m_gradientOfL1Norm, InputRef(0).GradientFor(fr), Gradient(), InputRef(0).ValueFor(fr));
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -396,14 +399,14 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        m_gradientOfL1Norm->Resize(Input(0)->Value());
+        m_gradientOfL1Norm->Resize(InputRef(0).Value());
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         Value().VerifySize(1, 1);
-        Value().SetValue(Input(0)->MaskedValueFor(fr).MatrixNorm1());
+        Value().SetValue(InputRef(0).MaskedValueFor(fr).MatrixNorm1());
 #if NANCHECK
         Value().HasNan("MatrixL1Reg");
 #endif
@@ -446,6 +449,464 @@ template class MatrixL1RegNode<float>;
 template class MatrixL1RegNode<double>;
 
 // -----------------------------------------------------------------------
+// LambdaRankNode (gain, prediction, queryId)
+// Check "From RankNet to LambdaRank to LambdaMART: An Overview" for details.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class LambdaRankNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"LambdaRank";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(LambdaRankNode);
+    LambdaRankNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), m_sigma(1.0)
+    {
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+
+        if (inputIndex == 1 &&  // right derivative
+            m_numberOfUrlPairs > 0)   // 
+        {
+            auto gradient = Input(1)->GradientFor(fr);
+
+            // sigma * (si - sj)
+            *m_pairwiseDifferences *= m_sigma;
+            // exp(sigma * (si - sj))
+            m_lambdas->AssignExpOf(*m_pairwiseDifferences);
+            // 1 + exp(sigma * (si - sj))
+            *m_lambdas += 1;
+            // 1 / (1 + exp(sigma * (si - sj)))
+            m_lambdas->AssignElementInverseOf(*m_lambdas);
+            // -sigma/(1+exp(sigma*(si - sj)))
+            m_lambdas->AssignProductOf(-m_sigma, *m_lambdas);
+
+            // Get the update of weight.
+            const Matrix<ElemType>& lambdas = *m_lambdas;
+            m_weightUpdate->SetValue(gradient);
+            size_t pairsCount = 0;
+            ElemType discountI, discountJ;
+            ElemType gainI;
+            ElemType lambdaIJ;
+            for (auto qu : m_queryUrls)
+            {
+                ElemType idealMetric = qu.m_idealMetric;
+                for (typename std::vector<Url>::iterator itUrlI = qu.m_urls.begin(); itUrlI != qu.m_urls.end(); itUrlI++)
+                {
+                    Url& UrlI = *itUrlI;
+                    size_t k = UrlI.m_K;
+                    discountI = m_logWeights[UrlI.m_rank];
+                    gainI = UrlI.m_gain;
+                    if (k == 0) continue;
+                    for (typename std::vector<Url>::iterator itUrlJ = itUrlI + 1; itUrlJ <= itUrlI + k; itUrlJ++)
+                    {
+                        Url& UrlJ = *itUrlJ;
+                        discountJ = m_logWeights[UrlJ.m_rank];
+                        if (abs(gainI - UrlJ.m_gain) < 0.0000001)
+                        {
+                            continue;
+                        }
+
+                        // delta DCG
+                        lambdaIJ = (gainI - UrlJ.m_gain) * (discountI - discountJ) / (discountI * discountJ);
+
+                        // |delta NDCG|
+                        lambdaIJ = (idealMetric == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / idealMetric));
+
+                        // Combine lambda
+                        lambdaIJ = lambdas(0, pairsCount++) * lambdaIJ;
+
+                        // Assign to gradient
+                        (*m_weightUpdate)(0, UrlI.m_id) += lambdaIJ;
+                        (*m_weightUpdate)(0, UrlJ.m_id) -= lambdaIJ;
+                        
+                    }
+                }
+            }
+
+            gradient.SetValue(*m_weightUpdate);
+        }
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        UpdateCounts();
+
+        // clean up first
+        if (!m_queryUrls.empty()) m_queryUrls.clear();
+        if (!m_urlSorter.empty()) m_urlSorter.clear();
+        if (!m_logWeights.empty()) m_logWeights.clear();
+
+        m_pairwiseDifferences->Resize(1, m_numberOfUrlPairs);
+        m_lambdas->Resize(1, m_numberOfUrlPairs);
+
+        m_urlGain0->Resize(1, m_numberOfQueryUrls);
+        m_urlGain1->Resize(1, m_numberOfQueryUrls);
+        m_urlDiscount0->Resize(1, m_numberOfQueryUrls);
+        m_urlDiscount1->Resize(1, m_numberOfQueryUrls);
+
+        // keep one additional space to avoid pointer moving out
+        m_urlSorter.resize(m_maxNumberOfUrlsPerQuery + 1);
+        
+        // prepared lookup table
+        m_logWeights.resize(m_maxNumberOfUrlsPerQuery);
+        size_t i = 0;
+        for (typename std::vector<ElemType>::iterator it = m_logWeights.begin(); it != m_logWeights.end(); it++, i++)
+        {
+            *it = (ElemType) log(2.0 + i);
+        }
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        // Inputs:
+        //      0. gain
+        //      1. predicted score
+        //      2. query id (used to separate urls belonging to different queries)
+        // 
+        // Following is an example: two queries (0 and 1) and 6 urls (three for each).
+        // 31,  0.9,    0
+        // 7,   0.3,    0
+        // 0,   0.0,    0
+        // 3,   0.4,    1
+        // 0,   0.5,    1
+        // 0,   0.3,    1
+        FrameRange fr(Input(0)->GetMBLayout());
+
+        // Construct matrices for further computation.
+        const Matrix<ElemType>& gains = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& preds = Input(1)->ValueFor(fr);
+        const Matrix<ElemType>& queryIds = Input(2)->ValueFor(fr);
+
+        // Iterate through all samples
+        size_t numberOfSamples = gains.GetNumCols();
+        QueryUrls aqu;
+        int previousQueryId = -1;
+        int numberOfQueries = 0;
+
+        // Iterate all samples and populate m_queryUrls table. 
+        for (size_t i = 0; i < numberOfSamples; i++)
+        {
+            int queryId = (int)queryIds(0, i);
+            // Samples are grouped by queries. Find all the urls 
+            // belonging to each individual query.
+            if (queryId != previousQueryId)
+            {
+                m_queryUrls.push_back(aqu);
+                numberOfQueries++;
+                previousQueryId = queryId;
+            }
+
+            // Get the last QueryUrls and add the Url.
+            QueryUrls& qu = m_queryUrls.back();
+            Url u(i, qu.m_urls.size(), preds(0, i), gains(0, i));
+            qu.m_urls.push_back(u);
+        }
+
+        // Update K (number of url pairs that have smaller or equal gain), rk (rank of 
+        // score in descending order) and and m_pairwiseDifferences (save for gradient 
+        // computation).
+        size_t pairCount = 0;
+        for (auto &qu : m_queryUrls)
+        {
+            std::vector<Url>& urls = qu.m_urls;
+            size_t numberOfUrls = urls.size();
+            // Urls are pre-sorted in descending order of gains.
+            ElemType minGain = urls[numberOfUrls - 1].m_gain;
+            for (size_t j = 0; j < urls.size(); j++)
+            {
+                if (urls[j].m_gain > minGain)
+                {
+                    size_t numberOfPairs = numberOfUrls - j - 1;
+                    urls[j].m_K = numberOfPairs;
+                    if (numberOfPairs > 0)
+                    {
+                        for (size_t k = 0; k < numberOfPairs; k++)
+                        {
+                            (*m_pairwiseDifferences)(0, pairCount++) = urls[j].m_score - urls[j + 1 + k].m_score;
+                        }
+                    }
+                }
+                // Skip urls with gain equal to min (0).
+                else 
+                {
+                    urls[j].m_K = 0;
+                }
+            }
+
+            typename std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
+            typename std::vector<Url>::iterator its0 = its;
+            its = std::copy(it, urls.end(), its);
+            std::sort(its0, its);
+            // Set the sorted rk order to each url and 
+            // the urls are still in the original order
+            int rk = 0;
+            for (it = its0; it != its; it++)
+            {
+                urls[it->m_rank0].m_rank = rk++;
+            }
+        }
+
+        // Compute ir metric.
+        size_t sampleCount = 0;
+        for (const auto &qu: m_queryUrls)
+        {
+            for (const auto &url : qu.m_urls)
+            {
+                (*m_urlGain0)(0, sampleCount) = url.m_gain;
+                (*m_urlGain1)(0, sampleCount) = url.m_gain;
+                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.m_rank0;
+                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.m_rank;
+                sampleCount++;
+            }
+        }
+        
+        // log(2+rank)
+        *m_urlDiscount0 += 2.0;
+        m_urlDiscount0->InplaceLog();
+        *m_urlDiscount1 += 2.0;
+        m_urlDiscount1->InplaceLog();
+        // gain/log(2+rank)
+        m_urlGain0->AssignElementDivisionOf(*m_urlGain0, *m_urlDiscount0);
+        m_urlGain1->AssignElementDivisionOf(*m_urlGain1, *m_urlDiscount1);
+
+        // Aggregate at query level.
+        const Matrix<ElemType>& urlDiscountedGain0 = *m_urlGain0;
+        const Matrix<ElemType>& urlDiscountedGain1 = *m_urlGain1;
+        ElemType irMetricValue = 0.0;
+        for (auto &qu : m_queryUrls)
+        {
+            qu.m_idealMetric = 0.0;
+            qu.m_metric = 0.0;
+
+            for (const auto &url : qu.m_urls)
+            {
+                qu.m_idealMetric += urlDiscountedGain0(0, url.m_id);
+                qu.m_metric += urlDiscountedGain1(0, url.m_id);
+            }
+
+            if (qu.m_idealMetric != 0.0)
+            {
+                irMetricValue += (qu.m_metric / qu.m_idealMetric);
+            }
+        }
+
+        if (numberOfQueries == 0)
+        {
+            LogicError("In %ls %ls numberOfQueries==0, check your data.", NodeName().c_str(), OperationName().c_str());
+        }
+
+        // to make up the reporting
+        irMetricValue = (1.0f - irMetricValue / numberOfQueries) * 100 * numberOfSamples;
+        Value().SetValue(irMetricValue);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        if (m_inputs.size() != 3)
+            InvalidArgument("%ls operation requires three inputs instead of %d.", NodeDescription().c_str(), (int)m_inputs.size());
+
+        if (Input(0)->NeedsGradient() == true)
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st input.", NodeName().c_str(), OperationName().c_str());
+
+        if (Input(2)->NeedsGradient() == true)
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 3rd input.", NodeName().c_str(), OperationName().c_str());
+
+        ValidateBinaryReduce(isFinalValidationPass);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<LambdaRankNode<ElemType>>(nodeP);
+            node->m_pairwiseDifferences->SetValue(*m_pairwiseDifferences);
+            node->m_lambdas->SetValue(*m_lambdas);
+            node->m_weightUpdate->SetValue(*m_weightUpdate);
+            node->m_urlGain0->SetValue(*m_urlGain0);
+            node->m_urlGain1->SetValue(*m_urlGain1);
+            node->m_urlDiscount0->SetValue(*m_urlDiscount0);
+            node->m_urlDiscount1->SetValue(*m_urlDiscount1);
+
+            node->m_queryUrls = m_queryUrls;
+            node->m_urlSorter = m_urlSorter;
+            node->m_logWeights = m_logWeights;
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_pairwiseDifferences, matrixPool);
+        RequestMatrixFromPool(m_lambdas, matrixPool);
+        RequestMatrixFromPool(m_weightUpdate, matrixPool);
+        RequestMatrixFromPool(m_urlGain0, matrixPool);
+        RequestMatrixFromPool(m_urlGain1, matrixPool);
+        RequestMatrixFromPool(m_urlDiscount0, matrixPool);
+        RequestMatrixFromPool(m_urlDiscount1, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_pairwiseDifferences, matrixPool);
+        ReleaseMatrixToPool(m_lambdas, matrixPool);
+        ReleaseMatrixToPool(m_weightUpdate, matrixPool);
+        ReleaseMatrixToPool(m_urlGain0, matrixPool);
+        ReleaseMatrixToPool(m_urlGain1, matrixPool);
+        ReleaseMatrixToPool(m_urlDiscount0, matrixPool);
+        ReleaseMatrixToPool(m_urlDiscount1, matrixPool);
+        
+        // is this the right place?  it was not called after bp.
+        m_queryUrls.clear();
+        m_urlSorter.clear();
+        m_logWeights.clear();
+    }
+
+protected:
+
+    void UpdateCounts()
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+        const Matrix<ElemType>& gains = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& queryIds = Input(2)->ValueFor(fr);
+        const size_t numberOfQueryUrls = gains.GetNumCols();
+        int previousQueryId = -1;
+
+        // Number of urls we have seen for the current query
+        size_t numberOfUrls = 0;
+
+        // Number of urls that have gains greater than 0 for the current query 
+        size_t numberOfUrlsWithNonZeroGain = 0;
+        size_t numberOfUrlPairs = 0;
+        size_t maxNumberOfUrlsPerQuery = 0;
+        for (size_t i = 0; i < numberOfQueryUrls; i++)
+        {
+            int queryId = (int)queryIds(0, i);
+            ElemType gain = gains(0, i);
+            if (queryId != previousQueryId)
+            {
+                // Ignore pairs between urls with zero gains.
+                numberOfUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
+                if (numberOfUrls > maxNumberOfUrlsPerQuery)
+                {
+                    maxNumberOfUrlsPerQuery = numberOfUrls;
+                }
+
+                // New query
+                numberOfUrls = 0;
+                numberOfUrlsWithNonZeroGain = 0;
+                previousQueryId = queryId;
+            }
+            
+            numberOfUrls++;
+            if (gain > 0)
+            {
+                numberOfUrlsWithNonZeroGain++;
+            }
+        }
+
+        // Add last query.
+        {
+            numberOfUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
+            if (numberOfUrls > maxNumberOfUrlsPerQuery)
+            {
+                maxNumberOfUrlsPerQuery = numberOfUrls;
+            }
+        }
+
+        m_numberOfQueryUrls = numberOfQueryUrls;
+        m_numberOfUrlPairs = numberOfUrlPairs;
+        m_maxNumberOfUrlsPerQuery = maxNumberOfUrlsPerQuery;
+    }
+
+    struct Url
+    {
+        Url()
+        {
+            m_id = 0;
+            m_rank0 = 0;
+            m_rank = 0;
+            m_score = (ElemType)0;
+            m_gain = (ElemType)0;
+            m_K = 0;
+        }
+
+        Url(int id, int rk0, ElemType sc, ElemType gn) : m_id(id), m_rank0(rk0), m_rank(0), m_score(sc), m_gain(gn), m_K(0) {}
+
+        int m_id;           // sample id
+        int m_rank0;        // original rank based on label
+        int m_rank;         // rank based on s in the associated query
+        ElemType m_score;   // score
+        ElemType m_gain;    // gain
+        int m_K;            // the pair index
+        bool operator < (const Url &url) const {
+            // tie breaking
+            if (m_score == url.m_score || std::isnan(m_score) || std::isnan(url.m_score))
+            {
+                return m_gain < url.m_gain;
+            }
+
+            return m_score > url.m_score;
+        }
+    };
+
+    struct QueryUrls
+    {
+        ElemType m_idealMetric;  // the ideal NDCG
+        ElemType m_metric;   // NDCG based on the current scores
+
+        std::vector<Url> m_urls;
+    };
+
+    // master data structure
+    std::list<QueryUrls> m_queryUrls;
+    // buffer for sorting
+    std::vector<Url> m_urlSorter;
+    // lookup table for position based weights
+    std::vector<ElemType> m_logWeights;
+
+    size_t m_numberOfQueryUrls;
+    size_t m_numberOfUrlPairs;
+    size_t m_maxNumberOfUrlsPerQuery;
+
+    ElemType m_sigma;
+    // Score differences between url pairs
+    shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
+    // 1/(1+exp(sigma*(si - sj)))
+    shared_ptr<Matrix<ElemType>> m_lambdas;
+    
+    // update of weight matrix
+    shared_ptr<Matrix<ElemType>> m_weightUpdate;
+    
+    // store the gains and position discounts
+    shared_ptr<Matrix<ElemType>> m_urlGain0;
+    shared_ptr<Matrix<ElemType>> m_urlGain1;
+    shared_ptr<Matrix<ElemType>> m_urlDiscount0;
+    shared_ptr<Matrix<ElemType>> m_urlDiscount1;
+};
+
+template class LambdaRankNode<float>;
+template class LambdaRankNode<double>;
+
+// -----------------------------------------------------------------------
 // MatrixL2RegNode (input)
 // TODO: share most code with MatrixL1RegNode
 // -----------------------------------------------------------------------
@@ -465,10 +926,10 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override // scale by number of cols (or samples)
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         assert(inputIndex == 0);
         inputIndex;
-        BackpropToS(Input(0)->GradientFor(fr), Gradient(), Input(0)->ValueFor(fr), Value());
+        BackpropToS(InputRef(0).GradientFor(fr), Gradient(), InputRef(0).ValueFor(fr), Value());
     }
 
     /*TODO: merge with call site*/ void BackpropToS(Matrix<ElemType> inputGradientValues, const Matrix<ElemType>& gradientValues, const Matrix<ElemType>& inputFunctionValues, const Matrix<ElemType>& functionValues)
@@ -479,9 +940,9 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         Value().VerifySize(1, 1);
-        Value().SetValue(Input(0)->MaskedValueFor(fr).FrobeniusNorm());
+        Value().SetValue(InputRef(0).MaskedValueFor(fr).FrobeniusNorm());
 #if NANCHECK
         Value().HasNan("MatrixL2Reg");
 #endif
@@ -577,7 +1038,7 @@ public:
         */
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         m_needRecomputeGradientToSoftmaxInput = false;
         // gradient computation@yinggongzhao
         // inputIndex should be 2 this time
@@ -586,11 +1047,11 @@ public:
         if (inputIndex == 0)
             InvalidArgument("ComputeInput partial should not be called for label");
         //                                                                              samples+probs                   hidden                  embedding
-        // Input(inputIndex)->GradientFor(fr).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->Value(), inputIndex);
+        // InputRef(inputIndex).GradientFor(fr).AssignNCEDerivative(m_ncePrediction, InputRef(0).ValueFor(fr), InputRef(1).ValueFor(fr), InputRef(2).Value(), inputIndex);
         if (inputIndex >= 2)
-            Input(inputIndex)->Gradient().AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->ValueAsMatrix(), inputIndex);
+            InputRef(inputIndex).Gradient().AssignNCEDerivative(m_ncePrediction, InputRef(0).ValueFor(fr), InputRef(1).ValueFor(fr), InputRef(2).ValueAsMatrix(), inputIndex);
         else
-            Input(inputIndex)->GradientFor(fr).AssignNCEDerivative(m_ncePrediction, Input(0)->ValueFor(fr), Input(1)->ValueFor(fr), Input(2)->ValueAsMatrix(), inputIndex);
+            InputRef(inputIndex).GradientFor(fr).AssignNCEDerivative(m_ncePrediction, InputRef(0).ValueFor(fr), InputRef(1).ValueFor(fr), InputRef(2).ValueAsMatrix(), inputIndex);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -605,42 +1066,42 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override // -sum(left_i * log(softmax_i(right)))
     {
-        FrameRange fr(Input(0)->GetMBLayout());
-        if (Input(0)->HasMBLayout() && Input(0)->GetMBLayout()->HasGaps())
+        FrameRange fr(InputRef(0).GetMBLayout());
+        if (InputRef(0).HasMBLayout() && InputRef(0).GetMBLayout()->HasGaps())
             LogicError("%ls %ls operation does not handle multiple parallel sequences with gaps correctly. Contact fseide@microsoft.com if you have a need and a test case.", NodeName().c_str(), OperationName().c_str());
 
         int positive = 0, negative = 0;
-        if (Input(0)->GetSampleLayout().GetNumElements() == 1)
+        if (InputRef(0).GetSampleLayout().GetNumElements() == 1)
         {
-            for (int i = 0; i < Input(0)->Value().GetNumCols(); i++) // BUGBUG: Loops must be over frames, not columns. Columns may contain gaps.
+            for (int i = 0; i < InputRef(0).Value().GetNumCols(); i++) // BUGBUG: Loops must be over frames, not columns. Columns may contain gaps.
             {
-                if (Input(0)->Value()(0, i) > 0)
+                if (InputRef(0).Value()(0, i) > 0)
                     positive++;
-                else if (Input(0)->Value()(0, i) < 0)
+                else if (InputRef(0).Value()(0, i) < 0)
                     negative++;
             }
             assert(positive * negative == 0);
         }
-        if (m_evalMode == NCEEvalMode::Softmax || (Input(0)->GetSampleLayout().GetNumElements() == 1 && positive > 0))
+        if (m_evalMode == NCEEvalMode::Softmax || (InputRef(0).GetSampleLayout().GetNumElements() == 1 && positive > 0))
         {
             // evaluation uses softmax
-            m_logSoftmax.AssignProductOf(Input(1)->Value(), true, Input(2)->ValueAsMatrix(), false);
-            m_logSoftmax += Input(3)->Value();
+            m_logSoftmax.AssignProductOf(InputRef(1).Value(), true, InputRef(2).ValueAsMatrix(), false);
+            m_logSoftmax += InputRef(3).Value();
             m_logSoftmax.InplaceLogSoftmax(false);
-            MaskMissingColumnsToZero(m_logSoftmax, Input(1)->GetMBLayout(), fr); // TODO: is this the right way to neutralize gaps?
-            Value().AssignSoftmaxSum(Input(0)->Value(), m_logSoftmax);
+            MaskMissingColumnsToZero(m_logSoftmax, InputRef(1).GetMBLayout(), fr); // TODO: is this the right way to neutralize gaps?
+            Value().AssignSoftmaxSum(InputRef(0).Value(), m_logSoftmax);
         }
-        else if (m_evalMode == NCEEvalMode::Unnormalized || (Input(0)->GetSampleLayout().GetNumElements() == 1 && negative > 0))
+        else if (m_evalMode == NCEEvalMode::Unnormalized || (InputRef(0).GetSampleLayout().GetNumElements() == 1 && negative > 0))
         {
             // TODO: are we treating gaps correctly here?
-            Value().AssignNceUnnormalizedEval(Input(0)->Value(), Input(1)->Value(), Input(2)->ValueAsMatrix(), Input(3)->Value());
+            Value().AssignNceUnnormalizedEval(InputRef(0).Value(), InputRef(1).Value(), InputRef(2).ValueAsMatrix(), InputRef(3).Value());
         }
         else
         {
             // TODO: are we treating gaps correctly here?
             // training criterion uses NCE
             // likelihood                                         samples+probs                        hidden                       embedding            bias
-            Value().AssignNoiseContrastiveEstimation(Input(0)->Value(), Input(1)->Value(), Input(2)->ValueAsMatrix(), Input(3)->Value(), m_ncePrediction);
+            Value().AssignNoiseContrastiveEstimation(InputRef(0).Value(), InputRef(1).Value(), InputRef(2).ValueAsMatrix(), InputRef(3).Value(), m_ncePrediction);
         }
         m_needRecomputeGradientToSoftmaxInput = true;
     }
@@ -681,6 +1142,179 @@ private:
 template class NoiseContrastiveEstimationNode<float>;
 template class NoiseContrastiveEstimationNode<double>;
 
+
+
+// Nodes using a random number generators should derive from this interface.
+// One purpuose of this interface is to have a common interface for setting the seeds when setting up a network.
+class IRngUser
+{
+public:
+    virtual RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) = 0;
+    virtual void SetRandomSeed(const unsigned long val) = 0;
+};
+
+// This implements IRngUser using RNGHandle.
+class RngUser : public IRngUser
+{
+public:
+    RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) override
+    {
+        if (!m_RNGHandle)
+            m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
+
+        return *m_RNGHandle;
+    }
+
+    // E.g. called from ComputationNetwork to make sure that CNTK running on different nodes will have different seed.
+    void SetRandomSeed(const unsigned long val) override
+    {
+        m_randomSeed = (unsigned long)val;
+
+        m_RNGHandle.reset(); // Reset handle. New handle will be generated with next call of GetRNGHandle(...).
+    }
+
+protected:
+    unsigned long m_randomSeed = 0;
+    std::shared_ptr<RNGHandle> m_RNGHandle;
+};
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+// RandomSampleNodeBase(samplingWeights, sizeOfSampledSet, allowDuplicates): 
+// Base class for RandomSampleNode and RandomSampleInclusionFrequencyNode.
+// Provides random sampling functionality.
+//
+// Parameters:
+// * Input(0) Sampling weight vector: Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * sizeOfSampledSet: Size of the sampled set.
+// * allowDuplicates: controls if sampled set is allowed to contain duplicates.
+// --------------------------------------------------------------------------------------------------------------------------------------------------
+
+template <class ElemType>
+class RandomSampleNodeBase : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>, public RngUser
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName(){return L"RandomSampleNodeBase";}
+
+public:
+    RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+        : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates)
+    {
+        SetRandomSeed((unsigned long)CreateUniqId());
+    }
+
+    RandomSampleNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
+        : RandomSampleNodeBase(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
+
+    void Save(File& fstream) const;
+
+    virtual void Load(File& fstream, size_t modelVersion) override;
+
+protected:
+
+    void UpdateWeightsPrefixSum();
+
+    // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
+    // to get the expected number of samples.
+    const std::vector<size_t> RunSampling(long& nTries);
+
+public:
+    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override {
+        // This node does not propagate gradients.
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override{}
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false;}
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override{}
+
+protected:
+    bool m_allowDuplicates; // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
+    int m_sizeOfSampledSet; // Requested size of sample in case of run-mode = CREATE_SAMPLES.
+    std::vector<double> m_samplingWeightsPrefixSum;
+};
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+// RandomSampleNode(samplingWeights, sizeOfSampledSet, allowDuplicates):
+// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix of shape [nClasses x sizeOfSampledSet] where nClasses is the number of classes (categories) to choose from.
+// The output has no dynamic axis.
+// The samples are drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
+// We get one set of samples for per minibatch.
+// Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
+//
+// Parameters:
+// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * sizeOfSampledSet: Size of the sampled set.
+// * allowDuplicates: controls if sampled set is allowed to contain duplicates.
+// --------------------------------------------------------------------------------------------------------------------------------------------------
+template<class ElemType> 
+class RandomSampleNode : public RandomSampleNodeBase<ElemType>
+{
+    typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName(){ return L"RandomSample"; }
+
+public:
+    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+        : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
+    {}
+
+    RandomSampleNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RandomSampleNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
+    const std::vector<size_t> GetWeightedSamples();
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+    virtual bool IsOutOfDateWrtInputs() const override;
+};
+
+// ------------------------------------------------------------------------------------------------------------------------------------------------
+// RandomSampleInclusionFrequencyNode(samplingWeights, sizeOfSampledSet, allowDuplicates): 
+// Intended uses are e.g. sampled softmax, noise contrastive estimation etc where it is used together with RandomSampleNode.
+// This node estimates how often each class will occur in a set sampled with RandomSampleNode(...) on the average. 
+// If the sampling mode 'allowDuplicates = true' is choosen this is trivial and exact. 
+// For allowDuplicates = false we get some estimate. The value is updated only when the input weights change.
+//
+// Parameters:
+// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * sizeOfSampledSet: Size of the sampled set.
+// * allowDuplicates: controls if sampled set is allowed to contain duplicates.
+// --------------------------------------------------------------------------------------------------------------------------------------------------
+template<class ElemType>
+class RandomSampleInclusionFrequencyNode : public RandomSampleNodeBase<ElemType>
+{
+    typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName(){ return L"RandomSampleInclusionFrequency"; }
+public:
+    RandomSampleInclusionFrequencyNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+        : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
+    {}
+
+    RandomSampleInclusionFrequencyNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RandomSampleInclusionFrequencyNode(CPUDEVICE, L"<placeholder>", configp->Get(L"sizeOfSampledSet"), configp->Get(L"allowDuplicates"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+    virtual void /*ComputationNode::*/ ForwardPropNonLooping() override;
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+private:
+    // Approximates the expected number of occurences of a class in the sampled set.
+    // Assuming (falsely) that the number of tries to get a sampled set with the requested number of distinct values is always estimatedNumTries
+    // the probability that a specific class in in the sampled set is (1 - (1-p)^estimatedNumTries), where p is the probablity to pick the clas in one draw.
+    // The estimate can be quite a bit off but should be better than nothing. Better alternatives?
+    double EstimateInSampleFrequency(double p, double estimatedNumTries) const;
+
+    double EstimateNumberOfTries();
+};
+
 // -----------------------------------------------------------------------
 // ClassBasedCrossEntropyWithSoftmaxNode (labeldata(.,t), inputdata(.,t), embeddingMatrix, clsProbBeforeSoftmaxData(.,t))
 //  - Input(0) [4 x T] label in dense matrix in
@@ -692,7 +1326,6 @@ template class NoiseContrastiveEstimationNode<double>;
 //  - Input(2) [hdsize x vocab_size] weight matrix in, for speed-up, as per word matrix can be simply obtained as column slice
 //  - Input(3) [nbr_cls x T] clsprob in dense matrix in. This input, if applied softmax on, is the posterior probabilty of class given observations
 // -----------------------------------------------------------------------
-
 // calculates: -sum(left_i * log(softmax_i(right))) for class given history and for word given history
 // need to provide class probabilty from external node
 template <class ElemType>
@@ -762,8 +1395,8 @@ private:
         ForColumnsWithClass([&](size_t /*s*/, size_t /*t*/, const FrameRange& fr, size_t /*y_t*/, size_t c_t, size_t sz, size_t lft_bnd, size_t nbr_wrd)
         {
             // compute prb - 1 and prb
-            Matrix<ElemType> weightForClass = Input(EMBEDDINGMATRIX)->ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
-            Matrix<ElemType> obs = Input(INPUTDATA)->ValueFor(fr); // hidden activation vector for current word token
+            Matrix<ElemType> weightForClass = InputRef(EMBEDDINGMATRIX).ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
+            Matrix<ElemType> obs = InputRef(INPUTDATA).ValueFor(fr); // hidden activation vector for current word token
             Matrix<ElemType> grd_to_soft_max_input = m_grdToSoftMaxInput.ColumnSlice(sz, nbr_wrd);
 
             switch (inputIndex)
@@ -771,21 +1404,21 @@ private:
                 case 1:
                 {
                     // gradient to input
-                    Matrix<ElemType> grd_t = Input(INPUTDATA)->GradientFor(fr);
+                    Matrix<ElemType> grd_t = InputRef(INPUTDATA).GradientFor(fr);
                     Matrix<ElemType>::MultiplyAndAdd(weightForClass, false, grd_to_soft_max_input, true, grd_t);
                     break;
                 }
                 case 2:
                 {
                     // gradient to input weight
-                    Matrix<ElemType> grd_to_wgt_t = Input(EMBEDDINGMATRIX)->GradientAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
+                    Matrix<ElemType> grd_to_wgt_t = InputRef(EMBEDDINGMATRIX).GradientAsMatrix().ColumnSlice(lft_bnd, nbr_wrd);
                     Matrix<ElemType>::MultiplyAndAdd(obs, false, grd_to_soft_max_input, false, grd_to_wgt_t);
                     break;
                 }
                 case 3:
                 {
-                    Matrix<ElemType> grd_t = Input(CLASSPROBINDATA)->GradientFor(fr);
-                    grd_t.AssignValuesOf(Input(CLASSPROBINDATA)->DataFor(m_clsSoftmax, fr));
+                    Matrix<ElemType> grd_t = InputRef(CLASSPROBINDATA).GradientFor(fr);
+                    grd_t.AssignValuesOf(InputRef(CLASSPROBINDATA).DataFor(m_clsSoftmax, fr));
                     ComputeCEPartialToSoftmaxInputs(grd_t, Gradient(), c_t);
                     break;
                 }
@@ -833,15 +1466,15 @@ public:
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         // get the label matrix to CPU, ideally in location=BOTH state
-        Input(LABELDATA)->Value().TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ false/*means: BOTH state OK*/, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ false);
+        InputRef(LABELDATA).Value().TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ false/*means: BOTH state OK*/, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ false);
 
         auto& functionValues = Value();
 
-        const size_t hdSize = Input(INPUTDATA)->GetSampleMatrixNumRows();
-        assert(m_nbrCls == Input(CLASSPROBINDATA)->GetSampleMatrixNumRows());
+        const size_t hdSize = InputRef(INPUTDATA).GetSampleMatrixNumRows();
+        assert(m_nbrCls == InputRef(CLASSPROBINDATA).GetSampleMatrixNumRows());
 
         // compute the class posteriors
-        m_clsLogSoftmax.SetValue(Input(CLASSPROBINDATA)->Value());
+        m_clsLogSoftmax.SetValue(InputRef(CLASSPROBINDATA).Value());
         m_clsLogSoftmax.InplaceLogSoftmax(true);   // log
         m_clsSoftmax.AssignExpOf(m_clsLogSoftmax); // non-log
 
@@ -866,13 +1499,13 @@ public:
             // now get views of various arrays that correspond to the index range of words belonging to this class
 
             // get hidden vectors for the words in this class
-            Matrix<ElemType> weightForClass = Input(EMBEDDINGMATRIX)->ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd); // [hdSize x nbr_wrd]
+            Matrix<ElemType> weightForClass = InputRef(EMBEDDINGMATRIX).ValueAsMatrix().ColumnSlice(lft_bnd, nbr_wrd); // [hdSize x nbr_wrd]
 
             // buffer to hold the class-conditional distribution
             Matrix<ElemType> softMax_t = m_softMax.ColumnSlice(sz, nbr_wrd); // TODO: declare these outside of the loop to avoid the malloc
             Matrix<ElemType> logSoftMax_t = m_logSoftmax.ColumnSlice(sz, nbr_wrd);
 
-            Matrix<ElemType> obs = Input(INPUTDATA)->ValueFor(fr); // hidden activation vector for current word token
+            Matrix<ElemType> obs = InputRef(INPUTDATA).ValueFor(fr); // hidden activation vector for current word token
 
             // multiply hidden activation with weight matrix (the slice of the weight matrix for the range of class members)
             // TODO: can we use 'true' here instead? Above transposition hack won't work with row slices. 'obs' not used elsewhere
@@ -892,7 +1525,7 @@ public:
             Matrix<ElemType>::AddElementToElement(logSoftMax_t, 0, idx_in_class, functionValues, 0, 0); // (1x1)
 
             // add the class log posterior probability (for backprop)
-            auto clsLogSoftmax_t = Input(CLASSPROBINDATA)->DataFor(m_clsLogSoftmax, fr);
+            auto clsLogSoftmax_t = InputRef(CLASSPROBINDATA).DataFor(m_clsLogSoftmax, fr);
             Matrix<ElemType>::AddElementToElement(clsLogSoftmax_t, c_t, 0, functionValues, 0, 0); // (1x1)
         });
 
@@ -994,9 +1627,9 @@ public:
     // compute posterior probability of label y at position t
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
-        size_t nrow = Input(0)->Value().GetNumRows();
-        size_t ncol = Input(0)->Value().GetNumCols();
+        FrameRange fr(InputRef(0).GetMBLayout());
+        size_t nrow = InputRef(0).Value().GetNumRows();
+        size_t ncol = InputRef(0).Value().GetNumCols();
 
         mAlpha.Resize(nrow, ncol);
         mBeta.Resize(nrow, ncol);
@@ -1005,7 +1638,7 @@ public:
         Value().SetValue(0.0);
         Matrix<ElemType> funcVal = Value(); // TODO: This just creates a 1x1 matrix set to 0.
 
-        size_t nS = Input(0)->GetNumParallelSequences();
+        size_t nS = InputRef(0).GetNumParallelSequences();
         if (nS != 1)
             LogicError("CRFNode: >1 parallel sequences are curently not implemented correctly.");
         for (size_t i = 0; i < nS; i++) // process parallel sequences one by one  --BUGBUG: We should loop over individual sequences.
@@ -1013,13 +1646,13 @@ public:
             FrameRange sequenceRange = fr.Sequence(i); // FrameRange to select one sequence
             // BUGBUG: This ^^ is neither supported nor correct, since this code does not handle gaps or start/end flags.
             ForwardPropS(
-                DataWithMBLayoutFor(mPostProb, sequenceRange, Input(0)->GetMBLayout()),
-                DataWithMBLayoutFor(mAlpha, sequenceRange, Input(0)->GetMBLayout()),
-                DataWithMBLayoutFor(mBeta, sequenceRange, Input(0)->GetMBLayout()),
+                DataWithMBLayoutFor(mPostProb, sequenceRange, InputRef(0).GetMBLayout()),
+                DataWithMBLayoutFor(mAlpha, sequenceRange, InputRef(0).GetMBLayout()),
+                DataWithMBLayoutFor(mBeta, sequenceRange, InputRef(0).GetMBLayout()),
                 funcVal,
-                Input(0)->ValueFor(sequenceRange),
-                Input(1)->ValueFor(sequenceRange),
-                Input(2)->ValueAsMatrix(), mStartLbl,
+                InputRef(0).ValueFor(sequenceRange),
+                InputRef(1).ValueFor(sequenceRange),
+                InputRef(2).ValueAsMatrix(), mStartLbl,
                 mEndLbl);
 
             Value() += funcVal; // aggregate over sequences
@@ -1028,28 +1661,28 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override // scaled by 2*number of colmns (samples) in the Matrix<ElemType>
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         // this should never be called for input[0], which is controlled through learningRateMultiplier == 0
         if (inputIndex != 1 && inputIndex != 2)
             InvalidArgument("CRFNode only takes with respect to input and weight.");
 
         if (inputIndex == 1)
         {
-            auto gradient = Input(1)->GradientFor(fr);
-            Matrix<ElemType>::AddScaledDifference(Gradient(), mPostProb, Input(0)->ValueFor(fr), gradient);
+            auto gradient = InputRef(1).GradientFor(fr);
+            Matrix<ElemType>::AddScaledDifference(Gradient(), mPostProb, InputRef(0).ValueFor(fr), gradient);
         }
         else if (inputIndex == 2)
         {
-            assert(Input(inputIndex)->GradientFor(fr).GetNumElements() > 0);
-            size_t nS = Input(0)->GetNumParallelSequences();
+            assert(InputRef(inputIndex).GradientFor(fr).GetNumElements() > 0);
+            size_t nS = InputRef(0).GetNumParallelSequences();
             for (size_t i = 0; i < nS; i++) // process all sequences one by one
             {
                 FrameRange sequenceRange = fr.Sequence(i); // FrameRange to select one sequence
-                auto& gradient = Input(2)->GradientAsMatrix();
-                TransGrdCompute(Input(0)->ValueFor(sequenceRange),
-                                DataWithMBLayoutFor(mAlpha, sequenceRange, Input(0)->GetMBLayout()),
-                                DataWithMBLayoutFor(mBeta, sequenceRange, Input(0)->GetMBLayout()),
-                                Input(2)->ValueAsMatrix(),
+                auto& gradient = InputRef(2).GradientAsMatrix();
+                TransGrdCompute(InputRef(0).ValueFor(sequenceRange),
+                                DataWithMBLayoutFor(mAlpha, sequenceRange, InputRef(0).GetMBLayout()),
+                                DataWithMBLayoutFor(mBeta, sequenceRange, InputRef(0).GetMBLayout()),
+                                InputRef(2).ValueAsMatrix(),
                                 gradient,
                                 mStartLbl, 1);
             }
@@ -1210,11 +1843,11 @@ public:
         m_pMBLayout = nullptr; // this node does not hold mini-batch data
 
         if (isFinalValidationPass)
-            if (!(Input(1)->GetSampleMatrixNumRows() == Input(2)->GetAsMatrixNumRows() && // position dependent and pair scores have same number of labels
-                  Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() &&
-                  Input(0)->HasMBLayout() && Input(0)->GetMBLayout() == Input(1)->GetMBLayout() &&
-                  // Input(0)->GetNumCols() == Input(1)->GetNumCols() && // position dependent and pair scores have the same observation numbers
-                  Input(2)->GetAsMatrixNumCols() == Input(2)->GetAsMatrixNumRows()))
+            if (!(InputRef(1).GetSampleMatrixNumRows() == InputRef(2).GetAsMatrixNumRows() && // position dependent and pair scores have same number of labels
+                  InputRef(0).GetSampleMatrixNumRows() == InputRef(1).GetSampleMatrixNumRows() &&
+                  InputRef(0).HasMBLayout() && InputRef(0).GetMBLayout() == InputRef(1).GetMBLayout() &&
+                  // InputRef(0).GetNumCols() == InputRef(1).GetNumCols() && // position dependent and pair scores have the same observation numbers
+                  InputRef(2).GetAsMatrixNumCols() == InputRef(2).GetAsMatrixNumRows()))
             {
                 LogicError("The Matrix dimension in the CRFNode operation does not match.");
             }
@@ -1271,22 +1904,22 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         if (inputIndex != 1)
             InvalidArgument("%ls %ls operation cannot compute the gradient for its first inpute.", NodeName().c_str(), OperationName().c_str());
 
-        // BackpropToRight(m_temp, Input(0)->Value(), Input(2)->Value(), Input(inputIndex)->Gradient(), Gradient(), m_classZeroLabels, m_result);
+        // BackpropToRight(m_temp, InputRef(0).Value(), InputRef(2).Value(), InputRef(inputIndex).Gradient(), Gradient(), m_classZeroLabels, m_result);
         // Create vector with 1 for class 1, and -1 for class 0
-        m_temp->AssignDifferenceOf(Input(0)->ValueFor(fr), *m_classZeroLabels); // TODO: need a slice for m_classZeroLabels?
+        m_temp->AssignDifferenceOf(InputRef(0).ValueFor(fr), *m_classZeroLabels); // TODO: need a slice for m_classZeroLabels?
 
-        // Multiply the vector by the Input(2)->Value()
+        // Multiply the vector by the InputRef(2).Value()
         if (m_inputs.size() == 3)                                            // with weight
-            m_temp->AssignElementProductOf(*m_temp, Input(2)->ValueFor(fr)); // TODO: is Input(2) minibatch data? Confirm
+            m_temp->AssignElementProductOf(*m_temp, InputRef(2).ValueFor(fr)); // TODO: is Input(2) minibatch data? Confirm
 
         // divide class by p (class 1) or (1-p) (class 0)
         m_temp->AssignElementDivisionOf(*m_temp, *m_result); // TODO: this is in-place--does this function allow that?
 
-        auto gradient = Input(inputIndex)->GradientFor(fr);
+        auto gradient = InputRef(inputIndex).GradientFor(fr);
         Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, Gradient() /*1x1*/, *m_temp, 1.0f, gradient);
     }
 
@@ -1297,21 +1930,22 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        m_classZeroLabels->Resize(Input(0)->Value());
-        m_result->Resize(Input(0)->Value());
-        m_temp->Resize(Input(0)->Value());
+        m_classZeroLabels->Resize(InputRef(0).Value());
+        m_result->Resize(InputRef(0).Value());
+        m_temp->Resize(InputRef(0).Value());
+        m_sumOfWeights->Resize(Value());
     }
 
     // -sum(left * log(right) + (1-left)*log(1-right)) (optionally * weight)
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
 
-        const Matrix<ElemType>& classOneLabels = Input(0)->ValueFor(fr);
-        const Matrix<ElemType>& classOneProbabilities = Input(1)->ValueFor(fr);
+        const Matrix<ElemType>& classOneLabels = InputRef(0).ValueFor(fr);
+        const Matrix<ElemType>& classOneProbabilities = InputRef(1).ValueFor(fr);
         Matrix<ElemType>& classZeroLabels = *m_classZeroLabels;
 
-        Matrix<ElemType> ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId()).DeepClone();
+        const Matrix<ElemType>& ones = ConstOnes(classOneLabels.GetNumRows(), classOneLabels.GetNumCols(), classOneLabels.GetDeviceId());
 
         // compute the indices for the class 0 indices
         classZeroLabels.AssignDifferenceOf(ones, classOneLabels);
@@ -1336,10 +1970,20 @@ public:
 
         // The error is the negative of the sum of the result
         if (m_inputs.size() == 2)
+        {
             Value().AssignSumOfElements(*m_temp);
+            Value() *= (-1);
+        }
         else
-            Value().AssignInnerProductOf(Input(2)->ValueFor(fr), *m_temp, false);
-        Value() *= (-1);
+        {
+            // sum of weights
+            m_sumOfWeights->AssignSumOfElements(InputRef(2).ValueFor(fr));
+            // number of elements
+            ElemType numOfElements = (ElemType)ones.GetNumCols();
+            // sum of weighted log loss
+            Value().AssignInnerProductOf(InputRef(2).ValueFor(fr), *m_temp, false).ElementDivideBy(*m_sumOfWeights);
+            Value() *= -numOfElements;
+        }
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -1373,6 +2017,7 @@ public:
         RequestMatrixFromPool(m_classZeroLabels, matrixPool);
         RequestMatrixFromPool(m_result, matrixPool);
         RequestMatrixFromPool(m_temp, matrixPool);
+        RequestMatrixFromPool(m_sumOfWeights, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1382,6 +2027,7 @@ public:
         ReleaseMatrixToPool(m_classZeroLabels, matrixPool);
         ReleaseMatrixToPool(m_result, matrixPool);
         ReleaseMatrixToPool(m_temp, matrixPool);
+        ReleaseMatrixToPool(m_sumOfWeights, matrixPool);
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -1393,6 +2039,7 @@ public:
             node->m_classZeroLabels->SetValue(*m_classZeroLabels);
             node->m_result->SetValue(*m_result);
             node->m_temp->SetValue(*m_temp);
+            node->m_sumOfWeights->SetValue(*m_sumOfWeights);
         }
     }
 
@@ -1400,6 +2047,9 @@ private:
     shared_ptr<Matrix<ElemType>> m_classZeroLabels;
     shared_ptr<Matrix<ElemType>> m_result;
     shared_ptr<Matrix<ElemType>> m_temp;
+
+    // for weighted log-loss
+    shared_ptr<Matrix<ElemType>> m_sumOfWeights;
 };
 
 template class LogisticNode<float>;
@@ -1411,7 +2061,7 @@ template class LogisticNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>
+class DropoutNode : public ComputationNode<ElemType>, public NumInputs<1>, public RngUser
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -1426,12 +2076,12 @@ public:
         : Base(deviceId, name),
           m_dropoutRate(0)
     {
-        m_randomSeed = (unsigned long) CreateUniqId();
+        SetRandomSeed((unsigned long)CreateUniqId());
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
+        Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
         if (m_dropoutRate > 0)
@@ -1483,21 +2133,9 @@ public:
         m_dropoutRate = val;
     }
 
-    void SetRandomSeed(const unsigned long val)
-    {
-        m_randomSeed = (unsigned long) val;
-
-        // Upon change of the seed, reset RNGHandle to force the creation of a new RNGHandle
-        // during forward propagation
-        m_RNGHandle = nullptr;
-    }
-
     RNGHandle& GetRNGHandle()
     {
-        if (m_RNGHandle == nullptr) 
-            m_RNGHandle = RNGHandle::Create(ValuePtr()->GetDeviceId(), m_randomSeed);
-
-        return *m_RNGHandle;
+        return RngUser::GetRNGHandle(ValuePtr()->GetDeviceId());
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1507,7 +2145,7 @@ public:
         {
             auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
             node->m_dropoutRate = m_dropoutRate;
-            node->m_randomSeed = m_randomSeed;
+            node->SetRandomSeed(m_randomSeed);
             node->m_maskOfDropout = m_maskOfDropout;
         }
     }
@@ -1529,9 +2167,6 @@ public:
 
 private:
     double m_dropoutRate;
-    unsigned long m_randomSeed;
-    std::shared_ptr<RNGHandle> m_RNGHandle;
-
     shared_ptr<Matrix<ElemType>> m_maskOfDropout;
 };
 

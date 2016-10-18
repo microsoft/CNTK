@@ -9,9 +9,12 @@
 #include <limits>
 #include "MLFDataDeserializer.h"
 #include "ConfigHelper.h"
+#include "SequenceData.h"
 #include "../HTKMLFReader/htkfeatio.h"
 #include "../HTKMLFReader/msra_mgram.h"
 #include "latticearchive.h"
+#include "StringUtil.h"
+
 
 #undef max // max is defined in minwindef.h
 
@@ -60,6 +63,9 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
         LogicError("MLFDataDeserializer supports a single input stream only.");
     }
 
+    std::wstring precision = cfg(L"precision", L"float");;
+    m_elementType = AreEqualIgnoreCase(precision, L"float") ? ElementType::tfloat : ElementType::tdouble;
+
     ConfigParameters input = inputs.front();
     auto inputName = input.GetMemberIds().front();
 
@@ -91,6 +97,9 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
             "value (%" PRIu64 ")\n", dimension, (size_t)numeric_limits<IndexType>::max());
     }
 
+    std::wstring precision = labelConfig(L"precision", L"float");;
+    m_elementType = AreEqualIgnoreCase(precision, L"float") ? ElementType::tfloat : ElementType::tdouble;
+
     wstring labelMappingFile = labelConfig(L"labelMappingFile", L"");
     InitializeChunkDescriptions(corpus, config, labelMappingFile, dimension);
     InitializeStream(name, dimension);
@@ -117,8 +126,6 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
         msra::asr::htkmlfreader<msra::asr::htkmlfentry,
         msra::lattices::lattice::htkmlfwordsequence >> ::value,
         "Type 'msra::asr::htkmlfreader' should be move constructible!");
-
-    m_elementType = config.GetElementType();
 
     MLFUtterance description;
     size_t numClasses = 0;
@@ -201,7 +208,7 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
     m_categoryIndices.reserve(dimension);
     for (size_t i = 0; i < dimension; ++i)
     {
-        SparseSequenceDataPtr category = make_shared<SparseSequenceData>();
+        auto category = make_shared<CategorySequenceData>();
         m_categoryIndices.push_back(static_cast<IndexType>(i));
         category->m_indices = &(m_categoryIndices[i]);
         category->m_nnzCounts.resize(1);
@@ -283,7 +290,11 @@ struct MLFSequenceData : SparseSequenceData
         m_numberOfSamples = (uint32_t) numberOfSamples;
         m_totalNnzCount = static_cast<IndexType>(numberOfSamples);
         m_indices = m_indicesPtr.get();
-        m_data = m_values.data();
+    }
+
+    const void* GetDataBuffer() override
+    {
+        return m_values.data();
     }
 };
 

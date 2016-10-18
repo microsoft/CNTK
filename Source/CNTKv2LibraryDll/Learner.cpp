@@ -26,6 +26,9 @@ using namespace std;
 
 namespace CNTK
 {
+    /*static*/ const std::wstring Learner::LearningRateAttributeName = L"learningRate";
+    /*static*/ const std::wstring LearnerBase::WasLearningRateResetAttributeName = L"wasLearningRateReset";
+
     template <typename ElementType>
     /*static*/ shared_ptr<const Matrix<ElementType>> LearnerBase::GetMatrix(const NDArrayViewPtr& arrayView)
     {
@@ -141,7 +144,7 @@ namespace CNTK
         // L1 regularizer with proximal gradient descent method
         if (m_additionalOptions.l1RegularizationWeight > 0)
         {
-            auto learningRate = ElementType(m_learningRates[m_sampleCount]);
+            auto learningRate = ElementType(LearningRate());
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             auto weight = ElementType(learningRate * m_additionalOptions.l1RegularizationWeight * actualMBSize);
             parameterValue->GetWritableMatrix<ElementType>()->InplaceSoftThreshold(weight);
@@ -154,19 +157,17 @@ namespace CNTK
         return arrayView->GetWritableTensorView<ElementType>();
     }
 
-    LearnerBase::LearnerBase(const unordered_set<Parameter>& parameters, 
+    LearnerBase::LearnerBase(const vector<Parameter>& parameters, 
                              const LearningRatesPerSample& learningRates,
-                             bool allocateSmoothGradients /* = true */,
-                             double clippingThresholdPerSample /*= std::numeric_limits<double>::infinity()*/,
-                             bool gradientClippingWithTruncation /*= true*/)
-        : Learner(parameters),
-        m_learningRates(learningRates),
+                             AdditionalLearningOptions additionalOptions,
+                             bool allocateSmoothGradients /* = true */)
+        : Learner(parameters, learningRates[0]),
+        m_wasLearningRateReset(false),
+        m_learningRateSchedule(learningRates),
         m_sampleCount(0),
-        m_minibatchCount(0)
+        m_minibatchCount(0),
+        m_additionalOptions(additionalOptions)
     {
-        m_additionalOptions.gradientClippingThresholdPerSample = clippingThresholdPerSample;
-        m_additionalOptions.gradientClippingWithTruncation = gradientClippingWithTruncation;
-
         for (const auto& parameter : parameters)
         {
             if (!allocateSmoothGradients)
@@ -225,8 +226,8 @@ namespace CNTK
 #endif
 
 #if DUMPOUTPUT
-            auto learningRate = ElementType(m_learningRates[m_sampleCount]);
-            auto momentum = ElementType(MomentumPerMB(m_momentums[m_sampleCount], trainingSampleCount));
+            auto learningRate = ElementType(LearningRate());
+            auto momentum = ElementType(MomentumValueForMB(m_momentumValues[m_sampleCount], trainingSampleCount));
             LOGPRINTF(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
                         learningRate, momentum, trainingSampleCount);
             LOGPRINTF(stderr, "GradUpdateType()=%s, GradientUpdateNoiseStd()=%0.8f\n",
@@ -280,6 +281,9 @@ namespace CNTK
         checkpoint[L"sampleCount"] = m_sampleCount;
         checkpoint[L"minibatchCount"] = m_minibatchCount;
 
+        if (m_wasLearningRateReset)
+            checkpoint[WasLearningRateResetAttributeName] = m_wasLearningRateReset;
+
         // TODO: should we also save learning rate schedule into the checkpoint?
         // If that is the case, need to be able to override this method in subclasses
         // and save momentum schedule as well.
@@ -294,11 +298,19 @@ namespace CNTK
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
             checkpoint[parameter.Uid()] = *smoothedGradientValue;
         }
+
+        // Add the base Learner's checkpoint state
+        auto baseCheckpointState = Learner::GetCheckpointState();
+        checkpoint.Add(baseCheckpointState);
+
         return checkpoint;
     }
 
     /*virtual*/ void LearnerBase::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
     {
+        // Restore the base learner's checkpoint state
+        Learner::RestoreFromCheckpoint(checkpoint);
+
         m_sampleCount = checkpoint[L"sampleCount"].Value<size_t>();
         m_minibatchCount = checkpoint[L"minibatchCount"].Value<size_t>();
 
@@ -308,6 +320,9 @@ namespace CNTK
             // At the moment, we only support one version, so this should never happen.
             LogicError("Unsupported checkpoint version.");
         }
+
+        if (checkpoint.Contains(WasLearningRateResetAttributeName))
+            m_wasLearningRateReset = checkpoint[WasLearningRateResetAttributeName].Value<bool>();
 
         for (const auto& parameter : Parameters())
         {
@@ -348,23 +363,14 @@ namespace CNTK
         const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue);
         const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue);
 
-        auto learningRate = ElementType(m_learningRates[m_sampleCount]);
-        auto momentum = ElementType(MomentumPerMB(m_momentums[m_sampleCount], trainingSampleCount));
+        auto learningRate = ElementType(LearningRate());
+        auto momentum = ElementType(MomentumValueForMB(m_momentumValues[m_sampleCount], trainingSampleCount));
 
         // TODO: break up the NormalGrad into 3 different functions, each with its own set of parameters
+        // Also, come up with a better name for NormalGrad (Default? Regular? Plain?).
         // (one for vanilla SGD, the other for momentum SGD, and the third one for NAG).
         smoothedGradientMatrix->NormalGrad(*gradientMatrix, *parameterMatrix,
                                            learningRate, momentum, m_useNesterovAcceleration);
-    }
-
-    LearnerAdaGrad::LearnerAdaGrad(const unordered_set<Parameter>& parameters, 
-                                   const LearningRatesPerSample& learningRates,
-                                   bool needAveMultiplier,
-                                   double clippingThresholdPerSample /*= std::numeric_limits<double>::infinity()*/,
-                                   bool gradientClippingWithTruncation /*= true*/)
-        : LearnerBase(parameters, learningRates, true, clippingThresholdPerSample, gradientClippingWithTruncation), 
-        m_needAveMultiplier(needAveMultiplier)
-    {
     }
 
     /*virtual*/ void LearnerAdaGrad::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
@@ -382,24 +388,28 @@ namespace CNTK
         const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue);
         const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue);
 
-        auto learningRate = ElementType(m_learningRates[m_sampleCount]);
+        auto learningRate = ElementType(LearningRate());
 
         auto aveMultiplier = smoothedGradientMatrix->Adagrad(*gradientMatrix, m_needAveMultiplier);
         Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
     }
 
-    LearnerFSAdaGrad::LearnerFSAdaGrad(const unordered_set<Parameter>& parameters, 
+    LearnerFSAdaGrad::LearnerFSAdaGrad(const vector<Parameter>& parameters,
                                        const LearningRatesPerSample& learningRates, 
-                                       const MomentumsPerSample& momentums,
-                                       double clippingThresholdPerSample /*= std::numeric_limits<double>::infinity()*/,
-                                       bool gradientClippingWithTruncation /*= true*/)
-        : LearnerMomentumSGD(parameters, learningRates, momentums, /*allocateSmoothGradients*/ false, clippingThresholdPerSample, gradientClippingWithTruncation)
+                                       const MomentumValuesPerSample& momentumValues,
+                                       const double targetAdagradAvDenom,
+                                       const size_t adagradT,
+                                       AdditionalLearningOptions additionalOptions)
+        : LearnerMomentumSGD(parameters, learningRates, momentumValues, additionalOptions, /*allocateSmoothGradients*/ false),
+        m_targetAdagradAvDenom(targetAdagradAvDenom),
+        m_adagradT(adagradT)
     {
         for (const auto& parameter : parameters)
         {  
             auto shape = GetMatrixShape(parameter);
             NDArrayViewPtr view = AllocateNDArrayView(parameter, {shape[0], 2 * shape[1]});
             m_smoothedGradientValues.insert(make_pair(parameter, view));
+            m_smoothedCounts.insert(make_pair(parameter, 0.0));
         }
     }
 
@@ -411,29 +421,31 @@ namespace CNTK
     template <typename ElementType>
     void LearnerFSAdaGrad::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
     {
-        UNUSED(trainingSampleCount);
-
         const auto& parameterValue = parameter.Value();
         const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue);
         const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue);
         const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue);
         
-        auto learningRate = ElementType(m_learningRates[m_sampleCount]);
-        auto momentum = ElementType(MomentumPerMB(m_momentums[m_sampleCount], trainingSampleCount));
-        smoothedGradientMatrix->FSAdagrad(trainingSampleCount, *gradientMatrix, *parameterMatrix, learningRate, momentum);
+        auto learningRate = LearningRate();
+        auto momentum = MomentumValueForMB(m_momentumValues[m_sampleCount], trainingSampleCount);
+
+        const double varMomentum = (exp(-1.0 * trainingSampleCount / m_adagradT));
+        double& smoothedCount = m_smoothedCounts.at(parameter); 
+
+        smoothedGradientMatrix->FSAdagradUpdate(trainingSampleCount, *gradientMatrix, *parameterMatrix, smoothedCount, learningRate, m_targetAdagradAvDenom, momentum, varMomentum);
     }
 
-    LearnerRMSProp::LearnerRMSProp(const unordered_set<Parameter>& parameters, const LearningRatesPerSample& learningRates,
-                                   double gamma, double inc, double dec, double max, double min, bool needAveMultiplier,
-                                   double clippingThresholdPerSample /*= std::numeric_limits<double>::infinity()*/,
-                                   bool gradientClippingWithTruncation /*= true*/)
-    : LearnerBase(parameters, learningRates, /*allocateSmoothGradients*/ false, clippingThresholdPerSample, gradientClippingWithTruncation),
+    LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters, 
+                                   const LearningRatesPerSample& learningRates,
+                                   double gamma, double inc, double dec, double max, double min,
+                                   bool needAveMultiplier,
+                                   AdditionalLearningOptions additionalOptions)
+    : LearnerBase(parameters, learningRates, additionalOptions, /*allocateSmoothGradients*/ false),
     m_gamma(gamma), m_inc(inc), m_dec(dec), m_max(max), m_min(min), m_needAveMultiplier(needAveMultiplier)
     {
         for (const auto& parameter : parameters)
         {  
             // When needAveMultiplier == true, CPU and GPU implementations of RMSProp require different number of columns.
-            // TODO: verify that this is correct.
             size_t factor = 3;
             if (needAveMultiplier && parameter.Value()->Device().Type() == DeviceKind::GPU)
             {
@@ -462,12 +474,15 @@ namespace CNTK
         const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue);
         const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue);
 
-        auto learningRate = ElementType(m_learningRates[m_sampleCount]);
+        auto learningRate = ElementType(LearningRate());
 
         auto aveMultiplier = smoothedGradientMatrix->RmsProp(*gradientMatrix,
-                                                             ElementType(m_gamma), ElementType(m_inc),
-                                                             ElementType(m_max), ElementType(m_dec),
-                                                             ElementType(m_min), m_needAveMultiplier);
+                                                             ElementType(m_gamma), 
+                                                             ElementType(m_inc),
+                                                             ElementType(m_max), 
+                                                             ElementType(m_dec),
+                                                             ElementType(m_min), 
+                                                             m_needAveMultiplier);
         Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
     }
 
@@ -475,56 +490,53 @@ namespace CNTK
     template shared_ptr<Matrix<float>> LearnerBase::GetWritableMatrix<float>(const NDArrayViewPtr& arrayView);
     template shared_ptr<Matrix<double>> LearnerBase::GetWritableMatrix<double>(const NDArrayViewPtr& arrayView);
     
-    LearnerPtr SGDLearner(const unordered_set<Parameter>& parameters,
+    LearnerPtr SGDLearner(const vector<Parameter>& parameters,
                           const LearningRatesPerSample& learningRates,
-                          double clippingThresholdPerSample /*= std::numeric_limits<double>::infinity()*/,
-                          bool gradientClippingWithTruncation /*= true*/)
+                          AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerSGD>(parameters, learningRates, true, clippingThresholdPerSample, gradientClippingWithTruncation);
+        return MakeSharedObject<LearnerSGD>(parameters, learningRates, additionalOptions);
     }
 
-    LearnerPtr MomentumSGDLearner(const unordered_set<Parameter>& parameters,
+    LearnerPtr MomentumSGDLearner(const vector<Parameter>& parameters,
                                   const LearningRatesPerSample& learningRates,
-                                  const MomentumsPerSample& momentums,
-                                  double clippingThresholdPerSample /*= std::numeric_limits<double>::infinity()*/,
-                                  bool gradientClippingWithTruncation /*= true*/)
+                                  const MomentumValuesPerSample& momentumValues,
+                                  AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerMomentumSGD>(parameters, learningRates, momentums, true, clippingThresholdPerSample, gradientClippingWithTruncation);
+        return MakeSharedObject<LearnerMomentumSGD>(parameters, learningRates, momentumValues, additionalOptions);
     }
 
-    LearnerPtr NesterovLearner(const unordered_set<Parameter>& parameters,
+    LearnerPtr NesterovLearner(const vector<Parameter>& parameters,
                                const LearningRatesPerSample& learningRates,
-                               const MomentumsPerSample& momentums,
-                               double clippingThresholdPerSample /*= std::numeric_limits<double>::infinity()*/,
-                               bool gradientClippingWithTruncation /*= true*/)
+                               const MomentumValuesPerSample& momentumValues,
+                               AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerNesterov>(parameters, learningRates, momentums, clippingThresholdPerSample, gradientClippingWithTruncation);
+        return MakeSharedObject<LearnerNesterov>(parameters, learningRates, momentumValues, additionalOptions);
     }
 
-    LearnerPtr FSAdaGradLearner(const unordered_set<Parameter>& parameters,
+    LearnerPtr FSAdaGradLearner(const vector<Parameter>& parameters,
                                 const LearningRatesPerSample& learningRates,
-                                const MomentumsPerSample& momentums,
-                                double clippingThresholdPerSample /*= std::numeric_limits<double>::infinity()*/,
-                                bool gradientClippingWithTruncation /*= true*/)
+                                const MomentumValuesPerSample& momentumValues,
+                                const double targetAdagradAvDenom /*= 0.0025*/,
+                                const size_t adagradT /*= 2 * 3600 * 100*/,
+                                AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerFSAdaGrad>(parameters, learningRates, momentums, clippingThresholdPerSample, gradientClippingWithTruncation);
+        return MakeSharedObject<LearnerFSAdaGrad>(parameters, learningRates, momentumValues, targetAdagradAvDenom, adagradT, additionalOptions);
     }
 
-    LearnerPtr AdaGradLearner(const unordered_set<Parameter>& parameters,
+    LearnerPtr AdaGradLearner(const vector<Parameter>& parameters,
                               const LearningRatesPerSample& learningRates,
                               bool needAveMultiplier /*= true*/,
-                              double clippingThresholdPerSample /*= std::numeric_limits<double>::infinity()*/,
-                              bool gradientClippingWithTruncation /*= true*/)
+                              AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerAdaGrad>(parameters, learningRates, needAveMultiplier, clippingThresholdPerSample, gradientClippingWithTruncation);
+        return MakeSharedObject<LearnerAdaGrad>(parameters, learningRates, needAveMultiplier, additionalOptions);
     }
 
-    LearnerPtr RMSPropLearner(const unordered_set<Parameter>& parameters, const LearningRatesPerSample& learningRates,
+    LearnerPtr RMSPropLearner(const vector<Parameter>& parameters,
+                              const LearningRatesPerSample& learningRates,
                               double gamma, double inc, double dec, double max, double min, 
                               bool needAveMultiplier /*= true*/,
-                              double clippingThresholdPerSample /*= std::numeric_limits<double>::infinity()*/,
-                              bool gradientClippingWithTruncation /*= true*/)
+                              AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        return MakeSharedObject<LearnerRMSProp>(parameters, learningRates, gamma, inc, dec, max, min, needAveMultiplier, clippingThresholdPerSample, gradientClippingWithTruncation);
+        return MakeSharedObject<LearnerRMSProp>(parameters, learningRates, gamma, inc, dec, max, min, needAveMultiplier, additionalOptions);
     }
 }

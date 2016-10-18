@@ -149,10 +149,12 @@ namespace CNTK
 namespace CNTK
 {
     // Forward declarations
+    class PrimitiveFunction;
     class CompositeFunction;
     class Function;
     class Variable;
     class Axis;
+    enum class PrimitiveOpType : unsigned int;
 
     // Similar to make_shared except that it associates a custom deleter with the shared_ptr to ensure
     // that objects are deleted on the same side of the library DLL where they are allocated
@@ -186,14 +188,11 @@ namespace CNTK
 
     namespace Internal
     {
-        // Create a new Function instance which just passes through specified list of 'operands'.
-        CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = L"");
-
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
         CNTK_API FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
         CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name = L"");
-        CNTK_API FunctionPtr ZeroesLike(const Variable& operand);
+        CNTK_API FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand);
         CNTK_API FunctionPtr Where(const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
         CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
@@ -201,5 +200,27 @@ namespace CNTK
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
 
         CNTK_API size_t NewUniqueId();
+
+        // Internal hooks for testing and higher-level bindings
+        // These should not be directly called by C++ API users
+        CNTK_API void EnableReversingTensorShapesInErrorMessages();
+        bool IsReversingTensorShapesInErrorMessagesEnabled();
+
+        CNTK_API void AlwaysAllowSettingDefaultDevice();
+        bool IsSettingDefaultDeviceAlwaysAllowed();
+
+        CNTK_API void SetAutomaticUnpackingOfPackedValues(bool disable);
+        bool IsAutomaticUnpackingOfPackedValuesDisabled();
+
+        CNTK_API void SetComputationNetworkTraceLevel(int traceLevel);
+        int GetComputationNetworkTraceLevel();
+
+        CNTK_API void SetGPUMemoryAllocationTraceLevel(int traceLevel);
+
+        CNTK_API void ForceSynchronousCUDAKernelExecutions();
+
+        CNTK_API void ForceDeterministicAlgorithms();
+
+        CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
     }
 }

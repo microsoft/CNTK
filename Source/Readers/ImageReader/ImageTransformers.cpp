@@ -13,79 +13,27 @@
 #include "Config.h"
 #include "ConcStack.h"
 #include "StringUtil.h"
-#include "ElementTypeUtils.h"
+#include "SequenceData.h"
+#include "ImageUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK 
 {
 
-struct ImageSequenceData : DenseSequenceData
-{
-    cv::Mat m_image;
-    // In case we do not copy data - we have to preserve the original sequence.
-    SequenceDataPtr m_original;
-};
-
-ImageTransformerBase::ImageTransformerBase(const ConfigParameters& readerConfig) : m_imageElementType(0)
-{
-    m_seed = readerConfig(L"seed", 0u);
-}
-
-// The method describes how input stream is transformed to the output stream. Called once per applied stream.
-// Currently for image transformations we only support dense streams of type double or float.
-StreamDescription ImageTransformerBase::Transform(const StreamDescription& inputStream)
-{
-    m_inputStream = inputStream;
-    m_outputStream = m_inputStream;
-
-    if (m_inputStream.m_storageType != StorageType::dense)
-    {
-        LogicError("ImageTransformerBase supports only dense input streams.");
-    }
-
-    if (m_inputStream.m_elementType == ElementType::tdouble)
-    {
-        m_imageElementType = CV_64F;
-    }
-    else if (m_inputStream.m_elementType == ElementType::tfloat)
-    {
-        m_imageElementType = CV_32F;
-    }
-    else
-    {
-        RuntimeError("Unsupported type");
-    }
-
-    return m_outputStream;
-}
-
 // Transforms a single sequence as open cv dense image. Called once per sequence.
 SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
 {
-    auto inputSequence = static_cast<const DenseSequenceData&>(*sequence);
-
-    ImageDimensions dimensions(*inputSequence.m_sampleLayout, HWC);
-    int columns = static_cast<int>(dimensions.m_width);
-    int rows = static_cast<int>(dimensions.m_height);
-    int channels = static_cast<int>(dimensions.m_numChannels);
+    auto inputSequence = dynamic_cast<ImageSequenceData*>(sequence.get());
+    if (inputSequence == nullptr)
+        RuntimeError("Unexpected sequence provided");
 
     auto result = std::make_shared<ImageSequenceData>();
-    int type = CV_MAKETYPE(m_imageElementType, channels);
-    cv::Mat buffer = cv::Mat(rows, columns, type, inputSequence.m_data);
-    Apply(sequence->m_id, buffer);
-    if (!buffer.isContinuous())
-    {
-        buffer = buffer.clone();
-    }
-    else
-    {
-        result->m_original = sequence;
-    }
-    assert(buffer.isContinuous());
-    result->m_image = buffer;
-    result->m_data = buffer.ptr();
-    result->m_numberOfSamples = inputSequence.m_numberOfSamples;
+    Apply(sequence->m_id, inputSequence->m_image);
 
-    ImageDimensions outputDimensions(buffer.cols, buffer.rows, buffer.channels());
+    result->m_image = inputSequence->m_image;
+    result->m_numberOfSamples = inputSequence->m_numberOfSamples;
+    result->m_elementType = GetElementTypeFromOpenCVType(inputSequence->m_image.depth());
+
+    ImageDimensions outputDimensions(inputSequence->m_image.cols, inputSequence->m_image.rows, inputSequence->m_image.channels());
     result->m_sampleLayout = std::make_shared<TensorShape>(outputDimensions.AsTensorShape(HWC));
     return result;
 }
@@ -290,44 +238,45 @@ cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, in
     return cv::Rect(xOff, yOff, cropSizeX, cropSizeY);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+// scaleMode = "fill" (default) - warp the image to the given target size
+// scaleMode = "crop" - resize the image's shorter side to the given target size and crops the overlap
+// scaleMode = "pad"  - resize the image's larger side to the given target size, center it and pad the rest
 ScaleTransformer::ScaleTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
-    m_interpMap.emplace("nearest", cv::INTER_NEAREST);
-    m_interpMap.emplace("linear", cv::INTER_LINEAR);
-    m_interpMap.emplace("cubic", cv::INTER_CUBIC);
-    m_interpMap.emplace("lanczos", cv::INTER_LANCZOS4);
-
-    m_imgWidth = config(L"width");
-    m_imgHeight = config(L"height");
+    m_imgWidth    = config(L"width");
+    m_imgHeight   = config(L"height");
     m_imgChannels = config(L"channels");
 
     size_t cfeat = m_imgWidth * m_imgHeight * m_imgChannels;
-    if (cfeat == 0 || cfeat > std::numeric_limits<size_t>().max() / 2)
+    if (cfeat == 0 || cfeat > SIZE_MAX / 2)
         RuntimeError("Invalid image dimensions.");
 
-    m_interp.clear();
-    std::stringstream ss{config(L"interpolations", "")};
-    for (std::string token = ""; std::getline(ss, token, ':');)
-    {
-        // Explicit cast required for GCC.
-        std::transform(token.begin(), token.end(), token.begin(),
-                       (int (*) (int)) std::tolower);
-        StrToIntMapT::const_iterator res = m_interpMap.find(token);
-        if (res != m_interpMap.end())
-            m_interp.push_back((*res).second);
-    }
+    string scaleMode = config(L"scaleMode", "fill");
+    if      (scaleMode == "crop") m_scaleMode = ScaleMode::Crop;
+    else if (scaleMode == "pad")  m_scaleMode = ScaleMode::Pad;
+    else if (scaleMode == "fill") m_scaleMode = ScaleMode::Fill;
+    else RuntimeError("Invalid scaleMode value, must be fill, crop or pad (all lower case)");
 
-    if (m_interp.size() == 0)
-        m_interp.push_back(cv::INTER_LINEAR);
+    // the pad value used for the 'pad' mode. if set to -1 then the border will be replicated.
+    m_padValue = config(L"padValue", -1);
+    if (m_padValue >= 0)       m_borderType = cv::BORDER_CONSTANT;
+    else if (m_padValue == -1) m_borderType = cv::BORDER_REPLICATE;
+    else RuntimeError("Invalid padValue value, must be -1 (replicates border) or >= 0 (constant)");
+
+    // for old config options use case-insensitve comparison ...
+    string interpolation = config(L"interpolations", "linear");
+    if (AreEqualIgnoreCase(interpolation, "nearest"))      m_interp = cv::INTER_NEAREST;
+    else if (AreEqualIgnoreCase(interpolation, "cubic"))   m_interp = cv::INTER_CUBIC;
+    else if (AreEqualIgnoreCase(interpolation, "lanczos")) m_interp = cv::INTER_LANCZOS4;
+    else if (AreEqualIgnoreCase(interpolation, "linear"))  m_interp = cv::INTER_LINEAR;
+    else RuntimeError("Invalid interpolations value, must be nearest, cubic, lanczos or linear");
 }
 
 // The method describes how input stream is transformed to the output stream. Called once per applied stream.
 // Scale transformer transforms the stream so that all samples are of the same size.
 StreamDescription ScaleTransformer::Transform(const StreamDescription& inputStream)
 {
-    ImageTransformerBase::Transform(inputStream);
+    TransformBase::Transform(inputStream);
     m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(ImageDimensions(m_imgWidth, m_imgHeight, m_imgChannels).AsTensorShape(HWC));
     return m_outputStream;
 }
@@ -336,21 +285,54 @@ void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
 {
     UNUSED(id);
 
-    // If matrix has not been converted to the right type, do it now as rescaling
-    // requires floating point type.
-    if (mat.type() != CV_MAKETYPE(m_imageElementType, m_imgChannels))
-    {
-        mat.convertTo(mat, m_imageElementType);
+    if (m_scaleMode == ScaleMode::Fill)
+    { // warp the image to the given target size
+        cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp);
     }
+    else
+    {
+        int height = mat.rows;
+        int width = mat.cols;
 
-    auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
+        // which dimension is our scaled one?
+        bool scaleW;
+        if (m_scaleMode == ScaleMode::Crop)
+            scaleW = width < height; // in "crop" mode we resize the smaller side
+        else
+            scaleW = width > height; // else we resize the larger side
 
-    auto index = UniIntT(0, static_cast<int>(m_interp.size()) - 1)(*rng);
-    assert(m_interp.size() > 0);
-    cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp[index]);
+        size_t targetW, targetH;
+        if (scaleW)
+        {
+            targetW = (size_t)m_imgWidth;
+            targetH = (size_t)round(height * m_imgWidth / (double)width);
+        }
+        else
+        {
+            targetH = (size_t)m_imgHeight;
+            targetW = (size_t)round(width * m_imgHeight / (double)height);
+        }
 
-    m_rngs.push(std::move(rng));
+        cv::resize(mat, mat, cv::Size((int)targetW, (int)targetH), 0, 0, m_interp);
+
+        if (m_scaleMode == ScaleMode::Crop)
+        { // crop the overlap
+            size_t xOff = max((size_t)0, (targetW - m_imgWidth) / 2);
+            size_t yOff = max((size_t)0, (targetH - m_imgHeight) / 2);
+            mat = mat(cv::Rect((int)xOff, (int)yOff, (int)m_imgWidth, (int)m_imgHeight));
+        }
+        else
+        { // ScaleMode::PAD --> center it and pad the rest
+            size_t hdiff = max((size_t)0, (m_imgHeight - mat.rows) / 2);
+            size_t wdiff = max((size_t)0, (m_imgWidth - mat.cols) / 2);
+
+            size_t top = hdiff;
+            size_t bottom = m_imgHeight - top - mat.rows;
+            size_t left = wdiff;
+            size_t right = m_imgWidth - left - mat.cols;
+            cv::copyMakeBorder(mat, mat, (int)top, (int)bottom, (int)left, (int)right, m_borderType, m_padValue);
+        }
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -390,100 +372,128 @@ void MeanTransformer::Apply(size_t id, cv::Mat &mat)
            (m_meanImg.size() == mat.size() &&
            m_meanImg.channels() == mat.channels()));
 
-    // REVIEW alexeyk: check type conversion (float/double).
     if (m_meanImg.size() == mat.size())
     {
+        // If matrix has not been converted to the right type, do it now as maen requires floating point type.
+        ConvertToFloatingPointIfRequired(mat);
         mat = mat - m_meanImg;
     }
 }
+
+TransposeTransformer::TransposeTransformer(const ConfigParameters& config) : TransformBase(config),
+    m_floatTransform(this), m_doubleTransform(this)
+{}
 
 // The method describes how input stream is transformed to the output stream. Called once per applied stream.
 // Transpose transformer expects the dense input stream with samples as HWC and outputs CHW.
 StreamDescription TransposeTransformer::Transform(const StreamDescription& inputStream)
 {
-    m_inputStream = inputStream;
-    if (m_inputStream.m_storageType != StorageType::dense)
-    {
-        LogicError("Transpose transformer supports only dense streams.");
-    }
+    m_outputStream = TransformBase::Transform(inputStream);
 
     // Changing from NHWC to NCHW
-    m_outputStream = m_inputStream;
+    m_outputStream.m_elementType = m_precision;
     if (m_inputStream.m_sampleLayout != nullptr)
     {
         ImageDimensions dimensions(*m_inputStream.m_sampleLayout, HWC);
         m_outputStream.m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
     }
+
     return m_outputStream;
 }
 
 // Transformation of the sequence.
 SequenceDataPtr TransposeTransformer::Transform(SequenceDataPtr sequence)
 {
-    if (m_inputStream.m_elementType == ElementType::tdouble)
-    {
-        return TypedTransform<double>(sequence);
-    }
+    auto inputSequence = dynamic_cast<ImageSequenceData*>(sequence.get());
+    if (inputSequence == nullptr)
+        RuntimeError("Currently Transpose transform only works with images.");
 
-    if (m_inputStream.m_elementType == ElementType::tfloat)
-    {
-        return TypedTransform<float>(sequence);
-    }
+    ElementType elementType = m_inputStream.m_elementType != ElementType::tvariant ?
+        m_inputStream.m_elementType :
+        sequence->m_elementType;
 
-    RuntimeError("Unsupported type");
+    switch (elementType)
+    {
+    case ElementType::tdouble:
+        if (m_precision == ElementType::tfloat)
+            return m_floatTransform.Apply<double>(inputSequence);
+        if (m_precision == ElementType::tdouble)
+            return m_doubleTransform.Apply<double>(inputSequence);
+    case ElementType::tfloat:
+        if (m_precision == ElementType::tdouble)
+            return m_doubleTransform.Apply<float>(inputSequence);
+        if (m_precision == ElementType::tfloat)
+            return m_floatTransform.Apply<float>(inputSequence);
+    case ElementType::tuchar:
+        if (m_precision == ElementType::tdouble)
+            return m_doubleTransform.Apply<unsigned char>(inputSequence);
+        if (m_precision == ElementType::tfloat)
+            return m_floatTransform.Apply<unsigned char>(inputSequence);
+    default:
+        RuntimeError("Unsupported type. Please apply a cast transform with 'double' or 'float' precision.");
+    }
+    return nullptr; // Make compiler happy
 }
 
-// The class represents a sequence that owns an internal data buffer.
-// Passed from the TransposeTransformer.
-// TODO: Transposition potentially could be done in place (alexeyk: performance might be much worse than of out-of-place transpose).
-struct DenseSequenceWithBuffer : DenseSequenceData
+template <class TElementTo>
+template<class TElementFrom>
+SequenceDataPtr TransposeTransformer::TypedTranspose<TElementTo>::Apply(ImageSequenceData* inputSequence)
 {
-    std::vector<char> m_buffer;
-};
+    TensorShapePtr shape = m_parent->m_inputStream.m_sampleLayout;
+    if (shape == nullptr) // Taking the shape from the sequence.
+        shape = inputSequence->m_sampleLayout;
 
-template <class TElemType>
-SequenceDataPtr TransposeTransformer::TypedTransform(SequenceDataPtr sequence)
-{
-    TensorShapePtr shape = m_inputStream.m_sampleLayout;
-    if (shape == nullptr)
-    {
-        // Taking the shape from the sequence.
-        shape = sequence->m_sampleLayout;
-    }
+    if (!shape)
+        RuntimeError("Unknown shape of the sample in stream '%ls'.", m_parent->m_inputStream.m_name.c_str());
 
-    if (shape == nullptr)
-    {
-        RuntimeError("Unknown shape of the sample in stream '%ls'.", m_inputStream.m_name.c_str());
-    }
+    assert(inputSequence->m_numberOfSamples == 1);
 
-    auto inputSequence = static_cast<DenseSequenceData&>(*sequence);
-    assert(inputSequence.m_numberOfSamples == 1);
-
-    size_t count = shape->GetNumElements() * GetSizeByType(m_inputStream.m_elementType);
-
-    auto result = std::make_shared<DenseSequenceWithBuffer>();
-    result->m_buffer.resize(count);
+    size_t count = shape->GetNumElements();
+    auto result = std::make_shared<DenseSequenceWithBuffer<TElementTo>>(m_memBuffers, count);
 
     ImageDimensions dimensions(*shape, ImageLayoutKind::HWC);
     size_t rowCount = dimensions.m_height * dimensions.m_width;
     size_t channelCount = dimensions.m_numChannels;
 
-    auto src = reinterpret_cast<TElemType*>(inputSequence.m_data);
-    auto dst = reinterpret_cast<TElemType*>(result->m_buffer.data());
+    auto dst = result->GetBuffer();
 
-    for (size_t irow = 0; irow < rowCount; irow++)
+    if (channelCount == 3) // Unrolling for BGR, the most common case.
     {
-        for (size_t icol = 0; icol < channelCount; icol++)
+        size_t nRows = inputSequence->m_image.rows;
+        size_t nCols = inputSequence->m_image.cols;
+
+        TElementTo* b = dst;
+        TElementTo* g = dst + rowCount;
+        TElementTo* r = dst + 2 * rowCount;
+
+        for (size_t i = 0; i < nRows; ++i)
         {
-            dst[icol * rowCount + irow] = src[irow * channelCount + icol];
+            auto* x = inputSequence->m_image.ptr<TElementFrom>((int)i);
+            for (size_t j = 0; j < nCols; ++j)
+            {
+                auto row = j * 3;
+                *b++ = static_cast<TElementTo>(x[row]);
+                *g++ = static_cast<TElementTo>(x[row + 1]);
+                *r++ = static_cast<TElementTo>(x[row + 2]);
+            }
+        }
+    }
+    else
+    {
+        auto src = reinterpret_cast<const TElementFrom*>(inputSequence->GetDataBuffer());
+        for (size_t irow = 0; irow < rowCount; irow++)
+        {
+            for (size_t icol = 0; icol < channelCount; icol++)
+            {
+                dst[icol * rowCount + irow] = static_cast<TElementTo>(src[irow * channelCount + icol]);
+            }
         }
     }
 
-    result->m_sampleLayout = m_outputStream.m_sampleLayout != nullptr ?
-        m_outputStream.m_sampleLayout :
-        std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));;
-    result->m_data = result->m_buffer.data();
-    result->m_numberOfSamples = inputSequence.m_numberOfSamples;
+    result->m_sampleLayout = m_parent->m_outputStream.m_sampleLayout != nullptr ?
+        m_parent->m_outputStream.m_sampleLayout :
+        std::make_shared<TensorShape>(dimensions.AsTensorShape(CHW));
+    result->m_numberOfSamples = inputSequence->m_numberOfSamples;
     return result;
 }
 
@@ -526,6 +536,11 @@ void IntensityTransformer::Apply(size_t id, cv::Mat &mat)
 
     if (m_eigVal.empty() || m_eigVec.empty() || m_curStdDev == 0)
         return;
+
+    // Have to convert to float.
+    int type = m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+    if (mat.type() != type)
+        mat.convertTo(mat, type);
 
     if (mat.type() == CV_64FC(mat.channels()))
         Apply<double>(mat);
@@ -601,6 +616,9 @@ void ColorTransformer::Apply(size_t id, cv::Mat &mat)
     if (m_curBrightnessRadius == 0 && m_curContrastRadius == 0 && m_curSaturationRadius == 0)
         return;
 
+    // Have to convert to float
+    ConvertToFloatingPointIfRequired(mat);
+
     if (mat.type() == CV_64FC(mat.channels()))
         Apply<double>(mat);
     else if (mat.type() == CV_32FC(mat.channels()))
@@ -672,6 +690,83 @@ void ColorTransformer::Apply(cv::Mat &mat)
     }
 
     m_rngs.push(std::move(rng));
+}
+
+CastTransformer::CastTransformer(const ConfigParameters& config) : TransformBase(config), m_floatTransform(this), m_doubleTransform(this)
+{
+}
+
+StreamDescription CastTransformer::Transform(const StreamDescription& inputStream)
+{
+    m_outputStream = TransformBase::Transform(inputStream);
+    m_outputStream.m_elementType = m_precision;
+    return m_outputStream;
+}
+
+SequenceDataPtr CastTransformer::Transform(SequenceDataPtr sequence)
+{
+    if (m_inputStream.m_elementType == m_precision || sequence->m_elementType == m_precision)
+    {
+        // No need to do anything, exit.
+        return sequence;
+    }
+
+    SequenceDataPtr result;
+    ElementType inputType = m_inputStream.m_elementType != ElementType::tvariant
+        ? m_inputStream.m_elementType 
+        : sequence->m_elementType;
+
+    switch (m_precision)
+    {
+    case ElementType::tdouble:
+        if (inputType == ElementType::tfloat)
+            result = m_doubleTransform.Apply<float>(sequence);
+        else if (inputType == ElementType::tuchar)
+            result = m_doubleTransform.Apply<unsigned char>(sequence);
+        else
+            RuntimeError("Unsupported type. Please apply a cast transform with 'double' or 'float' precision.");
+        break;
+    case ElementType::tfloat:
+        if (inputType == ElementType::tdouble)
+            result = m_floatTransform.Apply<double>(sequence);
+        if (inputType == ElementType::tuchar)
+            result = m_floatTransform.Apply<unsigned char>(sequence);
+        else
+            RuntimeError("Unsupported type. Please apply a cast transform with 'double' or 'float' precision.");
+        break;
+    default:
+        RuntimeError("Unsupported type. Please apply a cast transform with 'double' or 'float' precision.");
+    }
+    result->m_elementType = m_precision;
+    return result;
+}
+
+template <class TElementTo>
+template<class TElementFrom>
+SequenceDataPtr CastTransformer::TypedCast<TElementTo>::Apply(SequenceDataPtr sequence)
+{
+    TensorShapePtr shape = m_parent->m_inputStream.m_sampleLayout;
+    if (!shape) // Taking the shape from the sequence.
+        shape = sequence->m_sampleLayout;
+
+    if (!shape)
+        RuntimeError("Unknown shape of the sample in stream '%ls'.", m_parent->m_inputStream.m_name.c_str());
+
+    auto& inputSequence = static_cast<DenseSequenceData&>(*sequence);
+    size_t count = shape->GetNumElements() * sequence->m_numberOfSamples;
+    auto result = std::make_shared<DenseSequenceWithBuffer<TElementTo>>(m_memBuffers, count);
+
+    auto src = reinterpret_cast<const TElementFrom*>(inputSequence.GetDataBuffer());
+    auto dst = result->GetBuffer();
+
+    for (size_t i = 0; i < count; i++)
+    {
+        dst[i] = static_cast<TElementTo>(src[i]);
+    }
+
+    result->m_sampleLayout = shape;
+    result->m_numberOfSamples = inputSequence.m_numberOfSamples;
+    return result;
 }
 
 }}}

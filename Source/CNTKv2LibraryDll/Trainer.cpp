@@ -13,7 +13,41 @@ namespace CNTK
     Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::unordered_set<LearnerPtr>& parameterLearners)
         : m_model(model), m_lossFunction(lossFunction), m_evaluationFunction(evaluationFunction), m_parameterLearners(parameterLearners), m_prevMinibatchNumSamples(1)
     {
-        m_combinedTrainingFunction = Combine({ model, lossFunction, evaluationFunction });
+        std::vector<Variable> combinedFunctionArgs = { m_model, m_lossFunction };
+        if (!m_lossFunction->Output().DynamicAxes().empty())
+        {
+            m_aggregatedLossFunction = ReduceSum(lossFunction);
+            combinedFunctionArgs.push_back(m_aggregatedLossFunction);
+            m_trainingSampleCountVar = m_lossFunction;
+        }
+        else
+        {
+            m_aggregatedLossFunction = m_lossFunction;
+            m_trainingSampleCountVar = m_lossFunction->RootFunction()->Inputs()[0];
+            if (model->Output() != m_trainingSampleCountVar)
+                combinedFunctionArgs.push_back(m_trainingSampleCountVar);
+        }
+
+        if (m_evaluationFunction)
+        {
+            combinedFunctionArgs.push_back(m_evaluationFunction);
+
+            if (!m_evaluationFunction->Output().DynamicAxes().empty())
+            {
+                m_aggregatedEvaluationFunction = ReduceSum(m_evaluationFunction);
+                combinedFunctionArgs.push_back(m_aggregatedEvaluationFunction);
+                m_testSampleCountVar = m_evaluationFunction;
+            }
+            else
+            {
+                m_aggregatedEvaluationFunction = m_evaluationFunction;
+                m_testSampleCountVar = m_evaluationFunction->RootFunction()->Inputs()[0];
+                if ((m_testSampleCountVar != m_trainingSampleCountVar) && (model->Output() != m_testSampleCountVar))
+                    combinedFunctionArgs.push_back(m_testSampleCountVar);
+            }
+        }
+
+        m_combinedTrainingFunction = Combine(combinedFunctionArgs);
 
         auto modelParameters = m_combinedTrainingFunction->Parameters();
         std::unordered_set<Parameter> learnerParameters;
@@ -28,7 +62,8 @@ namespace CNTK
             }
         }
 
-        if (modelParameters != learnerParameters)
+        std::unordered_set<Parameter> modelParametersSet(modelParameters.begin(), modelParameters.end());
+        if (modelParametersSet != learnerParameters)
             InvalidArgument("Trainer ctor: Union of the parameters covered by the specified parameterLearners should match the specified model's parameters");
     }
 
@@ -65,52 +100,57 @@ namespace CNTK
         return scalar;
     }
 
-    static size_t GetSampleCountFromArguments(const Variable& evalOrLossArgument, const std::unordered_map<Variable, ValuePtr>& arguments)
+    static size_t GetSampleCount(const Variable& var, const ValuePtr& value)
     {
-        // Find the argument whose dynamic axes match the criterion operation's dynamic axes (i.e. label dynamic axes)
-        // Then we determine the actual number of samples contributing to the training loss from the argument's Value object
-        auto argumentIter = std::find_if(arguments.begin(), arguments.end(), [evalOrLossArgument](const std::pair<Variable, ValuePtr>& currentPair) {
-            return (currentPair.first.DynamicAxes() == evalOrLossArgument.DynamicAxes());
-        });
-
-        auto argumentValue = argumentIter->second;
-        auto argumentVar = argumentIter->first;
-        auto argumentDataShape = argumentValue->Data()->Shape();
-        auto mask = argumentValue->Mask();
-        size_t numMaskedSamples = (mask != nullptr) ? mask->MaskedCount() : 0;
-        size_t numSamplesInDataArrayView = argumentDataShape.SubShape(argumentVar.Shape().Rank()).TotalSize();
+        auto valueDataShape = value->Shape();
+        size_t numMaskedSamples = value->MaskedCount();
+        size_t numSamplesInDataArrayView = valueDataShape.SubShape(var.Shape().Rank()).TotalSize();
         if (numMaskedSamples > numSamplesInDataArrayView)
             LogicError("Number of masked values cannot exceed the number of samples that the Value object's Data NDArrayView can hold");
 
         return (numSamplesInDataArrayView - numMaskedSamples);
     }
 
-    double Trainer::TestMinbatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    double Trainer::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        if (!m_evaluationFunction)
-            InvalidArgument("Trainer::TestMinbatch: Cannot test when no evaluation function was specified during 'this' trainer's construction");
+        if (!m_aggregatedEvaluationFunction)
+            InvalidArgument("Trainer::TestMinibatch: Cannot test when no evaluation function was specified during 'this' trainer's construction");
 
         // TODO: Should we refactor this code that is somewhat similar to the prologue of the TrainMinibatch function
-        std::unordered_map<Variable, ValuePtr> outputs = { { m_evaluationFunction, nullptr } };
+        std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedEvaluationFunction, nullptr }, { m_testSampleCountVar, nullptr } };
         m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice);
 
-        auto sampleCount = GetSampleCountFromArguments(*(m_evaluationFunction->Arguments().begin()), arguments);
-        return (GetScalarValue(outputs[m_evaluationFunction]) / sampleCount);
+        auto sampleCount = GetSampleCount(m_testSampleCountVar, outputs[m_testSampleCountVar]);
+        return (GetScalarValue(outputs[m_aggregatedEvaluationFunction]) / sampleCount);
     }
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        std::unordered_map<Variable, ValuePtr> outputs = { { m_lossFunction, nullptr } };
-        if (m_evaluationFunction)
-            outputs.insert({ m_evaluationFunction, nullptr });
+        std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
+        return TrainMinibatch(arguments, outputsToFetch, computeDevice);
+    }
 
-        auto backPropSate = m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice, { m_lossFunction });
-        m_prevMinibatchAggregateTrainingLossValue = outputs[m_lossFunction];
-        if (m_evaluationFunction)
-            m_prevMinibatchAggregateEvalCriterionValue = outputs[m_evaluationFunction];
+    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedLossFunction, nullptr }, { m_trainingSampleCountVar, nullptr } };
+        if (m_aggregatedEvaluationFunction)
+            outputs.insert({ m_aggregatedEvaluationFunction, nullptr });
 
-        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_lossFunction->Output().GetDataType(), m_prevMinibatchAggregateTrainingLossValue->Data()->Shape(), computeDevice), outputs.at(m_lossFunction)->Mask());
-        if (m_lossFunction->Output().GetDataType() == DataType::Float)
+        outputs.insert(outputsToFetch.begin(), outputsToFetch.end());
+
+        auto backPropSate = m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice, { m_aggregatedLossFunction });
+        m_prevMinibatchAggregateTrainingLossValue = outputs[m_aggregatedLossFunction];
+        if (m_aggregatedEvaluationFunction)
+            m_prevMinibatchAggregateEvalCriterionValue = outputs[m_aggregatedEvaluationFunction];
+
+        for (auto outputToFetch : outputsToFetch)
+        {
+            if (outputToFetch.second == nullptr)
+                outputsToFetch[outputToFetch.first] = outputs[outputToFetch.first];
+        }
+
+        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_aggregatedLossFunction->Output().GetDataType(), m_prevMinibatchAggregateTrainingLossValue->Shape(), computeDevice), outputs.at(m_aggregatedLossFunction)->Mask());
+        if (m_aggregatedLossFunction->Output().GetDataType() == DataType::Float)
             rootGradientValue->Data()->SetValue(1.0f);
         else
             rootGradientValue->Data()->SetValue(1.0);
@@ -120,9 +160,9 @@ namespace CNTK
         for (const auto& parameter : modelParameters)
             parameterGradients[parameter] = nullptr;
 
-        m_combinedTrainingFunction->Backward(backPropSate, { { m_lossFunction, rootGradientValue } }, parameterGradients);
+        m_combinedTrainingFunction->Backward(backPropSate, { { m_aggregatedLossFunction, rootGradientValue } }, parameterGradients);
 
-        m_prevMinibatchNumSamples = GetSampleCountFromArguments(*(m_lossFunction->Arguments().begin()), arguments);
+        m_prevMinibatchNumSamples = GetSampleCount(m_trainingSampleCountVar, outputs[m_trainingSampleCountVar]);
 
         bool anyUpdatesPerformed = false;
         for (auto learner : m_parameterLearners)
@@ -175,74 +215,10 @@ namespace CNTK
 
     void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
     {
-        auto firstLearner = *(m_parameterLearners.begin());
+        // Restore the model's parameters
+        m_combinedTrainingFunction->RestoreFromLegacyModel(modelFilePath);
 
-        auto loadedModelFunction = LoadLegacyModel(m_combinedTrainingFunction->Outputs()[0].GetDataType(), modelFilePath, DeviceDescriptor::CPUDevice());
-
-        // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
-        // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
-        auto loadedModelLeafVariables = loadedModelFunction->Inputs();
-        auto trainerModelLeafVariables = m_combinedTrainingFunction->Inputs();
-        if (trainerModelLeafVariables.size() != loadedModelLeafVariables.size())
-            InvalidArgument("The loaded model's leaf variables do not match the trainer model's leaf variables");
-
-        std::map<std::wstring, Variable> loadedModelLeafVariablesMap;
-        for (auto leafVar : loadedModelLeafVariables)
-            loadedModelLeafVariablesMap[leafVar.Uid()] = leafVar;
-
-        std::map<std::wstring, Variable> trainerModelLeafVariablesMap;
-        for (auto leafVar : trainerModelLeafVariables)
-            trainerModelLeafVariablesMap[leafVar.Uid()] = leafVar;
-
-        // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
-        // since these are not part of the internal CNTK serialized computation graph
-        auto removePastAndFutureValueInitialStateScalarConstants = [](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
-            for (auto funcPtr : allPrimitiveFunctions)
-            {
-                auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
-                if ((primitiveFunction->OpType() == PrimitiveOpType::PastValue) || (primitiveFunction->OpType() == PrimitiveOpType::FutureValue))
-                {
-                    auto initialStateInput = primitiveFunction->Inputs()[1];
-                    if (initialStateInput.IsConstant() && (initialStateInput.Shape().TotalSize() == 1))
-                        modelLeafVariableMap.erase(initialStateInput.Uid());
-                }
-            }
-        };
-
-        auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
-        removePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
-
-        auto trainerModelCompositeFunction = dynamic_cast<const CompositeFunction*>(m_combinedTrainingFunction.get());
-        removePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
-
-        // Now update the trainer's model parameters and constants with those from the loaded model
-        for (auto nameVarPair : trainerModelLeafVariablesMap)
-        {
-            auto trainerModelLeafVar = nameVarPair.second;
-
-            auto areVariablesEquivalent = [](const Variable& left, const Variable& right) {
-                return ((left.Kind() == right.Kind()) &&
-                    ((left.Shape() == right.Shape()) || (AsTensorShape(left.Shape()) == AsTensorShape(right.Shape()))) &&
-                    (left.GetDataType() == right.GetDataType()) &&
-                    (left.DynamicAxes().size() == right.DynamicAxes().size()) &&
-                    (left.NeedsGradient() == right.NeedsGradient()) &&
-                    (left.Uid() == right.Uid()) &&
-                    (left.IsSparse() == right.IsSparse()));
-            };
-
-            auto correspondingLoadedModelVar = loadedModelLeafVariablesMap.at(trainerModelLeafVar.Uid());
-
-            if (!areVariablesEquivalent(correspondingLoadedModelVar, trainerModelLeafVar))
-                InvalidArgument("The loaded model's leaf variables do not match the trainer model's leaf variables");
-
-            if (trainerModelLeafVar.IsConstant() || trainerModelLeafVar.IsParameter())
-            {
-                auto trainerModelVarValue = trainerModelLeafVar.IsConstant() ? Constant(trainerModelLeafVar).Value() : Parameter(trainerModelLeafVar).Value();
-                auto loadedModelVarValue = correspondingLoadedModelVar.IsConstant() ? Constant(correspondingLoadedModelVar).Value() : Parameter(correspondingLoadedModelVar).Value();
-                trainerModelVarValue->CopyFrom(*loadedModelVarValue);
-            }
-        }
-
+        // Restore the learner state
         if (m_parameterLearners.size() > 1)
             LogicError("Trainer::RestoreFromCheckpoint: Checkpointing is currently unsupported for multiple learners");
 
@@ -250,6 +226,8 @@ namespace CNTK
         auto ckpStream = GetFstream(trainerStateCheckpointFilePath, true);
         Dictionary learnerState;
         *ckpStream >> learnerState;
+
+        auto firstLearner = *(m_parameterLearners.begin());
         firstLearner->RestoreFromCheckpoint(learnerState);
     }
 
