@@ -31,7 +31,7 @@ from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-from cntk.blocks import _default_initializer, _Inferred
+from cntk.blocks import _default_initializer, _INFERRED
 
 # Dense -- create a fully-connected linear projection layer with optional non-linear activation
 # Note: shape may describe a tensor as well.
@@ -56,9 +56,9 @@ def Dense(shape, init=_default_initializer, activation=identity, input_rank=None
     # BUGBUG: Should this be a negative number now, since output is the last axis in Python?
     output_rank = len(output_shape)   # support outputs with tensor layouts
 
-    # If input_rank not given then pass a single _Inferred; map_rank if given will determine the input_rank.
+    # If input_rank not given then pass a single _INFERRED; map_rank if given will determine the input_rank.
     # The dimension inference may still create multiple axes.
-    input_shape = _Inferred * (input_rank if input_rank is not None else 1)
+    input_shape = _INFERRED * (input_rank if input_rank is not None else 1)
 
     if input_rank is not None:
         UntestedBranchError("Dense, input_rank option not implemented")
@@ -91,12 +91,12 @@ def Embedding(shape, init=_default_initializer, transpose=False):
     shape = _as_tuple(shape)
     weights = None   # TODO: finish the Constant() thing
     if weights is None:  # no weights given: learn the embedding
-        full_shape = _Inferred + shape
+        full_shape = _INFERRED + shape
         E = Parameter(full_shape, init=init, name='E')
     else:                # weights given: use them as constant
         UntestedBranchError("Embedding, from constant")
         # TODO: infer full_shape from weights? Which in turn should be a constant... lots of TODO here
-        full_shape = (shape + _Inferred) if transpose else (_Inferred + shape)
+        full_shape = (shape + _INFERRED) if transpose else (_INFERRED + shape)
         E = Constant(full_shape, init=weights, name='E')  # TODO: can 'weights' be a CNTK object already? Then how to do this?
     x = Placeholder(name='embedding_arg')
     apply_x = Function.__matmul__(E, x) if transpose else \
@@ -136,7 +136,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
     output_channels_shape = _as_tuple(num_filters)
     output_rank = len(output_channels_shape)
     filter_rank = len(filter_shape)
-    kernel_shape = _Inferred * reductionRank + filter_shape # kernel := filter plus reductionDims
+    kernel_shape = _INFERRED * reductionRank + filter_shape # kernel := filter plus reductionDims
 
     # parameters bound to this Function
     #W = Parameter(output_channels_shape + kernel_shape, init=init, initfilter_rank=filter_rank, initoutput_rank=-1) # (K, C, H, W) aka [ W x H x C x K ]
@@ -221,4 +221,104 @@ def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
     _name_and_extend_Function(apply_x, 'Recurrence')
     if _trace_layers:
         _log_node(apply_x)
+    return apply_x
+
+# Delay -- delay input
+# TODO: This does not really have bound parameters. Should it still be a layer?
+def Delay(T=1, initial_state=None):
+    UntestedBranchError("Delay")
+
+    # expression
+    x = Placeholder(name='delay_arg')
+    if T > 0:
+        apply_x = past_value  (x, time_step=T, initial_state=initial_state)
+    elif T < 0:
+        apply_x = future_value(x, time_step=T, initial_state=initial_state)
+    else:
+        apply_x = x
+    _name_and_extend_Function(apply_x, 'Delay')
+    return apply_x
+
+# Dropout -- create a drop-out layer
+# Per-node dropout probabilities not yet supported, so one could also just use dropout directly.
+def Dropout(prob=None):
+    UntestedBranchError("Dropout")
+    if prob is not None:
+        raise NotImplementedError("Dropout: Dropout probability can currently not be specified per-layer.")
+    apply_x = dropout
+    _name_and_extend_Function(apply_x, 'Dropout')
+    return apply_x
+
+# BatchNormalization -- create a batch-normalization layer
+def BatchNormalization(spatial_rank=0,  # reduce over these dims. E.g. 2 to reduce over (w,h) in a [W x H x C]-shaped input
+                       init_scale=1,
+                       normalization_time_constant=5000, blend_time_constant=0,
+                       epsilon=0.00001, use_cntk_engine=True):
+    UntestedBranchError("BatchNormalization")
+
+    # parameters bound to this Function
+    #normShape   = _ConcatArrays (Repeat (spatial_rank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
+    norm_shape  = (1,) + _INFERRED  # TODO: Update this once we support broadcasting-style parameters.
+    scale       = Parameter(norm_shape, init=init_scale)
+    bias        = Parameter(norm_shape, init=0)
+    # BUGBUG: We need a parameter that is not updated, but is not a constant either
+    run_mean     = Constant(0, norm_shape)  # note: disable learning since these are updated differently
+    run_variance = Constant(0, norm_shape)
+
+    # expression
+    x = Placeholder(name='batch_normalization_arg')
+    apply_x = batch_normalization (x, scale, bias, run_mean, run_variance, spatial_rank > 0, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon, use_cntk_engine=use_cntk_engine)
+    _name_and_extend_Function(apply_x, 'BatchNormalization')
+    return apply_x
+
+# LayerNormalization -- create a layer-normalization layer
+def LayerNormalization(initial_scale=1, initial_bias=0):
+    UntestedBranchError("LayerNormalization")
+
+    # parameters bound to this Function
+    gain = Parameter((1), init=initial_scale)  # TODO: offer Softplus version for protection, as for Stabilizer
+    bias = Parameter((1), initValue = initial_bias)
+
+    # expression
+    x = Placeholder(name='layer_normalization_arg')
+    mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
+    x0 = x - mean;
+    std = sqrt (reduce_mean (x0 * x0))
+    x_hat = element_divide (x0, std)
+    apply_x = x_hat * gain + bias    # denormalize with learned parameters
+    _name_and_extend_Function(apply_x, 'LayerNormalization')
+    return apply_x
+
+# FeatureMVN -- create a corpus-level feature-normalization layer
+# This can only be applied to features. Statistics are not shared across invocations,
+# which is semantically OK because the values are the same. However, it is not efficient.
+def FeatureMVN():
+    UntestedBranchError("FeatureMVN")
+
+    # parameters bound to this Function
+    # are inside mean() and inv_std_dev()
+
+    # expression
+    x = Placeholder(name='feature_mvn_arg')
+    m = mean(x)
+    s = inv_std_dev(x)
+    apply_x = per_dim_mean_var_normalization(x, m, s)
+    _name_and_extend_Function(apply_x, 'FeatureMVN')
+    return apply_x
+
+# LogPrior -- create a corpus-level label-prior layer
+# This can only be applied to labels. Statistics are not shared across invocations,
+# which is semantically OK because the values are the same. However, it is not efficient.
+# TODO: document on Wiki
+def LogPrior():
+    UntestedBranchError('LogPrior')
+
+    # parameters bound to this Function
+    # are inside mean()
+
+    # expression
+    x = Placeholder(name='log_prior_arg')
+    log_prior = mean(x)
+    apply_x = x - log_prior
+    _name_and_extend_Function(apply_x, 'LogPrior')
     return apply_x
