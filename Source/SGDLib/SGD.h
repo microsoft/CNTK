@@ -307,7 +307,10 @@ protected:
     double m_seqGammarCalcbMMIFactor;
     bool m_seqGammarCalcUsesMBR;
     
-    bool m_disableWkInBatchNormal;  // TODO: comment?
+    // decide whether should apply regularization into BatchNormalizationNode
+    // true: disable Regularization
+    // false: enable Regularization (default)
+    bool m_disableRegInBatchNormalization;
 };
 
 template <class ElemType>

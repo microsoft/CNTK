@@ -79,17 +79,6 @@ void ComputationNetwork::Backprop(const ComputationNodeBasePtr rootNode) // trai
     GetNestedNetwork(rootNode)->Backprop(FrameRange(nullptr), true, true);
 }
 
-void ComputationNetwork::ForwardProp(const ComputationNodeBasePtr rootNode, const ComputationNodeBasePtr startNode, const ComputationNodeBasePtr endNode)
-{
-    VerifyIsCompiled("ForwardProp");
-
-    // traverse partial nodes as inputs
-    shared_ptr<FlowControlNode> network = dynamic_pointer_cast<FlowControlNode>(GetNestedNetwork(rootNode));
-    assert(network);
-
-    network->ForwardProp(FrameRange(nullptr), startNode, endNode);
-}
-
 void ComputationNetwork::FormNestedNetwork(const ComputationNodeBasePtr& rootNode)
 {
     if (m_nestedNetworks.find(rootNode) != m_nestedNetworks.end())
@@ -159,12 +148,11 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
             node->BumpEvalTimeStamp();
         }
 
-        // more extreme tracing for the ultimate debugging experience. Make space on your disk.
-        if (node->GetEnvironmentPtr() && node->Environment().traceLevel >= 1000000) // very high number, since this spews like hell
+        // Extreme Tracing, part 1/4
+        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace())
             DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
     }
 }
-
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
 {
     childrenInThisLoop, childrenInOuterLoop; // TODO: think through what these mean when coming from PAR mode
@@ -177,8 +165,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
         node->EndBackprop();
 
-        // more extreme tracing for the ultimate debugging experience. Make space on your disk.
-        if (node->GetEnvironmentPtr() && node->Environment().traceLevel >= 1000000 && node->NeedsGradient()) // very high number, since this spews like hell
+        // Extreme Tracing, part 2/4
+        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace() && node->NeedsGradient())
             DumpNode<float>(node, /*dumpGradient=*/true) || DumpNode<double>(node, true);
     }
 }
@@ -197,37 +185,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) /*override*/
 {
 }
-// TODO: merge with the main ForwardProp() function.
-/*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange & fr, ComputationNodeBasePtr startNode, ComputationNodeBasePtr endNode)
-{
-    // if start node is nullptr, forward will be enable
-    bool enableForward = startNode ? false : true;
 
-    for (auto& node : m_nestedNodes)
-    {
-#if 0
-        if (dynamic_pointer_cast<LearnableParameter<float>>(node))
-        dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
-#endif
-        if (node->IsOutOfDateWrtInputs() && enableForward)
-        {
-            node->BeginForwardProp();
-            node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
-            node->EndForwardProp();
-
-            node->BumpEvalTimeStamp();
-        }
-
-        if (node == startNode) 
-        {
-            enableForward = true;
-        }
-        else if (node == endNode) 
-        {
-            break;
-        }
-    }
-}
 // helper for logging. Returns false if it was not able to dynamic-cast nodep to ComputationNode<ElemType>
 template<class ElemType>
 static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
@@ -294,6 +252,15 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
             node->BumpEvalTimeStamp();
         }
     }
+
+    // Extreme Tracing, part 3/4
+    for (auto& node : m_nestedNodes)
+    {
+        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace())
+        {
+            DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
+        }
+    }
 }
 
 /*virtual*/ void ComputationNetwork::SEQTraversalFlowControlNode::EndForwardProp() /*override*/
@@ -324,6 +291,15 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
             node2->Backprop(t, true /*childrenInThisLoop*/, false /*childrenInOuterLoop*/);
             // The above flags tell Backprop() to skip back-propagation from inside a node into
             // a node that is outside the loop, which is done later in EndBackprop() in PAR mode.
+        }
+    }
+
+    // Extreme Tracing, part 4
+    for (auto& node : m_nestedNodes)
+    {
+        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace() && node->NeedsGradient())
+        {
+            DumpNode<float>(node, /*dumpGradient=*/true) || DumpNode<double>(node, true);
         }
     }
 }

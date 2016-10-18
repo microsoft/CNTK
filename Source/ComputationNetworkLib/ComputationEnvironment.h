@@ -44,6 +44,10 @@ struct ComputationEnvironment
 
     // traceLevel
     int traceLevel = 0;
+
+    // Extreme tracing of node outputs. Make space on your disk.
+    bool IsLogLevelNodeTrace() const { return traceLevel >= 1000000; }
+
     // more properties should be added here as needed
 };
 typedef std::shared_ptr<ComputationEnvironment> ComputationEnvironmentPtr;

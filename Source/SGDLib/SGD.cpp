@@ -8,6 +8,7 @@
 #include "SpecialPurposeNodes.h"        // for SequenceWithSoftmaxNode
 #include "DataReaderHelpers.h"
 #include "MatrixQuantizerImpl.h"
+#include "InputAndParamNodes.h"
 
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
@@ -147,15 +148,15 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     else
     {
         LOGPRINTF(stderr, "Training criteria:\n");
-    for (const auto& node : criterionNodes)
-    {
-        LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
-    }
-    if (criterionNodes.empty())
-    {
-        LOGPRINTF(stderr, "\t(none)\n");
-        InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
-    }
+        for (const auto& node : criterionNodes)
+        {
+            LOGPRINTF(stderr, "\t%ls = %ls\n", node->NodeName().c_str(), node->OperationName().c_str());
+        }
+        if (criterionNodes.empty())
+        {
+            LOGPRINTF(stderr, "\t(none)\n");
+            InvalidArgument("TrainOrAdaptModel: No criterion node was specified.");
+        }
     }
 
     // This code is only relevant for the new (V2) readers. It exist because of
@@ -296,10 +297,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         fprintf(stderr, "out of %d parameter tensors and %d nodes with gradient:\n\n",
             (int)learnableNodes.size(), (int)numNeedsGradient);
-    for (let nodeDescription : nodesToUpdateDescriptions)
-    {
-        LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
-    }
+        for (let nodeDescription : nodesToUpdateDescriptions)
+        {
+            LOGPRINTF(stderr, "\t%ls\n", nodeDescription.c_str());
+        }
     }
 
     // one blank line before training progress log
@@ -334,7 +335,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         InitModelAggregationHandler(m_syncStatsTrace, net->GetDeviceId());
     }
-    
+
     // precompute mean and invStdDev nodes and save initial model
     // When no precompute, only save if we did not load the model from a 
     // checkpoint but instead built it from a network description
@@ -534,7 +535,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                         ? 0.0
                                         : momentumPerSample >= 1.0
                                             ? 0.0
-                                                                                            : -1.0 / log(momentumPerSample);
+                                            : -1.0 / log(momentumPerSample);
         if (m_traceLevel > 0)
         {
             fprintf(stderr, "\n");
@@ -962,24 +963,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     EpochCriterion         epochCriterionLastLogged  = epochCriterion;
     vector<EpochCriterion> epochEvalErrorsLastLogged = epochEvalErrors;
 
-    // Now, we need to use a switch to enable/disable wk in BatchNormalization.
-    // If we can determine whether wk added or not for each node, then, discard this
-    // TODO: Define "wk" and say what this is for and in which context it is used.
-    std::unordered_set<ComputationNodeBasePtr> batchNormalizationWeights;
-    if (m_disableWkInBatchNormal) {
-        for (auto& evalNode : evaluationNodes) 
+    // NOTE: For ResNet, the regularization in BatchNormalization should be disable.
+    if (m_disableRegInBatchNormalization) {
+        let bnNodes = net->GetNodesWithType(L"BatchNormalization");
+        for (auto &node : bnNodes)
         {
-            shared_ptr<FlowControlNode> nestedNetwork = static_pointer_cast<FlowControlNode>(net->GetNestedNetwork(evalNode));
-            for (auto& node : nestedNetwork->GetNestedNodes()) 
-            {
-                shared_ptr<BatchNormalizationNode<ElemType>> castNode =
-                    dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(node);
-                if (castNode) 
-                {
-                    batchNormalizationWeights.insert(castNode->GetInputs()[1]);
-                    batchNormalizationWeights.insert(castNode->GetInputs()[2]);
-                }
-            }
+            let bnNode = dynamic_pointer_cast<BatchNormalizationNode<ElemType>>(node);
+            bnNode->DisableRegInBatchNormalization();
         }
     }
 
@@ -1124,11 +1114,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         {
             // accumulate criterion values (objective, eval)
             assert(wasDataRead || numSamplesWithLabelOfNetwork == 0);
-                // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
-                localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabelOfNetwork);
-                for (size_t i = 0; i < evaluationNodes.size(); i++)
-                    localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabelOfNetwork);
-            }
+            // criteria are in Value()(0,0), we accumulate into another 1x1 Matrix (to avoid having to pull the values off the GPU)
+            localEpochCriterion.Add(criterionNodes, 0, numSamplesWithLabelOfNetwork);
+            for (size_t i = 0; i < evaluationNodes.size(); i++)
+                localEpochEvalErrors.Add(evaluationNodes, i, numSamplesWithLabelOfNetwork);
+        }
         else
         {
             // distributed gradient aggregation
@@ -1207,8 +1197,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                         LogicError("%ls %ls operation has NaNs in smoothedGradient.", node->NodeName().c_str(), node->OperationName().c_str());
 #endif
                     double nodeDependentLearningRatePerSample = learnRatePerSample * node->GetLearningRateMultiplier();
+                    double nodeDependentRegMultiplier = dynamic_pointer_cast<LearnableParameter<ElemType>>(node)->GetRegMultiplier();
                     double momentumPerSample = GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences());
-                    double l2Factor = batchNormalizationWeights.find(node) == batchNormalizationWeights.end() ? 1.0 : 0.0;
                     // TODO: Check why l2Factor is not applied to L1. Bug?
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
                     UpdateWeights(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
@@ -1216,7 +1206,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                   *smoothedGradientIter, *smoothedCountIter,
                                   nodeDependentLearningRatePerSample, momentumPerSample,
                                   numSamplesInMinibatch,
-                                  m_L2RegWeight * l2Factor, m_L1RegWeight,
+                                  m_L2RegWeight * nodeDependentRegMultiplier, m_L1RegWeight * nodeDependentRegMultiplier,
                                   m_needAveMultiplier, m_useNesterovMomentum);
                     node->BumpEvalTimeStamp();
 #ifdef _DEBUG
@@ -1229,7 +1219,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
 
         if (m_perfTraceLevel > 0)
-        { 
+        {
             std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(net->GetDeviceId()));
             mainStreamSyncEvent->SynchronizeEvent();
             fineGrainedPerfMeasurementTimer.Stop();
@@ -1268,7 +1258,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             {
                 m_pMultiversoHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
                 nSamplesSinceLastModelSync = 0;
-            }
+        }
         }
 
 
@@ -1884,7 +1874,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
             {
                 LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Computed baseCriterion %.8f for minibatchSize=%d\n",
                           (int)epochNumber + 1, baseCriterion.Average(), (int)trialMinibatchSize);
-        }
+            }
         }
         else if (!epochCriterion.IsNan() &&
                  epochCriterion.Average() > (baseCriterion.Average() * (1.0 + (m_minibatchSearchCriterionErrorMargin / 100.0))))
@@ -1908,7 +1898,7 @@ size_t SGD<ElemType>::SearchForBestMinibatchSize(ComputationNetworkPtr net,
     }
     if (m_traceLevel > 0)
     {
-    LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Search successful. New minibatchSize is %d. epochCriterion = %.8f vs baseCriterion = %.8f\n",
+        LOGPRINTF(stderr, " AdaptiveMinibatchSearch Epoch[%d]: Search successful. New minibatchSize is %d. epochCriterion = %.8f vs baseCriterion = %.8f\n",
                   (int)epochNumber + 1, (int)lastGoodMinibatchSize, lastGoodEpochCriterion.Average(), baseCriterion.Average());
     }
     return lastGoodMinibatchSize;
@@ -1999,7 +1989,7 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
 
 template <class ElemType>
 void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int traceLevel)
-        {
+{
     assert(GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD);
     if (traceLevel > 0)
         fprintf(stderr, "Initializing dataParallelSGD for %d-bit quantization.\n", numGradientBits);
@@ -2008,11 +1998,11 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int t
     m_distGradAgg = std::make_shared<AllReduceDistGradAggregator<ElemType>>(m_mpi, numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
 #else
     if (numGradientBits != (8 * sizeof(ElemType)))
-            {
-                RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
-            }
+    {
+        RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
+    }
 
-            m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
+    m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
 #endif // !CNTK_PARALLEL_TRAINING_SUPPORT
 
     m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) { DistGradHeader::Destroy(ptr); });
@@ -2141,7 +2131,6 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 }
 
 // protected:
-
 template <class ElemType>
 void SGD<ElemType>::ClipGradient(Matrix<ElemType>& gradient, const size_t actualMBSize) const
 {
@@ -2621,8 +2610,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_seqGammarCalcLMF = configSGD(L"seqGammarLMF", 14.0);
     m_seqGammarCalcbMMIFactor = configSGD(L"seqGammarBMMIFactor", 0.0);
     m_seqGammarCalcWP = configSGD(L"seqGammarWordPen", 0.0);
-    
-    m_disableWkInBatchNormal = configSGD(L"disableWkInBatchNormal", false);
+    m_disableRegInBatchNormalization = configSGD(L"disableRegInBatchNormalization", false);
 
     m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(doubleargvector(vector<double>{0.0})));
     m_batchNormalizationTimeConstant = configSGD(L"batchNormalizationTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{0})));
