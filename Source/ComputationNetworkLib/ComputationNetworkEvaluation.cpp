@@ -159,8 +159,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
             node->BumpEvalTimeStamp();
         }
 
-        // more extreme tracing for the ultimate debugging experience. Make space on your disk.
-        if (node->HasEnvironmentPtr() && node->Environment().traceLevel >= 1000000) // very high number, since this spews like hell
+        // Extreme Tracing, part 1/4
+        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace())
             DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
     }
 }
@@ -177,8 +177,8 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         node->Backprop(fr.WithLayout(node->GetMBLayout()), true /*childrenInThisLoop*/, true /*childrenInOuterLoop*/);
         node->EndBackprop();
 
-        // more extreme tracing for the ultimate debugging experience. Make space on your disk.
-        if (node->HasEnvironmentPtr() && node->Environment().traceLevel >= 1000000 && node->NeedsGradient()) // very high number, since this spews like hell
+        // Extreme Tracing, part 2/4
+        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace() && node->NeedsGradient())
             DumpNode<float>(node, /*dumpGradient=*/true) || DumpNode<double>(node, true);
     }
 }
@@ -295,10 +295,10 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
         }
     }
 
-    // more extreme tracing for the ultimate debugging experience. Make space on your disk.
+    // Extreme Tracing, part 3/4
     for (auto& node : m_nestedNodes)
     {
-        if (node->HasEnvironmentPtr() && node->Environment().traceLevel >= 1000000) // very high number, since this spews like hell
+        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace())
         {
             DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
         }
@@ -333,6 +333,15 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
             node2->Backprop(t, true /*childrenInThisLoop*/, false /*childrenInOuterLoop*/);
             // The above flags tell Backprop() to skip back-propagation from inside a node into
             // a node that is outside the loop, which is done later in EndBackprop() in PAR mode.
+        }
+    }
+
+    // Extreme Tracing, part 4
+    for (auto& node : m_nestedNodes)
+    {
+        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace() && node->NeedsGradient())
+        {
+            DumpNode<float>(node, /*dumpGradient=*/true) || DumpNode<double>(node, true);
         }
     }
 }
