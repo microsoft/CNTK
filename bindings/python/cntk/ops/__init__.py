@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+﻿# Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -231,6 +231,27 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     In the case of average pooling, count of average does not include padded values.
 
     N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
+
+    Example:
+        >>> input_raw = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], dtype = np.float32)
+        
+        >>> input_val = input_raw.reshape([1, 4, 4])
+
+        >>> input_val
+        array([[[  1.,   2.,   3.,   4.],
+                [  5.,   6.,   7.,   8.],
+                [  9.,  10.,  11.,  12.],
+                [ 13.,  14.,  15.,  16.]]], dtype=float32)
+        
+        >>> input_var = C.input_variable(input_val.shape)
+        
+        >>> C.pooling(input_var, C.AVG_POOLING, (2,2), (2,2)).eval({input_var : input_val})
+        array([[[[[  3.5,   5.5],
+                  [ 11.5,  13.5]]]]], dtype=float32)
+        
+        >>> C.pooling(input_var, C.MAX_POOLING, (2,2), (2,2)).eval({input_var : input_val})
+        array([[[[[  6.,   8.],
+                  [ 14.,  16.]]]]], dtype=float32)
 
     Args:
         operand: pooling input
