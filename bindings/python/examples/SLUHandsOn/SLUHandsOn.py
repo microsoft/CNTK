@@ -14,9 +14,10 @@ from cntk.models import *  # higher abstraction level, e.g. entire standard mode
 from cntk.utils import *
 from cntk.io import CNTKTextFormatMinibatchSource, StreamDef
 from cntk import Trainer
-from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
-from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
+from cntk.learner import sgd, fsadagrad, learning_rate_schedule
+from cntk.ops import cross_entropy_with_softmax, classification_error
 from examples.common.nn import print_training_progress
+from cntk.device import gpu, set_default_device
 
 ########################
 # variables and stuff  #
@@ -90,9 +91,9 @@ def train(reader, model, max_epochs):
     momentum = 0.9**(1/minibatch_size)  # TODO: change to time constant
 
     # trainer object
-    lr_schedule = learning_rates_per_sample(lr_per_sample, units=epoch_size)
-    learner = fsadagrad(z.parameters(), lr_schedule, momentum,
-                        targetAdagradAvDenom=1, clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
+    lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
+    learner = fsadagrad(z.parameters, lr_schedule, momentum,
+                        targetAdagradAvDenom=1, gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
     trainer = Trainer(z, ce, pe, [learner])
     #_extend_Trainer(trainer)  # TODO: should be just baked in
@@ -113,18 +114,17 @@ def train(reader, model, max_epochs):
         metric_denom = 0
         epoch_end = (epoch+1) * epoch_size
         while t < epoch_end:
-            data, num_samples = next_minibatch(reader, min(minibatch_size, epoch_end-t), input_map)
+            data = reader.next_minibatch(min(minibatch_size, epoch_end-t), input_map=input_map)
             # BUGBUG? The first epoch has wrong #samples, does this ^^ take effect with a delay of 1 MB due to prefetching?
             if data is None:
                 break
             trainer.train_minibatch(data)
-            loss_numer += trainer.previous_minibatch_loss_average() * trainer.previous_minibatch_sample_count()  # too much code for something this simple
-            loss_denom +=                                             trainer.previous_minibatch_sample_count()
-            metric_numer += trainer.previous_minibatch_evaluation_average() * trainer.previous_minibatch_sample_count()
-            metric_denom +=                                                   trainer.previous_minibatch_sample_count()
+            loss_numer += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count  # too much code for something this simple
+            loss_denom +=                                           trainer.previous_minibatch_sample_count
+            metric_numer += trainer.previous_minibatch_evaluation_average * trainer.previous_minibatch_sample_count
+            metric_denom +=                                                 trainer.previous_minibatch_sample_count
             print_training_progress(trainer, mbs if mbs > 10 else 0, num_mbs_to_show_result)
-            t += num_samples[slot_labels]
-            #print (num_samples[slot_labels], t)
+            t += data[slot_labels].num_samples
             mbs += 1
         print("--- EPOCH {} DONE: loss = {:0.6f} * {}, metric = {:0.1f}% * {} ---".format(epoch+1, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
 
@@ -136,11 +136,10 @@ def train(reader, model, max_epochs):
 
 if __name__=='__main__':
     # TODO: get closure on Amit's feedback "Not the right pattern as we discussed over email. Please change to set_default_device(gpu(0))"
-    #set_gpu(0)
+    #set_default_device(gpu(0))
     #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
     reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model()
-    # TODO: Currently this fails with a mismatch error if axes ^^ are given in opposite order. I think it shouldn't.
     # train
     train(reader, model, max_epochs=8)
     # test (TODO)

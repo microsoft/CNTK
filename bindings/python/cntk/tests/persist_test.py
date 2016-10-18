@@ -7,10 +7,10 @@ import numpy as np
 import pytest
 
 from cntk.ops import *
-from cntk.utils import load_model, save_model
+from .. import load_model, save_model
 
 
-def test_load_save_constant():
+def test_load_save_constant(tmpdir):
     c = constant(value=[1,3])
     root_node = c * 5
 
@@ -18,14 +18,14 @@ def test_load_save_constant():
     expected = [[[[5,15]]]]
     assert np.allclose(result, expected)
 
-    filename = 'c_plus_c.mod'
+    filename = str(tmpdir / 'c_plus_c.mod')
     save_model(root_node, filename)
 
     loaded_node = load_model('float', filename)
     loaded_result = loaded_node.eval()
     assert np.allclose(loaded_result, expected)
 
-def test_load_save_input():
+def test_load_save_input(tmpdir):
     i1 = input_variable((1,2), name='i1')
     root_node = abs(i1)
     input1 = [[[-1,2]]]
@@ -34,7 +34,7 @@ def test_load_save_input():
     expected = [[[[1,2]]]]
     assert np.allclose(result, expected)
 
-    filename = 'i_plus_c_0.mod'
+    filename = str(tmpdir / 'i_plus_c_0.mod')
     save_model(root_node, filename)
 
     loaded_node = load_model('float', filename)
@@ -43,7 +43,7 @@ def test_load_save_input():
     loaded_result = loaded_node.eval([input1])
     assert np.allclose(loaded_result, expected)
     
-def test_load_save_inputs():
+def test_load_save_inputs(tmpdir):
     i1 = input_variable((1,2), name='i1')
     i2 = input_variable((2,1), name='i2')
     root_node = plus(i1, i2)
@@ -54,7 +54,7 @@ def test_load_save_inputs():
     expected = [[[[2,3],[3,4]]]]
     assert np.allclose(result, expected)
 
-    filename = 'i_plus_i_0.mod'
+    filename = str(tmpdir / 'i_plus_i_0.mod')
     save_model(root_node, filename)
 
     loaded_node = load_model('float', filename)

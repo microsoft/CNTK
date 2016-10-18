@@ -4,29 +4,31 @@
 # ==============================================================================
 from .. import cntk_py
 
+def map_if_possible(obj):
+    from cntk.ops.variables import Variable, Parameter, Constant
+    from cntk.ops.functions import Function
+    from cntk.learner import Learner
+    from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
+    from cntk.axis import Axis
+    typemap = { 
+            cntk_py.Variable: Variable,
+            cntk_py.Parameter: Parameter,
+            cntk_py.Constant: Constant,
+            cntk_py.Function: Function, 
+            cntk_py.Learner: Learner, 
+            cntk_py.MinibatchSource: MinibatchSource,
+            cntk_py.MinibatchData: MinibatchData,
+            cntk_py.StreamConfiguration: StreamConfiguration, 
+            cntk_py.Axis: Axis,
+            }
+    # Some types like NumPy arrays don't let to set the __class__
+    if obj.__class__ in typemap:
+        obj.__class__ = typemap[obj.__class__]
+            
 def typemap(f):
     '''
     Upcasts Swig types to cntk types that inherit from Swig.
     '''
-    def map_if_possible(obj):
-        from cntk.ops.variables import Variable, Parameter, Constant
-        from cntk.ops.functions import Function
-        from cntk.learner import Learner
-        from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
-        typemap = { 
-                cntk_py.Variable: Variable,
-                cntk_py.Parameter: Parameter,
-                cntk_py.Constant: Constant,
-                cntk_py.Function: Function, 
-                cntk_py.Learner: Learner, 
-                cntk_py.MinibatchSource: MinibatchSource,
-                cntk_py.MinibatchData: MinibatchData,
-                cntk_py.StreamConfiguration: StreamConfiguration, 
-                }
-        # Some types like NumPy arrays don't let to set the __class__
-        if obj.__class__ in typemap:
-            obj.__class__ = typemap[obj.__class__]
-            
     from functools import wraps
     @wraps(f)
     def wrapper(*args, **kwds):
