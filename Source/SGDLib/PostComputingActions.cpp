@@ -73,9 +73,9 @@ void PostComputingActions<ElemType>::BatchNormalizationStatistics(IDataReader * 
     m_net->StartEvaluateMinibatchLoop(bnNodes);
 
     if (useDistributedMBReading)
-        dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), totalEpochSize);
+        dataReader->StartDistributedMinibatchLoop(mbSize, 0, m_mpi->CurrentNodeRank(), m_mpi->NumNodesInUse(), inputMatrices.GetStreamDescriptions(), totalEpochSize);
     else
-        dataReader->StartMinibatchLoop(mbSize, 0, totalEpochSize);
+        dataReader->StartMinibatchLoop(mbSize, 0, inputMatrices.GetStreamDescriptions(), totalEpochSize);
 
     for (auto& node : bnNodes)
     {
