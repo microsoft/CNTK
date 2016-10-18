@@ -1995,7 +1995,6 @@ namespace CNTK
         // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
         // This mask is regerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
         // w.r.t. inputs to force evaluation in each minibatch
-        // BUGBUG: Currently this is also done in SGD.cpp. Not nice to have this spread over CNTK. For RandomSampleNode we have similar requirments.
         list<ComputationNodeBasePtr> dropoutNodes = m_computationNetwork->GetNodesWithType(OperationNameOf(DropoutNode));
         for (auto& nodeIter : dropoutNodes)
             nodeIter->SetEvalTimeStampOutdatedWrtAll();
