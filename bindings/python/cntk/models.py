@@ -13,7 +13,7 @@ import sys
 import os
 import time
 #from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
-#from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
+#from cntk.learner import sgd, fsadagrad
 #from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.layers import *

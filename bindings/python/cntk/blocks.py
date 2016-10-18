@@ -13,7 +13,7 @@ import sys
 import os
 import time
 from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration, slice, sigmoid, tanh, past_value, future_value
-from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
+from cntk.learner import sgd, fsadagrad
 from cntk.ops import parameter, constant, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
@@ -47,7 +47,7 @@ def UntestedBranchError(name):
 # Also add the >> operator (forward function composition).
 # Returns its arg to allow chaining.
 def _extend_Function(f):
-    class FunctionEx(f.__class__): 
+    class FunctionEx(f.__class__):
         def __call__(self, *args):
             return _apply(self, _as_tuple(args))
         def __rshift__(self, other):
@@ -151,7 +151,7 @@ def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initia
 
     cell_shape = _as_tuple(cell_shape) if cell_shape is not None else shape
 
-    #stack_axis = -1  # 
+    #stack_axis = -1  #
     stack_axis = 0  # BUGBUG: should be -1, i.e. the fastest-changing one, to match BS
     # determine stacking dimensions
     cell_shape_list = list(cell_shape)
