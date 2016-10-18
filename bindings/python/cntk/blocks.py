@@ -22,8 +22,6 @@ from cntk.initializer import glorot_uniform
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
-# TODO: move these out from examples
-#from examples.common.nn import slice  #, sigmoid, log, tanh, past_value, future_value, print_training_progress, negate
 
 # TODO: As you are on the level of cntk here, you could use relative imports:
 # from .ops.functions import Function
@@ -31,11 +29,10 @@ sys.path.append(os.path.join(abs_path, "..", ".."))
 from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
-#_trace_layers = True
 _trace_layers = False
+#_trace_layers = True  # uncomment this to log creation of graph through layers
 
 _default_initializer = glorot_uniform()
-#_default_initializer = None
 
 def UntestedBranchError(name):
     # pass
@@ -121,8 +118,11 @@ def Constant(init, shape=None, name=''):
 def Input(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')
 
-def Placeholder(_inf, name='placeholder'):
-    p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis, name=name)
+def Placeholder(_inf=None, name='placeholder'):
+    if _inf is None:
+        p = placeholder_variable()
+    else:  # TODO: remove this
+        p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis, name=name)
     _name_node(p, name)
     if _trace_layers:
         print("new " + _node_description(p))
@@ -130,8 +130,12 @@ def Placeholder(_inf, name='placeholder'):
 
 # TODO: Let's not encourage users to use combine([f]) as a workaround for identity/pass, but rather have it as a first-class operator implemented that we then use. [Willi]
 #       If we have Function identity, in same pattern as e.g. sigmoid, then that would suffice.
-def Identity(_inf):
-    x = Placeholder(_inf=_inf, name='identity_arg')
+# Once we no longer need _inf, we can just use identity without parentheses
+def Identity(_inf=None):
+    if _inf is None:
+        x = Placeholder(name='identity_arg')
+    else:
+        x = Placeholder(_inf=_inf, name='identity_arg')
     #apply_x = combine([x])  # BUGBUG: not working
     apply_x = x + Constant(0, name='Identity0')  # this fakes combine()
     _name_and_extend_Function(apply_x, 'Identity')

@@ -59,11 +59,11 @@ def create_reader(path):
 
 def create_model(_inf):  # TODO: all the _inf stuff will go away once dimension inference works. Should this be a function then?
     return Sequential([
-        Embedding(shape=emb_dim, _inf=_inf),
-        Recurrence(over=LSTM(shape=hidden_dim, _inf=_inf.with_shape(emb_dim)), _inf=_inf.with_shape(emb_dim), go_backwards=False,
+        Embedding(emb_dim, _inf=_inf),
+        Recurrence(LSTM(shape=hidden_dim, _inf=_inf.with_shape(emb_dim)), _inf=_inf.with_shape(emb_dim), go_backwards=False,
                    #),
                    initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
-        Linear(shape=label_dim, _inf=_inf.with_shape(hidden_dim))
+        Dense(label_dim, _inf=_inf.with_shape(hidden_dim))
     ], _inf=_inf)
 
 ########################
@@ -114,9 +114,8 @@ def train(reader, model, max_epochs):
         metric_denom = 0
         epoch_end = (epoch+1) * epoch_size
         while t < epoch_end:
-            # BUGBUG: RuntimeError: GetNextMinibatch: Changing minibatch sizes across calls is currently unsupported
-            #data, num_samples = next_minibatch(reader, min(minibatch_size, epoch_size-t), input_map)
-            data, num_samples = next_minibatch(reader, minibatch_size, input_map)
+            data, num_samples = next_minibatch(reader, min(minibatch_size, epoch_end-t), input_map)
+            # BUGBUG? The first epoch has wrong #samples, does this ^^ take effect with a delay of 1 MB due to prefetching?
             if data is None:
                 break
             trainer.train_minibatch(data)

@@ -1550,19 +1550,26 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
 
 
 @typemap
-def placeholder_variable(shape, dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
+def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     '''
     It creates a variable place holder for recurrence networks, when the network's dynamic axes
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
-
+ 
     Args:
         shape (`tuple` or `int`): the shape of the variable tensor
         dynamic_axes (`list`): the list of dynamic axes that the actual variable uses
-
+ 
     Returns:
         :class:`cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import placeholder_variable
+    from cntk.cntk_py import placeholder_variable, NDShape, Axis
+ 
+    if shape is None:
+        shape = (NDShape.unknown[0],)
+ 
+    if dynamic_axes is None:
+        dynamic_axes = Axis.unknown_dynamic_axes
+ 
     shape = sanitize_shape(shape)
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
