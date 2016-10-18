@@ -8,7 +8,7 @@ locals().update(importlib.import_module("PARAMETERS").__dict__)
 ####################################
 # Parameters
 ####################################
-cntkCmdStrPattern = "cntk.exe configFile={0}configbs.cntk currentDirectory={0} {1}"
+cntkCmdStrPattern = "cntk.exe configFile={0}fastrcnn.cntk currentDirectory={0} {1}"
 
 # cntk arguments
 NumLabels = nrClasses
@@ -30,7 +30,7 @@ cntk_args += " TestROIDim={} TestROILabelDim={}".format(TestROIDim, TestROILabel
 # Main
 ####################################
 # copy config file
-shutil.copy(cntkTemplateDir + "configbs.cntk", cntkFilesDir)
+shutil.copy(cntkTemplateDir + "fastrcnn.cntk", cntkFilesDir)
 
 # run cntk
 tstart = datetime.datetime.now()

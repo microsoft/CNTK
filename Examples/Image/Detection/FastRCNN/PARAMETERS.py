@@ -5,7 +5,7 @@ from fastRCNN.pascal_voc import pascal_voc # as nmsPython
 print datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
 
 # dataset name
-datasetName = "toy"
+datasetName = "grocery"
 # datasetName = "pascalVoc"
 # datasetName = "pascalVoc_aeroplanesOnly"
 
@@ -14,16 +14,14 @@ datasetName = "toy"
 # default parameters
 ############################
 # cntk params
-cntk_nrRois = 100  # how many ROIs to zero-pad
+cntk_nrRois = 4000  # 2000 # how many ROIs to zero-pad
 cntk_padWidth = 1000
 cntk_padHeight = 1000
-cntk_posOverlapThres = {"train": 0.5, "test": 0.5}  # only used for DNN training (as opposed to svm training)
-cntk_featureDimensions = {'svm': 4096}
 
 # directories
 rootDir = "C:/src/CNTK/Examples/Image/Detection/FastRCNN/"
-imgDir = rootDir + "data/" + datasetName + "/"
-pascalDataDir = "C:/Temp/Pascal/"
+imgDir = rootDir + "../../Datasets/Grocery/"
+pascalDataDir = rootDir + "../../Datasets/Pascal/"
 
 # derived directories
 procDir = rootDir + "proc/" + datasetName + "_{}/".format(cntk_nrRois)
@@ -32,42 +30,53 @@ roiDir = procDir + "rois/"
 cntkFilesDir = procDir + "cntkFiles/"
 cntkTemplateDir = rootDir
 
-# postprocessing
-nmsThreshold = 0.3
+# ROI generation
+roi_minDimRel = 0.01      # minium relative width/height of a ROI
+roi_maxDimRel = 1.0       # maximum relative width/height of a ROI
+roi_minNrPixelsRel = 0    # minium relative area covered by ROI
+roi_maxNrPixelsRel = 1.0  # maximm relative area covered by ROI
+roi_maxAspectRatio = 4.0  # maximum aspect Ratio of a ROI vertically and horizontally
+roi_maxImgDim = 200       # image size used for ROI generation
+ss_scale = 100            # selective search ROIS: parameter controlling cluster size for segmentation
+ss_sigma = 1.2            # selective search ROIs: width of gaussian kernal for segmentation
+ss_minSize = 20           # selective search ROIs: minimum component size for segmentation
+grid_nrScales = 7         # uniform grid ROIs: number of iterations from largest possible ROI to smaller ROIs
+grid_aspectRatios = [1.0, 2.0, 0.5]    # uniform grid ROIs: aspect ratio of ROIs
+
+# thresholds
+train_posOverlapThres = 0.5 # threshold for marking ROIs as positive.
+nmsThreshold = 0.3          # Non-Maxima suppression threshold (in range [0,1]).
+                            # The lower the more ROIs will be combined. Used in 5_evaluateResults and 5_visualizeResults.
 
 
 ############################
 # project-specific parameters
 ############################
-if datasetName.startswith("toy"):
+if datasetName.startswith("grocery"):
     classes = ('__background__',  # always index 0
-               "avocado", "orange", "butter", "champagne", "cheese", "eggBox", "gerkin", "joghurt", "ketchup",
-               "orangeJuice", "onion", "pepper", "sausage", "tomato", "water", "apple", "milk",
-               "tabasco", "soySauce", "mustard", "beer")
+               "avocado", "orange", "butter", "champagne", "eggBox", "gerkin", "joghurt", "ketchup",
+               "orangeJuice", "onion", "pepper", "tomato", "water", "milk", "tabasco", "mustard")
 
     # roi generation
     roi_minDimRel = 0.04
     roi_maxDimRel = 0.4
-    roi_minNrPixelsRel = 0.06 * 0.06
+    roi_minNrPixelsRel = 2    * roi_minDimRel * roi_minDimRel
     roi_maxNrPixelsRel = 0.33 * roi_maxDimRel * roi_maxDimRel
-    roi_maxAspectRatio = 4.0
-    roi_maxImgDim = 200
-    ss_scale = 100
-    ss_sigma = 1.2
-    ss_minSize = 20
-    grid_nrScales = 5
-    grid_aspectRatios = [1.0, 2.0, 0.5]
 
     # model training / scoring
     classifier = 'nn'
 
+    # postprocessing
+    nmsThreshold = 0.01
+
     # database
-    imdbs = dict()
+    imdbs = dict()      # database provider of images and image annotations
     for image_set in ["train", "test"]:
         imdbs[image_set] = imdb_data(image_set, classes, cntk_nrRois, imgDir, roiDir, cntkFilesDir, boAddGroundTruthRois = (image_set!='test'))
 
 
 elif datasetName.startswith("pascalVoc"):
+    imgDir = pascalDataDir
     if datasetName.startswith("pascalVoc_aeroplanesOnly"):
         classes = ('__background__', 'aeroplane')
         lutImageSet = {"train": "trainval.aeroplaneOnly", "test": "test.aeroplaneOnly"}
@@ -80,9 +89,12 @@ elif datasetName.startswith("pascalVoc"):
     # model training / scoring
     classifier = 'nn'
 
+    #more than 99% of the test images have less than 4000 rois, but 50% more than 2000
+    cntk_nrRois = 4000
+
     # database
     imdbs = dict()
-    for image_set, year in zip(["train", "test"], ["2012", "2007"]):
+    for image_set, year in zip(["train", "test"], ["2007", "2007"]):
         imdbs[image_set] = fastRCNN.pascal_voc(lutImageSet[image_set], year, classes, cntk_nrRois, cacheDir = cntkFilesDir, devkit_path=pascalDataDir)
         print "Number of {} images: {}".format(image_set, imdbs[image_set].num_images)
 
@@ -94,7 +106,7 @@ else:
 # computed parameters
 ############################
 nrClasses = len(classes)
-cntk_featureDimensions['nn'] = nrClasses
+cntk_featureDimensions = {'nn': nrClasses}
 
 assert cntk_padWidth == cntk_padHeight, "ERROR: different width and height for padding currently not supported."
 assert classifier.lower() in ['svm','nn'], "ERROR: only 'nn' or 'svm' classifier supported."

@@ -118,7 +118,7 @@ for image_set in image_sets:
                     rect = roiTransformPadScale(box, w_offset, h_offset, scale)
                     boxesStr += getCntkRoiCoordsLine(rect, cntk_padWidth, cntk_padHeight)
                     labelsStr += getCntkRoiLabelsLine(currGtOverlaps[boxIndex, :].toarray()[0],
-                                                   cntk_posOverlapThres[image_set],
+                                                   train_posOverlapThres,
                                                    nrClasses)
 
                 # if less than e.g. 2000 rois per image, then fill in the rest using 'zero-padding'.
