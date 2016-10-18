@@ -144,7 +144,7 @@ def momentum_schedule(momentum, units=1):
     Returns:
         momentum schedule
     '''
-    if isinstance(momentum, float):
+    if isinstance(momentum, (int, float)):
         return cntk_py.momentums_per_sample(momentum)
     
     if not isinstance(momentum, list):
@@ -177,7 +177,7 @@ def momentum_schedule_per_sample(momentum, units=1):
     Returns:
         schedule for momentum per sample
     '''
-    if isinstance(momentum, float):
+    if isinstance(momentum, (int, float)):
         return cntk_py.momentums_per_sample(momentum)
     
     if not isinstance(momentum, list):

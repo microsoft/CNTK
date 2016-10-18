@@ -4,6 +4,11 @@ from enum import Enum, unique
 
 @unique
 class CloneMethod(Enum):
+    '''
+    Describes different ways how :class:`cntk.ops.functions.Function.forward`
+    works.
+    '''
+
     clone = 1
     '''
     New learnable Parameters are created and initialied with the current values of the
@@ -61,10 +66,10 @@ class Function(cntk_py.Function):
         '''
         Clones the function. The parameters of the Function are either cloned,
         shared or frozen as specified by the method argument and any variable
-        replacements requested are applied in the cloned Function instance.
+        substitutions requested are applied in the cloned Function instance.
 
         Args:
-            method (:class:`cntk.ops.function.CloneMethod`): one of
+            method (:class:`cntk.ops.functions.CloneMethod`): one of
              * 'clone': the returned function gets its own copy of parameters (default)
              * 'share': the returned function shares its parameters with this function
              * 'freeze': parameters are cloned and made immutable (constant).
@@ -81,7 +86,7 @@ class Function(cntk_py.Function):
         method = getattr(cntk_py,
                 'ParameterCloningMethod_' + method.name.capitalize())
         if substitutions is None:
-            substitutions = dict()
+            substitutions = {}
         return super(Function, self).clone(method, substitutions)
 
     @property
@@ -263,36 +268,33 @@ class Function(cntk_py.Function):
         return super(Function, self).placeholders()
 
     @typemap
-    def replace_placeholder(self, placeholderReplacement):
+    def replace_placeholder(self, substitutions):
         '''
-        In-place replace the only placeholder in the function graph with the specified replacement
+        In-place replace the only placeholder in the function graph with the
+        specified substitutions.
 
         Args:
-            placeholderReplacement (:class:`cntk.ops.variables.Variable`): the variable that will replace the placeholder
+            substitutions (:class:`cntk.ops.variables.Variable`): the variable that will replace the placeholder
 
         Returns:
             `Function`: itself
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
-        kwargs = dict(locals())
-        del kwargs['self']
-        return super(Function, self).replace_placeholder(**kwargs)
+        return super(Function, self).replace_placeholder(substitutions)
 
     @typemap
-    def restore_from_model(self, modelFilePath):
+    def restore_from_model(self, filename):
         '''
         Restore the models parameters from a saved model file
 
         Args:
-            modelFilePath (`str`): saved model path
+            filename (`str`): saved model path 
 
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file
         '''
-        kwargs = dict(locals())
-        del kwargs['self']
-        return super(Function, self).restore_from_legacy_model(**kwargs)
+        return super(Function, self).restore_from_legacy_model(filename)
 
     @property
     @typemap
