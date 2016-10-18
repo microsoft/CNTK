@@ -97,8 +97,7 @@ def sequence_to_sequence_translator(debug_output=False):
     # Instantiate the trainer object to drive the model training
     lr = 0.007
     momentum_time_constant = 1100
-    m_schedule = momentum_schedule(
-        math.exp(-1.0 / momentum_time_constant))
+    m_schedule = momentum_schedule(momentum_time_constant)
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
 
