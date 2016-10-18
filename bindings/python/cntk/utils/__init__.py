@@ -168,7 +168,7 @@ def get_temp_filename(directory=None):
         be created
 
     Returns:
-        Filename of the temporary file 
+        Filename of the temporary file
     '''
     import tempfile
 
@@ -197,7 +197,7 @@ def sanitize_input(arg, fallback_dtype=np.float32):
     Convert to Variable or Constant so that it can be passed as Variable to the
     CNTK operators.
      * If `arg` is a NumPy array and its type is neither `np.float32` nor
-    `np.float64`, it sets it to `np.float32`. 
+      `np.float64`, it sets it to `np.float32`.
      * If `arg` is an op, it is assumed that it has only one output, which will
        be returned.
 
@@ -445,7 +445,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          `op.outputs()`
         arguments (`dict` or `list` or `tuple`): maps variables to their
          input data. The interpretation depends on the input type:
-           * `dict`: keys are input variable or names and values are the input data. 
+           * `dict`: keys are input variable or names, and values are the input data. 
            * `list`: elements are input data in the order their respective variables have been defined in the network. 
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
@@ -456,7 +456,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          Data should be either NumPy arrays or a
          :class:`cntk.io.MinibatchData` instance.
         precision (`str` or `np.float32` or `np.float64`): if string it can be
-         one of 'float' 'float32, 'double', 'float64', or `None` 
+         one of 'float' 'float32, 'double', 'float64', or `None`
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
 
     Returns:
@@ -526,7 +526,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
         if isinstance(batch, MinibatchData):
             batch = batch.data()
-        elif not isinstance(batch, Value):                
+        elif not isinstance(batch, Value):
             batch = sanitize_batch(
                 var, batch, seq_starts, precision, device)
 
@@ -612,7 +612,7 @@ def sanitize_axis(axis):
     if axis is None:
         return cntk_py.Axis.all_static_axes()
     elif isinstance(axis, numbers.Integral):
-        return cntk_py.Axis(-axis - 1)
+            return cntk_py.Axis(-axis - 1)
     elif axis.is_static_axis():
         return cntk_py.Axis(-1 - axis.static_axis_index())
     else:
@@ -633,7 +633,7 @@ def get_train_loss(trainer):
     Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
         trainer (:class:`Trainer`): the trainer used.
-    Returns: 
+    Returns:
         the loss value
     '''
     import copy
@@ -646,7 +646,7 @@ def get_train_eval_criterion(trainer):
     Fetch the train evaluation criterion (e.g., classification error) from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
         trainer (:class:`Trainer`): the trainer used.
-    Returns: 
+    Returns:
         the criterion value
     '''
     import copy
@@ -690,13 +690,13 @@ def value_to_seq(value):
 def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
-    mainly to explore the operators and for convenient unit testing. 
+    mainly to explore the operators and for convenient unit testing.
 
     Args:
         op (:class:`Function`): operation to evaluate
         arguments (`dict` or `list` or `tuple`): maps variables to their
          input data. The interpretation depends on the input type:
-           * `dict`: keys are input variable or names and values are the input data. 
+           * `dict`: keys are input variable or names, and values are the input data. 
            * `list`: elements are input data in the order their respective variables have been defined in the network. 
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
@@ -715,9 +715,9 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
          (costly)
         device (:class:`cntk.DeviceDescriptor`): the device the descriptor,
          whether it is CPU or GPU (and which one)
-        backward_pass (`bool`, optional): whether a backward pass is performed 
+        backward_pass (`bool`, optional): whether a backward pass is performed
 
-    Returns: 
+    Returns:
         mapping of output variables to their values.
     '''
 
@@ -733,3 +733,46 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
 
     else:
         return forward_output, None
+
+
+# helper to convert a dictionary into a Python class, so that the dict looks like an immutable record
+# TODO: move to utils?
+class _ClassFromDict(dict):
+    def __init__(self, args_dict):
+        super(_ClassFromDict, self).__init__(args_dict)
+        # TODO: try to delete __setattr__ to make it immutable
+        for key in args_dict:   # self.__dict__.update(args_dict)
+            self[key] = args_dict[key]
+    def __getattr__(self, k):
+        return self.get(k)
+    # can use __slot__ to hide __setattr__(), and cannot be extended
+    # cf. https://pypi.python.org/pypi/frozendict/0.4 
+
+
+# easier construction of records
+# e.g. r = Record(x = 13, y = 42) ; x = r.x
+def Record(**kwargs):
+    return _ClassFromDict(kwargs)
+
+
+# type-cast a shape given as a scalar into a tuple
+def _as_tuple(x):
+    return x if (isinstance(x,tuple)) else (x,)
+
+
+# top-level short-hand for selecting a GPU
+# TODO: find the right balance between conciseness and boilerplate
+#def set_gpu(gpu_id):
+#    from cntk import DeviceDescriptor
+#    # Specify the target device to be used for computing
+#    target_device = DeviceDescriptor.gpu_device(gpu_id)
+#    DeviceDescriptor.set_default_device(target_device)
+
+# helper to get next minibatch from a reader into a set of variables
+def next_minibatch(source, minibatch_size, input_map):
+    mb = source.get_next_minibatch(minibatch_size)
+    if not mb:
+        return (None, 0)
+    else:
+        return ({ key : mb[value]               for (key, value) in input_map.items() },
+                { key : mb[value].m_num_samples for (key, value) in input_map.items() })

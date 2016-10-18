@@ -1525,24 +1525,23 @@ def random_sample_inclusion_frequency(
         >>> import numpy as np
         >>> from cntk import *
         >>> # weight vector with 100 '1000'-values followed 
-        by 100 '1' values
-        >>> weights = np.concatenate((np.full((100),1000), 
-        np.full((100),1)))
-        >>> inclusion_frequencies = 
-        random_sample_inclusion_frequency(weights, 150, True).eval()
-        >>> inclusion_frequencies[0]
+        >>> # by 100 '1' values
+        >>> w1 = np.full((100),1000, dtype = np.float)
+        >>> w2 = np.full((100),1, dtype = np.float)
+        >>> w = np.concatenate((w1, w2))
+        >>> f = random_sample_inclusion_frequency(w, 150, True).eval()
+        >>> f[0]
         1.4985014985014986
-        >>> inclusion_frequencies[1]
+        >>> f[1]
         1.4985014985014986
-        >>> inclusion_frequencies[110]
+        >>> f[110]
         0.0014985014985014985
         >>> # when switching to sampling without duplicates samples are
-        forst to pick the low weight classes too
-        >>> inclusion_frequencies 
-        = random_sample_inclusion_frequency(weights, 150, False).eval()
-        >>> inclusion_frequencies[0]
+        >>> # forced to pick the low weight classes too
+        >>> f = random_sample_inclusion_frequency(w, 150, False).eval()
+        >>> f[0]
         1.0
-        >>> inclusion_frequencies[110]
+        >>> f[110]
         0.48722463883004796
 
     Returns:

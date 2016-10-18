@@ -521,6 +521,8 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     if (config(L"forceDeterministicAlgorithms", false))
         Globals::ForceDeterministicAlgorithms();
+    if (config(L"forceConstantRandomSeed", false))
+        Globals::ForceConstantRandomSeed();
 
 #ifndef CPUONLY
     auto valpp = config.Find(L"deviceId");
@@ -678,6 +680,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     if (config(L"forceDeterministicAlgorithms", false))
         Globals::ForceDeterministicAlgorithms();
+    if (config(L"forceConstantRandomSeed", false))
+        Globals::ForceConstantRandomSeed();
 
     // get the command param set they want
     wstring logpath = config(L"stderr", L"");

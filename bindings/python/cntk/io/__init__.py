@@ -358,3 +358,27 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
 
     def __init__(self, name, dim, is_sparse=False, stream_alias=''):
         return super(StreamConfiguration, self).__init__(name, dim, is_sparse, stream_alias)
+
+
+# wrapper around text_format_minibatch_source() that attaches a record of streams
+def CNTKTextFormatMinibatchSource(path, streams, epoch_size=None):
+    from cntk.utils import _ClassFromDict
+    # convert streams into StreamConfiguration format
+    # TODO: stream_alias should default to 'key'
+    stream_configs = [ StreamConfiguration(key, dim=value.dim, is_sparse=value.is_sparse, stream_alias=value.stream_alias) for (key, value) in streams.items() ]
+    if epoch_size is not None:  # TODO: use MAX_UI64, now that we have access
+        source = text_format_minibatch_source(path, stream_configs, epoch_size)
+    else:
+        source = text_format_minibatch_source(path, stream_configs)
+    # attach a dictionary of the streams
+    source.streams = _ClassFromDict({ name : source.stream_info(name) for name in streams.keys() })
+    return source
+
+
+# stream definition for CNTKTextFormatMinibatchSource
+def StreamDef(shape, is_sparse, alias):
+    from cntk.utils import Record
+    return Record(dim=shape, is_sparse=is_sparse, stream_alias=alias)
+    # TODO: why stream_alias and not alias?
+    # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension
+    # TODO: dim should be inferred from the file, at least for dense
