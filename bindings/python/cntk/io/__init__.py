@@ -87,10 +87,10 @@ class MinibatchSource(cntk_py.MinibatchSource):
         '''
         return self.stream_info(name)
 
-
     @typemap
     def next_minibatch(self, minibatch_size_in_samples=None,
-            minibatch_size_in_sequences=None, device=None):
+            minibatch_size_in_sequences=None, input_map=None, 
+            device=None):
         '''
         Reads a minibatch that contains data for all input streams.  The
         minibatch size is specified terms of #samples and/or #sequences for the
@@ -104,10 +104,15 @@ class MinibatchSource(cntk_py.MinibatchSource):
              the next minibatch. Must be > 0.
             minibatch_size_in_sequences (`int`, defaults to `None`): number of
              samples to retrieve for the next minibatch. Must be > 0. 
+            input_map (`dict`): mapping of :class:`cntk.ops.variabls.Variable`
+             to :class:`StreamInformation` which will be used to convert the
+             returned data. 
             device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor
 
         Returns:
-            :class:`MinibatchData`
+            A mapping of :class:`StramInformation` to :class:`MinibatchData` if 
+            `input_map` was not specified. Otherwise, the returned value will 
+            be a mapping of :class:`cntk.ops.variabls.Variable` to class:`MinibatchData`. 
         '''
         if device is None:
             device = use_default_device()
@@ -118,15 +123,23 @@ class MinibatchSource(cntk_py.MinibatchSource):
                     'minibatch_size_in_samples or minibatch_size_in_sequences')
 
         if minibatch_size_in_sequences is None:
-            return super(MinibatchSource, self).get_next_minibatch(
+            mb = super(MinibatchSource, self).get_next_minibatch(
                 minibatch_size_in_samples, device)
         else:
             if minibatch_size_in_samples is None:
                 minibatch_size_in_samples = 0
 
-            return super(MinibatchSource, self).get_next_minibatch(
+            mb = super(MinibatchSource, self).get_next_minibatch(
                 minibatch_size_in_samples,
                 minibatch_size_in_sequences, device)
+
+        if input_map:
+            if not mb:
+                return None
+            else:
+                return { key : mb[value] for (key, value) in input_map.items() }
+        else:
+            return mb
 
     def get_checkpoint_state(self):
         '''

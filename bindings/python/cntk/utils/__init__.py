@@ -505,7 +505,12 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     from ..cntk_py import Value
     from ..io import MinibatchData
 
-    if arguments is None or isinstance(arguments, (dict, list, tuple)) and len(arguments) == 0:
+    if isinstance(arguments, tuple):
+        arguments, seq_starts = arguments
+    else:
+        seq_starts = None
+
+    if arguments is None or isinstance(arguments, (dict, list)) and len(arguments) == 0:
         if len(op_arguments) > 0:
             raise ValueError('function expects %i arguments' %
                              len(op_arguments))
@@ -514,11 +519,6 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     if len(arguments) < len(op_arguments):
         raise ValueError('your graph has %i inputs, but you specified %i' %
                         (len(op_arguments), len(arguments)))
-
-    if isinstance(arguments, tuple):
-        arguments, seq_starts = arguments
-    else:
-        seq_starts = None
 
     if isinstance(arguments, list):
         arguments = dict(zip(op_arguments, arguments))
@@ -798,20 +798,3 @@ def Record(**kwargs):
 def _as_tuple(x):
     return x if (isinstance(x,tuple)) else (x,)
 
-
-# top-level short-hand for selecting a GPU
-# TODO: find the right balance between conciseness and boilerplate
-#def set_gpu(gpu_id):
-#    from cntk import DeviceDescriptor
-#    # Specify the target device to be used for computing
-#    target_device = DeviceDescriptor.gpu_device(gpu_id)
-#    DeviceDescriptor.set_default_device(target_device)
-
-# helper to get next minibatch from a reader into a set of variables
-def next_minibatch(source, minibatch_size, input_map):
-    mb = source.get_next_minibatch(minibatch_size)
-    if not mb:
-        return (None, 0)
-    else:
-        return ({ key : mb[value]               for (key, value) in input_map.items() },
-                { key : mb[value].m_num_samples for (key, value) in input_map.items() })

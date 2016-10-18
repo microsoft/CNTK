@@ -15,7 +15,7 @@ from cntk.utils import *
 from cntk.io import CNTKTextFormatMinibatchSource, StreamDef
 from cntk import Trainer
 from cntk.learner import sgd, fsadagrad, learning_rate_schedule
-from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
+from cntk.ops import cross_entropy_with_softmax, classification_error
 from examples.common.nn import print_training_progress
 from cntk.device import gpu, set_default_device
 
@@ -117,17 +117,16 @@ def train(reader, model, max_epochs):
         while t < epoch_end:
             # BUGBUG: RuntimeError: GetNextMinibatch: Changing minibatch sizes across calls is currently unsupported
             #data, num_samples = next_minibatch(reader, min(minibatch_size, epoch_size-t), input_map)
-            data, num_samples = next_minibatch(reader, minibatch_size, input_map)
+            data = reader.next_minibatch(minibatch_size, input_map=input_map)
             if data is None:
                 break
             trainer.train_minibatch(data)
-            loss_numer += trainer.previous_minibatch_loss_average() * trainer.previous_minibatch_sample_count()  # too much code for something this simple
-            loss_denom +=                                             trainer.previous_minibatch_sample_count()
-            metric_numer += trainer.previous_minibatch_evaluation_average() * trainer.previous_minibatch_sample_count()
-            metric_denom +=                                                   trainer.previous_minibatch_sample_count()
+            loss_numer += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count  # too much code for something this simple
+            loss_denom +=                                           trainer.previous_minibatch_sample_count
+            metric_numer += trainer.previous_minibatch_evaluation_average * trainer.previous_minibatch_sample_count
+            metric_denom +=                                                 trainer.previous_minibatch_sample_count
             print_training_progress(trainer, mbs if mbs > 10 else 0, num_mbs_to_show_result)
-            t += num_samples[slot_labels]
-            #print (num_samples[slot_labels], t)
+            t += data[slot_labels].num_samples
             mbs += 1
         print("--- EPOCH {} DONE: loss = {:0.6f} * {}, metric = {:0.1f}% * {} ---".format(epoch+1, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
 
@@ -139,7 +138,7 @@ def train(reader, model, max_epochs):
 
 def main():
     # TODO: get closure on Amit's feedback "Not the right pattern as we discussed over email. Please change to set_default_device(gpu(0))"
-    set_default_device(gpu(0))
+    #set_default_device(gpu(0))
     #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
     reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
