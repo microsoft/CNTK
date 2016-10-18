@@ -12,19 +12,16 @@ import numpy as np
 import sys
 import os
 import time
-#from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
-#from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
-#from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
-from cntk.layers import *
-from cntk.blocks import *
-from cntk.blocks import _name_and_extend_Function, _wrap_rename_Function  # (debugging)
+#from cntk.layers import *
+from cntk.blocks import Identity
+from cntk.blocks import _wrap_rename_Function  # (debugging)
 
 # Sequential -- composite that applies a sequence of functions onto an input
 # Sequential ([F, G, H]) === F >> G >> H
 # TODO: address this feedback: "I find this arbitrary. You can have Sequential as part of a bigger layer.  Or you can view a linear layer already as a model (which is part of the bigger model)."
-def Sequential(arrayOfFunctions, _inf):
+def Sequential(arrayOfFunctions):
     import functools  # reduce()
-    apply_x = functools.reduce(lambda f, g: f >> g, arrayOfFunctions, Identity(_inf=_inf))
+    apply_x = functools.reduce(lambda f, g: f >> g, arrayOfFunctions, Identity())
     apply_x = _wrap_rename_Function(apply_x, 'Sequential')
     return apply_x;

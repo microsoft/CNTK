@@ -59,12 +59,12 @@ def create_reader(path):
 
 def create_model(_inf):  # TODO: all the _inf stuff will go away once dimension inference works. Should this be a function then?
     return Sequential([
-        Embedding(emb_dim, _inf=_inf),
+        Embedding(emb_dim),
         Recurrence(LSTM(shape=hidden_dim, _inf=_inf.with_shape(emb_dim)), _inf=_inf.with_shape(emb_dim), go_backwards=False,
                    #),
                    initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
-        Dense(label_dim, _inf=_inf.with_shape(hidden_dim))
-    ], _inf=_inf)
+        Dense(label_dim)
+    ])
 
 ########################
 # train action         #

@@ -34,16 +34,14 @@ from cntk.ops.variables import Variable
 # this is what we initialize weight matrices from by default
 from cntk.blocks import _default_initializer
 
-# Linear -- create a fully-connected linear projection layer
-# TODO: eliminate Linear; only have Dense
+# Dense -- create a fully-connected linear projection layer with optional non-linear activation
 # Note: shape may describe a tensor as well.
 # TODO: change to new random-init descriptor
 # inputRank given: number of zeroes to add to W (mapRank must not be given)
 # mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
 # none      given: expand W to all (same as mapRank=0)
-def Dense(shape, _inf, init=_default_initializer, activation=None, input_rank=None, map_rank=None, bias=True, init_bias=0):
+def Dense(shape, init=_default_initializer, activation=None, input_rank=None, map_rank=None, bias=True, init_bias=0):
     if activation is None:  # TODO: change default to identity once we no longer need _inf
-        #activation = Identity(_inf=shape)
         activation = Identity()
 
     out_shape = _as_tuple(shape)
@@ -69,9 +67,9 @@ def Dense(shape, _inf, init=_default_initializer, activation=None, input_rank=No
     #    then Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap) + b
     #    else Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap)
 
-    W = Parameter(_inf.shape + out_shape, init=init     , name='W')
-    b = Parameter(             out_shape, init=init_bias, name='b') if bias else None
-    x = Placeholder(_inf=_inf, name='dense_arg')
+    W = Parameter((InferredDimension,) + out_shape, init=init     , name='W')
+    b = Parameter(                       out_shape, init=init_bias, name='b') if bias else None
+    x = Placeholder(name='dense_arg')
     apply_x = Function.__matmul__(x, W) + b if bias else \
               Function.__matmul__(x, W)
     _extend_Function(apply_x)  # (this gets us the >> operator  --TODO: remove once Function natively supports this)
@@ -95,7 +93,7 @@ def Dense(shape, _inf, init=_default_initializer, activation=None, input_rank=No
 # TODO: Once _inf is gone, change interface to pass weights as a Constant, e.g.
 #       Embedding(shape, constant(np.load('PATH')))
 #       Not nice since now we don't need the output shape either. Grmpf.
-def Embedding(shape, _inf, weights=None, init=_default_initializer, transpose=False):
+def Embedding(shape, weights=None, init=_default_initializer, transpose=False):
     shape = _as_tuple(shape)
     if weights is None:  # no weights given: learn the embedding
         full_shape = (InferredDimension,) + shape
@@ -105,7 +103,6 @@ def Embedding(shape, _inf, weights=None, init=_default_initializer, transpose=Fa
         # TODO: infer full_shape from weights? Which in turn should be a constant... lots of TODO here
         full_shape = (shape + (InferredDimension,)) if transpose else ((InferredDimension,) + shape)
         E = Constant(full_shape, init=weights, name='E')  # TODO: can 'weights' be a CNTK object already? Then how to do this?
-    #x = Placeholder(_inf=_inf, name='embedding_arg')
     x = Placeholder(name='embedding_arg')
     apply_x = Function.__matmul__(E, x) if transpose else \
               Function.__matmul__(x, E)     # x is expected to be sparse one-hot

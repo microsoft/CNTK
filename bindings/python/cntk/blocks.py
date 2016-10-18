@@ -7,21 +7,16 @@
 # blocks -- basic building blocks that are semantically not layers (not used in a layered fashion)
 #           e.g. the LSTM
 
-# TODO: clean up the dependencies
+# TODO: further clean up the dependencies
 import numpy as np
 import sys
 import os
 import time
-from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration, slice, sigmoid, tanh, past_value, future_value
-from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
-from cntk.ops import parameter, constant, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
-import itertools
+from cntk import parameter, constant, input_variable, placeholder_variable, combine
+from cntk.ops import times, slice, sigmoid, tanh, past_value, future_value
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
 from cntk.initializer import glorot_uniform
-
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", ".."))
 
 # TODO: As you are on the level of cntk here, you could use relative imports:
 # from .ops.functions import Function
