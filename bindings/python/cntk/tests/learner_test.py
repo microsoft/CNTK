@@ -28,8 +28,10 @@ def test_momentum_schedule():
     ms = momentum_schedule(m)
     assert ms[0] ==  np.exp(-1.0 / np.asarray(m))
 
-    mlist = [980, 5200]
-    assert np.allclose(momentum_schedule(mlist), np.exp(-1.0 / np.asarray(mlist)))
+    mlist = [980, 520]
+    msl = momentum_schedule(mlist)
+    expected = np.exp(-1.0 / np.asarray(mlist))
+    assert all(mi == ei for mi,ei in zip(msl,expected))
 
 @pytest.mark.parametrize("params, expectation", SCHEDULE_PARAMS)
 def test_momentum_schedule_per_sample(params, expectation):
