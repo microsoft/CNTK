@@ -17,6 +17,7 @@ from .initializer import *
 from .utils import *
 from .ops import *
 from .io import *
+from .persist import load_model, save_model
 from .device import *
 
 # TODO wrap

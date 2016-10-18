@@ -4,10 +4,10 @@ cntk.utils package
 Submodules
 ----------
 
-cntk.utils.persist module
--------------------------
+cntk.utils.swig_helper module
+-----------------------------
 
-.. automodule:: cntk.utils.persist
+.. automodule:: cntk.utils.swig_helper
     :members:
     :undoc-members:
     :show-inheritance:

@@ -17,7 +17,7 @@ from .. import constant, parameter, input_variable, placeholder_variable
 
 def test_variable_forwarding():
     op = constant(value=2, shape=(3,4)) + 1
-    assert op.shape().dimensions() == (3,4)
+    assert op.shape == (3,4)
 
 
 def test_replace_placeholders():
@@ -34,7 +34,7 @@ def test_replace_placeholders():
         res2 = p + 2
         from .. import plus
         func = plus(res2, 10)
-        res2.replace_placeholders({p: func.output()})
+        res2.replace_placeholders({p: func.output})
 
         assert res2.eval({i: [3]}) == [15]
 
@@ -55,10 +55,10 @@ def test_cloning():
 
     # Test freeze
     cloned = res.clone(CloneMethod.freeze)
-    assert cloned.inputs()[0].name() == 'p'
-    assert cloned.inputs()[0].uid() != p.uid()
-    assert cloned.inputs()[1].name() == 'i'
-    assert cloned.inputs()[1].uid() != i.uid()
+    assert cloned.inputs[0].name == 'p'
+    assert cloned.inputs[0].uid != p.uid
+    assert cloned.inputs[1].name == 'i'
+    assert cloned.inputs[1].uid != i.uid
 
     # TODO test other methods
 

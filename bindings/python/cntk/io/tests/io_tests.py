@@ -13,13 +13,13 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 def test_text_format():
     from cntk.io import text_format_minibatch_source, StreamConfiguration, MinibatchSource
 
-    # 0	|x 560:1	|y 1 0 0 0 0
-    # 0	|x 0:1
-    # 0	|x 0:1
-    # 1	|x 560:1	|y 0 1 0 0 0
-    # 1	|x 0:1
-    # 1	|x 0:1
-    # 1	|x 424:1
+    # 0	|x 560	|y 1 0 0 0 0
+    # 0	|x 0
+    # 0	|x 0
+    # 1	|x 560	|y 0 1 0 0 0
+    # 1	|x 0
+    # 1	|x 0
+    # 1	|x 424
     path = os.path.join(abs_path, 'tf_data.txt')
 
     input_dim = 1000
@@ -111,3 +111,63 @@ def test_image():
     sis = mbs.stream_infos()
     assert set(sis.keys()) == { feature_name, label_name }
     '''
+
+def test_minibatch(tmpdir):
+
+    mbdata = r'''0	|S0 0   |S1 0
+0	|S0 1 	|S1 1 
+0	|S0 2 	
+0	|S0 3 	|S1 3 
+1	|S0 4 	
+1	|S0 5 	|S1 1
+1	|S0 6	|S1 2 
+'''
+
+    tmpfile = str(tmpdir/'mbtest.txt')
+    with open(tmpfile, 'w') as f:
+        f.write(mbdata)
+
+    feature_stream_name = 'features'
+    labels_stream_name = 'labels'
+
+    from cntk.io import text_format_minibatch_source, StreamConfiguration
+    mb_source = text_format_minibatch_source(tmpfile, [
+        StreamConfiguration(feature_stream_name, 1, False, 'S0'),
+        StreamConfiguration(labels_stream_name, 1, False, 'S1')],
+        randomize=False)
+
+    features_si = mb_source.stream_info(feature_stream_name)
+    labels_si = mb_source.stream_info(labels_stream_name)
+    
+    mb = mb_source.next_minibatch(1000)
+    assert mb[features_si].num_sequences == 2
+    assert mb[labels_si].num_sequences == 2
+
+    features = mb[features_si]
+    assert len(features.value) == 2
+    expected_features = \
+            [
+                [[0],[1],[2],[3]],
+                [[4],[5],[6]]
+            ]
+
+    for res, exp in zip (features.value, expected_features):
+        assert np.allclose(res, exp)
+
+    assert np.allclose(features.mask, 
+            [[2, 1, 1, 1],
+             [2, 1, 1, 0]])
+
+    labels = mb[labels_si]
+    assert len(labels.value) == 2
+    expected_labels = \
+            [
+                [[0],[1],[3]], 
+                [[1],[2]]
+            ]
+    for res, exp in zip (labels.value, expected_labels):
+        assert np.allclose(res, exp)
+
+    assert np.allclose(labels.mask, 
+            [[2, 1, 1],
+             [2, 1, 0]])
