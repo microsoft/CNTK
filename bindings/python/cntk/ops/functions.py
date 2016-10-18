@@ -136,6 +136,13 @@ class Function(cntk_py.Function):
         Computes the values of speficied variables in `outputs`, using values
         provided in `arguments` that correspond to each input `Variable` of
         the function whose `is_input` is `True`.
+        
+        Example:
+            >>> v = C.input_variable(shape=(1,3))
+            >>> f = C.reciprocal(v)
+            >>> _, fv = f.forward({v:[[1, 2, 4]]}, [f.output])
+            >>> list(fv.values())[0]
+            array([[[[ 1.  ,  0.5 ,  0.25]]]], dtype=float32)
 
         Example:
             >>> v = C.input_variable(shape=(1,3))
