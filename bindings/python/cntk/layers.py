@@ -48,9 +48,12 @@ def Dense(shape, init=_default_initializer, activation=identity, input_rank=None
     # W gets dimension (input_shape + shape)
     # where input_shape is determined as:
     #  - by default, equal to the dimensions of the input passed to Dense()
-    #  - if input_rank is given, then the last 'input_rank' dimensions of the input
-    #  - if map_rank is given, then the first 'map_rank' dimensions of the input
+    #  - if input_rank is given, then the last 'input_rank' dimensions of the input (all others are not reduced over)
+    #  - if map_rank is given, then the all but the first 'map_rank' dimensions of the input (those are not reduced over)
     # where input_rank and map_rank are mutuallly exclusive.
+
+    #output_rank = -len(output_shape)   # support outputs with tensor layouts
+    # BUGBUG: Should this be a negative number now, since output is the last axis in Python?
     output_rank = len(output_shape)   # support outputs with tensor layouts
 
     # If input_rank not given then pass a single _Inferred; map_rank if given will determine the input_rank.
@@ -64,7 +67,7 @@ def Dense(shape, init=_default_initializer, activation=identity, input_rank=None
         infer_input_rank_to_map = 0  # neither given: default to 'infer W to use all input dims'
     else:
         UntestedBranchError("Dense, map_rank option not implemented")
-        infer_input_rank_to_map = map_rank  # infer W to use all input dims except the last 'map_rank' ones
+        infer_input_rank_to_map = map_rank  # infer W to use all input dims except the first static 'map_rank' ones
 
     # parameters bound to this Function
     W = Parameter(input_shape + output_shape, init=init     , name='W')
@@ -101,6 +104,93 @@ def Embedding(shape, init=_default_initializer, transpose=False):
     _name_and_extend_Function(apply_x, 'Embedding')
     return apply_x
 
+# Convolution -- create a convolution layer with optional non-linearity
+#             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape) )
+#    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape) )
+#    kernel : (                +  (output shape) +  (reduction shape) + (filte  shape)   )
+#    out    : ( (sample shape) +  (output shape) +                    + (shifting shape) )
+# TODO: Can we specify atrous convolution? How?
+# TODO: sharing = false?
+# TODO: conflict of parameter order: filter_shape or num_filters first?
+#  - filter_shape first is logical for non-NN applications such as straight image filtering
+#  - num_filters first is what Keras does
+def Convolution(filter_shape,        # e.g. (3,3)
+                num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension_
+                activation=identity,
+                init=_default_initializer,
+                pad=False,
+                #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
+                stride = 1,
+                sharing=True,     # (must be True currently)
+                bias=True,
+                reduction_rank=1, # (must be 1 currently)
+                transpose=False,  # (must be False currently)
+                max_temp_mem_size_in_samples=0):
+    UntestedBranchError("Convolution")
+    if reduction_rank != 1:
+        NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
+    if transpose:
+        NotImplementedError("Convolution: transpose option currently not supported")
+    if not sharing:
+        NotImplementedError("Convolution: sharing option currently must be True")
+    output_channels_shape = _as_tuple(num_filters)
+    output_rank = len(output_channels_shape)
+    filter_rank = len(filter_shape)
+    kernel_shape = _Inferred * reductionRank + filter_shape # kernel := filter plus reductionDims
+
+    # parameters bound to this Function
+    #W = Parameter(output_channels_shape + kernel_shape, init=init, initfilter_rank=filter_rank, initoutput_rank=-1) # (K, C, H, W) aka [ W x H x C x K ]
+    W = Parameter(output_channels_shape + kernel_shape, init=init, initfilter_rank=-filter_rank, initoutput_rank=1)  # (K, C, H, W) aka [ W x H x C x K ]
+    # BUGBUG: Signs are opposite now for initfilter_rank and initoutput_rank
+    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=0) if bias else None                        # (K,    1, 1) aka [ 1 x 1 x     K ]
+
+    # expression
+    x = Placeholder(name='convolution_arg')
+    # TODO: can we rename auto_padding to pad?
+    # TODO: can we update the parameter order of convolution to match the optional ones as in here? (options order matches Keras)
+    apply_x = convolution (W, x, filter_shape, map_dims=num_filters, stride=stride, sharing=sharing,
+                           auto_padding=pad, lower_pad=None, upper_pad=None,
+                           transpose=transpose,
+                           max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+    if bias:
+        apply_x = apply_x + b
+    _extend_Function(apply_x)  # (this gets us the >> operator  --TODO: remove once Function natively supports this)
+    apply_x = apply_x >> activation
+    _name_and_extend_Function(apply_x, 'Convolution')
+    return apply_x
+
+# MaxPooling, AveragePooling -- create a max- or average-pooling layer
+# TODO: do we need MaxPooling and AveragePooling?
+# TODO: This is not really a layer as it does not hold learnable parameters. So:
+#  - keep it in layer format, since users may think about it this way?
+#  - turn it into a function (lower-case)? Then how would it work inside Sequential() (we'd need partial application)?
+PoolingKind = Record(MAX='max', AVERAGE='average')  # create a const dictionary, acting like an enum  --TODO: what's the correct way?
+def Pooling(poolKind,      # PoolingKind.max or .average
+            filter_shape,  # e.g. (3,3)
+            pad=False,
+            #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
+            stride=1):
+    UntestedBranchError("Pooling")
+    x = Placeholder(name='convolution_arg')
+    apply_x = pooling (x, poolKind, filter_shape, stride = stride, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
+    _name_and_extend_Function(apply_x, poolKind + 'Pooling')
+    return apply_x
+
+def MaxPooling(poolKind,      # PoolingKind.max or .average
+               filter_shape,  # e.g. (3,3)
+               pad=False,
+               #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
+               stride=1):
+    return Pooling(PoolingKind.MAX, filter_shape, pad=pad, stride=stride)
+
+def AveragePooling(poolKind,      # PoolingKind.max or .average
+                   filter_shape,  # e.g. (3,3)
+                   pad=False,
+                   #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
+                   stride=1):
+    return Pooling(PoolingKind.AVERAGE, filter_shape, pad=pad, stride=stride)
+
+# Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
