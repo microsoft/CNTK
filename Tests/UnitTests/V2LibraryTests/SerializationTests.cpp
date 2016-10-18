@@ -285,7 +285,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::Clip) == 41 &&
                   static_cast<size_t>(PrimitiveOpType::Select) == 42 &&
                   static_cast<size_t>(PrimitiveOpType::Splice) == 43 &&
-                  static_cast<size_t>(PrimitiveOpType::Combine) == 44, 
+                  static_cast<size_t>(PrimitiveOpType::Combine) == 44 && 
+                  static_cast<size_t>(PrimitiveOpType::ROIPooling) == 45,
                   "PrimitiveOpType enum value was modified.");
 }
 

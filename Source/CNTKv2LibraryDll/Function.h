@@ -48,7 +48,6 @@ namespace CNTK
         {PrimitiveOpType::Slice, L"Slice"},
         {PrimitiveOpType::Dropout, L"Dropout"},
         {PrimitiveOpType::Reshape, L"Reshape"},
-        { PrimitiveOpType::ROIPooling, L"ROIPooling" },
         {PrimitiveOpType::Pooling, L"Pooling"},
         {PrimitiveOpType::SumAll, L"SumAll"},
         {PrimitiveOpType::Plus, L"Plus"},
@@ -79,6 +78,7 @@ namespace CNTK
         {PrimitiveOpType::Combine, L"Combine"},
         {PrimitiveOpType::RandomSample, L"RandomSample"},
         {PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency"},
+        {PrimitiveOpType::ROIPooling, L"ROIPooling"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
