@@ -193,6 +193,9 @@ namespace CNTK
         case DictionaryValue::Type::String:
             s << value.Value<std::wstring>();
             break;
+        case DictionaryValue::Type::Int:
+            s << value.Value<int>();
+            break;
         case DictionaryValue::Type::SizeT:
             s << value.Value<size_t>();
             break;
@@ -305,7 +308,7 @@ namespace CNTK
     }
 
     static size_t const CNTKInternalIdxValueForAllStaticAxes = 0;
-    inline Axis AsAxis(size_t CNTKInternalAxisIdx)
+    inline Axis AsAxis(int CNTKInternalAxisIdx)
     {
         if (CNTKInternalAxisIdx == CNTKInternalIdxValueForAllStaticAxes)
             return Axis::AllStaticAxes();
@@ -387,7 +390,7 @@ namespace CNTK
         return UidPrefix + uid + NamePrefix + name;
     }
 
-    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, VariableKind varKind)
+    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName)
     {
         std::wstring uid, name;
         auto uidPrefixBeginPos = CNTKInternalNodeName.find(UidPrefix);
@@ -402,7 +405,15 @@ namespace CNTK
             uid = CNTKInternalNodeName.substr(uidBeginPos, namePrefixBeginPos - uidBeginPos);
             name = CNTKInternalNodeName.substr(nameBeginPos);
         }
-        else
+
+        return{ uid, name };
+    }
+
+    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, VariableKind varKind)
+    {
+        std::wstring uid, name;
+        std::tie(uid, name) = UidAndNameFromCNTKInternalNodeName(CNTKInternalNodeName);
+        if (uid == L"")
         {
             name = CNTKInternalNodeName;
             uid = Internal::GenerateUid(varKind);
@@ -410,5 +421,62 @@ namespace CNTK
 
         return{ uid, name };
     }
-}
 
+    std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, const PrimitiveOpType& opType);
+
+    inline std::vector<Axis> GetDerivedDynamicAxes(const Axis& sourceAxis, size_t multiplicativeFactor, int additiveFactor)
+    {
+        if (sourceAxis.IsStaticAxis())
+            LogicError("Static axes cannot be derived from to create new dynamic axes!");
+
+        if ((multiplicativeFactor == 0) && (additiveFactor == 0))
+            LogicError("Zero size dynamic axes are not allowed!");
+
+        // If we slice off exactly one frame off of the source axis, then we effectively delete this axis
+        if ((multiplicativeFactor == 0) && (additiveFactor == 1))
+            return {};
+
+        if ((multiplicativeFactor == 1) && (additiveFactor == 0))
+            return {sourceAxis};
+
+        std::wstring derivedDynamicAxisName = sourceAxis.Name();
+        if (multiplicativeFactor > 0)
+        {
+            derivedDynamicAxisName += L"_times_" + std::to_wstring(multiplicativeFactor);
+            if (additiveFactor > 0)
+                derivedDynamicAxisName += L"_plus_" + std::to_wstring(additiveFactor);
+            else
+                derivedDynamicAxisName += L"_minus_" + std::to_wstring(-additiveFactor);
+        }
+        else
+        {
+            assert(additiveFactor > 0);
+            derivedDynamicAxisName += L"_fixedSliceOf_" + std::to_wstring(additiveFactor);
+        }
+
+        return{ Axis(derivedDynamicAxisName, sourceAxis.IsOrdered()) };
+    }
+
+    inline Axis& NormalizeStaticAxis(Axis& axis, const NDShape& operandShape)
+    {
+        if (axis != Axis::AllStaticAxes())
+        {
+            assert(axis.IsStaticAxis());
+            assert(operandShape != NDShape::Unknown);
+
+            if (axis.StaticAxisIndex() < 0)
+                axis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
+        }
+
+        return axis;
+    }
+
+    inline void VerifyStaticAxis(const Axis& axis, const NDShape& operandShape)
+    {
+        assert(axis.IsStaticAxis());
+        assert(axis.StaticAxisIndex() >= 0);
+
+        if (axis.StaticAxisIndex() >= (int)operandShape.Rank())
+            InvalidArgument("The specified axis index (%d) exceeds the static #axes (%d) of the corresponding operand", (int)axis.StaticAxisIndex(), (int)operandShape.Rank());
+    }
+}

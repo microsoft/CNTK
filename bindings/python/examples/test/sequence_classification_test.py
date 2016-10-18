@@ -5,7 +5,7 @@
 # ==============================================================================
 
 import numpy as np
-from cntk import DeviceDescriptor
+from cntk.device import set_default_device
 
 from examples.SequenceClassification.SequenceClassification import train_sequence_classifier
 
@@ -13,7 +13,7 @@ TOLERANCE_ABSOLUTE = 1E-1
 
 def test_seq_classification_error(device_id):
     from cntk.utils import cntk_device
-    DeviceDescriptor.set_default_device(cntk_device(device_id))
+    set_default_device(cntk_device(device_id))
 
     evaluation_avg, loss_avg = train_sequence_classifier()
 

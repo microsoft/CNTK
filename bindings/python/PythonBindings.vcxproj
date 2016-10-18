@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug_CpuOnly|x64">
+      <Configuration>Debug_CpuOnly</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_CpuOnly|x64">
+      <Configuration>Release_CpuOnly</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{CD721536-CFD3-413E-A3D7-FB0FAF989635}</ProjectGuid>
+    <Keyword>MakeFileProj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v120</PlatformToolset>
+    <UseDebugLibraries>$(DebugBuild)</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <NMakeBuildCommandLine>.\vsbuild.bat "$(OutDir)" "$(DebugBuild)" "$(GpuBuild)" "$(SWIG_PATH)" "$(CNTK_PY_VERSIONS)" "$(CNTK_PY27_PATH)" "$(CNTK_PY34_PATH)" "$(CNTK_PY35_PATH)"</NMakeBuildCommandLine>
+    <NMakeOutput>dist/pythonwheel</NMakeOutput>
+    <NMakeCleanCommandLine>rmdir /s /q build</NMakeCleanCommandLine>
+  </PropertyGroup>
+  <ItemGroup>
+    <Text Include="vsbuild.bat" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cntk\blocks.py" />
+    <None Include="cntk\cntk_py.i" />
+    <None Include="cntk\conftest.py" />
+    <None Include="cntk\initializer.py" />
+    <None Include="cntk\io\__init__.py" />
+    <None Include="cntk\layers.py" />
+    <None Include="cntk\learner.py" />
+    <None Include="cntk\models.py" />
+    <None Include="cntk\ops\functions.py" />
+    <None Include="cntk\ops\variables.py" />
+    <None Include="cntk\ops\__init__.py" />
+    <None Include="cntk\pytest.ini" />
+    <None Include="cntk\tensor.py" />
+    <None Include="cntk\trainer.py" />
+    <None Include="cntk\utils\debughelpers\__init__.py" />
+    <None Include="cntk\utils\persist.py" />
+    <None Include="cntk\utils\swig_helper.py" />
+    <None Include="cntk\utils\__init__.py" />
+    <None Include="cntk\__init__.py" />
+    <None Include="setup.py" />
+    <None Include="swig_install.sh" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

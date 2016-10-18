@@ -23,7 +23,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
 ReaderShim<ElemType>::ReaderShim(ReaderFactory factory)
-    : m_factory(factory), m_deviceId(CPUDEVICE), m_dataTransferers(2, DataTransfererPtr()), m_currentDataTransferIndex(0)
+    : m_factory(factory), m_deviceId(CPUDEVICE), m_dataTransferers(2, DataTransfererPtr()), m_currentDataTransferIndex(0), m_endOfEpoch(false)
+{
+}
+
+template <class ElemType>
+ReaderShim<ElemType>::ReaderShim(ReaderPtr reader)
+    : m_deviceId(CPUDEVICE), m_dataTransferers(2, DataTransfererPtr()), m_currentDataTransferIndex(0), m_reader(reader), m_factory(nullptr), m_endOfEpoch(false)
 {
 }
 
@@ -40,7 +46,9 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
 
     m_numParallelSequences = numberOfuttsPerMinibatchForAllEpochs[0];
 
-    m_reader = m_factory(config);
+    if (!m_reader)
+        m_reader = m_factory(config);
+
     m_streams = m_reader->GetStreamDescriptions();
     for (auto i : m_streams)
     {
@@ -63,18 +71,24 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     const std::unordered_set<InputStreamDescription>& inputs,
     size_t requestedEpochSamples /*= requestDataSize*/)
 {
-    // For adaptive minibatch, make sure there are no outstanding reads.
-    if (m_prefetchTask.valid())
-    {
-        m_prefetchTask.wait();
-    }
-
     EpochConfiguration config;
     config.m_workerRank = subsetNum;
     config.m_numberOfWorkers = numSubsets;
     config.m_minibatchSizeInSamples = requestedMBSize;
     config.m_totalEpochSizeInSamples = requestedEpochSamples;
     config.m_epochIndex = epoch;
+
+    StartEpoch(config, inputs);
+}
+
+template <class ElemType>
+void ReaderShim<ElemType>::StartEpoch(const EpochConfiguration& config, const std::unordered_set<InputStreamDescription>& inputs)
+{
+    // For adaptive minibatch, make sure there are no outstanding reads.
+    if (m_prefetchTask.valid())
+    {
+        m_prefetchTask.wait();
+    }
 
     // Let's check that there is no outstanding copies.
     // Wait on all events if there are any pending copy operations in flight.
@@ -114,7 +128,7 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
         m_prefetchBuffers[i.GetStreamName()] = StreamPrefetchBuffer
         {
             std::make_shared<Matrix<ElemType>>(0, 0, i.GetDeviceId(), i.GetMatrixType(), i.GetMatrixFormat()),
-            nullptr
+            std::make_shared<MBLayout>()
         };
     }
 
@@ -263,6 +277,10 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 template <class ElemType>
 typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMinibatch(size_t currentDataTransferIndex)
 {
+    // Resetting layouts.
+    for (auto& mx : m_prefetchBuffers)
+        mx.second.m_mbLayout = std::make_shared<MBLayout>();
+
     Minibatch minibatch = m_reader->ReadMinibatch();
 
     // If there is no data we can simply return.

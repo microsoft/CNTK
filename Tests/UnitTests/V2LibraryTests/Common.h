@@ -263,9 +263,10 @@ inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t m
 {
     std::vector<size_t> sequenceLengths(numSequences);
     size_t maxActualSequenceLength = 0;
+    size_t minActualSequenceLength = 3;
     for (size_t i = 0; i < numSequences; ++i)
     {
-        sequenceLengths[i] = (rand() % maxAllowedSequenceLength) + 1;
+        sequenceLengths[i] = (rand() % maxAllowedSequenceLength) + minActualSequenceLength;
         if (sequenceLengths[i] > maxActualSequenceLength)
             maxActualSequenceLength = sequenceLengths[i];
     }
@@ -428,3 +429,106 @@ inline CNTK::FunctionPtr LSTMSequenceClassiferNet(const CNTK::Variable& input, s
     return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
 }
 
+using namespace CNTK;
+
+inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second, ParameterCloningMethod parameterCloningMethod, const std::unordered_map<Variable, Variable>& replacements, std::unordered_set<FunctionPtr>& visitedFunctions)
+{
+    if ((first->RootFunction() == nullptr) != (second->RootFunction() == nullptr))
+        throw std::runtime_error("CompareFunctions: Both functions should be primitives or both should be composites");
+
+    if (first->Name() != second->Name())
+        throw std::runtime_error("CompareFunctions: Both functions' names should match");
+
+    if (first->Attributes() != second->Attributes())
+        throw std::runtime_error("CompareFunctions: Both functions' attributes should match");
+
+    auto firstPrimitive = (first->RootFunction() == nullptr) ? first : first->RootFunction();
+    auto secondPrimitive = (second->RootFunction() == nullptr) ? second : second->RootFunction();
+
+    if (firstPrimitive->Name() != secondPrimitive->Name())
+        throw std::runtime_error("CompareFunctions: Both functions' names should match");
+
+    // All the outputs must be equivalent
+    if (firstPrimitive->Outputs().size() != secondPrimitive->Outputs().size())
+        throw std::runtime_error("CompareFunctions: Both functions' should have same number of outputs");
+
+    visitedFunctions.insert(firstPrimitive);
+
+    for (size_t i = 0; i < firstPrimitive->Outputs().size(); ++i)
+    {
+        auto firstFunctionOutput = firstPrimitive->Outputs()[i];
+        auto secondFunctionOutput = secondPrimitive->Outputs()[i];
+
+        if ((firstFunctionOutput.Name() != secondFunctionOutput.Name()) ||
+            (firstFunctionOutput.DynamicAxes() != secondFunctionOutput.DynamicAxes()) ||
+            (firstFunctionOutput.GetDataType() != secondFunctionOutput.GetDataType()) ||
+            (firstFunctionOutput.IsSparse() != secondFunctionOutput.IsSparse()) ||
+            (firstFunctionOutput.Kind() != secondFunctionOutput.Kind()) ||
+            (firstFunctionOutput.Shape() != secondFunctionOutput.Shape()))
+        {
+            throw std::runtime_error("CompareFunctions: Both functions' outputs should match");
+        }
+    }
+
+    // All of the inputs must be identical
+    if (firstPrimitive->Inputs().size() != secondPrimitive->Inputs().size())
+        throw std::runtime_error("CompareFunctions: Both functions' should have same number of inputs");
+
+    for (size_t i = 0; i < firstPrimitive->Inputs().size(); ++i)
+    {
+        auto firstFunctionInput = firstPrimitive->Inputs()[i];
+        auto secondFunctionInput = secondPrimitive->Inputs()[i];
+
+        if (replacements.find(firstFunctionInput) != replacements.end())
+        {
+            if (replacements.at(firstFunctionInput) != secondFunctionInput)
+                throw std::runtime_error("CompareFunctions: The 2nd function does not have the expected replacement");
+        }
+        else
+        {
+            if (firstFunctionInput.IsOutput())
+            {
+                if (visitedFunctions.find(firstFunctionInput.Owner()) == visitedFunctions.end())
+                    CompareFunctions(firstFunctionInput.Owner(), secondFunctionInput.Owner(), parameterCloningMethod, replacements, visitedFunctions);
+            }
+            else
+            {
+                if ((firstFunctionInput.Name() != secondFunctionInput.Name()) ||
+                    (firstFunctionInput.DynamicAxes() != secondFunctionInput.DynamicAxes()) ||
+                    (firstFunctionInput.IsSparse() != secondFunctionInput.IsSparse()) ||
+                    (firstFunctionInput.Shape() != secondFunctionInput.Shape()) ||
+                    (firstFunctionInput.GetDataType() != secondFunctionInput.GetDataType()))
+                {
+                    throw std::runtime_error("CompareFunctions: The leaves of the functions are not equivalent");
+                }
+
+                if ((firstFunctionInput.Kind() != VariableKind::Parameter) && ((firstFunctionInput.Kind() != secondFunctionInput.Kind()) || (firstFunctionInput.NeedsGradient() != secondFunctionInput.NeedsGradient())))
+                    throw std::runtime_error("CompareFunctions: The leaves of the functions are not equivalent");
+
+                switch (firstFunctionInput.Kind())
+                {
+                case VariableKind::Parameter:
+                case VariableKind::Constant:
+                    if ((parameterCloningMethod == ParameterCloningMethod::Share) && (firstFunctionInput != secondFunctionInput))
+                        throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+
+                    auto firstFunctionInputValue = firstFunctionInput.IsConstant() ? Constant(firstFunctionInput).Value() : Parameter(firstFunctionInput).Value();
+                    auto secondFunctionInputValue = secondFunctionInput.IsConstant() ? Constant(secondFunctionInput).Value() : Parameter(secondFunctionInput).Value();
+                    if ((parameterCloningMethod == ParameterCloningMethod::Clone) &&
+                        ((firstFunctionInput == secondFunctionInput) || (DictionaryValue(*firstFunctionInputValue) != DictionaryValue(*secondFunctionInputValue))))
+                    {
+                        throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+                    }
+
+                    if ((parameterCloningMethod == ParameterCloningMethod::Freeze) &&
+                        ((firstFunctionInput == secondFunctionInput) || !secondFunctionInput.IsConstant() || (DictionaryValue(*firstFunctionInputValue) != DictionaryValue(*secondFunctionInputValue))))
+                    {
+                        throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+                    }
+
+                    break;
+                }
+            }
+        }
+    }
+}

@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <CPUMatrix.h> // For CPUMatrix::SetNumThreads
 #include <thread>
+#include "GPUMatrix.h"
+#include "Globals.h"
 
 namespace CNTK
 {
@@ -45,16 +47,44 @@ namespace CNTK
         }
 
         std::atomic<bool> s_disableAutomaticUnpackingOfPackedValues(false);
-        void DisableAutomaticUnpackingOfPackedValues()
+        void SetAutomaticUnpackingOfPackedValues(bool disable)
         {
-            s_disableAutomaticUnpackingOfPackedValues.store(true);
+            s_disableAutomaticUnpackingOfPackedValues.store(disable);
         }
 
         bool IsAutomaticUnpackingOfPackedValuesDisabled()
         {
             return s_disableAutomaticUnpackingOfPackedValues.load();
         }
+
+        std::atomic<int> s_computationNetworkTraceLevel(0);
+        void SetComputationNetworkTraceLevel(int traceLevel)
+        {
+            s_computationNetworkTraceLevel.store(traceLevel);
+        }
+
+        int GetComputationNetworkTraceLevel()
+        {
+            return s_computationNetworkTraceLevel.load();
+        }
+
+        void SetGPUMemoryAllocationTraceLevel(int traceLevel)
+        {
+            Microsoft::MSR::CNTK::TracingGPUMemoryAllocator::SetTraceLevel(traceLevel);
+        }
+
+        void ForceSynchronousCUDAKernelExecutions()
+        {
+            Microsoft::MSR::CNTK::SyncGuard::EnableSync();
+        }
+
+        void ForceDeterministicAlgorithms()
+        {
+            Microsoft::MSR::CNTK::Globals::ForceDeterministicAlgorithms();
+        }
     }
+
+    /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);
 
     /*static*/ std::atomic<bool> DeviceDescriptor::s_defaultDeviceFrozen(false);
     /*static*/ std::shared_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice;
@@ -83,6 +113,9 @@ namespace CNTK
 
     /*static*/ void DeviceDescriptor::SetDefaultDevice(const DeviceDescriptor& newDefaultDevice)
     {
+        if (newDefaultDevice == DefaultDevice())
+            return;
+
         // As a testing backdoor we allow changing the default device even after being "used/frozen"
         if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
             RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
@@ -140,9 +173,14 @@ namespace CNTK
 
     /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxis_";
 
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForDynamicAxes = std::numeric_limits<int>::max();
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllStaticAxes = std::numeric_limits<int>::max() - 1;
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
+
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
     /*static*/ const std::vector<Axis> Axis::DefaultInputVariableDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
+    /*static*/ const std::vector<Axis> Axis::UnknownDynamicAxes = { Axis(SentinelStaticAxisIndexValueForUnknownAxes) };
 
     /*static*/ const Axis& Axis::DefaultDynamicAxis()
     {
@@ -162,10 +200,6 @@ namespace CNTK
         return s_allStaticAxes;
     }
 
-    /*static*/ Axis Axis::NewUniqueDynamicAxis(const std::wstring& axisNamePrefix, bool isOrderedDynamicAxis /*= true*/)
-    {
-        return Axis(s_uniqueDynamicAxisNames.NewUniqueDynamicAxisName(axisNamePrefix), isOrderedDynamicAxis);
-    }
 
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {

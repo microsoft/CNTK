@@ -215,6 +215,7 @@ def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurre
     # the actualDh and actualDc
     LSTMCell[0].replace_placeholders(
         {dh: actualDh.output(), dc: actualDc.output()})
+    
     return (LSTMCell[0], LSTMCell[1])
 
 

@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-import math
+import numpy as np
 from ..learner import *
 from .. import parameter, input_variable
 
@@ -26,7 +26,6 @@ def test_momentums_per_sample(params, expectation):
     assert [l[i] for i in range(len(expectation))] == expectation
 
 def test_learner_init():
-    # TODO Test functionality
     i = input_variable(shape=(1,),
                        needs_gradient=True,
                        name='a')
@@ -43,7 +42,7 @@ def test_learner_init():
 
     momentum_time_constant = 1100
     momentum_per_sample = momentums_per_sample(
-        math.exp(-1.0 / momentum_time_constant))
+        np.exp(-1.0 / momentum_time_constant))
 
     momentum_sgd(res.parameters(), lr=0.1, momentums=momentum_per_sample)
 
@@ -55,3 +54,16 @@ def test_learner_init():
 
     gamma, inc, dec, max, min = [0.1]*5
     rmsprop(res.parameters(), 0.1, gamma, inc, dec, max, min, True)
+
+def test_learner_update():
+    i = input_variable(shape=(1,),
+                       needs_gradient=True,
+                       name='a')
+    w_init = 1
+    w = parameter(shape=(1,), init=w_init)
+    res = i * w
+
+    learner = sgd(res.parameters(), lr=0.1)
+    x = learner.update({w: np.asarray([[2.]], dtype=np.float32)}, 1)
+    assert w.value().to_numpy() < w_init
+

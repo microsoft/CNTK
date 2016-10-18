@@ -45,7 +45,7 @@ namespace CNTK
                 if (node->HasMBLayout())
                 {
                     // TODO: Currently only default dynamic axis is supported
-                    auto inputNodeInternalDynamicAxisName = node->GetMBLayout()->GetAxisName();
+                    auto inputNodeInternalDynamicAxisName = node->As<InputValueBase<ElementType>>()->GetRequestedDynamicAxis();
                     std::vector<Axis> inputVarDynamicAxes = DynamicAxesFromInternalDynamicAxisName(inputNodeInternalDynamicAxisName);
 
                     var = Variable(varShape, isSparse, AsDataType<ElementType>(), node->GetLearningRateMultiplier() != 0, varName, inputVarDynamicAxes, varUid);
@@ -79,14 +79,7 @@ namespace CNTK
         else
         {
             // This is a non-leaf node and maps to a primitive Function
-            std::vector<Axis> varDynamicAxes;;
-            if (node->HasMBLayout())
-            {
-                auto nodeInternalDynamicAxisName = node->GetMBLayout()->GetAxisName();
-                varDynamicAxes = DynamicAxesFromInternalDynamicAxisName(nodeInternalDynamicAxisName);
-            }
-
-            auto placeholderVar = PlaceholderVariable(varShape, varDynamicAxes);
+            auto placeholderVar = PlaceholderVariable(varShape);
             nodeToVariableMap[node] = placeholderVar;
 
             std::vector<Variable> inputVars(node->GetNumInputs());
@@ -133,7 +126,7 @@ namespace CNTK
             }
             else if (node->OperationName() == OperationNameOf(WhereNode))
             {
-                auto internalDynamicAxisName = node->GetMBLayout()->GetAxisName();
+                auto internalDynamicAxisName = node->As<WhereNode<ElementType>>()->DynamicAxisName();
                 std::vector<Axis> dynamicAxes = DynamicAxesFromInternalDynamicAxisName(internalDynamicAxisName);
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNewDynamicAxes] = AsDictionaryValueVector(dynamicAxes);
 
@@ -189,12 +182,14 @@ namespace CNTK
                 opType = PrimitiveOpType::ScatterPacked;
             else if (node->OperationName() == OperationNameOf(TimesNode))
             {
-                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = (size_t)node->As<TimesNode<ElementType>>()->OutputRank();
+                auto timesNode = node->As<TimesNode<ElementType>>();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = timesNode->OutputRank();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInferInputRankToMap] = timesNode->InferInputRankToMap();
                 opType = PrimitiveOpType::Times;
             }
             else if (node->OperationName() == OperationNameOf(TransposeTimesNode))
             {
-                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = (size_t)node->As<TransposeTimesNode<ElementType>>()->OutputRank();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = node->As<TransposeTimesNode<ElementType>>()->OutputRank();
                 opType = PrimitiveOpType::TransposeTimes;
             }
             else if (node->OperationName() == OperationNameOf(PastValueNode))
@@ -287,7 +282,10 @@ namespace CNTK
             // Let's reorder inputVars properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
             ReorderAsPrimitiveFunctionInputs(opType, inputVars);
 
-            FunctionPtr primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), node->NodeName());
+            std::wstring functionUid, functionName;
+            std::tie(functionUid, functionName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), opType);
+
+            FunctionPtr primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), functionUid, functionName);
             allPrimitiveFunctions.insert(primitiveFunction);
             var = primitiveFunction->Output();
             if (placeholderReplacements.find(placeholderVar) != placeholderReplacements.end())

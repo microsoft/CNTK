@@ -138,7 +138,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     auto labelsInputName = L"Labels";
     auto labelsVar = InputVariable({ numOutputClasses }, labelStreamInfo.m_elementType, labelsInputName);
     auto trainingLoss = CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"lossFunction");
-    auto prediction = ClassificationError(classifierOutput, labelsVar, L"predictionError");
+    auto prediction = ClassificationError(classifierOutput, labelsVar, 5, L"predictionError");
 
     if (testSaveAndReLoad)
     {
@@ -173,12 +173,10 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
 
 void TrainCifarResnet()
 {
+    fprintf(stderr, "\nTrainCifarResnet..\n");
+
     if (IsGPUAvailable())
-    {
         TrainResNetCifarClassifer(DeviceDescriptor::GPUDevice(0), true /*testSaveAndReLoad*/);
-    }
     else
-    {
         fprintf(stderr, "Cannot run TrainCifarResnet test on a CPU device.\n");
-    }
 }
