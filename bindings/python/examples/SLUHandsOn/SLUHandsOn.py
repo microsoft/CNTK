@@ -17,6 +17,7 @@ from cntk import Trainer
 from cntk.learner import sgd, fsadagrad, learning_rate_schedule
 from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 from examples.common.nn import print_training_progress
+from cntk.device import gpu, set_default_device
 
 # helper function that will go away once dimension inference works and has been updated here
 from cntk import Axis
@@ -92,7 +93,7 @@ def train(reader, model, max_epochs):
 
     # trainer object
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner = fsadagrad(z.parameters(), lr_schedule, momentum,
+    learner = fsadagrad(z.parameters, lr_schedule, momentum,
                         targetAdagradAvDenom=1, clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
     trainer = Trainer(z, ce, pe, [learner])
@@ -136,9 +137,9 @@ def train(reader, model, max_epochs):
 # main function boilerplate #
 #############################
 
-if __name__=='__main__':
+def main():
     # TODO: get closure on Amit's feedback "Not the right pattern as we discussed over email. Please change to set_default_device(gpu(0))"
-    #set_gpu(0)
+    set_default_device(gpu(0))
     #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
     reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
@@ -148,3 +149,6 @@ if __name__=='__main__':
     # test (TODO)
     reader = create_reader(data_dir + "/atis.test.ctf")
     #test(reader, model_dir + "/slu.cmf")  # TODO: what is the correct pattern here?
+
+if __name__=='__main__':
+    main()

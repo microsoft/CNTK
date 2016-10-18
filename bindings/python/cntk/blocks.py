@@ -88,17 +88,17 @@ def _apply(f, args):
     # TODO: This should go into Function.replace_placeholders()
     def _output_of(arg):  # helper to get the output of an arg; use arg itself if no output() method (that'd be a Variable)
         try:
-            return arg.output()
+            return arg.output
         except AttributeError:
             return arg  # Variables have no output()
     args = [_output_of(arg) for arg in args]
-    placeholders = f.placeholders()  # f parameters to fill in
+    placeholders = f.placeholders  # f parameters to fill in
     if len(args) != len(placeholders):
         raise TypeError("_apply ({}): number of arguments {} must match number of placeholders {}".format(_node_description(f), len(args), len(placeholders)))
     _function_name = _node_name(f)  # these are for logging/debugging only
     _function_description = _node_description(f)
     _arg_description = ", ".join([_node_name(f) for f in list(args)])
-    f = f.clone(CloneMethod.share, dict(zip(f.placeholders(), args)))
+    f = f.clone(CloneMethod.share, dict(zip(f.placeholders, args)))
     _name_and_extend_Function(f, _function_name)
     if _trace_layers:
         print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
@@ -115,7 +115,7 @@ def Parameter(shape, init, name=''):
 
 # TODO: parameter order; shape should be optional (only for filling a tensor with a scalar--rare case)
 def Constant(init, shape=None, name=''):
-    p = constant (shape, init, name=name)
+    p = constant (init, shape, name=name)
     return _name_node(p, 'constant')   # these are factory methods for things with state
 
 def Input(*args, **kwargs):

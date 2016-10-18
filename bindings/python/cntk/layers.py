@@ -119,7 +119,7 @@ def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
         UntestedBranchError("Recurrence, go_backwards option")
     def previous_hook(state):
         if hasattr(state, 'outputs'):
-           outputs = state.outputs()
+           outputs = state.outputs
            if len(outputs) > 1:  # if multiple then apply to each element
                return tuple([previous_hook(s) for s in outputs])
         # not a tuple: must be a 'scalar', i.e. a single element
@@ -129,14 +129,14 @@ def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
     prev_state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
     f_x_h_c = over(x, prev_state_forward) # apply the recurrent over
     # this returns a Function (x, (h_prev, c_prev)) -> (h, c)
-    h = f_x_h_c.outputs()[0]  # 'h' is a Variable (the output of a Function that computed it)
+    h = f_x_h_c.outputs[0]  # 'h' is a Variable (the output of a Function that computed it)
     if _trace_layers:
         _log_node(h)
-        _log_node(combine([h.owner()]))
+        _log_node(combine([h.owner]))
     prev_state = previous_hook(f_x_h_c)  # delay (h, c)
-    replacements = { value_forward: value.output() for (value_forward, value) in zip(list(prev_state_forward), list(prev_state)) }
+    replacements = { value_forward: value.output for (value_forward, value) in zip(list(prev_state_forward), list(prev_state)) }
     f_x_h_c.replace_placeholders(replacements)  # binds _h_c := prev_state
-    apply_x = combine([h.owner()])     # the Function that yielded 'h', so we get to know its inputs
+    apply_x = combine([h.owner])     # the Function that yielded 'h', so we get to know its inputs
     # apply_x is a Function x -> h
     _name_and_extend_Function(apply_x, 'Recurrence')
     if _trace_layers:

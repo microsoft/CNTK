@@ -126,7 +126,7 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         '''
         The function this variable is an output of.
         '''
-        if self.is_output() == False:
+        if self.is_output == False:
             raise RuntimeError('called owner() on a variable that is not an output variable')
         return super(Variable, self).owner()
 

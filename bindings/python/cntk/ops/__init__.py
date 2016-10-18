@@ -31,7 +31,7 @@ def combine(operands, name=''):
     converted_operands = list()
     for o in operands:
         if isinstance(o, Function):
-            converted_operands.append(o.output())
+            converted_operands.append(o.output)
         else:
             converted_operands.append(o)
 
