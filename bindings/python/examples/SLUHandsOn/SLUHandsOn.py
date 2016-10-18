@@ -18,14 +18,6 @@ from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_pe
 from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 from examples.common.nn import print_training_progress
 
-# helper function that will go away once dimension inference works and has been updated here
-from cntk import Axis
-def _Infer(shape, axis):
-    from cntk.utils import Record, _as_tuple
-    return Record(shape=_as_tuple(shape), axis=axis, with_shape = lambda new_shape: _Infer(new_shape, axis))
-
-#### User code begins here
-
 ########################
 # variables and stuff  #
 ########################
@@ -57,12 +49,19 @@ def create_reader(path):
 # define the model     #
 ########################
 
-def create_model(_inf):  # TODO: all the _inf stuff will go away once dimension inference works. Should this be a function then?
+def create_model():  # TODO: all the _inf stuff will go away once dimension inference works. Should this be a function then?
+    # helper function that will go away once dimension inference works for Recurrence()
+    def _Infer(shape):
+        from cntk import Axis
+        from cntk.utils import Record, _as_tuple
+        return Record(shape=_as_tuple(shape), axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()], with_shape = lambda new_shape: _Infer(new_shape, axis))
+
     return Sequential([
         Embedding(emb_dim),
-        Recurrence(LSTM(shape=hidden_dim, _inf=_inf.with_shape(emb_dim)), _inf=_inf.with_shape(emb_dim), go_backwards=False,
+        Recurrence(LSTM(hidden_dim), _inf=_Infer(shape=emb_dim), go_backwards=False,
                    #),
                    initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
+                   # BUGBUG: initial_state=0.1 should work
         Dense(label_dim)
     ])
 
@@ -140,7 +139,7 @@ if __name__=='__main__':
     #set_gpu(0)
     #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
     reader = create_reader(data_dir + "/atis.train.ctf")
-    model = create_model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
+    model = create_model()
     # TODO: Currently this fails with a mismatch error if axes ^^ are given in opposite order. I think it shouldn't.
     # train
     train(reader, model, max_epochs=8)

@@ -17,6 +17,7 @@ from cntk.ops import times, slice, sigmoid, tanh, past_value, future_value
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
 from cntk.initializer import glorot_uniform
+from _cntk_py import InferredDimension
 
 # TODO: As you are on the level of cntk here, you could use relative imports:
 # from .ops.functions import Function
@@ -63,9 +64,6 @@ def _name_and_extend_Function(f, name=None):
 def _wrap_rename_Function(f, name):
      f = combine([f]) ; _name_and_extend_Function(f, name)  # 'combine' to create a separate identity so we can reassign the debug name
      return f
-
-def _Infer(shape, axis):
-    return Record(shape=_as_tuple(shape), axis=axis, with_shape = lambda new_shape: _Infer(new_shape, axis))
 
 def _apply(f, args):
     import operator   # add()
@@ -126,18 +124,36 @@ def Placeholder(_inf=None, name='placeholder'):
 # TODO: Let's not encourage users to use combine([f]) as a workaround for identity/pass, but rather have it as a first-class operator implemented that we then use. [Willi]
 #       If we have Function identity, in same pattern as e.g. sigmoid, then that would suffice.
 # Once we no longer need _inf, we can just use identity without parentheses
-def Identity(_inf=None):
-    if _inf is None:
-        x = Placeholder(name='identity_arg')
-    else:
-        x = Placeholder(_inf=_inf, name='identity_arg')
+def _Identity():
+    x = Placeholder(name='identity_arg')
     #apply_x = combine([x])  # BUGBUG: not working
     apply_x = x + Constant(0, name='Identity0')  # this fakes combine()
     _name_and_extend_Function(apply_x, 'Identity')
     return apply_x
 
+# there is only one identity function
+# TODO: This should become a C++-side Function, e.g. like sigmoid
+identity = _Identity()
+
+def Stabilizer(steepness=4):
+    UntestedBranchError("Stabilizer")
+    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
+    # this behaves linear for weights around 1, yet guarantees positiveness
+
+    # parameters
+    param = Parameter((1), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
+    # TODO: compute this strange value directly in Python
+
+    # application
+    x = Placeholder(name='stabilizer_arg')
+    # TODO: risk of confusion; can these functions be namespaced?
+    beta = log (1 + exp (steepness * param)) / steepness
+    apply_x = beta * x
+    _name_and_extend_Function(apply_x, 'Stabilizer')
+    return apply_x
+
 # TODO: For now, shape and cell_shape can only be rank-1 vectors
-def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
+def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
     has_projection = cell_shape is not None
     has_aux = False
 
@@ -159,26 +175,26 @@ def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initia
     cell_shape_stacked = tuple(cell_shape_list)  # patched dims with stack_axis duplicated 4 times
 
     # parameters
-    b  = Parameter(             cell_shape_stacked, init=init_bias, name='b')                        # a bias
-    W  = Parameter(_inf.shape + cell_shape_stacked, init=init,      name='W')                             # input
-    A  = Parameter(_inf.shape + cell_shape_stacked, init=init,      name='A') if has_aux else None        # aux input (optional)
-    H  = Parameter(shape      + cell_shape_stacked, init=init,      name='H')                             # hidden-to-hidden
-    Ci = Parameter(             cell_shape,         init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Cf = Parameter(             cell_shape,         init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Co = Parameter(             cell_shape,         init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    b  = Parameter(                       cell_shape_stacked, init=init_bias, name='b')                        # a bias
+    W  = Parameter((InferredDimension,) + cell_shape_stacked, init=init,      name='W')                             # input
+    A  = Parameter((InferredDimension,) + cell_shape_stacked, init=init,      name='A') if has_aux else None        # aux input (optional)
+    H  = Parameter(shape                + cell_shape_stacked, init=init,      name='H')                             # hidden-to-hidden
+    Ci = Parameter(                       cell_shape,         init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Cf = Parameter(                       cell_shape,         init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Co = Parameter(                       cell_shape,         init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
 
     Wmr = ParameterTensor (cell_shape + shape, init=init, init_value_scale=init_value_scale) if has_projection else None  # final projection
 
-    Sdh = Stabilizer(_inf=_inf.with_shape(     shape)) if enable_self_stabilization else Identity(_inf=_inf.with_shape(     shape))
-    Sdc = Stabilizer(_inf=_inf.with_shape(cell_shape)) if enable_self_stabilization else Identity(_inf=_inf.with_shape(cell_shape))
-    Sct = Stabilizer(_inf=_inf.with_shape(cell_shape)) if enable_self_stabilization else Identity(_inf=_inf.with_shape(cell_shape))
-    Sht = Stabilizer(_inf=_inf.with_shape(     shape)) if enable_self_stabilization else Identity(_inf=_inf.with_shape(     shape))
+    Sdh = Stabilizer() if enable_self_stabilization else identity
+    Sdc = Stabilizer() if enable_self_stabilization else identity
+    Sct = Stabilizer() if enable_self_stabilization else identity
+    Sht = Stabilizer() if enable_self_stabilization else identity
 
     def create_hc_placeholder():
-        return (Placeholder(_inf=_inf.with_shape(shape), name='hPh'), Placeholder(_inf=_inf.with_shape(cell_shape), name='cPh')) # (h, c)
+        return (Placeholder(name='hPh'), Placeholder(name='cPh')) # (h, c)
 
     # parameters to model function
-    x = Placeholder(_inf=_inf, name='lstm_block_arg')
+    x = Placeholder(name='lstm_block_arg')
     prev_state = create_hc_placeholder()
 
     # formula of model function

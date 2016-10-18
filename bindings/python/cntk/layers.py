@@ -18,7 +18,7 @@ from cntk.ops import parameter, input_variable, placeholder_variable, times, cro
 import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
-from cntk.blocks import *
+from cntk.blocks import *  # TODO: reduce to what we actually use
 from cntk.blocks import _extend_Function, _name_and_extend_Function, _wrap_rename_Function, _trace_layers  # (debugging)
 from cntk.initializer import glorot_uniform
 from _cntk_py import InferredDimension
@@ -40,10 +40,7 @@ from cntk.blocks import _default_initializer
 # inputRank given: number of zeroes to add to W (mapRank must not be given)
 # mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
 # none      given: expand W to all (same as mapRank=0)
-def Dense(shape, init=_default_initializer, activation=None, input_rank=None, map_rank=None, bias=True, init_bias=0):
-    if activation is None:  # TODO: change default to identity once we no longer need _inf
-        activation = Identity()
-
+def Dense(shape, init=_default_initializer, activation=identity, input_rank=None, map_rank=None, bias=True, init_bias=0):
     out_shape = _as_tuple(shape)
 
     if input_rank is not None:
@@ -67,6 +64,7 @@ def Dense(shape, init=_default_initializer, activation=None, input_rank=None, ma
     #    then Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap) + b
     #    else Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap)
 
+    # TODO: change InferredDimension to a tuple
     W = Parameter((InferredDimension,) + out_shape, init=init     , name='W')
     b = Parameter(                       out_shape, init=init_bias, name='b') if bias else None
     x = Placeholder(name='dense_arg')
@@ -109,24 +107,6 @@ def Embedding(shape, weights=None, init=_default_initializer, transpose=False):
     _name_and_extend_Function(apply_x, 'Embedding')
     return apply_x
 
-def Stabilizer(_inf, steepness=4):
-    UntestedBranchError("Stabilizer")
-    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
-    # this behaves linear for weights around 1, yet guarantees positiveness
-
-    # parameters
-    param = Parameter((1), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
-    # TODO: compute this strange value directly in Python
-
-    # application
-    #x = Placeholder(_inf=_inf, name='stabilizer_arg')
-    x = Placeholder(name='stabilizer_arg')
-    # TODO: risk of confusion; can these functions be namespaced?
-    beta = log (1 + exp (steepness * param)) / steepness
-    apply_x = beta * x
-    _name_and_extend_Function(apply_x, 'Stabilizer')
-    return apply_x
-
 def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
@@ -141,6 +121,7 @@ def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
         return past_value  (state, initial_state) if not go_backwards else \
                future_value(state, initial_state)
     x = Placeholder(_inf=_inf, name='recurrence_arg')
+    #x = Placeholder(name='recurrence_arg') # BUGBUG: Fails with "Variable with unknown dynamic axes detected when compiling the Function graph!"
     prev_state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
     f_x_h_c = over(x, prev_state_forward) # apply the recurrent over
     # this returns a Function (x, (h_prev, c_prev)) -> (h, c)
