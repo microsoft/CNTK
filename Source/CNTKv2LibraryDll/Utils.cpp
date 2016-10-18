@@ -6,78 +6,14 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Utils.h"
-#include <istream>
-#include <ostream>
+#include "Serialization.h"
 #include "Function.h"
 
 using namespace std;
 
 namespace CNTK
 {
-
-    // This wrapper redefines operator<< in terms of unformatted (binary) write operation.
-    struct BinaryOStreamWrapper
-    {
-        BinaryOStreamWrapper(ostream& s) : m_stream(s) {}
-
         template<typename T>
-        typename std::enable_if<std::is_pod<T>::value, BinaryOStreamWrapper&>::type
-        operator<<(const T& value)
-        { 
-            m_stream.write(reinterpret_cast<const char*>(&value), sizeof(T)); 
-            return *this ; 
-        }
-
-        BinaryOStreamWrapper& operator<<(const wstring& str)
-        { 
-            *this << str.length();
-            m_stream.write(reinterpret_cast<const char*>(str.c_str()), str.length() * sizeof(wchar_t)); 
-            return *this; 
-        }
-
-        operator ostream& () { return m_stream; }
-
-        ostream& m_stream;
-        BinaryOStreamWrapper(const BinaryOStreamWrapper&) = delete; BinaryOStreamWrapper(BinaryOStreamWrapper&&) = delete; BinaryOStreamWrapper& operator=(const BinaryOStreamWrapper&) = delete; BinaryOStreamWrapper& operator=(BinaryOStreamWrapper&&) = delete;
-    };
-
-    // This wrapper redefines operator>> in terms of unformatted (binary) read operation.
-    struct BinaryIStreamWrapper
-    {
-        BinaryIStreamWrapper(istream& s) : m_stream(s) {}
-
-        template<typename T>
-        typename std::enable_if<std::is_pod<T>::value, BinaryIStreamWrapper&>::type
-        operator>>(T& value)
-        { 
-            static_assert(sizeof(T) <= sizeof(size_t), "size_t is the largest supported type.");
-            m_stream.read(buf, sizeof(T)); 
-            value = *(reinterpret_cast<T*>(buf));
-            return *this ; 
-        }
-
-        BinaryIStreamWrapper& operator>>(wstring& str)
-        { 
-            size_t length;
-            *this >> length;
-            str.resize(length);
-            for (size_t i = 0; i < length; ++i)
-            {
-                m_stream.read(buf, sizeof(wchar_t)); 
-                str[i] = *(reinterpret_cast<wchar_t*>(buf));
-            }
-
-            return *this; 
-        }
-
-        operator istream& () const { return m_stream ;}
-
-        istream& m_stream;
-        char buf[sizeof(size_t)];
-        BinaryIStreamWrapper(const BinaryIStreamWrapper&) = delete; BinaryIStreamWrapper(BinaryIStreamWrapper&&) = delete; BinaryIStreamWrapper& operator=(const BinaryIStreamWrapper&) = delete; BinaryIStreamWrapper& operator=(BinaryIStreamWrapper&&) = delete;
-    };
-
-    template <typename T>
     T* CreateDataPtr(const T& value)
     {
         return new T(value);
@@ -114,44 +50,6 @@ namespace CNTK
         m_data.m_ptr = nullptr;
     }
 
-    template <typename ElementType> 
-    bool AreEqual(NDArrayView& view1, NDArrayView& view2)
-    {
-        if (view1.GetDataType() != view2.GetDataType() ||
-            view1.Shape() != view2.Shape())
-        {
-            return false;
-        }
-
-        ElementType* data1 = nullptr;
-        ElementType* data2 = nullptr;
-        if (view1.Device().Type() == DeviceKind::CPU)
-        {
-            data1 = view1.WritableDataBuffer<ElementType>();
-            data2 = view2.WritableDataBuffer<ElementType>();
-        }
-        else
-        {
-            NDArrayViewPtr temp1CpuDataView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), view1.Shape(), DeviceDescriptor::CPUDevice());
-            temp1CpuDataView->CopyFrom(view1);
-            data1 = temp1CpuDataView->WritableDataBuffer<ElementType>();
-
-            NDArrayViewPtr temp2CpuDataView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), view2.Shape(), DeviceDescriptor::CPUDevice());
-            temp2CpuDataView->CopyFrom(view2);
-            data2 = temp2CpuDataView->WritableDataBuffer<ElementType>();
-        }
-
-        size_t numElements = view1.Shape().TotalSize();
-
-        for (size_t i = 0; i < numElements; ++i)
-        {
-            if (data1[i] != data2[i])
-            {
-                return false;
-            }
-        }
-        return true;
-    }
 
     bool DictionaryValue::operator==(const DictionaryValue& other) const
     {
@@ -212,16 +110,8 @@ namespace CNTK
             NDArrayView* viewPtr1 = reinterpret_cast<NDArrayView*>(m_data.m_ptr);
             NDArrayView* viewPtr2 = reinterpret_cast<NDArrayView*>(other.m_data.m_ptr);
 
-            switch (viewPtr1->GetDataType())
-            {
-            case DataType::Float:
-                return AreEqual<float>(*viewPtr1, *viewPtr2);
-            case DataType::Double:
-                return AreEqual<double>(*viewPtr1, *viewPtr2);
-            default:
-                NOT_IMPLEMENTED;
+            return Internal::AreEqual(*viewPtr1, *viewPtr2);
             }
-        }
         default:
             NOT_IMPLEMENTED;
         }
@@ -233,258 +123,8 @@ namespace CNTK
     }
 
     
-    BinaryOStreamWrapper& operator<<(BinaryOStreamWrapper& stream, const NDShape& us)
-    {
-        auto size = us.Rank();
-        stream << size;
-        for (auto i = 0; i < size; i++)
-        {
-            stream << us[i];
-        }
-        return stream;
-    }
 
-    BinaryOStreamWrapper& operator<<(BinaryOStreamWrapper& stream, const Axis& us)
-    {
-        stream << us.StaticAxisIndex(false);
-        stream << us.Name();
-        stream << us.IsOrdered();
-
-        return stream;
-    }
-
-    template <typename T>
-    void Write(BinaryOStreamWrapper& stream, const NDArrayView& view)
-    {
-        assert(view.Device().Type() == DeviceKind::CPU);
-
-        auto numElements = view.Shape().TotalSize();
-        const T* buffer = view.DataBuffer<T>();
-        for (auto i = 0; i < numElements; ++i)
-        {
-            stream << buffer[i];
-        }
-    }
-
-    template <typename T>
-    void Read(BinaryIStreamWrapper& stream, NDArrayView& view)
-    {
-        assert(view.Device().Type() == DeviceKind::CPU);
         
-        auto numElements = view.Shape().TotalSize();
-        T* buffer = view.WritableDataBuffer<T>();
-        for (auto i = 0; i < numElements; ++i)
-        {
-            stream >> buffer[i];
-        }
-    }
-
-    istream& operator>>(istream& stdStream, DictionaryValue& us)
-    {
-        BinaryIStreamWrapper stream(stdStream);
-        size_t version;
-        stream >> version;
-        
-        unsigned int type;
-        stream >> type;
-        us.m_valueType = static_cast<DictionaryValue::Type>(type);
-
-        switch (us.ValueType())
-        {
-        case DictionaryValue::Type::Bool:
-            stream >> us.m_data.m_boolean;
-            break;
-        case DictionaryValue::Type::Int:
-            stream >> us.m_data.m_int;
-            break;
-        case DictionaryValue::Type::SizeT:
-            stream >> us.m_data.m_sizeT;
-            break;
-        case DictionaryValue::Type::Float:
-            stream >> us.m_data.m_float;
-            break;
-        case DictionaryValue::Type::Double:
-            stream >> us.m_data.m_double;
-            break;
-        case DictionaryValue::Type::String:
-        {
-            wstring* strPtr = new wstring();
-            stream >> *strPtr;
-            us.m_data.m_ptr = strPtr;
-            break;
-        }
-        case DictionaryValue::Type::NDShape:
-        {
-            size_t size;
-            stream >> size;
-            NDShape* shapePtr = new NDShape(size);
-            for (auto i = 0; i < size; i++)
-            {
-                stream >> shapePtr->operator[](i);
-            }
-            us.m_data.m_ptr = shapePtr;
-            break;
-        }
-        case DictionaryValue::Type::Axis:
-        {
-            int staticAxisIdx;
-            stream >> staticAxisIdx;
-
-            std::wstring axisName;
-            stream >> axisName;
-
-            bool isOrderedDynamicAxis;
-            stream >> isOrderedDynamicAxis;
-
-            Axis* axisPtr = nullptr;
-            if (Axis(staticAxisIdx).IsStaticAxis())
-                axisPtr = new Axis(staticAxisIdx);
-            else
-                axisPtr = new Axis(axisName, isOrderedDynamicAxis);
-
-            us.m_data.m_ptr = axisPtr;
-            break;
-        }
-        case DictionaryValue::Type::Vector:
-        {   
-            size_t size;
-            stream >> size;
-            vector<DictionaryValue>* vectorPtr = new vector<DictionaryValue>(size);
-            for (auto i = 0; i < size; i++)
-            {
-                stream >> vectorPtr->at(i);
-            }
-            us.m_data.m_ptr = vectorPtr;
-            break;
-        }
-        case DictionaryValue::Type::Dictionary:
-        {
-            Dictionary* dictPtr = new Dictionary();
-            stream >> *dictPtr;
-            us.m_data.m_ptr = dictPtr;
-            break;
-        }
-        case DictionaryValue::Type::NDArrayView:
-        {
-            unsigned int type;
-            stream >> type;
-            DataType dtype = static_cast<DataType>(type);
-
-            size_t size;
-            stream >> size;
-            NDShape shape(size);
-            for (auto i = 0; i < size; i++)
-            {
-                stream >> shape[i];
-            }
-
-            NDArrayView* viewPtr = new NDArrayView(dtype, shape, DeviceDescriptor::CPUDevice());
-            switch (dtype)
-            {
-            case DataType::Float:
-                Read<float>(stream, *viewPtr);
-                break;
-            case DataType::Double:
-                Read<double>(stream, *viewPtr);
-                break;
-            default:
-                LogicError("Unsupported DataType %s", DataTypeName(dtype));
-            }
-
-            us.m_data.m_ptr = viewPtr;
-            break;
-        }
-        default:
-            NOT_IMPLEMENTED;
-        }
-        return stream;
-    }
-
-    ostream& operator<<(ostream& stdStream, const DictionaryValue& us)
-    {
-        BinaryOStreamWrapper stream(stdStream);
-
-        stream << us.version;
-
-        stream << static_cast<unsigned int>(us.ValueType());
-
-        switch (us.ValueType())
-        {
-        case DictionaryValue::Type::Bool:
-            stream << us.m_data.m_boolean;
-            break;
-        case DictionaryValue::Type::Int:
-            stream << us.m_data.m_int;
-            break;
-        case DictionaryValue::Type::SizeT:
-            stream << us.m_data.m_sizeT;
-            break;
-        case DictionaryValue::Type::Float:
-            stream << us.m_data.m_float;
-            break;
-        case DictionaryValue::Type::Double:
-            stream << us.m_data.m_double;
-            break;
-        case DictionaryValue::Type::String:
-        {
-            wstring* stringPtr = reinterpret_cast<wstring*>(us.m_data.m_ptr);
-            stream << *stringPtr;
-            break;
-        }
-        case DictionaryValue::Type::NDShape:
-        {
-            NDShape* shapePtr = reinterpret_cast<NDShape*>(us.m_data.m_ptr);
-            stream << *shapePtr;
-            break;
-        }
-        case DictionaryValue::Type::Axis:
-        {
-            Axis* axisPtr = reinterpret_cast<Axis*>(us.m_data.m_ptr);
-            stream << *axisPtr;
-            break;
-        }
-        case DictionaryValue::Type::Vector:
-        {
-            vector<DictionaryValue>* vectorPtr =
-                reinterpret_cast<vector<DictionaryValue>*>(us.m_data.m_ptr);
-            auto size = vectorPtr->size();
-            stream << size;
-            for (auto i = 0; i < size; i++)
-            {
-                stream << vectorPtr->at(i);
-            }
-            break;
-        }
-        case DictionaryValue::Type::Dictionary:
-        {
-            Dictionary* dictPtr = reinterpret_cast<Dictionary*>(us.m_data.m_ptr);
-            stream << *dictPtr;
-            break;
-        }
-        case DictionaryValue::Type::NDArrayView:
-        {
-            NDArrayView* viewPtr = reinterpret_cast<NDArrayView*>(us.m_data.m_ptr);
-            stream << static_cast<unsigned int>(viewPtr->GetDataType());
-            stream << viewPtr->Shape();
-            switch (viewPtr->GetDataType())
-            {
-            case DataType::Float:
-                Write<float>(stream, *viewPtr);
-                break;
-            case DataType::Double:
-                Write<double>(stream, *viewPtr);
-                break;
-            default:
-                LogicError("Unsupported DataType %s", DataTypeName(viewPtr->GetDataType()));
-            }
-            break;
-        }
-        default:
-            NOT_IMPLEMENTED;
-        }
-        return stream;
-    }
-
     Dictionary::Dictionary()
         : m_dictionaryData(new unordered_map <wstring, DictionaryValue>)
     {
@@ -527,7 +167,7 @@ namespace CNTK
         return (*m_dictionaryData)[key];
     }
 
-    DictionaryValue Dictionary::operator[](const wchar_t* key) const
+    const DictionaryValue& Dictionary::operator[](const wchar_t* key) const
     {
         return m_dictionaryData->at(key);
     }
@@ -575,36 +215,6 @@ namespace CNTK
     bool Dictionary::operator!=(const Dictionary& other) const
     {
         return !(*this == other);    
-    }
-
-    ostream& operator<<(ostream& stdStream, const Dictionary& us)
-    {
-        BinaryOStreamWrapper stream(stdStream);
-        stream << us.version;
-        stream << us.m_dictionaryData->size();
-        for (const auto& kv : *(us.m_dictionaryData))
-        {
-            stream << kv.first;
-            stream << kv.second;
-        }
-        return stream;
-    }
-
-    istream& operator>>(istream& stdStream, Dictionary& us)
-    {
-        BinaryIStreamWrapper stream(stdStream);
-        size_t version;
-        stream >> version;
-        size_t size;
-        stream >> size;
-        us.m_dictionaryData->reserve(size);
-        for (auto i = 0; i < size; i++)
-        {
-            wstring key;
-            stream >> key;
-            stream >> us[key];
-        }
-        return stream;
     }
 
     std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, const PrimitiveOpType& opType)
@@ -656,14 +266,16 @@ namespace CNTK
         if (schedule.size() == 0)
             RuntimeError("TrainingParameterSchedule::ConstructSchedule : schedule is empty.");
 
-        size_t i = 0;
-        for (const auto& it : schedule)
+        size_t count = 0;
+        for (int i = 0; i < schedule.size(); ++i)
         {
-            if (it.first == 0)
+            const auto& pair = schedule[i];
+            // Unit count for all, but last element must be non-zero.
+            if (i < (schedule.size() - 1) && pair.first == 0)
                 RuntimeError("TrainingParameterSchedule::ConstructSchedule : unit count cannot be 0.");
 
-            i += it.first;
-            m_schedule[m_unit * i] = it.second;
+            count += pair.first;
+            m_schedule[m_unit * count] = pair.second;
         }
     }
 
@@ -706,6 +318,47 @@ namespace CNTK
         m_schedule = move(that.m_schedule);
         m_unit = that.m_unit;
         return *this;
+    }
+
+    static const std::wstring s_trainingParameterScheduleTypeValue = L"TrainingParameterSchedule";
+
+    template <typename T>
+    /*virtual*/ Dictionary TrainingParameterSchedule<T>::Serialize() const
+    {
+        Dictionary schedule;
+        for (const auto& it : m_schedule)
+        {
+            schedule[std::to_wstring(it.first)] = DictionaryValue(it.second);
+        }
+        Dictionary dict;
+        dict[versionKey] = CurrentVersion();
+        dict[typeKey] = s_trainingParameterScheduleTypeValue;
+        dict[unitKey] = m_unit;
+        dict[scheduleKey] = schedule;
+        return dict;
+    }
+
+     template <typename T>
+    /*static*/ TrainingParameterSchedule<T>  TrainingParameterSchedule<T>::Deserialize(const Dictionary& dict)
+    {
+        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, unitKey, scheduleKey };
+
+        ValidateDictionary<TrainingParameterSchedule<T>>(dict, s_requiredDictionaryKeys, s_trainingParameterScheduleTypeValue, s_serializationVersion);
+
+        return TrainingParameterSchedule<T>(dict);
+    }
+
+    template <typename T>
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(const Dictionary& dictionary)
+    {
+        m_unit = dictionary[unitKey].Value<size_t>();
+        Dictionary schedule = dictionary[scheduleKey].Value<Dictionary>();
+        vector<std::wstring> keys = schedule.Keys();
+        std::map<size_t, T> map;
+        for (const auto& key : keys)
+        {
+            m_schedule[std::stoll(key)] = schedule[key].Value<T>();
+        }
     }
 
     void MomentumValuesAsTimeConstants::ConvertToPerSampleValues()

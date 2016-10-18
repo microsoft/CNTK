@@ -42,7 +42,7 @@ def test_learner_init():
 
     learner_parameter = learner.parameters
     from ..ops.variables import Parameter
-    param = learner_parameter.pop()
+    param = learner_parameter[0]
     assert isinstance(param, Parameter)
 
     momentum_time_constant = 1100
