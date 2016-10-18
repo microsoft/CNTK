@@ -8,10 +8,10 @@ import numbers
 import collections
 import numpy as np
 import scipy.sparse
-from cntk import cntk_py
+from .. import cntk_py
 from cntk.device import cpu, gpu, use_default_device
-from .persist import load_model, save_model
 from .swig_helper import typemap
+from ..axis import Axis
 
 
 def sanitize_precision(precision):
@@ -25,9 +25,9 @@ def sanitize_precision(precision):
     Returns:
         NumPy precision
     '''
-    if precision in ['float', 'float32', np.float32]:
+    if precision in [cntk_py.DataType_Float, 'float', 'float32', np.float32]:
         return np.float32
-    elif precision in ['double', 'float64', np.float64]:
+    elif precision in [cntk_py.DataType_Double, 'double', 'float64', np.float64]:
         return np.float64
     else:
         raise ValueError('precision value: "%s" is not supported' % precision)
@@ -168,7 +168,7 @@ def get_temp_filename(directory=None):
         be created
 
     Returns:
-        Filename of the temporary file 
+        Filename of the temporary file
     '''
     import tempfile
 
@@ -192,35 +192,39 @@ def sanitize_shape(shape):
     return tuple(reversed(shape))
 
 
-def sanitize_input(arg, fallback_dtype=np.float32):
+def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """
-    Convert to Variable or Constant so that it can be passed as Variable to the
+    Convert to Variable so that it can be passed as Variable to the
     CNTK operators.
      * If `arg` is a NumPy array and its type is neither `np.float32` nor
-    `np.float64`, it sets it to `np.float32`. 
+      `np.float64`, it sets it to `np.float32`.
      * If `arg` is an op, it is assumed that it has only one output, which will
-       be returned.
+      be returned.
 
     Args:
-        arg (number, NumPy array, `Variable`, or `Function`): input
-        fallback_dtype (numpy dtype): fallback dtype in case `arg` is a list
+        arg (number, NumPy array, :cntk:`cntk.ops.variables.Variable`, or
+         :class:`cntk.ops.functions.Function`): input
+        fallback_dtype (NumPy dtype): fallback dtype in case `arg` is a list
 
     Returns:
-        Constant, if `arg` was a number or NumPy array. Variable otherwise.
+      Leave Constant, Parameter, and Variable as is. Return Constant, if
+      `arg` was a number or NumPy array. Variable otherwise.
     """
 
-    from cntk.ops.variables import Constant, Variable
+    from cntk.ops.variables import Constant, Variable, Parameter
     from cntk.ops import constant
 
     # is it a Variable?
     if isinstance(arg,
-                  (Constant, Variable, cntk_py.Constant, cntk_py.Variable)):
+                  (Constant, cntk_py.Constant,
+                   Variable, cntk_py.Variable,
+                   Parameter, cntk_py.Parameter)):
         return arg
 
     # or a Function?
     if isinstance(arg, cntk_py.Function):
         try:
-            return arg.output()
+            return arg.output
         except RuntimeError:
             raise ValueError(
                 'the argument has more than one output, please provide the one you want')
@@ -231,6 +235,8 @@ def sanitize_input(arg, fallback_dtype=np.float32):
 
     if not isinstance(arg, np.ndarray):
         arg = np.asarray(arg, dtype=fallback_dtype)
+    if reshape:
+        arg = np.reshape(arg, reshape)
 
     return constant(value=arg)
 
@@ -264,7 +270,7 @@ def get_data_type(*args):
                     'NumPy type "%s" is not supported' % arg.dtype)
             dtypes.add(arg.dtype.type)
         elif isinstance(arg, cntk_py.Function):
-            var_outputs = arg.outputs()
+            var_outputs = arg.outputs
             if len(var_outputs) > 1:
                 raise ValueError(
                     'expected single output, but got %i' % len(var_outputs))
@@ -357,7 +363,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
             raise ValueError('only float32 and float64 are supported')
     elif isinstance(batch, list):
         if is_tensor_list(batch):
-            use_mask =  len(var.dynamic_axes()) > 1
+            use_mask =  len(var.dynamic_axes) > 1
 
     if device is None:
         device = cntk_py.DeviceDescriptor.use_default_device()
@@ -367,7 +373,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
                 ' make sense when not using the sequence axis')
 
     # Use the mask, if we have additional dynamic axes besides the batch axis
-    
+
     if use_mask:
         seq_lens = [len(seq) for seq in batch]
 
@@ -417,13 +423,47 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
 
     return value
 
+def sanitize_value(shape, value, dtype, device):
+    '''
+    Converts a given `value` to a :class:`NDArrayView` object that can be passed to
+    the CNTK core.
+
+    Args:
+        shape (`tuple`): shape of the value
+        value (`None` or value that can be cast to NumPy array): the value to
+         be converted
+        dtype: data type (`np.float32` or `np.float64`)
+        device (:clas:`cntk.DeviceDescriptor`): device this value should be put
+         on
+
+    Returns:
+        :class:`NDArrayView` object representing `value`
+    '''
+    np_dtype = sanitize_dtype_numpy(dtype)
+    cntk_dtype = sanitize_dtype_cntk(dtype)
+
+    if value is None:
+        if shape is None:
+            raise ValueError('you need to specify at least shape or value')
+        ndav = create_NDArrayView(shape, cntk_dtype, device)
+    else:
+        if not isinstance(value, np.ndarray) or value.dtype != np_dtype:
+            if np.isscalar(value) and shape:
+                value = np.full(shape, value, dtype=np_dtype)
+            else:
+                value = np.asarray(value, dtype=np_dtype)
+
+        ndav = create_NDArrayView_from_NumPy(value, device)
+
+    return ndav
+
 
 def sanitize_function(arg):
     '''
     Tries to retrieve a Function from the argument or throws an exception if
     that's not possible.
     '''
-    
+
     if isinstance(arg, cntk_py.Variable):
         arg = arg.owner
 
@@ -441,12 +481,12 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
     Args:
         op_arguments (:class:`cntk.ops.functions.Function`): arguments of the root function. In
-         forward pass it is typically `op.arguments()`, in backward mode it is
-         `op.outputs()`
+         forward pass it is typically `op.arguments`, in backward mode it is
+         `op.outputs`
         arguments (`dict` or `list` or `tuple`): maps variables to their
          input data. The interpretation depends on the input type:
-           * `dict`: keys are input variable or names and values are the input data. 
-           * `list`: elements are input data in the order their respective variables have been defined in the network. 
+           * `dict`: keys are input variable or names and values are the input data.
+           * `list`: elements are input data in the order their respective variables have been defined in the network.
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
          previous sequence, specify `arguments` as `tuple`: the
@@ -456,7 +496,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          Data should be either NumPy arrays or a
          :class:`cntk.io.MinibatchData` instance.
         precision (`str` or `np.float32` or `np.float64`): if string it can be
-         one of 'float' 'float32, 'double', 'float64', or `None` 
+         one of 'float' 'float32, 'double', 'float64', or `None`
         device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
 
     Returns:
@@ -465,7 +505,12 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     from ..cntk_py import Value
     from ..io import MinibatchData
 
-    if arguments is None or isinstance(arguments, (dict, list, tuple)) and len(arguments) == 0:
+    if isinstance(arguments, tuple):
+        arguments, seq_starts = arguments
+    else:
+        seq_starts = None
+
+    if arguments is None or isinstance(arguments, (dict, list)) and len(arguments) == 0:
         if len(op_arguments) > 0:
             raise ValueError('function expects %i arguments' %
                              len(op_arguments))
@@ -473,21 +518,16 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
     if len(arguments) < len(op_arguments):
         raise ValueError('your graph has %i inputs, but you specified %i' %
-                         (len(op_arguments), len(arguments)))
-
-    if isinstance(arguments, tuple):
-        arguments, seq_starts = arguments
-    else:
-        seq_starts = None
+                        (len(op_arguments), len(arguments)))
 
     if isinstance(arguments, list):
         arguments = dict(zip(op_arguments, arguments))
 
     if isinstance(arguments, dict):
-        arg_names = [var.name() for var in op_arguments]
+        arg_names = [var.name for var in op_arguments]
         name_counter = collections.Counter(arg_names)
 
-        var_name_map = dict((var.name(), var) for var in op_arguments)
+        var_name_map = dict((var.name, var) for var in op_arguments)
     else:
         raise ValueError('type "%s" is not supported' % type(arguments))
 
@@ -525,8 +565,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                     var, ", ".join(var_name_map.keys())))
 
         if isinstance(batch, MinibatchData):
-            batch = batch.data()
-        elif not isinstance(batch, Value):                
+            batch = batch.m_data
+        elif not isinstance(batch, Value):
             batch = sanitize_batch(
                 var, batch, seq_starts, precision, device)
 
@@ -610,11 +650,11 @@ def sanitize_axis(axis):
           * `None`: denote all available axes
     '''
     if axis is None:
-        return cntk_py.Axis.all_static_axes()
+        return Axis.all_static_axes()
     elif isinstance(axis, numbers.Integral):
-        return cntk_py.Axis(-axis - 1)
-    elif axis.is_static_axis():
-        return cntk_py.Axis(-1 - axis.static_axis_index())
+        return Axis(-axis - 1)
+    elif axis.is_static_axis:
+        return Axis(-1 - axis.static_axis_index())
     else:
         return axis
 
@@ -633,12 +673,12 @@ def get_train_loss(trainer):
     Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
         trainer (:class:`Trainer`): the trainer used.
-    Returns: 
+    Returns:
         the loss value
     '''
     import copy
     # we copy the value so swig does not destroy it when we leave the scope
-    return copy.copy(trainer.previous_minibatch_loss_average())
+    return copy.copy(trainer.previous_minibatch_loss_average)
 
 
 def get_train_eval_criterion(trainer):
@@ -646,12 +686,12 @@ def get_train_eval_criterion(trainer):
     Fetch the train evaluation criterion (e.g., classification error) from the last minibatch and copy it to the CPU in case it is on the GPU.
     Args:
         trainer (:class:`Trainer`): the trainer used.
-    Returns: 
+    Returns:
         the criterion value
     '''
     import copy
     # we copy the value so swig does not destroy it when we leave the scope
-    return copy.copy(trainer.previous_minibatch_evaluation_average())
+    return copy.copy(trainer.previous_minibatch_evaluation_average)
 
 
 def ensure_dev(ndav, dev):
@@ -690,14 +730,14 @@ def value_to_seq(value):
 def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
     '''
     It evaluates `op` on the data provided by the reader. This is useful
-    mainly to explore the operators and for convenient unit testing. 
+    mainly to explore the operators and for convenient unit testing.
 
     Args:
         op (:class:`Function`): operation to evaluate
         arguments (`dict` or `list` or `tuple`): maps variables to their
          input data. The interpretation depends on the input type:
-           * `dict`: keys are input variable or names and values are the input data. 
-           * `list`: elements are input data in the order their respective variables have been defined in the network. 
+           * `dict`: keys are input variable or names, and values are the input data.
+           * `list`: elements are input data in the order their respective variables have been defined in the network.
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
          previous sequence, specify `arguments` as `tuple`: the
@@ -715,13 +755,13 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
          (costly)
         device (:class:`cntk.DeviceDescriptor`): the device the descriptor,
          whether it is CPU or GPU (and which one)
-        backward_pass (`bool`, optional): whether a backward pass is performed 
+        backward_pass (`bool`, optional): whether a backward pass is performed
 
-    Returns: 
+    Returns:
         mapping of output variables to their values.
     '''
 
-    state, forward_output = op.forward(arguments, op.outputs(), op.outputs(), device=device)
+    state, forward_output = op.forward(arguments, op.outputs, op.outputs, device=device)
 
     if backward_pass:
         root_gradients = {v: ones_like(o, precision) for v, o in
@@ -733,3 +773,28 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
 
     else:
         return forward_output, None
+
+# helper to convert a dictionary into a Python class, so that the dict looks like an immutable record
+# TODO: move to utils?
+class _ClassFromDict(dict):
+    def __init__(self, args_dict):
+        super(_ClassFromDict, self).__init__(args_dict)
+        # TODO: try to delete __setattr__ to make it immutable
+        for key in args_dict:   # self.__dict__.update(args_dict)
+            self[key] = args_dict[key]
+    def __getattr__(self, k):
+        return self.get(k)
+    # can use __slot__ to hide __setattr__(), and cannot be extended
+    # cf. https://pypi.python.org/pypi/frozendict/0.4
+
+
+# easier construction of records
+# e.g. r = Record(x = 13, y = 42) ; x = r.x
+def Record(**kwargs):
+    return _ClassFromDict(kwargs)
+
+
+# type-cast a shape given as a scalar into a tuple
+def _as_tuple(x):
+    return x if (isinstance(x,tuple)) else (x,)
+

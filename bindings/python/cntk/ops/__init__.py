@@ -31,7 +31,7 @@ def combine(operands, name=''):
     converted_operands = list()
     for o in operands:
         if isinstance(o, Function):
-            converted_operands.append(o.output())
+            converted_operands.append(o.output)
         else:
             converted_operands.append(o)
 
@@ -41,10 +41,10 @@ def combine(operands, name=''):
 def alias(x, name=''):
     '''
      Create a new Function instance which just aliases the specified 'x' Function/Variable
-     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified 
+     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified
      'x' Function/Variable, and has the newly specified name.
      The purpose of this operator is to create a new distinct reference to a symbolic
-     computation which is different from the original Function/Variable that it aliases and can 
+     computation which is different from the original Function/Variable that it aliases and can
      be used for e.g. to substitute a specific instance of the aliased Function/Variable in the
      computation graph instead of substituting all usages of the aliased Function/Variable.
 
@@ -84,8 +84,11 @@ def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
 
     Args:
         output_vector: the unscaled computed output values from the network
-        target_vector: usually it is one-hot vector where the hot bit corresponds to the label index.
-        But it can be any probability distribution over the labels.
+        target_vector: usually it is one-hot vector where the hot bit
+         corresponds to the label index. But it can be any probability
+         distribution over the labels. 
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the cross
+         entropy will be computed.
         name (`str`, optional): the name of the Function instance in the network
     Returns:
         :class:`cntk.ops.functions.Function`
@@ -152,7 +155,10 @@ def classification_error(output_vector, target_vector, axis=-1, topN=1, name='')
 
     Args:
         output_vector: the output values from the network
-        target_vector: it is one-hot vector where the hot bit corresponds to the label index
+        target_vector: it is one-hot vector where the hot bit corresponds to
+         the label index.
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the
+         classification error will be computed.
         name (`str`, optional): the name of the Function instance in the network
     Returns:
         :class:`cntk.ops.functions.Function`
@@ -514,7 +520,7 @@ def minus(left, right, name=''):
 def element_times(left, right, name=''):
     '''
     The output of this operation is the element-wise product of the two input
-    tensors. It supports broadcasting. 
+    tensors. It supports broadcasting.
 
     Example:
         >>> C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
@@ -541,7 +547,7 @@ def element_times(left, right, name=''):
 def element_divide(left, right, name=''):
     '''
     The output of this operation is the element-wise division of the two input
-    tensors. It supports broadcasting. 
+    tensors. It supports broadcasting.
 
     Example:
         >>> C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
@@ -611,6 +617,104 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
     return times(right, left, output_rank, infer_input_rank_to_map, name)
+
+@typemap
+def times_transpose(left, right, name=''):
+    '''
+    The output of this operation is the product of the first (`left`) argument with the second (`right`) argument transposed.
+    The second (`right`) argument must have a rank of 1 or 2.
+    This operation is conceptually computing ``np.dot(left, right.T)`` except when `right` is a vector
+    in which case the output is ``np.dot(left,np.reshape(right,(1,-1)).T)`` (matching numpy when `left` is a vector).
+
+    Example:
+        >>> a=np.array([[1,2],[3,4]],dtype=np.float32)
+        >>> b=np.array([2,-1],dtype=np.float32)
+        >>> c=np.array([[2,-1]],dtype=np.float32)
+        >>> d=np.reshape(np.arange(24,dtype=np.float32),(4,3,2))
+        >>> print(C.times_transpose(a, a).eval())
+        [[  5.  11.]
+         [ 11.  25.]]
+        >>> print(C.times_transpose(a, b).eval())
+        [[ 0.]
+         [ 2.]]
+        >>> print(C.times_transpose(a, c).eval())
+        [[ 0.]
+         [ 2.]]
+        >>> print(C.times_transpose(b, a).eval())
+        [ 0.  2.]
+        >>> print(C.times_transpose(b, b).eval())
+        [ 5.]
+        >>> print(C.times_transpose(b, c).eval())
+        [ 5.]
+        >>> print(C.times_transpose(c, a).eval())
+        [[ 0.  2.]]
+        >>> print(C.times_transpose(c, b).eval())
+        [[ 5.]]
+        >>> print(C.times_transpose(c, c).eval())
+        [[ 5.]]
+        >>> print(C.times_transpose(d, a).eval())
+        [[[   2.    4.]
+          [   8.   18.]
+          [  14.   32.]]
+        <BLANKLINE>
+         [[  20.   46.]
+          [  26.   60.]
+          [  32.   74.]]
+        <BLANKLINE>
+         [[  38.   88.]
+          [  44.  102.]
+          [  50.  116.]]
+        <BLANKLINE>
+         [[  56.  130.]
+          [  62.  144.]
+          [  68.  158.]]]
+        >>> print(C.times_transpose(d, b).eval())
+        [[[ -1.]
+          [  1.]
+          [  3.]]
+        <BLANKLINE>
+         [[  5.]
+          [  7.]
+          [  9.]]
+        <BLANKLINE>
+         [[ 11.]
+          [ 13.]
+          [ 15.]]
+        <BLANKLINE>
+         [[ 17.]
+          [ 19.]
+          [ 21.]]]
+        >>> print(C.times_transpose(d, c).eval())
+        [[[ -1.]
+          [  1.]
+          [  3.]]
+        <BLANKLINE>
+         [[  5.]
+          [  7.]
+          [  9.]]
+        <BLANKLINE>
+         [[ 11.]
+          [ 13.]
+          [ 15.]]
+        <BLANKLINE>
+         [[ 17.]
+          [ 19.]
+          [ 21.]]]
+
+    Args:
+        left: left side tensor
+        right: right side matrix or vector
+        name (`str`, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import times_transpose
+    dtype = get_data_type(left, right)
+    left = sanitize_input(left, dtype)
+    rshape = sanitize_shape(right.shape)
+    right = sanitize_input(right, dtype, (1,rshape[0]) if len(rshape) == 1 else None)
+    return times_transpose(right, left, 1, name)
 
 ##########################################################################
 # non_diff ops
@@ -1054,8 +1158,6 @@ def element_select(flag, value_if_true, value_if_false, name=''):
 # recurrent ops
 ##########################################################################
 
-# TODO: add default value for initial_state. It should be a constant scalar
-# (0.0), using the default device
 
 @typemap
 def future_value(x, initial_state=None, time_step=1, name=''):
@@ -1068,7 +1170,26 @@ def future_value(x, initial_state=None, time_step=1, name=''):
     value is returned.
 
     Example:
-        TBA
+        >>> x = C.input_variable(shape=(3,2))
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> y = C.future_value(x)
+        >>> y.eval({x:x0})
+        array([[[[  6.,   7.],
+                 [  8.,   9.],
+                 [ 10.,  11.]],
+        <BLANKLINE>
+                [[ 12.,  13.],
+                 [ 14.,  15.],
+                 [ 16.,  17.]],
+        <BLANKLINE>
+                [[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]],
+        <BLANKLINE>
+                [[  0.,   0.],
+                 [  0.,   0.],
+                 [  0.,   0.]]]], dtype=float32)
+
     Args:
         x: the tensor (or its name) from which the future value is obtained.
         initial_state: tensor or scalar representing the initial value to be
@@ -1101,13 +1222,33 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     value is returned.
 
     Example:
-        TBA
+        >>> x = C.input_variable(shape=(3,2))
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> y = C.past_value(x)
+        >>> y.eval({x:x0})
+        array([[[[  0.,   0.],
+                 [  0.,   0.],
+                 [  0.,   0.]],
+        <BLANKLINE>
+                [[  0.,   1.],
+                 [  2.,   3.],
+                 [  4.,   5.]],
+        <BLANKLINE>
+                [[  6.,   7.],
+                 [  8.,   9.],
+                 [ 10.,  11.]],
+        <BLANKLINE>
+                [[ 12.,  13.],
+                 [ 14.,  15.],
+                 [ 16.,  17.]]]], dtype=float32)
+
     Args:
         x: the tensor (or its name) from which the past value is obtained
         initial_state: tensor or scalar representing the initial value to be
         used when the input tensor is shifted in time.
         time_step (`int`): the number of time steps to look into the past (default 1)
         name (`str`, optional): the name of the Function instance in the network
+
     Returns:
         :class:`cntk.ops.functions.Function`
     '''
@@ -1165,7 +1306,7 @@ def reshape(x, shape, name=''):
 @typemap
 def transpose(x, axis1=0, axis2=1, name=''):
     '''
-    Reverses two axes of the tensor. The output tensor has the same data but with
+    Swaps two axes of the tensor. The output tensor has the same data but with
     `axis1` and `axis2` swapped.
 
     Examples:
@@ -1175,8 +1316,8 @@ def transpose(x, axis1=0, axis2=1, name=''):
 
     Args:
         x: tensor to be transposed
-        axis1 (`int` or :class:`cntk.Axis`): the axis to swap with `axis2`
-        axis2 (`int` or :class:`cntk.Axis`): the axis to swap with `axis1`
+        axis1 (`int` or :class:`cntk.axis.Axis`): the axis to swap with `axis2`
+        axis2 (`int` or :class:`cntk.axis.Axis`): the axis to swap with `axis1`
         name (`str`, optional): the name of the Function instance in the network
     Returns:
         :class:`cntk.ops.functions.Function`
@@ -1229,7 +1370,7 @@ def slice(x, axis, begin_index, end_index, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which `begin_index` and `end_index`
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which `begin_index` and `end_index`
          will be used. If it is of type `int` it will be used as a static axis.
         begin_index (`int`): the index along axis where the slicing starts
         end_index (`int`): the index along axis where the slicing ends
@@ -1275,7 +1416,8 @@ def splice(inputs, axis=-1, name=''):
 
     Args:
         inputs (`list`): tuple of input tensors
-        axis (:class:`cntk.Axis`): axis along which the concatenation will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the
+         concatenation will be performed
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
@@ -1286,7 +1428,6 @@ def splice(inputs, axis=-1, name=''):
         raise ValueError('inputs has to be an iterable')
 
     inputs = [sanitize_input(x) for x in inputs]
-
     axis = sanitize_axis(axis)
 
     return splice(inputs, axis, name)
@@ -1334,7 +1475,7 @@ def reduce_sum(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
@@ -1349,14 +1490,21 @@ def reduce_sum(x, axis=None, name=''):
 @typemap
 def reduce_log_sum(x, axis=None, name=''):
     '''
-    Computes the log sum of the input tensor's elements across the specified axis.
+    Computes the log of the sum of the exponentiations of the input tensor's
+    elements across the specified axis.
 
     Examples:
-        TBA
+        >>> x = C.input_variable(shape=(3,2))
+        >>> x0 = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
+        >>> lse = C.reduce_log_sum(x)
+        >>> lse.eval({x:x0})
+        array([[ 5.456193]], dtype=float32)
+        >>> np.log(np.sum(np.exp(x0)))
+        5.4561934
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
         name (`str`): the name of the Function instance in the network
 
     Returns:
@@ -1387,7 +1535,7 @@ def reduce_mean(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
@@ -1418,7 +1566,7 @@ def reduce_max(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
         name (`str`): the name of the Function instance in the network
 
     Returns:
@@ -1449,7 +1597,7 @@ def reduce_min(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.Axis`): axis along which the reduction will be performed
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
         name (`str`): the name of the Function instance in the network
 
     Returns:
@@ -1508,9 +1656,8 @@ def dropout(x, dropout_rate=0.0, name=''):
 # variables_and_parameters ops
 ##########################################################################
 
-from cntk.cntk_py import Axis
 from cntk.device import use_default_device
-# TODO: expose output_variable as well ?
+from cntk.axis import Axis
 
 # TODO: if we end up using only factory methods, we should get rid of the
 # class Variable in variables.py
@@ -1531,7 +1678,7 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`cntk.ops.variables.Variable`
     '''
     from cntk.cntk_py import input_variable
     from ..utils import sanitize_shape, sanitize_dtype_cntk
@@ -1586,7 +1733,7 @@ def parameter(shape=None, init=None, device=None, name=''):
         init (scalar or NumPy array or initializer): if init is a scalar
          it will be replicated for every element in the tensor or
          NumPy array. If it is the output of an initializer form
-         `:module:cntk.initializer` it will be used to initialize the tensor at
+         :module:`cntk.initializer` it will be used to initialize the tensor at
          the first forward pass. If `None`, the tensor will be initialized
          with 0.
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
@@ -1613,23 +1760,23 @@ def parameter(shape=None, init=None, device=None, name=''):
 
 
 @typemap
-def constant(shape=None, value=None, device=None, name=''):
+def constant(value=None, shape=None, device=None, name=''):
     '''
     It creates a constant tensor initialized from a numpy array
 
     Examples
-        >>> constant_data = C.constant(value=[[1., 2.], [3., 4.], [5., 6.]])
-        >>> np.asarray(constant_data) # doctest: +SKIP
+        >>> constant_data = C.constant([[1., 2.], [3., 4.], [5., 6.]])
+        >>> constant_data.value
         array([[ 1.,  2.],
                [ 3.,  4.],
                [ 5.,  6.]], dtype=float32)
 
     Args:
-        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
-         be inferred from ``value``.
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated for
          every element in the tensor or NumPy array.
          If ``None``, the tensor will be initialized uniformly random.
+        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
+         be inferred from ``value``.
         device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the Function instance in the network
     Returns:
@@ -1647,7 +1794,7 @@ def constant(shape=None, value=None, device=None, name=''):
     else:
         data_type = None
 
-    return Constant(shape, value, data_type, device, name)
+    return Constant(value, shape, data_type, device, name)
 
 ##########################################################################
 # normalization ops

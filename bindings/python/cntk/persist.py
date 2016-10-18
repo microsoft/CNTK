@@ -4,7 +4,7 @@
 # ==============================================================================
 
 from cntk import cntk_py
-from .swig_helper import typemap
+from .utils.swig_helper import typemap
 from cntk.device import use_default_device
 
 def save_model(root_op, filename):

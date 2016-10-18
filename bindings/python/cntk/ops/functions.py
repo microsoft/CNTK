@@ -4,13 +4,32 @@ from enum import Enum, unique
 
 @unique
 class CloneMethod(Enum):
+    '''
+    Describes different ways how :class:`cntk.ops.functions.Function.forward`
+    works.
+    '''
+
     clone = 1
+    '''
+    New learnable Parameters are created and initialied with the current values of the
+    corresponding Parameters of the Function being cloned
+    '''
+
     share = 2
-    freeze =3
+    '''
+    Parameters are shared between the Function being cloned and the new clone
+    '''
+
+    freeze = 3
+    '''
+    Parameters are cloned and made immutable; i.e. Constants in the new clone
+    (e.g. for use as a fixed feature extractor)
+    '''
+
 
 class Function(cntk_py.Function):
     '''
-    Base class of all operators.
+    Base class of all primitive tensor operators.
 
     If it has only one output, one can invoke Variable methods on it, which it
     will relay to its only output.
@@ -20,67 +39,61 @@ class Function(cntk_py.Function):
         if name in self.__dict__:
             return self.__dict__[name]
 
-        if len(self.outputs()) == 1:
-            return getattr(self.output(), name)
+        if len(self.outputs) == 1:
+            return getattr(self.output, name)
 
         raise AttributeError("'%s' object has no attribute '%s'" %
                              (type(self), name))
 
+    @property
     @typemap
     def arguments(self):
         '''
-        Returns a list of all input variables of the Function that are not of type Parameter or Constant
-
-        Returns:
-            `list`: list of input variables
+        List of all input variables of the Function that are not of type Parameter or Constant
         '''
         return super(Function, self).arguments()
 
+    @property
     @typemap
     def attributes(self):
         '''
-        Get the attributes of the function
-
-        Returns:
-            `dict`: dictionary of string, value pairs
+        List of the attributes of the function
         '''
         return super(Function, self).attributes()
 
     @typemap
-    def clone(self, method=CloneMethod.freeze, replacements=None):
+    def clone(self, method=CloneMethod.freeze, substitutions=None):
         '''
         Clones the function. The parameters of the Function are either cloned,
         shared or frozen as specified by the method argument and any variable
-        replacements requested are applied in the cloned Function instance.
+        substitutions requested are applied in the cloned Function instance.
 
         Args:
-            method (:class:`cntk.ops.function.CloneMethod`): one of
+            method (:class:`cntk.ops.functions.CloneMethod`): one of
              * 'clone': the returned function gets its own copy of parameters (default)
              * 'share': the returned function shares its parameters with this function
              * 'freeze': parameters are cloned and made immutable (constant).
-            replacements (`dict`): a dictionary mapping variables in this
-             function to variables in the cloned function 
+            substitutions (`dict`): a dictionary mapping variables in this
+             function to variables in the cloned function
 
         Returns:
-            `Function`: the cloned Function
+            :class:`Function`: the cloned Function
         '''
         if not isinstance(method, CloneMethod):
             raise ValueError('clone method "%s" is not supported' %
                     str(method))
 
-        method = getattr(cntk_py, 
+        method = getattr(cntk_py,
                 'ParameterCloningMethod_' + method.name.capitalize())
-        if replacements is None:
-            replacements = dict()
-        return super(Function, self).clone(method, replacements)
+        if substitutions is None:
+            substitutions = {}
+        return super(Function, self).clone(method, substitutions)
 
+    @property
     @typemap
     def constants(self):
         '''
-        Returns a list of all `Constant` variables of this `Function`
-
-        Returns:
-            `list`: all `Constant` variables of this `Function`
+        List of all `Constant` variables of this :class:`Function`
         '''
         return super(Function, self).constants()
 
@@ -91,8 +104,8 @@ class Function(cntk_py.Function):
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
-               * `dict`: keys are input variable or names and values are the input data. 
-               * `list`: elements are input data in the order their respective variables have been defined in the network. 
+               * `dict`: keys are input variable or names, and values are the input data.
+               * `list`: elements are input data in the order their respective variables have been defined in the network.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify `arguments` as `tuple`: the
@@ -108,7 +121,7 @@ class Function(cntk_py.Function):
         Returns:
             `bool`: `True` if updates have been performed
         '''
-        _, output_map = self.forward(arguments or {}, self.outputs(), device=device)
+        _, output_map = self.forward(arguments or {}, self.outputs, device=device)
 
         if len(output_map) > 1:
             return output_map
@@ -118,15 +131,15 @@ class Function(cntk_py.Function):
     @typemap
     def forward(self, arguments, outputs, keep_for_backward=None, device=None):
         '''
-        Computes and stores the values of speficied variables in `outputs`,
-        using provided `arguments` values corresponding to each leaf `Variable`
-        of the function whose is_input() is true. 
+        Computes the values of speficied variables in `outputs`, using values
+        provided in `arguments` that correspond to each input `Variable` of
+        the function whose `is_input` is `True`.
 
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
-               * `dict`: keys are input variable or names and values are the input data. 
-               * `list`: elements are input data in the order their respective variables have been defined in the network. 
+               * `dict`: keys are input variable or names, and values are the input data.
+               * `list`: elements are input data in the order their respective variables have been defined in the network.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify `arguments` as `tuple`: the
@@ -146,7 +159,7 @@ class Function(cntk_py.Function):
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
 
-        Returns: 
+        Returns:
              A tuple (`BackpropState`, `map` of outputs to NumPy arrays). The
              BackpropState is a handle taken by :func:`backward`.
         '''
@@ -154,7 +167,7 @@ class Function(cntk_py.Function):
             from cntk import DeviceDescriptor
             device = DeviceDescriptor.use_default_device()
 
-        in_var_map = sanitize_var_map(self.arguments(), arguments,
+        in_var_map = sanitize_var_map(self.arguments, arguments,
                                       None, device)
         output_map = {v: None for v in outputs}
         keep_for_backward = set(keep_for_backward or {})
@@ -177,7 +190,7 @@ class Function(cntk_py.Function):
         Args:
             state (`BackPropState`): state obtained from a previous call to the
              func:`cntk.ops.Function.forward` method on this Function for the
-             computation that this gradient backpropagation corresponds to. 
+             computation that this gradient backpropagation corresponds to.
             root_gradients (`dict`): the gradients that will be backpropagated
             variables (`set`): a list of input variables with respect to which
              the gradients have to be computed.
@@ -185,7 +198,7 @@ class Function(cntk_py.Function):
         Returns:
             `dict`: mapping of `variables` to NumPy arrays
         '''
-        root_gradients = sanitize_var_map(self.outputs(), root_gradients)
+        root_gradients = sanitize_var_map(self.outputs, root_gradients)
 
         var_gradients = dict((var, None) for var in variables)
 
@@ -197,157 +210,96 @@ class Function(cntk_py.Function):
 
         return var_gradients
 
+    @property
     @typemap
     def inputs(self):
         '''
-        Returns all input variables of this function.
-
-
-        Returns:
-            `list`: all input variables of this function.
+        List of all input variables of this function.
         '''
         return super(Function, self).inputs()
 
+    @property
     @typemap
     def name(self):
         '''
-        Returns the name of 'this' function.
-
-
-        Returns:
-            `str`: the name of 'this' function.
+        Name of this function
         '''
         return super(Function, self).name()
 
+    @property
     @typemap
     def op_name(self):
         '''
-        Returns the name of the operation that this Function denotes
-
-
-        Returns:
-            `str`: the name of the operation that this Function denotes
+        Name of the operation that this Function performs
         '''
         return super(Function, self).op_name()
 
-    # @typemap
-    # Function.output = lambda self:get_output_and_keep_reference(self)
-        # '''
-        # output
 
-        # Args:
-        # self.replace_placeholders_internal(ph_map (`ph_map:`): text
+    @property
+    @typemap
+    def output(self):
+        '''
+        The single output variable if there is only one, or raises an exception.
+        '''
+        return super(Function, self).output()
 
-        # Returns:
-        # `None`: text
-        # '''
-        # kwargs=dict(locals()); del kwargs['self']; return super(Function,
-        # self).output(**kwargs)
-
-    # @typemap
-    # def output_internal(self):
-        # '''
-
-        # Returns:
-        # `Variable`: text
-        # '''
-        # return super(Function, self).output_internal()
-
+    @property
     @typemap
     def outputs(self):
         '''
-        Returns a list consisting of all output variables of this function.
-
-
-        Returns:
-            `list`: all output variables of this function
+        List consisting of all output variables of this function.
         '''
         return super(Function, self).outputs()
 
+    @property
     @typemap
     def parameters(self):
         '''
-        Returns a list of all parameter variables of this function.
-
-        Returns:
-            `list`: all parameter variables of this function.
+        List of all parameter variables of this function.
         '''
         return super(Function, self).parameters()
 
+    @property
     @typemap
     def placeholders(self):
         '''
-        Returns a list of all placeholders variables of this function.
-
-
-        Returns:
-            `list`: all placeholders variables of this function
+        List of all placeholders variables of this function.
         '''
         return super(Function, self).placeholders()
 
     @typemap
-    def replace_placeholder(self, placeholderReplacement):
+    def replace_placeholder(self, substitutions):
         '''
-        In-place replace the only placeholder in the function graph with the specified replacement
+        In-place replace the only placeholder in the function graph with the
+        specified substitutions.
 
         Args:
-            placeholderReplacement (`Variable`): the variable that will replace the placeholder
+            substitutions (:class:`cntk.ops.variables.Variable`): the variable that will replace the placeholder
 
         Returns:
-            `Function`: itself
+            :class:`Function`: itself
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
-        kwargs = dict(locals())
-        del kwargs['self']
-        return super(Function, self).replace_placeholder(**kwargs)
-
-    # @typemap
-    # Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
-        # '''
-        # replace_placeholders
-
-        # Returns:
-        # `None`: text
-        # '''
-        # kwargs=dict(locals()); del kwargs['self']; return super(Function,
-        # self).replace_placeholders(**kwargs)
-
-    # @typemap
-    # def replace_placeholders_internal(self, placeholderReplacements):
-        # '''
-        # replace_placeholders_internal
-
-        # Args:
-        # placeholderReplacements (`dict`): text
-
-        # Returns:
-        # `FunctionPtr`: text
-        # '''
-        # kwargs=dict(locals()); del kwargs['self']; return super(Function,
-        # self).replace_placeholders_internal(**kwargs)
+        return super(Function, self).replace_placeholder(substitutions)
 
     @typemap
-    def restore_from_legacy_model(self, modelFilePath):
+    def restore_from_model(self, filename):
         '''
         Restore the models parameters from a saved model file
 
         Args:
-            modelFilePath (`str`): saved model path 
+            filename (`str`): saved model path 
 
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file
         '''
-        kwargs = dict(locals())
-        del kwargs['self']
-        return super(Function, self).restore_from_legacy_model(**kwargs)
+        return super(Function, self).restore_from_legacy_model(filename)
 
+    @property
     @typemap
     def root_function(self):
         '''
-        Returns the primitive function at the root of the graph of functions underlying this function.
-
-        Returns:
-            `Function`: the primitive function at the root of the graph of functions underlying this function
+        The primitive function at the root of the graph of functions underlying this function.
         '''
         return super(Function, self).root_function()

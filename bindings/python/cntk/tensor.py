@@ -6,6 +6,10 @@
 
 
 class TensorOpsMixin(object):
+    '''
+    This class defines math overloads so that CNTK nodes can be written in math
+    expressions.
+    '''
 
     # operator overload for (+) where self is the left operand
     def __add__(self, other):
@@ -168,7 +172,7 @@ class EvalMixin(object):
             arguments (`dict` or `list`): 
               * map from input variables to the data
               * list of inputs in the order that the function expects or 
-              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+              Data should be either NumPy arrays or a :class:`cntk.io.MinibatchData` instance
             seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a
@@ -217,7 +221,7 @@ class ArrayMixin(object):
                 np_array = self.data().to_numpy()
             except AttributeError:
                 try:
-                    np_array = self.value().to_numpy()
+                    np_array = self.value
                 except AttributeError:
                     # Ideally an exception would be raised here, but getattr would swallow it
                     # so we return None
