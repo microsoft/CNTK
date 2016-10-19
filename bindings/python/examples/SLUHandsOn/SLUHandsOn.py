@@ -8,13 +8,14 @@ import numpy as np
 import sys
 import os
 import time
+import math
 from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
 from cntk.io import CNTKTextFormatMinibatchSource, StreamDef
 from cntk import Trainer
-from cntk.learner import sgd, fsadagrad, learning_rate_schedule
+from cntk.learner import sgd, fsadagrad, learning_rate_schedule, momentum_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
 from examples.common.nn import print_training_progress
 from cntk.device import gpu, set_default_device
@@ -58,11 +59,13 @@ def create_model():  # TODO: all the _inf stuff will go away once dimension infe
         return Record(shape=_as_tuple(shape), axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()], with_shape = lambda new_shape: _Infer(new_shape, axis))
 
     return Sequential([
+        #Stabilizer(),
         Embedding(emb_dim),
-        Recurrence(LSTM(hidden_dim), _inf=_Infer(shape=emb_dim), go_backwards=False,
+        Recurrence(LSTM(hidden_dim, enable_self_stabilization=False), _inf=_Infer(shape=emb_dim), go_backwards=False,
                    #),
                    initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
                    # BUGBUG: initial_state=0.1 should work
+        #Stabilizer(),
         Dense(label_dim)
     ])
 
@@ -89,14 +92,16 @@ def train(reader, model, max_epochs):
 
     lr_per_sample = [0.003]*2+[0.0015]*12+[0.0003]
     momentum = 0.9**(1/minibatch_size)  # TODO: change to time constant
+    #momentum_as_time_constant = [-1/math.log (0.9) * minibatch_size]   # to mimic BrainScript; otherwise use 660 or whatever works
+    # BUGBUG: need latest build to get this to work
 
     # trainer object
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner = fsadagrad(z.parameters, lr_schedule, momentum,
+    m_schedule = momentum   #momentum_schedule(momentum_as_time_constant, units=epoch_size)
+    learner = fsadagrad(z.parameters, lr_schedule, m_schedule,
                         targetAdagradAvDenom=1, gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
     trainer = Trainer(z, ce, pe, [learner])
-    #_extend_Trainer(trainer)  # TODO: should be just baked in
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -115,10 +120,16 @@ def train(reader, model, max_epochs):
         epoch_end = (epoch+1) * epoch_size
         while t < epoch_end:
             data = reader.next_minibatch(min(minibatch_size, epoch_end-t), input_map=input_map)
-            # BUGBUG? The first epoch has wrong #samples, does this ^^ take effect with a delay of 1 MB due to prefetching?
+            # BUGBUG? The change of minibatch_size parameter has no effect.
             if data is None:
                 break
             trainer.train_minibatch(data)
+            #def trace_node(name):
+            #    nl = [n for n in z.parameters if n.name() == name]
+            #    if len(nl) > 0:
+            #        print (name, np.asarray(nl[0].value))
+            #trace_node('W')
+            #trace_node('stabilizer_param')
             loss_numer += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count  # too much code for something this simple
             loss_denom +=                                           trainer.previous_minibatch_sample_count
             metric_numer += trainer.previous_minibatch_evaluation_average * trainer.previous_minibatch_sample_count
@@ -137,7 +148,11 @@ def train(reader, model, max_epochs):
 if __name__=='__main__':
     # TODO: get closure on Amit's feedback "Not the right pattern as we discussed over email. Please change to set_default_device(gpu(0))"
     #set_default_device(gpu(0))
+
+    #from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed
     #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
+    #set_fixed_random_seed(1)  # TODO: remove debugging facilities once this all works
+
     reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model()
     # train
