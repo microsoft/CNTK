@@ -197,17 +197,17 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     Convert to :class:`cntk.ops.variables.Variable` so that it can be passed as Variable to the
     CNTK operators.
 
-      * If `arg` is a NumPy array and its type is neither `np.float32` nor `np.float64`, it sets it to `np.float32`.
-      * If `arg` is an op, it is assumed that it has only one output, which will be returned.
+      * If ``arg`` is a NumPy array and its type is neither `np.float32` nor `np.float64`, it sets it to `np.float32`.
+      * If ``arg`` is an op, it is assumed that it has only one output, which will be returned.
 
 
     Args:
         arg (number, NumPy array, :class:`cntk.ops.variables.Variable`, or :class:`cntk.ops.functions.Function`): input
-        fallback_dtype (NumPy dtype): fallback dtype in case `arg` is a list
+        fallback_dtype (NumPy dtype): fallback dtype in case ``arg`` is a list
 
     Returns:
       Leaves Constant, Parameter, and Variable as is. Returns Constant, if
-      `arg` is a number or NumPy array. Variable otherwise.
+      ``arg`` is a number or NumPy array. Variable otherwise.
     """
 
     from cntk.ops.variables import Constant, Variable, Parameter
@@ -298,7 +298,7 @@ def get_data_type(*args):
 
 def pad_to_dense(batch):
     """Appends the minimal required amount of zeroes at the end of each sample
-    in the batch so that it becomes rectangular. `batch` is assumed to be
+    in the batch so that it becomes rectangular. ``batch`` is assumed to be
     row-major: first index is batch item, second is sequence item, then comes
     that actual sample. The sequence length is assumed to be the only varying
     dimension.
@@ -337,7 +337,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     mask.
 
     Args:
-        var (`:class:cntk.ops.variables.Variable`): variable node for which the `batch` is
+        var (`:class:cntk.ops.variables.Variable`): variable node for which the ``batch`` is
          meant
         batch (`list` of NumPy arrays): input
         seq_starts (`list` of `bool` or `None`): if `None`, every sequence is
@@ -424,7 +424,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
 
 def sanitize_value(shape, value, dtype, device):
     '''
-    Converts a given `value` to a :class:`NDArrayView` object that can be passed to
+    Converts a given ``value`` to a :class:`NDArrayView` object that can be passed to
     the CNTK core.
 
     Args:
@@ -490,8 +490,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
-         previous sequence, specify `arguments` as `tuple`: the
-         first element will be used as `arguments`, and the second one will
+         previous sequence, specify ``arguments`` as `tuple`: the
+         first element will be used as ``arguments``, and the second one will
          be used as a list of bools, denoting whether a sequence is a new
          one (`True`) or a continuation of the previous one (`False`).
          Data should be either NumPy arrays or a
@@ -578,7 +578,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
 def ones_like(batch, precision):
     '''
-    Returns a new batch, which has the same format as `batch` but all values
+    Returns a new batch, which has the same format as ``batch`` but all values
     set to 1.
 
     Args:
@@ -644,7 +644,7 @@ def sanitize_axis(axis):
 
     Args:
         axis (`:class:Axis` or `int` or `None`): the axis to be used.
-         
+
           * `:class:Axis`: use axis instance directly (will convert row- to
              col-major in case of static axis.
           * `int`: if positive, use it as static axis. If negative, count from
@@ -731,7 +731,7 @@ def value_to_seq(value):
 
 def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
     '''
-    It evaluates `op` on the data provided by the reader. This is useful
+    It evaluates ``op`` on the data provided by the reader. This is useful
     mainly to explore the operators and for convenient unit testing.
 
     Args:
@@ -744,8 +744,8 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
 
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
-         previous sequence, specify `arguments` as `tuple`: the
-         first element will be used as `arguments`, and the second one will
+         previous sequence, specify ``arguments`` as `tuple`: the
+         first element will be used as ``arguments``, and the second one will
          be used as a list of bools, denoting whether a sequence is a new
          one (`True`) or a continuation of the previous one (`False`).
          Data should be either NumPy arrays or a

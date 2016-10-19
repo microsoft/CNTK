@@ -15,10 +15,10 @@ using gradients of parameters w.r.t. a training objective.
 
 class Trainer(cntk_py.Trainer):
     '''
-    Trainer to train the specified `model` with the specified `training_loss`
-    as the training criterion, the specified `evaluation_function` as the
+    Trainer to train the specified ``model`` with the specified ``training_loss``
+    as the training criterion, the specified ``evaluation_function`` as the
     criterion for evaluating the trained model's quality, and using the
-    specified set of `parameter_learners` for updating the model's parameters
+    specified set of ``parameter_learners`` for updating the model's parameters
     using computed gradients.
 
     Args:
@@ -49,8 +49,8 @@ class Trainer(cntk_py.Trainer):
 
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
-             previous sequence, specify `arguments` as `tuple`: the
-             first element will be used as `arguments`, and the second one will
+             previous sequence, specify ``arguments`` as `tuple`: the
+             first element will be used as ``arguments``, and the second one will
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
@@ -62,9 +62,9 @@ class Trainer(cntk_py.Trainer):
 
         Returns:
             `bool` or `tuple`:
-            If `outputs` have not been provided, the returned value is `True`
+            If ``outputs`` have not been provided, the returned value is `True`
             if updates have been performed, `False` if all parameter learners
-            indicate end of learning (through their `update`. Otherwise, the
+            indicate end of learning (through their update). Otherwise, the
             return value is a tuple of the that `bool` and a dictionary that
             maps the variables in `outputs` to their respective NumPy arrays.
         '''
@@ -101,8 +101,8 @@ class Trainer(cntk_py.Trainer):
 
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
-             previous sequence, specify `arguments` as `tuple`: the
-             first element will be used as `arguments`, and the second one will
+             previous sequence, specify ``arguments`` as `tuple`: the
+             first element will be used as ``arguments``, and the second one will
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a

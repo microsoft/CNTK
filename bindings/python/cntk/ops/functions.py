@@ -101,19 +101,19 @@ class Function(cntk_py.Function):
 
     def eval(self, arguments=None, device=None):
         '''
-        Evaluate the node using the specified `arguments` as input.
+        Evaluate the node using the specified ``arguments`` as input.
 
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
-             
+
                * `dict`: keys are input variable or names, and values are the input data.
                * `list`: elements are input data in the order their respective variables have been defined in the network.
-             
+
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
-             previous sequence, specify `arguments` as `tuple`: the
-             first element will be used as `arguments`, and the second one will
+             previous sequence, specify ``arguments`` as `tuple`: the
+             first element will be used as ``arguments``, and the second one will
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
@@ -135,9 +135,9 @@ class Function(cntk_py.Function):
     @typemap
     def forward(self, arguments, outputs, keep_for_backward=None, device=None):
         '''
-        Computes the values of speficied variables in `outputs`, using values
-        provided in `arguments` that correspond to each input `Variable` of
-        the function whose `is_input` is `True`.
+        Computes the values of speficied variables in ``outputs``, using values
+        provided in ``arguments`` that correspond to each input `Variable` of
+        the function whose ``is_input`` is `True`.
 
         Example:
             >>> v = C.input_variable(shape=(1,3))
@@ -162,8 +162,8 @@ class Function(cntk_py.Function):
 
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
-             previous sequence, specify `arguments` as `tuple`: the
-             first element will be used as `arguments`, and the second one will
+             previous sequence, specify ``arguments`` as ``tuple``: the
+             first element will be used as ``arguments``, and the second one will
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
@@ -172,7 +172,7 @@ class Function(cntk_py.Function):
             keep_for_backward (`set`, default `None`): the subset of the
              Function's output variables for which gradients shall be calculated
              in a subsequent backward call. If `None`, the returned state will
-             be `None` and a subsequent call to `backward` will not be
+             be `None` and a subsequent call to :func:`backward` will not be
              possible.
             device (:class:`cntk.device.DeviceDescriptor`, default `None`): the device
              descriptor that contains the type and id of the device on which the
@@ -202,9 +202,9 @@ class Function(cntk_py.Function):
     @typemap
     def backward(self, state, root_gradients, variables):
         '''
-        Backpropagates supplied `root_gradients` for one or more of the output
+        Backpropagates supplied ``root_gradients`` for one or more of the output
         variables of the Function, to calculate gradients with respect to
-        `variables`.
+        ``variables``.
 
         Example:
             >>> # compute the value and the derivative of the sigmoid at 0
@@ -227,7 +227,7 @@ class Function(cntk_py.Function):
              the gradients have to be computed.
 
         Returns:
-            `dict`: mapping of `variables` to NumPy arrays
+            `dict`: mapping of ``variables`` to NumPy arrays
         '''
         root_gradients = sanitize_var_map(self.outputs, root_gradients)
 

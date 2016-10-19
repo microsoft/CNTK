@@ -66,9 +66,9 @@ def alias(x, name=''):
 @typemap
 def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
     '''
-    This operation computes the cross entropy over the softmax of the `output_vector`.
-    It expects the `output_vector` as unscaled, and it computes softmax over
-    the `output_vector` internally.  Any `output_vector` input over which softmax is
+    This operation computes the cross entropy over the softmax of the ``output_vector``.
+    It expects the ``output_vector`` as unscaled, and it computes softmax over
+    the ``output_vector`` internally.  Any ``output_vector`` input over which softmax is
     already computed before passing to this operator will be incorrect.
 
     :math:`cross\_entropy\_with\_softmax(o, t) = {-{\sum_{i \in \{1,len(t)\}} t_i \log(softmax(o_i)) }}`
@@ -619,10 +619,10 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
 @typemap
 def times_transpose(left, right, name=''):
     '''
-    The output of this operation is the product of the first (`left`) argument with the second (`right`) argument transposed.
-    The second (`right`) argument must have a rank of 1 or 2.
-    This operation is conceptually computing ``np.dot(left, right.T)`` except when `right` is a vector
-    in which case the output is ``np.dot(left,np.reshape(right,(1,-1)).T)`` (matching numpy when `left` is a vector).
+    The output of this operation is the product of the first (``left``) argument with the second (``right``) argument transposed.
+    The second (``right``) argument must have a rank of 1 or 2.
+    This operation is conceptually computing ``np.dot(left, right.T)`` except when ``right`` is a vector
+    in which case the output is ``np.dot(left,np.reshape(right,(1,-1)).T)`` (matching numpy when ``left`` is a vector).
 
     Example:
         >>> a=np.array([[1,2],[3,4]],dtype=np.float32)
@@ -818,10 +818,10 @@ def round(arg, name=''):
 def clip(x, min_value, max_value, name=''):
     '''
     Computes a tensor with all of its values clipped to fall
-    between `min_value` and `max_value`, i.e.
+    between ``min_value`` and ``max_value``, i.e.
     ``min(max(x, min_value), max_value)``.
 
-    The output tensor has the same shape as `x`.
+    The output tensor has the same shape as ``x``.
 
     Example:
         >>> C.clip([1., 2.1, 3.0, 4.1], 2., 4.).eval()
@@ -851,9 +851,9 @@ def clip(x, min_value, max_value, name=''):
 def relu(x, name=''):
     '''
     Rectified linear operation. Computes the element-wise rectified linear
-    of `x`: ``max(x, 0)``
+    of ``x``: ``max(x, 0)``
 
-    The output tensor has the same shape as `x`.
+    The output tensor has the same shape as ``x``.
 
     Example:
         >>> C.relu([[-1, -0.5, 0, 1, 2]]).eval()
@@ -873,11 +873,11 @@ def relu(x, name=''):
 @typemap
 def sigmoid(x, name=''):
     '''
-    Computes the element-wise sigmoid of `x`:
+    Computes the element-wise sigmoid of ``x``:
 
     :math:`sigmoid(x) = {1 \over {1+\exp(-x)}}`
 
-    The output tensor has the same shape as `x`.
+    The output tensor has the same shape as ``x``.
 
     Example:
         >>> C.sigmoid([-2, -1., 0., 1., 2.]).eval()
@@ -897,9 +897,9 @@ def sigmoid(x, name=''):
 @typemap
 def tanh(x, name=''):
     '''
-    Computes the element-wise tanh of `x`:
+    Computes the element-wise tanh of ``x``:
 
-    The output tensor has the same shape as `x`.
+    The output tensor has the same shape as ``x``.
 
     Example:
         >>> C.tanh([[1,2],[3,4]]).eval()
@@ -920,7 +920,7 @@ def tanh(x, name=''):
 @typemap
 def softmax(x, name=''):
     '''
-    Squashes the input values `x` such that they add up to 1:
+    Squashes the input values ``x`` such that they add up to 1:
 
     :math:`softmax(x) = {\exp(x_i) - \max_{x_i \in x}(\exp(x_i)) \over {\sum_{x_i \in x} \exp(x_i)- \max_{x_i \in x}(\exp(x_i)) }}`
 
@@ -972,7 +972,7 @@ def hardmax(x, name=''):
 @typemap
 def exp(x, name=''):
     '''
-    Computes the element-wise exponential of `x`:
+    Computes the element-wise exponential of ``x``:
 
     :math:`exp(x) = {e^x}`
 
@@ -994,7 +994,7 @@ def exp(x, name=''):
 @typemap
 def log(x, name=''):
     '''
-    Computes the element-wise the natural logarithm of `x`:
+    Computes the element-wise the natural logarithm of ``x``:
 
     Example:
         >>> C.log([1., 2.]).eval()
@@ -1007,7 +1007,7 @@ def log(x, name=''):
         :class:`cntk.ops.functions.Function`
 
     Note:
-        CNTK returns -85.1 for log(x) if `x` is negative or zero. The reason is that
+        CNTK returns -85.1 for log(x) if ``x`` is negative or zero. The reason is that
         it uses 1e-37 (whose natural logarithm is -85.1) as the smallest float
         number for `log`, because this is the only guaranteed precision across
         platforms. This will be changed to return `NaN` and `-inf`.
@@ -1020,7 +1020,7 @@ def log(x, name=''):
 @typemap
 def sqrt(x, name=''):
     '''
-    Computes the element-wise square-root of `x`:
+    Computes the element-wise square-root of ``x``:
 
     :math:`sqrt(x) = {\sqrt[2]{x}}`
 
@@ -1046,7 +1046,7 @@ def sqrt(x, name=''):
 @typemap
 def square(x, name=''):
     '''
-    Computes the element-wise square of `x`:
+    Computes the element-wise square of ``x``:
 
     Example:
         >>> C.square([1., 10.]).eval()
@@ -1066,7 +1066,7 @@ def square(x, name=''):
 @typemap
 def abs(x, name=''):
     '''
-    Computes the element-wise absolute of `x`:
+    Computes the element-wise absolute of ``x``:
 
     :math:`abs(x) = |x|`
 
@@ -1088,7 +1088,7 @@ def abs(x, name=''):
 @typemap
 def negate(x, name=''):
     '''
-    Computes the element-wise negation of `x`:
+    Computes the element-wise negation of ``x``:
 
     :math:`negate(x) = -x`
 
@@ -1110,7 +1110,7 @@ def negate(x, name=''):
 @typemap
 def reciprocal(x, name=''):
     '''
-    Computes the element-wise reciprocal of `x`:
+    Computes the element-wise reciprocal of ``x``:
 
     Example:
         >>> C.reciprocal([-1/3, 1/5, -2, 3]).eval()
@@ -1160,11 +1160,11 @@ def element_select(flag, value_if_true, value_if_false, name=''):
 @typemap
 def future_value(x, initial_state=None, time_step=1, name=''):
     '''
-    This function returns the future value w.r.t. `x`. It is most often used when
+    This function returns the future value w.r.t. ``x``. It is most often used when
     creating RNNs. The resulting tensor has the same shape as the input but is
-    the next logical sample. The `time_step` parameter is the number of steps
+    the next logical sample. The ``time_step`` parameter is the number of steps
     to look into the future and is 1 by default. If there is no future value (i.e.
-    the current sample is the last one in the tensor) then the `initial_state`
+    the current sample is the last one in the tensor) then the ``initial_state``
     value is returned.
 
     Example:
@@ -1212,11 +1212,11 @@ def future_value(x, initial_state=None, time_step=1, name=''):
 @typemap
 def past_value(x, initial_state=None, time_step=1, name=''):
     '''
-    This function returns the past value w.r.t. `x`. It is most often used when
+    This function returns the past value w.r.t. ``x``. It is most often used when
     creating RNNs. The resulting tensor has the same shape as the input but is
-    the previous logical sample. The `time_step` parameter is the number of steps
+    the previous logical sample. The ``time_step`` parameter is the number of steps
     to look into the past and is 1 by default. If there is no past value (i.e.
-    the current sample is the first one in the tensor)  then the `initial_state`
+    the current sample is the first one in the tensor)  then the ``initial_state``
     value is returned.
 
     Example:
@@ -1305,7 +1305,7 @@ def reshape(x, shape, name=''):
 def transpose(x, axis1=0, axis2=1, name=''):
     '''
     Swaps two axes of the tensor. The output tensor has the same data but with
-    `axis1` and `axis2` swapped.
+    ``axis1`` and ``axis2`` swapped.
 
     Examples:
         >>> C.transpose([[[0,1],[2,3],[4,5]]], 1, 2).eval()
@@ -1314,8 +1314,8 @@ def transpose(x, axis1=0, axis2=1, name=''):
 
     Args:
         x: tensor to be transposed
-        axis1 (`int` or :class:`cntk.axis.Axis`): the axis to swap with `axis2`
-        axis2 (`int` or :class:`cntk.axis.Axis`): the axis to swap with `axis1`
+        axis1 (`int` or :class:`cntk.axis.Axis`): the axis to swap with ``axis2``
+        axis2 (`int` or :class:`cntk.axis.Axis`): the axis to swap with ``axis1``
         name (`str`, optional): the name of the Function instance in the network
     Returns:
         :class:`cntk.ops.functions.Function`
@@ -1368,7 +1368,7 @@ def slice(x, axis, begin_index, end_index, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.axis.Axis`): axis along which `begin_index` and `end_index`
+        axis (`int` or :class:`cntk.axis.Axis`): axis along which ``begin_index`` and ``end_index``
          will be used. If it is of type `int` it will be used as a static axis.
         begin_index (`int`): the index along axis where the slicing starts
         end_index (`int`): the index along axis where the slicing ends
@@ -1614,11 +1614,11 @@ def reduce_min(x, axis=None, name=''):
 @typemap
 def dropout(x, dropout_rate=0.0, name=''):
     '''
-    Randomly selects elements of the input with a given probability called the `dropout_rate`, and sets
+    Randomly selects elements of the input with a given probability called the ``dropout_rate``, and sets
     them to 0. This has been shown to improve generalizability of models.
 
     In CNTK's implementation, the remaining values that are not set to 0 will instead be multiplied
-    with (1 / (1 - `dropout_rate`)). This way, the model parameters learned with dropout are directly
+    with (1 / (1 - ``dropout_rate``)). This way, the model parameters learned with dropout are directly
     applicable in inference. (If this was not done, the user would have to manually scale them before
     inference.)
 

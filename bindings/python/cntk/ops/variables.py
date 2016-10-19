@@ -10,7 +10,7 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
 
     Args:
        shape (`tuple`): the shape of this variable.
-       data_type (`np.float32 or np.float64`): data type of the values that will be bound to this variable.
+       data_type (`np.float32` or `np.float64`): data type of the values that will be bound to this variable.
         Default is np.float32
        needs_gradient (`bool`): if set to True any expression that contains this variable
         will also be differentiated with respect to this variable.
@@ -156,7 +156,7 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
        init (`np.ndarray` or `list` or `float` or `int`): Initial value.
         If a numpy array is specified the shape argument is ignored and
         the tensor gets the shape of this argument.
-       data_type (`np.float32 or np.float64`): data type of the values stored.
+       data_type (`np.float32` or `np.float64`): data type of the values stored.
        device (:class:`cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this parameter
 

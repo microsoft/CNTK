@@ -109,7 +109,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         Returns:
             A mapping of :class:`StramInformation` to :class:`MinibatchData` if
-            `input_map` was not specified. Otherwise, the returned value will
+            ``input_map`` was not specified. Otherwise, the returned value will
             be a mapping of :class:`cntk.ops.variabls.Variable` to class:`MinibatchData`.
         '''
         if device is None:

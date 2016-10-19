@@ -13,7 +13,7 @@ from ...utils import sanitize_input, sanitize_shape, get_data_type, typemap
 @typemap
 def is_first(seq, name=''):
     '''
-    Returns a symbolic sequence of booleans with the same length as `seq`. The
+    Returns a symbolic sequence of booleans with the same length as ``seq``. The
     first element of the sequence is 1 and all others are 0.
 
     Example:
@@ -40,7 +40,7 @@ def is_first(seq, name=''):
 @typemap
 def is_last(seq, name=''):
     '''
-    Returns a symbolic sequence of booleans with the same length as `seq`. The
+    Returns a symbolic sequence of booleans with the same length as ``seq``. The
     last element of the sequence is 1 and all others are 0.
 
     Example:
@@ -67,7 +67,7 @@ def is_last(seq, name=''):
 @typemap
 def first(seq, name=''):
     '''
-    Returns the first element of its symbolic input sequence `seq`
+    Returns the first element of its symbolic input sequence ``seq``
 
     Example:
         >>> import cntk.ops as C
@@ -94,7 +94,7 @@ def first(seq, name=''):
 @typemap
 def last(seq, name=''):
     '''
-    Returns the last element of its symbolic input sequence `seq`
+    Returns the last element of its symbolic input sequence ``seq``
 
     Example:
         >>> import cntk.ops as C
@@ -122,7 +122,7 @@ def last(seq, name=''):
 @typemap
 def where(condition, name=''):
     '''
-    Given a symbolic sequence `condition` of boolean-like values, it will return
+    Given a symbolic sequence ``condition`` of boolean-like values, it will return
     a new sequence containing the indices for which the values were true.
 
     Example:
@@ -152,8 +152,8 @@ def where(condition, name=''):
 def gather(seq, condition, name=''):
     '''
     Takes two sequences of the same length and returns a new sequence whose
-    elements are those elements of sequence `seq` whose corresponding element
-    in `condition` is True, preserving the ordering of `seq`.
+    elements are those elements of sequence ``seq`` whose corresponding element
+    in ``condition`` is True, preserving the ordering of ``seq``.
 
     This operation is also known as stream compaction, or copy_if.
 
@@ -188,11 +188,11 @@ def gather(seq, condition, name=''):
 @typemap
 def scatter(seq, condition, name=''):
     '''
-    Performs the inverse of gather. The sequence `seq` must have as many
-    elements as the number of True values in the sequence `condition`.
-    It will return a sequence whose length is the same as the `condition`
-    sequence with zeroes everywhere except for the locations where `condition`
-    evaluates to True in which case it will copy the elements from `seq`
+    Performs the inverse of gather. The sequence ``seq`` must have as many
+    elements as the number of True values in the sequence ``condition``.
+    It will return a sequence whose length is the same as the ``condition``
+    sequence with zeroes everywhere except for the locations where ``condition``
+    evaluates to True in which case it will copy the elements from ``seq``
     preserving their order.
 
     Example:
@@ -238,9 +238,9 @@ def scatter(seq, condition, name=''):
 @typemap
 def broadcast_as(operand, broadcast_as_operand, name=''):
     '''
-    Creates a sequence out of a non-sequence by endowing the `operand`
-    with dynamic axes of the same type as the `broadcast_as_operand`
-    and broadcasting the value of the `operand` along those dynamic axes.
+    Creates a sequence out of a non-sequence by endowing the ``operand``
+    with dynamic axes of the same type as the ``broadcast_as_operand``
+    and broadcasting the value of the ``operand`` along those dynamic axes.
 
     Example:
         >>> import cntk.ops as C
