@@ -16,6 +16,9 @@
     <ClCompile Include="MinibatchSource.cpp" />
     <ClCompile Include="ComputeInputStatistics.cpp" />
     <ClCompile Include="Serialization.cpp" />
+    <ClCompile Include="DistributedCommunicator.cpp" />
+    <ClCompile Include="DataParallelDistributedTrainer.cpp" />
+    <ClCompile Include="Globals.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -36,6 +39,8 @@
     <ClInclude Include="Serialization.h" />
     <ClInclude Include="Value.h" />
     <ClInclude Include="PrimitiveOpType.h" />
+    <ClInclude Include="DistributedCommunicator.h" />
+    <ClInclude Include="DataParallelDistributedTrainer.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

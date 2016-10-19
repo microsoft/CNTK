@@ -131,6 +131,8 @@
     </ClInclude>
     <ClInclude Include="PostComputingActions.h">
       <Filter>Stat</Filter>
+    <ClInclude Include="V2SimpleDistGradAggregator.h">
+      <Filter>Parallelization</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
