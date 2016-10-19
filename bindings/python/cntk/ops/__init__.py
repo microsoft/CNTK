@@ -1630,7 +1630,7 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
 
     Args:
         weights: input vector of sampling weights which should be
-        non-negative numbers.
+            non-negative numbers.
         num_samples (`int`): number of expected samples
         allow_duplicates (`bool`): If sampling is done
             with replacement (`True`) or without (`False`).
@@ -1660,7 +1660,7 @@ def random_sample_inclusion_frequency(
     Intended uses are e.g. sampled softmax, noise contrastive 
     estimation etc.
     This operation will be typically used together 
-    with `random_sample`.
+    with :func:`random_sample`.
 
     Args:
         weights: input vector of sampling weights which should be 
