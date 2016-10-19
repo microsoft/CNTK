@@ -116,7 +116,7 @@ class Function(cntk_py.Function):
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
              :class:`cntk.io.MinibatchData` instance.
-            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
+            device (:class:`cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
 
@@ -172,7 +172,7 @@ class Function(cntk_py.Function):
              in a subsequent backward call. If `None`, the returned state will
              be `None` and a subsequent call to `backward` will not be
              possible.
-            device (:class:`cntk.DeviceDescriptor`, default `None`): the device
+            device (:class:`cntk.device.DeviceDescriptor`, default `None`): the device
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
 

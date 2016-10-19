@@ -26,7 +26,7 @@ def load_model(data_type, filename, device=None):
     Args:
         data_type ('float' or 'double', or NumPy type): data type of the operation
         filename (`str`): filename to load the model from
-        device (:class:`cntk.DeviceDescriptor`, default to default device): instance of DeviceDescriptor
+        device (:class:`cntk.device.DeviceDescriptor`, default to default device): instance of DeviceDescriptor
 
     Returns:
         root node

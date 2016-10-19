@@ -56,7 +56,7 @@ class Trainer(cntk_py.Trainer):
              Data should be either NumPy arrays or a
              :class:`cntk.io.MinibatchData` instance.
             outputs (iterable): outputs to fetch values for.
-            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
+            device (:class:`cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
 
@@ -107,7 +107,7 @@ class Trainer(cntk_py.Trainer):
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
              :class:`cntk.io.MinibatchData` instance.
-            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
+            device (:class:`cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
         Returns:

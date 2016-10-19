@@ -753,7 +753,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
         precision (`str` or `None`): precision being 'float32', 'float64', or
          `None`, in which case it will be determined by inspecting the operator
          (costly)
-        device (:class:`cntk.DeviceDescriptor`): the device the descriptor,
+        device (:class:`cntk.device.DeviceDescriptor`): the device the descriptor,
          whether it is CPU or GPU (and which one)
         backward_pass (`bool`, optional): whether a backward pass is performed
 
