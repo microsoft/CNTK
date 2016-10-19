@@ -278,10 +278,8 @@ def get_data_type(*args):
             var_type = var_outputs[0].get_data_type()
             if cntk_py.DataType_Double == var_type:
                 dtypes.add(np.float64)
-            elif cntk_py.DataType_Float == var_type:
-                dtypes.add(np.float32)
             else:
-                raise ValueError('type %s is not supported'%var_type)
+                dtypes.add(np.float32)
         else:
             # We don't know anything so we convert everything to float32. If it
             # works, we know the type.

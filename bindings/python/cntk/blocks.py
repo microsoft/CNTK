@@ -12,7 +12,7 @@ import numpy as np
 import sys
 import os
 import time
-from cntk import parameter, constant, input_variable, placeholder_variable, combine
+from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
@@ -125,9 +125,8 @@ def Placeholder(_inf=None, name='placeholder'):
 #       If we have Function identity, in same pattern as e.g. sigmoid, then that would suffice.
 def _Identity(name='identity_arg'):
     x = Placeholder(name=name)
-    #apply_x = combine([x])  # BUGBUG: "ValueError: type 0 is not supported"
-    apply_x = x + Constant(0, name='Identity0')  # this fakes combine()
-    #apply_x = x
+    apply_x = combine([x])
+    #apply_x = alias(x) # TODO: does not work. Should it?
     _name_and_extend_Function(apply_x, 'Identity')
     return apply_x
 
