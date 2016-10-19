@@ -106,8 +106,10 @@ class Function(cntk_py.Function):
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
+             
                * `dict`: keys are input variable or names, and values are the input data.
                * `list`: elements are input data in the order their respective variables have been defined in the network.
+             
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify `arguments` as `tuple`: the
