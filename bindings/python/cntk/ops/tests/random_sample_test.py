@@ -41,12 +41,13 @@ TEST_CASES = [
 def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, expected, tolerance, raises_exception, device_id, precision):
 
     weights = AA(weights);
-    result = random_sample_inclusion_frequency(weights, num_samples, allow_duplicates)
 
     if raises_exception:
         with pytest.raises(RuntimeError):
+            result = random_sample_inclusion_frequency(weights, num_samples, allow_duplicates)
             result.eval()
     else:
+        result = random_sample_inclusion_frequency(weights, num_samples, allow_duplicates)
         assert np.allclose(result.eval(), expected, atol=tolerance)
 
 # BUGBUG add test for random_sample(...) too.

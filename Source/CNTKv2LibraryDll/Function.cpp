@@ -879,19 +879,28 @@ namespace CNTK
         case PrimitiveOpType::RandomSample:
         case PrimitiveOpType::RandomSampleInclusionFrequency:
         {
-                                                                auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
-                                                                auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
+            auto numSamples = functionConfig[PrimitiveFunction::AttributeNameNumSamples].Value<size_t>();
+            auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
 
-                                                                if (numSamples == 0)
-                                                                    InvalidArgument("Number of requested samples is zero.");
+            if (numSamples == 0)
+                InvalidArgument("Number of requested samples is zero.");
 
-                                                                let& shape = inputs[0].Shape();
-                                                                size_t nClasses = shape.Dimensions()[0];
+            let& shape = inputs[0].Shape();
+            size_t numClasses = shape.Dimensions()[0];
 
-                                                                if (nClasses != NDShape::InferredDimension && !allowDuplicates && nClasses <= numSamples)
-                                                                    InvalidArgument("For sampling without duplicates the number of requested samples (%lu) needs to be less than the number of classes (%lu).", numSamples, nClasses);
+            if (numClasses != NDShape::InferredDimension && !allowDuplicates && numClasses <= numSamples)
+                InvalidArgument("For sampling without duplicates the number of requested samples (%lu) needs to be less than the number of classes (%lu).", numSamples, numClasses);
+            
+            // within this block we handle RandomSample and RandomSampleInclusionFrequency
+            if (op == PrimitiveOpType::RandomSampleInclusionFrequency)
+                outputShape = shape;
+            else
+            {
+                vector<size_t> dimensions{ numSamples, numClasses };
+                outputShape = NDShape(dimensions);
+            }
 
-                                                                break;
+            break;
         }
         default:
             LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
