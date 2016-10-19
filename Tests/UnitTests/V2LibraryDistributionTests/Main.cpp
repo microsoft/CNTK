@@ -10,7 +10,7 @@ using namespace CNTK;
 using namespace std::placeholders;
 
 // TODO: Move to other file.
-void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device)
+void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, DistributedCommunicatorPtr communicator)
 {
     const size_t inputDim = 2;
     const size_t numOutputClasses = 2;
@@ -46,8 +46,6 @@ void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device)
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");;
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 
-    auto communicator = MPICommunicator();
-
     // Test save and reload of model
     {
         Variable classifierOutputVar = classifierOutput;
@@ -80,9 +78,10 @@ int main(int /*argc*/, char* /*argv*/[])
     // which will have a silent performance degradation otherwise
     Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
 
-    TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice());
+    auto communicator = MPICommunicator();
+    TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice(), communicator);
 
     if (IsGPUAvailable())
-        TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0));
+        TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), communicator);
     return 0;
 }
