@@ -40,10 +40,10 @@ def combine(operands, name=''):
 def alias(x, name=''):
     '''
      Create a new Function instance which just aliases the specified 'x' Function/Variable
-     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified
+     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified 
      'x' Function/Variable, and has the newly specified name.
      The purpose of this operator is to create a new distinct reference to a symbolic
-     computation which is different from the original Function/Variable that it aliases and can
+     computation which is different from the original Function/Variable that it aliases and can 
      be used for e.g. to substitute a specific instance of the aliased Function/Variable in the
      computation graph instead of substituting all usages of the aliased Function/Variable.
 
@@ -571,7 +571,7 @@ def minus(left, right, name=''):
 def element_times(left, right, name=''):
     '''
     The output of this operation is the element-wise product of the two input
-    tensors. It supports broadcasting.
+    tensors. It supports broadcasting. 
 
     Example:
         >>> C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
@@ -598,7 +598,7 @@ def element_times(left, right, name=''):
 def element_divide(left, right, name=''):
     '''
     The output of this operation is the element-wise division of the two input
-    tensors. It supports broadcasting.
+    tensors. It supports broadcasting. 
 
     Example:
         >>> C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
@@ -1860,7 +1860,7 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     if shape is None:
         shape = NDShape.unknown.dimensions()
     else:
-        shape = sanitize_shape(shape)
+    shape = sanitize_shape(shape)
 
     if dynamic_axes is None:
         dynamic_axes = Axis.unknown_dynamic_axes()
@@ -1942,7 +1942,7 @@ def constant(value=None, shape=None, device=None, name=''):
     #if np.isscalar(value) and not shape:
     if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
         shape = ()
-    if isinstance(value, np.ndarray):
+        if isinstance(value, np.ndarray):
         dtype = value.dtype
     else:
         dtype = np.float32

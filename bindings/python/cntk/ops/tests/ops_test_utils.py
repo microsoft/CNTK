@@ -59,8 +59,7 @@ def _test_unary_op(precision, device_id, op_func,
 
 
 def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
-                    expected_forward, expected_backward_all,
-                    only_input_variables=False, wrap_batch_seq=True):
+                    expected_forward, expected_backward_all, wrap_batch_seq=True):
 
     left_value = AA(left_operand, dtype=PRECISION_TO_TYPE[precision])
     right_value = AA(right_operand, dtype=PRECISION_TO_TYPE[precision])
@@ -97,18 +96,17 @@ def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
                     forward_input, expected_forward, expected_backward,
                     device_id=device_id, precision=precision)
 
-    if not only_input_variables:
-        forward_input = {a: left_value}
-        expected_backward = {a: expected_backward_all['left_arg'], }
-        unittest_helper(input_op_constant,
-                        forward_input, expected_forward, expected_backward,
-                        device_id=device_id, precision=precision)
+    forward_input = {a: left_value}
+    expected_backward = {a: expected_backward_all['left_arg'], }
+    unittest_helper(input_op_constant,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
 
-        forward_input = {b: right_value}
-        expected_backward = {b: expected_backward_all['right_arg'], }
-        unittest_helper(constant_op_input,
-                        forward_input, expected_forward, expected_backward,
-                        device_id=device_id, precision=precision)
+    forward_input = {b: right_value}
+    expected_backward = {b: expected_backward_all['right_arg'], }
+    unittest_helper(constant_op_input,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
 
 
 def unittest_helper(root_node,
