@@ -23,9 +23,8 @@ them on sample data in real time.
    Getting Started <gettingstarted>
    Tutorials <tutorials>
    Examples <examples>
-   Common Issues <commonissues>
    Python API Reference <apireference>
-
+   Known Issues <knownissues>
 
 Indices and tables
 ==================

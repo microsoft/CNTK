@@ -1,3 +1,6 @@
+Examples
+========
+
 The best way to learn about the APIs currently is to look at the
 following examples in the [CNTK clone root]/bindings/python/examples
 directory:
