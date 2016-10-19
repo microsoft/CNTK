@@ -1516,7 +1516,7 @@ def random_sample_inclusion_frequency(
 
     Args:
         weights: input vector of sampling weights which should be 
-        non-negative numbers. 
+            non-negative numbers. 
         num_samples (`int`): number of expected samples
         allow_duplicates (`bool`): If sampling is done 
             with replacement (`True`) or without (`False`).
@@ -1541,8 +1541,6 @@ def random_sample_inclusion_frequency(
         >>> f = random_sample_inclusion_frequency(w, 150, False).eval()
         >>> f[0]
         1.0
-        >>> f[110]
-        0.48722463883004796
 
     Returns:
         :class:`cntk.ops.functions.Function`
