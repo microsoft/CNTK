@@ -110,190 +110,8 @@ void LatticeFreeMMINode<ElemType>::Graph2matrixWithSelfLoop(const vector<DataArc
     }
 }
 
-
 template <class ElemType>
-void LatticeFreeMMINode<ElemType>::Graph2matrix(vector<DataArc> input, vector<ElemType>& transVal, vector<CPUSPARSE_INDEX_TYPE>& transRow, vector<CPUSPARSE_INDEX_TYPE>& transCol, size_t &nstates, size_t &transCount, vector<ElemType>& smapVal, vector<CPUSPARSE_INDEX_TYPE>& smapRow, vector<CPUSPARSE_INDEX_TYPE>& smapCol, size_t &smapCount, size_t numSenone, vector<map<int, pair<int, ElemType>>>& fsa, const wstring &transFilePath)
-{
-    // decoding graph and turns it into a transition matrix
-    // all costs on input graph are expected to be negative log base 10
-
-    map<int, pair<ElemType, ElemType>> translp4;
-    bool hasTransProbFromFile = false;
-    if (transFilePath != L"" && transFilePath != L"''") {
-        hasTransProbFromFile = true;
-        FILE *fin = fopenOrDie(transFilePath.c_str(), L"r");
-        const int slen = 1000;
-        char buff[slen];
-        float slp, flp;
-        int count = 0;
-        while (fscanf(fin, "%s%f%f", buff, &slp, &flp) == 3) {
-            assert(slp <= 0 && flp <= 0); // log-probs are negative
-            translp4[count] = pair<ElemType, ElemType>((ElemType)exp(-slp), (ElemType)exp(-flp));
-            count++;
-        }
-        fclose(fin);
-    }
-
-    map<int, vector<int> > states4senone;
-
-    int arcstate = 1;  // state 0 will be the start state
-    int start_state = -1;
-    vector<vector<arc>> arcs;
-    map<int, ElemType> cost4final_state;
-    int curr_state = 0, fs = 0;
-    arc ca;
-    vector<arc> carcs;
-    smapCount = 0;
-    for (auto dataArc : input)
-    {
-        if (dataArc.Senone < 0)
-        {
-            int state = dataArc.From;
-            fs = state;
-            assert(cost4final_state.count(state) == 0);
-            cost4final_state[state] = dataArc.Cost;
-        }
-        else
-        {
-            fs = dataArc.From;
-            ca.source = dataArc.From;
-            ca.destination = dataArc.To;
-            ca.lm_cost = dataArc.Cost;
-            ca.logsp = ca.logfp = 1.0;
-            ca.label = dataArc.Senone;
-            if (hasTransProbFromFile)
-            {
-                assert(translp4.count(dataArc.Senone) > 0);
-                ca.logsp = translp4[dataArc.Senone].first;
-                ca.logfp = translp4[dataArc.Senone].second;
-            }
-            ca.statenum = arcstate++;
-            states4senone[dataArc.Senone].push_back(ca.statenum);
-            smapCount++;
-        }
-        if (start_state < 0) start_state = dataArc.From;
-        if (fs != curr_state) {
-            assert(fs == curr_state + 1);  // att format ordered this way
-            arcs.push_back(carcs);  // store the arcs for the previous state
-            carcs.clear();
-            curr_state = fs;
-        }
-        if (dataArc.Senone >= 0)
-            carcs.push_back(ca);
-    }
-
-    // don't forget to store the arcs associated with the last state!
-    arcs.push_back(carcs);  // store the arcs for the previous state
-
-    assert(cost4final_state.size() != 0);
-    assert(start_state == 0);
-
-    const int finalstate = arcstate;  // make a fresh state to be the final state in the graph
-
-    // now write the matrix
-
-    // each arc becomes a state
-    // the LM prob and forward transition probs are applied on transition out of the state
-    // self-loop prob is applied for the on-diagonal transition
-
-    fsa.clear();
-    map<int, pair<int, ElemType>> currentMap;
-    // add a notional start state
-    assert(arcs[0].size());
-    assert(arcs[0].front().source == 0);  // openfst should number the first state 0
-    int counter = 0;
-    for (size_t a = 0; a < arcs[0].size(); a++) {
-        transVal.push_back(arcs[0][a].lm_cost);
-        transCol.push_back(arcs[0][a].statenum);
-        counter++;
-        currentMap[arcs[0][a].label] = make_pair(arcs[0][a].statenum, log(arcs[0][a].lm_cost));
-    }
-    transRow.push_back(0);
-    fsa.push_back(currentMap);
-
-    // now add the rest
-    for (size_t c = 0; c < arcs.size(); c++) {  // for each "from state"
-        assert(arcs[c].size());
-        for (size_t a = 0; a < arcs[c].size(); a++) {
-            assert(arcs[c][a].statenum == fsa.size());
-            transRow.push_back(counter);
-            currentMap.clear();
-
-            const arc &curr = arcs[c][a];
-            assert(curr.statenum == transRow.size() - 1);
-            const int dest = curr.destination;
-            const vector<arc> &succs = arcs[dest];
-            assert(succs.size());
-            assert(succs[0].source == dest);  // should be 1-1 mapping of states to sets of successor arcs
-            bool added_selfloop = false;
-            for (size_t s = 0; s < succs.size(); s++) {
-                if (s > 0)
-                    assert(succs[s].statenum > succs[s - 1].statenum);
-                if (succs[s].statenum > curr.statenum && !added_selfloop) {
-                    transVal.push_back(curr.logsp);  // transition to curr.statenum
-                    transCol.push_back(curr.statenum);
-                    added_selfloop = true;
-                    counter++;
-                    currentMap[curr.label] = make_pair(curr.statenum, log(curr.logsp));
-                }
-                transVal.push_back(succs[s].lm_cost*curr.logfp);  // transition to succs[s].statenum
-                transCol.push_back(succs[s].statenum);
-                counter++;
-                currentMap[succs[s].label] = make_pair(succs[s].statenum, log(succs[s].lm_cost*curr.logfp));
-            }
-            if (!added_selfloop) {
-                transVal.push_back(curr.logsp);  // transition to curr.statenum
-                transCol.push_back(curr.statenum);
-                added_selfloop = true;
-                counter++;
-                currentMap[curr.label] = make_pair(curr.statenum, log(curr.logsp));
-            }
-            if (cost4final_state.count(dest)) {  // add transition to finalstate
-                transVal.push_back(cost4final_state[dest] * curr.logfp);
-                transCol.push_back(finalstate);
-                counter++;
-                currentMap[-1] = make_pair(finalstate, log(cost4final_state[dest] * curr.logfp));
-            }
-            fsa.push_back(currentMap);
-        }
-    }
-
-    transRow.push_back(counter);
-    transRow.push_back(counter);  // the final state has no transitions out, and no self-transition
-    assert(transRow.back() == transVal.size());
-    assert(transVal.size() == transCol.size());
-    assert(transRow.size() == finalstate + 2);
-    cout << "Transition matrix has " << (finalstate + 1) << " states and " << transVal.size() << " nozeros " << endl;
-
-    nstates = finalstate + 1;
-    transCount = transVal.size();
-
-    assert(smapCount == arcstate - 1);  // -1 because arcstate 0 is a dummy start state
-
-    bool seen_all = true;
-    smapRow.push_back(0);
-    for (size_t s = 0, smp = 1; s<numSenone; s++, smp++) {
-        if (states4senone.find((int)s) == states4senone.end()) {  // graph build w/ small vocab - not all senones present
-            seen_all = false;
-            smapRow.push_back(smapRow[smp - 1]);
-            continue;
-        }
-        const vector<int> &states = states4senone[(int)s];
-        for (size_t j = 0; j < states.size(); j++) {
-            assert(j == 0 || states[j]>states[j - 1]);
-            assert(states[j] > 0 && states[j] < finalstate);
-            smapVal.push_back(1.0);
-            smapCol.push_back(states[j]);
-        }
-        smapRow.push_back(smapRow[smp - 1] + (int)states.size());
-    }
-    if (!seen_all) {
-        cout << "Warning: not all senones present in graph" << endl;
-    }
-}
-
-template <class ElemType>
-void LatticeFreeMMINode<ElemType>::InitializeFromTfstFiles(const wstring& fstFilePath, const wstring& smapFilePath, bool useSenoneLM, const wstring& transFilePath)
+void LatticeFreeMMINode<ElemType>::InitializeFromTfstFiles(const wstring& fstFilePath, const wstring& smapFilePath)
 {
     map<string, int> idx4senone;
     Read_senone_map(smapFilePath.c_str(), idx4senone);
@@ -311,10 +129,7 @@ void LatticeFreeMMINode<ElemType>::InitializeFromTfstFiles(const wstring& fstFil
 
     int maxstate;
     auto input = LoadTfstFile(fstFilePath.c_str(), idx4senone, maxstate);
-    if (useSenoneLM)
-        Graph2matrixWithSelfLoop(input, maxstate, transVal, transRow, transCol, nstates, transCount, smapVal, smapRow, smapCol, smapCount, nsenones, m_fsa);
-    else
-        Graph2matrix(input, transVal, transRow, transCol, nstates, transCount, smapVal, smapRow, smapCol, smapCount, nsenones, m_fsa, transFilePath);
+    Graph2matrixWithSelfLoop(input, maxstate, transVal, transRow, transCol, nstates, transCount, smapVal, smapRow, smapCol, smapCount, nsenones, m_fsa);
 
     m_tmap->SwitchToMatrixType(SPARSE, matrixFormatSparseCSR, false);
     m_tmap->SetMatrixFromCSRFormat(&transRow[0], &transCol[0], &transVal[0], transCount, nstates, nstates);
@@ -427,8 +242,6 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
             m_betasTemp[j] = m_betas[j] + m_likelihoodBuffer[i * nsenones + m_senoneSequence[j].Senone];
         }
 
-        //assert(absum != -FLT_MAX);
-        //cout << i << " : " << log(absum) << endl;
         for (int j = 0; j < nstates; j++)
         {
             m_alphaNums[i * nstates + j] -= absum;
@@ -517,7 +330,7 @@ double LatticeFreeMMINode<ElemType>::ForwardBackwardProcessForDenorminator(const
     auto probpart = m_obsp->ColumnSlice(0, nf);
     Matrix<ElemType>::MultiplyAndWeightedAdd((ElemType)1.0, smapTranspose, false, *m_likelihoods, false, (ElemType)1.0, probpart);
     
-    const int rescale_interval = 1; // rescale every this many frames
+    //const int rescale_interval = 1; // rescale every this many frames
     ElemType scale = 1.0;
     double fwlogscale = 0.0;
 #ifdef _DEBUG
@@ -535,7 +348,8 @@ double LatticeFreeMMINode<ElemType>::ForwardBackwardProcessForDenorminator(const
         Matrix<ElemType>::MultiplyAndWeightedAdd(scale, tmapTranspose, false, *m_currAlpha, false, (ElemType)0.0, *m_nextAlpha);
 
         m_currAlpha->AssignElementProductOf(*m_nextAlpha, m_obsp->ColumnSlice(f, 1));
-        scale = (f % rescale_interval) == 0 ? m_currAlpha->MatrixNormInf() : (ElemType)1.0;
+        /*scale = (f % rescale_interval) == 0 ? m_currAlpha->MatrixNormInf() : (ElemType)1.0;*/
+        scale = m_currAlpha->MatrixNormInf();
         
         m_alphas->SetColumnSlice(*m_currAlpha, f, 1);
     }
@@ -567,7 +381,8 @@ double LatticeFreeMMINode<ElemType>::ForwardBackwardProcessForDenorminator(const
 
         // apply the transition matrix and scale by the maximum of the previous frame
         Matrix<ElemType>::MultiplyAndWeightedAdd(scale, tmap, false, *m_nextAlpha, false, (ElemType)0.0, *m_currAlpha);
-        scale = (f % rescale_interval) == 0 ? (ElemType)1.0 / m_currAlpha->MatrixNormInf() : (ElemType)1.0;
+        /*scale = (f % rescale_interval) == 0 ? (ElemType)1.0 / m_currAlpha->MatrixNormInf() : (ElemType)1.0;*/
+        scale = (ElemType)1.0 / m_currAlpha->MatrixNormInf();
     }
 
     posteriors.Resize(m_smap->GetNumRows(), nf);

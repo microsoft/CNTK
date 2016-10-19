@@ -551,12 +551,12 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
 
         if (pass == ndlPassInitial)
         {
-            int id = 3; // skip inputValueNode, scale and bias, runMean, runInvStdDev.
+            int id = 3; // skip labelVectorSequence, outProbVectorSequence, logPrior.
             // evaluate only scalar parameters
             vector<void*> params = EvaluateParameters(node, baseName, id, parameter.size() - id, pass);
 
             // Optional parameters
-            ElemType acweight = node->GetOptionalParameter("acweight", "1.0");
+            ElemType squashingFactor = node->GetOptionalParameter("squashingFactor", "1.0");
             bool usePrior = node->GetOptionalParameter("usePrior", "true");
             int alignmentWindow = node->GetOptionalParameter("alignmentWindow", "0");
             ElemType ceweight = node->GetOptionalParameter("ceweight", "0.0");
@@ -579,17 +579,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             if (!fexists(smapFilePath))
                 RuntimeError("File pointed to by smapFilePath does not exist: %s", smapFilePath.c_str());
 
-
-            bool useSenoneLM = node->GetOptionalParameter("useSenoneLM", "true");
-            std::string transFilePath = node->GetOptionalParameter("transFilePath", "");
-            if (!useSenoneLM)
-            {
-                if (transFilePath[0] == '\"' && transFilePath[transFilePath.size() - 1] == '\"')
-                    // remove the opening and closing double quotes
-                    transFilePath = transFilePath.substr(1, transFilePath.size() - 2);
-            }
-
-            nodePtr = builder.LatticeFreeMMI(nullptr, nullptr, nullptr, msra::strfun::utf16(fstFilePath), msra::strfun::utf16(smapFilePath), acweight, usePrior, alignmentWindow, ceweight, l2NormFactor, useSenoneLM, msra::strfun::utf16(transFilePath), name);
+            nodePtr = builder.LatticeFreeMMI(nullptr, nullptr, nullptr, msra::strfun::utf16(fstFilePath), msra::strfun::utf16(smapFilePath), squashingFactor, usePrior, alignmentWindow, ceweight, l2NormFactor, name);
         }
     }
     else

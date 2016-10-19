@@ -48,7 +48,7 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
         CreateMatrixIfNull(m_mbGradients);
     }
 
-    void InitializeFromTfstFiles(const wstring& fstFilePath, const wstring& smapFilePath, bool useSenoneLM, const wstring& transFilePath);
+    void InitializeFromTfstFiles(const wstring& fstFilePath, const wstring& smapFilePath);
 
     inline double Logadd(double a, double b) {
         if (b > a) {
@@ -63,20 +63,20 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
     
 public:
     LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_acweight(1.0), m_usePrior(true), m_alignmentWindow(0), m_ceweight(0), m_l2NormFactor(0), m_totalFrameNumberOfCurrentMinibatch(0)
+        : Base(deviceId, name), m_squashingFactor(1.0), m_usePrior(true), m_alignmentWindow(0), m_ceweight(0), m_l2NormFactor(0), m_totalFrameNumberOfCurrentMinibatch(0)
     {
         InitMatrixes();
     }
 
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType acweight, const bool usePrior, const int alignmentWindow, const ElemType ceweight, const ElemType l2NormFactor, const bool useSenoneLM, const wstring& transFilePath)
-        : Base(deviceId, name), m_acweight(acweight), m_usePrior(usePrior), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_l2NormFactor(l2NormFactor), m_totalFrameNumberOfCurrentMinibatch(0)
+    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const bool usePrior, const int alignmentWindow, const ElemType ceweight, const ElemType l2NormFactor)
+        : Base(deviceId, name), m_squashingFactor(squashingFactor), m_usePrior(usePrior), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_l2NormFactor(l2NormFactor), m_totalFrameNumberOfCurrentMinibatch(0)
     {
         InitMatrixes();
-        InitializeFromTfstFiles(fstFilePath, smapFilePath, useSenoneLM, transFilePath);
+        InitializeFromTfstFiles(fstFilePath, smapFilePath);
     }
 
     LatticeFreeMMINode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"acweight"), configp->Get(L"usePrior"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"l2NormFactor"), configp->Get(L"useSenoneLM"), configp->Get(L"transFilePath"))
+        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"usePrior"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"l2NormFactor"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -101,8 +101,8 @@ public:
                 if (m_ceweight != 0)
                 {
                     m_softmax->InplaceExp();
-                    Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_acweight * (1 - m_ceweight), *m_posteriorsDen);
-                    Matrix<ElemType>::Scale(m_acweight * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
+                    Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_squashingFactor * (1 - m_ceweight), *m_posteriorsDen);
+                    Matrix<ElemType>::Scale(m_squashingFactor * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
                 }
                 if (m_l2NormFactor != 0)
                 {
@@ -225,8 +225,8 @@ public:
         if (m_usePrior)
             (*m_likelihoods) -= Input(2)->ValueAsMatrix();
 
-        if (m_acweight != (ElemType)1.0)    // acoustic squashing factor
-            (*m_likelihoods) *= m_acweight;
+        if (m_squashingFactor != (ElemType)1.0)    // squashing factor
+            (*m_likelihoods) *= m_squashingFactor;
 
         m_likelihoods->InplaceExp(); // likelihood
         (*m_likelihoods) += (ElemType)1e-15;
@@ -247,7 +247,6 @@ public:
         Value().SetValue(finalValue);
 
 #ifdef _DEBUG
-        //SaveMatrix(L"D:\\temp\\LFMMI\\testoutput\\p.txt", *m_posteriorsDen);
         cout << "value: " << Value().GetValue(0, 0) << endl;
 #endif
 
@@ -286,7 +285,7 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<LatticeFreeMMINode<ElemType>>(nodeP);
-            node->m_acweight = m_acweight;
+            node->m_squashingFactor = m_squashingFactor;
             node->m_usePrior = m_usePrior;
             node->m_alignmentWindow = m_alignmentWindow;
             node->m_ceweight = m_ceweight;
@@ -386,7 +385,7 @@ public:
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << m_acweight;
+        fstream << m_squashingFactor;
         fstream << m_usePrior;
         fstream << m_alignmentWindow;
         fstream << m_ceweight;
@@ -407,7 +406,7 @@ public:
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        fstream >> m_acweight;
+        fstream >> m_squashingFactor;
         fstream >> m_usePrior;
         fstream >> m_alignmentWindow;
         fstream >> m_ceweight;
@@ -426,7 +425,7 @@ public:
             Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
             char str[4096];
-            sprintf(str, "acweight=%f usePrior=%d alignmentWindow=%d ceweight=%f l2NormFactor=%f", this->m_acweight, this->m_usePrior, this->m_alignmentWindow, this->m_ceweight, this->m_l2NormFactor);
+            sprintf(str, "squashingFactor=%f usePrior=%d alignmentWindow=%d ceweight=%f l2NormFactor=%f", this->m_squashingFactor, this->m_usePrior, this->m_alignmentWindow, this->m_ceweight, this->m_l2NormFactor);
             fstream << string(str);
         }
 
@@ -458,7 +457,6 @@ private:
 
 private:
     void Graph2matrixWithSelfLoop(vector<DataArc> input, size_t maxstate, vector<ElemType>& transVal, vector<CPUSPARSE_INDEX_TYPE>& transRow, vector<CPUSPARSE_INDEX_TYPE>& transCol, size_t &nstates, size_t &transCount, vector<ElemType>& smapVal, vector<CPUSPARSE_INDEX_TYPE>& smapRow, vector<CPUSPARSE_INDEX_TYPE>& smapCol, size_t &smapCount, size_t numSenone, vector<map<int, pair<int, ElemType>>>& fsa);
-    void Graph2matrix(vector<DataArc> input, vector<ElemType>& transVal, vector<CPUSPARSE_INDEX_TYPE>& transRow, vector<CPUSPARSE_INDEX_TYPE>& transCol, size_t &nstates, size_t &transCount, vector<ElemType>& smapVal, vector<CPUSPARSE_INDEX_TYPE>& smapRow, vector<CPUSPARSE_INDEX_TYPE>& smapCol, size_t &smapCount, size_t numSenone, vector<map<int, pair<int, ElemType>>>& fsa, const wstring &transFilePath);
     
     void Read_senone_map(const wchar_t *infile, map<string, int> &idx4senone) {
         FILE *fin = fopenOrDie(infile, L"r");
@@ -518,7 +516,7 @@ protected:
     size_t m_frameNumberOfCurrentMinibatch;
     bool m_firstPassFinished;
     double m_savedCriterionValue;
-    ElemType m_acweight;
+    ElemType m_squashingFactor;
     bool m_usePrior;
     int m_alignmentWindow;
     ElemType m_ceweight;
