@@ -393,7 +393,7 @@ def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64, rand
         randomize (`bool`, optional): whether to randomize the contents of data file.
 
     Returns:
-        :class:`MinibatchSource'
+        :class:`MinibatchSource`
     '''
     return cntk_py.text_format_minibatch_source(path, stream_configs,
                                                 epoch_size, randomize)
