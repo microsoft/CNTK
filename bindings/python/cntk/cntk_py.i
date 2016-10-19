@@ -1188,24 +1188,6 @@ public:
     virtual void backward() { std::cout << "Callback::backward()" << std::endl; }
 };
 
-/*
-class FunctionInCNTK {
-private:
-    Callback *_callback;
-public:
-    FunctionInCNTK(): _callback(0) {}
-    ~FunctionInCNTK() { delCallback(); }
-    void delCallback() { delete _callback; _callback = 0; }
-    void setCallback(Callback *cb) { delCallback(); _callback = cb; }
-    void forward() { 
-        if (_callback) 
-            _callback->forward(); 
-        else
-            throw "Forward callback not defined!";
-    }
-    void backward() { if (_callback) _callback->backward(); }
-};
-*/
 %}
 
 //
