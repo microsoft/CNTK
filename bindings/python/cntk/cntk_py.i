@@ -249,12 +249,12 @@ def dynamic_axes(self):
             CNTK::ValuePtr* value;
             if (raw_value) {
                 value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+                args_map.insert(std::make_pair(*var, *value));
             } else {
                 // We got an empty ValuePtr, which carries a nullptr.
-                value = new CNTK::ValuePtr();
+                args_map.insert(std::make_pair(*var, CNTK::ValuePtr()));
             }
 
-            args_map.insert(std::make_pair(*var, *value));
         }
 
         $1 = &args_map;
@@ -293,12 +293,11 @@ def dynamic_axes(self):
             CNTK::ValuePtr* value;
             if (raw_value) {
                 value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+                args_map.insert(std::make_pair(*var, *value));
             } else {
                 // We got an empty ValuePtr, which carries a nullptr.
-                value = new CNTK::ValuePtr();
+                args_map.insert(std::make_pair(*var, CNTK::ValuePtr()));
             }
-
-            args_map.insert(std::make_pair(*var, *value));
         }
 
         $1 = &args_map;
@@ -361,6 +360,7 @@ def dynamic_axes(self):
                 PyDict_SetItem($input, py_key, returned_val);
             }
         }
+        Py_DECREF(returned_val);
     }
 }
 
@@ -1188,6 +1188,7 @@ public:
     virtual void backward() { std::cout << "Callback::backward()" << std::endl; }
 };
 
+/*
 class FunctionInCNTK {
 private:
     Callback *_callback;
@@ -1204,6 +1205,7 @@ public:
     }
     void backward() { if (_callback) _callback->backward(); }
 };
+*/
 %}
 
 //
