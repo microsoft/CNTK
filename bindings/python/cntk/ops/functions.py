@@ -179,7 +179,8 @@ class Function(cntk_py.Function):
         Returns:
             `bool`: `True` if updates have been performed
         '''
-        _, output_map = self.forward(arguments or {}, self.outputs, device=device)
+
+        _, output_map = self.forward(arguments, self.outputs, device=device)
 
         if len(output_map) > 1:
             return output_map

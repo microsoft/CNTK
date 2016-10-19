@@ -165,7 +165,7 @@ def get_temp_filename(directory=None):
 
     Args:
         directory (str): optional directory, in which the temporary file will
-         be created
+        be created
 
     Returns:
         Filename of the temporary file
@@ -282,7 +282,7 @@ def get_data_type(*args):
                 dtypes.add(np.float64)
             else:
                 dtypes.add(np.float32)
-        else:
+            else:
             # We don't know anything so we convert everything to float32. If it
             # works, we know the type.
             # TODO figure out a better/faster way.
@@ -338,7 +338,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     mask.
 
     Args:
-        var (`:class:cntk.ops.variables.Variable`): variable node for which the ``batch`` is
+        var (:class:`cntk.ops.variables.Variable`): variable node for which the ``batch`` is
          meant
         batch (`list` of NumPy arrays): input
         seq_starts (`list` of `bool` or `None`): if `None`, every sequence is
@@ -347,7 +347,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
          continuation of the previous one (`False`)
 
     Returns:
-        `:class:cntk.cntk_py.Value`: converted batch
+        :class:`cntk.cntk_py.Value`: converted batch
     '''
     from ..cntk_py import Value
 
@@ -477,18 +477,19 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     '''
     Sanitizes a dictionary of `Variable`s to input data such that it can be
     handed off to the :meth:`cntk.ops.functions.Function.forward` method.
+    handed off to the evaluation methods (:meth:`cntk.ops.functions.Function.forward`, :meth:`cntk.ops.functions.Function.backward`, :meth:`cntk.Trainer.train_minibatch` and
+    :meth:`cntk.Trainer.test_minibatch`).
 
     Args:
         op_arguments (:class:`cntk.ops.functions.Function`): arguments of the root function. In
          forward pass it is typically `op.arguments`, in backward mode it is
          `op.outputs`
-        arguments (`dict` or `list` or `tuple`): maps variables to their
-         input data. The interpretation depends on the input type
-
-            * `dict`: keys are input variable or names and values are the input data.
-            * `list`: elements are input data in the order their respective variables have been defined in the network.
-
-         In both cases, every every sample in the data will be interpreted
+        arguments: maps variables to their
+         input data. The interpretation depends on the input type:
+           * `dict`: keys are input variable or names and values are the input data.
+           * any other type: if node has an unique input, argument is mapped to this input.
+            For nodes with more than one input, only `dict` is allowed.
+         In both cases, every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
          previous sequence, specify ``arguments`` as `tuple`: the
          first element will be used as ``arguments``, and the second one will
@@ -521,16 +522,18 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
         raise ValueError('your graph has %i inputs, but you specified %i' %
                         (len(op_arguments), len(arguments)))
 
-    if isinstance(arguments, list):
-        arguments = dict(zip(op_arguments, arguments))
-
     if isinstance(arguments, dict):
         arg_names = [var.name for var in op_arguments]
         name_counter = collections.Counter(arg_names)
 
         var_name_map = dict((var.name, var) for var in op_arguments)
     else:
-        raise ValueError('type "%s" is not supported' % type(arguments))
+        if len(op_arguments) == 1:
+            name_counter = collections.Counter([op_arguments[0].name])
+            var_name_map = dict([(op_arguments[0].name, op_arguments[0])])
+            arguments = dict([(op_arguments[0], arguments)])
+        else:
+            raise ValueError('non-dict argument (%s) is not supported for nodes with more than one input' % type(arguments).__name__)
 
     sample_sizes = [len(v) for v in arguments.values()]
     if len(set(sample_sizes)) != 1:
