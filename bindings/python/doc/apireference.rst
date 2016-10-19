@@ -1,4 +1,4 @@
-Python API Reference 
+Python API Reference
 ====================
 
 .. toctree::
@@ -7,15 +7,15 @@ Python API Reference
    Graph components <graph>
    IO <cntk.io>
    Trainer & learners <cntk.trainer>
-   Operators <cntk.ops>   
-   Utils <cntk.utils>   
+   Operators <cntk.ops>
+   Utils <cntk.utils>
    Module reference <modules>
 
- Indices and tables
-===================
+Indices and tables
+==================
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
 
-  
+

@@ -27,7 +27,6 @@ def combine(operands, name=''):
         :class:`cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import combine
-    from cntk.cntk_py import Function
     converted_operands = list()
     for o in operands:
         if isinstance(o, Function):
@@ -56,7 +55,6 @@ def alias(x, name=''):
         :class:`cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import alias
-    from cntk.cntk_py import Function
     x = sanitize_input(x)
     return alias(x, name)
 
@@ -86,7 +84,7 @@ def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
         output_vector: the unscaled computed output values from the network
         target_vector: usually it is one-hot vector where the hot bit
          corresponds to the label index. But it can be any probability
-         distribution over the labels. 
+         distribution over the labels.
         axis (`int` or :class:`cntk.axis.Axis`): axis along which the cross
          entropy will be computed.
         name (`str`, optional): the name of the Function instance in the network
@@ -1733,7 +1731,7 @@ def parameter(shape=None, init=None, device=None, name=''):
         init (scalar or NumPy array or initializer): if init is a scalar
          it will be replicated for every element in the tensor or
          NumPy array. If it is the output of an initializer form
-         :module:`cntk.initializer` it will be used to initialize the tensor at
+         :mod:`cntk.initializer` it will be used to initialize the tensor at
          the first forward pass. If `None`, the tensor will be initialized
          with 0.
         device (:class:`cntk.device.DeviceDescriptor`): instance of DeviceDescriptor

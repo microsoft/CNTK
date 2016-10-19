@@ -166,16 +166,18 @@ class EvalMixin(object):
 
     def eval(self, arguments=None, seq_starts=None, precision='float', device=None):
         '''
+        foo
         Evaluate the node using the specified `arguments` as input.
 
         Args:
-            arguments (`dict` or `list`):
-
+            arguments (`dict` or `list`): one 
+             of
+             
               * map from input variables to the data
-              * list of inputs in the order that the function expects or
-
-              Data should be either NumPy arrays or a :class:`cntk.io.MinibatchData` instance
-            seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
+              * list of inputs in the order that the function expects
+             
+             Data should be either NumPy arrays or a :class:`cntk.io.MinibatchData` instance
+            seq_starts (`list` of `bool` or `None`): if `None`, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a
              continuation of the previous one (`False`)
