@@ -402,7 +402,8 @@ CNTKLIBRARY_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/Utils.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Value.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Variable.cpp \
-    $(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Serialization.cpp \
 
 CNTKLIBRARY_SRC+=$(CNTK_COMMON_SRC)
 CNTKLIBRARY_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
@@ -465,7 +466,8 @@ EVAL:=eval
 
 SGDLIB_SRC=\
 	$(SOURCEDIR)/SGDLib/Profiler.cpp \
-	$(SOURCEDIR)/SGDLib/SGD.cpp
+	$(SOURCEDIR)/SGDLib/SGD.cpp \
+	$(SOURCEDIR)/SGDLib/PostComputingActions.cpp \
 	
 EVAL_SRC=\
 	$(SOURCEDIR)/EvalDll/CNTKEval.cpp \

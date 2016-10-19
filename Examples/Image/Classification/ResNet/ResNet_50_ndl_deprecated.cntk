@@ -46,7 +46,7 @@ Train=[
         L2RegWeight=0.0001
         dropoutRate=0
 
-        disableWkInBatchNormal=true
+        disableRegInBatchNormalization=true
         
         ParallelTrain=[
             parallelizationMethod="DataParallelSGD"
@@ -88,11 +88,12 @@ Train=[
 ]
 
 PBN=[
-    action="pbn"
+    action="bnstat"
     modelPath="$ModelDir$/ResNet_50"
     # Set minibatch size for testing.
     minibatchSize=256
-    iters=30
+    itersPerNode=30
+    enableDistributedMBReading=true
 
     reader=[
         readerType="ImageReader"

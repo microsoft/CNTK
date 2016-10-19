@@ -16,6 +16,7 @@
 #include "InputAndParamNodes.h"
 #include "NonlinearityNodes.h"
 #include "RecurrentNodes.h"
+#include "Serialization.h"
 #include "Value.h"
 
 using namespace Microsoft::MSR::CNTK;
@@ -36,6 +37,42 @@ namespace CNTK
         return std::shared_ptr<std::vector<Variable>>(new std::vector<Variable>(std::move(inputs)), [](std::vector<Variable>* ptr) { delete ptr; });
     }
 
+    Function::Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid)
+        : m_rootFunction(rootFunction), m_name(name != L"" ? name : uid), m_uid(uid), m_attributes(std::move(functionConfig))
+    {
+        for (auto inputVar : inputs)
+        {
+            m_inputs.push_back(inputVar);
+
+            if (!inputVar.IsInput() &&
+                !inputVar.IsOutput() &&
+                !inputVar.IsParameter() &&
+                !inputVar.IsConstant() &&
+                !inputVar.IsPlaceholder())
+            {
+                InvalidArgument("Function input has invalid VariableKind!");
+            }
+        }
+
+        std::unordered_set<Variable> uniqueOutputs;
+        for (auto outputVar : outputs)
+        {
+            if (uniqueOutputs.find(outputVar) != uniqueOutputs.end())
+                RuntimeError("Same variable appears multiple times in the outputs vector passed to Function constructor");
+
+            if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.m_dataFields->m_ownerFunction == this)
+            {
+                // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
+                outputVar.m_dataFields->m_uid = m_uid + L"_" + VariableKindName(outputVar.Kind()) + L"_" + std::to_wstring(m_outputs.size());
+            }
+
+            m_outputs.push_back(outputVar);
+            uniqueOutputs.insert(outputVar);
+        }
+    }
+
+    /*virtual*/ Function::~Function() {}
+
     // Placeholders can be replaced incrementally - i.e. not all placeholders need to replaced in one go.
     // The only requirement is that they must all be replaced before making any 'Forward' calls on the Function instance.
     /*virtual*/ void Function::ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
@@ -44,19 +81,38 @@ namespace CNTK
     {
         visitedFunctions.insert(this);
 
-        for (auto& inputVar : m_inputs)
+        auto replacePlaceholder = [&placeholderReplacements, &replacedPlaceholders](Variable& var) {
+            if (var.IsPlaceholder())
         {
-            if (inputVar.IsPlaceholder())
-            {
-                auto placeholder = inputVar;
+                auto placeholder = var;
                 if (placeholderReplacements.find(placeholder) != placeholderReplacements.end())
                 {
-                    inputVar = placeholderReplacements.at(placeholder);
+                    var = placeholderReplacements.at(placeholder);
                     replacedPlaceholders.insert(placeholder);
                 }
             }
-            else if (inputVar.IsOutput() && (visitedFunctions.find(inputVar.Owner().get()) == visitedFunctions.end()))
+        };
+
+        for (auto& inputVar : m_inputs)
+        {
+            replacePlaceholder(inputVar);
+
+            if (inputVar.IsOutput() && (visitedFunctions.find(inputVar.Owner().get()) == visitedFunctions.end()))
+            {
                 inputVar.Owner()->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+        }
+    }
+
+        auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(this);
+        if (primitiveFunction != nullptr && primitiveFunction->OpType() == PrimitiveOpType::Combine)
+        {
+            // Again, combine needs a special treatment, since m_inputs and m_outputs are two 
+            // different vectors, and m_outputs is created by copying m_inputs content, there
+            // still can be placeholders cached in m_outputs, need to replace those as well.
+            for (auto& outputVar : m_outputs)
+            {
+                replacePlaceholder(outputVar);
+            }
         }
     }
 
@@ -162,18 +218,7 @@ namespace CNTK
             auto trainerModelLeafVar = nameVarPair.second;
 
             auto areVariablesEquivalent = [](const Variable& left, const Variable& right) {
-                bool areDynamicAxesCompatible = (left.DynamicAxes().size() == right.DynamicAxes().size());
-                auto numAxes = left.DynamicAxes().size();
-                for (size_t i = 0; areDynamicAxesCompatible && (i < numAxes); ++i)
-                    areDynamicAxesCompatible = (left.DynamicAxes()[i].IsOrdered() == right.DynamicAxes()[i].IsOrdered());
-
-                return ((left.Kind() == right.Kind()) &&
-                    ((left.Shape() == right.Shape()) || (AsTensorShape(left.Shape()) == AsTensorShape(right.Shape()))) &&
-                    (left.GetDataType() == right.GetDataType()) &&
-                    areDynamicAxesCompatible &&
-                    (left.NeedsGradient() == right.NeedsGradient()) &&
-                    (left.Uid() == right.Uid()) &&
-                    (left.IsSparse() == right.IsSparse()));
+                return Internal::AreEquivalent(left, right) && (left.Uid() == right.Uid());
             };
 
             auto correspondingLoadedModelVar = loadedModelLeafVariablesMap.at(trainerModelLeafVar.Uid());
@@ -400,6 +445,42 @@ namespace CNTK
         auto clonedComposite = CompositeFunction::Create(clonedRootFunction, compositeFunction->Name());
         clonedComposite->ReplacePlaceholders(placeholderReplacements);
         return clonedComposite;
+    }
+
+
+    /*virtual*/ void Function::RestoreFromCheckpoint(const Dictionary& modelDictionary)
+    {
+        CompositeFunction* compositeFunction = dynamic_cast<CompositeFunction*>(this);
+        if (compositeFunction == nullptr)
+            InvalidArgument("Primitive (aka non-composite) Function instances cannot be restored from a checkpoint.");
+
+        auto restoredFunction = Function::Deserialize(modelDictionary, DeviceDescriptor::CPUDevice());
+
+        if (!Internal::AreEquivalent(shared_from_this(), restoredFunction))
+            InvalidArgument("'This' function is not equivalent (isomorphic) to the function restored from a checkpoint.");
+
+        auto parameters = Parameters();
+        auto restoredParameters = restoredFunction->Parameters();
+
+        assert(parameters.size() == restoredParameters.size());
+
+        for (int i = 0; i < parameters.size(); i++)
+        {
+            assert(Internal::AreEquivalent(parameters[i], restoredParameters[i]));
+
+            // Additionally, to be super-safe, compare parameter UIDs.
+            if (parameters[i].Uid() != restoredParameters[i].Uid())
+            {
+                 InvalidArgument("'This' function parameters and restored function parameters do not have identical UIDs.");
+            }
+
+            parameters[i].Value()->CopyFrom(*(restoredParameters[i].Value().get()));
+        }
+    }
+
+    /*static*/ FunctionPtr Function::Deserialize(const Dictionary& modelDictionary, const CNTK::DeviceDescriptor& device)
+    {
+        return CompositeFunction::Deserialize(modelDictionary, device);
     }
 
     // Names for the reduction operations as used by the CNTK ReduceElementsNode
@@ -805,11 +886,248 @@ namespace CNTK
             }
         }
 
-        return { OutputVariable(outputShape, outputDataType, owner, outputDynamicAxes, functionName.empty() ? L"" : functionName + L"_output") };
+        return{ OutputVariable(outputShape, outputDataType, owner, outputDynamicAxes, functionName.empty() ? L"" : functionName + L"_output") };
     }
 
     /*static*/ const std::wstring CompositeFunction::CompositeFunctionOpName = L"CompositeFunctionOpName";
     /*static*/ std::atomic<unsigned int> CompositeFunction::s_nextAutoGeneratedDynamicAxis(0);
+
+    static const std::wstring s_primitiveFunctionTypeValue = L"PrimitiveFunction";
+
+    /*virtual*/ Dictionary PrimitiveFunction::Serialize() const 
+    {
+        Dictionary dict;
+
+        dict[versionKey] = CurrentVersion();
+        dict[typeKey] = s_primitiveFunctionTypeValue;
+        dict[opKey] = static_cast<size_t>(m_op);
+        dict[attributesKey] = Attributes();
+        dict[uidKey] = Uid();
+        dict[nameKey] = Name();
+        
+        auto inputs = Inputs();
+        vector<DictionaryValue> inputUids;
+        inputUids.reserve(inputs.size());
+        for (auto& input : inputs)
+        {
+            inputUids.push_back(input.Uid());
+        }
+
+        dict[inputsKey] = std::move(inputUids);
+
+        return dict;
+    }
+
+    /*static*/ FunctionPtr PrimitiveFunction::Deserialize(const Dictionary& dict, 
+                                                          const std::unordered_map<std::wstring, Variable>& uidToVariableMap,
+                                                          const CNTK::DeviceDescriptor& device)
+    {
+        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, opKey, uidKey, attributesKey, inputsKey, nameKey };
+       
+        size_t version = ValidateDictionary<PrimitiveFunction>(dict, s_requiredDictionaryKeys, s_primitiveFunctionTypeValue, s_serializationVersion);
+
+        PrimitiveOpType op = PrimitiveOpType(dict[opKey].Value<std::size_t>());
+
+        // The hard requirement that the serialization depends on is that
+        // new op type values are only added to the end of the list, after Combine.
+        // This also applies to other enums (DataType, VariableKind, etc.)
+        if (op > PrimitiveOpType::Combine)
+        {
+            LogicError("Unexpected variable '%ls':'%d' "
+                        "(%s).", opKey.c_str(), op, GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
+        }
+
+        const auto& uid = dict[uidKey].Value<std::wstring>();
+        const auto& name = dict[nameKey].Value<std::wstring>();
+        auto attributes = dict[attributesKey].Value<Dictionary>();
+        const auto& inputUids = dict[inputsKey].Value<vector<DictionaryValue>>();
+
+        std::vector<Variable> inputs;
+        inputs.reserve(inputUids.size());
+
+        for (const auto& dictionaryValue : inputUids)
+        {
+            const auto& inputUid = dictionaryValue.Value<std::wstring>();
+            if (uidToVariableMap.find(inputUid) == uidToVariableMap.end())
+            {
+                LogicError("There are no inputs corresponging to input uid = '%ls' "
+                        "(%s).", inputUid.c_str(), GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
+            }
+            inputs.push_back(uidToVariableMap.at(inputUid));
+        }
+
+        return std::shared_ptr<PrimitiveFunction>(new PrimitiveFunction(op, inputs, std::move(attributes), name, uid), 
+                                                  [](PrimitiveFunction* ptr) { delete ptr; });
+    }
+
+    static const std::wstring s_compositeFunctionTypeValue = L"CompositeFunction";
+
+    /*virtual*/ Dictionary CompositeFunction::Serialize() const
+    {
+        Dictionary dict;
+
+        dict[versionKey] = CurrentVersion();
+        dict[typeKey] = s_compositeFunctionTypeValue;
+        dict[rootKey] = RootFunction()->Uid();
+        dict[nameKey] = Name();
+        dict[uidKey] = Uid();
+
+       
+        // Find cycles in the graph and "break" them by inserting placeholders.
+        // This needs to be done on Save, since here we have easy access to the shape and 
+        // dynamic axis info.
+        std::unordered_set<FunctionPtr> visitedFunctions;
+        std::vector<FunctionPtr> topoSortedPrimitiveFunctions;
+        std::vector<Variable> inputs;
+        std::unordered_set<std::wstring> inputUids;
+        Traverse([&visitedFunctions, &inputs, &topoSortedPrimitiveFunctions, &inputUids](const FunctionPtr& function) {
+                    std::vector<Variable> functionInputs = function->Inputs();
+                    for (const auto& input : functionInputs)
+                    {
+                        auto& uid = input.Uid();
+                        if (inputUids.find(uid) != inputUids.end())
+                        {
+                            continue;
+                        }
+
+                        // check if this input corresponds to a cyclic edge in the graph.
+                        bool mustBeReplaced = input.IsOutput() && visitedFunctions.find(input.Owner()) != visitedFunctions.end();
+
+                        if (mustBeReplaced)
+                        {
+                            auto varKind = VariableKind::Placeholder;
+                                Variable var(input.Shape(), varKind, input.GetDataType(), nullptr, 
+                                             input.IsSparse(), input.DynamicAxes(), input.Name(), uid);
+                                inputs.push_back(var);
+                                inputUids.insert(uid);
+                        }
+                        else if (!input.IsOutput())
+                        {
+                            // leave the input as is.
+                            inputs.push_back(input);
+                            inputUids.insert(uid);
+                        }
+                    }
+                    visitedFunctions.insert(function);
+                    topoSortedPrimitiveFunctions.push_back(function);
+                });
+
+        std::reverse(std::begin(topoSortedPrimitiveFunctions), std::end(topoSortedPrimitiveFunctions));
+
+        assert(topoSortedPrimitiveFunctions.size() == m_allPrimitiveFunctions.size());
+        assert(topoSortedPrimitiveFunctions.back()->Uid() == RootFunction()->Uid());
+        
+        std::vector<DictionaryValue> inputDictionaries;
+        inputDictionaries.reserve(inputs.size());
+        inputUids.clear();
+        for (const auto& input : inputs)
+        {
+            if (inputUids.find(input.Uid()) != inputUids.end())
+            {
+                LogicError("Input uids must be unique");
+            }
+            inputUids.insert(input.Uid());
+            inputDictionaries.push_back(input.Serialize());
+        }
+
+        dict[inputsKey] = std::move(inputDictionaries);
+       
+        std::vector<DictionaryValue>  functionDictionaries;
+        std::unordered_set<std::wstring> outputUids;
+        for (const auto& primitiveFunciton : topoSortedPrimitiveFunctions)
+        {
+            for (const auto& output : primitiveFunciton->Outputs())
+            {
+                if (outputUids.find(output.Uid()) != outputUids.end())
+                {
+                    LogicError("Output uids of all primitive functions in a function graph must be unique");
+                }
+                outputUids.insert(primitiveFunciton->Uid());
+            }
+            functionDictionaries.push_back(primitiveFunciton->Serialize());
+        }
+
+        dict[functionsKey] = std::move(functionDictionaries);
+        
+        return dict;
+    }
+
+    /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
+    {
+        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, rootKey, nameKey, uidKey, inputsKey, functionsKey };
+       
+        size_t version = ValidateDictionary<CompositeFunction>(dict, s_requiredDictionaryKeys, s_compositeFunctionTypeValue, s_serializationVersion);
+
+        const auto& rootUid = dict[rootKey].Value<std::wstring>();
+        const auto& name = dict[nameKey].Value<std::wstring>();
+        const auto& uid = dict[uidKey].Value<std::wstring>();
+        const auto& inputs = dict[inputsKey].Value<vector<DictionaryValue>>();
+
+        std::unordered_map<std::wstring, Variable> uidToInputMap(inputs.size());
+
+        for (const auto& dictionaryValue : inputs)
+        {
+            const auto& dictionary = dictionaryValue.Value<Dictionary>();
+            const auto& inputVar = Variable::Deserialize(dictionary, device);
+
+            if (uidToInputMap.find(inputVar.Uid()) != uidToInputMap.end())
+            {
+                LogicError("Input uids are not unique (several inputs share '%ls' uid) "
+                        "(%s).", inputVar.Uid().c_str(), GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
+            }
+            uidToInputMap[inputVar.Uid()] = inputVar;
+        }
+
+        const auto& functions = dict[functionsKey].Value<vector<DictionaryValue>>();
+
+        FunctionPtr root;
+        std::unordered_map<Variable, Variable> placeholderReplacements;
+        std::unordered_set<FunctionPtr> allPrimitiveFunctions; // this keeps all primitive functions alive until a composite function is created.
+        for (const auto& dictionaryValue : functions)
+        {
+            root = PrimitiveFunction::Deserialize(dictionaryValue.Value<Dictionary>(), uidToInputMap, device);
+            allPrimitiveFunctions.insert(root);
+
+            auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(root.get());
+            // Since Combine simply forwards other functions' outputs, all of its outputs
+            // should already be in the uidToInputMap.
+            if (primitiveFunction->OpType() == PrimitiveOpType::Combine)
+            {
+                continue;
+            }
+
+            for (const auto& output : root->Outputs())
+            {
+                const auto& it = uidToInputMap.find(output.Uid());
+                if (it != uidToInputMap.end())
+                {
+                    if (!it->second.IsPlaceholder())
+                    {
+                        LogicError("Unexpected variable type %ls instead of a Placeholder for input %ls variable (uid = %ls)"
+                        "(%s).", VariableKindName(it->second.Kind()), it->second.Name().c_str(), it->second.Uid().c_str(),
+                        GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
+                    }
+                    placeholderReplacements[it->second] = output;
+                }
+                else
+                {
+                    uidToInputMap[output.Uid()] = output;
+                }
+            }
+        }
+
+        if (root->Uid() != rootUid)
+        {
+            LogicError("Root UID '%ls' is different from the expected value '%ls'.", rootUid.c_str(), root->Uid().c_str());
+        }
+
+        if (placeholderReplacements.size() > 0)
+        {
+           return CompositeFunction::Create(root->ReplacePlaceholders(placeholderReplacements), name, uid);
+        }
+
+        return CompositeFunction::Create(root, name, uid);
+    }
 
     // Names of the dynamic axes in the CNTK engine for some special sets of dynamic axes values
     // Note: The no sequence axis corresponds to a special case where there is no sequence axis (i.e. has been reduced over)
@@ -834,7 +1152,7 @@ namespace CNTK
             {
                 auto ownerFunc = replacingVariable.Owner();
                 std::unordered_set<FunctionPtr> visitedFunctions;
-                DetermineInputs(ownerFunc, visitedFunctions);
+                Collect(ownerFunc, visitedFunctions);
 
                 // Add the newly visited functions to 'm_allPrimitiveFunctions' set
                 m_allPrimitiveFunctions.insert(visitedFunctions.begin(), visitedFunctions.end());

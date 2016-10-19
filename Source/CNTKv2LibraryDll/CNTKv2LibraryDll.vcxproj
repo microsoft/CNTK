@@ -135,6 +135,8 @@
     <ClInclude Include="Function.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
+    <ClInclude Include="PrimitiveOpType.h" />
+    <ClInclude Include="Serialization.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -154,6 +156,7 @@
     <ClCompile Include="MinibatchSource.cpp" />
     <ClCompile Include="NDArrayView.cpp" />
     <ClCompile Include="NDMask.cpp" />
+    <ClCompile Include="Serialization.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>

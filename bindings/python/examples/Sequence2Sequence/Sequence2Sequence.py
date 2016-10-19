@@ -11,7 +11,7 @@ import math
 import time
 from cntk import Trainer, Axis, text_format_minibatch_source, StreamConfiguration
 from cntk.device import cpu, set_default_device
-from cntk.learner import momentums_per_sample, momentum_sgd
+from cntk.learner import momentum_sgd, momentum_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -56,7 +56,7 @@ def sequence_to_sequence_translator(debug_output=False):
     encoder_outputH = stabilize(input_sequence)
     for i in range(0, num_layers):
         (encoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
-            encoder_outputH.output(), hidden_dim, hidden_dim, future_value, future_value)
+            encoder_outputH.output, hidden_dim, hidden_dim, future_value, future_value)
 
     thought_vectorH = sequence.first(encoder_outputH)
     thought_vectorC = sequence.first(encoder_outputC)
@@ -84,7 +84,7 @@ def sequence_to_sequence_translator(debug_output=False):
                 isFirst, thought_vector_broadcastC, past_value(operand))
 
         (decoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
-            decoder_outputH.output(), hidden_dim, hidden_dim, recurrence_hookH, recurrence_hookC)
+            decoder_outputH.output, hidden_dim, hidden_dim, recurrence_hookH, recurrence_hookC)
 
     decoder_output = decoder_outputH
     decoder_dim = hidden_dim
@@ -97,12 +97,11 @@ def sequence_to_sequence_translator(debug_output=False):
     # Instantiate the trainer object to drive the model training
     lr = 0.007
     momentum_time_constant = 1100
-    momentum_per_sample = momentums_per_sample(
-        math.exp(-1.0 / momentum_time_constant))
+    m_schedule = momentum_schedule(momentum_time_constant)
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
 
-    trainer = Trainer(z, ce, errs, [momentum_sgd(z.parameters(), lr, momentum_per_sample, clipping_threshold_per_sample, gradient_clipping_with_truncation)])                   
+    trainer = Trainer(z, ce, errs, [momentum_sgd(z.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)])                   
 
     rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.train-dev-20-21.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
@@ -122,7 +121,7 @@ def sequence_to_sequence_translator(debug_output=False):
         training_progress_output_freq = training_progress_output_freq/3
 
     while True:
-        mb = mb_source.get_next_minibatch(minibatch_size)
+        mb = mb_source.next_minibatch(minibatch_size)
         if len(mb) == 0:
             break
 
@@ -151,7 +150,7 @@ def sequence_to_sequence_translator(debug_output=False):
     i = 0
     total_error = 0.0
     while True:
-        mb = test_mb_source.get_next_minibatch(train_minibatch_size)
+        mb = test_mb_source.next_minibatch(train_minibatch_size)
         if len(mb) == 0:
             break
 

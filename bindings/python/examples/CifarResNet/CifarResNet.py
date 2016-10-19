@@ -34,7 +34,7 @@ def create_mb_source(features_stream_name, labels_stream_name, image_height,
 
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         cifar_py3 = "" if sys.version_info.major < 3 else "_py3"
-        raise RuntimeError("File '%s' or '%s' do not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
+        raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
                            (map_file, mean_file, cifar_py3, cifar_py3))
 
     image = ImageDeserializer(map_file)
@@ -59,7 +59,7 @@ def create_test_mb_source(features_stream_name, labels_stream_name, image_height
 
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         cifar_py3 = "" if sys.version_info.major < 3 else "_py3"
-        raise RuntimeError("File '%s' or '%s' do not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
+        raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
                            (map_file, mean_file, cifar_py3, cifar_py3))
 
     image = ImageDeserializer(map_file)
@@ -168,7 +168,7 @@ def cifar_resnet(base_path, debug_output=False):
 
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(classifier_output, ce, pe,
-                      [sgd(classifier_output.parameters(), lr=0.0078125)])
+                      [sgd(classifier_output.parameters, lr=0.0078125)])
 
     # Get minibatches of images to train with and perform model training
     mb_size = 32
@@ -179,7 +179,7 @@ def cifar_resnet(base_path, debug_output=False):
         training_progress_output_freq = training_progress_output_freq/3
 
     for i in range(0, num_mbs):
-        mb = minibatch_source.get_next_minibatch(mb_size)
+        mb = minibatch_source.next_minibatch(mb_size)
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
@@ -201,7 +201,7 @@ def cifar_resnet(base_path, debug_output=False):
 
     total_error = 0.0
     for i in range(0, num_mbs):
-        mb = test_minibatch_source.get_next_minibatch(mb_size)
+        mb = test_minibatch_source.next_minibatch(mb_size)
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
@@ -219,10 +219,10 @@ if __name__ == '__main__':
     # use the best available one, e.g.
     # set_default_device(cpu())
 
-    base_path = os.path.normpath(os.path.join(
-        *"../../../Examples/Image/Datasets/CIFAR-10/cifar-10-batches-py".split("/")))
+    base_path = os.path.abspath(os.path.normpath(os.path.join(
+        *"../../../Examples/Image/Datasets/CIFAR-10/".split("/"))))
 
-    os.chdir(os.path.join(base_path, '..'))
+    os.chdir(base_path)
 
     error = cifar_resnet(base_path)
     print("Error: %f" % error)

@@ -52,7 +52,7 @@ def ffnet(debug_output=False):
     pe = classification_error(netout, label)
 
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters(), lr=0.02)])
+    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters, lr=0.02)])
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25
