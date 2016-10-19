@@ -22,7 +22,7 @@ them on sample data in real time.
 
    Getting Started <gettingstarted>
    Tutorials <tutorials>
-   API Reference <apireference>
+   Python API Reference <apireference>
 
 
 Indices and tables
