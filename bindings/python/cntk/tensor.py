@@ -166,7 +166,6 @@ class EvalMixin(object):
 
     def eval(self, arguments=None, seq_starts=None, precision='float', device=None):
         '''
-        foo
         Evaluate the node using the specified ``arguments`` as input.
 
         Args:

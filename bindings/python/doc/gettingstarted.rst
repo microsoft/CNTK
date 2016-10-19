@@ -49,9 +49,6 @@ more common case) is as follows:
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. 
-.. I think this is confusing (four brackets in the first example?). Two brackets work the same as four.
-.. These have to be specified as minibatches. Let's take e.g. the data for `x`: ``[[2., 1.]]`` describes the 1x2 matrix as one element in a sequence. Then we need a `[ ]` 
-   pair for the sequence, and another one for the batch.
 The squared error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
 
 As the graph nodes implement the NumPy array interface, you can easily access
