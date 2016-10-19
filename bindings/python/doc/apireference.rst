@@ -1,5 +1,5 @@
 Python API Reference 
-===============
+====================
 
 .. toctree::
    :maxdepth: 2
@@ -12,7 +12,7 @@ Python API Reference
    Module reference <modules>
 
  Indices and tables
-==================
+===================
 
 * :ref:`genindex`
 * :ref:`modindex`

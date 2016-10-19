@@ -80,7 +80,7 @@ class TensorOpsMixin(object):
     # TODO __xor__, __rxor__, __pow__, __rpow__,  __invert__
 
     # Comparison operators are not exposed yet, because of __eq__ being
-    # required to allow comparison of Variables on C++ so that we can say 
+    # required to allow comparison of Variables on C++ so that we can say
     # 'for var in variables'.
     # __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__,
 
@@ -169,9 +169,11 @@ class EvalMixin(object):
         Evaluate the node using the specified `arguments` as input.
 
         Args:
-            arguments (`dict` or `list`): 
+            arguments (`dict` or `list`):
+
               * map from input variables to the data
-              * list of inputs in the order that the function expects or 
+              * list of inputs in the order that the function expects or
+
               Data should be either NumPy arrays or a :class:`cntk.io.MinibatchData` instance
             seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of

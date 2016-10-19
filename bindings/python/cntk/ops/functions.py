@@ -136,7 +136,7 @@ class Function(cntk_py.Function):
         Computes the values of speficied variables in `outputs`, using values
         provided in `arguments` that correspond to each input `Variable` of
         the function whose `is_input` is `True`.
-        
+
         Example:
             >>> v = C.input_variable(shape=(1,3))
             >>> f = C.reciprocal(v)
@@ -154,8 +154,10 @@ class Function(cntk_py.Function):
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
+
                * `dict`: keys are input variable or names, and values are the input data.
                * `list`: elements are input data in the order their respective variables have been defined in the network.
+
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify `arguments` as `tuple`: the
@@ -165,13 +167,12 @@ class Function(cntk_py.Function):
              Data should be either NumPy arrays or a
              :class:`cntk.io.MinibatchData` instance.
             outputs (iterable): outputs to fetch values for.
-            keep_for_backward (`set`, default `None): the subset of the
+            keep_for_backward (`set`, default `None`): the subset of the
              Function's output variables for which gradients shall be calculated
              in a subsequent backward call. If `None`, the returned state will
              be `None` and a subsequent call to `backward` will not be
              possible.
-             for backpropagation.
-            device (:class:`cntk.DeviceDescriptor`, default `None): the device
+            device (:class:`cntk.DeviceDescriptor`, default `None`): the device
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
 
@@ -232,7 +233,6 @@ class Function(cntk_py.Function):
 
         self._backward(state, root_gradients, var_gradients)
 
-        backward_output = {}
         for var, value in var_gradients.items():
             var_gradients[var] = value_to_seq(value)
 
