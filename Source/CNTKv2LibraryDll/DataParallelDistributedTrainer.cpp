@@ -5,9 +5,37 @@
 
 #include "stdafx.h"
 #include "DataParallelDistributedTrainer.h"
+#include "DistributedCommunicator.h"
+
+#ifdef CNTK_PARALLEL_TRAINING_SUPPORT
+#include "QuantizedDistributedCommunicator.h"
+#include "QuantizedDataParallelDistributedTrainer.h"
+#endif
 
 namespace CNTK
 {
+#ifdef CNTK_PARALLEL_TRAINING_SUPPORT
+    QuantizedDistributedCommunicatorPtr QuantizedMPICommunicator(bool zeroThresholdFor1Bit, bool useQuantizationForSelfStripe, size_t numQuantizationBits)
+    {
+        return MakeSharedObject<QuantizedMPICommunicatorImpl>(zeroThresholdFor1Bit, useQuantizationForSelfStripe, numQuantizationBits);
+    }
+
+    DistributedTrainerPtr CreateQuantizedDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate)
+    {
+        return MakeSharedObject<DataParallelDistributedTrainer>(communicator, useAsyncBufferedParameterUpdate);
+    }
+#else
+    QuantizedDistributedCommunicatorPtr QuantizedMPICommunicator(bool, bool, size_t)
+    {
+        LogicError("Quantized MPI Communicator is not supported for this build.");
+    }
+
+    DistributedTrainerPtr CreateQuantizedDataParallelDistributedTrainer(DistributedCommunicatorPtr, bool)
+    {
+        LogicError("Quantized Distributed Trainer is not supported for this build.");
+    }
+#endif
+
     DistributedTrainerPtr CreateDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate)
     {
         return MakeSharedObject<DataParallelDistributedTrainer>(communicator, useAsyncBufferedParameterUpdate);

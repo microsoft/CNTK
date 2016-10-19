@@ -97,5 +97,6 @@ int main(int /*argc*/, char* /*argv*/[])
     _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);
 #endif
 
+    DistributedCommunicator::Finalize();
     return 0;
 }
