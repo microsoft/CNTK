@@ -161,12 +161,12 @@ def create_model(input):
 
 def train(reader, max_epochs = 30):
 
-    features_si = reader[features_stream_name]
-    labels_si   = reader[labels_stream_name]
+    features_slot = reader[features_stream_name]
+    labels_slot   = reader[labels_stream_name]
 
     # Input variables denoting the features and label data
-    input_var = input_variable((num_channels, image_height, image_width), features_si.m_element_type)
-    label_var = input_variable((num_classes), features_si.m_element_type)
+    input_var = input_variable((num_channels, image_height, image_width), features_slot.m_element_type)
+    label_var = input_variable((num_classes), labels_slot.m_element_type)
 
     # apply model to input
     model = create_model_1(input_var)
@@ -201,18 +201,13 @@ def train(reader, max_epochs = 30):
         metric_denom = 0
 
         while True:
-            mb = reader.next_minibatch(minibatch_size)
-            if mb is None:
+            data = reader.next_minibatch(minibatch_size)
+            if data is None:
                 reader.restore_from_checkpoint(original_state)
                 break
 
-            # Specify the mapping of input variables in the model to actual
             # minibatch data to be trained with
-            data = {
-                input_var: mb[features_si], 
-                label_var: mb[labels_si]
-                }
-            trainer.train_minibatch(data)
+            trainer.train_minibatch({input_var: data[features_slot], label_var: data[labels_slot]})
 
             loss_numer += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count  # too much code for something this simple
             loss_denom +=                                           trainer.previous_minibatch_sample_count
