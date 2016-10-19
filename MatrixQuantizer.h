@@ -20,13 +20,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // data-parallel SGD training, at the end of each minibatch.
 // Refer this paper http://research.microsoft.com/apps/pubs/?id=230137
 // for details.
+class MatrixQuantizerBase
+{};
+
 template <class ElemType>
-class MatrixQuantizer final
+class MatrixQuantizer final : public MatrixQuantizerBase
 {
 public:
-    MatrixQuantizer(size_t numRows, size_t numCols, int deviceId, bool useAsync)
+    MatrixQuantizer(size_t numRows, size_t numCols, int deviceId, bool useAsync) : MatrixQuantizer(deviceId, useAsync)
     {
-        m_residual.reset(new Matrix<ElemType>(numRows, numCols, deviceId, DENSE));
+        m_residual = std::make_shared<Matrix<ElemType>>(numRows, numCols, deviceId, DENSE);
+    }
+
+    MatrixQuantizer(int deviceId, bool useAsync) : m_residual(nullptr)
+    {
         m_quantizerImpl.reset(MatrixQuantizerImpl<ElemType>::Create(deviceId, useAsync));
     }
 
@@ -36,6 +43,11 @@ public:
     void QuantizeAsync(const Matrix<ElemType>& inMatrix, QuantizedMatrix<ElemType>& outQMatrix, bool zeroThresholdFor1Bit)
     {
         m_quantizerImpl->QuantizeAsync(inMatrix, *m_residual, outQMatrix, *m_residual, zeroThresholdFor1Bit);
+    }
+
+    void QuantizeAsync(const Matrix<ElemType>& inMatrix, const Matrix<ElemType>& inResidual, QuantizedMatrix<ElemType>& outQMatrix, Matrix<ElemType>& outResidual, bool zeroThresholdFor1Bit)
+    {
+        m_quantizerImpl->QuantizeAsync(inMatrix, inResidual, outQMatrix, outResidual, zeroThresholdFor1Bit);
     }
 
     void WaitQuantizeAsyncDone()
@@ -55,7 +67,7 @@ public:
 
     int GetDeviceId() const
     {
-        return m_residual->GetDeviceId();
+        return m_quantizerImpl->GetDeviceId();
     }
 
     void ResetResidue()
@@ -72,7 +84,7 @@ private:
     std::unique_ptr<MatrixQuantizerImpl<ElemType>> m_quantizerImpl;
 
     // the residual matrix
-    std::unique_ptr<Matrix<ElemType>> m_residual;
+    std::shared_ptr<Matrix<ElemType>> m_residual;
 };
 
 } } }
