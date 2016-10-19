@@ -332,7 +332,7 @@ def pad_to_dense(batch):
 
 def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     '''
-    Convert to :class:`cntk.cntk_py.Value` with `data_type`. If the samples in `batch` have
+    Convert to :class:`cntk.cntk_py.Value` with ``data_type``. If the samples in ``batch`` have
     different sequence lengths, pad them to max sequence length and create a
     mask.
 
@@ -436,7 +436,7 @@ def sanitize_value(shape, value, dtype, device):
          on
 
     Returns:
-        :class:`NDArrayView` object representing `value`
+        :class:`NDArrayView` object representing ``value``
     '''
     np_dtype = sanitize_dtype_numpy(dtype)
     cntk_dtype = sanitize_dtype_cntk(dtype)
@@ -476,7 +476,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                      device=None):
     '''
     Sanitizes a dictionary of `Variable`s to input data such that it can be
-    handed off to the `Forward` method.
+    handed off to the :meth:`cntk.ops.functions.Function.forward` method.
 
     Args:
         op_arguments (:class:`cntk.ops.functions.Function`): arguments of the root function. In
