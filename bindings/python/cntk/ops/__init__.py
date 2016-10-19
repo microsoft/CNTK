@@ -1736,7 +1736,7 @@ def parameter(shape=None, init=None, device=None, name=''):
          :module:`cntk.initializer` it will be used to initialize the tensor at
          the first forward pass. If `None`, the tensor will be initialized
          with 0.
-        device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
+        device (:class:`cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the Parameter instance in the network
 
     Returns:
@@ -1777,7 +1777,7 @@ def constant(value=None, shape=None, device=None, name=''):
          If ``None``, the tensor will be initialized uniformly random.
         shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
          be inferred from ``value``.
-        device (:class:`cntk.DeviceDescriptor`): instance of DeviceDescriptor
+        device (:class:`cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the Function instance in the network
     Returns:
         :class:`cntk.ops.variables.Constant`
