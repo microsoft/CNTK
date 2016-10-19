@@ -65,13 +65,19 @@ def alias(x, name=''):
 
 @typemap
 def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
-    '''
-    This operation computes the cross entropy over the softmax of the ``output_vector``.
-    It expects the ``output_vector`` as unscaled, and it computes softmax over
-    the ``output_vector`` internally.  Any ``output_vector`` input over which softmax is
-    already computed before passing to this operator will be incorrect.
+    r'''
+    This operation computes the cross entropy between the ``target_vector`` and
+    the softmax of the ``output_vector``. The elements of ``target_vector``
+    have to be non-negative and should sum to 1. The ``output_vector`` can
+    contain any values. The function will internally compute the softmax of
+    the ``output_vector``. Concretely,
 
-    :math:`cross\_entropy\_with\_softmax(o, t) = {-{\sum_{i \in \{1,len(t)\}} t_i \log(softmax(o_i)) }}`
+    :math:`\mathrm{softmax}(x)=\left[\frac{\exp(x_1)}{\sum_i\exp(x_i)}\quad\frac{\exp(x_1)}{\sum_i\exp(x_i)}\quad\ldots\quad\frac{\exp(x_1)}{\sum_i\exp(x_i)}\right]`
+
+    :math:`\mathrm{cross\_entropy\_with\_softmax}(o, t) = -\sum_{i} t_i \log(\mathrm{softmax}(o)_i)`
+
+    with the understanding that the implementation can use equivalent formulas
+    for efficiency and numerical stability.
 
     Example:
         >>> C.cross_entropy_with_softmax([[1., 1., 1., 50.]], [[0., 0., 0., 1.]]).eval()
@@ -919,13 +925,17 @@ def tanh(x, name=''):
 
 @typemap
 def softmax(x, name=''):
-    '''
-    Squashes the input values ``x`` such that they add up to 1:
+    r'''
+    Computes the gradient of :math:`f(z)=\log\sum_i\exp(z_i)` at z=``x``. Concretely,
 
-    :math:`softmax(x) = {\exp(x_i) - \max_{x_i \in x}(\exp(x_i)) \over {\sum_{x_i \in x} \exp(x_i)- \max_{x_i \in x}(\exp(x_i)) }}`
+    :math:`\mathrm{softmax}(x)=\left[\frac{\exp(x_1)}{\sum_i\exp(x_i)}\quad\frac{\exp(x_1)}{\sum_i\exp(x_i)}\quad\ldots\quad\frac{\exp(x_1)}{\sum_i\exp(x_i)}\right]`
 
-    The term :math:`\max_{x_i \in x}(\exp(x_i))` is subtracted for numerical
-    stability.
+    with the understanding that the implementation can use equivalent formulas
+    for efficiency and numerical stability.
+
+    The output is a vector of non-negative numbers that sum to 1 and can
+    therefore be interpreted as probabilities for mutually exclusive outcomes
+    as in the case of multiclass classification.
 
     Example:
         >>> C.softmax([[1, 1, 2, 3]]).eval()
@@ -1636,8 +1646,8 @@ def dropout(x, dropout_rate=0.0, name=''):
 
     Args:
         x: input tensor
-        dropout_rate (float, [0,1)): fraction of nodes to be set to zero
-        name (`str`, optional): the name of the Function instance in the network
+        dropout_rate (`float`, [0,1)): fraction of nodes to be set to zero
+        name (:class:`str`, optional): the name of the Function instance in the network
 
     Returns:
         :class:`cntk.ops.functions.Function`
