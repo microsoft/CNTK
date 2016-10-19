@@ -143,9 +143,10 @@ if __name__=='__main__':
     # TODO: get closure on Amit's feedback "Not the right pattern as we discussed over email. Please change to set_default_device(gpu(0))"
     #set_default_device(gpu(0))
 
-    #from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed
-    #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
-    #set_fixed_random_seed(1)  # TODO: remove debugging facilities once this all works
+    # TODO: leave these in for now as debugging aids; remove for beta
+    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed
+    set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
+    set_fixed_random_seed(1)  # TODO: remove debugging facilities once this all works
 
     reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model()

@@ -42,13 +42,26 @@ def UntestedBranchError(name):
 # Returns its arg to allow chaining.
 def _extend_Function(f):
     class FunctionEx(f.__class__): 
-        def __call__(self, *args):
-            return _apply(self, _as_tuple(args))
-        def __rshift__(self, other):
-            return other(self)
+        # BUGBUG: Somehow we don't get here anymore. It's fine for now.
+        def __dummy__():
+            pass
+        #def __call__(self, *args):
+        #    f = self
+        #    _function_name = _node_name(f)  # these are for logging/debugging only
+        #    _function_description = _node_description(f)
+        #    _arg_description = ", ".join([_node_name(f) for f in list(args)])
+        #    #f = super(Function, self).f()
+        #    f = super(Function, f)(*args)
+        #    _name_and_extend_Function(f, _function_name)
+        #    if _trace_layers:
+        #        print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
+        #    return f
+        ## needed here to call into FunctionEx.__call__ instead of Function.__call__
+        #def __rshift__(self, other):
+        #    return other(self)
         def _name(self):  # retrieve the debug name
             return _node_name(self)
-    if hasattr(f, '__call__'):  # already extended: don't do it again
+    if hasattr(f, '__dummy__'):  # already extended: don't do it again
         return f
     f.__class__ = FunctionEx
     if _trace_layers:
@@ -66,7 +79,8 @@ def _wrap_rename_Function(f, name):
      f = combine([f]) ; _name_and_extend_Function(f, name)  # 'combine' to create a separate identity so we can reassign the debug name
      return f
 
-def _apply(f, args):
+# TODO: no longer used in this form
+def __unused_apply(f, args):
     import operator   # add()
     import functools  # reduce()
     from cntk.ops.functions import CloneMethod
@@ -82,7 +96,8 @@ def _apply(f, args):
             return arg.output
         except AttributeError:
             return arg  # Variables have no output()
-    args = [_output_of(arg) for arg in args]
+            #return arg.output  # Variables have no output()  --should work but doesn't
+    args = [_output_of(arg) for arg in args]  # BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
     placeholders = f.placeholders  # f parameters to fill in
     if len(args) != len(placeholders):
         raise TypeError("_apply ({}): number of arguments {} must match number of placeholders {}".format(_node_description(f), len(args), len(placeholders)))
