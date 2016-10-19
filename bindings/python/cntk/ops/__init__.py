@@ -215,9 +215,8 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                   [ 16.,  16.,  16.,  16.]]]]], dtype=float32)
 
     Args:
-        convolution_map: convolution filter weights, stored as a matrix of dimensions [outChannels, (M1*M2*...*Mn)],
-         where (M1*M2*...*Mn) must be the product of the kernel dimensions, e.g. 75 for a [5 x 5]-sized filter on 3
-         input channels.
+        convolution_map: convolution filter weights, stored as a tensor of dimensions [outChannels x M1 x M2 x ... x Mn)],
+         where [M1 x M2 x ... x Mn) must be the kernel dimensions.
         operand: convolution input. A tensor with dimensions [M1 x M2 x ... x Mn x inChannels].
         strides (optional): stride dimensions. A stride > 1 means that only pixel positions that are multiples of the stride value are computed.
          For example, a stride of 2 will lead to a halving of the dimensions. The last stride dimension that lines up with the number
