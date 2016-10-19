@@ -8,23 +8,6 @@
 
 using namespace CNTK;
 
-FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input,
-                                                   size_t numOutputClasses,
-                                                   size_t hiddenLayerDim,
-                                                   size_t numHiddenLayers,
-                                                   const DeviceDescriptor& device,
-                                                   const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity,
-                                                   const std::wstring& outputName)
-{
-    assert(numHiddenLayers >= 1);
-    auto classifierRoot = FullyConnectedDNNLayer(input, hiddenLayerDim, device, nonLinearity);
-    for (size_t i = 1; i < numHiddenLayers; ++i)
-        classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
-
-    auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, 1, device));
-    return Times(outputTimesParam, classifierRoot, 1, outputName);
-}
-
 std::wstring s_tempModelPath = L"feedForward.net";
 
 void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSaveAndReLoad)
@@ -263,6 +246,8 @@ void TestTimesAndPlus(size_t inputDim,
 
 void FeedForwardTests()
 {
+    fprintf(stderr, "\nFeedForwardTests..\n");
+
     TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true, true);
     if (IsGPUAvailable())
     {

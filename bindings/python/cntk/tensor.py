@@ -6,6 +6,10 @@
 
 
 class TensorOpsMixin(object):
+    '''
+    This class defines math overloads so that CNTK nodes can be written in math
+    expressions.
+    '''
 
     # operator overload for (+) where self is the left operand
     def __add__(self, other):
@@ -160,7 +164,7 @@ def _add_tensor_ops(klass):
 
 class EvalMixin(object):
 
-    def eval(self, arguments=None, precision='float', device=None):
+    def eval(self, arguments=None, seq_starts=None, precision='float', device=None):
         '''
         Evaluate the node using the specified `arguments` as input.
 
@@ -168,9 +172,13 @@ class EvalMixin(object):
             arguments (`dict` or `list`): 
               * map from input variables to the data
               * list of inputs in the order that the function expects or 
-              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
+              Data should be either NumPy arrays or a :class:`cntk.io.MinibatchData` instance
+            seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
+             treated as a new sequence. Otherwise, it is interpreted as a list of
+             Booleans that tell whether a sequence is a new sequence (`True`) or a
+             continuation of the previous one (`False`)
             precision (`str` or `np.float32` or `np.float64`): precision, if string
-             it can be one of 'float' 'float32, 'double', 'float64', or `None`
+             it can be one of 'float', 'float32', 'double', 'float64', or `None`
             device (:class:`cntk.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -180,8 +188,8 @@ class EvalMixin(object):
         '''
         from .utils import eval as utils_eval
         if device is None:
-            from . import DeviceDescriptor
-            device = DeviceDescriptor.use_default_device()
+            from .device import use_default_device
+            device = use_default_device()
 
         if len(self.outputs()) != 1:
             raise ValueError(
@@ -190,7 +198,7 @@ class EvalMixin(object):
         if arguments is None:
             arguments = {}
 
-        result, _ = utils_eval(self, precision, device, arguments, False)
+        result, _ = utils_eval(self, arguments, seq_starts, precision, device, False)
         return result.popitem()[1]
 
 
@@ -202,3 +210,37 @@ def _add_eval(klass):
                          (klass, overload_name))
 
     setattr(klass, overload_name, getattr(EvalMixin, overload_name))
+
+class ArrayMixin(object):
+    @property
+    def __array_interface__(self):
+        try:
+            np_array = self.to_numpy()
+        except AttributeError:
+            try:
+                np_array = self.data().to_numpy()
+            except AttributeError:
+                try:
+                    np_array = self.value
+                except AttributeError:
+                    # Ideally an exception would be raised here, but getattr would swallow it
+                    # so we return None
+                    return None
+
+        interface_copy = np_array.__array_interface__
+
+        # for np arrays (other than 0-d arrays) data entry in __array_interface__ dict
+        # must be replaced with data member of array
+        if len(np_array.shape):
+            interface_copy["data"] = np_array.data
+
+        return interface_copy
+
+def _add_array_interface(klass):
+    array_interface_name = '__array_interface__'
+
+    if getattr(klass, array_interface_name, None):
+        raise ValueError('class "%s" has already an attribute "%s"' %
+                         (klass, array_interface_name))
+
+    setattr(klass, array_interface_name, getattr(ArrayMixin, array_interface_name))

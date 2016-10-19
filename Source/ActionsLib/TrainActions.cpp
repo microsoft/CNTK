@@ -26,6 +26,7 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+#include "PostComputingActions.h"
 
 #include <string>
 #include <chrono>
@@ -259,3 +260,46 @@ void DoEdit(const ConfigParameters& config)
 
 template void DoEdit<double>(const ConfigParameters& config);
 template void DoEdit<float>(const ConfigParameters& config);
+
+// ===========================================================================
+// DoBatchNormalizationStat() - implements CNTK "bnstat" command
+// ===========================================================================
+
+template <typename ElemType>
+void DoBatchNormalizationStat(const ConfigParameters& config)
+{
+    ConfigParameters readerConfig(config(L"reader"));
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+
+    auto dataReader = make_shared<DataReader>(readerConfig);
+
+    int traceLevel = config(L"traceLevel", "0");
+    int itersPerNode = config(L"itersPerNode", 30);
+
+    ConfigArray minibatchSize = config(L"minibatchSize", "40960");
+    intargvector mbSize = minibatchSize;
+    
+    bool enableDistributedMBReading = config(L"enableDistributedMBReading", false);
+
+    wstring curModelPath = config(L"modelPath", L"");
+    wstring newModelPath = config(L"newModelPath", L"");
+    if (newModelPath == L"")
+    {
+        newModelPath = curModelPath + L".PBN";
+    }
+
+    std::vector<std::wstring> evalNodeNames; 
+    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"evalNodeNames", evalNodeNames);
+    // set tracing flags
+    net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
+
+    PostComputingActions<ElemType> postComputingActions(net, MPIWrapper::GetInstance(), enableDistributedMBReading, traceLevel);
+
+    postComputingActions.BatchNormalizationStatistics(dataReader.get(), evalNodeNames, newModelPath, mbSize[0], itersPerNode);
+}
+
+template void DoBatchNormalizationStat<double>(const ConfigParameters& config);
+template void DoBatchNormalizationStat<float>(const ConfigParameters& config);
+

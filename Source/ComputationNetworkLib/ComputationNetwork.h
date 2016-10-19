@@ -136,10 +136,6 @@ public:
     // main entry point for backprop
     void Backprop(const ComputationNodeBasePtr rootNode);
 
-    // partial forward entry
-    void ForwardProp(const ComputationNodeBasePtr rootNode, const ComputationNodeBasePtr startNode, 
-                     const ComputationNodeBasePtr endNode);
-
     template <class NODESET> // version that takes multiple nodes
     void ForwardProp(const NODESET& nodes)
     {
@@ -446,8 +442,11 @@ public:
 
     // TODO: Why are all these static, but then take a network as the first argument? --> make them class members
     template <class ElemType>
-    static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
+    static void SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
 
+    template <class ElemType>
+    static void SetIRngUserSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
+    
     template <class ElemType>
     static void SetBatchNormalizationTimeConstants(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, 
                                                    double normalizationTimeConstant, double& prevNormalizationTimeConstant,
@@ -652,18 +651,19 @@ public:
         return std::vector<ComputationNodeBasePtr>(outputNodes.begin(), outputNodes.end());
     }
 
-    std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr)
+    std::list<ComputationNodeBasePtr> GetNodesWhere(std::function<bool(const ComputationNodeBasePtr&)>& predicate, const ComputationNodeBasePtr& rootNode = nullptr) const
     {
-        std::list<ComputationNodeBasePtr> nodesWithType;
+        std::list<ComputationNodeBasePtr> filteredNodes;
 
         // find nodes from all available nodes
+        // TODO: This distinction should not be necessary anymore. Calling GetEvalOrder(nullptr) will have the same effect.
         if (rootNode == nullptr)
         {
             for (auto nodeIter = m_nameToNodeMap.begin(); nodeIter != m_nameToNodeMap.end(); nodeIter++)
             {
                 ComputationNodeBasePtr node = nodeIter->second;
-                if (node->OperationName() == typeName)
-                    nodesWithType.push_back(node);
+                if (predicate(node))
+                    filteredNodes.push_back(node);
             }
         }
         else
@@ -671,12 +671,56 @@ public:
             // for calculating a specific node
             for (const auto& node : GetEvalOrder(rootNode)) // TODO: verify that no use of this requires the actual eval order, then change to GetAllNodesForRoot()
             {
-                if (node->OperationName() == typeName)
-                    nodesWithType.push_back(node);
+                if (predicate(node))
+                    filteredNodes.push_back(node);
             }
         }
 
-        return nodesWithType;
+        return filteredNodes;
+    }
+
+    std::list<ComputationNodeBasePtr> GetNodesWithType(const wstring typeName, const ComputationNodeBasePtr& rootNode = nullptr) const
+    {
+        std::function<bool(const ComputationNodeBasePtr&)> predicate = [typeName](const ComputationNodeBasePtr& node) { return node->OperationName() == typeName; };
+        return GetNodesWhere(predicate, rootNode);
+    }
+
+    // Get the eval nodes with names
+    // if evalNodeNames are not specified, return all the default evalnodes and training criterion nodes.
+    std::vector<ComputationNodeBasePtr> GetEvalNodesWithName(const std::vector<wstring> evalNodeNames)
+    {
+        // determine nodes to evaluate
+        std::vector<ComputationNodeBasePtr> evalNodes;
+
+        set<ComputationNodeBasePtr> criteriaLogged; // (keeps track ot duplicates to avoid we don't double-log critera)
+        if (evalNodeNames.size() == 0)
+        {
+            fprintf(stderr, "evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.\n");
+            if (EvaluationNodes().empty() && FinalCriterionNodes().empty())
+                InvalidArgument("There is no default evaluation node or training criterion specified in the network.");
+
+            for (const auto& node : EvaluationNodes())
+                if (criteriaLogged.insert(node).second)
+                    evalNodes.push_back(node);
+
+            for (const auto& node : FinalCriterionNodes())
+                if (criteriaLogged.insert(node).second)
+                    evalNodes.push_back(node);
+        }
+        else
+        {
+            for (int i = 0; i < evalNodeNames.size(); i++)
+            {
+                const auto& node = GetNodeFromName(evalNodeNames[i]);
+                if (!criteriaLogged.insert(node).second)
+                    continue;
+                if (node->GetSampleLayout().GetNumElements() != 1)
+                    InvalidArgument("Criterion nodes to evaluate must have dimension 1x1.");
+                evalNodes.push_back(node);
+            }
+        }
+
+        return evalNodes;
     }
 
 public:
@@ -1045,9 +1089,6 @@ protected:
         virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool);
         virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool);
         virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool);
-
-        // TODO: Why is this virtual?
-        virtual void ForwardProp(const FrameRange&, const ComputationNodeBasePtr, const ComputationNodeBasePtr) override;
 
     public:
         // this special constructor constructs the top-level network node

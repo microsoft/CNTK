@@ -48,9 +48,6 @@
     <ClCompile Include="GPUDataTransferer.cpp">
       <Filter>GPU</Filter>
     </ClCompile>
-    <ClCompile Include="..\Common\ExceptionWithCallStack.cpp">
-      <Filter>Misc</Filter>
-    </ClCompile>
     <ClCompile Include="CuDnnCommon.cpp">
       <Filter>GPU\CuDnn</Filter>
     </ClCompile>

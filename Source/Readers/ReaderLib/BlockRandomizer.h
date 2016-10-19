@@ -74,6 +74,10 @@ public:
         }
     }
 
+    void SetCurrentSamplePosition(size_t currentSamplePosition) override;
+
+    void SetConfiguration(const ReaderConfiguration& config) override;
+
 private:
     // Load data for chunks if needed.
     void LoadDataChunks(const ClosedOpenChunkInterval& windowRange);

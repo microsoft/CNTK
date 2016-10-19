@@ -149,10 +149,12 @@ namespace CNTK
 namespace CNTK
 {
     // Forward declarations
+    class PrimitiveFunction;
     class CompositeFunction;
     class Function;
     class Variable;
     class Axis;
+    enum class PrimitiveOpType : unsigned int;
 
     // Similar to make_shared except that it associates a custom deleter with the shared_ptr to ensure
     // that objects are deleted on the same side of the library DLL where they are allocated
@@ -207,7 +209,23 @@ namespace CNTK
         CNTK_API void AlwaysAllowSettingDefaultDevice();
         bool IsSettingDefaultDeviceAlwaysAllowed();
 
-        CNTK_API void DisableAutomaticUnpackingOfPackedValues();
+        CNTK_API void SetAutomaticUnpackingOfPackedValues(bool disable);
         bool IsAutomaticUnpackingOfPackedValuesDisabled();
+
+        CNTK_API void SetComputationNetworkTraceLevel(int traceLevel);
+        int GetComputationNetworkTraceLevel();
+
+        CNTK_API void SetGPUMemoryAllocationTraceLevel(int traceLevel);
+
+        CNTK_API void ForceSynchronousCUDAKernelExecutions();
+
+        CNTK_API void ForceDeterministicAlgorithms();
+
+        CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
+
+        CNTK_API bool AreEquivalent(const CNTK::FunctionPtr& f1, const CNTK::FunctionPtr& f2);
+        CNTK_API bool AreEquivalent(const CNTK::Variable& v1, const CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
+
+        CNTK_API bool AreEqual(const CNTK::NDArrayView& view1, const CNTK::NDArrayView& view2);
     }
 }

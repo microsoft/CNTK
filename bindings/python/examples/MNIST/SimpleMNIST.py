@@ -7,7 +7,8 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, StreamConfiguration, DeviceDescriptor, text_format_minibatch_source
+from cntk import Trainer, StreamConfiguration, text_format_minibatch_source
+from cntk.device import cpu, set_default_device
 from cntk.learner import sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
 
@@ -35,7 +36,7 @@ def simple_mnist(debug_output=False):
     label = input_variable(num_output_classes, np.float32)
 
     # Instantiate the feedforward classification model
-    scaled_input = element_times(constant((), 0.00390625), input)
+    scaled_input = element_times(constant(0.00390625), input)
     netout = fully_connected_classifier_net(
         scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
 
@@ -60,7 +61,7 @@ def simple_mnist(debug_output=False):
     labels_si = mb_source[labels_stream_name]
 
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters(),
+    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters,
         lr=0.003125)])
 
     # Get minibatches of images to train with and perform model training
@@ -74,7 +75,7 @@ def simple_mnist(debug_output=False):
         training_progress_output_freq = training_progress_output_freq/4
 
     for i in range(0, int(num_minibatches_to_train)):
-        mb = mb_source.get_next_minibatch(minibatch_size)
+        mb = mb_source.next_minibatch(minibatch_size)
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
@@ -89,7 +90,7 @@ def simple_mnist(debug_output=False):
         rel_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
                                 *"Image/MNIST/v0/Test-28x28_cntk_text.txt".split("/"))
     except KeyError:
-        rel_path = os.path.join(*"../../../../Examples/Image/Datasets/MMNIST/Test-28x28_cntk_text.txt".split("/"))
+        rel_path = os.path.join(*"../../../../Examples/Image/Datasets/MNIST/Test-28x28_cntk_text.txt".split("/"))
     path = os.path.normpath(os.path.join(abs_path, rel_path))
     check_path(path)
 
@@ -105,12 +106,12 @@ def simple_mnist(debug_output=False):
     num_minibatches_to_test = num_samples / test_minibatch_size
     test_result = 0.0
     for i in range(0, int(num_minibatches_to_test)):
-        mb = test_mb_source.get_next_minibatch(test_minibatch_size)
+        mb = test_mb_source.next_minibatch(test_minibatch_size)
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be tested with
-        arguments = {input: mb[features_si].m_data,
-                     label: mb[labels_si].m_data}
+        arguments = {input: mb[features_si],
+                     label: mb[labels_si]}
         eval_error = trainer.test_minibatch(arguments)
         test_result = test_result + eval_error
 
@@ -121,8 +122,7 @@ def simple_mnist(debug_output=False):
 if __name__=='__main__':
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    # target_device = DeviceDescriptor.cpu_device()
-    # DeviceDescriptor.set_default_device(target_device)
+    # set_default_device(cpu())
 
     error = simple_mnist()
     print("Error: %f" % error)

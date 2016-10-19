@@ -7,7 +7,8 @@
 import numpy as np
 import sys
 import os
-from cntk import DeviceDescriptor, Trainer, cntk_device, StreamConfiguration
+from cntk import Trainer, cntk_device, StreamConfiguration
+from cntk.device import cpu, set_default_device
 from cntk.learner import sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid
 
@@ -51,7 +52,7 @@ def ffnet(debug_output=False):
     pe = classification_error(netout, label)
 
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters(), lr=0.02)])
+    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters, lr=0.02)])
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25
@@ -81,8 +82,7 @@ def ffnet(debug_output=False):
 if __name__ == '__main__':
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    # target_device = DeviceDescriptor.cpu_device()
-    # DeviceDescriptor.set_default_device(target_device)
+    # set_default_device(cpu())
 
     error = ffnet()
     print("Error: %f" % error)

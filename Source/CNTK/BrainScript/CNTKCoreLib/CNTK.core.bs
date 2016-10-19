@@ -459,7 +459,7 @@ CNTK2 = [
         if axis==0 then new ComputationNode [ operation = 'CrossEntropyWithSoftmax' ; inputs = _AsNodes (labelSequence : outProbVectorSequence) /*plus the function args*/ ]
         else [ tag1 = tag; out = Minus (ReduceLogSum (outProbVectorSequence, axis=axis), ReduceSum (labelSequence .* outProbVectorSequence, axis=axis), tag=tag1) ].out
     # Classification error along a specific axis: account only for missed labels, i.e.
-    # strictly check whether at the one “1” location in labels we find a value equal to the max
+    # strictly check whether at the one '1' location in labels we find a value equal to the max
     ClassificationError(labelSequence, outVectorSequence, topN=1, axis=0, tag='') =
         if axis==0 then new ComputationNode [ operation = 'ClassificationError' ; inputs = _AsNodes (if topN == 1 then (labelSequence : outVectorSequence) else  (labelSequence : outVectorSequence : Constant (topN))) /*plus the function args*/ ]
         else if topN != 1 then Fail ("ClassificationError() along a specific axis does not support topN.")
@@ -485,9 +485,26 @@ CNTK2 = [
     NotEqual(_, y, tag='')     = new ComputationNode [ operation = 'NotEqual'     ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
     LessEqual(_, y, tag='')    = new ComputationNode [ operation = 'LessEqual'    ; inputs = _AsNodes (_ : y) /*plus the function args*/ ]
 
-    // 13. Others    
-    Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _AsNodes (_) /*plus the function args*/ ]    
+    // 13. Others
+    Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Identity = Pass
+
+    // The value of GetRandomSample(weights /* vector of length nClasses */, numSamples, sampleWithReplacement) randomly samples numSamples using the specified sampling weights. 
+    // The result is a sparse matrix of num samples one-hot vectors as columns.
+    GetRandomSample(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [
+                                                                                        operation = 'RandomSample' ;
+                                                                                        sizeOfSampledSet = numSamples;
+                                                                                        allowDuplicates = sampleWithReplacement;
+                                                                                        inputs = _ /*plus the function args*/ ]
+
+    // The value of GetInclusion(weights /* vector of length nClasses */, numSamples, sampleWithReplacement) has to be seen in cojuction to GetRandomSample(...).
+    // While GetRandomSample(...) creates a set of samples, GetInclusion(...) tells how often each class is expected to occur in the sampled sets.
+    // For sampling with replacment the relation to the sampling weights is trivial but not for sampling without replacment.
+    GetInclusionFrequency(_ ,numSamples, sampleWithReplacement, tag='') = new ComputationNode [
+                                                                                        operation = 'RandomSampleInclusionFrequency' ;
+                                                                                        sizeOfSampledSet = numSamples;
+                                                                                        allowDuplicates = sampleWithReplacement;
+                                                                                        inputs = _ /*plus the function args*/ ]
 ]
 
 # Parameter{} can do several forms of initialization.
@@ -549,6 +566,8 @@ FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis 
 SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N) 
 # TODO: make input the last arg!
 Transpose(x) = TransposeDimensions(x, 1, 2)
+LambdaRank(gain, prediction, queryId, tag='') = new ComputationNode [ operation = 'LambdaRank' ; inputs = _AsNodes (gain : prediction : queryId) /*plus the function args*/ ]
+NDCG1Eval(gain, prediction, queryId, tag='') = new ComputationNode [ operation = 'NDCG1Eval' ; inputs = _AsNodes (gain : prediction : queryId) /*plus the function args*/ ]
 Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = _AsNodes (label : probability) /*plus the function args*/ ]
 WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = _AsNodes (label : probability : instanceWeight) /*plus the function args*/ ]
 ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileDynamicAxis' ; inputs = _AsNodes (dataInput : layoutInput) /*plus the function args*/ ]
