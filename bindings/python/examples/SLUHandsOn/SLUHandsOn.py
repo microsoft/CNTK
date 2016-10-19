@@ -5,6 +5,7 @@
 # ==============================================================================
 
 import os
+import math
 from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
@@ -83,12 +84,13 @@ def train(reader, model, max_epochs):
     epoch_size = 36000
     minibatch_size = 70
     num_mbs_to_show_result = 100
+    time_constant = minibatch_size / math.log(1/0.9)
 
     lr_per_sample = [0.003]*2+[0.0015]*12+[0.0003]
 
     # trainer object
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner = fsadagrad(z.parameters, lr_schedule, minibatch_size,
+    learner = fsadagrad(z.parameters, lr_schedule, time_constant,
                         targetAdagradAvDenom=1, gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
     trainer = Trainer(z, ce, pe, [learner])
