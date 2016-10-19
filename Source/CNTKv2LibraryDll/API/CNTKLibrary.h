@@ -1688,7 +1688,7 @@ private:
         template <typename ElementType>
         static NDArrayViewPtr CreateValueFromParameterInitializer(const NDShape& shape, const ParameterInitializer& initConfig, const DeviceDescriptor& device);
 
-        CNTK_API static Variable Deserialize(const Dictionary& dictionary, const CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static Variable Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
     private:
 
@@ -2062,7 +2062,7 @@ namespace std {
     };
 
     // TODO: Variable hash should be based on uid.
-    template <> struct hash<CNTK::Variable>
+    template <> struct hash<::CNTK::Variable>
     {
         size_t operator()(const ::CNTK::Variable& x) const
         {
@@ -2210,7 +2210,7 @@ namespace CNTK
         /// TODO: add a second overload with a 'function builder' parameter that would allow hooking
         /// user-defined op-codes with custom functionality.
         ///
-        CNTK_API static FunctionPtr Deserialize(const Dictionary& modelDictionary, const CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static FunctionPtr Deserialize(const Dictionary& modelDictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
     public:
         ///

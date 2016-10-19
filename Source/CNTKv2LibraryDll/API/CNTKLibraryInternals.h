@@ -229,9 +229,9 @@ namespace CNTK
 
         CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
 
-        CNTK_API bool AreEquivalent(const CNTK::FunctionPtr& f1, const CNTK::FunctionPtr& f2);
-        CNTK_API bool AreEquivalent(const CNTK::Variable& v1, const CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
+        CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
+        CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 
-        CNTK_API bool AreEqual(const CNTK::NDArrayView& view1, const CNTK::NDArrayView& view2);
+        CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2);
     }
 }
