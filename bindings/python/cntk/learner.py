@@ -3,6 +3,7 @@
 # for full license information.
 # ==============================================================================
 
+import math
 from . import cntk_py
 from .utils import typemap
 
@@ -110,7 +111,7 @@ def learning_rate_schedule(lr, units=1):
         return cntk_py.learning_rates_per_sample(lr)
     
     if not isinstance(lr, list):
-        raise ValueError('lr must be either a float or a list')
+        raise ValueError('lr must be either a float or a list, not %s'%type(lr))
 
     return cntk_py.learning_rates_per_sample(lr, units)
 
@@ -129,11 +130,11 @@ def momentum_schedule(momentum, units=1):
 
 
     Examples:
-        >>> # Use a fixed momentum of 0.99 for all samples
-        >>> m = momentum_schedule(0.99)
+        >>> # Use a fixed momentum of 1100 for all samples
+        >>> m = momentum_schedule(1100)
 
-        >>> # Use the learning rate 0.99 for the first 1000 samples, then 0.9 for the remaining ones
-        >>> m = momentum_schedule([0.99,0.9], 1000)
+        >>> # Use the time constant 1100 for the first 1000 samples, then 1500 for the remaining ones
+        >>> m = momentum_schedule([1100, 1500], 1000)
 
     Args:
         momentum (`float` or `list`): if `float`, it is the momentum to be used
@@ -144,13 +145,19 @@ def momentum_schedule(momentum, units=1):
     Returns:
         momentum schedule
     '''
+    # FIXME: Swig does not see MomentumValuesAsTimeConstants as an inherited
+    # type of MomentumValuesPerSample, so we are doing the conversion
+    # explicitly for now. This has to be solved in the Swig layer eventually. 
+    to_per_sample = lambda x: 0 if x==0 else math.exp(-1.0 / x)
+
     if isinstance(momentum, (int, float)):
-        return cntk_py.momentums_per_sample(momentum)
+        return cntk_py.momentums_per_sample(to_per_sample(momentum))
+        
     
     if not isinstance(momentum, list):
-        raise ValueError('momentum must be either a float or a list')
+        raise ValueError('momentum must be either a float or a list, not %s'%type(momentum))
 
-    return cntk_py.momentums_as_time_constants(momentum, units)
+    return cntk_py.momentums_per_sample([to_per_sample(m) for m in momentum], units)
 
 @typemap
 def momentum_schedule_per_sample(momentum, units=1):
@@ -181,7 +188,7 @@ def momentum_schedule_per_sample(momentum, units=1):
         return cntk_py.momentums_per_sample(momentum)
     
     if not isinstance(momentum, list):
-        raise ValueError('momentum must be either a float or a list')
+        raise ValueError('momentum must be either a float or a list, not %s'%type(momentum))
 
     return cntk_py.momentums_per_sample(momentum, units)
 
