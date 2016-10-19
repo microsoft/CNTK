@@ -890,7 +890,7 @@ namespace CNTK
                 let& shape = inputs[0].Shape();
                 size_t nClasses = shape.Dimensions()[0];
 
-                if (!allowDuplicates && nClasses <= numSamples)
+                if (nClasses != NDShape::InferredDimension && !allowDuplicates && nClasses <= numSamples)
                     InvalidArgument("For sampling without duplicates the number of requested samples (%lu) needs to be less than the number of classes (%lu).", numSamples, nClasses);
 
                 break;
