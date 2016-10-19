@@ -196,10 +196,21 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     filter, and the last one must be equal to inChannels. There are outChannels filters. I.e. for each output position, a vector of
     dimension outChannels is computed. Hence, the total number of filter parameters is (M1*M2*...*Mn) * inChannels * outChannels.
 
+
+    Example:
+	>>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
+	>>> x = C.input_variable(img.shape)
+	>>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
+	>>> kernel = C.constant(value = filter)
+	>>> C.convolution(kernel , x, auto_padding = [False]).eval({x: img})
+	array([[[[[  6.,   8.,  10.,  12.],
+		  [ 16.,  18.,  20.,  22.],
+		  [ 26.,  28.,  30.,  32.],
+		  [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
+
     Args:
-        convolution_map: convolution filter weights, stored as a matrix of dimensions [outChannels, (M1*M2*...*Mn)],
-         where (M1*M2*...*Mn) must be the product of the kernel dimensions, e.g. 75 for a [5 x 5]-sized filter on 3
-         input channels.
+        convolution_map: convolution filter weights, stored as a tensor of dimensions [outChannels x M1 x M2 x ... x Mn],
+         where [M1 x M2 x ... x Mn] must be the kernel dimensions.
         operand: convolution input. A tensor with dimensions [M1 x M2 x ... x Mn x inChannels].
         strides (optional): stride dimensions. A stride > 1 means that only pixel positions that are multiples of the stride value are computed.
          For example, a stride of 2 will lead to a halving of the dimensions. The last stride dimension that lines up with the number
@@ -237,14 +248,24 @@ AVG_POOLING = PoolingType_Average
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
             lower_pad=(0,), upper_pad=(0,), name=''):
     '''
-    The pooling operations compute a new matrix by selecting the maximum (max pooling) or average value in the pooling input.
-    In the case of average pooling, count of average does not include padded values.
+    The pooling operations compute a new tensor by selecting the maximum or average value in the pooling input.
+    In the case of average pooling with padding, the average is only over the valid region.
 
     N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
 
+    Example:
+	>>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+	>>> x = C.input_variable(img.shape)
+	>>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : img})
+	array([[[[[  2.5,   4.5],
+		  [ 10.5,  12.5]]]]], dtype=float32)
+	>>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : img})
+	array([[[[[  5.,   7.],
+		  [ 13.,  15.]]]]], dtype=float32)
+
     Args:
         operand: pooling input
-        pooling_type(str): "max" or "average"
+        pooling_type: one of :const:`cntk.ops.MAX_POOLING` or :const:`cntk.ops.AVG_POOLING`
         pooling_window_shape: dimensions of the pooling window
         strides (default 1): strides.
         auto_padding: automatic padding flags for each input dimension.
