@@ -4,10 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-import numpy as np
-import sys
 import os
-import time
 import math
 from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
@@ -18,7 +15,6 @@ from cntk import Trainer
 from cntk.learner import sgd, fsadagrad, learning_rate_schedule, momentum_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
 from examples.common.nn import print_training_progress
-from cntk.device import gpu, set_default_device
 
 ########################
 # variables and stuff  #
@@ -89,17 +85,15 @@ def train(reader, model, max_epochs):
     epoch_size = 36000
     minibatch_size = 70
     num_mbs_to_show_result = 100
+    momentum_as_time_constant = minibatch_size / -math.log(0.9)
 
     lr_per_sample = [0.003]*2+[0.0015]*12+[0.0003]
-    momentum = 0.9**(1/minibatch_size)  # TODO: change to time constant
-    #momentum_as_time_constant = [-1/math.log (0.9) * minibatch_size]   # to mimic BrainScript; otherwise use 660 or whatever works
-    # BUGBUG: need latest build to get this to work
 
     # trainer object
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    m_schedule = momentum   #momentum_schedule(momentum_as_time_constant, units=epoch_size)
-    learner = fsadagrad(z.parameters, lr_schedule, m_schedule,
+    learner = fsadagrad(z.parameters, lr_schedule, momentum_as_time_constant,
                         targetAdagradAvDenom=1, gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
+    # BUGBUG: targetAdagradAvDenom must be removed from the interface, and default to 1
 
     trainer = Trainer(z, ce, pe, [learner])
 

@@ -40,6 +40,7 @@
 %template() std::vector<CNTK::StreamConfiguration>;
 //%template() std::vector<CNTK::DictionaryValue>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
+%template() std::vector<std::shared_ptr<CNTK::Learner>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
 %ignore CNTK::Internal::Combine;
@@ -47,6 +48,7 @@
 %ignore CNTK::Internal::Gather;
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
+%ignore CNTK::DistributedCommunicator::AggregateAsync;
 
 // These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
@@ -624,7 +626,7 @@ def dynamic_axes(self):
         Py_DECREF(iterator);
 
         if (PyErr_Occurred()) {
-            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::LearnerPtr"); 
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::DictionaryValue"); 
         }
 
         $1 = vec;

@@ -21,6 +21,7 @@ them on sample data in real time.
    :maxdepth: 2
 
    Getting Started <gettingstarted>
+   Tutorials <tutorials>
    API Reference <apireference>
 
 

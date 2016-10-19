@@ -16,28 +16,14 @@ namespace CNTK
     // and adds a few pre-/postprocessing methods (which are invoked before and after the update).
     class LearnerBase : public Learner
     {
-        static const std::wstring WasLearningRateResetAttributeName;
-
     public:
         virtual bool Update(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) override final;
 
-        virtual Dictionary GetCheckpointState() const override final;
+        virtual Dictionary Serialize() const override final;
+
+        virtual size_t CurrentVersion() const override final { return s_serializationVersion; }
 
         virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override final;
-
-        virtual void ResetLearningRate(double learningRate) override final
-        {
-            m_wasLearningRateReset = true;
-            Learner::ResetLearningRate(learningRate);
-        }
-
-        virtual double LearningRate() const override final
-        {
-            if (m_wasLearningRateReset)
-                return Learner::LearningRate();
-            else
-                return m_learningRateSchedule[m_sampleCount];
-        }
 
     protected:
         // allocateSmoothGradients flag specifies whether NDArrayViews for smoothed gradients can be allocated 
@@ -53,10 +39,9 @@ namespace CNTK
 
         std::string LearnerType() const;
 
-        bool m_wasLearningRateReset;
-        LearningRatesPerSample m_learningRateSchedule;
-
         AdditionalLearningOptions m_additionalOptions;
+
+
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
 
@@ -94,8 +79,6 @@ namespace CNTK
         // Retrieves the shape of the matrix corresponding to the parameter value.
         static NDShape GetMatrixShape(const Parameter& parameter);
 
-
-        size_t m_sampleCount;
         size_t m_minibatchCount;
 
     private:
@@ -108,7 +91,7 @@ namespace CNTK
         static bool HasNan(const NDArrayViewPtr& value, const char* name);
         static void Print(const NDArrayViewPtr& value, const char* msg);
 
-        static const size_t checkpointVersion = 1;
+        static const size_t s_serializationVersion = 1;
     };
 
     // Vanilla gradient descent optimization algorithm.

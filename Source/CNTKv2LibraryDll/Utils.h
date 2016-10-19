@@ -374,6 +374,19 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
     }
 
+    template <typename T>
+    inline std::string Typename(const T* = nullptr)
+    {
+        auto name = typeid(T).name(); 
+        if (strncmp(name, "class ", 6) == 0)
+        {
+            // On Windows, the type name contains "class" prefix. 
+            // Return the actual name, omitting the prefix.
+            return &name[6];
+        }
+        return name;
+    }
+
     inline std::wstring ParanthesizedName(const std::wstring& name)
     {
         if (name.empty())

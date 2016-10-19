@@ -2,22 +2,22 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+
 #include "CNTKLibrary.h"
-#include <functional>
 #include "Common.h"
 
 using namespace CNTK;
-
 using namespace std::placeholders;
 
-void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
+// TODO: Move to other file.
+void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, DistributedCommunicatorPtr communicator)
 {
     const size_t inputDim = 2;
     const size_t numOutputClasses = 2;
     const size_t hiddenLayerDim = 50;
     const size_t numHiddenLayers = 2;
 
-    const size_t minibatchSize = 50;
+    const size_t minibatchSize = 25;
     const size_t numSamplesPerSweep = 10000;
     const size_t numSweepsToTrainWith = 2;
     const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
@@ -52,7 +52,7 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
         Variable trainingLossVar = trainingLoss;
         Variable predictionVar = prediction;
         auto combinedNet = Combine({ trainingLoss, prediction, classifierOutput }, L"feedForwardClassifier");
-        SaveAndReloadModel<float>(combinedNet, { &input, &labels, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+        SaveAndReloadModel<float>(combinedNet, { &input, &labels, &trainingLossVar, &predictionVar, &classifierOutputVar }, device, communicator->CurrentWorker().m_globalRank);
 
         classifierOutput = classifierOutputVar;
         trainingLoss = trainingLossVar;
@@ -61,7 +61,8 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
 
     double learningRatePerSample = 0.02;
     minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { L"features", inputDim }, { L"labels", numOutputClasses } });
-    Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
+    auto distributedTrainer = CreateDataParallelDistributedTrainer(communicator, false);
+    Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) }, distributedTrainer);
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
@@ -71,67 +72,16 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     }
 }
 
-void TrainMNISTClassifier(const DeviceDescriptor& device)
+int main(int /*argc*/, char* /*argv*/[])
 {
-    const size_t inputDim = 784;
-    const size_t numOutputClasses = 10;
-    const size_t hiddenLayerDim = 200;
+    // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking 
+    // which will have a silent performance degradation otherwise
+    Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
 
-    auto input = InputVariable({ inputDim }, DataType::Float, L"features");
-    auto scaledInput = ElementTimes(Constant::Scalar(0.00390625f, device), input);
-    auto classifierOutput = FullyConnectedDNNLayer(scaledInput, hiddenLayerDim, device, std::bind(Sigmoid, _1, L""));
-    auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.05, 0.05, 1, device));
-    auto outputBiasParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses }, -0.05, 0.05, 1, device));
-    classifierOutput = Plus(outputBiasParam, Times(outputTimesParam, classifierOutput), L"classifierOutput");
+    auto communicator = MPICommunicator();
+    TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice(), communicator);
 
-    auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels");
-    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");;
-    auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
-
-    // Test save and reload of model
-    {
-        Variable classifierOutputVar = classifierOutput;
-        Variable trainingLossVar = trainingLoss;
-        Variable predictionVar = prediction;
-        auto combinedNet = Combine({ trainingLoss, prediction, classifierOutput }, L"MNISTClassifier");
-        SaveAndReloadModel<float>(combinedNet, { &input, &labels, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
-
-        classifierOutput = classifierOutputVar;
-        trainingLoss = trainingLossVar;
-        prediction = predictionVar;
-    }
-
-    const size_t minibatchSize = 64;
-    const size_t numSamplesPerSweep = 60000;
-    const size_t numSweepsToTrainWith = 2;
-    const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
-
-    auto featureStreamName = L"features";
-    auto labelsStreamName = L"labels";
-    auto minibatchSource = TextFormatMinibatchSource(L"Train-28x28_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } });
-
-    auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
-    auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
-
-    double learningRatePerSample = 0.003125;
-    Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
-
-    size_t outputFrequencyInMinibatches = 20;
-    for (size_t i = 0; i < numMinibatchesToTrain; ++i)
-    {
-        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
-        trainer.TrainMinibatch({ { input, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-        PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
-    }
-}
-
-void TrainerTests()
-{
-    fprintf(stderr, "\nTrainerTests..\n");
-
-    TrainSimpleFeedForwardClassifer(DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())
-    {
-        TrainMNISTClassifier(DeviceDescriptor::GPUDevice(0));
-    }
+        TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), communicator);
+    return 0;
 }

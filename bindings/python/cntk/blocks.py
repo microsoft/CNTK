@@ -125,7 +125,7 @@ def Placeholder(_inf=None, name='placeholder'):
 #       If we have Function identity, in same pattern as e.g. sigmoid, then that would suffice.
 def _Identity(name='identity_arg'):
     x = Placeholder(name=name)
-    #apply_x = combine([x])  # BUGBUG: not working
+    #apply_x = combine([x])  # BUGBUG: "ValueError: type 0 is not supported"
     apply_x = x + Constant(0, name='Identity0')  # this fakes combine()
     #apply_x = x
     _name_and_extend_Function(apply_x, 'Identity')

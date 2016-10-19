@@ -5,10 +5,6 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release_NoOpt|x64">
-      <Configuration>Release_NoOpt</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
@@ -23,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E}</ProjectGuid>
+    <ProjectGuid>{F4CCAAB2-0DB2-4281-929A-2E68E30F0F6E}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>V2LibraryTests</RootNamespace>
-    <ProjectName>V2LibraryTests</ProjectName>
+    <RootNamespace>V2LibraryDistributionTests</RootNamespace>
+    <ProjectName>V2LibraryDistributionTests</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
@@ -58,7 +54,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\CNTKv2LibraryDll\;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Tests\UnitTests\V2LibraryTests</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
@@ -96,7 +92,7 @@
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MultiThreaded</RuntimeLibrary>
-      <RuntimeLibrary Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">MultiThreaded</RuntimeLibrary>
+      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -105,6 +101,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>CNTKLibrary-2.0.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Bscmake>
+      <PreserveSbr Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</PreserveSbr>
+    </Bscmake>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
@@ -114,26 +113,8 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Examples\Evaluation\CPPEvalV2Client\EvalMultithreads.cpp" />
-    <ClCompile Include="CifarResNet.cpp" />
-    <ClCompile Include="Common.cpp" />
-    <ClCompile Include="DeviceSelectionTests.cpp" />
-    <ClCompile Include="LearnerTests.cpp" />
-    <ClCompile Include="Seq2Seq.cpp" />
-    <ClCompile Include="SerializationTests.cpp" />
-    <ClCompile Include="FeedForwardTests.cpp" />
-    <ClCompile Include="FunctionTests.cpp" />
+    <ClCompile Include="..\V2LibraryTests\Common.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="NDArrayViewTests.cpp" />
-    <ClCompile Include="RecurrentFunctionTests.cpp" />
-    <ClCompile Include="SequenceClassification.cpp" />
-    <ClCompile Include="TensorTests.cpp" />
-    <ClCompile Include="TrainerTests.cpp" />
-    <ClCompile Include="TruncatedLSTMAcousticModel.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="Common.h" />
-    <ClInclude Include="Image.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
