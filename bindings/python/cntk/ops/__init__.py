@@ -984,7 +984,7 @@ def exp(x, name=''):
     '''
     Computes the element-wise exponential of ``x``:
 
-    :math:`exp(x) = {e^x}`
+    :math:`\exp(x) = {e^x}`
 
     Example:
         >>> C.exp([0., 1.]).eval()
@@ -1140,8 +1140,8 @@ def reciprocal(x, name=''):
 @typemap
 def element_select(flag, value_if_true, value_if_false, name=''):
     '''
-    return either value_if_true or value_if_false based on the value of flag.
-    If flag != 0 value_if_true is returned, otherwise value_if_false.
+    return either ``value_if_true`` or ``value_if_false`` based on the value of ``flag``.
+    If ``flag`` != 0 ``value_if_true`` is returned, otherwise ``value_if_false``.
     Behaves analogously to numpy.where(...).
 
     Example:
@@ -1149,9 +1149,9 @@ def element_select(flag, value_if_true, value_if_false, name=''):
         array([     1.,     10.,    200.,   1000.,  10000.], dtype=float32)
 
     Args:
-        flag: tensor
-        value_if_true: tensor
-        value_if_false: tensor
+        flag: condition tensor
+        value_if_true: true branch tensor
+        value_if_false: false branch tensor
         name (`str`, optional): the name of the Function instance in the network
     Returns:
         :class:`cntk.ops.functions.Function`
@@ -1624,13 +1624,14 @@ def reduce_min(x, axis=None, name=''):
 @typemap
 def dropout(x, dropout_rate=0.0, name=''):
     '''
-    Randomly selects elements of the input with a given probability called the ``dropout_rate``, and sets
-    them to 0. This has been shown to improve generalizability of models.
+    Each element of the input is independently set to 0 with probabily ``dropout_rate``
+    or to 1 / (1 - ``dropout_rate``) times its original value (with probability 1-``dropout_rate``).
+    Dropout is a good way to reduce overfitting.
 
-    In CNTK's implementation, the remaining values that are not set to 0 will instead be multiplied
-    with (1 / (1 - ``dropout_rate``)). This way, the model parameters learned with dropout are directly
-    applicable in inference. (If this was not done, the user would have to manually scale them before
-    inference.)
+    This behavior only happens during training. During inference dropout is a no-op.
+    In the paper that introduced dropout it was suggested to scale the weights during inference
+    In CNTK's implementation, because the values that are not set to 0 are multiplied
+    with (1 / (1 - ``dropout_rate``)), this is not necessary.
 
     Examples:
         >>> data = [[10, 20],[30, 40],[50, 60]]
@@ -1639,14 +1640,14 @@ def dropout(x, dropout_rate=0.0, name=''):
                [  0.,  80.],
                [  0.,   0.]], dtype=float32)
 
-        >>> C.dropout(reduce_data, 0.75).eval() # doctest: +SKIP
+        >>> C.dropout(data, 0.75).eval() # doctest: +SKIP
         array([[   0.,    0.],
                [   0.,  160.],
                [   0.,  240.]], dtype=float32)
 
     Args:
         x: input tensor
-        dropout_rate (`float`, [0,1)): fraction of nodes to be set to zero
+        dropout_rate (`float`, [0,1)): probability that an element of ``x`` will be set to zero
         name (:class:`str`, optional): the name of the Function instance in the network
 
     Returns:
