@@ -1007,24 +1007,24 @@ EXTRA_LIBS_BASENAMES:=$(addsuffix .so,$(addprefix lib,$(filter-out $(RUNTIME_LIB
 .PHONY: python
 python: $(ALL_LIBS)
 	@bash -c '\
-            set -x; \
+            set -x -e; \
             declare -A py_paths; \
             py_paths[34]=$(PYTHON34_PATH); \
             py_paths[35]=$(PYTHON35_PATH); \
-            export LD_LIBRARY_PATH=$$(echo $(LIBPATH) $(KALDI_LIBPATH) | tr " " :); \
-            ! (ldd $(LIBDIR)/* | grep  "not found") && \
-            export CNTK_EXTRA_LIBRARIES=$$(ldd $(LIBDIR)/* | grep "^\s.*=> " | cut -d ">" -f 2- --only-delimited | cut -d "(" -f 1 --only-delimited | sort -u | grep -Ff <(echo $(EXTRA_LIBS_BASENAMES) | xargs -n1)) && \
-            test -x $(SWIG_PATH) && \
-            export CNTK_LIB_PATH=$$(readlink -f $(LIBDIR)) && \
-            PYTHONDIR=$$(readlink -f $(PYTHONDIR)) && \
-            test $$? -eq 0 && \
-            cd bindings/python && \
+            export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$$(echo $(LIBPATH) $(KALDI_LIBPATH) | tr " " :); \
+            ldd $(LIBDIR)/* | grep "not found" && false; \
+            export CNTK_EXTRA_LIBRARIES=$$(ldd $(LIBDIR)/* | grep "^\s.*=> " | cut -d ">" -f 2- --only-delimited | cut -d "(" -f 1 --only-delimited | sort -u | grep -Ff <(echo $(EXTRA_LIBS_BASENAMES) | xargs -n1)); \
+            test -x $(SWIG_PATH); \
+            export CNTK_LIB_PATH=$$(readlink -f $(LIBDIR)); \
+            PYTHONDIR=$$(readlink -f $(PYTHONDIR)); \
+            test $$? -eq 0; \
+            cd bindings/python; \
             export PATH=$(SWIG_PATH):$$PATH; \
             for ver in $(PYTHON_VERSIONS); \
             do \
                 test -x $${py_paths[$$ver]}; \
                 $${py_paths[$$ver]} setup.py \
-                    build_ext \
+                    build_ext --inplace \
                     bdist_wheel \
                         --dist-dir $$PYTHONDIR || exit $$?; \
             done'
