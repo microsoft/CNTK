@@ -229,6 +229,8 @@ namespace CNTK
         if (numValues == 0)
             return;
 
+        Initialize(inputValues);
+
         // for all values residing on GPU initiate async transfer to CPU buffers.
         for (auto i = 0; i < numValues; ++i)
         {
