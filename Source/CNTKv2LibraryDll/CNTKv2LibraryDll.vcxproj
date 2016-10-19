@@ -132,6 +132,8 @@
     <ClInclude Include="API\CNTKLibrary.h" />
     <ClInclude Include="API\CNTKLibraryExperimental.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
+    <ClInclude Include="DataParallelDistributedTrainer.h" />
+    <ClInclude Include="DistributedCommunicator.h" />
     <ClInclude Include="Function.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
@@ -146,12 +148,15 @@
     <ClCompile Include="BackCompat.cpp" />
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="ComputeInputStatistics.cpp" />
+    <ClCompile Include="DataParallelDistributedTrainer.cpp" />
+    <ClCompile Include="DistributedCommunicator.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeader>
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Function.cpp" />
+    <ClCompile Include="Globals.cpp" />
     <ClCompile Include="Learner.cpp" />
     <ClCompile Include="MinibatchSource.cpp" />
     <ClCompile Include="NDArrayView.cpp" />

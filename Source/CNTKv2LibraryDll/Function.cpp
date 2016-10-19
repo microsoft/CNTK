@@ -21,8 +21,6 @@
 
 using namespace Microsoft::MSR::CNTK;
 
-bool g_shareNodeValueMatrices = true;
-
 namespace CNTK
 {
     std::shared_ptr<std::vector<Variable>> Function::InputsImpl() const
