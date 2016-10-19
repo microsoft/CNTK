@@ -1,17 +1,6 @@
-examples package
-================
+Examples
+========
 
-Subpackages
------------
+.. _`CNTK Python Examples`: https://github.com/Microsoft/CNTK/wiki/CNTK-2.0-Examples
 
-.. toctree::
-
-    examples.common
-
-Module contents
----------------
-
-.. automodule:: examples
-    :members:
-    :undoc-members:
-    :show-inheritance:
+`CNTK Python Examples`_: This is the best way to learn about the APIs.
