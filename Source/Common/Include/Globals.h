@@ -21,7 +21,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         static bool UseV2Aggregator()
         {
-            return true;
+            return false;
         }
 
     private:
