@@ -10,6 +10,9 @@
     <ClCompile Include="SGD.cpp">
       <Filter>SGD</Filter>
     </ClCompile>
+    <ClCompile Include="PostComputingActions.cpp">
+      <Filter>Stat</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">
@@ -126,6 +129,11 @@
     <ClInclude Include="Criterion.h">
       <Filter>SGD</Filter>
     </ClInclude>
+    <ClInclude Include="PostComputingActions.h">
+      <Filter>Stat</Filter>
+    <ClInclude Include="V2SimpleDistGradAggregator.h">
+      <Filter>Parallelization</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -163,6 +171,9 @@
     </Filter>
     <Filter Include="Data Reading">
       <UniqueIdentifier>{b866d513-7bd0-497c-98c2-f62dbcd4cde4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Stat">
+      <UniqueIdentifier>{f406217f-5a11-44ca-bb34-52254dbee8af}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

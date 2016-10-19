@@ -17,7 +17,7 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     const size_t hiddenLayerDim = 50;
     const size_t numHiddenLayers = 2;
 
-    const size_t minibatchSize = 25;
+    const size_t minibatchSize = 50;
     const size_t numSamplesPerSweep = 10000;
     const size_t numSweepsToTrainWith = 2;
     const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
@@ -101,9 +101,9 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
         prediction = predictionVar;
     }
 
-    const size_t minibatchSize = 32;
+    const size_t minibatchSize = 64;
     const size_t numSamplesPerSweep = 60000;
-    const size_t numSweepsToTrainWith = 3;
+    const size_t numSweepsToTrainWith = 2;
     const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
 
     auto featureStreamName = L"features";

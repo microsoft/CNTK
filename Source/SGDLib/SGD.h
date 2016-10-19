@@ -298,7 +298,10 @@ protected:
 
     bool m_useTwoPassTraining;
     
-    bool m_disableWkInBatchNormal;  // TODO: comment?
+    // decide whether should apply regularization into BatchNormalizationNode
+    // true: disable Regularization
+    // false: enable Regularization (default)
+    bool m_disableRegInBatchNormalization;
 };
 
 template <class ElemType>

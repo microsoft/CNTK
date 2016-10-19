@@ -16,8 +16,10 @@
 %rename(_backward) CNTK::Function::Backward;
 %rename(sgd_learner) CNTK::SGDLearner;
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
+%rename(momentums_as_time_constants) CNTK::MomentumValuesAsTimeConstants;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
 %rename(cpu_device) CNTK::DeviceDescriptor::CPUDevice;
+%rename(times_transpose) CNTK::TransposeTimes;
 
 // if we don't except RandomUniform the corresponding template functions will not be generated
 %rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";
@@ -38,6 +40,7 @@
 %template() std::vector<CNTK::StreamConfiguration>;
 //%template() std::vector<CNTK::DictionaryValue>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
+%template() std::vector<std::shared_ptr<CNTK::Learner>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
 %ignore CNTK::Internal::Combine;
@@ -45,6 +48,7 @@
 %ignore CNTK::Internal::Gather;
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
+%ignore CNTK::DistributedCommunicator::AggregateAsync;
 
 // These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
@@ -89,6 +93,14 @@ def dynamic_axes(self):
 }
 
 %extend CNTK::TrainingParameterSchedule<double> {
+    const double& __getitem__(size_t sampleCount) {
+        return (*($self))[sampleCount];
+    }
+}
+
+// MomentumValuesAsTimeConstants is a descendent of TrainingParameterSchedule,
+// but it does not inherit automatically functions added via %extend.
+%extend CNTK::MomentumValuesAsTimeConstants {
     const double& __getitem__(size_t sampleCount) {
         return (*($self))[sampleCount];
     }
@@ -614,7 +626,7 @@ def dynamic_axes(self):
         Py_DECREF(iterator);
 
         if (PyErr_Occurred()) {
-            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::LearnerPtr"); 
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::DictionaryValue"); 
         }
 
         $1 = vec;
@@ -1161,7 +1173,7 @@ def dynamic_axes(self):
 learning_rates_per_sample = training_param_schedule_double
 momentums_per_sample = training_param_schedule_double
 %}
-        
+
 // end of NDArrayView
 
 //

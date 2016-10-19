@@ -10,8 +10,8 @@
 
 namespace CNTK
 {
-    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::unordered_set<LearnerPtr>& parameterLearners)
-        : m_model(model), m_lossFunction(lossFunction), m_evaluationFunction(evaluationFunction), m_parameterLearners(parameterLearners), m_prevMinibatchNumSamples(1)
+    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners, const DistributedTrainerPtr& distributedTrainer)
+        : m_model(model), m_lossFunction(lossFunction), m_evaluationFunction(evaluationFunction), m_parameterLearners(parameterLearners), m_prevMinibatchNumSamples(1), m_distributedTrainer(distributedTrainer)
     {
         std::vector<Variable> combinedFunctionArgs = { m_model, m_lossFunction };
         if (!m_lossFunction->Output().DynamicAxes().empty())
@@ -64,10 +64,17 @@ namespace CNTK
 
         std::unordered_set<Parameter> modelParametersSet(modelParameters.begin(), modelParameters.end());
         if (modelParametersSet != learnerParameters)
+        {
             InvalidArgument("Trainer ctor: Union of the parameters covered by the specified parameterLearners should match the specified model's parameters");
+        }
+            
     }
 
-    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::unordered_set<LearnerPtr>& parameterLearners)
+    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners)
+        : Trainer(model, lossFunction, evaluationFunction, parameterLearners, nullptr)
+    {}
+
+    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners)
         : Trainer(model, lossFunction, nullptr, parameterLearners)
     {}
 
@@ -138,6 +145,9 @@ namespace CNTK
 
         outputs.insert(outputsToFetch.begin(), outputsToFetch.end());
 
+        if (m_distributedTrainer)
+            m_distributedTrainer->PreMinibatchCallback(*this);
+
         auto backPropSate = m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice, { m_aggregatedLossFunction });
         m_prevMinibatchAggregateTrainingLossValue = outputs[m_aggregatedLossFunction];
         if (m_aggregatedEvaluationFunction)
@@ -158,11 +168,32 @@ namespace CNTK
         auto modelParameters = m_combinedTrainingFunction->Parameters();
         std::unordered_map<Variable, ValuePtr> parameterGradients;
         for (const auto& parameter : modelParameters)
+        {
             parameterGradients[parameter] = nullptr;
+        }
 
         m_combinedTrainingFunction->Backward(backPropSate, { { m_aggregatedLossFunction, rootGradientValue } }, parameterGradients);
 
         m_prevMinibatchNumSamples = GetSampleCount(m_trainingSampleCountVar, outputs[m_trainingSampleCountVar]);
+
+        if (m_distributedTrainer)
+        {
+            // Aggregation should happen in the same order, the order of parmaters is guaranteed to be the same.
+            std::vector<std::pair<Variable, NDArrayViewPtr>> gradients;
+            gradients.reserve(modelParameters.size());
+            for (const auto& parameter : modelParameters)
+                gradients.push_back(std::make_pair(parameter, parameterGradients[parameter]->Data()));
+
+            MinibatchInfo info
+            {
+                m_prevMinibatchNumSamples,
+                m_prevMinibatchAggregateTrainingLossValue->Data(),
+                m_prevMinibatchAggregateEvalCriterionValue->Data()
+            };
+
+            m_distributedTrainer->PreParameterUpdateCallback(*this, gradients, info);
+            m_prevMinibatchNumSamples = info.numberOfSamples;
+        }
 
         bool anyUpdatesPerformed = false;
         for (auto learner : m_parameterLearners)
@@ -199,36 +230,69 @@ namespace CNTK
 #endif
     }
 
-    void Trainer::SaveCheckpoint(const std::wstring& modelFilePath)
+    void Trainer::SaveCheckpoint(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
     {
-        SaveAsLegacyModel(m_combinedTrainingFunction, modelFilePath);
+        if (usinglegacyModelFormat)
+        {
+            SaveAsLegacyModel(m_combinedTrainingFunction, modelFilePath);
+        }
+        else
+        {
+             Dictionary model = m_combinedTrainingFunction->Serialize();
+             auto stream = GetFstream(modelFilePath, false);
+            *stream << model;
+             stream->flush();
+        }
 
-        if (m_parameterLearners.size() > 1)
-            LogicError("Trainer::SaveCheckpoint: Checkpointing is currently unsupported for multiple learners");
+        vector<DictionaryValue> learnerStates;
 
-        auto learnerState = (*(m_parameterLearners.begin()))->GetCheckpointState();
+        for (const auto& learner : m_parameterLearners)
+        {
+            // TODO: add DictionaryValue(T&&)
+            learnerStates.push_back(DictionaryValue(learner->Serialize()));
+        }
+        
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
         auto ckpStream = GetFstream(trainerStateCheckpointFilePath, false);
-        *ckpStream << learnerState;
+        // TODO: this will create an extra copy of all leaner states, 
+        // add DictionaryValue ctor that takes an rvalue!
+        *ckpStream << DictionaryValue(learnerStates);
         ckpStream->flush();
     }
 
-    void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
+    void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
     {
         // Restore the model's parameters
-        m_combinedTrainingFunction->RestoreFromLegacyModel(modelFilePath);
-
-        // Restore the learner state
-        if (m_parameterLearners.size() > 1)
-            LogicError("Trainer::RestoreFromCheckpoint: Checkpointing is currently unsupported for multiple learners");
+        if (usinglegacyModelFormat)
+        {
+            m_combinedTrainingFunction->RestoreFromLegacyModel(modelFilePath);
+        }
+        else
+        { 
+            auto stream = GetFstream(modelFilePath, true);
+            Dictionary model;
+            *stream >> model;
+            m_combinedTrainingFunction->RestoreFromCheckpoint(model);
+        }
 
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
         auto ckpStream = GetFstream(trainerStateCheckpointFilePath, true);
-        Dictionary learnerState;
-        *ckpStream >> learnerState;
+        DictionaryValue checkpoint;
+        *ckpStream >> checkpoint;
 
-        auto firstLearner = *(m_parameterLearners.begin());
-        firstLearner->RestoreFromCheckpoint(learnerState);
+        const vector<DictionaryValue>& learnerStates = checkpoint.Value<vector<DictionaryValue>>();
+
+        if (learnerStates.size() != m_parameterLearners.size())
+        {
+            LogicError("Trainer::RestoreFromCheckpoint: "
+                       "Number of learners in the checkpoint (%zu) does not match the expected number (%zu)",
+                       learnerStates.size(), m_parameterLearners.size());
+        }
+
+        for (int i = 0; i < m_parameterLearners.size(); ++i)
+        {
+            m_parameterLearners[i]->RestoreFromCheckpoint(learnerStates[i].Value<Dictionary>());
+        }
     }
 
     double Trainer::PreviousMinibatchLossAverage() const

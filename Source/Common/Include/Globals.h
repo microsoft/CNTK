@@ -13,17 +13,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class Globals
     {
     public:
-        static void ForceDeterministicAlgorithms()
-        {
-            m_forceDeterministicAlgorithms = true;
-        }
+        static void       ForceDeterministicAlgorithms() {        m_forceDeterministicAlgorithms = true; }
+        static bool ShouldForceDeterministicAlgorithms() { return m_forceDeterministicAlgorithms; }
 
-        static bool ShouldForceDeterministicAlgorithms()
+        static void       ForceConstantRandomSeed() {        m_forceConstantRandomSeed = true; }
+        static bool ShouldForceConstantRandomSeed() { return m_forceConstantRandomSeed; }
+
+        static bool UseV2Aggregator()
         {
-            return m_forceDeterministicAlgorithms;
+            return false;
         }
 
     private:
         static std::atomic<bool> m_forceDeterministicAlgorithms;
+        static std::atomic<bool> m_forceConstantRandomSeed;
     };
 }}}

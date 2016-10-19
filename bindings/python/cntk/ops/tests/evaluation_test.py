@@ -28,21 +28,27 @@ TARGET_OUT_PAIRS = [
 @pytest.mark.parametrize("target_vector, output_vector", TARGET_OUT_PAIRS)
 def _test_op_cross_entropy_with_soft_max(output_vector, target_vector, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
-    o = AA(output_vector, dtype=dt)
-    o_max = o - o.max()
-    exp_x = np.exp(o_max)
+    
+    def numpy_softmax(x):
+        x = AA(x, dtype=PRECISION_TO_TYPE[precision])
+        ox = x - x.max()  # subtract max to avoid overflow
 
-    s_max = exp_x / np.sum(exp_x)
+        expX = np.exp(ox)
+        return expX / np.sum(expX)
+    
+    def numpy_op(label, softmax):
+        return -np.sum(label * np.log(softmax, dtype=PRECISION_TO_TYPE[precision]), dtype=PRECISION_TO_TYPE[precision])
 
-    t = AA(target_vector, dtype=dt)
+    def numpy_grad(softmax, target):
+        s = np.sum(target, dtype=dt) #This should be 1.0
+        return np.subtract(softmax * s , target)
 
-    expected_forward = np.asarray(-np.sum(t * np.log(s_max, dtype=dt),
-        dtype=dt))
-    expected_forward.shape = (1,1,1,1)+expected_forward.shape
 
-    s = np.sum(t, dtype=dt)
-    backward = np.subtract(s_max * s, t)
-    backward.shape = (1,1)+backward.shape
+    expected_forward = [[[[numpy_op(AA(target_vector, dtype=PRECISION_TO_TYPE[precision]), 
+                           numpy_softmax(output_vector))]]]]
+
+    backward = [[numpy_grad(numpy_softmax(output_vector), 
+                AA(target_vector, dtype=PRECISION_TO_TYPE[precision]))]]
 
     expected_backward = {
         'left_arg':  backward,
@@ -52,21 +58,21 @@ def _test_op_cross_entropy_with_soft_max(output_vector, target_vector, device_id
     from .. import cross_entropy_with_softmax
     _test_binary_op(precision, device_id, cross_entropy_with_softmax,
                     output_vector, target_vector,
-                    expected_forward, expected_backward)
+                    expected_forward, expected_backward, True)
 
 
 @pytest.mark.parametrize("target_vector, output_vector", TARGET_OUT_PAIRS)
-def _test_op_squared_error(output_vector, target_vector, device_id, precision):
+def test_op_squared_error(output_vector, target_vector, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
     o = AA(output_vector, dtype=dt)
     t = AA(target_vector, dtype=dt)
 
-    expected_forward = np.sum((t - o)**2)
+    expected_forward = [[np.sum((t - o)**2)]]
 
     expected_backward = {
-        'left_arg':  2 * np.subtract(t, o),
-        'right_arg': 2 * np.subtract(o, t)
+        'left_arg':  [[-2 * np.subtract(t, o)]],
+        'right_arg': [[-2 * np.subtract(o, t)]]
     }
 
     from .. import squared_error
@@ -93,5 +99,5 @@ def test_op_classification_error(output_vector, target_vector, device_id, precis
     from .. import classification_error
     op = classification_error(o, t)
     
-    unittest_helper(op, {}, {}, {},
+    unittest_helper(op, {}, expected_forward, {},
             device_id=device_id, precision=precision)

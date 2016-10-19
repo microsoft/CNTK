@@ -391,20 +391,27 @@ SEQUENCE_TRAINING_LIB_SRC +=\
 
 endif
 
-CNTKLIBRARY_SRC =\
+CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/BackCompat.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/ComputeInputStatistics.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/MinibatchSource.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDMask.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Trainer.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Utils.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Value.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Variable.cpp \
-    $(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Serialization.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/DistributedCommunicator.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/DataParallelDistributedTrainer.cpp \
 
+CNTKLIBRARY_SRC =\
+	$(SOURCEDIR)/CNTKv2LibraryDll/ComputeInputStatistics.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/MinibatchSource.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Globals.cpp \
+
+CNTKLIBRARY_SRC+=$(CNTKLIBRARY_COMMON_SRC)
 CNTKLIBRARY_SRC+=$(CNTK_COMMON_SRC)
 CNTKLIBRARY_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
 CNTKLIBRARY_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
@@ -466,8 +473,11 @@ EVAL:=eval
 
 SGDLIB_SRC=\
 	$(SOURCEDIR)/SGDLib/Profiler.cpp \
-	$(SOURCEDIR)/SGDLib/SGD.cpp
+	$(SOURCEDIR)/SGDLib/SGD.cpp \
+	$(SOURCEDIR)/SGDLib/PostComputingActions.cpp \
 	
+SGDLIB_SRC+=$(CNTKLIBRARY_COMMON_SRC)
+
 EVAL_SRC=\
 	$(SOURCEDIR)/EvalDll/CNTKEval.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
@@ -1006,24 +1016,24 @@ EXTRA_LIBS_BASENAMES:=$(addsuffix .so,$(addprefix lib,$(filter-out $(RUNTIME_LIB
 .PHONY: python
 python: $(ALL_LIBS)
 	@bash -c '\
-            set -x; \
+            set -x -e; \
             declare -A py_paths; \
             py_paths[34]=$(PYTHON34_PATH); \
             py_paths[35]=$(PYTHON35_PATH); \
-            export LD_LIBRARY_PATH=$$(echo $(LIBPATH) $(KALDI_LIBPATH) | tr " " :); \
-            ! (ldd $(LIBDIR)/* | grep  "not found") && \
-            export CNTK_EXTRA_LIBRARIES=$$(ldd $(LIBDIR)/* | grep "^\s.*=> " | cut -d ">" -f 2- --only-delimited | cut -d "(" -f 1 --only-delimited | sort -u | grep -Ff <(echo $(EXTRA_LIBS_BASENAMES) | xargs -n1)) && \
-            test -x $(SWIG_PATH) && \
-            export CNTK_LIB_PATH=$$(readlink -f $(LIBDIR)) && \
-            PYTHONDIR=$$(readlink -f $(PYTHONDIR)) && \
-            test $$? -eq 0 && \
-            cd bindings/python && \
+            export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$$(echo $(LIBPATH) $(KALDI_LIBPATH) | tr " " :); \
+            ldd $(LIBDIR)/* | grep "not found" && false; \
+            export CNTK_EXTRA_LIBRARIES=$$(ldd $(LIBDIR)/* | grep "^\s.*=> " | cut -d ">" -f 2- --only-delimited | cut -d "(" -f 1 --only-delimited | sort -u | grep -Ff <(echo $(EXTRA_LIBS_BASENAMES) | xargs -n1)); \
+            test -x $(SWIG_PATH); \
+            export CNTK_LIB_PATH=$$(readlink -f $(LIBDIR)); \
+            PYTHONDIR=$$(readlink -f $(PYTHONDIR)); \
+            test $$? -eq 0; \
+            cd bindings/python; \
             export PATH=$(SWIG_PATH):$$PATH; \
             for ver in $(PYTHON_VERSIONS); \
             do \
                 test -x $${py_paths[$$ver]}; \
                 $${py_paths[$$ver]} setup.py \
-                    build_ext \
+                    build_ext --inplace \
                     bdist_wheel \
                         --dist-dir $$PYTHONDIR || exit $$?; \
             done'

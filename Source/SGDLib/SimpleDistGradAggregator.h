@@ -147,7 +147,7 @@ private:
 
                 if (deviceId != CPUDEVICE)
                 {
-                    m_gpuDataTransferers.push_back(std::unique_ptr<GPUDataTransferer<ElemType>>(new GPUDataTransferer<ElemType>(deviceId, m_useAsyncAggregation)));
+                    m_gpuDataTransferers.push_back(std::make_unique<GPUDataTransferer>(deviceId, m_useAsyncAggregation));
                     m_intermediateCPUBuffers.push_back(AllocateIntermediateBuffer(deviceId, gradients[i]->GetNumElements()));
                 }
 
@@ -329,7 +329,7 @@ private:
     std::unique_ptr<CUDAPageLockedMemAllocator> m_allocator;
     std::vector<std::shared_ptr<ElemType>> m_intermediateCPUBuffers;
 
-    std::vector<std::unique_ptr<GPUDataTransferer<ElemType>>> m_gpuDataTransferers;
+    std::vector<std::unique_ptr<GPUDataTransferer>> m_gpuDataTransferers;
 
     std::vector<DistGradHeader*> m_recvHeaders;
 

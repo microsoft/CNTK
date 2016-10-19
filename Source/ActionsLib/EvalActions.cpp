@@ -84,65 +84,6 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
     eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 }
 
-// ===========================================================================
-// DoEvalBNBase() - implements CNTK "pbn" command
-// ===========================================================================
-
-template <typename ElemType>
-static void DoEvalBNBase(const ConfigParameters& config, IDataReader& reader)
-{
-    // DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-    ConfigArray minibatchSize = config(L"minibatchSize", "40960");
-    size_t epochSize = config(L"epochSize", "0");
-    if (epochSize == 0)
-    {
-        epochSize = requestDataSize;
-    }
-    wstring modelPath = config(L"modelPath");
-    wstring exportPath = modelPath + L".PBN";
-    intargvector mbSize = minibatchSize;
-
-    int iters = config(L"iters", 240);
-
-    int traceLevel = config(L"traceLevel", "0");
-    size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
-    size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
-    size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
-    size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
-
-    bool enableDistributedMBReading = config(L"distributedMBReading", GetDistributedMBReadingDefaultValue(config, reader));
-
-    vector<wstring> evalNodeNamesVector;
-
-    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"evalNodeNames", evalNodeNamesVector);
-
-    // set tracing flags
-    net->EnableNodeTracing(config(L"traceNodeNamesReal", ConfigParameters::Array(stringargvector())),
-        config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
-        config(L"traceNodeNamesSparse", ConfigParameters::Array(stringargvector())));
-
-    SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
-        firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
-    eval.EvaluateBN(&reader, evalNodeNamesVector, exportPath, mbSize[0], iters, epochSize);
-}
-
-template <typename ElemType>
-void DoEvalBN(const ConfigParameters& config)
-{
-    // This is actually used for re-estimating the BN node. It *should* actually randomize.
-    // TODO: rename to DoEstimateBN.
-
-    // evaluate batch normalization mean and various
-    ConfigParameters readerConfig(config(L"reader"));
-
-    // Should trace level to zero in Post BN?
-    //readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
-
-    DataReader evaBNDataReader(readerConfig);
-
-    DoEvalBNBase<ElemType>(config, evaBNDataReader);
-}
-
 template <typename ElemType>
 void DoEval(const ConfigParameters& config)
 {
@@ -158,8 +99,6 @@ void DoEval(const ConfigParameters& config)
     DoEvalBase<ElemType>(config, testDataReader);
 }
 
-template void DoEvalBN<double>(const ConfigParameters& config);
-template void DoEvalBN<float>(const ConfigParameters& config);
 template void DoEval<double>(const ConfigParameters& config);
 template void DoEval<float>(const ConfigParameters& config);
 
@@ -229,7 +168,7 @@ void DoCrossValidate(const ConfigParameters& config)
         cvModels.push_back(cvModelPath);
         auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, cvModelPath);
         // BUGBUG: ^^ Should use GetModelFromConfig()
-        
+
         SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
             firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
 
