@@ -30,7 +30,7 @@ abs_path  = os.path.dirname(os.path.abspath(__file__))
 cntk_path = os.path.normpath(os.path.join(abs_path, "..", "..", "..", ".."))
 data_path = os.path.join(cntk_path, "Examples", "Image", "Datasets", "CIFAR-10")
 
-model_dir = "./Models"
+model_path = os.path.join(abs_path, "Models")
 
 # model dimensions
 image_height = 32
@@ -69,7 +69,7 @@ def create_reader(path, map_file, mean_file, train):
     return ReaderConfig(deserializer, epoch_size=sys.maxsize).minibatch_source()
 
 #
-# define the model
+# helper APIs that define layers. 
 #
 def conv_layer(input, num_filters, filter_size, stride = (1,1), init = glorot_uniform(output_rank=-1, filter_rank=2), nonlinearity = relu):
     shape = input.shape
@@ -83,24 +83,14 @@ def conv_layer(input, num_filters, filter_size, stride = (1,1), init = glorot_un
 
     return nonlinearity(linear)
 
-def conv_to_dense_layer(input, num_units, init=glorot_uniform(), nonlinearity = relu):
-    shape = input.shape
-
-    b_param = parameter(shape=(num_units))
-    w_param = parameter(shape=(shape[0], shape[1], shape[2], num_units), init=init)
-
-    linear = b_param + times(input, w_param)
-    if nonlinearity == None:
-        return linear
-
-    return nonlinearity(linear)    
-    
 def dense_layer(input, num_units, init=glorot_uniform(), nonlinearity = relu):
-    shape = input.shape
-    input_dim = shape[0]
 
     b_param = parameter(shape=(num_units))
-    w_param = parameter(shape=(input_dim, num_units), init=init)
+
+    if len(input.shape) >= 3:
+        w_param = parameter(shape=(input.shape[0], input.shape[1], input.shape[2], num_units), init=init)
+    else:
+        w_param = parameter(shape=(input.shape[0], num_units), init=init)
 
     linear = b_param + times(input, w_param)
     if nonlinearity == None:
@@ -111,6 +101,12 @@ def dense_layer(input, num_units, init=glorot_uniform(), nonlinearity = relu):
 def max_pool_layer(input, pool_size, stride):
     return pooling(input, PoolingType_Max, (1, pool_size[0], pool_size[1]), (1, stride[0], stride[1]))
 
+def dropout_layer(input, p):
+    return dropout(input, dropout_rate=p)
+
+#
+# define the model.
+#
 def create_model_1(input):
     net = {}
 
@@ -123,8 +119,26 @@ def create_model_1(input):
     net['conv3'] = conv_layer(net['pool2'], 64, (5,5), init=gaussian(output_rank=-1, filter_rank=2, scale=1.414))
     net['pool3'] = max_pool_layer(net['conv3'], (3,3), (2,2))
 
-    net['fc4'] = conv_to_dense_layer(net['pool3'], 64, init=gaussian(scale=12))
-    net['fc5'] = dense_layer(net['fc4'], 10, init=gaussian(scale=1.5), nonlinearity = None)
+    net['fc4']   = dense_layer(net['pool3'], 64, init=gaussian(scale=12))
+    net['fc5']   = dense_layer(net['fc4'], 10, init=gaussian(scale=1.5), nonlinearity = None)
+
+    return net
+
+def create_model_2(input):
+    net = {}
+
+    net['conv1'] = conv_layer(input, 32, (5,5), init=gaussian(output_rank=-1, filter_rank=2, scale=0.0043))
+    net['pool1'] = max_pool_layer(net['conv1'], (3,3), (2,2))
+
+    net['conv2'] = conv_layer(net['pool1'], 32, (5,5), init=gaussian(output_rank=-1, filter_rank=2, scale=1.414))
+    net['pool2'] = max_pool_layer(net['conv2'], (3,3), (2,2))
+
+    net['conv3'] = conv_layer(net['pool2'], 64, (5,5), init=gaussian(output_rank=-1, filter_rank=2, scale=1.414))
+    net['pool3'] = max_pool_layer(net['conv3'], (3,3), (2,2))
+
+    net['fc4']   = dense_layer(net['pool3'], 64, init=gaussian(scale=12))
+    net['drop4'] = dropout_layer(net['fc4'], 0.5)
+    net['fc5']   = dense_layer(net['drop4'], 10, init=gaussian(scale=1.5), nonlinearity = None)
 
     return net
 
@@ -214,7 +228,8 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
             if current_minibatch != minibatch_size:
                 break
 
-        print("Finished Epoch[ {} of {}]: [Training] ce = {:0.6f} * {}, errs = {:0.1f}% * {}".format(epoch+1, max_epochs, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
+        print("Finished Epoch[{} of {}]: [Training] ce = {:0.6f} * {}, errs = {:0.1f}% * {}".format(epoch+1, max_epochs, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
+        trainer.save_checkpoint(os.path.join(model_path, "cifar_model"))
 
     #
     # Evaluation action
@@ -223,8 +238,6 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     minibatch_size = 16
 
     # process minibatches and evaluate the model
-    loss_numer      = 0 
-    loss_denom      = 0
     metric_numer    = 0
     metric_denom    = 0
     sample_count    = 0
@@ -253,7 +266,7 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
             break
 
     print("")
-    print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, metric_numer/metric_denom*100.0, metric_denom))
+    print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
     print("")
 
 if __name__=='__main__':
