@@ -249,7 +249,6 @@ class Function(cntk_py.Function):
         return super(Function, self).inputs()
 
     @property
-    @typemap
     def name(self):
         '''
         Name of this function
@@ -257,7 +256,6 @@ class Function(cntk_py.Function):
         return super(Function, self).name()
 
     @property
-    @typemap
     def op_name(self):
         '''
         Name of the operation that this Function performs

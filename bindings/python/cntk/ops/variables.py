@@ -46,7 +46,6 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         return sanitize_precision(self.get_data_type())
 
     @property
-    @typemap
     def is_constant(self):
         '''
         Whether this variable is a constant.
@@ -54,7 +53,6 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         return super(Variable, self).is_constant()
 
     @property
-    @typemap
     def is_input(self):
         '''
         Whether this variable is an input.
@@ -62,7 +60,6 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         return super(Variable, self).is_input()
 
     @property
-    @typemap
     def is_output(self):
         '''
         Whether this variable is an output.
@@ -70,7 +67,6 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         return super(Variable, self).is_output()
 
     @property
-    @typemap
     def is_parameter(self):
         '''
         Whether this variable is a parameter.
@@ -78,7 +74,6 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         return super(Variable, self).is_parameter()
 
     @property
-    @typemap
     def is_placeholder(self):
         '''
         Whether this variable is a placeholder.
@@ -86,26 +81,13 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         return super(Variable, self).is_placeholder()
 
     @property
-    @typemap
     def is_sparse(self):
         '''
         Whether this variable is sparse.
         '''
         return super(Variable, self).is_sparse()
 
-    # @typemap
-    # def kind(self):
-        # '''
-        # kind
-
-
-        # Returns:
-            # `VariableKind`: text
-        # '''
-        # return super(Variable, self).kind()
-
     @property
-    @typemap
     def name(self):
         '''
         The name of this variable.
@@ -113,7 +95,6 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         return super(Variable, self).name()
 
     @property
-    @typemap
     def needs_gradient(self):
         '''
         Whether this variable needs gradients.
@@ -138,7 +119,6 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         return super(Variable, self).shape().dimensions()
 
     @property
-    @typemap
     def uid(self):
         '''
         The internally generated unique name of the variable.
@@ -184,7 +164,6 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
                     device, name)
 
     @property
-    @typemap
     def value(self):
         '''
         NumPy array of the value
@@ -232,7 +211,6 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
 
     #TODO how to expose Scalar ?
     @property
-    @typemap
     def value(self):
         '''
         NumPy array of the value
