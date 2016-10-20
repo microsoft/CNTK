@@ -690,6 +690,21 @@ namespace CNTK
             auto numChannels = convMapShape[2];
             auto roisPerImage = roisShape[1];
 
+            if (roiOutputShape.Rank() != 2)
+                InvalidArgument("ROIPoolingNode: roi output shape must have two dimensions ([W x H]).");
+
+            if (convMapShape[0] < outW || convMapShape[1] < outH)
+                InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
+
+            if (convMapShape[2] < 1)
+                InvalidArgument("ROIPoolingNode: input must have at least one channel ([W x H x C]).");
+
+            if (roisShape[0] != 4)
+                InvalidArgument("ROIPoolingNode: ROI input must have the following shape: [4 x roisPerImage].");
+
+            if (roisPerImage < 1)
+                InvalidArgument("ROIPoolingNode: ROI input must contain at least one ROI ([4 x roisPerImage]).");
+
             outputShape = { outW, outH, numChannels, roisPerImage };
             break;
         }
@@ -2799,11 +2814,11 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr ROIPooling(const Variable& leftOperand, const Variable& rightOperand, const NDShape& roiOutputShape, const std::wstring& name/* = L""*/)
+    FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name/* = L""*/)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameROIOutputShape] = roiOutputShape;
-        return BinaryOp(PrimitiveOpType::ROIPooling, leftOperand, rightOperand, std::move(additionalProperties), name);
+        return BinaryOp(PrimitiveOpType::ROIPooling, convolutionMap, rois, std::move(additionalProperties), name);
     }
 
     FunctionPtr Pooling(const Variable& operand,

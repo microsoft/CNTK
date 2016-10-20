@@ -14,7 +14,7 @@ datasetName = "grocery"
 # default parameters
 ############################
 # cntk params
-cntk_nrRois = 4000  # 2000 # how many ROIs to zero-pad
+cntk_nrRois = 2000 # how many ROIs to zero-pad
 cntk_padWidth = 1000
 cntk_padHeight = 1000
 

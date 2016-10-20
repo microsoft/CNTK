@@ -118,7 +118,7 @@ def unittest_helper(root_node,
     assert isinstance(root_node, Function)
     backward_pass = expected_backward is not None
     forward, backward = cntk_eval(root_node, forward_input, precision,
-            cntk_device(device_id), backward_pass)
+            cntk_device(device_id), backward_pass, expected_backward)
 
     # for forward we always expect only one result
     assert len(forward) == 1
