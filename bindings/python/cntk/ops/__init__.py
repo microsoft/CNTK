@@ -306,8 +306,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
         normalization_time_constant(`float`, default 5000): time constant for computing running average of
-         mean and variance as a low-pass filtered version of the batch statistics. Note: the default is not
-         typically what you want
+         mean and variance as a low-pass filtered version of the batch statistics. 
         blend_time_constant(`float`, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
