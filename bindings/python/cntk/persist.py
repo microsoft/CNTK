@@ -9,7 +9,7 @@ from cntk.device import use_default_device
 
 def save_model(root_op, filename):
     '''
-    Save the network of `root_op` in `model_file`.
+    Save the network of ``root_op`` in ``filename``.
 
     Args:
         root_op (`:class:cntk.functions.Function`): op of the graph to save
@@ -20,13 +20,13 @@ def save_model(root_op, filename):
 @typemap
 def load_model(data_type, filename, device=None):
     '''
-    Load the network in `model_file`, that has been saved using
+    Load the network in ``filename``, that has been saved using
     `:func:save_model`.
 
     Args:
         data_type ('float' or 'double', or NumPy type): data type of the operation
         filename (`str`): filename to load the model from
-        device (:class:`cntk.DeviceDescriptor`, default to default device): instance of DeviceDescriptor
+        device (:class:`cntk.device.DeviceDescriptor`, default to default device): instance of DeviceDescriptor
 
     Returns:
         root node
