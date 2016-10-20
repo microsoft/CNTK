@@ -287,7 +287,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
 @typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
-                        normalization_time_constant=0, blend_time_constant=0,
+                        normalization_time_constant=5000, blend_time_constant=0,
                         epsilon=0.00001, use_cudnn_engine=False, name=''):
     '''
     Normalizes layer outputs for every minibatch for each output (feature) independently
@@ -305,7 +305,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         running_inv_std: running variance. Represented as ``running_mean``
         spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
-        normalization_time_constant(`float`, default 0): time constant for computing running average of
+        normalization_time_constant(`float`, default 5000): time constant for computing running average of
          mean and variance as a low-pass filtered version of the batch statistics. Note: the default is not
          typically what you want
         blend_time_constant(`float`, default 0): constant for smoothing batch estimates with the running
