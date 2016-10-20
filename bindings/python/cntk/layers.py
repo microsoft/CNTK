@@ -267,25 +267,28 @@ def Dropout(prob=None):
     return apply_x
 
 # BatchNormalization -- create a batch-normalization layer
-def BatchNormalization(spatial_rank=0,  # reduce over these dims. E.g. 2 to reduce over (w,h) in a [W x H x C]-shaped input
+def BatchNormalization(_inf, spatial_rank=0,  # reduce over these dims. E.g. 2 to reduce over (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=5000, blend_time_constant=0,
                        epsilon=0.00001, use_cntk_engine=True):
     #UntestedBranchError("BatchNormalization")
+    # Note: This has been tested ad-hoc in SLUHandsOn.py, and gives quite precisely the expected improvement. So this works. Just need to fix _inf.
 
     # parameters bound to this Function
-    #normShape   = _ConcatArrays (Repeat (spatial_rank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
-    norm_shape  = (1,) * spatial_rank + _INFERRED
-    #norm_shape  = (1,) * spatial_rank + _INFERRED  # TODO: Update this once we support broadcasting-style parameters.
+    norm_shape  = _INFERRED + (1,) * spatial_rank
+    norm_shape  = _inf   # BUGBUG: remove once inference works
+    if spatial_rank != 0:
+        UntestedBranchError("BatchNormalization spatial_rank != 0:")
     scale       = Parameter(norm_shape, init=constant_initializer(init_scale))
     bias        = Parameter(norm_shape, init=constant_initializer(0))
     # BUGBUG: We need a parameter that is not updated, but is not a constant either
     # BUGBUG: the following fails: "ValueError: setting an array element with a sequence."
     #run_mean     = Constant(constant_initializer(0), shape=norm_shape)  # note: disable learning since these are updated differently
     #run_variance = Constant(constant_initializer(0), shape=norm_shape)
-    # BUGBUG: this is the only way to get it to run
-    run_mean     = Parameter(norm_shape, init=constant_initializer(0))  # note: disable learning since these are updated differently
-    run_variance = Parameter(norm_shape, init=constant_initializer(0))
+    import numpy as np
+    init_stat = np.zeros(_inf, dtype=np.float32)
+    run_mean     = Constant(init_stat)  # BUGBUG: replace by above once inference works
+    run_variance = Constant(init_stat)
 
     # expression
     x = Placeholder(name='batch_normalization_arg')

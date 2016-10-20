@@ -1792,7 +1792,8 @@ def constant(value=None, shape=None, device=None, name=''):
     from .variables import Constant
     if not device:
         device = use_default_device()
-    if np.isscalar(value) and not shape:
+    #if np.isscalar(value) and not shape:
+    if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
         shape = ()
         if isinstance(value, np.ndarray):
             data_type = str(value.dtype)

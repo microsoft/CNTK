@@ -57,13 +57,13 @@ def create_model():  # TODO: all the _inf stuff will go away once dimension infe
     return Sequential([
         #Stabilizer(),
         Embedding(emb_dim),
-        #BatchNormalization(),
+        #BatchNormalization(_inf=emb_dim), # TODO: remove _inf once it works
         Recurrence(LSTM(hidden_dim, enable_self_stabilization=False), _inf=_Infer(shape=emb_dim), go_backwards=False,
                    #),
                    initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
                    # BUGBUG: initial_state=0.1 should work
         #Stabilizer(),
-        #BatchNormalization(),
+        #BatchNormalization(_inf=hidden_dim), # TODO: remove _inf once it works
         Dense(label_dim)
     ])
 
