@@ -156,6 +156,7 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
        init (`np.ndarray` or `list` or `float` or `int`): Initial value.
         If a numpy array is specified the shape argument is ignored and
         the tensor gets the shape of this argument.
+        BUGBUG: Document initializers
        data_type (`np.float32 or np.float64`): data type of the values stored.
        device (`dev`): the device on which the values should reside.
        name (`str`): an optional name for this parameter
@@ -214,6 +215,7 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
+        BUGBUG: Document initializers
        data_type (`np.float32 or np.float64`): data type to store the values as.
        device (`dev`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
@@ -226,9 +228,18 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
             else:
                 data_type = np.float32
                 
-        ndav = sanitize_value(shape, value, data_type, device)
+        #ndav = sanitize_value(shape, value, data_type, device)
+        #super(Constant, self).__init__(ndav, name)
 
-        super(Constant, self).__init__(ndav, name)
+        # from Parameter: [fseide]
+        if isinstance(value, (np.ndarray, list, float, int)):
+            ndav = sanitize_value(shape, value, data_type, device)
+            super(Constant, self).__init__(ndav, name)
+        else:
+            shape = utils.sanitize_shape(shape)
+            data_type  = utils.sanitize_dtype_cntk(data_type)
+            super(Constant, self).__init__(shape, data_type, value,
+                    device, name)
 
     #TODO how to expose Scalar ?
     @property

@@ -57,11 +57,13 @@ def create_model():  # TODO: all the _inf stuff will go away once dimension infe
     return Sequential([
         #Stabilizer(),
         Embedding(emb_dim),
+        #BatchNormalization(),
         Recurrence(LSTM(hidden_dim, enable_self_stabilization=False), _inf=_Infer(shape=emb_dim), go_backwards=False,
                    #),
                    initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
                    # BUGBUG: initial_state=0.1 should work
         #Stabilizer(),
+        #BatchNormalization(),
         Dense(label_dim)
     ])
 
@@ -146,7 +148,7 @@ if __name__=='__main__':
     # TODO: leave these in for now as debugging aids; remove for beta
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed
     set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
-    set_fixed_random_seed(1)  # TODO: remove debugging facilities once this all works
+    set_fixed_random_seed(1000000)  # TODO: remove debugging facilities once this all works
 
     reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model()

@@ -15,13 +15,14 @@ import time
 from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
 from cntk.learner import sgd, fsadagrad
 from cntk.ops import parameter, input_variable, placeholder_variable, combine
-from cntk.ops import times, cross_entropy_with_softmax, classification_error, convolution
+from cntk.ops import times, cross_entropy_with_softmax, classification_error, convolution, batch_normalization
 import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
 from cntk.blocks import *  # TODO: reduce to what we actually use
 from cntk.blocks import _extend_Function, _name_and_extend_Function, _wrap_rename_Function, _trace_layers  # (debugging)
 from cntk.initializer import glorot_uniform
+from _cntk_py import constant_initializer # BUGBUG: Should not be necessary, should just type-cast under the hood.
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -270,20 +271,27 @@ def BatchNormalization(spatial_rank=0,  # reduce over these dims. E.g. 2 to redu
                        init_scale=1,
                        normalization_time_constant=5000, blend_time_constant=0,
                        epsilon=0.00001, use_cntk_engine=True):
-    UntestedBranchError("BatchNormalization")
+    #UntestedBranchError("BatchNormalization")
 
     # parameters bound to this Function
     #normShape   = _ConcatArrays (Repeat (spatial_rank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
-    norm_shape  = (1,) + _INFERRED  # TODO: Update this once we support broadcasting-style parameters.
-    scale       = Parameter(norm_shape, init=init_scale)
-    bias        = Parameter(norm_shape, init=0)
+    norm_shape  = (1,) * spatial_rank + _INFERRED
+    #norm_shape  = (1,) * spatial_rank + _INFERRED  # TODO: Update this once we support broadcasting-style parameters.
+    scale       = Parameter(norm_shape, init=constant_initializer(init_scale))
+    bias        = Parameter(norm_shape, init=constant_initializer(0))
     # BUGBUG: We need a parameter that is not updated, but is not a constant either
-    run_mean     = Constant(0, norm_shape)  # note: disable learning since these are updated differently
-    run_variance = Constant(0, norm_shape)
+    # BUGBUG: the following fails: "ValueError: setting an array element with a sequence."
+    #run_mean     = Constant(constant_initializer(0), shape=norm_shape)  # note: disable learning since these are updated differently
+    #run_variance = Constant(constant_initializer(0), shape=norm_shape)
+    # BUGBUG: this is the only way to get it to run
+    run_mean     = Parameter(norm_shape, init=constant_initializer(0))  # note: disable learning since these are updated differently
+    run_variance = Parameter(norm_shape, init=constant_initializer(0))
 
     # expression
     x = Placeholder(name='batch_normalization_arg')
-    apply_x = batch_normalization (x, scale, bias, run_mean, run_variance, spatial_rank > 0, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon, use_cntk_engine=use_cntk_engine)
+    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, spatial_rank > 0, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
+                                  #use_cntk_engine=use_cntk_engine)
+                                  use_cudnn_engine=not use_cntk_engine)
     _name_and_extend_Function(apply_x, 'BatchNormalization')
     return apply_x
 

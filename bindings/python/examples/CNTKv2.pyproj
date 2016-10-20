@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{1a078fc2-21c0-4f42-9a5b-0e84e944bc74}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>ImageHandsOn\ImageHandsOn.py</StartupFile>
+    <StartupFile>SLUHandsOn\SLUHandsOn.py</StartupFile>
     <SearchPath>$(RepoRootPath)$(Platform)\$(Configuration);$(RepoRootPath)bindings\python;$(RepoRootPath)bindings\python\examples</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -16,8 +16,7 @@
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <IsWindowsApplication>False</IsWindowsApplication>
     <Environment>PYTHONPATH=$(SolutionDir)bindings\python;$(SolutionDir)bindings\python\examples</Environment>
-    <InterpreterPath>
-    </InterpreterPath>
+    <InterpreterPath>C:\Program Files\Anaconda3\envs\cntk\python.exe</InterpreterPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
