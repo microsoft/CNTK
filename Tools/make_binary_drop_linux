@@ -173,7 +173,8 @@ rm -f $baseBinariesPath/bin/mathtests
 rm -f $baseBinariesPath/bin/networktests
 rm -f $baseBinariesPath/bin/readertests
 rm -f $baseBinariesPath/bin/v2librarytests
-rm -f $baseBinariesPath/lib/libcntklibrary-2.0.so
+# libcntklibrary-2.0.so added to drop for 2.0 Beta
+# rm -f $baseBinariesPath/lib/libcntklibrary-2.0.so
 
 # Make Include directory
 mkdir -p $baseIncludePath
