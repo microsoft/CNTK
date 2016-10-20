@@ -27,5 +27,5 @@ directory:
    – numpy interop example showing how to train a simple feed-forward
    network with training data fed using numpy arrays.
 
--  `SLUHandson <https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/SLUHandson/SLUHandson.py>`__
+-  `SLUHandsOn <https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/SLUHandsOn/SLUHandsOn.py>`__
    – Language Understanding.

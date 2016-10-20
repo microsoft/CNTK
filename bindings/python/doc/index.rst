@@ -20,6 +20,7 @@ them on sample data in real time.
 .. toctree::
    :maxdepth: 2
 
+   Setup <setup>
    Getting Started <gettingstarted>
    Tutorials <tutorials>
    Examples <examples>
