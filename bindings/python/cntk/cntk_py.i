@@ -40,6 +40,7 @@
 %template() std::vector<CNTK::StreamConfiguration>;
 //%template() std::vector<CNTK::DictionaryValue>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
+%template() std::vector<std::shared_ptr<CNTK::Learner>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
 %ignore CNTK::Internal::Combine;
@@ -47,6 +48,7 @@
 %ignore CNTK::Internal::Gather;
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
+%ignore CNTK::DistributedCommunicator::AggregateAsync;
 
 // These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
@@ -247,12 +249,12 @@ def dynamic_axes(self):
             CNTK::ValuePtr* value;
             if (raw_value) {
                 value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+                args_map.insert(std::make_pair(*var, *value));
             } else {
                 // We got an empty ValuePtr, which carries a nullptr.
-                value = new CNTK::ValuePtr();
+                args_map.insert(std::make_pair(*var, CNTK::ValuePtr()));
             }
 
-            args_map.insert(std::make_pair(*var, *value));
         }
 
         $1 = &args_map;
@@ -291,12 +293,11 @@ def dynamic_axes(self):
             CNTK::ValuePtr* value;
             if (raw_value) {
                 value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+                args_map.insert(std::make_pair(*var, *value));
             } else {
                 // We got an empty ValuePtr, which carries a nullptr.
-                value = new CNTK::ValuePtr();
+                args_map.insert(std::make_pair(*var, CNTK::ValuePtr()));
             }
-
-            args_map.insert(std::make_pair(*var, *value));
         }
 
         $1 = &args_map;
@@ -359,6 +360,7 @@ def dynamic_axes(self):
                 PyDict_SetItem($input, py_key, returned_val);
             }
         }
+        Py_DECREF(returned_val);
     }
 }
 
@@ -529,6 +531,8 @@ def dynamic_axes(self):
                 PyDict_SetItem($input, py_key, PyTuple_Pack(2, returned_val1, returned_val2));
             }
         }
+        Py_DECREF(returned_val1);
+        Py_DECREF(returned_val2);
     }
 }
 
@@ -624,7 +628,7 @@ def dynamic_axes(self):
         Py_DECREF(iterator);
 
         if (PyErr_Occurred()) {
-            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::LearnerPtr"); 
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::DictionaryValue"); 
         }
 
         $1 = vec;
@@ -918,6 +922,7 @@ def dynamic_axes(self):
         PyObject *item = SWIG_NewPointerObj(new CNTK::DATA_TYPE(var), _SWIG_TYPE, SWIG_POINTER_OWN );
         // No error handling here, because the error will be passed directly to Python
         PyList_Append(container, item);
+        Py_DECREF(item);
     }
 
     $result = container;
@@ -942,6 +947,7 @@ def dynamic_axes(self):
         PyObject *item = SWIG_NewPointerObj(new CNTK::DATA_TYPE(var), _SWIG_TYPE, SWIG_POINTER_OWN );
         // No error handling here, because the error will be passed directly to Python
         PyList_Append(container, item);
+        Py_DECREF(item);
     }
 
     $result = container;
@@ -972,6 +978,9 @@ def dynamic_axes(self):
         PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::DATA_TYPE2(it.second)), _SWIG_TYPE2, SWIG_POINTER_OWN);
         
         PyDict_SetItem(container, returned_var, returned_val);        
+
+        Py_DECREF(returned_var);
+        Py_DECREF(returned_val);
     }
 
     $result = container;
@@ -1186,22 +1195,6 @@ public:
     virtual void backward() { std::cout << "Callback::backward()" << std::endl; }
 };
 
-class FunctionInCNTK {
-private:
-    Callback *_callback;
-public:
-    FunctionInCNTK(): _callback(0) {}
-    ~FunctionInCNTK() { delCallback(); }
-    void delCallback() { delete _callback; _callback = 0; }
-    void setCallback(Callback *cb) { delCallback(); _callback = cb; }
-    void forward() { 
-        if (_callback) 
-            _callback->forward(); 
-        else
-            throw "Forward callback not defined!";
-    }
-    void backward() { if (_callback) _callback->backward(); }
-};
 %}
 
 //

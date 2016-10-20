@@ -5,7 +5,7 @@
 Python API for CNTK (2.0a4)
 ===============================
 
-CNTK_, the Computational Network Toolkit, is a system for describing, training,
+CNTK_, the Microsfot Cognitive Toolkit, is a system for describing, training,
 and executing computational networks, a unified framework for describing
 arbitrary learning machines, such as deep neural networks (DNNs), convolutional
 neural networks (CNNs), recurrent neural networks (RNNs), long short term
@@ -21,8 +21,10 @@ them on sample data in real time.
    :maxdepth: 2
 
    Getting Started <gettingstarted>
-   API Reference <apireference>
-
+   Tutorials <tutorials>
+   Examples <examples>
+   Python API Reference <apireference>
+   Known Issues <knownissues>
 
 Indices and tables
 ==================

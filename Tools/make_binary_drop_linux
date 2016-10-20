@@ -121,15 +121,31 @@ declare -a cudaFiles=("libcudart.so.7.5" "libcublas.so.7.5" "libcurand.so.7.5" "
 # cuDNN
 declare -a cudnnFiles=("libcudnn.so.5")
 
+# OpenBLAS (Needed by Kaldi)
+declare -a openblasFiles=("libopenblas.so.0")
+
+# Kaldi
+declare -a kaldiFiles=("libkaldi-util.so" "libkaldi-matrix.so" "libkaldi-base.so" "libkaldi-hmm.so" "libkaldi-cudamatrix.so" "libkaldi-nnet.so" "libkaldi-lat.so" "libkaldi-tree.so")
+
+# OpenFst (from Kaldi)
+declare -a openfstFiles=("libfst.so.3")
+
 # Include files
 declare -a includeFiles=("Eval.h")
 
 # Set dependency sources paths
-mklPath="/usr/local/CNTKCustomMKL/2/x64/parallel"
-opencvPath="/usr/local/opencv-3.1.0/lib"
+mklVersion="2"
+mklPath="/usr/local/CNTKCustomMKL/$mklVersion/x64/parallel"
+opencvVersion="3.1.0"
+opencvPath="/usr/local/opencv-$opencvVersion/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
-cudnnPath="/usr/local/cudnn-5.1/cuda/lib64"
+cudnnVersion="5.1"
+cudnnPath="/usr/local/cudnn-$cudnnVersion/cuda/lib64"
+openblasPath="/usr/local/openblas/lib"
+kaldiVersion="c024e8aa"
+kaldiPath="/usr/local/kaldi-$kaldiVersion/src/lib"
+openfstPath="/usr/local/kaldi-$kaldiVersion/tools/openfst/lib"
 
 # Set build paths
 buildPath="build/$targetConfig/release"
@@ -199,6 +215,18 @@ CopyFilesFromList $opencvPath opencvFiles[@] $baseDependenciesPath
 # Copy libzip
 echo "Copying libzip..." >&3
 CopyFilesFromList $libzipPath libzipFiles[@] $baseDependenciesPath
+
+# Copy OpenBLAS (for Kaldi)
+echo "Copying OpenBLAS (for Kaldi)..." >&3
+CopyFilesFromList $openblasPath openblasFiles[@] $baseDependenciesPath
+
+# Copy Kaldi
+echo "Copying Kaldi..." >&3
+CopyFilesFromList $kaldiPath kaldiFiles[@] $baseDependenciesPath
+
+# Copy OpenFst (from Kaldi)
+echo "Copying OpenFst (Kaldi)..." >&3
+CopyFilesFromList $openfstPath openfstFiles[@] $baseDependenciesPath
 
 # GPU Drops only
 if [[ $targetConfig != "cpu" ]]; then

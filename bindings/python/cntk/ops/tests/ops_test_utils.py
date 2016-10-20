@@ -115,7 +115,7 @@ def unittest_helper(root_node,
                     forward_input, expected_forward, expected_backward,
                     device_id=-1, precision="float"):
 
-    assert isinstance(root_node, Function) 
+    assert isinstance(root_node, Function)
     backward_pass = expected_backward is not None
     forward, backward = cntk_eval(root_node, forward_input, precision,
             cntk_device(device_id), backward_pass)
@@ -151,7 +151,7 @@ def batch_dense_to_sparse(batch, dynamic_axis=''):
     representation that can be consumed by :func:`cntk.ops.sparse_input_numpy`.
 
     Args:
-        batch (list): list of samples. If `dynamic_axis` is given, samples are sequences
+        batch (list): list of samples. If ``dynamic_axis`` is given, samples are sequences
          of tensors. Otherwise, they are simple tensors.
         dynamic_axis (str or :func:`cntk.ops.dynamic_axis` instance): the dynamic axis
 

@@ -70,9 +70,11 @@ class Function(cntk_py.Function):
 
         Args:
             method (:class:`cntk.ops.functions.CloneMethod`): one of
+
              * 'clone': the returned function gets its own copy of parameters (default)
              * 'share': the returned function shares its parameters with this function
              * 'freeze': parameters are cloned and made immutable (constant).
+
             substitutions (`dict`): a dictionary mapping variables in this
              function to variables in the cloned function
 
@@ -99,22 +101,24 @@ class Function(cntk_py.Function):
 
     def eval(self, arguments=None, device=None):
         '''
-        Evaluate the node using the specified `arguments` as input.
+        Evaluate the node using the specified ``arguments`` as input.
 
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
+
                * `dict`: keys are input variable or names, and values are the input data.
                * `list`: elements are input data in the order their respective variables have been defined in the network.
+
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
-             previous sequence, specify `arguments` as `tuple`: the
-             first element will be used as `arguments`, and the second one will
+             previous sequence, specify ``arguments`` as `tuple`: the
+             first element will be used as ``arguments``, and the second one will
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
              :class:`cntk.io.MinibatchData` instance.
-            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
+            device (:class:`cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
 
@@ -131,31 +135,46 @@ class Function(cntk_py.Function):
     @typemap
     def forward(self, arguments, outputs, keep_for_backward=None, device=None):
         '''
-        Computes the values of speficied variables in `outputs`, using values
-        provided in `arguments` that correspond to each input `Variable` of
-        the function whose `is_input` is `True`.
+        Computes the values of speficied variables in ``outputs``, using values
+        provided in ``arguments`` that correspond to each input `Variable` of
+        the function whose ``is_input`` is `True`.
+
+        Example:
+            >>> v = C.input_variable(shape=(1,3))
+            >>> f = C.reciprocal(v)
+            >>> _, fv = f.forward({v:[[1, 2, 4]]}, [f.output])
+            >>> list(fv.values())[0]
+            array([[[[ 1.  ,  0.5 ,  0.25]]]], dtype=float32)
+
+        Example:
+            >>> v = C.input_variable(shape=(1,3))
+            >>> f = C.reciprocal(v)
+            >>> _, fv = f.forward({v:[[1, 2, 4]]}, [f.output])
+            >>> list(fv.values())[0]
+            array([[[[ 1.  ,  0.5 ,  0.25]]]], dtype=float32)
 
         Args:
             arguments (`dict` or `list` or `tuple`): maps variables to their
              input data. The interpretation depends on the input type:
+
                * `dict`: keys are input variable or names, and values are the input data.
                * `list`: elements are input data in the order their respective variables have been defined in the network.
+
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
-             previous sequence, specify `arguments` as `tuple`: the
-             first element will be used as `arguments`, and the second one will
+             previous sequence, specify ``arguments`` as ``tuple``: the
+             first element will be used as ``arguments``, and the second one will
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
              :class:`cntk.io.MinibatchData` instance.
             outputs (iterable): outputs to fetch values for.
-            keep_for_backward (`set`, default `None): the subset of the
+            keep_for_backward (`set`, default `None`): the subset of the
              Function's output variables for which gradients shall be calculated
              in a subsequent backward call. If `None`, the returned state will
-             be `None` and a subsequent call to `backward` will not be
+             be `None` and a subsequent call to :func:`backward` will not be
              possible.
-             for backpropagation.
-            device (:class:`cntk.DeviceDescriptor`, default `None): the device
+            device (:class:`cntk.device.DeviceDescriptor`, default `None`): the device
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
 
@@ -183,9 +202,21 @@ class Function(cntk_py.Function):
     @typemap
     def backward(self, state, root_gradients, variables):
         '''
-        Backpropagates supplied `root_gradients` for one or more of the output
+        Backpropagates supplied ``root_gradients`` for one or more of the output
         variables of the Function, to calculate gradients with respect to
-        `variables`.
+        ``variables``.
+
+        Example:
+            >>> # compute the value and the derivative of the sigmoid at 0
+            >>> v = C.input_variable(shape=(1,))
+            >>> f = C.sigmoid(v)
+            >>> df, fv = f.forward({v:[0]}, [f.output], set([f.output]))
+            >>> value = list(fv.values())[0]
+            >>> grad  = f.backward(df, {f.output: np.ones_like(value)}, set([v]))
+            >>> value
+            array([[[ 0.5]]], dtype=float32)
+            >>> list(grad.values())[0]
+            array([[[ 0.25]]], dtype=float32)
 
         Args:
             state (`BackPropState`): state obtained from a previous call to the
@@ -196,7 +227,7 @@ class Function(cntk_py.Function):
              the gradients have to be computed.
 
         Returns:
-            `dict`: mapping of `variables` to NumPy arrays
+            `dict`: mapping of ``variables`` to NumPy arrays
         '''
         root_gradients = sanitize_var_map(self.outputs, root_gradients)
 
@@ -204,7 +235,6 @@ class Function(cntk_py.Function):
 
         self._backward(state, root_gradients, var_gradients)
 
-        backward_output = {}
         for var, value in var_gradients.items():
             var_gradients[var] = value_to_seq(value)
 
@@ -289,7 +319,7 @@ class Function(cntk_py.Function):
         Restore the models parameters from a saved model file
 
         Args:
-            filename (`str`): saved model path 
+            filename (`str`): saved model path
 
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file

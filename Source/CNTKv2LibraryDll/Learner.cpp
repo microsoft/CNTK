@@ -7,6 +7,7 @@
 #include "Learner.h"
 #include "TensorView.h"
 #include "Utils.h"
+#include "Serialization.h"
 
 #define UPDATE_FUNCTION                                                                                       \
     switch (smoothedGradientValue->GetDataType())                                                             \
@@ -26,9 +27,6 @@ using namespace std;
 
 namespace CNTK
 {
-    /*static*/ const std::wstring Learner::LearningRateAttributeName = L"learningRate";
-    /*static*/ const std::wstring LearnerBase::WasLearningRateResetAttributeName = L"wasLearningRateReset";
-
     template <typename ElementType>
     /*static*/ shared_ptr<const Matrix<ElementType>> LearnerBase::GetMatrix(const NDArrayViewPtr& arrayView)
     {
@@ -161,13 +159,17 @@ namespace CNTK
                              const LearningRatesPerSample& learningRates,
                              AdditionalLearningOptions additionalOptions,
                              bool allocateSmoothGradients /* = true */)
-        : Learner(parameters, learningRates[0]),
-        m_wasLearningRateReset(false),
-        m_learningRateSchedule(learningRates),
-        m_sampleCount(0),
+        : Learner(parameters, learningRates),
         m_minibatchCount(0),
         m_additionalOptions(additionalOptions)
     {
+        std::unordered_set<Parameter> uniqueParameters(parameters.begin(), parameters.end());
+
+        if (uniqueParameters.size() != parameters.size()) 
+        {
+            LogicError("Learner parameters contain duplicates.");
+        }
+        
         for (const auto& parameter : parameters)
         {
             if (!allocateSmoothGradients)
@@ -263,68 +265,56 @@ namespace CNTK
 
     string LearnerBase::LearnerType() const
     {
-        auto name = typeid(*this).name(); 
-        if (strncmp(name, "class ", 6) == 0)
-        {
-            // On Windows, the type name contains "class" prefix. 
-            // Return the actual name, omitting the prefix.
-            return &name[6];
+        return Typename(this);
         } 
-        return name;
-    }
 
-    /*virtual*/ Dictionary LearnerBase::GetCheckpointState() const /*override*/
+    static const std::wstring s_learnerTypeValue = L"Learner";
+
+    /*virtual*/ Dictionary LearnerBase::Serialize() const /*override*/
     {
         Dictionary checkpoint;
 
-        checkpoint[L"checkpointVersion"] = checkpointVersion;
-        checkpoint[L"sampleCount"] = m_sampleCount;
-        checkpoint[L"minibatchCount"] = m_minibatchCount;
+        checkpoint[versionKey] = CurrentVersion();
+        checkpoint[typeKey] = s_learnerTypeValue;
+        checkpoint[sampleCountKey] = m_sampleCount;
+        checkpoint[minibatchCountKey] = m_minibatchCount;
+        checkpoint[learningRateScheduleKey] = m_learningRateSchedule.Serialize();
 
-        if (m_wasLearningRateReset)
-            checkpoint[WasLearningRateResetAttributeName] = m_wasLearningRateReset;
-
-        // TODO: should we also save learning rate schedule into the checkpoint?
-        // If that is the case, need to be able to override this method in subclasses
-        // and save momentum schedule as well.
-
+        // TODO: should we also save momentum schedule into the checkpoint?
+        // If that is the case, need to be able to override this method in subclasses,
+        // TODO: we now store mapping from UID to Parameter value in the checkpoint,
+        // if uids turn out to be too fragile, this can be easily changed to a vector
+        // of parameters, so that in restore we don't have to lookup based on uids, 
+        // and simply restore parameters one by one in the original (dfs) order.
         for (const auto& parameter : Parameters())
         {
             if (checkpoint.Contains(parameter.Uid()))
             {
-                LogicError("Parameter names must be unique");
+                LogicError("Parameter uids must be unique");
             }
 
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
             checkpoint[parameter.Uid()] = *smoothedGradientValue;
         }
 
-        // Add the base Learner's checkpoint state
-        auto baseCheckpointState = Learner::GetCheckpointState();
-        checkpoint.Add(baseCheckpointState);
-
         return checkpoint;
     }
 
     /*virtual*/ void LearnerBase::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
     {
-        // Restore the base learner's checkpoint state
-        Learner::RestoreFromCheckpoint(checkpoint);
+        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, sampleCountKey, minibatchCountKey, learningRateScheduleKey };
+        
+        ValidateDictionary<LearnerBase>(checkpoint, s_requiredDictionaryKeys, s_learnerTypeValue, CurrentVersion());
 
-        m_sampleCount = checkpoint[L"sampleCount"].Value<size_t>();
-        m_minibatchCount = checkpoint[L"minibatchCount"].Value<size_t>();
+        m_sampleCount = checkpoint[sampleCountKey].Value<size_t>();
+        m_minibatchCount = checkpoint[minibatchCountKey].Value<size_t>();
+        // TODO: which learning rate schedule should take precedence here? 
+        // The one given at construction time or the one loaded from a checkpoint?
+        m_learningRateSchedule = TrainingParameterSchedule<double>::Deserialize(checkpoint[learningRateScheduleKey].Value<Dictionary>());
 
-        size_t version = checkpoint[L"checkpointVersion"].Value<size_t>();
-        if (checkpointVersion != version)
-        {
-            // At the moment, we only support one version, so this should never happen.
-            LogicError("Unsupported checkpoint version.");
-        }
+        auto parameters = Parameters();
 
-        if (checkpoint.Contains(WasLearningRateResetAttributeName))
-            m_wasLearningRateReset = checkpoint[WasLearningRateResetAttributeName].Value<bool>();
-
-        for (const auto& parameter : Parameters())
+        for (const auto& parameter : parameters)
         {
             if (!checkpoint.Contains(parameter.Uid()))
             {
@@ -332,6 +322,7 @@ namespace CNTK
             }
 
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
+
             const NDArrayView& checkpointedValue = checkpoint[parameter.Uid()].Value<NDArrayView>();
             
             if (smoothedGradientValue->GetDataType() != checkpointedValue.GetDataType())

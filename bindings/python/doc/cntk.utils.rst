@@ -1,6 +1,13 @@
 cntk.utils package
 ==================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    cntk.utils.debughelpers
+
 Submodules
 ----------
 
