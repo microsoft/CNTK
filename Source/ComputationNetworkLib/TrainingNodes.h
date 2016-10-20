@@ -2560,7 +2560,8 @@ public:
                 runInvStdDev.AssignElementPowerOf(runInvStdDev, 2);
                 runInvStdDev.ElementInverse();
                 runInvStdDev += (float) m_epsilon;
-                runInvStdDev.Print();
+                if (Base::GetEnvironmentPtr() && Base::Environment().traceLevel > 0)
+                    runInvStdDev.Print();
                 m_convertRunningVariancePending = false;
             }
 
