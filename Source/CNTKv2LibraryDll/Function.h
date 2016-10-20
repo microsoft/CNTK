@@ -14,6 +14,7 @@
 #include "ConvolveGeometry.h"
 #include "ConvolutionalNodes.h"
 
+
 namespace std
 {
     template <> struct hash<CNTK::PrimitiveOpType>
@@ -75,6 +76,8 @@ namespace CNTK
             { PrimitiveOpType::Select, L"Select" },
             { PrimitiveOpType::Splice, L"Splice" },
             { PrimitiveOpType::Combine, L"Combine" },
+            { PrimitiveOpType::RandomSample, L"RandomSample" },
+            { PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency" },
         };
 
         if (primitiveOpNames.find(opType) == primitiveOpNames.end())
@@ -158,6 +161,8 @@ namespace CNTK
         static const std::wstring AttributeNameAxis;
         static const std::wstring AttributeNameAxis1;
         static const std::wstring AttributeNameAxis2;
+        static const std::wstring AttributeNameAllowDuplicates;
+        static const std::wstring AttributeNameNumSamples;
         static const std::wstring AttributeNameDropoutRate;
         static const std::wstring AttributeNameNewShape;
         static const std::wstring AttributeNameOutputRank;
@@ -302,7 +307,7 @@ namespace CNTK
                         if (dim == NDShape::InferredDimension)
                             outputDims[index] = NDShape::InferredDimension;
                         else
-                        outputDims[index] += dim;
+                            outputDims[index] += dim;
                     }
                     else
                     {
@@ -460,17 +465,17 @@ namespace CNTK
             for (size_t i = 0; i < numReductionAxes; ++i)
             {
                 if ((leftOperandShape[outputRank + i] != NDShape::InferredDimension) && (rightOperandShape[i] != NDShape::InferredDimension))
-            {
+                {
                     if (leftOperandShape[outputRank + i] != rightOperandShape[i])
-                InvalidArgument("The %d %s dimensions of the %s operand with shape %S do not match the %s operand's %s dimensions with shape %S",
-                                (int)numReductionAxes,
-                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "leading" : "trailing",
-                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left",
-                                AsStringForErrorReporting(leftOperandShape.SubShape(outputRank)).c_str(),
-                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right",
-                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
-                                AsStringForErrorReporting(rightOperandShape).c_str());
-            }
+                        InvalidArgument("The %d %s dimensions of the %s operand with shape %S do not match the %s operand's %s dimensions with shape %S",
+                                        (int)numReductionAxes,
+                                        Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "leading" : "trailing",
+                                        Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left",
+                                        AsStringForErrorReporting(leftOperandShape.SubShape(outputRank)).c_str(),
+                                        Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right",
+                                        Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
+                                        AsStringForErrorReporting(rightOperandShape).c_str());
+                }
                 else if (leftOperandShape[outputRank + i] == NDShape::InferredDimension)
                     leftOperandShape[outputRank + i] = rightOperandShape[i];
                 else if (rightOperandShape[i] == NDShape::InferredDimension)
@@ -525,7 +530,7 @@ namespace CNTK
                                                 bool transpose, bool inferDimensions)
         {
             if (inferDimensions)
-        {
+            {
                 // infer reduction dimensions if not given
                 // If kernel has a lower rank than the input then the remaining dimensions are to be reduced over.
                 size_t filterRank = kernelShape.Rank();

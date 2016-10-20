@@ -8,6 +8,25 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template<class ElemType>
+void RandomSampleNodeBase<ElemType>::Validate(bool isFinalValidationPass)
+{
+    if (m_sizeOfSampledSet == 0)
+    {
+        InvalidArgument("Number of requested samples is zero.");
+    }
+
+    if (isFinalValidationPass)
+    {
+        // Sampling without replacement does only work when the number of requested classes is <= number of classes.
+        let& shape = Input(0)->GetSampleLayout();
+        let dims = shape.GetDims();
+        size_t nClasses = dims[0];
+        if (!m_allowDuplicates && nClasses <= m_sizeOfSampledSet)
+            InvalidArgument("For sampling without duplicates the number of requested samples (%lu) needs to be less than the number of classes (%lu).", m_sizeOfSampledSet, nClasses);
+    }
+}
+
+template<class ElemType>
 void RandomSampleNodeBase<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
 {
     Base::CopyTo(nodeP, newName, flags);
@@ -45,6 +64,9 @@ void RandomSampleNodeBase<ElemType>::UpdateWeightsPrefixSum()
     for (int iClass = 0; iClass < samplingWeights.GetNumRows(); iClass++)
     {
         ElemType currentWeight = samplingWeights.GetValue(iClass, 0);
+        if (currentWeight < 0)
+            InvalidArgument("Sampling weights contain negative number %f.", currentWeight);
+
         runningWeightsSum += currentWeight;
         m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
     }
