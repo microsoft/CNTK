@@ -1209,7 +1209,7 @@ namespace CNTK
             InvalidArgument("Variable%S with unknown shape detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         if (variable.Shape().HasInferredDimension())
-            InvalidArgument("Variable%S with InferredDimension for at least one axis in it's shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            InvalidArgument("Variable%S with InferredDimension for at least one axis in its shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         if (variable.DynamicAxes() == Axis::UnknownDynamicAxes)
             InvalidArgument("Variable%S with unknown dynamic axes detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
@@ -1629,9 +1629,13 @@ namespace CNTK
 
             ComputationNetworkBuilder<ElementType> builder(*m_computationNetwork);
 
-            // TODO: We current only support one backprop root
+            // TODO: We currently only support one backprop root
             if (backpropRoots.size() > 1)
                 LogicError("More than one backprop roots is currently unsupported");
+
+            auto placeholders = Placeholders();
+            if (!placeholders.empty())
+                InvalidArgument("All placeholders of a Function must be bound before performing a Forward computation on the Function!");
 
             // Now recursively create the network in a top-down fashion
             auto rootFunction = RootFunction();
@@ -2478,9 +2482,6 @@ namespace CNTK
 
     FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name)
     {
-        if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
-            LogicError("TransposeAxes currently does not support transposing dynamic axes");
-
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameAxis1] = axis1;
         additionalProperties[PrimitiveFunction::AttributeNameAxis2] = axis2;
@@ -2674,9 +2675,9 @@ namespace CNTK
             InvalidArgument("ClassificationError: The topN argument must be > 0!");
 
         if (topN == 1)
-    {
+        {
             if (axis == Axis(0))
-        return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
+                return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
             else
             {
                 auto axMax = ReduceMax(prediction, axis);
@@ -2686,7 +2687,7 @@ namespace CNTK
                 auto capErr = GreaterEqual(axErr, Constant::Scalar(prediction.GetDataType(), 1.0));
                 return ReduceMean(capErr, Axis::AllStaticAxes(), name);
             }
-    }
+        }
         else
         {
             if (axis != Axis(0))
@@ -2872,7 +2873,7 @@ namespace CNTK
     {
         void VerifyIsSequence(const Variable& operand)
         {
-            // The operand must have at least one dynamic axis and it's first dynamic axis must be ordered
+            // The operand must have at least one dynamic axis and its first dynamic axis must be ordered
             if (operand.DynamicAxes().empty() || !operand.DynamicAxes()[0].IsOrdered())
                 InvalidArgument("A sequence function can only be applied on operands with at least one dynamic axis and whose first dynamic axis is ordered");
         }
