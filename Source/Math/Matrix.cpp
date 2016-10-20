@@ -791,12 +791,12 @@ Matrix<ElemType> Matrix<ElemType>::ColumnSlice(size_t startColumn, size_t numCol
 }
 
 template<typename T>
-shared_ptr<TemporaryMatrix<T>> Matrix<T>::m_tempMatrices = make_shared<TemporaryMatrix<T>>();
+shared_ptr<TemporaryMatrixPool<T>> Matrix<T>::m_tempMatrixPool = make_shared<TemporaryMatrixPool<T>>();
 
 template <class ElemType>
 shared_ptr<Matrix<ElemType>> Matrix<ElemType>::ColumnSlicePtr(size_t startColumn, size_t numCols) const
 {
-    shared_ptr<Matrix<ElemType>> slice = m_tempMatrices->MatrixFromPool(m_preferredDeviceId);
+    shared_ptr<Matrix<ElemType>> slice = m_tempMatrixPool->Get(m_preferredDeviceId);
     slice->AssignColumnSlice(*this, startColumn, numCols);
     return slice;
 }

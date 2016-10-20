@@ -19,6 +19,8 @@
 #include <memory> // for shared_ptr
 #include <array>
 #include <initializer_list>
+#include <mutex>
+
 
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -57,7 +59,7 @@ struct /*interface*/ MATH_API MatrixBase
 typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
 
 template <class ElemType>
-class TemporaryMatrix;
+class TemporaryMatrixPool;
 
 // Note: To comply with BLAS libraries, matrices are stored in ColMajor. However, by default C/C++/C# use RowMajor convertion.
 // !!!WARNING!!! This class is NOT THREAD SAFE. Test and add necessary modifications if using in multi-threaded environment
@@ -81,7 +83,7 @@ private:
     mutable int m_devicesTransferedTo[2]; // TODO: what is this for? Seems only diagnostics
 
     // Create space for all temporary matrices of the current type
-    static shared_ptr<TemporaryMatrix<ElemType>> m_tempMatrices;
+    static shared_ptr<TemporaryMatrixPool<ElemType>> m_tempMatrixPool;
 
     // Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
     void _transferFromDeviceToDevice(int id_from, int id_to, bool isBeingMoved = true, bool emptyTransfer = false) const;
@@ -641,43 +643,76 @@ typedef Matrix<float> SingleMatrix;
 typedef Matrix<double> DoubleMatrix;
 
 template <class ElemType>
-class TemporaryMatrix
+class TemporaryMatrixPool
 {
     static const int32_t MAX_MATRICES = 10;
-    int32_t matricesAllocated;
-    vector<Matrix<ElemType>*> m_tempMatrices;
+    // Used to keep track of how many matrices have been allocated.
+    // We don't preallocate the matrices since we don't know which 
+    // device id to use
+    size_t m_matricesAllocated;
+    // Pool of temporary matrices we have already allocated that are
+    // ready for reuse.
+    vector<Matrix<ElemType>*> m_tempMatrixPool;
+
+    // Lock for thread safety.
+    std::mutex m_locker;
 
 public:
-    TemporaryMatrix() : matricesAllocated(0) {};
+    // We could fill m_tempMatrixPool here, but we don't have a deviceId, so let's wait until
+    // people start using the pool to fill it.
+    TemporaryMatrixPool() : m_matricesAllocated(0) {};
     
     void Return(Matrix<ElemType>* returned)
     {
         if (returned)
         {
+            // We MUST call ReleaseInternalMemory. If not, the matrix remains a view of whatever it was used for.
+            // We SHOULD NOT call Clear, because clear will allocate another m_sob, defeating the entire purpose.
+            // Thus all matrices in the pool are in an indeterminiate state where the matrix has a GPUMatrix (for instance), but
+            // the GPUMatrix doesn't have an m_sob. This is fine since the use case is only with AssignColumnSlicePtr, 
+            // which overwrites the entire contents (including m_sob) anyway.
             returned->ReleaseInternalMemory();
-            m_tempMatrices.emplace_back(returned);
+            std::lock_guard<std::mutex> g(m_locker);
+            m_tempMatrixPool.emplace_back(returned);
         }
     }
 
-    shared_ptr<Matrix<ElemType>> MatrixFromPool(DEVICEID_TYPE deviceId)
+    shared_ptr<Matrix<ElemType>> Get(DEVICEID_TYPE deviceId)
     {
         Matrix<ElemType>* matrix;
-        if (m_tempMatrices.empty())
+        bool isEmpty;
         {
+            std::lock_guard<std::mutex> g(m_locker);
+            isEmpty = m_tempMatrixPool.empty();
+        }
+        // Check to see if we have any matrices ready.
+        if (isEmpty)
+        {
+            // At this point no matrices exist, so we create a new matrix on deviceId
             matrix = new Matrix<ElemType>(deviceId);
-            if (matricesAllocated < MAX_MATRICES)
+            // Check if the pool is full (i.e., we've already allocated > MAX_MATRICES)
+            if (m_matricesAllocated < MAX_MATRICES)
             {
-                matricesAllocated++;
-                return shared_ptr<Matrix<ElemType>>(matrix, std::bind(&TemporaryMatrix::Return, this, std::placeholders::_1));
+                // If not, add this matrix to the pool by setting the custom deleter above
+                m_matricesAllocated++;
+                return shared_ptr<Matrix<ElemType>>(matrix, std::bind(&TemporaryMatrixPool::Return, this, std::placeholders::_1));
             }
             else 
+            {
+                // If so, just return a normal shared_ptr, whose contents will be destroyed instead of preserved.
                 return shared_ptr<Matrix<ElemType>>(matrix);
+            }
         }
         else
         {
-            matrix = m_tempMatrices.back();
-            m_tempMatrices.pop_back();
-            return shared_ptr<Matrix<ElemType>>(matrix, std::bind(&TemporaryMatrix::Return, this, std::placeholders::_1));
+            // If the pool isn't empty, then grab an element from the pool, and return it with a custom deleter to
+            // return it to the pool.
+            {
+                std::lock_guard<std::mutex> g(m_locker);
+                matrix = m_tempMatrixPool.back();
+                m_tempMatrixPool.pop_back();
+            }
+            return shared_ptr<Matrix<ElemType>>(matrix, std::bind(&TemporaryMatrixPool::Return, this, std::placeholders::_1));
         }
     }
 };
