@@ -1514,10 +1514,10 @@ void GPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols
 template <class ElemType>
 void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly)
 {
-    VerifyResizable(__func__);
-
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
+
+    VerifyResizable(__func__);
 
     size_t numElements = numRows * numCols;
     if (numElements > GetSizeAllocated() ||                 // grow allocation
