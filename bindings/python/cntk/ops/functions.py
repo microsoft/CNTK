@@ -296,20 +296,35 @@ class Function(cntk_py.Function):
         return super(Function, self).placeholders()
 
     @typemap
-    def replace_placeholder(self, substitutions):
+    def replace_placeholders(self, substitutions):
         '''
-        In-place replace the only placeholder in the function graph with the
-        specified substitutions.
+        In-place replace specified placeholders in the Function graph with the
+        specified replacements in the map.
 
         Args:
-            substitutions (:class:`cntk.ops.variables.Variable`): the variable that will replace the placeholder
+            substitutions (``dict``): map from placeholder to variables
+
+        Returns:
+            :class:`Function`: itself
+        '''
+        return super(Function, self).replace_placeholders(substitutions)
+
+    @typemap
+    def replace_placeholder(self, substitution):
+        '''
+        In-place replace the only placeholder in the function graph with the
+        specified substitution.
+
+        Args:
+            substitution (:class:`cntk.ops.variables.Variable`): the variable
+             that will replace the placeholder 
 
         Returns:
             :class:`Function`: itself
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
-        return super(Function, self).replace_placeholder(substitutions)
+        return super(Function, self).replace_placeholder(substitution)
 
     @typemap
     def restore_from_model(self, filename):
