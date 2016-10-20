@@ -150,8 +150,9 @@ def _Identity(name='identity_arg'):
 identity = _Identity()
 
 def Stabilizer(steepness=4):
-    UntestedBranchError("Stabilizer")
-    # This was tested ad-hoc, but no test case exists at present. Also, I see very little impact on SLUHandsOn.
+    #UntestedBranchError("Stabilizer")
+    # This was tested ad-hoc, and it works with linear stabilizer, but not with softplus,
+    # which shows that it is not a bug in this code but maybe some time-stamp problem.
 
     # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
     # this behaves linear for weights around 1, yet guarantees positiveness
@@ -163,8 +164,13 @@ def Stabilizer(steepness=4):
     # expression
     x = Placeholder(name='stabilizer_arg')
     # TODO: risk of confusion; can these functions be namespaced?
-    beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething
-    #beta = _Identity(name="Stabilizer_beta")(beta)  # debugging
+    #beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething
+    #from cntk import log, exp
+    #beta = log (param - 0.99537863 + 2.7182818284590452353602874713527)   # HAS NO EFFECT
+    #beta = log (exp (param))   # HAS NO EFFECT
+    #beta = (exp (param))   # HAS NO EFFECT
+    #beta = steepness * param * (1/steepness) # HAS NO EFFECT
+    beta = param # TODO: replace by function above
     apply_x = beta * x
     _name_and_extend_Function(apply_x, 'Stabilizer')
     return apply_x
