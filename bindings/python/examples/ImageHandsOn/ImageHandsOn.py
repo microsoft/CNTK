@@ -218,8 +218,8 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
             trainer.train_minibatch({input_var: data[features_slot], label_var: data[labels_slot]})
 
             # Keep track of some statistics.
-            loss_numer += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count 
-            loss_denom +=                                           trainer.previous_minibatch_sample_count
+            loss_numer   += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count 
+            loss_denom   +=                                           trainer.previous_minibatch_sample_count
             metric_numer += trainer.previous_minibatch_evaluation_average * trainer.previous_minibatch_sample_count
             metric_denom +=                                                 trainer.previous_minibatch_sample_count
 
@@ -229,7 +229,9 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
                 break
 
         print("Finished Epoch[{} of {}]: [Training] ce = {:0.6f} * {}, errs = {:0.1f}% * {}".format(epoch+1, max_epochs, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
-        trainer.save_checkpoint(os.path.join(model_path, "cifar_model"))
+    
+    # Save the latest checkpoint
+    # trainer.save_checkpoint(os.path.join(model_path, "cifar_checkpoint"))
 
     #
     # Evaluation action
@@ -253,11 +255,8 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
             break
 
         # minibatch data to be trained with
-        trainer.test_minibatch({input_var: data[features_slot], label_var: data[labels_slot]})
-
-        # Keep track of some statistics.
-        metric_numer += trainer.previous_minibatch_evaluation_average * trainer.previous_minibatch_sample_count
-        metric_denom +=                                                 trainer.previous_minibatch_sample_count
+        metric_numer += trainer.test_minibatch({input_var: data[features_slot], label_var: data[labels_slot]}) * current_minibatch
+        metric_denom += current_minibatch
 
         # Keep track of the number of samples processed so far.
         sample_count += data[labels_slot].num_samples
@@ -274,4 +273,4 @@ if __name__=='__main__':
     reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', True)
     reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', False)
 
-    train_and_evaluate(reader_train, reader_test, 10)
+    train_and_evaluate(reader_train, reader_test, 30)
