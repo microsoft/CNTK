@@ -241,14 +241,14 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
 
 def get_data_type(*args):
     """
-    Calculates the highest precision numpy datatype of the provided parameters.
+    Calculates the highest precision numpy data type of the provided parameters.
     If the parameter is a Function instance, it calculates it based on its
-    inputs.
+    inputs. Placeholders are ignore in the type determination.
 
     Args:
         args (number, ``list``, NumPy array, `Variable`, or `Function`): input
     Returns:
-        `np.float32` or `np.float64`
+        `np.float32`, `np.float64`, or ``None``
     """
 
     dtypes = set()
@@ -256,11 +256,13 @@ def get_data_type(*args):
         args = [args]
 
     for arg in args:
+        if isinstance(arg, (cntk_py.Variable)) and arg.is_placeholder==True:
+            continue
         if isinstance(arg,
                       (cntk_py.Variable, cntk_py.Value, cntk_py.NDArrayView)):
             if cntk_py.DataType_Double == arg.get_data_type():
                 dtypes.add(np.float64)
-            else:
+            elif cntk_py.DataType_Float == arg.get_data_type():
                 dtypes.add(np.float32)
         elif isinstance(arg, np.ndarray):
             if arg.dtype not in (np.float32, np.float64):
@@ -278,8 +280,6 @@ def get_data_type(*args):
                 dtypes.add(np.float64)
             elif cntk_py.DataType_Float == var_type:
                 dtypes.add(np.float32)
-            else:
-                raise ValueError('type %s is not supported'%var_type)
         else:
             # We don't know anything so we convert everything to float32. If it
             # works, we know the type.
@@ -292,7 +292,7 @@ def get_data_type(*args):
     elif np.float32 in dtypes:
         return np.float32
     else:
-        raise ValueError('could not determine data type')
+        None
 
 
 def pad_to_dense(batch):

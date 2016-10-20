@@ -97,3 +97,20 @@ def test_sanitize_input(data, dtype):
     assert np.allclose(inp.value, data)
     assert inp.dtype == dtype
 
+def test_get_data_type():
+    pa = parameter(init=2)
+    pl = placeholder_variable(shape=(2))
+    c = constant(value=3.0)
+    n32 = np.asarray(1, dtype=np.float32)
+    n64 = np.asarray(1, dtype=np.float64)
+
+    assert get_data_type(pa) == np.float32
+    assert get_data_type(pa, n32) == np.float32
+    assert get_data_type(pa, n64) == np.float64
+    assert get_data_type(pa, pl, n64) == np.float64
+    assert get_data_type(n32, n32) == np.float32
+    assert get_data_type(n32, n64) == np.float64
+    assert get_data_type(pl, n64) == np.float64
+    assert get_data_type(pl, n32) == np.float32
+    assert get_data_type(pl, pl) == None
+    

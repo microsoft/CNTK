@@ -57,4 +57,12 @@ def test_constant():
     c = constant(val)
     assert np.allclose(c.value, val)
 
+def test_placeholder():
+    p1 = placeholder_variable(shape=(1,2))
+    p2 = placeholder_variable(shape=(2,1))
+    op = times(p1, p2)
+
+    p1 = placeholder_variable(shape=(1,2))
+    p2 = placeholder_variable(shape=(2,1))
+    op = times(p1, [[1],[2]])
 
