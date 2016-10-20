@@ -531,6 +531,8 @@ def dynamic_axes(self):
                 PyDict_SetItem($input, py_key, PyTuple_Pack(2, returned_val1, returned_val2));
             }
         }
+        Py_DECREF(returned_val1);
+        Py_DECREF(returned_val2);
     }
 }
 
@@ -920,6 +922,7 @@ def dynamic_axes(self):
         PyObject *item = SWIG_NewPointerObj(new CNTK::DATA_TYPE(var), _SWIG_TYPE, SWIG_POINTER_OWN );
         // No error handling here, because the error will be passed directly to Python
         PyList_Append(container, item);
+        Py_DECREF(item);
     }
 
     $result = container;
@@ -944,6 +947,7 @@ def dynamic_axes(self):
         PyObject *item = SWIG_NewPointerObj(new CNTK::DATA_TYPE(var), _SWIG_TYPE, SWIG_POINTER_OWN );
         // No error handling here, because the error will be passed directly to Python
         PyList_Append(container, item);
+        Py_DECREF(item);
     }
 
     $result = container;
@@ -974,6 +978,9 @@ def dynamic_axes(self):
         PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::DATA_TYPE2(it.second)), _SWIG_TYPE2, SWIG_POINTER_OWN);
         
         PyDict_SetItem(container, returned_var, returned_val);        
+
+        Py_DECREF(returned_var);
+        Py_DECREF(returned_val);
     }
 
     $result = container;
