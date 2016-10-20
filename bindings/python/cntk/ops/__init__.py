@@ -1780,9 +1780,9 @@ def parameter(shape=None, init=None, device=None, name=''):
     if np.isscalar(init) and not shape:
         shape = ()
         if isinstance(init, np.ndarray):
-            data_type = str(init.dtype)
+            data_type = init.dtype
         else:
-            data_type = 'float32'
+            data_type = np.float32
     else:
         data_type = None
 
@@ -1817,14 +1817,12 @@ def constant(value=None, shape=None, device=None, name=''):
         device = use_default_device()
     if np.isscalar(value) and not shape:
         shape = ()
-        if isinstance(value, np.ndarray):
-            data_type = str(value.dtype)
-        else:
-            data_type = 'float32'
+    if isinstance(value, np.ndarray):
+        dtype = value.dtype
     else:
-        data_type = None
+        dtype = np.float32
 
-    return Constant(value, shape, data_type, device, name)
+    return Constant(value, shape, dtype, device, name)
 
 ##########################################################################
 # normalization ops

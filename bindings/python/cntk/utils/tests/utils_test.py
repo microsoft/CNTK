@@ -74,3 +74,26 @@ def test_is_tensor(data, expected):
 def test_is_tensor_list(data, expected):
     assert is_tensor_list(data) == expected
 
+def test_sanitize_dtype_numpy():
+    for dtype in ['float', 'float32', np.float32, int]:
+        assert sanitize_dtype_numpy(dtype) == np.float32, dtype
+    for dtype in [float, 'float64', np.float64]:
+        assert sanitize_dtype_numpy(dtype) == np.float64, dtype
+
+def test_sanitize_dtype_cntk():
+    for dtype in ['float', 'float32', np.float32, int]:
+        assert sanitize_dtype_cntk(dtype) == cntk_py.DataType_Float, dtype
+    for dtype in [float, 'float64', np.float64]:
+        assert sanitize_dtype_cntk(dtype) == cntk_py.DataType_Double, dtype
+
+@pytest.mark.parametrize("data, dtype", [
+    ([1], np.float32),
+    ([[1, 2]], np.float64),
+    (2, np.float64),
+    (np.asarray([1,2], dtype=np.float32), np.float64),
+])
+def test_sanitize_input(data, dtype):
+    inp = sanitize_input(data, dtype)
+    assert np.allclose(inp.value, data)
+    assert inp.dtype == dtype
+

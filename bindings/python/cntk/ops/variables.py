@@ -10,7 +10,7 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
 
     Args:
        shape (`tuple`): the shape of this variable.
-       data_type (`np.float32` or `np.float64`): data type of the values that will be bound to this variable.
+       dtype (`np.float32` or `np.float64`): data type of the values that will be bound to this variable.
         Default is np.float32
        needs_gradient (`bool`): if set to True any expression that contains this variable
         will also be differentiated with respect to this variable.
@@ -19,16 +19,17 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
         express dimensions that can vary across examples or minibatches.
        name(`str`): an optional name for this parameter.
     '''
-    def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False,
+    def __init__(self, shape=None, dtype=None, needs_gradient=False, is_sparse=False,
                  dynamic_axes=[cntk_py.Axis.default_dynamic_axis(), cntk_py.Axis.default_batch_axis()], name=''):
         shape = utils.sanitize_shape(shape)
 
-        if data_type is None:
-            data_type = np.float32
-        dtype = utils.sanitize_dtype_cntk(data_type)
+        if dtype is None:
+            dtype = np.float32
 
-        super(Variable, self).__init__(shape, is_sparse,
-                                       dtype, needs_gradient, name, dynamic_axes)
+        cntk_dtype = utils.sanitize_dtype_cntk(dtype)
+
+        super(Variable, self).__init__(shape, is_sparse, cntk_dtype,
+                needs_gradient, name, dynamic_axes)
 
     @property
     @typemap
@@ -136,31 +137,31 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
        init (`np.ndarray` or `list` or `float` or `int`): Initial value.
         If a numpy array is specified the shape argument is ignored and
         the tensor gets the shape of this argument.
-       data_type (`np.float32` or `np.float64`): data type of the values stored.
+       dtype (`np.float32` or `np.float64`): data type of the values stored.
        device (:class:`cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this parameter
 
     Parameters are Variables and therefore they inherit all their methods.
     '''
-    def __init__(self, shape=None, init=None, data_type=None,
+    def __init__(self, shape=None, init=None, dtype=None,
             device=None, name=''):
 
-        if data_type is None:
+        if dtype is None:
             if isinstance(init, np.ndarray):
-                data_type = str(init.dtype)
+                dtype = init.dtype
             else:
-                data_type = np.float32
+                dtype = np.float32
 
         if init is None:
             init = 0
 
         if isinstance(init, (np.ndarray, list, float, int)):
-            ndav = sanitize_value(shape, init, data_type, device)
+            ndav = sanitize_value(shape, init, dtype, device)
             super(Parameter, self).__init__(ndav, name)
         else:
             shape = utils.sanitize_shape(shape)
-            data_type  = utils.sanitize_dtype_cntk(data_type)
-            super(Parameter, self).__init__(shape, data_type, init,
+            cntk_dtype  = utils.sanitize_dtype_cntk(dtype)
+            super(Parameter, self).__init__(shape, cntk_dtype, init,
                     device, name)
 
     @property
@@ -193,19 +194,19 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
-       data_type (`np.float32` or `np.float64`): data type to store the values as.
+       dtype (`np.float32` or `np.float64`): data type to store the values as.
        device (:class:`cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
     '''
-    def __init__(self, value=None, shape=None, data_type=None, device=None, name=''):
+    def __init__(self, value=None, shape=None, dtype=None, device=None, name=''):
 
-        if data_type is None:
+        if dtype is None:
             if isinstance(value, np.ndarray):
-                data_type = str(value.dtype)
+                dtype = value.dtype
             else:
-                data_type = np.float32
+                dtype = np.float32
 
-        ndav = sanitize_value(shape, value, data_type, device)
+        ndav = sanitize_value(shape, value, dtype, device)
 
         super(Constant, self).__init__(ndav, name)
 

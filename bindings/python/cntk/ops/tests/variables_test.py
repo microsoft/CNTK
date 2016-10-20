@@ -22,10 +22,10 @@ def test_dtype(variable_type):
     c = variable_type(shape=(2,3))
     assert c.dtype == np.float32
 
-    c = variable_type(shape=(2,3), data_type=np.float32)
+    c = variable_type(shape=(2,3), dtype=np.float32)
     assert c.dtype == np.float32
 
-    c = variable_type(shape=(2,3), data_type=np.float64)
+    c = variable_type(shape=(2,3), dtype=np.float64)
     assert c.dtype == np.float64
 
 @pytest.mark.parametrize("variable_type", VARIABLE_TYPES)
@@ -51,4 +51,10 @@ def test_constant_value(value):
 def test_parameter_value(value):
     c = Parameter(init=value)
     assert np.allclose(c.value, value)
+
+def test_constant():
+    val = np.asarray([[1,2],[3,4]])
+    c = constant(val)
+    assert np.allclose(c.value, val)
+
 
