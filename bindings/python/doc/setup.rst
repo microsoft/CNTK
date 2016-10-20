@@ -77,7 +77,7 @@ additionally clone the CNTK repository into ``C:\repos\cntk``.
 -  Downloaded the scripts from
    `here <https://cntk.ai/pippackages/cntk2a4_WindowsBinaryInstall.zip>`__.
    Unzip/extract in a local folder say ``C:\scripts``. One can create
-   the director by executing ``mkdir C:\scripts`` from a Windows command
+   the directory by executing ``mkdir C:\scripts`` from a Windows command
    prompt.
 -  Open PowerShell with administrator priviledges
 -  Click on Windows Start
