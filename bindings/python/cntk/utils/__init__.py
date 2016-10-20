@@ -165,7 +165,7 @@ def get_temp_filename(directory=None):
 
     Args:
         directory (str): optional directory, in which the temporary file will
-        be created
+         be created
 
     Returns:
         Filename of the temporary file
@@ -194,21 +194,20 @@ def sanitize_shape(shape):
 
 def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """
-    Convert to Variable so that it can be passed as Variable to the
+    Convert to :class:`cntk.ops.variables.Variable` so that it can be passed as Variable to the
     CNTK operators.
-     * If `arg` is a NumPy array and its type is neither `np.float32` nor
-      `np.float64`, it sets it to `np.float32`.
-     * If `arg` is an op, it is assumed that it has only one output, which will
-      be returned.
+
+      * If ``arg`` is a NumPy array and its type is neither `np.float32` nor `np.float64`, it sets it to `np.float32`.
+      * If ``arg`` is an op, it is assumed that it has only one output, which will be returned.
+
 
     Args:
-        arg (number, NumPy array, :cntk:`cntk.ops.variables.Variable`, or
-         :class:`cntk.ops.functions.Function`): input
-        fallback_dtype (NumPy dtype): fallback dtype in case `arg` is a list
+        arg (number, NumPy array, :class:`cntk.ops.variables.Variable`, or :class:`cntk.ops.functions.Function`): input
+        fallback_dtype (NumPy dtype): fallback dtype in case ``arg`` is a list
 
     Returns:
-      Leave Constant, Parameter, and Variable as is. Return Constant, if
-      `arg` was a number or NumPy array. Variable otherwise.
+      Leaves Constant, Parameter, and Variable as is. Returns Constant, if
+      ``arg`` is a number or NumPy array. Variable otherwise.
     """
 
     from cntk.ops.variables import Constant, Variable, Parameter
@@ -299,7 +298,7 @@ def get_data_type(*args):
 
 def pad_to_dense(batch):
     """Appends the minimal required amount of zeroes at the end of each sample
-    in the batch so that it becomes rectangular. `batch` is assumed to be
+    in the batch so that it becomes rectangular. ``batch`` is assumed to be
     row-major: first index is batch item, second is sequence item, then comes
     that actual sample. The sequence length is assumed to be the only varying
     dimension.
@@ -333,21 +332,21 @@ def pad_to_dense(batch):
 
 def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     '''
-    Convert to :cntk:`Value` with `data_type`. If the samples in `batch` have
+    Convert to :class:`cntk.cntk_py.Value` with ``data_type``. If the samples in ``batch`` have
     different sequence lengths, pad them to max sequence length and create a
     mask.
 
     Args:
-        var (`:class:Variable`): variable node for which the `batch` is
+        var (`:class:cntk.ops.variables.Variable`): variable node for which the ``batch`` is
          meant
         batch (`list` of NumPy arrays): input
-        seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
+        seq_starts (`list` of `bool` or `None`): if `None`, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
          continuation of the previous one (`False`)
 
     Returns:
-        `:class:Value`: converted batch
+        `:class:cntk.cntk_py.Value`: converted batch
     '''
     from ..cntk_py import Value
 
@@ -425,7 +424,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
 
 def sanitize_value(shape, value, dtype, device):
     '''
-    Converts a given `value` to a :class:`NDArrayView` object that can be passed to
+    Converts a given ``value`` to a :class:`NDArrayView` object that can be passed to
     the CNTK core.
 
     Args:
@@ -433,11 +432,11 @@ def sanitize_value(shape, value, dtype, device):
         value (`None` or value that can be cast to NumPy array): the value to
          be converted
         dtype: data type (`np.float32` or `np.float64`)
-        device (:clas:`cntk.DeviceDescriptor`): device this value should be put
+        device (:class:`cntk.device.DeviceDescriptor`): device this value should be put
          on
 
     Returns:
-        :class:`NDArrayView` object representing `value`
+        :class:`NDArrayView` object representing ``value``
     '''
     np_dtype = sanitize_dtype_numpy(dtype)
     cntk_dtype = sanitize_dtype_cntk(dtype)
@@ -477,20 +476,22 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                      device=None):
     '''
     Sanitizes a dictionary of `Variable`s to input data such that it can be
-    handed off to the `Forward` method.
+    handed off to the :meth:`cntk.ops.functions.Function.forward` method.
 
     Args:
         op_arguments (:class:`cntk.ops.functions.Function`): arguments of the root function. In
          forward pass it is typically `op.arguments`, in backward mode it is
          `op.outputs`
         arguments (`dict` or `list` or `tuple`): maps variables to their
-         input data. The interpretation depends on the input type:
-           * `dict`: keys are input variable or names and values are the input data.
-           * `list`: elements are input data in the order their respective variables have been defined in the network.
+         input data. The interpretation depends on the input type
+
+            * `dict`: keys are input variable or names and values are the input data.
+            * `list`: elements are input data in the order their respective variables have been defined in the network.
+
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
-         previous sequence, specify `arguments` as `tuple`: the
-         first element will be used as `arguments`, and the second one will
+         previous sequence, specify ``arguments`` as `tuple`: the
+         first element will be used as ``arguments``, and the second one will
          be used as a list of bools, denoting whether a sequence is a new
          one (`True`) or a continuation of the previous one (`False`).
          Data should be either NumPy arrays or a
@@ -577,7 +578,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
 def ones_like(batch, precision):
     '''
-    Returns a new batch, which has the same format as `batch` but all values
+    Returns a new batch, which has the same format as ``batch`` but all values
     set to 1.
 
     Args:
@@ -643,6 +644,7 @@ def sanitize_axis(axis):
 
     Args:
         axis (`:class:Axis` or `int` or `None`): the axis to be used.
+
           * `:class:Axis`: use axis instance directly (will convert row- to
              col-major in case of static axis.
           * `int`: if positive, use it as static axis. If negative, count from
@@ -729,19 +731,21 @@ def value_to_seq(value):
 
 def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
     '''
-    It evaluates `op` on the data provided by the reader. This is useful
+    It evaluates ``op`` on the data provided by the reader. This is useful
     mainly to explore the operators and for convenient unit testing.
 
     Args:
         op (:class:`Function`): operation to evaluate
         arguments (`dict` or `list` or `tuple`): maps variables to their
          input data. The interpretation depends on the input type:
+
            * `dict`: keys are input variable or names, and values are the input data.
            * `list`: elements are input data in the order their respective variables have been defined in the network.
+
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
-         previous sequence, specify `arguments` as `tuple`: the
-         first element will be used as `arguments`, and the second one will
+         previous sequence, specify ``arguments`` as `tuple`: the
+         first element will be used as ``arguments``, and the second one will
          be used as a list of bools, denoting whether a sequence is a new
          one (`True`) or a continuation of the previous one (`False`).
          Data should be either NumPy arrays or a
@@ -753,7 +757,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
         precision (`str` or `None`): precision being 'float32', 'float64', or
          `None`, in which case it will be determined by inspecting the operator
          (costly)
-        device (:class:`cntk.DeviceDescriptor`): the device the descriptor,
+        device (:class:`cntk.device.DeviceDescriptor`): the device the descriptor,
          whether it is CPU or GPU (and which one)
         backward_pass (`bool`, optional): whether a backward pass is performed
 

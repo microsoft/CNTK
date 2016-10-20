@@ -32,7 +32,7 @@ public:
     using Mat = Matrix<ElemType>;
 
 public:
-    virtual ~BatchNormEngine() = default;
+    virtual ~BatchNormEngine() {};
 
     void Forward(const Mat& in, const Mat& scale, const Mat& bias, bool inferenceOnly, double expAvgFactor, double blendFactor, Mat& runMean, Mat& runVariance,
                  Mat& out, double epsilon, Mat& saveMean, Mat& saveInvStdDev);

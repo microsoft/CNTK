@@ -186,6 +186,12 @@ namespace CNTK
     class MinibatchSource;
     typedef std::shared_ptr<MinibatchSource> MinibatchSourcePtr;
 
+    class DistributedCommunicator;
+    typedef std::shared_ptr<DistributedCommunicator> DistributedCommunicatorPtr;
+
+    class DistributedTrainer;
+    typedef std::shared_ptr<DistributedTrainer> DistributedTrainerPtr;
+
     namespace Internal
     {
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
@@ -222,5 +228,10 @@ namespace CNTK
         CNTK_API void ForceDeterministicAlgorithms();
 
         CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
+
+        CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
+        CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
+
+        CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2);
     }
 }

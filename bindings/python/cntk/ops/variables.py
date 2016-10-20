@@ -10,7 +10,7 @@ class Variable(TensorOpsMixin, cntk_py.Variable):
 
     Args:
        shape (`tuple`): the shape of this variable.
-       data_type (`np.float32 or np.float64`): data type of the values that will be bound to this variable.
+       data_type (`np.float32` or `np.float64`): data type of the values that will be bound to this variable.
         Default is np.float32
        needs_gradient (`bool`): if set to True any expression that contains this variable
         will also be differentiated with respect to this variable.
@@ -156,8 +156,8 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
        init (`np.ndarray` or `list` or `float` or `int`): Initial value.
         If a numpy array is specified the shape argument is ignored and
         the tensor gets the shape of this argument.
-       data_type (`np.float32 or np.float64`): data type of the values stored.
-       device (`dev`): the device on which the values should reside.
+       data_type (`np.float32` or `np.float64`): data type of the values stored.
+       device (:class:`cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this parameter
 
     Parameters are Variables and therefore they inherit all their methods.
@@ -210,12 +210,12 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
     A constant value. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that cannot be modified.
 
-    Constants are :class:`cntk.ops.Variable`s and therefore they inherit all their methods.
+    A Constant is a :class:`cntk.ops.Variable` and therefore inherits all its methods.
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
-       data_type (`np.float32 or np.float64`): data type to store the values as.
-       device (`dev`): the device on which the values should reside.
+       data_type (`np.float32` or `np.float64`): data type to store the values as.
+       device (:class:`cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
     '''
     def __init__(self, value=None, shape=None, data_type=None, device=None, name=''):
@@ -225,7 +225,7 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
                 data_type = str(value.dtype)
             else:
                 data_type = np.float32
-                
+
         ndav = sanitize_value(shape, value, data_type, device)
 
         super(Constant, self).__init__(ndav, name)
