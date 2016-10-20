@@ -119,11 +119,11 @@ Foreach ($includeFile in $includeFiles)
 # Copy Examples
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
-# Remove CPPEvalV2Client examples, until V2 is included in the binary drop
-If (Test-Path $baseDropPath\Examples\Evaluation\CPPEvalV2Client)
-{
-	Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalV2Client -Recurse
-}
+# Include CPPEvalV2Client examples in 2.0 Beta drop
+# If (Test-Path $baseDropPath\Examples\Evaluation\CPPEvalV2Client)
+# {
+# 	Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalV2Client -Recurse
+# }
 
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."
