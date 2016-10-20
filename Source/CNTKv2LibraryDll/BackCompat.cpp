@@ -141,6 +141,22 @@ namespace CNTK
 
                 opType = PrimitiveOpType::Slice;
             }
+            else if (node->OperationName() == OperationNameOf(RandomSampleNode))
+            {
+                auto randomSampleNode = node->As<RandomSampleNode<ElementType>>();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAllowDuplicates] = randomSampleNode->GetAllowDuplicates();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNumSamples] = randomSampleNode->GetNumSamples();
+
+                opType = PrimitiveOpType::RandomSample;
+            }
+            else if (node->OperationName() == OperationNameOf(RandomSampleInclusionFrequencyNode))
+            {
+                auto randomSampleInclusionFrequencyNode = node->As<RandomSampleInclusionFrequencyNode<ElementType>>();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAllowDuplicates] = randomSampleInclusionFrequencyNode->GetAllowDuplicates();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNumSamples] = randomSampleInclusionFrequencyNode->GetNumSamples();
+
+                opType = PrimitiveOpType::RandomSampleInclusionFrequency;
+            }
             else if (node->OperationName() == OperationNameOf(DropoutNode))
             {
                 auto dropoutNode = node->As<DropoutNode<ElementType>>();
