@@ -30,8 +30,8 @@ data in native Python numpy/C++ arrays.
 
 -  CNTK V2 also supports the BrainScript framework.
 
-Install CNTK
-------------
+CNTK installation overview
+--------------------------
 
 You can install CNTK with in three different ways:
 
@@ -118,7 +118,8 @@ additionally clone the CNTK repository into ``C:\repos\cntk``.
   -  GPU:
      https://cntk.ai/pippackages/gpu/cntk-2.0a4-cp34-cp34m-win\_amd64.whl
 -  Run: ``.\install.ps1 -Execute -cntkWhl [Location of the Whl file]``
-
+-  Note: at a later time, if you need to re-install the same or a different wheel package, please run: ``.\install.ps1 -Execute -ForceWheelUpdate [Location of the Whl file]``
+   
 **Step 3**: Run Python setup
 
 Open a windows command window or an anaconda command window - Run:
@@ -129,7 +130,7 @@ Open a windows command window or an anaconda command window - Run:
 -  Run: ``pip install –upgrade [Location of the wheel file]``
 
 Windows install details
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 The script automates the following installation steps:
 
@@ -185,7 +186,7 @@ that folder.
    re-run: ``pip install –upgrade [Whl file location]``
 
 Linux install details
-----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 The script automates the following installation steps:
 
@@ -202,7 +203,3 @@ The script automates the following installation steps:
   -  Git installation
   -  Clone the CNTK repositories. Default directory is
      ``/home/[USERNAME]/repos/cntk``
-
-The script installs a CNTK Python 3.4 environment with Anaconda 4.1.1
-located at ``$HOME/anaconda3/envs/cntk-py34`` with all packages required
-for CNTK v2 Python and notebooks.
