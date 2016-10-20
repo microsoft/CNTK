@@ -247,7 +247,7 @@ def get_data_type(*args):
     inputs.
 
     Args:
-        args (number, `list`, NumPy array, `Variable`, or `Function`): input
+        args (number, ``list``, NumPy array, `Variable`, or `Function`): input
     Returns:
         `np.float32` or `np.float64`
     """

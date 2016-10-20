@@ -164,30 +164,37 @@ def _add_tensor_ops(klass):
 
 class EvalMixin(object):
 
-    def eval(self, arguments=None, seq_starts=None, precision='float', device=None):
+    def ___eval(self, arguments=None, precision='float', device=None):
         '''
         Evaluate the node using the specified ``arguments`` as input.
 
         Args:
-            arguments (`dict` or `list`): one
-             of
+            arguments (``dict`` or ``list`` or ``tuple``): maps variables to their
+             input data. The interpretation depends on the input type:
 
-              * map from input variables to the data
-              * list of inputs in the order that the function expects
+               * ``dict``: keys are input variable or names, and values are the input data.
+               * ``list``: elements are input data in the order their respective variables have been defined in the network.
 
-             Data should be either NumPy arrays or a :class:`cntk.io.MinibatchData` instance
-            seq_starts (`list` of `bool` or `None`): if `None`, every sequence is
+             In both cases, every every sample in the data will be interpreted
+             as a new sequence. To mark samples as continuations of the
+             previous sequence, specify ``arguments`` as ``tuple``: the
+             first element will be used as ``arguments``, and the second one will
+             be used as a list of bools, denoting whether a sequence is a new
+             one (``True``) or a continuation of the previous one (``False``).
+             Data should be either NumPy arrays or a
+             :class:`cntk.io.MinibatchData` instance.
+            seq_starts (``list`` of ``bool`` or ``None``): if ``None``, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
-             Booleans that tell whether a sequence is a new sequence (`True`) or a
-             continuation of the previous one (`False`)
-            precision (`str` or `np.float32` or `np.float64`): precision, if string
-             it can be one of 'float', 'float32', 'double', 'float64', or `None`
+             Booleans that tell whether a sequence is a new sequence (``True``) or a
+             continuation of the previous one (``False``)
+            precision (``str`` or ``np.float32`` or ``np.float64``): precision, if string
+             it can be one of 'float', 'float32', 'double', 'float64', or ``None``
             device (:class:`cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
 
         Returns:
-            `bool`: `True` if updates have been performed
+            ``bool``: ``True`` if updates have been performed
         '''
         from .utils import eval as utils_eval
         if device is None:
@@ -201,7 +208,7 @@ class EvalMixin(object):
         if arguments is None:
             arguments = {}
 
-        result, _ = utils_eval(self, arguments, seq_starts, precision, device, False)
+        result, _ = utils_eval(self, arguments, precision, device, False)
         return result.popitem()[1]
 
 

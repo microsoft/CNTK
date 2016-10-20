@@ -21,29 +21,30 @@ def map_if_possible(obj):
             cntk_py.StreamConfiguration: StreamConfiguration, 
             cntk_py.Axis: Axis,
             }
+
     # Some types like NumPy arrays don't let to set the __class__
     if obj.__class__ in typemap:
         obj.__class__ = typemap[obj.__class__]
+    else:
+        if isinstance(obj, (tuple, list, set)):
+            for o in obj:
+                map_if_possible(o)
+        elif isinstance(obj, dict):
+            for k,v in obj.items():
+                map_if_possible(k)
+                map_if_possible(v)
             
 def typemap(f):
     '''
-    Upcasts Swig types to cntk types that inherit from Swig.
+    Decorator that upcasts return types from Swig types to cntk types that
+    inherit from Swig. It does so recuresively, e.g. if the return type is a
+    tuple containing a dictionary, it will try to upcase every element in the
+    tuple and all the keys and values in the dictionary.
     '''
     from functools import wraps
     @wraps(f)
     def wrapper(*args, **kwds):
         result = f(*args, **kwds)
-        if isinstance(result, (tuple, list, set)):
-            for r in result:
-                map_if_possible(r)
-        elif isinstance(result, dict):
-            for k,v in result.items():
-                map_if_possible(k)
-                map_if_possible(v)
-        else:
-            try:
-                map_if_possible(result)
-            except TypeError:
-                pass
+        map_if_possible(result)
         return result
     return wrapper

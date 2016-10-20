@@ -9,6 +9,7 @@ Unit tests for Variable and its descendents.
 """
 
 from ..variables import *
+from .. import times, placeholder_variable, constant
 import numpy as np
 
 import pytest
@@ -50,4 +51,18 @@ def test_constant_value(value):
 def test_parameter_value(value):
     c = Parameter(init=value)
     assert np.allclose(c.value, value)
+
+def test_placeholder():
+    left_val = [[10,2]]
+    right_val = [[2],[3]]
+
+    p = placeholder_variable(shape=(1,2))
+    op = times(p, right_val)
+    c = constant(left_val)
+
+    bound = op.replace_placeholders({p:c})
+    import ipdb;ipdb.set_trace()
+    result = bound.eval()
+
+    assert np.allclose(result, np.dot(left_val, right_val))
 
