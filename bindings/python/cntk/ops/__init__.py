@@ -287,7 +287,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
 @typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
-                        normalization_time_constant=0, blend_time_constant=0,
+                        normalization_time_constant=5000, blend_time_constant=0,
                         epsilon=0.00001, use_cudnn_engine=False, name=''):
     '''
     Normalizes layer outputs for every minibatch for each output (feature) independently
@@ -305,9 +305,8 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         running_inv_std: running variance. Represented as ``running_mean``
         spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
-        normalization_time_constant(`float`, default 0): time constant for computing running average of
-         mean and variance as a low-pass filtered version of the batch statistics. Note: the default is not
-         typically what you want
+        normalization_time_constant(`float`, default 5000): time constant for computing running average of
+         mean and variance as a low-pass filtered version of the batch statistics.
         blend_time_constant(`float`, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
@@ -1817,7 +1816,7 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
 
 
 @typemap
-def placeholder_variable(shape, dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
+def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     '''
     It creates a variable place holder for recurrence networks, when the network's dynamic axes
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
@@ -1829,8 +1828,16 @@ def placeholder_variable(shape, dynamic_axes=Axis.default_input_variable_dynamic
     Returns:
         :class:`cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import placeholder_variable
-    shape = sanitize_shape(shape)
+    from cntk.cntk_py import placeholder_variable, NDShape, Axis
+
+    if shape is None:
+        shape = NDShape.unknown.dimensions()
+    else:
+        shape = sanitize_shape(shape)
+
+    if dynamic_axes is None:
+        dynamic_axes = Axis.unknown_dynamic_axes
+
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
 

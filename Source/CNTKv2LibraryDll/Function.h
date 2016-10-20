@@ -330,7 +330,7 @@ namespace CNTK
         {
             bool anyParameterOperandDimsInferred = false;
             auto updateOperandShapeFunc = [](Variable& operand, const NDShape& newOperandShape) {
-                if (operand.IsParameter() && (operand.Shape() != newOperandShape))
+                if ((operand.IsParameter() || operand.IsConstant()) && (operand.Shape() != newOperandShape))
                 {
                     operand.m_dataFields->m_shape = newOperandShape;
                     return true;
@@ -536,6 +536,17 @@ namespace CNTK
                 // infer reduction dimensions if not given
                 // If kernel has a lower rank than the input then the remaining dimensions are to be reduced over.
                 size_t filterRank = kernelShape.Rank();
+
+                // If the trailing axis dimensionality of the kernel shape is NDShape::InferredDimension, we reduce over it by 
+                // picking the corresponding operand shape dimensionality
+                // This is done by shrinking the filter rank and let the dimensions be inferred from the operand's shape
+                // TODO: Should we do this for all of the axes in kernelShape that have a dimensionailty of NDShape::InferredDimension?
+                if (kernelShape[filterRank - 1] == NDShape::InferredDimension)
+                {
+                    filterRank--;
+                    kernelShape = kernelShape.SubShape(0, filterRank);
+                }
+
                 size_t inputRank = operandShape.Rank();
                 NDShape fromShape;
                 if (op == PrimitiveOpType::Convolution)
@@ -815,7 +826,7 @@ namespace CNTK
         Microsoft::MSR::CNTK::ComputationNetworkPtr m_computationNetwork;
 
         // The backpropRoots sepecified in the most recent 'Forward' call on 'this' Function.
-        // This indicates for which of it's roots has 'this' Function retained required intermediate 
+        // This indicates for which of its roots has 'this' Function retained required intermediate 
         // states from the previos Forward call to be able to backpropagate gradients backwards from in
         // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;
