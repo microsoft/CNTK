@@ -88,6 +88,9 @@
     <ClInclude Include="TransformBase.h">
       <Filter>Transformers</Filter>
     </ClInclude>
+    <ClInclude Include="CategoryBasedRandomizer.h">
+      <Filter>Randomizers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">
@@ -123,8 +126,13 @@
     <ClCompile Include="ChunkCache.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
+<<<<<<< ff3d78b0579ff1a91252063dd66de7e8d647968a
     <ClCompile Include="ReaderBase.cpp">
       <Filter>Utils</Filter>
+=======
+    <ClCompile Include="CategoryBasedRandomizer.cpp">
+      <Filter>Randomizers</Filter>
+>>>>>>> category based sampling and debug triplet
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
