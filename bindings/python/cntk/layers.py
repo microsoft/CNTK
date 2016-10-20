@@ -20,7 +20,7 @@ import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
 from cntk.blocks import *  # TODO: reduce to what we actually use
-from cntk.blocks import _extend_Function, _name_and_extend_Function, _wrap_rename_Function, _trace_layers  # (debugging)
+from cntk.blocks import _trace_layers  # (debugging)
 from cntk.initializer import glorot_uniform
 from _cntk_py import constant_initializer # BUGBUG: Should not be necessary, should just type-cast under the hood.
 
@@ -80,10 +80,10 @@ def Dense(shape, init=_default_initializer, activation=identity, input_rank=None
     apply_x = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
     if b:
         apply_x = apply_x + b
-    _extend_Function(apply_x)  # (this gets us the >> operator  --TODO: remove once Function natively supports this)
+    #_extend_Function(apply_x)  # (this gets us the >> operator  --TODO: remove once Function natively supports this)
     apply_x = apply_x >> activation
-    _name_and_extend_Function(apply_x, 'Dense')
-    return apply_x
+    #_name_and_extend_Function(apply_x, 'Dense')
+    return Block(apply_x, 'Dense', Record(W=W, b=b))
 
 # Embedding -- create a linear embedding layer
 # To create an embedding from a file, use this:
@@ -119,8 +119,8 @@ def Embedding(shape=None, init=None, weights=None):
     # expression
     x = Placeholder(name='embedding_arg')
     apply_x = times(x, E)
-    _name_and_extend_Function(apply_x, 'Embedding')
-    return apply_x
+    #_name_and_extend_Function(apply_x, 'Embedding')
+    return Block(apply_x, 'Embedding', Record(E=E))
 
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape) )
@@ -132,6 +132,7 @@ def Embedding(shape=None, init=None, weights=None):
 # TODO: conflict of parameter order: filter_shape or num_filters first?
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
+# TODO [Cha]: Allow to specify the bias initializer
 def Convolution(filter_shape,        # e.g. (3,3)
                 num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension_
                 activation=identity,
@@ -141,6 +142,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
                 strides=1,
                 sharing=True,     # (must be True currently)
                 bias=True,
+                init_bias=0,
                 reduction_rank=1, # (must be 1 currently)
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0):
@@ -166,7 +168,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
     #init_kernel['filterRank'] = -filter_rank
     W = Parameter(output_channels_shape + kernel_shape, init=init_kernel)  # (K, C, H, W) aka [ W x H x C x K ]
     # BUGBUG: Signs are opposite now for initfilter_rank and initoutput_rank
-    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=0) if bias else None                        # (K,    1, 1) aka [ 1 x 1 x     K ]
+    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias) if bias else None                        # (K,    1, 1) aka [ 1 x 1 x     K ]
 
     # expression
     x = Placeholder(name='convolution_arg')
@@ -188,41 +190,41 @@ def Convolution(filter_shape,        # e.g. (3,3)
 
     if bias:
         apply_x = apply_x + b
-    _extend_Function(apply_x)  # (this gets us the >> operator  --TODO: remove once Function natively supports this)
+    #_extend_Function(apply_x)  # (this gets us the >> operator  --TODO: remove once Function natively supports this)
     apply_x = apply_x >> activation
-    _name_and_extend_Function(apply_x, 'Convolution')
-    return apply_x
+    #_name_and_extend_Function(apply_x, 'Convolution')
+    return Block(apply_x, 'Convolution', Record(W=W, b=b))
 
 # MaxPooling, AveragePooling -- create a max- or average-pooling layer
 # TODO: do we need MaxPooling and AveragePooling?
 # TODO: This is not really a layer as it does not hold learnable parameters. So:
 #  - keep it in layer format, since users may think about it this way?
 #  - turn it into a function (lower-case)? Then how would it work inside Sequential() (we'd need partial application)?
-PoolingKind = Record(MAX='max', AVERAGE='average')  # create a const dictionary, acting like an enum  --TODO: what's the correct way?
-def Pooling(poolKind,      # PoolingKind.max or .average
+PoolingOp = Record(MAX='max', AVERAGE='average')  # create a const dictionary, acting like an enum  --TODO: what's the correct way?
+def Pooling(op,      # PoolingOp.max or .average
             filter_shape,  # e.g. (3,3)
             pad=False,
             #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
             strides=1):
     UntestedBranchError("Pooling")
     x = Placeholder(name='convolution_arg')
-    apply_x = pooling (x, poolKind, filter_shape, strides = strides, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
-    _name_and_extend_Function(apply_x, poolKind + 'Pooling')
-    return apply_x
+    apply_x = pooling (x, op, filter_shape, strides = strides, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
+    #_name_and_extend_Function(apply_x, op + 'Pooling')
+    return Block(apply_x, op + 'Pooling')
 
 def MaxPooling(poolKind,      # PoolingKind.max or .average
                filter_shape,  # e.g. (3,3)
                pad=False,
                #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
                strides=1):
-    return Pooling(PoolingKind.MAX, filter_shape, pad=pad, strides=strides)
+    return Pooling(PoolingOp.MAX, filter_shape, pad=pad, strides=strides)
 
 def AveragePooling(poolKind,      # PoolingKind.max or .average
                    filter_shape,  # e.g. (3,3)
                    pad=False,
                    #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
                    strides=1):
-    return Pooling(PoolingKind.AVERAGE, filter_shape, pad=pad, strides=strides)
+    return Pooling(PoolingOp.AVERAGE, filter_shape, pad=pad, strides=strides)
 
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
@@ -252,10 +254,10 @@ def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
     f_x_h_c.replace_placeholders(replacements)  # binds _h_c := prev_state
     apply_x = combine([h.owner])     # the Function that yielded 'h', so we get to know its inputs
     # apply_x is a Function x -> h
-    _name_and_extend_Function(apply_x, 'Recurrence')
+    #_name_and_extend_Function(apply_x, 'Recurrence')
     if _trace_layers:
         _log_node(apply_x)
-    return apply_x
+    return Block(apply_x, 'Recurrence', Record(over=over))
 
 # Delay -- delay input
 # TODO: This does not really have bound parameters. Should it still be a layer?
@@ -270,8 +272,8 @@ def Delay(T=1, initial_state=None):
         apply_x = future_value(x, time_step=T, initial_state=initial_state)
     else:
         apply_x = x
-    _name_and_extend_Function(apply_x, 'Delay')
-    return apply_x
+    #_name_and_extend_Function(apply_x, 'Delay')
+    return Block(apply_x, 'Delay', Record(T=T))
 
 # Dropout -- create a drop-out layer
 # Per-node dropout probabilities not yet supported, so one could also just use dropout directly.
@@ -280,8 +282,8 @@ def Dropout(prob=None):
     if prob is not None:
         raise NotImplementedError("Dropout: Dropout probability can currently not be specified per-layer.")
     apply_x = dropout
-    _name_and_extend_Function(apply_x, 'Dropout')
-    return apply_x
+    #_name_and_extend_Function(apply_x, 'Dropout')
+    return Block(apply_x, 'Dropout')
 
 # BatchNormalization -- create a batch-normalization layer
 def BatchNormalization(_inf, spatial_rank=0,  # reduce over these dims. E.g. 2 to reduce over (h,w) in a (C, H, W)-shaped input
@@ -312,15 +314,15 @@ def BatchNormalization(_inf, spatial_rank=0,  # reduce over these dims. E.g. 2 t
     apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, spatial_rank > 0, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
                                   #use_cntk_engine=use_cntk_engine)
                                   use_cudnn_engine=not use_cntk_engine)
-    _name_and_extend_Function(apply_x, 'BatchNormalization')
-    return apply_x
+    #_name_and_extend_Function(apply_x, 'BatchNormalization')
+    return Block(apply_x, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
 # LayerNormalization -- create a layer-normalization layer
 def LayerNormalization(initial_scale=1, initial_bias=0):
     UntestedBranchError("LayerNormalization")
 
     # parameters bound to this Function
-    gain = Parameter((1), init=initial_scale)  # TODO: offer Softplus version for protection, as for Stabilizer
+    scale = Parameter((1), init=initial_scale)  # TODO: offer Softplus version for protection, as for Stabilizer
     bias = Parameter((1), init=initial_bias)
 
     # expression
@@ -329,40 +331,6 @@ def LayerNormalization(initial_scale=1, initial_bias=0):
     x0 = x - mean;
     std = sqrt (reduce_mean (x0 * x0))
     x_hat = element_divide (x0, std)
-    apply_x = x_hat * gain + bias    # denormalize with learned parameters
-    _name_and_extend_Function(apply_x, 'LayerNormalization')
-    return apply_x
-
-# FeatureMVN -- create a corpus-level feature-normalization layer
-# This can only be applied to features. Statistics are not shared across invocations,
-# which is semantically OK because the values are the same. However, it is not efficient.
-def FeatureMVN():
-    UntestedBranchError("FeatureMVN")
-
-    # parameters bound to this Function
-    # are inside mean() and inv_std_dev()
-
-    # expression
-    x = Placeholder(name='feature_mvn_arg')
-    m = mean(x)
-    s = inv_std_dev(x)
-    apply_x = per_dim_mean_var_normalization(x, m, s)
-    _name_and_extend_Function(apply_x, 'FeatureMVN')
-    return apply_x
-
-# LogPrior -- create a corpus-level label-prior layer
-# This can only be applied to labels. Statistics are not shared across invocations,
-# which is semantically OK because the values are the same. However, it is not efficient.
-# TODO: document on Wiki
-def LogPrior():
-    UntestedBranchError('LogPrior')
-
-    # parameters bound to this Function
-    # are inside mean()
-
-    # expression
-    x = Placeholder(name='log_prior_arg')
-    log_prior = mean(x)
-    apply_x = x - log_prior
-    _name_and_extend_Function(apply_x, 'LogPrior')
-    return apply_x
+    apply_x = x_hat * scale + bias    # denormalize with learned parameters
+    #_name_and_extend_Function(apply_x, 'LayerNormalization')
+    return Block(apply_x, 'LayerNormalization', Record(scale=scale, bias=bias))

@@ -69,45 +69,27 @@ def _extend_Function(f):
     return f
 
 # name and extend; in this order, so that _extend_Function can print a meaningful log message
-def _name_and_extend_Function(f, name=None):
-    if name is not None:
-        _name_node(f, name)
-    _extend_Function(f)
+#def _name_and_extend_Function(f, name=None):
+#    if name is not None:
+#        _name_node(f, name)
+#    _extend_Function(f)
 
 # give a new name to a function, by wrapping it
-def _wrap_rename_Function(f, name):
-     f = combine([f]) ; _name_and_extend_Function(f, name)  # 'combine' to create a separate identity so we can reassign the debug name
-     return f
+#def _wrap_rename_Function(f, name):
+#    f = combine([f], name)  # 'combine' to create a separate identity so we can reassign the debug name
+#    _name_node(f, name)
+#    _extend_Function(f)
+#    return f
 
-# TODO: no longer used in this form
-def __unused_apply(f, args):
-    import operator   # add()
-    import functools  # reduce()
-    from cntk.ops.functions import CloneMethod
-    # flatten args to a list. Note it may be a a tuple or even a nested tree of tuples, e.g. LSTM (x, (h, c))
-    def flatten_tuple(args):
-        if not isinstance(args, tuple): # not a tuple: singleton; create a singleton tuple
-            return (args,)
-        return functools.reduce(operator.add, [(flatten_tuple(item)) for item in args])
-    args = list(flatten_tuple(args))
-    # TODO: This should go into Function.replace_placeholders()
-    def _output_of(arg):  # helper to get the output of an arg; use arg itself if no output() method (that'd be a Variable)
-        try:
-            return arg.output
-        except AttributeError:
-            return arg  # Variables have no output()
-            #return arg.output  # Variables have no output()  --should work but doesn't
-    args = [_output_of(arg) for arg in args]  # BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
-    placeholders = f.placeholders  # f parameters to fill in
-    if len(args) != len(placeholders):
-        raise TypeError("_apply ({}): number of arguments {} must match number of placeholders {}".format(_node_description(f), len(args), len(placeholders)))
-    _function_name = _node_name(f)  # these are for logging/debugging only
-    _function_description = _node_description(f)
-    _arg_description = ", ".join([_node_name(f) for f in list(args)])
-    f = f.clone(CloneMethod.share, dict(zip(f.placeholders, args)))
-    _name_and_extend_Function(f, _function_name)
-    if _trace_layers:
-        print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
+# turn a Function into a Block
+# BUGBUG: does not actually exist yet, faking it
+# BUGBUG: should create a new object, but does it in-place instead. Works for current usage, but should be fixed.
+# BUGBUG: combine does not work, so the name actually does not get changed
+def Block(f, op_name, members={}):
+    #f = combine([f], op_name)  # 'combine' to create a separate identity so we can reassign the debug name --BUGBUG: "Unknown DataType"
+    #_name_node(f, op_name) ; _extend_Function(f)  # debugging
+    for key in members:   # self.__dict__.update(args_dict)
+        f.__dict__[key] = members[key]
     return f
 
 # some mappings--these currently exist only so that I can name the nodes for debugging
@@ -142,8 +124,8 @@ def _Identity(name='identity_arg'):
     apply_x = combine([x])
     # TODO: Let's not encourage users to use combine([f]) as a workaround for identity/pass, but rather have it as a first-class operator implemented that we then use. [Willi]
     #apply_x = alias(x) # TODO: does not work. Should it?
-    _name_and_extend_Function(apply_x, 'Identity')
-    return apply_x
+    #_name_and_extend_Function(apply_x, 'Identity')
+    return Block(apply_x, 'Identity')
 
 # there is only one identity function
 # TODO: This should become a C++-side Function, e.g. like sigmoid
@@ -172,8 +154,8 @@ def Stabilizer(steepness=4):
     #beta = steepness * param * (1/steepness) # HAS NO EFFECT
     beta = param # TODO: replace by function above
     apply_x = beta * x
-    _name_and_extend_Function(apply_x, 'Stabilizer')
-    return apply_x
+    #_name_and_extend_Function(apply_x, 'Stabilizer')
+    return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
 # TODO: For now, shape and cell_shape can only be rank-1 vectors
 def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
@@ -263,5 +245,6 @@ def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer,
     apply_x_h_c = combine ([h, c])
     # return to caller a helper function to create placeholders for recurrence
     apply_x_h_c.create_placeholder = create_hc_placeholder
-    _name_and_extend_Function(apply_x_h_c, 'LSTM')
+    #_name_and_extend_Function(apply_x_h_c, 'LSTM')
+    #return Block(apply_x_h_c, 'LSTM') # BUGBUG: fails with "RuntimeError: A Function instance with more than one output cannot be implicitly converted to a Variable"
     return apply_x_h_c

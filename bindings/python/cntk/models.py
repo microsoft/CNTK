@@ -14,16 +14,16 @@ import os
 import time
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 #from cntk.layers import *
-from cntk.blocks import identity
-from cntk.blocks import _wrap_rename_Function  # (debugging)
+from cntk.utils import Record
+from cntk.blocks import identity, Block
 
 # Sequential -- composite that applies a sequence of functions onto an input
 # Sequential ([F, G, H]) === F >> G >> H
 # TODO: address this feedback: "I find this arbitrary. You can have Sequential as part of a bigger layer.  Or you can view a linear layer already as a model (which is part of the bigger model)."
 # TODO: can we use *arrayOfFunctions to avoid the [ ]?
 # TODO: nested lists?
-def Sequential(arrayOfFunctions):
-    import functools  # reduce()
-    apply_x = functools.reduce(lambda f, g: f >> g, arrayOfFunctions, identity)
-    apply_x = _wrap_rename_Function(apply_x, 'Sequential')
-    return apply_x;
+def Sequential(functions):
+    from functools import reduce
+    apply_x = reduce(lambda f, g: f >> g, functions, identity)
+    #apply_x = _wrap_rename_Function(apply_x, 'Sequential')
+    return Block(apply_x, 'Sequential', Record(functions=functions))
