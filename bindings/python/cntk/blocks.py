@@ -136,11 +136,11 @@ def Placeholder(_inf=None, name='placeholder'):
         print("new " + _node_description(p))
     return p
 
-# TODO: Let's not encourage users to use combine([f]) as a workaround for identity/pass, but rather have it as a first-class operator implemented that we then use. [Willi]
-#       If we have Function identity, in same pattern as e.g. sigmoid, then that would suffice.
+# If we have C++-side Function identity, in same pattern as e.g. sigmoid, then that would suffice.
 def _Identity(name='identity_arg'):
     x = Placeholder(name=name)
     apply_x = combine([x])
+    # TODO: Let's not encourage users to use combine([f]) as a workaround for identity/pass, but rather have it as a first-class operator implemented that we then use. [Willi]
     #apply_x = alias(x) # TODO: does not work. Should it?
     _name_and_extend_Function(apply_x, 'Identity')
     return apply_x

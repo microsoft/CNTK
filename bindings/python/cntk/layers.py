@@ -14,7 +14,8 @@ import os
 import time
 from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
 from cntk.learner import sgd, fsadagrad
-from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
+from cntk.ops import parameter, input_variable, placeholder_variable, combine
+from cntk.ops import times, cross_entropy_with_softmax, classification_error, convolution
 import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
@@ -120,7 +121,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
                 init=_default_initializer,
                 pad=False,
                 #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
-                stride = 1,
+                strides=1,
                 sharing=True,     # (must be True currently)
                 bias=True,
                 reduction_rank=1, # (must be 1 currently)
@@ -136,11 +137,16 @@ def Convolution(filter_shape,        # e.g. (3,3)
     output_channels_shape = _as_tuple(num_filters)
     output_rank = len(output_channels_shape)
     filter_rank = len(filter_shape)
-    kernel_shape = _INFERRED * reductionRank + filter_shape # kernel := filter plus reductionDims
+    kernel_shape = _INFERRED * reduction_rank + filter_shape # kernel := filter plus reductionDims
 
     # parameters bound to this Function
     #W = Parameter(output_channels_shape + kernel_shape, init=init, initfilter_rank=filter_rank, initoutput_rank=-1) # (K, C, H, W) aka [ W x H x C x K ]
-    W = Parameter(output_channels_shape + kernel_shape, init=init, initfilter_rank=-filter_rank, initoutput_rank=1)  # (K, C, H, W) aka [ W x H x C x K ]
+    #init_kernel = glorot_uniform(filter_rank=-filter_rank, output_rank=1)
+    init_kernel = glorot_uniform(filter_rank=filter_rank, output_rank=-1) # BUGBUG: Signs must be flipped
+    # initfilter_rank=-filter_rank, initoutput_rank=-1
+    #init_kernel['outputRank'] = -1
+    #init_kernel['filterRank'] = -filter_rank
+    W = Parameter(output_channels_shape + kernel_shape, init=init_kernel)  # (K, C, H, W) aka [ W x H x C x K ]
     # BUGBUG: Signs are opposite now for initfilter_rank and initoutput_rank
     b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=0) if bias else None                        # (K,    1, 1) aka [ 1 x 1 x     K ]
 
@@ -148,10 +154,20 @@ def Convolution(filter_shape,        # e.g. (3,3)
     x = Placeholder(name='convolution_arg')
     # TODO: can we rename auto_padding to pad?
     # TODO: can we update the parameter order of convolution to match the optional ones as in here? (options order matches Keras)
-    apply_x = convolution (W, x, filter_shape, map_dims=num_filters, stride=stride, sharing=sharing,
-                           auto_padding=pad, lower_pad=None, upper_pad=None,
+    # note: map_dims=num_filters not specified in Python (but in BS)
+    #strides = _INFERRED + (1,) * filter_rank # TODO: this is not needed in BS, why here?
+    apply_x = convolution (W, x,
+                           #filter_shape,
+                           strides=_as_tuple(strides),
+                           sharing=_as_tuple(sharing),
+                           auto_padding=_as_tuple(pad), #lower_pad=0, upper_pad=0,
                            transpose=transpose,
                            max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+
+    #def convolution(convolution_map, operand, strides=(1,), sharing=[True],
+    #                auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False,
+    #                max_temp_mem_size_in_samples=0, name=''):
+
     if bias:
         apply_x = apply_x + b
     _extend_Function(apply_x)  # (this gets us the >> operator  --TODO: remove once Function natively supports this)
@@ -169,10 +185,10 @@ def Pooling(poolKind,      # PoolingKind.max or .average
             filter_shape,  # e.g. (3,3)
             pad=False,
             #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
-            stride=1):
+            strides=1):
     UntestedBranchError("Pooling")
     x = Placeholder(name='convolution_arg')
-    apply_x = pooling (x, poolKind, filter_shape, stride = stride, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
+    apply_x = pooling (x, poolKind, filter_shape, strides = strides, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
     _name_and_extend_Function(apply_x, poolKind + 'Pooling')
     return apply_x
 
@@ -180,15 +196,15 @@ def MaxPooling(poolKind,      # PoolingKind.max or .average
                filter_shape,  # e.g. (3,3)
                pad=False,
                #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
-               stride=1):
-    return Pooling(PoolingKind.MAX, filter_shape, pad=pad, stride=stride)
+               strides=1):
+    return Pooling(PoolingKind.MAX, filter_shape, pad=pad, strides=strides)
 
 def AveragePooling(poolKind,      # PoolingKind.max or .average
                    filter_shape,  # e.g. (3,3)
                    pad=False,
                    #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
-                   stride=1):
-    return Pooling(PoolingKind.AVERAGE, filter_shape, pad=pad, stride=stride)
+                   strides=1):
+    return Pooling(PoolingKind.AVERAGE, filter_shape, pad=pad, strides=strides)
 
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):

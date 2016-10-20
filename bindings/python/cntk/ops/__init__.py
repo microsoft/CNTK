@@ -176,6 +176,7 @@ def classification_error(output_vector, target_vector, axis=-1, topN=1, name='')
 
 
 @typemap
+# TODO: Reorder the kwargs to match a known toolkit, e.g. Keras; cf. layers.Convolution()
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                 auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False,
                 max_temp_mem_size_in_samples=0, name=''):

@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{1a078fc2-21c0-4f42-9a5b-0e84e944bc74}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>SLUHandsOn\SLUHandsOn.py</StartupFile>
+    <StartupFile>ImageHandsOn\ImageHandsOn.py</StartupFile>
     <SearchPath>$(RepoRootPath)$(Platform)\$(Configuration);$(RepoRootPath)bindings\python;$(RepoRootPath)bindings\python\examples</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -34,6 +34,7 @@
     </Compile>
     <Compile Include="common\nn.py" />
     <Compile Include="common\__init__.py" />
+    <Compile Include="ImageHandsOn\ImageHandsOn.py" />
     <Compile Include="MNIST\SimpleMNIST.py" />
     <Compile Include="NumpyInterop\FeedForwardNet.py" />
     <Compile Include="Sequence2Sequence\Sequence2Sequence.py" />
@@ -51,6 +52,7 @@
   <ItemGroup>
     <Folder Include="CifarResNet" />
     <Folder Include="common" />
+    <Folder Include="ImageHandsOn\" />
     <Folder Include="MNIST" />
     <Folder Include="NumpyInterop" />
     <Folder Include="Sequence2Sequence" />
