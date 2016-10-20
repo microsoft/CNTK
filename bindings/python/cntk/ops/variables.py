@@ -234,7 +234,7 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
         # from Parameter: [fseide]
         if isinstance(value, (np.ndarray, list, float, int)):
             ndav = sanitize_value(shape, value, data_type, device)
-        super(Constant, self).__init__(ndav, name)
+            super(Constant, self).__init__(ndav, name)
         else:
             shape = utils.sanitize_shape(shape)
             data_type  = utils.sanitize_dtype_cntk(data_type)

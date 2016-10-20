@@ -87,22 +87,38 @@ def Dense(shape, init=_default_initializer, activation=identity, input_rank=None
 
 # Embedding -- create a linear embedding layer
 # To create an embedding from a file, use this:
-#   Embedding(shape, Constant(np.load('PATH')))
-# TODO: remove shape in case of Constant
-def Embedding(shape, init=_default_initializer, transpose=False):
-    shape = _as_tuple(shape)
-    weights = None   # TODO: finish the Constant() thing
-    if weights is None:  # no weights given: learn the embedding
-        full_shape = _INFERRED + shape
-        E = Parameter(full_shape, init=init, name='E')
-    else:                # weights given: use them as constant
+#  Embedding(weights=np.load('PATH'))
+def Embedding(shape=None, init=None, weights=None):
+    if init is not None or weights is not None:
+        raise ValueError('Embedding: init and weights options are mutually exclusive')
+
+    # parameters bound to this Function:
+    # no weights given: learn the embedding
+    if weights is None:
+        if shape is None:
+            raise ValueError('Embedding: output shape must be specified')
+        if init is None:
+            init = _default_initializer
+        shape = _as_tuple(shape)
+        weight_shape = _INFERRED + shape
+        E = Parameter(weight_shape, init=init, name='E')
+    # weights given: use them as constant
+    else:
         UntestedBranchError("Embedding, from constant")
-        # TODO: infer full_shape from weights? Which in turn should be a constant... lots of TODO here
-        full_shape = (shape + _INFERRED) if transpose else (_INFERRED + shape)
-        E = Constant(full_shape, init=weights, name='E')  # TODO: can 'weights' be a CNTK object already? Then how to do this?
+        import numpy as np
+        if not isinstance(weights, array): # TODO: is this the correct test for a numpy array
+            UntestedBranchError("Embedding, from constant that is not an array")
+            # TODO: can 'weights' be a CNTK object? Then how to do this?
+            raise ValueError('Embedding: weights must be a numpy array')
+        weight_shape = np.shape(weights)
+        if shape is not None: # user may give shape, then it must match
+            if len(shape) >= len(weight_shape) or weight_shape[-len(shape):] != shape:
+                raise ValueError('Embedding: shape parameter must match weights')
+        E = Constant(weights, name='E')
+
+    # expression
     x = Placeholder(name='embedding_arg')
-    apply_x = Function.__matmul__(E, x) if transpose else \
-              Function.__matmul__(x, E)     # x is expected to be sparse one-hot
+    apply_x = times(x, E)
     _name_and_extend_Function(apply_x, 'Embedding')
     return apply_x
 
@@ -144,6 +160,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
     #W = Parameter(output_channels_shape + kernel_shape, init=init, initfilter_rank=filter_rank, initoutput_rank=-1) # (K, C, H, W) aka [ W x H x C x K ]
     #init_kernel = glorot_uniform(filter_rank=-filter_rank, output_rank=1)
     init_kernel = glorot_uniform(filter_rank=filter_rank, output_rank=-1) # BUGBUG: Signs must be flipped
+    # TODO: should the signs be flipped? In times(), output_rank=1 means count from the right. Should that be flipped as well?
     # initfilter_rank=-filter_rank, initoutput_rank=-1
     #init_kernel['outputRank'] = -1
     #init_kernel['filterRank'] = -filter_rank
