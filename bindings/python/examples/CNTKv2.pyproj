@@ -34,6 +34,7 @@
     </Compile>
     <Compile Include="common\nn.py" />
     <Compile Include="common\__init__.py" />
+    <Compile Include="ImageHandsOn\ImageHandsOn.py" />
     <Compile Include="MNIST\SimpleMNIST.py" />
     <Compile Include="NumpyInterop\FeedForwardNet.py" />
     <Compile Include="Sequence2Sequence\Sequence2Sequence.py" />
@@ -51,6 +52,7 @@
   <ItemGroup>
     <Folder Include="CifarResNet" />
     <Folder Include="common" />
+    <Folder Include="ImageHandsOn\" />
     <Folder Include="MNIST" />
     <Folder Include="NumpyInterop" />
     <Folder Include="Sequence2Sequence" />
