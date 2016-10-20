@@ -19,13 +19,15 @@ programmatically defining CNTK models and drive their
 training/evaluation, using either built-in data readers or user supplied
 data in native Python numpy/C++ arrays.
 
--  *Python*:
+*Python*:
+
 -  CNTK V2 with Python APIs is supported natively on Windows with Python
    **3.4.4** and on Linux with Python **3.5**. For both the platforms
    one can create a 3.4.4 python environment within any Anaconda (Python
    2.7 or 3.x version).
 
--  *Brainscript*:
+*Brainscript*:
+
 -  CNTK V2 also supports the BrainScript framework.
 
 Install CNTK
@@ -111,10 +113,10 @@ additionally clone the CNTK repository into ``C:\repos\cntk``.
 
 -  Run: ``cd [Path to your unzipped PS scripts]``
 -  Choose a wheel file appropriate for your machine:
--  CPU:
-   https://cntk.ai/pippackages/cpu/cntk-2.0a4-cp34-cp34m-win\_amd64.whl
--  GPU:
-   https://cntk.ai/pippackages/gpu/cntk-2.0a4-cp34-cp34m-win\_amd64.whl
+  -  CPU:
+     https://cntk.ai/pippackages/cpu/cntk-2.0a4-cp34-cp34m-win\_amd64.whl
+  -  GPU:
+     https://cntk.ai/pippackages/gpu/cntk-2.0a4-cp34-cp34m-win\_amd64.whl
 -  Run: ``.\install.ps1 -Execute -cntkWhl [Location of the Whl file]``
 
 **Step 3**: Run Python setup
@@ -132,21 +134,21 @@ Windows install details
 The script automates the following installation steps:
 
 -  Pre-requisites:
--  Visual C++ Redistributable Package for Visual Studio 2013
--  Visual C++ Redistributable Package for Visual Studio 2012
--  Microsoft MPI of version 7 (7.0.12437.6).
--  For NVIDIA GPU systems: ensures the latest NVIDIA driver are
-   installed
+  -  Visual C++ Redistributable Package for Visual Studio 2013
+  -  Visual C++ Redistributable Package for Visual Studio 2012
+  -  Microsoft MPI of version 7 (7.0.12437.6).
+  -  For NVIDIA GPU systems: ensures the latest NVIDIA driver are
+     installed
 
 -  Python setup:
--  Install Anaconda (can take a while)
--  Create an Anaconda CNTK environment cntk-py34 with conda create and
-   install packages to run iPython notebook (can take some time)
--  Install CNTK V2 Python Packages using pip
+  -  Install Anaconda (can take a while)
+  -  Create an Anaconda CNTK environment cntk-py34 with conda create and
+     install packages to run iPython notebook (can take some time)
+  -  Install CNTK V2 Python Packages using pip
 
 -  Example / Tutorial:
--  Git installation
--  Clone the CNTK repositories into ``C:\repos\cntk``
+  -  Git installation
+  -  Clone the CNTK repositories into ``C:\repos\cntk``
 
 Linux installation steps
 ----------------------------
@@ -165,16 +167,16 @@ that folder.
 **Step 2**: Run the bash scripts:
 
 -  Choose a wheel file appropriate for your machine:
--  CPU:
-   https://cntk.ai/pippackages/cpu/cntk-2.0a4-cp34-cp34m-linux\_x86\_64.whl
--  GPU:
-   https://cntk.ai/pippackages/gpu/cntk-2.0a4-cp34-cp34m-linux\_x86\_64.whl
+  -  CPU:
+     https://cntk.ai/pippackages/cpu/cntk-2.0a4-cp34-cp34m-linux\_x86\_64.whl
+  -  GPU:
+     https://cntk.ai/pippackages/gpu/cntk-2.0a4-cp34-cp34m-linux\_x86\_64.whl
 
-Run: ``bash pycntkv2_linux_install.sh <url-of-wheel>``
+-  Run: ``bash pycntkv2_linux_install.sh <url-of-wheel>``
 
 **Step 3**: Python updates
 
--  RUN:
+-  Run:
    ``source $HOME/anaconda3/bin/activate $HOME/anaconda3/envs/cntk-py34``
    to activate the python environment after the environment updates are
    completed.
@@ -188,18 +190,18 @@ Linux install details
 The script automates the following installation steps:
 
 -  Pre-requisites:
--  Install for Open MPI
--  Install for NVIDIA GPU to the latest NVIDIA driver
+  -  Install for Open MPI
+  -  Install for NVIDIA GPU to the latest NVIDIA driver
 
 -  Python:
--  Install Anaconda (can take a while)
--  Create a CNTK environment cntk-py34 with conda create
--  Install CNTK binaries using pip
+  -  Install Anaconda (can take a while)
+  -  Create a CNTK environment cntk-py34 with conda create
+  -  Install CNTK binaries using pip
 
 -  Example / Tutorial:
--  Git installation
--  Clone the CNTK repositories. Default directory is
-   ``/home/[USERNAME]/repos/cntk``
+  -  Git installation
+  -  Clone the CNTK repositories. Default directory is
+     ``/home/[USERNAME]/repos/cntk``
 
 The script installs a CNTK Python 3.4 environment with Anaconda 4.1.1
 located at ``$HOME/anaconda3/envs/cntk-py34`` with all packages required
