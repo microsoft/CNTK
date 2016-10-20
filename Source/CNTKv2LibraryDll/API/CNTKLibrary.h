@@ -2480,6 +2480,18 @@ namespace CNTK
     CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the random_sample operation on specified sampling weights input vector
+    ///
+    // TODO: The initial random seed should be specifiable
+    CNTK_API FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name /*= L""*/);
+
+    ///
+    /// Create an instance of the random_sample_inclusion_frequency operation on specified sampling weights input vector
+    ///
+    // TODO: The initial random seed should be specifiable
+    CNTK_API FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name /*= L""*/);
+
+    ///
     /// Create an instance of the dropout operation on specified tensor input operand
     ///
     // TODO: The initial random seed should be specifiable
@@ -2729,6 +2741,11 @@ namespace CNTK
                                      bool transpose = false,
                                      size_t maxTempMemSizeInSamples = 0,
                                      const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
+    ///
+    CNTK_API FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name = L"");
 
     ///
     /// TODO:

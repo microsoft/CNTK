@@ -14,6 +14,7 @@
 #include "ConvolveGeometry.h"
 #include "ConvolutionalNodes.h"
 
+
 namespace std
 {
     template <> struct hash<CNTK::PrimitiveOpType>
@@ -27,56 +28,61 @@ namespace std
 
 namespace CNTK
 {
+    // Move primitiveOpNames out from PrimitiveOpTypeName(), as local static variables are not thread-safe under VS2013.
+    // Todo: Move it into PrimitiveOpTypeName() as local static after upgraded to VS2015.
+    static const std::unordered_map<PrimitiveOpType, std::wstring> primitiveOpNames = {
+        {PrimitiveOpType::Negate, L"Negate"},
+        {PrimitiveOpType::Sigmoid, L"Sigmoid"},
+        {PrimitiveOpType::Tanh, L"Tanh"},
+        {PrimitiveOpType::ReLU, L"ReLU"},
+        {PrimitiveOpType::Exp, L"Exp"},
+        {PrimitiveOpType::Log, L"Log"},
+        {PrimitiveOpType::Sqrt, L"Sqrt"},
+        {PrimitiveOpType::Floor, L"Floor"},
+        {PrimitiveOpType::Abs, L"Abs"},
+        {PrimitiveOpType::Reciprocal, L"Reciprocal"},
+        {PrimitiveOpType::Softmax, L"Softmax"},
+        {PrimitiveOpType::Hardmax, L"Hardmax"},
+        {PrimitiveOpType::TransposeAxes, L"TransposeAxes"},
+        {PrimitiveOpType::Where, L"Where"},
+        {PrimitiveOpType::Slice, L"Slice"},
+        {PrimitiveOpType::Dropout, L"Dropout"},
+        {PrimitiveOpType::Reshape, L"Reshape"},
+        {PrimitiveOpType::Pooling, L"Pooling"},
+        {PrimitiveOpType::SumAll, L"SumAll"},
+        {PrimitiveOpType::Plus, L"Plus"},
+        {PrimitiveOpType::Minus, L"Minus"},
+        {PrimitiveOpType::ElementTimes, L"ElementTimes"},
+        {PrimitiveOpType::Equal, L"Equal"},
+        {PrimitiveOpType::NotEqual, L"NotEqual"},
+        {PrimitiveOpType::Less, L"Less"},
+        {PrimitiveOpType::LessEqual, L"LessEqual"},
+        {PrimitiveOpType::Greater, L"Greater"},
+        {PrimitiveOpType::GreaterEqual, L"GreaterEqual"},
+        {PrimitiveOpType::PackedIndex, L"PackedIndex"},
+        {PrimitiveOpType::GatherPacked, L"GatherPacked"},
+        {PrimitiveOpType::ScatterPacked, L"ScatterPacked"},
+        {PrimitiveOpType::Times, L"Times"},
+        {PrimitiveOpType::TransposeTimes, L"TransposeTimes"},
+        {PrimitiveOpType::Convolution, L"Convolution"},
+        {PrimitiveOpType::SquaredError, L"SquaredError"},
+        {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
+        {PrimitiveOpType::ClassificationError, L"ClassificationError"},
+        {PrimitiveOpType::PastValue, L"PastValue"},
+        {PrimitiveOpType::FutureValue, L"FutureValue"},
+        {PrimitiveOpType::ReduceElements, L"ReduceElements"},
+        {PrimitiveOpType::BatchNormalization, L"BatchNormalization"},
+        {PrimitiveOpType::Clip, L"Clip"},
+        {PrimitiveOpType::Select, L"Select"},
+        {PrimitiveOpType::Splice, L"Splice"},
+        {PrimitiveOpType::Combine, L"Combine"},
+        {PrimitiveOpType::RandomSample, L"RandomSample"},
+        {PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency"},
+        {PrimitiveOpType::ROIPooling, L"ROIPooling"},
+    };
+
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
     {
-        static const std::unordered_map<PrimitiveOpType, std::wstring> primitiveOpNames = {
-            { PrimitiveOpType::Negate, L"Negate" },
-            { PrimitiveOpType::Sigmoid, L"Sigmoid" },
-            { PrimitiveOpType::Tanh, L"Tanh" },
-            { PrimitiveOpType::ReLU, L"ReLU" },
-            { PrimitiveOpType::Exp, L"Exp" },
-            { PrimitiveOpType::Log, L"Log" },
-            { PrimitiveOpType::Sqrt, L"Sqrt" },
-            { PrimitiveOpType::Floor, L"Floor" },
-            { PrimitiveOpType::Abs, L"Abs" },
-            { PrimitiveOpType::Reciprocal, L"Reciprocal" },
-            { PrimitiveOpType::Softmax, L"Softmax" },
-            { PrimitiveOpType::Hardmax, L"Hardmax" },
-            { PrimitiveOpType::TransposeAxes, L"TransposeAxes" },
-            { PrimitiveOpType::Where, L"Where" },
-            { PrimitiveOpType::Slice, L"Slice" },
-            { PrimitiveOpType::Dropout, L"Dropout" },
-            { PrimitiveOpType::Reshape, L"Reshape" },
-            { PrimitiveOpType::Pooling, L"Pooling" },
-            { PrimitiveOpType::SumAll, L"SumAll" },
-            { PrimitiveOpType::Plus, L"Plus" },
-            { PrimitiveOpType::Minus, L"Minus" },
-            { PrimitiveOpType::ElementTimes, L"ElementTimes" },
-            { PrimitiveOpType::Equal, L"Equal" },
-            { PrimitiveOpType::NotEqual, L"NotEqual" },
-            { PrimitiveOpType::Less, L"Less" },
-            { PrimitiveOpType::LessEqual, L"LessEqual" },
-            { PrimitiveOpType::Greater, L"Greater" },
-            { PrimitiveOpType::GreaterEqual, L"GreaterEqual" },
-            { PrimitiveOpType::PackedIndex, L"PackedIndex" },
-            { PrimitiveOpType::GatherPacked, L"GatherPacked" },
-            { PrimitiveOpType::ScatterPacked, L"ScatterPacked" },
-            { PrimitiveOpType::Times, L"Times" },
-            { PrimitiveOpType::TransposeTimes, L"TransposeTimes" },
-            { PrimitiveOpType::Convolution, L"Convolution" },
-            { PrimitiveOpType::SquaredError, L"SquaredError" },
-            { PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax" },
-            { PrimitiveOpType::ClassificationError, L"ClassificationError" },
-            { PrimitiveOpType::PastValue, L"PastValue" },
-            { PrimitiveOpType::FutureValue, L"FutureValue" },
-            { PrimitiveOpType::ReduceElements, L"ReduceElements" },
-            { PrimitiveOpType::BatchNormalization, L"BatchNormalization" },
-            { PrimitiveOpType::Clip, L"Clip" },
-            { PrimitiveOpType::Select, L"Select" },
-            { PrimitiveOpType::Splice, L"Splice" },
-            { PrimitiveOpType::Combine, L"Combine" },
-        };
-
         if (primitiveOpNames.find(opType) == primitiveOpNames.end())
             LogicError("Unknown PrimitiveOpType");
 
@@ -158,6 +164,8 @@ namespace CNTK
         static const std::wstring AttributeNameAxis;
         static const std::wstring AttributeNameAxis1;
         static const std::wstring AttributeNameAxis2;
+        static const std::wstring AttributeNameAllowDuplicates;
+        static const std::wstring AttributeNameNumSamples;
         static const std::wstring AttributeNameDropoutRate;
         static const std::wstring AttributeNameNewShape;
         static const std::wstring AttributeNameOutputRank;
@@ -170,6 +178,7 @@ namespace CNTK
         static const std::wstring AttributeNameUpperPad;
         static const std::wstring AttributeNameTranspose;
         static const std::wstring AttributeNameMaxTempMemSizeInSamples;
+        static const std::wstring AttributeNameROIOutputShape;
         static const std::wstring AttributeNamePoolingType;
         static const std::wstring AttributeNamePoolingWindowShape;
         static const std::wstring AttributeNameSpatial;
@@ -302,7 +311,7 @@ namespace CNTK
                         if (dim == NDShape::InferredDimension)
                             outputDims[index] = NDShape::InferredDimension;
                         else
-                        outputDims[index] += dim;
+                            outputDims[index] += dim;
                     }
                     else
                     {
@@ -460,17 +469,17 @@ namespace CNTK
             for (size_t i = 0; i < numReductionAxes; ++i)
             {
                 if ((leftOperandShape[outputRank + i] != NDShape::InferredDimension) && (rightOperandShape[i] != NDShape::InferredDimension))
-            {
+                {
                     if (leftOperandShape[outputRank + i] != rightOperandShape[i])
-                InvalidArgument("The %d %s dimensions of the %s operand with shape %S do not match the %s operand's %s dimensions with shape %S",
-                                (int)numReductionAxes,
-                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "leading" : "trailing",
-                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left",
-                                AsStringForErrorReporting(leftOperandShape.SubShape(outputRank)).c_str(),
-                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right",
-                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
-                                AsStringForErrorReporting(rightOperandShape).c_str());
-            }
+                        InvalidArgument("The %d %s dimensions of the %s operand with shape %S do not match the %s operand's %s dimensions with shape %S",
+                                        (int)numReductionAxes,
+                                        Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "leading" : "trailing",
+                                        Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left",
+                                        AsStringForErrorReporting(leftOperandShape.SubShape(outputRank)).c_str(),
+                                        Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right",
+                                        Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
+                                        AsStringForErrorReporting(rightOperandShape).c_str());
+                }
                 else if (leftOperandShape[outputRank + i] == NDShape::InferredDimension)
                     leftOperandShape[outputRank + i] = rightOperandShape[i];
                 else if (rightOperandShape[i] == NDShape::InferredDimension)
@@ -525,7 +534,7 @@ namespace CNTK
                                                 bool transpose, bool inferDimensions)
         {
             if (inferDimensions)
-        {
+            {
                 // infer reduction dimensions if not given
                 // If kernel has a lower rank than the input then the remaining dimensions are to be reduced over.
                 size_t filterRank = kernelShape.Rank();

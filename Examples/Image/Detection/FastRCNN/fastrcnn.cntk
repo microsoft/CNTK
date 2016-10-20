@@ -10,8 +10,8 @@
 # by the following layer (usually a set of pretrained fully connected layers).
 # Classification error and evaluation criterion are computed for each ROI.
 
-command = Train:Test
-#command = Write
+#makeMode = false
+command = Train:WriteTest:WriteTrain
 
 deviceId = "Auto"
 precision = "float"
@@ -23,21 +23,20 @@ dataDir = "$rootDir$/data/"
 outputDir = "$rootDir$/Output"
 
 modelPath = "$outputDir$/Fast-RCNN"
-stderr = "$outputDir$/Fast-RCNN.log"
+#stderr = "$outputDir$/Fast-RCNN.log"
 
 ImageH = 1000
 ImageW = 1000
 ImageC = 3
 
-NumLabels = 21
+NumLabels = 22
+NumTrainROIs = 200
+NumTestROIs = 1000
 
-NumTrainROIs = 64
-TrainROIDim = 256               # $NumTrainROIs$ * 4 
-TrainROILabelDim = 1344         # $NumTrainROIs$ * $NumLabels$
-
-NumTestROIs = 200
-TestROIDim = 800
-TestROILabelDim = 4200
+TrainROIDim = 800               # $NumTrainROIs$ * 4 
+TrainROILabelDim = 4400         # $NumTrainROIs$ * $NumLabels$
+TestROIDim = 4000               # $NumTestROIs$ * 4
+TestROILabelDim = 22000         # $NumTestROIs$ * $NumLabels$
 
 # For training we load a pretrained AlexNet model (AlexNet.89) and clone three parts of it.
 # For the first part (up to pool1) we keep the weights fixed. The middle part contains the
@@ -55,19 +54,17 @@ Train = {
         labelShape = $NumLabels$:$NumTrainROIs$         # 21:64
         ROIShape   = 4:$NumTrainROIs$                   # 4:64
 
-        network     = BS.Network.Load ("AlexNet.89")
-        pool1       = BS.Network.CloneFunction(network.features, network.pool1, parameters = "constant")
-        convLayers  = BS.Network.CloneFunction(network.pool1, network.conv5_y)
+        network     = BS.Network.Load ("../../../../../PretrainedModels/AlexNet.model")
+        convLayers  = BS.Network.CloneFunction(network.features, network.conv5_y, parameters = "constant")
         fcLayers    = BS.Network.CloneFunction(network.pool3, network.h2_d)
 
         model (features, rois) = {
             featNorm = features - 114
-            pool1Out = pool1 (featNorm)
-            conv5Out = convLayers (pool1Out)
-            roiOut   = ROIPooling (conv5Out, rois, (6:6))
+            convOut  = convLayers (featNorm)
+            roiOut   = ROIPooling (convOut, rois, (6:6))
             fcOut    = fcLayers (roiOut)
-            W        = ParameterTensor{(21:4096)}
-            b        = ParameterTensor{21, init = 'zero'}
+            W        = ParameterTensor{($NumLabels$:4096), init="glorotUniform"}
+            b        = ParameterTensor{$NumLabels$, init = 'zero'}
             z        = W * fcOut + b
         }.z
 
@@ -89,13 +86,15 @@ Train = {
 
     SGD = {
         epochSize = 0
-        minibatchSize = 2
-        maxEpochs = 15
+        minibatchSize = 1
+        maxEpochs = 17
         
-        learningRatesPerSample = 0.00005
-        momentumAsTimeConstant = 0*5:1024 # was: 0.9 per MB 
-        L2RegWeight = 0.0001
-        dropoutRate = 0.5
+        #momentumAsTimeConstant = 0*5:10
+        learningRatesPerSample=0.00001*10:0.000001*5:0.0000001
+        momentumPerMB=0.9
+        gradUpdateType=None
+        L2RegWeight=0.0005
+        dropoutRate=0.5
         
         numMBsToShowResult = 50
     }
@@ -105,15 +104,15 @@ Train = {
         verbosity = 2
         deserializers = ({
             type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "$dataDir$/tv2012pad.rois.txt"
+            file = train.rois.txt
             input = { rois = { dim = $TrainROIDim$ ; format = "dense" } }
         }:{
             type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "$dataDir$/tv2012pad.roilabels.txt"
+            file = train.roilabels.txt
             input = { roiLabels = { dim = $TrainROILabelDim$ ; format = "dense" } }
         }:{
             type = "ImageDeserializer" ; module = "ImageReader"
-            file = "$dataDir$/tv2012pad.txt"
+            file = train.txt
             input = {
                 features = { transforms = (
                     { type = "Scale" ; width = $ImageW$ ; height = $ImageW$ ; channels = $ImageC$ ; scaleMode = "pad" ; padValue = 114 }:
@@ -125,17 +124,84 @@ Train = {
     }
 }
 
-# For testing we load the trained Fast-RCNN model and modify the input size,
-# such that the network accepts 200 ROIs per image. To this end we load and 
-# clone the entire network and define new inputs with the desired size 
-# corresponding to 200 ROIs. 
-Test = {
-    action = "test"
+# Write network output for entire test data set
+WriteTest = {
+    action = "write"
     minibatchSize = 1
 
-    # use this for write action
-    # action = "write"
     # outputPath = "$OutputDir$/fastrcnnNetOutput"
+    outputPath=test
+    
+    reader = {
+        randomize = false
+        verbosity = 2
+        deserializers = ({
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = test.rois.txt
+            input = { rois = { dim = $TestROIDim$ ; format = "dense" } }
+        }:{
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = test.roilabels.txt
+            input = { roiLabels = { dim = $TestROILabelDim$ ; format = "dense" } }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = test.txt
+            input = {
+                features = { transforms = (
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageW$ ; channels = $ImageC$ ; scaleMode = "pad" ; padValue = 114 }:
+                    { type = "Transpose" }
+                )}
+                ignored = {labelDim = 1000}
+            }
+        })
+    }
+}
+
+# Write network output for entire train data set
+WriteTrain = {
+    action = "write"
+    minibatchSize = 1
+
+    # outputPath = "$OutputDir$/fastrcnnNetOutput"
+    outputPath=train
+    
+    reader = {
+        randomize = false
+        verbosity = 2
+        deserializers = ({
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            #file = "$dataDir$/test2007pad_all.rois.txt"
+            file = train.rois.txt
+            input = { rois = { dim = $TestROIDim$ ; format = "dense" } }
+        }:{
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            #file = "$dataDir$/test2007pad_all.roilabels.txt"
+            file = train.roilabels.txt
+            input = { roiLabels = { dim = $TestROILabelDim$ ; format = "dense" } }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            #file = "$dataDir$/test2007pad_all.txt"
+            file = train.txt
+            input = {
+                features = { transforms = (
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageW$ ; channels = $ImageC$ ; scaleMode = "pad" ; padValue = 114 }:
+                    { type = "Transpose" }
+                )}
+                ignored = {labelDim = 1000}
+            }
+        })
+    }
+}
+
+# For testing you can optionally load the trained Fast-RCNN model and modify the input size,
+# such that the network accepts a different number of ROIs per image, e.g. 200. To this end we load and 
+# clone the network and define new inputs with the desired size corresponding to 200 ROIs. 
+WriteTestModify = {
+    action = "write"
+    minibatchSize = 1
+
+    # outputPath = "$OutputDir$/fastrcnnNetOutput"
+    outputPath=test
     
     BrainScriptNetworkBuilder = {
         imageShape = $ImageH$:$ImageW$:$ImageC$        # 1000:1000:3
@@ -167,15 +233,15 @@ Test = {
         verbosity = 2
         deserializers = ({
             type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "$dataDir$/test2007pad_all.rois.txt"
+            file = test.rois.txt
             input = { rois = { dim = $TestROIDim$ ; format = "dense" } }
         }:{
             type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "$dataDir$/test2007pad_all.roilabels.txt"
+            file = test.roilabels.txt
             input = { roiLabels = { dim = $TestROILabelDim$ ; format = "dense" } }
         }:{
             type = "ImageDeserializer" ; module = "ImageReader"
-            file = "$dataDir$/test2007pad_all.txt"
+            file = test.txt
             input = {
                 features = { transforms = (
                     { type = "Scale" ; width = $ImageW$ ; height = $ImageW$ ; channels = $ImageC$ ; scaleMode = "pad" ; padValue = 114 }:
