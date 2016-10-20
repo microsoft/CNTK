@@ -7,16 +7,16 @@
 
 #include <stdio.h>
 
-// define CPUONLY, if you want to run evaluation on a CPU device.
-// undefine CPUONLY, if you want to run evaluation on a GPU device. You also need CNTK GPU binaries.
-#define CPUONLY
+// define GPU_AVAILABLE, if you want to run evaluation on a GPU device. You also need CNTK GPU binaries.
+// undefine GPU_AVAILABLE, if you want to run evaluation on a CPU device.
+// #define GPU_AVAILABLE
 
 void MultiThreadsEvaluation(bool);
 
 int main()
 {
 
-#ifndef CPUONLY
+#ifdef GPU_AVAILABLE
     fprintf(stderr, "\n##### Run eval on GPU device. #####\n");
     MultiThreadsEvaluation(true);
 #else
