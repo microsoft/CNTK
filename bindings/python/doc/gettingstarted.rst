@@ -1,32 +1,18 @@
 Getting started 
 ===============
 
+.. _here: https://github.com/Microsoft/CNTK/wiki/Recomended-CNTK-2.0-Setup
+
 Installation
 ------------
-This page will guide you through the following three required steps:
+You have the choice of installing CNTK from binary distributions or from the GitHub sources for both Windows and Linux environment with optional support for Nvidia GPU. CNTK V2 provides Python and C++ APIs. 
 
-#. Make sure that all Python requirements are met
-#. Install CNTK2
+Click here_ for the installation steps.
 
-Requirements
-~~~~~~~~~~~~
-You will need the following Python packages: 
 
-:Python: 3.4
-:NumPy: >= 1.11
-:Scipy: >= 0.17
-
-On Linux a simple ``pip install`` should suffice. On Windows, you will get
-everything you need from `Anaconda <https://www.continuum.io/downloads>`_.
-
-CNTK also depends on MPI (`Linux <https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi>`_ and 
-`Windows <https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#ms-mpi>`_) and 
-`CUDA <https://developer.nvidia.com/cuda-downloads>`_ (if you want to use GPUs). Please see the 
-`CNTK wiki <https://github.com/Microsoft/CNTK/wiki>`_ for more information on installation.
-
-First contact
-~~~~~~~~~~~~~~~~~~~~~~~~~
-After installing the pip package, you can then start using CNTK from Python right away:
+After Installation
+------------------
+After going through the installation steps above, you can start using CNTK from Python right away:
 
     >>> import cntk
     >>> cntk.__version__
@@ -49,9 +35,6 @@ more common case) is as follows:
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. 
-.. I think this is confusing (four brackets in the first example?). Two brackets work the same as four.
-.. These have to be specified as minibatches. Let's take e.g. the data for `x`: ``[[2., 1.]]`` describes the 1x2 matrix as one element in a sequence. Then we need a `[ ]` 
-   pair for the sequence, and another one for the batch.
 The squared error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
 
 As the graph nodes implement the NumPy array interface, you can easily access

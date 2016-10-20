@@ -3,7 +3,6 @@
 # for full license information.
 # ==============================================================================
 
-import numpy as np
 from ...utils import sanitize_input, sanitize_shape, get_data_type, typemap
 
 ##########################################################################
@@ -14,7 +13,7 @@ from ...utils import sanitize_input, sanitize_shape, get_data_type, typemap
 @typemap
 def is_first(seq, name=''):
     '''
-    Returns a symbolic sequence of booleans with the same length as `seq`. The 
+    Returns a symbolic sequence of booleans with the same length as ``seq``. The
     first element of the sequence is 1 and all others are 0.
 
     Example:
@@ -26,7 +25,7 @@ def is_first(seq, name=''):
         >>> y.eval({x:x0})
         array([[ 1.,  0.,  0.,  0.]], dtype=float32)
 
-    Args:        
+    Args:
         seq: the symbolic tensor denoting a sequence
         name (str): the name of the node in the network
 
@@ -41,7 +40,7 @@ def is_first(seq, name=''):
 @typemap
 def is_last(seq, name=''):
     '''
-    Returns a symbolic sequence of booleans with the same length as `seq`. The 
+    Returns a symbolic sequence of booleans with the same length as ``seq``. The
     last element of the sequence is 1 and all others are 0.
 
     Example:
@@ -58,7 +57,7 @@ def is_last(seq, name=''):
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk.Function`: 
+        :class:`cntk.Function`:
     '''
     from cntk.cntk_py import is_last
     seq = sanitize_input(seq, get_data_type(seq))
@@ -68,7 +67,7 @@ def is_last(seq, name=''):
 @typemap
 def first(seq, name=''):
     '''
-    Returns the first element of its symbolic input sequence `seq`
+    Returns the first element of its symbolic input sequence ``seq``
 
     Example:
         >>> import cntk.ops as C
@@ -95,7 +94,7 @@ def first(seq, name=''):
 @typemap
 def last(seq, name=''):
     '''
-    Returns the last element of its symbolic input sequence `seq`
+    Returns the last element of its symbolic input sequence ``seq``
 
     Example:
         >>> import cntk.ops as C
@@ -123,7 +122,7 @@ def last(seq, name=''):
 @typemap
 def where(condition, name=''):
     '''
-    Given a symbolic sequence `condition` of boolean-like values, it will return
+    Given a symbolic sequence ``condition`` of boolean-like values, it will return
     a new sequence containing the indices for which the values were true.
 
     Example:
@@ -152,9 +151,9 @@ def where(condition, name=''):
 @typemap
 def gather(seq, condition, name=''):
     '''
-    Takes two sequences of the same length and returns a new sequence whose 
-    elements are those elements of sequence `seq` whose corresponding element 
-    in `condition` is True, preserving the ordering of `seq`.
+    Takes two sequences of the same length and returns a new sequence whose
+    elements are those elements of sequence ``seq`` whose corresponding element
+    in ``condition`` is True, preserving the ordering of ``seq``.
 
     This operation is also known as stream compaction, or copy_if.
 
@@ -174,7 +173,7 @@ def gather(seq, condition, name=''):
 
     Args:
         seq: the symbolic sequence from which elements will be selected
-        condition: the symbolic sequence of booleans which indicate which 
+        condition: the symbolic sequence of booleans which indicate which
             elements should be selected
         name (str): the name of the node in the network
     Returns:
@@ -189,11 +188,11 @@ def gather(seq, condition, name=''):
 @typemap
 def scatter(seq, condition, name=''):
     '''
-    Performs the inverse of gather: The sequence `seq` must have as many 
-    elements as the number of True values in the sequence `condition`.
-    It will return a sequence whose length is the same as the `condition` 
-    sequence with zeroes everywhere except for the locations where `condition`
-    evaluates to True in which case it will copy the elements from `seqz 
+    Performs the inverse of gather. The sequence ``seq`` must have as many
+    elements as the number of True values in the sequence ``condition``.
+    It will return a sequence whose length is the same as the ``condition``
+    sequence with zeroes everywhere except for the locations where ``condition``
+    evaluates to True in which case it will copy the elements from ``seq``
     preserving their order.
 
     Example:
@@ -222,9 +221,9 @@ def scatter(seq, condition, name=''):
                  [  0.,   0.]]]], dtype=float32)
 
     Args:
-        seq: the symbolic sequence from which elements will be copied in the 
+        seq: the symbolic sequence from which elements will be copied in the
             output
-        condition: the symbolic sequence which denotes the locations where 
+        condition: the symbolic sequence which denotes the locations where
             elements should be copied
         name (str): the name of the node in the network
     Returns:
@@ -239,9 +238,9 @@ def scatter(seq, condition, name=''):
 @typemap
 def broadcast_as(operand, broadcast_as_operand, name=''):
     '''
-    Creates a sequence out of a non-sequence by endowing the `operand` 
-    with dynamic axes of the same type as the `broadcast_as_operand`
-    and broadcasting the value of the `operand` along those dynamic axes.
+    Creates a sequence out of a non-sequence by endowing the ``operand``
+    with dynamic axes of the same type as the ``broadcast_as_operand``
+    and broadcasting the value of the ``operand`` along those dynamic axes.
 
     Example:
         >>> import cntk.ops as C
@@ -268,9 +267,9 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
                  [ 20.,  21.],
                  [ 22.,  23.]]]], dtype=float32)
 
-    Args:        
+    Args:
         operand: the symbolic tensor whose value will be broadcast
-        broadcast_as_operand: the symbolic tensor whose dynamic axes will 
+        broadcast_as_operand: the symbolic tensor whose dynamic axes will
             be used to broadcast the operand
         name (str): the name of the node in the network
 
