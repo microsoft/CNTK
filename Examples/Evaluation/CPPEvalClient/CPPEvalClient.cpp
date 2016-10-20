@@ -4,7 +4,6 @@
 //
 // CPPEvalClient.cpp : Sample application using the evaluation interface from C++
 //
-#include <sys/stat.h>
 #include "Eval.h"
 #ifdef _WIN32
 #include "Windows.h"
@@ -33,98 +32,73 @@ typedef std::map<std::wstring, std::vector<float>*> Layer;
 /// This program demonstrates the usage of the Evaluate method requiring the input and output layers as parameters.
 int main(int argc, char* argv[])
 {
-	// Get the binary path (current working directory)
-	argc = 0;
-	std::string app = argv[0];
-	std::string path;
-	IEvaluateModel<float> *model;
-	size_t pos;
-	int ret;
+    // Get the binary path (current working directory)
+    argc = 0;   
+    std::string app = argv[0];
+    std::string path; 
+    IEvaluateModel<float> *model;
+    size_t pos;
 
 #ifdef _WIN32
-	pos = app.rfind("\\");
-	path = (pos == std::string::npos) ? "." : app.substr(0, pos);
+    pos = app.rfind("\\");
+    path = (pos == std::string::npos) ? "." : app.substr(0, pos);
 
-	// This relative path assumes launching from CNTK's binary folder, e.g. x64\Release
-	const std::string modelWorkingDirectory = path + "/../../Examples/Image/MNIST/Data/";
+    // This relative path assumes launching from CNTK's binary folder, e.g. x64\Release
+    const std::string modelWorkingDirectory = path + "/../../Examples/Image/MNIST/Data/";
 #else // on Linux
-	pos = app.rfind("/");
-	path = (pos == std::string::npos) ? "." : app.substr(0, pos);
+    pos = app.rfind("/");
+    path = (pos == std::string::npos) ? "." : app.substr(0, pos);
 
-	// This relative path assumes launching from CNTK's binary folder, e.g. build/cpu/release/bin/
-	const std::string modelWorkingDirectory = path + "/../../../../Examples/Image/MNIST/Data/";
+    // This relative path assumes launching from CNTK's binary folder, e.g. build/release/bin/
+    const std::string modelWorkingDirectory = path + "/../../../Examples/Image/MNIST/Data/";
 #endif
-	const std::string modelFilePath = modelWorkingDirectory + "../Output/Models/01_OneHidden";
+    
+    GetEvalF(&model);
 
-	try
-	{
-		struct stat statBuf;
-		if (stat(modelFilePath.c_str(), &statBuf) != 0)
-		{
-			fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.\n", modelFilePath.c_str());
-			return(1);
-		}
+    const std::string modelFilePath = modelWorkingDirectory + "../Output/Models/01_OneHidden";
 
-		GetEvalF(&model);
+    // Load model with desired outputs
+    std::string networkConfiguration;
+    // Uncomment the following line to re-define the outputs (include h1.z AND the output ol.z)
+    // When specifying outputNodeNames in the configuration, it will REPLACE the list of output nodes 
+    // with the ones specified.
+    //networkConfiguration += "outputNodeNames=\"h1.z:ol.z\"\n";
+    networkConfiguration += "modelPath=\"" + modelFilePath + "\"";
+    model->CreateNetwork(networkConfiguration);
 
-		// Load model with desired outputs
-		std::string networkConfiguration;
-		// Uncomment the following line to re-define the outputs (include h1.z AND the output ol.z)
-		// When specifying outputNodeNames in the configuration, it will REPLACE the list of output nodes 
-		// with the ones specified.
-		//networkConfiguration += "outputNodeNames=\"h1.z:ol.z\"\n";
-		networkConfiguration += "modelPath=\"" + modelFilePath + "\"";
-		model->CreateNetwork(networkConfiguration);
+    // get the model's layers dimensions
+    std::map<std::wstring, size_t> inDims;
+    std::map<std::wstring, size_t> outDims;
+    model->GetNodeDimensions(inDims, NodeGroup::nodeInput);
+    model->GetNodeDimensions(outDims, NodeGroup::nodeOutput);
+    
+    // Generate dummy input values in the appropriate structure and size
+    auto inputLayerName = inDims.begin()->first;
+    std::vector<float> inputs;
+    for (int i = 0; i < inDims[inputLayerName]; i++)
+    {
+        inputs.push_back(static_cast<float>(i % 255));
+    }
 
-		// get the model's layers dimensions
-		std::map<std::wstring, size_t> inDims;
-		std::map<std::wstring, size_t> outDims;
-		model->GetNodeDimensions(inDims, NodeGroup::nodeInput);
-		model->GetNodeDimensions(outDims, NodeGroup::nodeOutput);
+    // Allocate the output values layer
+    std::vector<float> outputs;
 
-		// Generate dummy input values in the appropriate structure and size
-		auto inputLayerName = inDims.begin()->first;
-		std::vector<float> inputs;
-		for (int i = 0; i < inDims[inputLayerName]; i++)
-		{
-			inputs.push_back(static_cast<float>(i % 255));
-		}
+    // Setup the maps for inputs and output
+    Layer inputLayer;
+    inputLayer.insert(MapEntry(inputLayerName, &inputs));
+    Layer outputLayer;
+    auto outputLayerName = outDims.begin()->first;
+    outputLayer.insert(MapEntry(outputLayerName, &outputs));
 
-		// Allocate the output values layer
-		std::vector<float> outputs;
+    // We can call the evaluate method and get back the results (single layer)...
+    model->Evaluate(inputLayer, outputLayer);
 
-		// Setup the maps for inputs and output
-		Layer inputLayer;
-		inputLayer.insert(MapEntry(inputLayerName, &inputs));
-		Layer outputLayer;
-		auto outputLayerName = outDims.begin()->first;
-		outputLayer.insert(MapEntry(outputLayerName, &outputs));
+    // Output the results
+    fprintf(stderr, "Layer '%ls' output:\n", outputLayerName.c_str());
+    for (auto& value : outputs)
+    {
+        fprintf(stderr, "%f\n", value);
+    }
 
-		// We can call the evaluate method and get back the results (single layer)...
-		model->Evaluate(inputLayer, outputLayer);
-
-		// Output the results
-		fprintf(stderr, "Layer '%ls' output:\n", outputLayerName.c_str());
-		for (auto& value : outputs)
-		{
-			fprintf(stderr, "%f\n", value);
-		}
-
-		// This pattern is used by End2EndTests to check whether the program runs to complete.
-		fprintf(stderr, "Evaluation complete.\n");
-		ret = 0;
-	}
-	catch (const std::exception& err)
-	{
-		fprintf(stderr, "Evaluation failed. EXCEPTION occurred: %s\n", err.what());
-		ret = 1;
-	}
-	catch (...)
-	{
-		fprintf(stderr, "Evaluation failed. Unknown ERROR occurred.\n");
-		ret = 1;
-	}
-
-	fflush(stderr);
-	return ret;
+    return 0;
 }
