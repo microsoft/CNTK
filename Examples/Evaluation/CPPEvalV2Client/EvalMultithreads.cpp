@@ -460,11 +460,7 @@ void MultiThreadsEvaluation(bool isGPUAvailable)
     // The number of threads running evaluation in parallel.
     const int numOfThreads = 2;
 
-#ifndef CPUONLY
-    fprintf(stderr, "\n##### Run evaluation on %s device using GPU build. Number of evaluation threads: %d. #####\n", isGPUAvailable ? "GPU" : "CPU", numOfThreads);
-#else
-    fprintf(stderr, "\n##### Run evaluation using CPU-only build. Number of evaluation threads: %d.#####\n", numOfThreads);
-#endif
+    fprintf(stderr, "\n##### Run evaluation on %s device with %d parallel evaluation thread(s). #####\n", isGPUAvailable ? "GPU" : "CPU", numOfThreads);
 
     // Test multi-threads evaluation with new function
     fprintf(stderr, "\n##### Run evaluation using new function on CPU. #####\n");
