@@ -80,10 +80,11 @@ If (Test-Path $baseDropPath\cntk\Python)
 {
 	Remove-Item $baseDropPath\cntk\Python -Recurse
 }
-If (Test-Path $baseDropPath\cntk\CNTKLibrary-2.0.dll)
-{
-	Remove-Item $baseDropPath\cntk\CNTKLibrary-2.0.dll
-}
+# Add alexeyo/Linux-Binary-Drop-Script-Beta-2.0 to 2.0 Beta Drop
+# If (Test-Path $baseDropPath\cntk\CNTKLibrary-2.0.dll)
+# {
+# 	Remove-Item $baseDropPath\cntk\CNTKLibrary-2.0.dll
+# }
 If (Test-Path $baseDropPath\cntk\CPPEvalClientTest.exe)
 {
 	Remove-Item $baseDropPath\cntk\CPPEvalClientTest.exe
