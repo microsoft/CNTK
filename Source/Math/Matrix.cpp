@@ -4982,7 +4982,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignL2Distance(const Matrix<ElemType>& a, 
   DEVICEID_TYPE orgdevice = GetDeviceId();
   if (a.IsEmpty() || b.IsEmpty())
     LogicError("AssignL2Distance:  one of the input matrices is empty.");
-  
+
   Resize(a.GetNumCols(), a.GetNumCols());
 
   DecideAndMoveToRightDevice(a, b, *this);
@@ -4996,13 +4996,11 @@ Matrix<ElemType>& Matrix<ElemType>::AssignL2Distance(const Matrix<ElemType>& a, 
       m_CPUMatrix->AssignL2Distance(*a.m_CPUMatrix, *b.m_CPUMatrix),
       // GPU;
       {
-          _transferToDevice(CPUDEVICE, false, false);
+          _transferToDevice(CPUDEVICE, true, false);
           a._transferToDevice(CPUDEVICE, false, false);
           b._transferToDevice(CPUDEVICE, false, false);
           m_CPUMatrix->AssignL2Distance(*a.m_CPUMatrix, *b.m_CPUMatrix);
-          _transferToDevice(orgdevice, false, false);
-          a._transferToDevice(orgdevice, false, false);
-          b._transferToDevice(orgdevice, false, false);
+          _transferToDevice(orgdevice, true, false);
       },
       NOT_IMPLEMENTED,
       NOT_IMPLEMENTED);
@@ -5015,22 +5013,15 @@ Matrix<ElemType>& Matrix<ElemType>::AssignL2Distance(const Matrix<ElemType>& a, 
 }
 
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignFastTripletGradient(const Matrix<ElemType>& left, const Matrix<ElemType>& right, int bottom_index, std::map<__int64, ElemType>& triplet_sampler,
+Matrix<ElemType>& Matrix<ElemType>::AssignFastTripletGradient(const Matrix<ElemType>& left, const Matrix<ElemType>& right, const Matrix<ElemType>& top_grad, int bottom_index, std::map<__int64, ElemType>& triplet_sampler,
     bool pairwise, double margin, bool hard_negative_sample, int hard_negative_sample_num, int sample_per_class)
 {
   DEVICEID_TYPE orgdevice = GetDeviceId();
 
+  top_grad._transferToDevice(CPUDEVICE, true, false);
+
   if (left.IsEmpty() || right.IsEmpty())
     LogicError("AssignL2Distance:  one of the input matrices is empty.");
-
-  /*
-  if (bottom_index == 0)
-    Resize(left.GetNumCols(), left.GetNumCols());
-  else
-    Resize(right.GetNumCols(), right.GetNumCols());
-*/
-
-  //DecideAndMoveToRightDevice(left, right, *this);
 
   if (left.GetMatrixType() == right.GetMatrixType())
   {
@@ -5042,13 +5033,11 @@ Matrix<ElemType>& Matrix<ElemType>::AssignFastTripletGradient(const Matrix<ElemT
         m_CPUMatrix->AssignFastTripletGradient_0(*left.m_CPUMatrix, *right.m_CPUMatrix, triplet_sampler, pairwise, margin, hard_negative_sample, hard_negative_sample_num, sample_per_class),
         // GPU;
         {
-            _transferToDevice(CPUDEVICE, false, false);
+            _transferToDevice(CPUDEVICE, true, false);
             left._transferToDevice(CPUDEVICE, false, false);
             right._transferToDevice(CPUDEVICE, false, false);
             m_CPUMatrix->AssignFastTripletGradient_0(*left.m_CPUMatrix, *right.m_CPUMatrix, triplet_sampler, pairwise, margin, hard_negative_sample, hard_negative_sample_num, sample_per_class);
-            _transferToDevice(orgdevice, false, false);
-            left._transferToDevice(orgdevice, false, false);
-            right._transferToDevice(orgdevice, false, false);
+            _transferToDevice(orgdevice, true, false);
         },
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
@@ -5059,13 +5048,11 @@ Matrix<ElemType>& Matrix<ElemType>::AssignFastTripletGradient(const Matrix<ElemT
         m_CPUMatrix->AssignFastTripletGradient_1(*left.m_CPUMatrix, *right.m_CPUMatrix, triplet_sampler, pairwise, margin, hard_negative_sample, hard_negative_sample_num, sample_per_class),
         // GPU;
         {
-            _transferToDevice(CPUDEVICE, false, false);
+            _transferToDevice(CPUDEVICE, true, false);
             left._transferToDevice(CPUDEVICE, false, false);
             right._transferToDevice(CPUDEVICE, false, false);
-            m_CPUMatrix->AssignFastTripletGradient_1(*left.m_CPUMatrix, *right.m_CPUMatrix, triplet_sampler, pairwise, margin, hard_negative_sample, hard_negative_sample_num, sample_per_class);
-            _transferToDevice(orgdevice, false, false);
-            left._transferToDevice(orgdevice, false, false);
-            right._transferToDevice(orgdevice, false, false);
+            m_CPUMatrix->AssignFastTripletGradient_1(*left.m_CPUMatrix, *right.m_CPUMatrix, triplet_sampler, pairwise, margin, hard_negative_sample, hard_negative_sample_num, sample_per_class);            
+            _transferToDevice(orgdevice, true, false);
         },
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
@@ -5098,13 +5085,11 @@ Matrix<ElemType>& Matrix<ElemType>::AssignFastTripletLoss(const Matrix<ElemType>
       m_CPUMatrix->AssignFastTripletLoss(*dist.m_CPUMatrix, *label.m_CPUMatrix, triplet_sampler, pairwise, margin, hard_negative_sample, hard_negative_sample_num, sample_per_class),
       // GPU;
       {
-          _transferToDevice(CPUDEVICE, false, false);
+          _transferToDevice(CPUDEVICE, true, false);
           dist._transferToDevice(CPUDEVICE, false, false);
           label._transferToDevice(CPUDEVICE, false, false);
           m_CPUMatrix->AssignFastTripletLoss(*dist.m_CPUMatrix, *label.m_CPUMatrix, triplet_sampler, pairwise, margin, hard_negative_sample, hard_negative_sample_num, sample_per_class);
-          _transferToDevice(orgdevice, false, false);
-          dist._transferToDevice(orgdevice, false, false);
-          label._transferToDevice(orgdevice, false, false);
+          _transferToDevice(orgdevice, true, false);
       },
       NOT_IMPLEMENTED,
       NOT_IMPLEMENTED);

@@ -5893,15 +5893,69 @@ void CPUMatrix<ElemType>::AssignL2Distance(const CPUMatrix<ElemType>& left, cons
     foreach_column(j, right)
     {
       ElemType v = 0;
-#pragma omp parallel for
+//#pragma omp parallel for
       foreach_row(k, left)
       {
-#pragma omp atomic
+//#pragma omp atomic
         v += (left(k, i) - right(k, j)) * (left(k, i) - right(k, j));
       }
       res(i, j) = v;
     }
+
+    
+
+    /*
+    std::cout << "Fuck " << std::endl;
+    for (int k = 0; k < 10; k++)
+    {
+        std::cout << left(0, k) << " " ;
+    }
+    std::cout << std::endl;
+    for (int k = 0; k < 10; k++)
+    {
+        ElemType v = 0;
+        foreach_row(f, left) {
+            v += left(f, k);
+        }
+        std::cout << v << " ";
+    }
+
+
+
+    exit(0);
+    */
   }
+
+
+  /*
+  std::cout << "Error" << std::endl;
+  foreach_row(k, right)
+  {
+      std::cout << right(k, 441) << " ";
+  }
+  std::cout << std::endl;
+
+  foreach_row(k, left)
+  {
+      std::cout << left(k, 441) << " ";
+  }
+  std::cout << std::endl;
+
+  std::cout << "FF " << res(441, 441) << " " << res(441, 637) << std::endl;
+  */
+
+  /*
+  std::cout << "Dist" << std::endl;
+  for (int i = 0; i < 20; i++) {
+      for (int j = 0; j < 20; j++) {
+          std::cout << res(i, j) << " ";
+      }
+      std::cout << std::endl;
+  }
+  */
+
+  //exit(0);
+ 
 }
 
 
@@ -5945,6 +5999,18 @@ void CPUMatrix<ElemType>::AssignFastTripletLoss(const CPUMatrix<ElemType>& dist_
     }
   }
 
+
+  /*
+  // Print map
+  std::cout << "Batch map" << std::endl;
+  int ff = 0;
+  for (auto it = label_data_map.begin(); it != label_data_map.end(); ++it) {
+      std::cout << it->second.size() << " ";
+      ff++;
+  }
+  std::cout << "CatNum " << ff << std::endl;
+  */
+
   if (label_data_map.size() == 1)
   {
     std::cout << "label number is 1" << std::endl;
@@ -5953,6 +6019,7 @@ void CPUMatrix<ElemType>::AssignFastTripletLoss(const CPUMatrix<ElemType>& dist_
   else
   {
     int pos_count = 0;
+    //int cat_idx = 0;
     for (auto const &ent1 : label_data_map)
     {
       if (pairwise) {
@@ -5988,6 +6055,26 @@ void CPUMatrix<ElemType>::AssignFastTripletLoss(const CPUMatrix<ElemType>& dist_
               if (mdist_anc > 0) {
                 triplet_count += ElemType(1);
                 loss += (mdist_anc);
+
+                /*
+                if (loss > 1e100) {
+                    std::cout << anc << " " << pos << " " << neg << " " << dist_matrix(anc, pos) << " " << dist_matrix(anc, neg) << std::endl;
+                    
+                    for (int x = anc; x < anc + 5; x++)
+                    {
+                        for (int y = neg; y < neg + 5; y++)
+                            std::cout << dist_matrix(x, y) << " ";
+                        std::cout << std::endl;
+                    }
+                    
+
+
+                    std::cout << "In CPUMAtrxi " << dist_matrix.GetNumRows() << " " << dist_matrix.GetNumCols() << std::endl;
+
+                    exit(0);
+
+                }
+                */
                 triplet_sampler[__int64((anc * nums + pos)) * __int64(nums) + __int64(neg)] = mdist_anc;
               }
             }
@@ -6051,10 +6138,18 @@ void CPUMatrix<ElemType>::AssignFastTripletLoss(const CPUMatrix<ElemType>& dist_
         }
       }
     }
+
+
+    if (pairwise)
+        std::cout << "pairwise " << pairwise << " poscount " << pos_count << " sampler " << triplet_sampler.size() << " " << loss / 2 / sample_per_class << " " << triplet_count << " " << pairwise << std::endl;
+    else
+        std::cout << "pairwise " << pairwise << " poscount " << pos_count << " sampler " << triplet_sampler.size() << " " << loss / 2 << " " << triplet_count << " " << pairwise << std::endl;
+
   }
   if (triplet_count == 0) {
     loss = 0;
   }
+
   else {
     if (pairwise)
         loss = loss / (2 * nums * hard_negative_sample_num);
@@ -6072,9 +6167,9 @@ void CPUMatrix<ElemType>::AssignFastTripletGradient_0(const CPUMatrix<ElemType>&
     auto& res = *this;
     ElemType alpha = 0;
     if (pairwise)
-        alpha = 2 / (2 * nums * hard_negative_sample_num);
+        alpha = 2.0 / (2 * nums * hard_negative_sample_num);
     else
-        alpha = 2 / (2 * (nums / sample_per_class) * hard_negative_sample_num);
+        alpha = 2.0 / (2 * (nums / sample_per_class) * hard_negative_sample_num);
 
     for (std::map<__int64, ElemType>::iterator it = triplet_sampler.begin(); it != triplet_sampler.end(); ++it) {
         __int64 idx = it->first;
@@ -6083,10 +6178,10 @@ void CPUMatrix<ElemType>::AssignFastTripletGradient_0(const CPUMatrix<ElemType>&
         size_t j = idx % nums;
         size_t i = idx / nums;
         
-#pragma omp parallel for
+//#pragma omp parallel for
         foreach_row(r, left)
         {
-#pragma omp atomic
+            //#pragma omp atomic
             res(r, i) += alpha * (right(r, k) - right(r, j));
         }
     }
@@ -6100,9 +6195,9 @@ void CPUMatrix<ElemType>::AssignFastTripletGradient_1(const CPUMatrix<ElemType>&
     auto& res = *this;
     ElemType alpha = 0;
     if (pairwise)
-        alpha = 2 / (2 * nums * hard_negative_sample_num);
+        alpha = 2.0 / (2 * nums * hard_negative_sample_num);
     else
-        alpha = 2 / (2 * (nums / sample_per_class) * hard_negative_sample_num);
+        alpha = 2.0 / (2 * (nums / sample_per_class) * hard_negative_sample_num);
 
     for (std::map<__int64, ElemType>::iterator it = triplet_sampler.begin(); it != triplet_sampler.end(); ++it) {
         __int64 idx = it->first;
@@ -6111,14 +6206,15 @@ void CPUMatrix<ElemType>::AssignFastTripletGradient_1(const CPUMatrix<ElemType>&
         size_t j = idx % nums;
         size_t i = idx / nums;
 
-#pragma omp parallel for
+//#pragma omp parallel for
         foreach_row(r, left)
         {
-#pragma omp atomic
+//#pragma omp atomic
             res(r, j) -= alpha * (left(r, i) - right(r, j));
             res(r, k) += alpha * (left(r, i) - right(r, k));
         }
     }
+    //std::cout << "end bp1" << std::endl;
 }
 
 // =======================================================================

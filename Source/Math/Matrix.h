@@ -447,7 +447,7 @@ public:
     Matrix<ElemType>& AssignFastTripletLoss(const Matrix<ElemType>& dist, const Matrix<ElemType>& label, std::map<__int64, ElemType>& triplet_sampler,
                                             bool pairwise, double margin, bool hard_negative_sample, int hard_negative_sample_num, int sample_per_class);
 
-    Matrix<ElemType>& AssignFastTripletGradient(const Matrix<ElemType>& left, const Matrix<ElemType>& right, int bottom_index, std::map<__int64, ElemType>& triplet_sampler,
+    Matrix<ElemType>& AssignFastTripletGradient(const Matrix<ElemType>& left, const Matrix<ElemType>& right, const Matrix<ElemType>& top_grad, int bottom_index, std::map<__int64, ElemType>& triplet_sampler,
                                                 bool pairwise, double margin, bool hard_negative_sample, int hard_negative_sample_num, int sample_per_class);
 
     bool HasNan(const char* name) const;

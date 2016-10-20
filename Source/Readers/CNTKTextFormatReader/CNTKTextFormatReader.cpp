@@ -10,6 +10,7 @@
 #include "ChunkCache.h"
 #include "BlockRandomizer.h"
 #include "NoRandomizer.h"
+#include "CategoryBasedRandomizer.h"
 #include "TextParser.h"
 #include "SequencePacker.h"
 #include "FramePacker.h"
@@ -42,7 +43,11 @@ CNTKTextFormatReader::CNTKTextFormatReader(MemoryProviderPtr provider,
         }
 
         size_t window = configHelper.GetRandomizationWindow();
-        if (window > 0)
+        size_t cagegory_based_sampling = configHelper.useCategoryBasedSampling();
+        if (cagegory_based_sampling) {
+            m_randomizer = make_shared<CategoryBasedRandomizer>(m_deserializer, configHelper.GetSamplerPerCategory(), configHelper.GetCategoryInfoName(), true);
+        }
+        else if (window > 0)
         {
             // Verbosity is a general config parameter, not specific to the text format reader.
             int verbosity = config(L"verbosity", 0);

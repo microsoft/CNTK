@@ -149,6 +149,9 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     m_chunkSizeBytes = config(L"chunkSizeInBytes", 32 * 1024 * 1024); // 32 MB by default
     m_keepDataInMemory = config(L"keepDataInMemory", false);
     m_frameMode = config(L"frameMode", false);
+    m_categoryInfoName = config(L"categoryInfoName", L"Labels");
+    m_categoryBasedSampling = config(L"categoryBasedSampling", false);
+    m_samplePerCategory = config(L"samplePerCategory", 1);
 }
 
 }}}

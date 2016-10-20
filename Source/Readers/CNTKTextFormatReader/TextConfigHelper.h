@@ -39,7 +39,13 @@ public:
 
     bool IsInFrameMode() const { return m_frameMode; }
 
+    bool useCategoryBasedSampling() const { return m_categoryBasedSampling; }
+
+    size_t GetSamplerPerCategory() const { return m_samplePerCategory; }
+
     ElementType GetElementType() const { return m_elementType; }
+
+    std::wstring GetCategoryInfoName() const { return m_categoryInfoName; }
 
     DISABLE_COPY_AND_MOVE(TextConfigHelper);
 
@@ -54,6 +60,9 @@ private:
     size_t m_chunkSizeBytes; // chunks size in bytes
     bool m_keepDataInMemory; // if true the whole dataset is kept in memory
     bool m_frameMode; // if true, the maximum expected sequence length in the dataset is one sample.
+    bool m_categoryBasedSampling; // whether to conduct category based sampling.
+    size_t m_samplePerCategory; // how many instances to sample from each category.
+    std::wstring m_categoryInfoName; // the stream name for the label
 };
 
 } } }

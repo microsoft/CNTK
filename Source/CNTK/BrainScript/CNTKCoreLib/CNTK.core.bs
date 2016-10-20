@@ -435,6 +435,8 @@ CNTK2 = [
     # (_new will be removed once the change is made)
     CrossEntropyWithSoftmax_new (L, z, tag='') = Minus (ReduceLogSum (z), TransposeTimes (L,          z),  tag=tag)
     ClassificationError_new (L, z, tag='')     = Minus (BS.Constants.One, TransposeTimes (L, Hardmax (z)), tag=tag)
+    
+    TripletFastLoss(leftNode, rightNode, labelNode, margin = 1, hard_negative_sample = true, harg_neg_sample_num = 30, sample_per_class = 1) = new ComputationNode [ operation = 'TripletFastLoss' ; inputs = (leftNode : rightNode : labelNode) ]
 
     // 12. Comparison nodes
     Less(_, y, tag='')         = new ComputationNode [ operation = 'Less'         ; inputs = (_ : y) /*plus the function args*/ ]

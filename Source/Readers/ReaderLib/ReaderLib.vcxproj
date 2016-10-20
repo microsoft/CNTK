@@ -40,6 +40,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CategoryBasedRandomizer.h" />
     <ClInclude Include="ConfigUtil.h" />
     <ClInclude Include="CorpusDescriptor.h" />
     <ClInclude Include="Bundler.h" />
@@ -69,6 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Bundler.cpp" />
+    <ClCompile Include="CategoryBasedRandomizer.cpp" />
     <ClCompile Include="ChunkCache.cpp" />
     <ClCompile Include="ChunkRandomizer.cpp" />
     <ClCompile Include="NoRandomizer.cpp" />
