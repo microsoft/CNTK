@@ -66,7 +66,7 @@ def test_typemap():
         op = times(p, right_val)
         c = constant(left_val)
 
-        bound = op.replace_placeholders({p:c})
+        return op.replace_placeholders({p:c})
 
     res = returnFunction()
     assert res.__class__ == functions.Function
