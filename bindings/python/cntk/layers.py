@@ -195,7 +195,7 @@ def Pooling(op,      # PoolingType_Max or _Average
             strides=1,
             pad=False):
     #UntestedBranchError("Pooling")
-    x = Placeholder(name='convolution_arg')
+    x = Placeholder(name='pooling_arg')
     apply_x = pooling (x, op, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
 
     if op == PoolingType_Average:
