@@ -15,15 +15,29 @@ import time
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 #from cntk.layers import *
 from cntk.utils import Record
+from cntk import combine
 from cntk.blocks import identity, Block
 
 # Sequential -- composite that applies a sequence of layers (or any functions) onto an input
 # Sequential ([F, G, H]) === F >> G >> H
 # TODO: address this feedback: "I find this arbitrary. You can have Sequential as part of a bigger layer.  Or you can view a linear layer already as a model (which is part of the bigger model)."
 # TODO: Willi had an idea how to use *layers to avoid the [ ]?
+# Experimental: users can inject strings which name variables that are returned. Not pretty yet.
+def _is_string(obj):
+    return isinstance(obj, str) # TODO: different in Python 2
 def Sequential(layers):
     if not isinstance(layers, (list,tuple)): # to support nested lists, run every item recursively through Sequential()
         return layers
-    from functools import reduce
-    apply_x = reduce(lambda f, g: Sequential(f) >> Sequential(g), layers, identity)
-    return Block(apply_x, 'Sequential', Record(layers=layers))
+    apply_x = identity
+    attrs = {}
+    for layer in layers:
+        if _is_string(layer):
+            UntestedBranchError("Sequential variable names") # BUGBUG: name gets lost in both Variable and resulting function once applied, so dict not usable for now for data, only for parameers
+            apply_x = combine([apply_x.output], name=layer)
+            attrs[layer] = apply_x
+        else:
+            apply_x = apply_x >> Sequential(layer)
+    #from functools import reduce
+    #apply_x = reduce(lambda f, g: Sequential(f) >> Sequential(g), layers, identity)
+    attrs['layers'] = [layer for layer in layers if not _is_string(layer)]
+    return Block(apply_x, 'Sequential', attrs)
