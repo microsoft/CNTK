@@ -15,21 +15,19 @@ from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
 from cntk.io import ReaderConfig, ImageDeserializer
-from cntk.initializer import glorot_uniform, gaussian
+from cntk.initializer import glorot_uniform, gaussian, he_normal
 from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu
 from cntk.device import gpu, set_default_device
 from cntk.ops import *
-from cntk.utils import get_train_eval_criterion, get_train_loss
 
 #
-# variables and stuff
+# Paths relative to current python file.
 #
-abs_path  = os.path.dirname(os.path.abspath(__file__))
-cntk_path = os.path.normpath(os.path.join(abs_path, "..", "..", "..", ".."))
-data_path = os.path.join(cntk_path, "Examples", "Image", "Datasets", "CIFAR-10")
-
+abs_path   = os.path.dirname(os.path.abspath(__file__))
+cntk_path  = os.path.normpath(os.path.join(abs_path, "..", "..", "..", ".."))
+data_path  = os.path.join(cntk_path, "Examples", "Image", "Datasets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
 
 # model dimensions
@@ -37,8 +35,8 @@ image_height = 32
 image_width  = 32
 num_channels = 3
 num_classes  = 10
-features_stream_name  = 'features'
-labels_stream_name    = 'labels'
+features_stream_name = 'features'
+labels_stream_name   = 'labels'
 
 #
 # Define the reader for both training and evaluation action.
@@ -66,31 +64,47 @@ def create_reader(path, map_file, mean_file, train):
 
     deserializer.map_labels(labels_stream_name, num_classes)
 
-    return ReaderConfig(deserializer, epoch_size=sys.maxsize).minibatch_source()
+    return ReaderConfig(deserializer, epoch_size = sys.maxsize).minibatch_source()
 
 #
-# helper APIs that define layers. 
+# helper APIs that define layers and shows low level APIs usage. 
 #
-def conv_layer(input, num_filters, filter_size, stride = (1,1), init = glorot_uniform(output_rank=-1, filter_rank=2), nonlinearity = relu):
-    shape = input.shape
-    channel_count = shape[0]
+def conv_layer(input, num_filters, filter_size, init, strides = (1,1), nonlinearity = relu):
+    channel_count = input.shape[0]
 
     b_param = parameter(shape=(num_filters, 1, 1))
     w_param = parameter(shape=(num_filters, channel_count, filter_size[0], filter_size[1]), init=init)
-    linear = convolution(w_param, input, (channel_count, stride[0], stride[1])) + b_param
+    linear = convolution(w_param, input, (channel_count, strides[0], strides[1])) + b_param
+
     if nonlinearity == None:
         return linear
 
     return nonlinearity(linear)
 
-def dense_layer(input, num_units, init=glorot_uniform(), nonlinearity = relu):
+def bn_layer(input, spatial_rank, nonlinearity = relu, bn_time_const = 5000, b_value = 0, sc_value = 1):
+    dims = input.shape[0]
+    bias_params    = parameter(shape=(dims), init = b_value)
+    scale_params   = parameter(shape=(dims), init = sc_value)
+    running_mean   = constant(0., (dims))
+    running_invstd = constant(0., (dims))
 
+    linear = batch_normalization(input, scale_params, bias_params, running_mean, running_invstd, spatial_rank > 0, bn_time_const, use_cudnn_engine = True)
+    if nonlinearity == None:
+        return linear
+
+    return nonlinearity(linear)
+
+def conv_bn_layer(input, num_filters, filter_size, init, strides = (1,1), nonlinearity = relu, bn_time_const = 5000, b_value = 0, sc_value = 1):
+    conv = conv_layer(input, num_filters, filter_size, init, strides = strides, nonlinearity = None)
+    return bn_layer(conv, 2, nonlinearity = nonlinearity)
+
+def dense_layer(input, num_units, init, nonlinearity = relu):
     b_param = parameter(shape=(num_units))
 
     if len(input.shape) >= 3:
-        w_param = parameter(shape=(input.shape[0], input.shape[1], input.shape[2], num_units), init=init)
+        w_param = parameter(shape=(input.shape[0], input.shape[1], input.shape[2], num_units), init = init)
     else:
-        w_param = parameter(shape=(input.shape[0], num_units), init=init)
+        w_param = parameter(shape=(input.shape[0], num_units), init = init)
 
     linear = b_param + times(input, w_param)
     if nonlinearity == None:
@@ -98,72 +112,93 @@ def dense_layer(input, num_units, init=glorot_uniform(), nonlinearity = relu):
 
     return nonlinearity(linear)
 
+def dense_bn_layer(input, num_units, init, nonlinearity = relu):
+    dense = dense_layer(input, num_units, init, nonlinearity = None)
+    return bn_layer(dense, 0, nonlinearity = nonlinearity)
+
 def max_pool_layer(input, pool_size, stride):
     return pooling(input, PoolingType_Max, (1, pool_size[0], pool_size[1]), (1, stride[0], stride[1]))
 
-def dropout_layer(input, p):
-    return dropout(input, dropout_rate=p)
+def dropout_layer(input, rate):
+    return dropout(input, dropout_rate = rate)
 
-#
-# define the model.
-#
-def create_model_1(input):
+# Define basic model
+def create_basic_model(input):
     net = {}
 
-    net['conv1'] = conv_layer(input, 32, (5,5), init=gaussian(output_rank=-1, filter_rank=2, scale=0.0043))
+    net['conv1'] = conv_layer(input, 32, (5,5), init = gaussian(scale = 0.0043))
     net['pool1'] = max_pool_layer(net['conv1'], (3,3), (2,2))
 
-    net['conv2'] = conv_layer(net['pool1'], 32, (5,5), init=gaussian(output_rank=-1, filter_rank=2, scale=1.414))
+    net['conv2'] = conv_layer(net['pool1'], 32, (5,5), init = gaussian(scale = 1.414))
     net['pool2'] = max_pool_layer(net['conv2'], (3,3), (2,2))
 
-    net['conv3'] = conv_layer(net['pool2'], 64, (5,5), init=gaussian(output_rank=-1, filter_rank=2, scale=1.414))
+    net['conv3'] = conv_layer(net['pool2'], 64, (5,5), init = gaussian(scale = 1.414))
     net['pool3'] = max_pool_layer(net['conv3'], (3,3), (2,2))
 
-    net['fc4']   = dense_layer(net['pool3'], 64, init=gaussian(scale=12))
-    net['fc5']   = dense_layer(net['fc4'], 10, init=gaussian(scale=1.5), nonlinearity = None)
+    net['fc4']   = dense_layer(net['pool3'], 64, init = gaussian(scale = 12))
+    net['fc5']   = dense_layer(net['fc4'], 10, init = gaussian(scale = 1.5), nonlinearity = None)
 
     return net
 
-def create_model_2(input):
+# Task 1: Adding Dropout
+def create_basic_model_with_dropout(input):
     net = {}
-
-    net['conv1'] = conv_layer(input, 32, (5,5), init=gaussian(output_rank=-1, filter_rank=2, scale=0.0043))
+    net['conv1'] = conv_layer(input, 32, (5,5), init = gaussian(scale = 0.0043))
     net['pool1'] = max_pool_layer(net['conv1'], (3,3), (2,2))
 
-    net['conv2'] = conv_layer(net['pool1'], 32, (5,5), init=gaussian(output_rank=-1, filter_rank=2, scale=1.414))
+    net['conv2'] = conv_layer(net['pool1'], 32, (5,5), init = gaussian(scale = 1.414))
     net['pool2'] = max_pool_layer(net['conv2'], (3,3), (2,2))
 
-    net['conv3'] = conv_layer(net['pool2'], 64, (5,5), init=gaussian(output_rank=-1, filter_rank=2, scale=1.414))
+    net['conv3'] = conv_layer(net['pool2'], 64, (5,5), init = gaussian(scale = 1.414))
     net['pool3'] = max_pool_layer(net['conv3'], (3,3), (2,2))
 
-    net['fc4']   = dense_layer(net['pool3'], 64, init=gaussian(scale=12))
-    net['drop4'] = dropout_layer(net['fc4'], 0.5)
-    net['fc5']   = dense_layer(net['drop4'], 10, init=gaussian(scale=1.5), nonlinearity = None)
+    net['fc4']   = dense_layer(net['pool3'], 64, init = gaussian(scale = 12))
+    net['drop4'] = dropout_layer(net['fc4'], 0.75)
+    net['fc5']   = dense_layer(net['drop4'], 10, init = gaussian(scale = 1.5), nonlinearity = None)
 
     return net
 
-def create_model(input):
+# Task 2: Adding Batch Normalization
+def create_basic_model_with_batch_normalization(input):
     net = {}
+    net['conv1'] = conv_bn_layer(input, 32, (5,5), init = gaussian(scale = 0.0043))
+    net['pool1'] = max_pool_layer(net['conv1'], (3,3), (2,2))
 
-    net['conv1'] = Convolution((5,5), 32, init=gaussian(output_rank=-1, filter_rank=2, scale=0.0043), activation = relu, pad = True)(input)
-    net['pool1'] = Pooling(PoolingKind.MAX, (3,3), stride=(2,2))(net['conv1'])
+    net['conv2'] = conv_bn_layer(net['pool1'], 32, (5,5), init = gaussian(scale = 1.414))
+    net['pool2'] = max_pool_layer(net['conv2'], (3,3), (2,2))
 
-    net['conv2'] = Convolution((5,5), 32, init=gaussian(output_rank=-1, filter_rank=2, scale=1.414), activation = relu, pad = True)(net['pool1'])
-    net['pool2'] = Pooling(PoolingKind.MAX, (3,3), stride=(2,2))(net['conv2'])
+    net['conv3'] = conv_bn_layer(net['pool2'], 64, (5,5), init = gaussian(scale = 1.414))
+    net['pool3'] = max_pool_layer(net['conv3'], (3,3), (2,2))
 
-    net['conv3'] = Convolution((5,5), 64, init=gaussian(output_rank=-1, filter_rank=2, scale=1.414), activation=relu, pad = True)(net['pool2'])
-    net['pool3'] = Pooling(PoolingKind.MAX, (3,3), stride=(2,2))(net['conv3'])
-
-    net['fc4'] = Dense(64, init=gaussian(scale=12), activation=relu)(net['pool3'])
-    net['fc5'] = Dense(10, init=gaussian(scale=1.5), activation=relu)(net['fc4'])
+    net['fc4']   = dense_bn_layer(net['pool3'], 64, init = gaussian(scale = 12))
+    net['fc5']   = dense_layer(net['fc4'], 10, init = gaussian(scale = 1.5), nonlinearity = None)
 
     return net
+
+# Task 3: Implement Task 1 and 2 using layer API, when it is ready.
+# def create_basic_model_layer(input):
+#    net = {}
+
+#    net['conv1'] = Convolution((5,5), 32, init=gaussian(scale=0.0043), activation = relu, pad = True)(input)
+#    net['pool1'] = Pooling(PoolingKind.MAX, (3,3), stride=(2,2))(net['conv1'])
+
+#    net['conv2'] = Convolution((5,5), 32, init=gaussian(scale=1.414), activation = relu, pad = True)(net['pool1'])
+#    net['pool2'] = Pooling(PoolingKind.MAX, (3,3), stride=(2,2))(net['conv2'])
+
+#    net['conv3'] = Convolution((5,5), 64, init=gaussian(scale=1.414), activation=relu, pad = True)(net['pool2'])
+#    net['pool3'] = Pooling(PoolingKind.MAX, (3,3), stride=(2,2))(net['conv3'])
+
+#    net['fc4'] = Dense(64, init=gaussian(scale=12), activation = relu)(net['pool3'])
+#    net['fc5'] = Dense(10, init=gaussian(scale=1.5), activation = relu)(net['fc4'])
+
+#    return net
 
 #
 # Train and evaluate the network.
 #
 def train_and_evaluate(reader_train, reader_test, max_epochs):
 
+    # Map reader streams
     features_slot = reader_train[features_stream_name]
     labels_slot   = reader_train[labels_stream_name]
 
@@ -172,7 +207,7 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     label_var = input_variable((num_classes), labels_slot.m_element_type)
 
     # apply model to input
-    model = create_model_1(input_var)
+    model = create_basic_model(input_var)
     z = model['fc5']
 
     #
@@ -187,13 +222,19 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     epoch_size     = 50000
     minibatch_size = 64
 
-    lr_per_sample = [0.00015625]*10+[0.000046875]*10+[0.0000156]
-    momentum      = 0.9 ** 1/ minibatch_size
-    l2_reg_weight = 0.03
+    # For basic model
+    lr_per_sample       = [0.00015625]*10+[0.000046875]*10+[0.0000156]
+    momentum_per_sample = 0.9 ** (1.0 / minibatch_size)
+    l2_reg_weight       = 0.03
+
+    # For basic model with batch normalization
+    # lr_per_sample       = [0.00046875]*7+[0.00015625]*10+[0.000046875]*10+[0.000015625]
+    # momentum_per_sample = 0
+    # l2_reg_weight       = 0
 
     # trainer object
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner     = momentum_sgd(z.parameters, lr_schedule, momentum, 
+    learner     = momentum_sgd(z.parameters, lr_schedule, momentum_per_sample, 
                                l2_regularization_weight = l2_reg_weight)
     trainer     = Trainer(z, ce, pe, [learner])
 
@@ -230,9 +271,6 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
 
         print("Finished Epoch[{} of {}]: [Training] ce = {:0.6f} * {}, errs = {:0.1f}% * {}".format(epoch+1, max_epochs, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
     
-    # Save the latest checkpoint
-    # trainer.save_checkpoint(os.path.join(model_path, "cifar_checkpoint"))
-
     #
     # Evaluation action
     #
@@ -273,4 +311,4 @@ if __name__=='__main__':
     reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', True)
     reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', False)
 
-    train_and_evaluate(reader_train, reader_test, 30)
+    train_and_evaluate(reader_train, reader_test, 10)
