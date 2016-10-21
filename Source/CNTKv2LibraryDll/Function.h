@@ -78,6 +78,7 @@ namespace CNTK
         {PrimitiveOpType::Combine, L"Combine"},
         {PrimitiveOpType::RandomSample, L"RandomSample"},
         {PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency"},
+        {PrimitiveOpType::ROIPooling, L"ROIPooling"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -177,6 +178,7 @@ namespace CNTK
         static const std::wstring AttributeNameUpperPad;
         static const std::wstring AttributeNameTranspose;
         static const std::wstring AttributeNameMaxTempMemSizeInSamples;
+        static const std::wstring AttributeNameROIOutputShape;
         static const std::wstring AttributeNamePoolingType;
         static const std::wstring AttributeNamePoolingWindowShape;
         static const std::wstring AttributeNameSpatial;
