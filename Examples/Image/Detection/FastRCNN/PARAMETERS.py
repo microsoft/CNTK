@@ -20,7 +20,7 @@ cntk_padWidth = 1000
 cntk_padHeight = 1000
 
 # directories
-rootDir = "D:/GitHub/CNTK/Examples/Image/Detection/FastRCNN0/"
+rootDir = "D:/GitHub/CNTK/Examples/Image/Detection/FastRCNN/"
 imgDir = rootDir + "../../Datasets/Grocery/"
 pascalDataDir = rootDir + "../../Datasets/Pascal/"
 
