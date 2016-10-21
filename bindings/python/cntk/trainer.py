@@ -34,8 +34,12 @@ class Trainer(cntk_py.Trainer):
         loss_function = sanitize_function(loss_function)
         eval_function = sanitize_function(eval_function)
 
-        super(Trainer, self).__init__(model, loss_function, eval_function,
-                parameter_learners, distributed_trainer)
+        if distributed_trainer:
+            super(Trainer, self).__init__(model, loss_function, eval_function,
+                parameter_learners, distributed_trainer.data)
+        else:
+            super(Trainer, self).__init__(model, loss_function, eval_function,
+                parameter_learners)
 
     def train_minibatch(self, arguments, outputs=None, device=None):
         '''
