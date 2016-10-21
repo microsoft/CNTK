@@ -158,12 +158,12 @@ class Function(cntk_py.Function):
         Evaluate the node using the specified ``arguments`` as input.
 
         Args:
-            arguments (`dict` or `list` or `tuple`): maps variables to their
-             input data. The interpretation depends on the input type:
+            arguments: maps variables to their input data. The interpretation depends on
+             the input type:
 
                * `dict`: keys are input variable or names, and values are the input data.
-               * `list`: elements are input data in the order their respective variables have been defined in the network.
-
+               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+                For nodes with more than one input, only `dict` is allowed.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
@@ -209,12 +209,12 @@ class Function(cntk_py.Function):
             array([[[[ 1.  ,  0.5 ,  0.25]]]], dtype=float32)
 
         Args:
-            arguments (`dict` or `list` or `tuple`): maps variables to their
+            arguments: maps variables to their
              input data. The interpretation depends on the input type:
 
                * `dict`: keys are input variable or names, and values are the input data.
-               * `list`: elements are input data in the order their respective variables have been defined in the network.
-
+               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+                For nodes with more than one input, only `dict` is allowed.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as ``tuple``: the
@@ -387,7 +387,7 @@ class Function(cntk_py.Function):
         Restore the models parameters from a saved model file
 
         Args:
-            filename (`str`): saved model path
+            filename (`str`): saved model path 
 
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file

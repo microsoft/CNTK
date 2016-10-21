@@ -18,7 +18,7 @@ def uniform(scale=DefaultParamInitScale, seed=None):
         seed (`int`): random seed
 
     Returns:
-        initializer for `:class:cntk.variables.Parameter`
+        initializer for :class:`cntk.variables.Parameter`
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -36,7 +36,7 @@ def gaussian(output_rank=SentinelValueForInferParamInitRank, filter_rank=Sentine
         seed (`int`): random seed
 
     Returns:
-        initializer for `:class:cntk.variables.Parameter`
+        initializer for :class:`cntk.variables.Parameter`
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -54,7 +54,7 @@ def xavier(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelV
         seed (`int`): random seed
 
     Returns:
-        initializer for `:class:cntk.variables.Parameter`
+        initializer for :class:`cntk.variables.Parameter`
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -72,7 +72,7 @@ def glorot_uniform(output_rank=SentinelValueForInferParamInitRank, filter_rank=S
         seed (`int`): random seed
 
     Returns:
-        initializer for `:class:cntk.variables.Parameter`
+        initializer for :class:`cntk.variables.Parameter`
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -90,7 +90,7 @@ def glorot_normal(output_rank=SentinelValueForInferParamInitRank, filter_rank=Se
         seed (`int`): random seed
 
     Returns:
-        initializer for `:class:cntk.variables.Parameter`
+        initializer for :class:`cntk.variables.Parameter`
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -108,7 +108,7 @@ def he_uniform(output_rank=SentinelValueForInferParamInitRank, filter_rank=Senti
         seed (`int`): random seed
 
     Returns:
-        initializer for `:class:cntk.variables.Parameter`
+        initializer for :class:`cntk.variables.Parameter`
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -126,7 +126,7 @@ def he_normal(output_rank=SentinelValueForInferParamInitRank, filter_rank=Sentin
         seed (`int`): random seed
 
     Returns:
-        initializer for `:class:cntk.variables.Parameter`
+        initializer for :class:`cntk.variables.Parameter`
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -142,7 +142,7 @@ def bilinear(kernel_width, kernel_height):
         kernel_height (`int`): kernel height
 
     Returns:
-        initializer for `:class:cntk.variables.Parameter`
+        initializer for :class:`cntk.variables.Parameter`
     '''
     return cntk_py.bilinear_initializer(kernel_width, kernel_height)
 
