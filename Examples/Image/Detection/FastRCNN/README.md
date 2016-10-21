@@ -29,12 +29,16 @@ After running the script, the toy dataset will be installed under the `Image/Dat
 
 Currently, CNTK only supports `Python 3.4`, and we hereby assume you already have it installed. To run the code in this example, you need to install a few additional packages. Under Python 3.4, run:
 
-`pip install -r requirements64_python3.txt`
+`pip install -r requirements.txt`
 
-If some of the wheel packages are not recognized, you will need to download and install them manually. If you are running CNTK on Windows, a good place to search for these packages is http://www.lfd.uci.edu/~gohlke/pythonlibs/.
+You will further need Scikit-Image and OpenCV to run these examples. Unfortunately, for Python 3.4, there is no direct way to install them other than downloading the corresponding wheel packages and install manually. For Windows users, visit http://www.lfd.uci.edu/~gohlke/pythonlibs/, and download:
+
+    scikit_image-0.12.3-cp34-cp34m-win_amd64.whl
+    opencv_python-3.1.0-cp34-cp34m-win_amd64.whl
 
 Once you download the respective wheel binaries, install them with:
 
+`pip install your_download_folder/scikit_image-0.12.3-cp34-cp34m-win_amd64.whl`  
 `pip install your_download_folder/opencv_python-3.1.0-cp34-cp34m-win_amd64.whl`
 
 Last but not least, in `PARAMETERS.py`: Change 'rootdir' to the absolute path of the FastRCNN folder of your CNTK repository clone (only forward slashes, has to end with forward slash). Also, make sure datasetName is set to "grocery".
@@ -106,7 +110,7 @@ We are still working on enabling the script to run Fast R-CNN on Pascal VOC data
 -- 2007 test:     http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar
 -- 2012 trainval: http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar
 - Additionally you need selective_search_data: http://www.cs.berkeley.edu/~rbg/fast-rcnn-data/selective_search_data.tgz
-- In PARAMETERS.py set datasetName = "pascalVoc". 
+- In PARAMETERS.py set datasetName = "pascalVoc".
 
 ## Running on your own data
 
