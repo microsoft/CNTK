@@ -41,6 +41,8 @@ from cntk.blocks import _default_initializer, _INFERRED
 # map_rank   given: expand W to leave exactly mapRank axes (input_rank must not be given)
 # none       given: expand W to all (same as map_rank=0)
 def Dense(shape, init=_default_initializer, activation=identity, input_rank=None, map_rank=None, bias=True, init_bias=0):
+    if activation is None: # we must accept None here as well
+        activation = identity
     output_shape = _as_tuple(shape)
 
     if input_rank is not None and map_rank is not None:
@@ -152,6 +154,8 @@ def Convolution(filter_shape,        # e.g. (3,3)
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0):
     #UntestedBranchError("Convolution")
+    if activation is None: # we must accept None here as well
+        activation = identity
     if reduction_rank != 1:
         NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
     if transpose:
@@ -169,8 +173,8 @@ def Convolution(filter_shape,        # e.g. (3,3)
     # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag
     #d = init_kernel.__dict__
     #x = init_kernel.filter_rank
-    W = Parameter(output_channels_shape + kernel_shape, init=init_kernel)                             # (K, C, H, W) aka [ W x H x C x K ]
-    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias) if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
+    W = Parameter(output_channels_shape + kernel_shape,             init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
+    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
     # expression
     x = Placeholder(name='convolution_arg')
