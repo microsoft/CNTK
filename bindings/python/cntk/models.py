@@ -28,16 +28,16 @@ def _is_string(obj):
 def Sequential(layers):
     if not isinstance(layers, (list,tuple)): # to support nested lists, run every item recursively through Sequential()
         return layers
-    apply_x = identity
-    attrs = {}
-    for layer in layers:
-        if _is_string(layer):
-            UntestedBranchError("Sequential variable names") # BUGBUG: name gets lost in both Variable and resulting function once applied, so dict not usable for now for data, only for parameers
-            apply_x = combine([apply_x.output], name=layer)
-            attrs[layer] = apply_x
-        else:
-            apply_x = apply_x >> Sequential(layer)
-    #from functools import reduce
-    #apply_x = reduce(lambda f, g: Sequential(f) >> Sequential(g), layers, identity)
-    attrs['layers'] = [layer for layer in layers if not _is_string(layer)]
+    #apply_x = identity
+    #for layer in layers:
+    #    if _is_string(layer):
+    #        UntestedBranchError("Sequential variable names") # BUGBUG: name gets lost in both Variable and resulting function once applied, so dict not usable for now for data, only for parameers
+    #        apply_x = combine([apply_x.output], name=layer)
+    #        attrs[layer] = apply_x
+    #    else:
+    #        apply_x = apply_x >> Sequential(layer)
+    #attrs['layers'] = [layer for layer in layers if not _is_string(layer)]
+    from functools import reduce
+    apply_x = reduce(lambda f, g: f >> Sequential(g), layers, identity)
+    attrs = Record(layers=layers)
     return Block(apply_x, 'Sequential', attrs)
