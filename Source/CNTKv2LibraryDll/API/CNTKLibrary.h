@@ -1713,6 +1713,7 @@ private:
             VariableKind m_varKind;
             ::CNTK::DataType m_dataType;
             Function* const m_ownerFunction; // Variable does not keep the Function alive
+            std::unique_ptr<std::once_flag> m_initValueFlag;
             NDArrayViewPtr m_value;
             std::unique_ptr<ParameterInitializer> m_valueInitializer;
             std::unique_ptr<DeviceDescriptor> m_valueInitializationDevice;
