@@ -38,30 +38,33 @@ namespace CNTK
         if (!IsConstant() && !IsParameter())
             LogicError("Only Variables of kind Parameter and Constant have a Value!");
 
-        if (m_dataFields->m_value == nullptr)
+        if (m_dataFields->m_initValueFlag)
         {
-            assert(m_dataFields->m_valueInitializer);
-            assert(m_dataFields->m_valueInitializationDevice);
+            std::call_once(*m_dataFields->m_initValueFlag, [=]{
+                assert(m_dataFields->m_value == nullptr);
+                assert(m_dataFields->m_valueInitializer);
+                assert(m_dataFields->m_valueInitializationDevice);
 
-            switch (GetDataType())
-            {
-            case DataType::Float:
-            {
-                m_dataFields->m_value = CreateValueFromParameterInitializer<float>(Shape(), *m_dataFields->m_valueInitializer, *m_dataFields->m_valueInitializationDevice);
-                break;
-            }
-            case DataType::Double:
-            {
-                m_dataFields->m_value = CreateValueFromParameterInitializer<double>(Shape(), *m_dataFields->m_valueInitializer, *m_dataFields->m_valueInitializationDevice);
-                break;
-            }
-            default:
-                LogicError("Unsupported DataType %s", DataTypeName(GetDataType()));
-                break;
-            }
+                switch (GetDataType())
+                {
+                case DataType::Float:
+                {
+                    m_dataFields->m_value = CreateValueFromParameterInitializer<float>(Shape(), *m_dataFields->m_valueInitializer, *m_dataFields->m_valueInitializationDevice);
+                    break;
+                }
+                case DataType::Double:
+                {
+                    m_dataFields->m_value = CreateValueFromParameterInitializer<double>(Shape(), *m_dataFields->m_valueInitializer, *m_dataFields->m_valueInitializationDevice);
+                    break;
+                }
+                default:
+                    LogicError("Unsupported DataType %s", DataTypeName(GetDataType()));
+                    break;
+                }
 
-            m_dataFields->m_valueInitializer = nullptr;
-            m_dataFields->m_valueInitializationDevice = nullptr;
+                m_dataFields->m_valueInitializer = nullptr;
+                m_dataFields->m_valueInitializationDevice = nullptr;
+            });
         }
 
         assert(m_dataFields->m_value != nullptr);
@@ -93,6 +96,7 @@ namespace CNTK
                 InvalidArgument("Sum of filter rank (%d) and output rank (%d) of the parameter initializer cannot exceed the Parameter's rank(%d)", filterRank, outputRank, (int)m_shape.Rank());
         }
 
+        m_initValueFlag.reset(new std::once_flag());
         m_valueInitializer.reset(new ParameterInitializer(initializationConfig));
         m_valueInitializationDevice.reset(new DeviceDescriptor(device));
     }

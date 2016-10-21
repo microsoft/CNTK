@@ -178,7 +178,7 @@ namespace CNTK
             stream >> isOrderedDynamicAxis;
 
             Axis* axisPtr = nullptr;
-            if (Axis(staticAxisIdx).IsStaticAxis())
+            if (!Axis(staticAxisIdx).IsDynamicAxis())
                 axisPtr = new Axis(staticAxisIdx);
             else
                 axisPtr = new Axis(axisName, isOrderedDynamicAxis);

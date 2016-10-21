@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 from ..functions import *
 from ...trainer import *
-from .. import constant, parameter, input_variable, placeholder_variable
+from .. import constant, parameter, input_variable, placeholder_variable, times
 
 
 def test_variable_forwarding():
@@ -60,5 +60,18 @@ def test_cloning():
     assert cloned.inputs[1].name == 'i'
     assert cloned.inputs[1].uid != i.uid
 
-    # TODO test other methods
 
+def test_replace_placeholder_s():
+    left_val = [[10,2]]
+    right_val = [[2],[3]]
+
+    p = placeholder_variable(shape=(1,2))
+    c = constant(left_val)
+
+    op = times(p, right_val)
+    op.replace_placeholders({p:c})
+    assert op.eval() == 26
+
+    op = times(p, right_val)
+    op.replace_placeholder(c)
+    assert op.eval() == 26

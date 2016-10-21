@@ -24,7 +24,7 @@ directory:
    trains on the CMUDict corpus.
 
 -  `NumpyInterop <https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/NumpyInterop/FeedForwardNet.py>`__
-   – numpy interop example showing how to train a simple feed-forward
+   - numpy interop example showing how to train a simple feed-forward
    network with training data fed using numpy arrays.
 
 -  `SLUHandsOn <https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/SLUHandsOn/SLUHandsOn.py>`__

@@ -226,7 +226,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
         transpose (bool): set to true for deconvolution.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
-         performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the inpu
+         performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
          samples.
         name (`str`, optional): the name of the Function instance in the network
     Returns:
@@ -238,6 +238,32 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                        tuple(reversed(lower_pad)), tuple(
                            reversed(upper_pad)), transpose,
                        max_temp_mem_size_in_samples, name)
+
+
+@typemap
+def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
+    '''
+    The ROI (Region of Interest) pooling operation pools over sub-regions of an input volume and produces
+    a fixed sized output volume regardless of the ROI size. It is used for example for object detection.
+
+    Each input image has a fixed number of regions of interest, which are specified as bounding boxes (x, y, w, h)
+    that are relative to the image size [W x H]. This operation can be used as a replacement for the final
+    pooling layer of an image classification network (as presented in Fast R-CNN and others).
+
+    Args:
+        conv_feature_map: a convolutional feature map as the input volume ([W x H x C x N]).
+        rois: the coordinates of the ROIs per image ([4 x roisPerImage x N]), each ROI is (x, y, w, h) relative to original image size.
+        roi_output_shape: dimensions (width x height) of the ROI pooling output shape
+        name (`str`, optional): the name of the Function instance in the network
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import roipooling
+    conv_feature_map = sanitize_input(conv_feature_map)
+    rois = sanitize_input(rois)
+    roi_output_shape = sanitize_shape(roi_output_shape)
+    return roipooling(conv_feature_map, rois, roi_output_shape, name)
+
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
@@ -287,7 +313,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
 @typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
-                        normalization_time_constant=0, blend_time_constant=0,
+                        normalization_time_constant=5000, blend_time_constant=0,
                         epsilon=0.00001, use_cudnn_engine=False, name=''):
     '''
     Normalizes layer outputs for every minibatch for each output (feature) independently
@@ -305,9 +331,8 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         running_inv_std: running variance. Represented as ``running_mean``
         spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
-        normalization_time_constant(`float`, default 0): time constant for computing running average of
-         mean and variance as a low-pass filtered version of the batch statistics. Note: the default is not
-         typically what you want
+        normalization_time_constant(`float`, default 5000): time constant for computing running average of
+         mean and variance as a low-pass filtered version of the batch statistics. 
         blend_time_constant(`float`, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
@@ -1637,9 +1662,99 @@ def reduce_min(x, axis=None, name=''):
     axis = sanitize_axis(axis)
     return reduce_min(x, axis, name)
 
-##########################################################################
+#######################################################################
 # training ops
-##########################################################################
+#######################################################################
+
+@typemap
+def random_sample(weights, num_samples, allow_duplicates, name=''):
+    '''
+    Estimates inclusion frequencies for random sampling with or without
+    replacement.
+
+    The node's value is a set of num_samples random samples represented
+    by a (sparse) matrix of shape [num_samples x len(weights)],
+    where len(weights) is the number of classes (categories) to choose
+    from. The output has no dynamic axis.
+    The samples are drawn according to the weight vector p(i) =
+    weights[i] / sum(weights)
+    We get one set of samples per minibatch.
+    Intended use cases are e.g. sampled softmax, noise contrastive
+    estimation etc.
+
+    Args:
+        weights: input vector of sampling weights which should be
+            non-negative numbers.
+        num_samples (`int`): number of expected samples
+        allow_duplicates (`bool`): If sampling is done
+            with replacement (`True`) or without (`False`).
+
+    Returns:
+        :class:`cntk.ops.functions.Function`
+
+    '''
+    from cntk.cntk_py import random_sample
+    weights = sanitize_input(weights)
+
+    return random_sample(weights, num_samples, allow_duplicates, name)
+
+
+@typemap
+def random_sample_inclusion_frequency(
+    weights, 
+    num_samples, 
+    allow_duplicates, 
+    name=''):
+    '''
+    For weighted sampling with the specifed sample size (`num_samples`)
+    this node computes the expected number of occurences of each class
+    in the the sampled set. In case of sampling without replacement 
+    the result is only an estimate which might be quite rough in the
+    case of small sample sizes.
+    Intended uses are e.g. sampled softmax, noise contrastive 
+    estimation etc.
+    This operation will be typically used together 
+    with :func:`random_sample`.
+
+    Args:
+        weights: input vector of sampling weights which should be 
+            non-negative numbers. 
+        num_samples (`int`): number of expected samples
+        allow_duplicates (`bool`): If sampling is done 
+            with replacement (`True`) or without (`False`).
+
+    Examples:
+        >>> import numpy as np
+        >>> from cntk import *
+        >>> # weight vector with 100 '1000'-values followed 
+        >>> # by 100 '1' values
+        >>> w1 = np.full((100),1000, dtype = np.float)
+        >>> w2 = np.full((100),1, dtype = np.float)
+        >>> w = np.concatenate((w1, w2))
+        >>> f = random_sample_inclusion_frequency(w, 150, True).eval()
+        >>> f[0]
+        1.4985015
+        >>> f[1]
+        1.4985015
+        >>> f[110]
+        0.0014985015
+        >>> # when switching to sampling without duplicates samples are
+        >>> # forced to pick the low weight classes too
+        >>> f = random_sample_inclusion_frequency(w, 150, False).eval()
+        >>> f[0]
+        1.0
+
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import random_sample_inclusion_frequency
+    weights = sanitize_input(weights)
+
+    return random_sample_inclusion_frequency(
+        weights, 
+        num_samples, 
+        allow_duplicates, 
+        name)
 
 
 @typemap
@@ -1727,7 +1842,7 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
 
 
 @typemap
-def placeholder_variable(shape, dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
+def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     '''
     It creates a variable place holder for recurrence networks, when the network's dynamic axes
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
@@ -1739,8 +1854,16 @@ def placeholder_variable(shape, dynamic_axes=Axis.default_input_variable_dynamic
     Returns:
         :class:`cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import placeholder_variable
-    shape = sanitize_shape(shape)
+    from cntk.cntk_py import placeholder_variable, NDShape, Axis
+
+    if shape is None:
+        shape = NDShape.unknown.dimensions()
+    else:
+        shape = sanitize_shape(shape)
+
+    if dynamic_axes is None:
+        dynamic_axes = Axis.unknown_dynamic_axes
+
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
 
@@ -1780,9 +1903,9 @@ def parameter(shape=None, init=None, device=None, name=''):
     if np.isscalar(init) and not shape:
         shape = ()
         if isinstance(init, np.ndarray):
-            data_type = str(init.dtype)
+            data_type = init.dtype
         else:
-            data_type = 'float32'
+            data_type = np.float32
     else:
         data_type = None
 
@@ -1817,14 +1940,12 @@ def constant(value=None, shape=None, device=None, name=''):
         device = use_default_device()
     if np.isscalar(value) and not shape:
         shape = ()
-        if isinstance(value, np.ndarray):
-            data_type = str(value.dtype)
-        else:
-            data_type = 'float32'
+    if isinstance(value, np.ndarray):
+        dtype = value.dtype
     else:
-        data_type = None
+        dtype = np.float32
 
-    return Constant(value, shape, data_type, device, name)
+    return Constant(value, shape, dtype, device, name)
 
 ##########################################################################
 # normalization ops

@@ -113,10 +113,12 @@ additionally clone the CNTK repository into ``C:\repos\cntk``.
 
 -  Run: ``cd [Path to your unzipped PS scripts]``
 -  Choose a wheel file appropriate for your machine:
+
   -  CPU:
      https://cntk.ai/pippackages/cpu/cntk-2.0a4-cp34-cp34m-win\_amd64.whl
   -  GPU:
      https://cntk.ai/pippackages/gpu/cntk-2.0a4-cp34-cp34m-win\_amd64.whl
+
 -  Run: ``.\install.ps1 -Execute -cntkWhl [Location of the Whl file]``
 -  Note: at a later time, if you need to re-install the same or a different wheel package, please run: ``.\install.ps1 -Execute -ForceWheelUpdate [Location of the Whl file]``
    
