@@ -1733,11 +1733,11 @@ def random_sample_inclusion_frequency(
         >>> w = np.concatenate((w1, w2))
         >>> f = random_sample_inclusion_frequency(w, 150, True).eval()
         >>> f[0]
-        1.4985014985014986
+        1.4985015
         >>> f[1]
-        1.4985014985014986
+        1.4985015
         >>> f[110]
-        0.0014985014985014985
+        0.0014985015
         >>> # when switching to sampling without duplicates samples are
         >>> # forced to pick the low weight classes too
         >>> f = random_sample_inclusion_frequency(w, 150, False).eval()
