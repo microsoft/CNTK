@@ -4,27 +4,32 @@
 # ==============================================================================
 from .. import cntk_py
 
+__typemap = None
 def map_if_possible(obj):
-    from cntk.ops.variables import Variable, Parameter, Constant
-    from cntk.ops.functions import Function
-    from cntk.learner import Learner
-    from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
-    from cntk.axis import Axis
-    typemap = { 
-            cntk_py.Variable: Variable,
-            cntk_py.Parameter: Parameter,
-            cntk_py.Constant: Constant,
-            cntk_py.Function: Function, 
-            cntk_py.Learner: Learner, 
-            cntk_py.MinibatchSource: MinibatchSource,
-            cntk_py.MinibatchData: MinibatchData,
-            cntk_py.StreamConfiguration: StreamConfiguration, 
-            cntk_py.Axis: Axis,
-            }
+    global __typemap
+    if __typemap is None:
+        # We can do this only if cntk_py and the cntk classes are already
+        # known, which is the case, when map_if_possible is called. 
+        from cntk.ops.variables import Variable, Parameter, Constant
+        from cntk.ops.functions import Function
+        from cntk.learner import Learner
+        from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
+        from cntk.axis import Axis
+        __typemap = { 
+                cntk_py.Variable: Variable,
+                cntk_py.Parameter: Parameter,
+                cntk_py.Constant: Constant,
+                cntk_py.Function: Function, 
+                cntk_py.Learner: Learner, 
+                cntk_py.MinibatchSource: MinibatchSource,
+                cntk_py.MinibatchData: MinibatchData,
+                cntk_py.StreamConfiguration: StreamConfiguration, 
+                cntk_py.Axis: Axis,
+                }
 
     # Some types like NumPy arrays don't let to set the __class__
-    if obj.__class__ in typemap:
-        obj.__class__ = typemap[obj.__class__]
+    if obj.__class__ in __typemap:
+        obj.__class__ = __typemap[obj.__class__]
     else:
         if isinstance(obj, (tuple, list, set)):
             for o in obj:

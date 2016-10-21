@@ -251,6 +251,7 @@ def get_data_type(*args):
     Returns:
         ``np.float32``, ``np.float64``, or ``None``
     """
+    from ..ops.variables import Variable
 
     dtypes = set()
     if len(args) == 1 and isinstance(args, cntk_py.Function):
