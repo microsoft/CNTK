@@ -28,58 +28,61 @@ namespace std
 
 namespace CNTK
 {
+    // Move primitiveOpNames out from PrimitiveOpTypeName(), as local static variables are not thread-safe under VS2013.
+    // Todo: Move it into PrimitiveOpTypeName() as local static after upgraded to VS2015.
+    static const std::unordered_map<PrimitiveOpType, std::wstring> primitiveOpNames = {
+        {PrimitiveOpType::Negate, L"Negate"},
+        {PrimitiveOpType::Sigmoid, L"Sigmoid"},
+        {PrimitiveOpType::Tanh, L"Tanh"},
+        {PrimitiveOpType::ReLU, L"ReLU"},
+        {PrimitiveOpType::Exp, L"Exp"},
+        {PrimitiveOpType::Log, L"Log"},
+        {PrimitiveOpType::Sqrt, L"Sqrt"},
+        {PrimitiveOpType::Floor, L"Floor"},
+        {PrimitiveOpType::Abs, L"Abs"},
+        {PrimitiveOpType::Reciprocal, L"Reciprocal"},
+        {PrimitiveOpType::Softmax, L"Softmax"},
+        {PrimitiveOpType::Hardmax, L"Hardmax"},
+        {PrimitiveOpType::TransposeAxes, L"TransposeAxes"},
+        {PrimitiveOpType::Where, L"Where"},
+        {PrimitiveOpType::Slice, L"Slice"},
+        {PrimitiveOpType::Dropout, L"Dropout"},
+        {PrimitiveOpType::Reshape, L"Reshape"},
+        {PrimitiveOpType::Pooling, L"Pooling"},
+        {PrimitiveOpType::SumAll, L"SumAll"},
+        {PrimitiveOpType::Plus, L"Plus"},
+        {PrimitiveOpType::Minus, L"Minus"},
+        {PrimitiveOpType::ElementTimes, L"ElementTimes"},
+        {PrimitiveOpType::Equal, L"Equal"},
+        {PrimitiveOpType::NotEqual, L"NotEqual"},
+        {PrimitiveOpType::Less, L"Less"},
+        {PrimitiveOpType::LessEqual, L"LessEqual"},
+        {PrimitiveOpType::Greater, L"Greater"},
+        {PrimitiveOpType::GreaterEqual, L"GreaterEqual"},
+        {PrimitiveOpType::PackedIndex, L"PackedIndex"},
+        {PrimitiveOpType::GatherPacked, L"GatherPacked"},
+        {PrimitiveOpType::ScatterPacked, L"ScatterPacked"},
+        {PrimitiveOpType::Times, L"Times"},
+        {PrimitiveOpType::TransposeTimes, L"TransposeTimes"},
+        {PrimitiveOpType::Convolution, L"Convolution"},
+        {PrimitiveOpType::SquaredError, L"SquaredError"},
+        {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
+        {PrimitiveOpType::ClassificationError, L"ClassificationError"},
+        {PrimitiveOpType::PastValue, L"PastValue"},
+        {PrimitiveOpType::FutureValue, L"FutureValue"},
+        {PrimitiveOpType::ReduceElements, L"ReduceElements"},
+        {PrimitiveOpType::BatchNormalization, L"BatchNormalization"},
+        {PrimitiveOpType::Clip, L"Clip"},
+        {PrimitiveOpType::Select, L"Select"},
+        {PrimitiveOpType::Splice, L"Splice"},
+        {PrimitiveOpType::Combine, L"Combine"},
+        {PrimitiveOpType::RandomSample, L"RandomSample"},
+        {PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency"},
+        {PrimitiveOpType::ROIPooling, L"ROIPooling"},
+    };
+
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
     {
-        static const std::unordered_map<PrimitiveOpType, std::wstring> primitiveOpNames = {
-            { PrimitiveOpType::Negate, L"Negate" },
-            { PrimitiveOpType::Sigmoid, L"Sigmoid" },
-            { PrimitiveOpType::Tanh, L"Tanh" },
-            { PrimitiveOpType::ReLU, L"ReLU" },
-            { PrimitiveOpType::Exp, L"Exp" },
-            { PrimitiveOpType::Log, L"Log" },
-            { PrimitiveOpType::Sqrt, L"Sqrt" },
-            { PrimitiveOpType::Floor, L"Floor" },
-            { PrimitiveOpType::Abs, L"Abs" },
-            { PrimitiveOpType::Reciprocal, L"Reciprocal" },
-            { PrimitiveOpType::Softmax, L"Softmax" },
-            { PrimitiveOpType::Hardmax, L"Hardmax" },
-            { PrimitiveOpType::TransposeAxes, L"TransposeAxes" },
-            { PrimitiveOpType::Where, L"Where" },
-            { PrimitiveOpType::Slice, L"Slice" },
-            { PrimitiveOpType::Dropout, L"Dropout" },
-            { PrimitiveOpType::Reshape, L"Reshape" },
-            { PrimitiveOpType::Pooling, L"Pooling" },
-            { PrimitiveOpType::SumAll, L"SumAll" },
-            { PrimitiveOpType::Plus, L"Plus" },
-            { PrimitiveOpType::Minus, L"Minus" },
-            { PrimitiveOpType::ElementTimes, L"ElementTimes" },
-            { PrimitiveOpType::Equal, L"Equal" },
-            { PrimitiveOpType::NotEqual, L"NotEqual" },
-            { PrimitiveOpType::Less, L"Less" },
-            { PrimitiveOpType::LessEqual, L"LessEqual" },
-            { PrimitiveOpType::Greater, L"Greater" },
-            { PrimitiveOpType::GreaterEqual, L"GreaterEqual" },
-            { PrimitiveOpType::PackedIndex, L"PackedIndex" },
-            { PrimitiveOpType::GatherPacked, L"GatherPacked" },
-            { PrimitiveOpType::ScatterPacked, L"ScatterPacked" },
-            { PrimitiveOpType::Times, L"Times" },
-            { PrimitiveOpType::TransposeTimes, L"TransposeTimes" },
-            { PrimitiveOpType::Convolution, L"Convolution" },
-            { PrimitiveOpType::SquaredError, L"SquaredError" },
-            { PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax" },
-            { PrimitiveOpType::ClassificationError, L"ClassificationError" },
-            { PrimitiveOpType::PastValue, L"PastValue" },
-            { PrimitiveOpType::FutureValue, L"FutureValue" },
-            { PrimitiveOpType::ReduceElements, L"ReduceElements" },
-            { PrimitiveOpType::BatchNormalization, L"BatchNormalization" },
-            { PrimitiveOpType::Clip, L"Clip" },
-            { PrimitiveOpType::Select, L"Select" },
-            { PrimitiveOpType::Splice, L"Splice" },
-            { PrimitiveOpType::Combine, L"Combine" },
-            { PrimitiveOpType::RandomSample, L"RandomSample" },
-            { PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency" },
-        };
-
         if (primitiveOpNames.find(opType) == primitiveOpNames.end())
             LogicError("Unknown PrimitiveOpType");
 
@@ -175,6 +178,7 @@ namespace CNTK
         static const std::wstring AttributeNameUpperPad;
         static const std::wstring AttributeNameTranspose;
         static const std::wstring AttributeNameMaxTempMemSizeInSamples;
+        static const std::wstring AttributeNameROIOutputShape;
         static const std::wstring AttributeNamePoolingType;
         static const std::wstring AttributeNamePoolingWindowShape;
         static const std::wstring AttributeNameSpatial;
@@ -328,7 +332,7 @@ namespace CNTK
         {
             bool anyParameterOperandDimsInferred = false;
             auto updateOperandShapeFunc = [](Variable& operand, const NDShape& newOperandShape) {
-                if (operand.IsParameter() && (operand.Shape() != newOperandShape))
+                if ((operand.IsParameter() || operand.IsConstant()) && (operand.Shape() != newOperandShape))
                 {
                     operand.m_dataFields->m_shape = newOperandShape;
                     return true;
@@ -534,6 +538,17 @@ namespace CNTK
                 // infer reduction dimensions if not given
                 // If kernel has a lower rank than the input then the remaining dimensions are to be reduced over.
                 size_t filterRank = kernelShape.Rank();
+
+                // If the trailing axis dimensionality of the kernel shape is NDShape::InferredDimension, we reduce over it by 
+                // picking the corresponding operand shape dimensionality
+                // This is done by shrinking the filter rank and let the dimensions be inferred from the operand's shape
+                // TODO: Should we do this for all of the axes in kernelShape that have a dimensionailty of NDShape::InferredDimension?
+                if (kernelShape[filterRank - 1] == NDShape::InferredDimension)
+                {
+                    filterRank--;
+                    kernelShape = kernelShape.SubShape(0, filterRank);
+                }
+
                 size_t inputRank = operandShape.Rank();
                 NDShape fromShape;
                 if (op == PrimitiveOpType::Convolution)
@@ -813,7 +828,7 @@ namespace CNTK
         Microsoft::MSR::CNTK::ComputationNetworkPtr m_computationNetwork;
 
         // The backpropRoots sepecified in the most recent 'Forward' call on 'this' Function.
-        // This indicates for which of it's roots has 'this' Function retained required intermediate 
+        // This indicates for which of its roots has 'this' Function retained required intermediate 
         // states from the previos Forward call to be able to backpropagate gradients backwards from in
         // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;

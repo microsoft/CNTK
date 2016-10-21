@@ -226,7 +226,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
         transpose (bool): set to true for deconvolution.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
-         performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the inpu
+         performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
          samples.
         name (`str`, optional): the name of the Function instance in the network
     Returns:
@@ -238,6 +238,32 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                        tuple(reversed(lower_pad)), tuple(
                            reversed(upper_pad)), transpose,
                        max_temp_mem_size_in_samples, name)
+
+
+@typemap
+def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
+    '''
+    The ROI (Region of Interest) pooling operation pools over sub-regions of an input volume and produces
+    a fixed sized output volume regardless of the ROI size. It is used for example for object detection.
+
+    Each input image has a fixed number of regions of interest, which are specified as bounding boxes (x, y, w, h)
+    that are relative to the image size [W x H]. This operation can be used as a replacement for the final
+    pooling layer of an image classification network (as presented in Fast R-CNN and others).
+
+    Args:
+        conv_feature_map: a convolutional feature map as the input volume ([W x H x C x N]).
+        rois: the coordinates of the ROIs per image ([4 x roisPerImage x N]), each ROI is (x, y, w, h) relative to original image size.
+        roi_output_shape: dimensions (width x height) of the ROI pooling output shape
+        name (`str`, optional): the name of the Function instance in the network
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import roipooling
+    conv_feature_map = sanitize_input(conv_feature_map)
+    rois = sanitize_input(rois)
+    roi_output_shape = sanitize_shape(roi_output_shape)
+    return roipooling(conv_feature_map, rois, roi_output_shape, name)
+
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
@@ -287,7 +313,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
 @typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
-                        normalization_time_constant=0, blend_time_constant=0,
+                        normalization_time_constant=5000, blend_time_constant=0,
                         epsilon=0.00001, use_cudnn_engine=False, name=''):
     '''
     Normalizes layer outputs for every minibatch for each output (feature) independently
@@ -305,9 +331,8 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         running_inv_std: running variance. Represented as ``running_mean``
         spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
-        normalization_time_constant(`float`, default 0): time constant for computing running average of
-         mean and variance as a low-pass filtered version of the batch statistics. Note: the default is not
-         typically what you want
+        normalization_time_constant(`float`, default 5000): time constant for computing running average of
+         mean and variance as a low-pass filtered version of the batch statistics.
         blend_time_constant(`float`, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
@@ -1817,7 +1842,7 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
 
 
 @typemap
-def placeholder_variable(shape, dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
+def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     '''
     It creates a variable place holder for recurrence networks, when the network's dynamic axes
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
@@ -1829,8 +1854,16 @@ def placeholder_variable(shape, dynamic_axes=Axis.default_input_variable_dynamic
     Returns:
         :class:`cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import placeholder_variable
-    shape = sanitize_shape(shape)
+    from cntk.cntk_py import placeholder_variable, NDShape, Axis
+
+    if shape is None:
+        shape = NDShape.unknown.dimensions()
+    else:
+        shape = sanitize_shape(shape)
+
+    if dynamic_axes is None:
+        dynamic_axes = Axis.unknown_dynamic_axes
+
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
 

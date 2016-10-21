@@ -729,7 +729,7 @@ def value_to_seq(value):
     return np_data
 
 
-def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
+def eval(op, arguments=None, precision=None, device=None, backward_pass=False, expected_backward=None):
     '''
     It evaluates ``op`` on the data provided by the reader. This is useful
     mainly to explore the operators and for convenient unit testing.
@@ -760,6 +760,9 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
         device (:class:`cntk.device.DeviceDescriptor`): the device the descriptor,
          whether it is CPU or GPU (and which one)
         backward_pass (`bool`, optional): whether a backward pass is performed
+        expected_backward (`dict` or `None`): keys are variables for which to
+         compute a backward ouptut. By default (set to `None`) all entries from
+         'arguments' are used
 
     Returns:
         mapping of output variables to their values.
@@ -768,10 +771,12 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False):
     state, forward_output = op.forward(arguments, op.outputs, op.outputs, device=device)
 
     if backward_pass:
+        if expected_backward is None:
+            expected_backward = arguments
         root_gradients = {v: ones_like(o, precision) for v, o in
                           forward_output.items()}
 
-        backward_output = op.backward(state, root_gradients, arguments)
+        backward_output = op.backward(state, root_gradients, expected_backward)
 
         return forward_output, backward_output
 

@@ -508,6 +508,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUpperPad = L"upperPad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTranspose = L"transpose";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples = L"maxTempMemSizeInSamples";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameROIOutputShape = L"roiOutputShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePoolingType = L"poolingType";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePoolingWindowShape = L"poolingWindowShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSpatial = L"spatial";
@@ -677,6 +678,36 @@ namespace CNTK
             outputShape = ReshapeOutputShape(inputs[0].Shape(), newShape);
             break;
         }
+        case PrimitiveOpType::ROIPooling:
+        {
+            assert(inputs.size() == 2);
+            auto convMapShape = inputs[0].Shape();
+            auto roisShape = inputs[1].Shape();
+            auto roiOutputShape = functionConfig[PrimitiveFunction::AttributeNameROIOutputShape].Value<NDShape>();
+
+            auto outW = roiOutputShape[0];
+            auto outH = roiOutputShape[1];
+            auto numChannels = convMapShape[2];
+            auto roisPerImage = roisShape[1];
+
+            if (roiOutputShape.Rank() != 2)
+                InvalidArgument("ROIPoolingNode: roi output shape must have two dimensions ([W x H]).");
+
+            if (convMapShape[0] < outW || convMapShape[1] < outH)
+                InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
+
+            if (convMapShape[2] < 1)
+                InvalidArgument("ROIPoolingNode: input must have at least one channel ([W x H x C]).");
+
+            if (roisShape[0] != 4)
+                InvalidArgument("ROIPoolingNode: ROI input must have the following shape: [4 x roisPerImage].");
+
+            if (roisPerImage < 1)
+                InvalidArgument("ROIPoolingNode: ROI input must contain at least one ROI ([4 x roisPerImage]).");
+
+            outputShape = { outW, outH, numChannels, roisPerImage };
+            break;
+        }
         case PrimitiveOpType::Pooling:
         {
             assert(inputs.size() == 1);
@@ -685,9 +716,9 @@ namespace CNTK
             auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
             auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
             auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-                NDShape outputMapCount = { 1 };
-                std::vector<bool> sharing = { true };
-                outputShape = ConvolutionOpOutputShape(op, inputs[0].Shape(), poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
+            NDShape outputMapCount = { 1 };
+            std::vector<bool> sharing = { true };
+            outputShape = ConvolutionOpOutputShape(op, inputs[0].Shape(), poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
             break;
         }
         case PrimitiveOpType::SumAll:
@@ -1209,7 +1240,7 @@ namespace CNTK
             InvalidArgument("Variable%S with unknown shape detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         if (variable.Shape().HasInferredDimension())
-            InvalidArgument("Variable%S with InferredDimension for at least one axis in it's shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            InvalidArgument("Variable%S with InferredDimension for at least one axis in its shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         if (variable.DynamicAxes() == Axis::UnknownDynamicAxes)
             InvalidArgument("Variable%S with unknown dynamic axes detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
@@ -1389,6 +1420,12 @@ namespace CNTK
         {
             auto newShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
             computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(newShape));
+            break;
+        }
+        case PrimitiveOpType::ROIPooling:
+        {
+            auto roiOutputShape = functionConfig[PrimitiveFunction::AttributeNameROIOutputShape].Value<NDShape>();
+            computationNodePtr = New<ROIPoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(roiOutputShape));
             break;
         }
         case PrimitiveOpType::Pooling:
@@ -1629,9 +1666,13 @@ namespace CNTK
 
             ComputationNetworkBuilder<ElementType> builder(*m_computationNetwork);
 
-            // TODO: We current only support one backprop root
+            // TODO: We currently only support one backprop root
             if (backpropRoots.size() > 1)
                 LogicError("More than one backprop roots is currently unsupported");
+
+            auto placeholders = Placeholders();
+            if (!placeholders.empty())
+                InvalidArgument("All placeholders of a Function must be bound before performing a Forward computation on the Function!");
 
             // Now recursively create the network in a top-down fashion
             auto rootFunction = RootFunction();
@@ -2478,9 +2519,6 @@ namespace CNTK
 
     FunctionPtr TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name)
     {
-        if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
-            LogicError("TransposeAxes currently does not support transposing dynamic axes");
-
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameAxis1] = axis1;
         additionalProperties[PrimitiveFunction::AttributeNameAxis2] = axis2;
@@ -2674,9 +2712,9 @@ namespace CNTK
             InvalidArgument("ClassificationError: The topN argument must be > 0!");
 
         if (topN == 1)
-    {
+        {
             if (axis == Axis(0))
-        return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
+                return Minus(Constant::Scalar(prediction.GetDataType(), 1.0), TransposeTimes(labels, Hardmax(prediction)), name);
             else
             {
                 auto axMax = ReduceMax(prediction, axis);
@@ -2686,7 +2724,7 @@ namespace CNTK
                 auto capErr = GreaterEqual(axErr, Constant::Scalar(prediction.GetDataType(), 1.0));
                 return ReduceMean(capErr, Axis::AllStaticAxes(), name);
             }
-    }
+        }
         else
         {
             if (axis != Axis(0))
@@ -2775,6 +2813,13 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
 
         return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name/* = L""*/)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameROIOutputShape] = roiOutputShape;
+        return BinaryOp(PrimitiveOpType::ROIPooling, convolutionMap, rois, std::move(additionalProperties), name);
     }
 
     FunctionPtr Pooling(const Variable& operand,
@@ -2872,7 +2917,7 @@ namespace CNTK
     {
         void VerifyIsSequence(const Variable& operand)
         {
-            // The operand must have at least one dynamic axis and it's first dynamic axis must be ordered
+            // The operand must have at least one dynamic axis and its first dynamic axis must be ordered
             if (operand.DynamicAxes().empty() || !operand.DynamicAxes()[0].IsOrdered())
                 InvalidArgument("A sequence function can only be applied on operands with at least one dynamic axis and whose first dynamic axis is ordered");
         }

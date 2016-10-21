@@ -56,6 +56,7 @@ namespace CNTK
         Combine = 44,
         RandomSample = 45,
         RandomSampleInclusionFrequency = 46,
+        ROIPooling = 47,
         // New op types should only be appended to the end of this list.
     };
 }
