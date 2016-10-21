@@ -11,7 +11,7 @@
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <InterpreterId>{51b3a70c-2ea2-4fe4-aeba-ff2cea35103f}</InterpreterId>
+    <InterpreterId>{a09c4858-c5c1-4aa7-8d2c-040123d8bb30}</InterpreterId>
     <InterpreterVersion>3.4</InterpreterVersion>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <IsWindowsApplication>False</IsWindowsApplication>
@@ -34,6 +34,7 @@
     </Compile>
     <Compile Include="common\nn.py" />
     <Compile Include="common\__init__.py" />
+    <Compile Include="ImageHandsOn\ImageHandsOn.py" />
     <Compile Include="MNIST\SimpleMNIST.py" />
     <Compile Include="NumpyInterop\FeedForwardNet.py" />
     <Compile Include="Sequence2Sequence\Sequence2Sequence.py" />
@@ -51,6 +52,7 @@
   <ItemGroup>
     <Folder Include="CifarResNet" />
     <Folder Include="common" />
+    <Folder Include="ImageHandsOn\" />
     <Folder Include="MNIST" />
     <Folder Include="NumpyInterop" />
     <Folder Include="Sequence2Sequence" />
@@ -60,9 +62,7 @@
     <Folder Include="test\" />
   </ItemGroup>
   <ItemGroup>
-    <InterpreterReference Include="{51b3a70c-2ea2-4fe4-aeba-ff2cea35103f}\3.4" />
-    <InterpreterReference Include="{9a7a9026-48c1-4688-9d5d-e5699d47d074}\3.5" />
-    <InterpreterReference Include="{e91159cb-e1ee-4880-a9b1-63558527d248}\3.4" />
+    <InterpreterReference Include="{a09c4858-c5c1-4aa7-8d2c-040123d8bb30}\3.4" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />

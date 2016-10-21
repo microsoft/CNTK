@@ -746,7 +746,9 @@ bool BestGpu::LockDevice(int deviceId, bool trial)
     std::unique_ptr<CrossProcessMutex> mutex(new CrossProcessMutex(buffer));
     if (!mutex->Acquire(/*wait=*/false)) // GPU not available
     {
-        fprintf(stderr, "LockDevice: Failed to lock GPU %d for exclusive use.\n", deviceId);
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "LockDevice: Failed to lock GPU %d for exclusive use.\n", deviceId);
+
         return false;
     }
     else

@@ -884,8 +884,8 @@ namespace CNTK
         CNTK_API static const std::wstring StaticAxisNamePrefix;
 
         CNTK_API static const int SentinelStaticAxisIndexValueForDynamicAxes;
-        static const int SentinelStaticAxisIndexValueForAllStaticAxes;
-        static const int SentinelStaticAxisIndexValueForUnknownAxes;
+        CNTK_API static const int SentinelStaticAxisIndexValueForAllStaticAxes;
+        CNTK_API static const int SentinelStaticAxisIndexValueForUnknownAxes;
 
         class UniqueDynamicAxesNames
         {
@@ -953,7 +953,20 @@ namespace CNTK
         ///
         /// Returns a boolean indicating if 'this' Axis corresponds to a static axis
         ///
-        bool IsStaticAxis() const { return m_staticAxisIdx != SentinelStaticAxisIndexValueForDynamicAxes; }
+        bool IsStaticAxis() const 
+        {
+            return ((m_staticAxisIdx != SentinelStaticAxisIndexValueForDynamicAxes) &&
+                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForAllStaticAxes) &&
+                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForUnknownAxes));
+        }
+
+        ///
+        /// Returns a boolean indicating if 'this' Axis corresponds to a dynamic axis
+        ///
+        bool IsDynamicAxis() const
+        {
+            return (m_staticAxisIdx == SentinelStaticAxisIndexValueForDynamicAxes);
+        }
 
         ///
         /// Returns a boolean indicating if 'this' Axis is ordered; i.e. if there is an ordering between the dimensions along this axis.
@@ -1017,11 +1030,11 @@ namespace CNTK
 
     inline bool operator==(const Axis& first, const Axis& second)
     {
-        if (first.IsStaticAxis() != second.IsStaticAxis())
+        if (first.IsDynamicAxis() != second.IsDynamicAxis())
             return false;
 
-        if (first.IsStaticAxis())
-            return first.StaticAxisIndex() == second.StaticAxisIndex();
+        if (!first.IsDynamicAxis())
+            return first.StaticAxisIndex(/*checked =*/ false) == second.StaticAxisIndex(/*checked =*/ false);
         else
             return first.Name() == second.Name();
     }
@@ -1700,6 +1713,7 @@ private:
             VariableKind m_varKind;
             ::CNTK::DataType m_dataType;
             Function* const m_ownerFunction; // Variable does not keep the Function alive
+            std::unique_ptr<std::once_flag> m_initValueFlag;
             NDArrayViewPtr m_value;
             std::unique_ptr<ParameterInitializer> m_valueInitializer;
             std::unique_ptr<DeviceDescriptor> m_valueInitializationDevice;
@@ -1915,14 +1929,14 @@ private:
         ///
         template<typename ElemType>
         Parameter(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Parameter, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), true, {}, name, Internal::GenerateUid(VariableKind::Parameter))
+            : Parameter(shape, AsDataType<ElemType>(), ConstantInitializer(initValue), device, name)
         {}
 
         ///
         /// Construct a constant of specified shape whose contents are initialized with the specified 'initValue'
         ///
         Parameter(const NDShape& shape, DataType dataType, double initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Parameter, dataType, MakeSharedObject<NDArrayView>(initValue, dataType, shape, device), true, {}, name, Internal::GenerateUid(VariableKind::Parameter))
+            : Parameter(shape, dataType, ConstantInitializer(initValue), device, name)
         {}
 
         ///
@@ -1962,7 +1976,7 @@ private:
     // However we have a couple of derivatives of the type to extend the base interface and thus we ensure that the derived types do not have additional fields.
     // This check is weak in that the derives types may sneak in some additional fields if the base type had some padding at the end, without changing the object size
     // but it should be good enough for catching any accidental additon of fields.
-    static_assert(sizeof(Parameter) == sizeof(Variable), "The Parameter type should not have any data fields beyond what it's base type 'Variable' has.");
+    static_assert(sizeof(Parameter) == sizeof(Variable), "The Parameter type should not have any data fields beyond what its base type 'Variable' has.");
 
     ///
     /// Denotes Constant inputs of a Function.
@@ -1993,14 +2007,14 @@ private:
         ///
         template<typename ElemType>
         Constant(const NDShape& shape, ElemType initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Constant, AsDataType<ElemType>(), MakeSharedObject<NDArrayView>(initValue, shape, device), false, {}, name, Internal::GenerateUid(VariableKind::Constant))
+            : Constant(shape, AsDataType<ElemType>(), ConstantInitializer(initValue), device, name)
         {}
 
         ///
         /// Construct a constant of specified shape whose contents are initialized with the specified 'initValue'
         ///
         Constant(const NDShape& shape, DataType dataType, double initValue, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Constant, dataType, MakeSharedObject<NDArrayView>(initValue, dataType, shape, device), false, {}, name, Internal::GenerateUid(VariableKind::Constant))
+            : Constant(shape, dataType, ConstantInitializer(initValue), device, name)
         {}
 
         ///
@@ -2042,13 +2056,23 @@ private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
             : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value->DeepClone(true), false, {}, name, uid)
         {}
+
+        ///
+        /// Construct a constant of specified shape whose contents are initialized using the specified initializer
+        ///
+        Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
+            : Variable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, Internal::GenerateUid(VariableKind::Parameter))
+        {
+            m_dataFields->SetValueInitialization(initializer, device);
+        }
+
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
     // However we have a couple of derivatives of the type to extend the base interface and thus we ensure that the derived types do not have additional fields.
     // This check is weak in that the derives types may sneak in some additional fields if the base type had some padding at the end, without changing the object size
     // but it should be good enough for catching any accidental additon of fields.
-    static_assert(sizeof(Constant) == sizeof(Variable), "The Constant type should not have any data fields beyond what it's base type 'Variable' has.");
+    static_assert(sizeof(Constant) == sizeof(Variable), "The Constant type should not have any data fields beyond what its base type 'Variable' has.");
 }
 
 namespace std {
@@ -2480,6 +2504,18 @@ namespace CNTK
     CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the random_sample operation on specified sampling weights input vector
+    ///
+    // TODO: The initial random seed should be specifiable
+    CNTK_API FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name /*= L""*/);
+
+    ///
+    /// Create an instance of the random_sample_inclusion_frequency operation on specified sampling weights input vector
+    ///
+    // TODO: The initial random seed should be specifiable
+    CNTK_API FunctionPtr RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name /*= L""*/);
+
+    ///
     /// Create an instance of the dropout operation on specified tensor input operand
     ///
     // TODO: The initial random seed should be specifiable
@@ -2729,6 +2765,11 @@ namespace CNTK
                                      bool transpose = false,
                                      size_t maxTempMemSizeInSamples = 0,
                                      const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
+    ///
+    CNTK_API FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name = L"");
 
     ///
     /// TODO:
