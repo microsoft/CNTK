@@ -35,7 +35,27 @@ class Function(cntk_py.Function):
     will relay to its only output.
     '''
 
-    # call a function, i.e. clone with all placeholders replaced
+
+    # define input shapes, in-place
+    # e.g.
+    # model.declare_args(42)
+    # pass a list of objects that define the dimensions etc. of the placeholders
+    # Currently you can pass either
+    def declare_args(self, *arg_types):
+        placeholders = self.placeholders  # the unbound parameters to fill in
+        if len(arg_types) != len(placeholders):
+            raise TypeError("CNTK Function.declare_inputs() expected {} arguments, got {}".format(len(placeholders), len(arg_types)))
+        def to_input(arg):
+            if isinstance(arg, cntk_py.Variable):
+                return arg
+            else:
+                from cntk import input_variable
+                return input_variable(arg)
+        args = [to_input(arg) for arg in arg_types]
+        self.replace_placeholders(dict(zip(placeholders, args)))
+
+
+    # call a function, i.e. clone with all placeholders/inputs replaced
     def __call__(self, *args):
         if not isinstance(args, tuple):  # normalize single argument into tuple
             args = (args,)

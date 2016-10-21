@@ -230,7 +230,7 @@ def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
         # not a tuple: must be a 'scalar', i.e. a single element
         return past_value  (state, initial_state) if not go_backwards else \
                future_value(state, initial_state)
-    x = Placeholder(_inf=_inf, name='recurrence_arg')
+    x = PlaceholderWithShape(_inf=_inf, name='recurrence_arg')
     #x = Placeholder(name='recurrence_arg') # BUGBUG: Fails with "Variable with unknown dynamic axes detected when compiling the Function graph!"
     prev_state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
     f_x_h_c = over(x, prev_state_forward) # apply the recurrent over

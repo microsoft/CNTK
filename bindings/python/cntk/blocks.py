@@ -110,11 +110,16 @@ def Constant(init, shape=None, name=''):
 def Input(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')
 
-def Placeholder(_inf=None, name='placeholder'):
-    if _inf is None:
-        p = placeholder_variable(name=name) # TODO: use (*args, **kwargs) once got rid of _inf
-    else:  # BUGBUG: This code branch is only needed for Recurrence(), and will go away completely.
-        p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis, name=name)
+def Placeholder(name='placeholder'):
+    p = placeholder_variable(name=name) # TODO: use (*args, **kwargs) once got rid of _inf
+    _name_node(p, name)
+    if _trace_layers:
+        print("new " + _node_description(p))
+    return p
+
+# TODO: this is a left-over until inference works
+def PlaceholderWithShape(_inf, name='placeholder'):
+    p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis, name=name)
     _name_node(p, name)
     if _trace_layers:
         print("new " + _node_description(p))
@@ -160,7 +165,7 @@ def Stabilizer(steepness=4):
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
 # TODO: For now, shape and cell_shape can only be rank-1 vectors
-def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
+def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
     has_projection = cell_shape is not None
     has_aux = False
 
@@ -197,6 +202,12 @@ def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer,
     Sht = Stabilizer() if enable_self_stabilization else identity
 
     def create_hc_placeholder():
+        # BUGBUG: This will go away
+        #def _Infer(shape):
+        #    from cntk import Axis
+        #    from cntk.utils import Record, _as_tuple
+        #    return Record(shape=_as_tuple(shape), axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()], with_shape = lambda new_shape: _Infer(new_shape, axis))
+        return (PlaceholderWithShape(_inf=_inf.with_shape(shape), name='hPh'), PlaceholderWithShape(_inf=_inf.with_shape(cell_shape), name='cPh')) # (h, c)
         return (Placeholder(name='hPh'), Placeholder(name='cPh')) # (h, c)
 
     # parameters to model function
