@@ -800,8 +800,6 @@ class _ClassFromDict(dict):
 def Record(**kwargs):
     return _ClassFromDict(kwargs)
 
-
 # type-cast a shape given as a scalar into a tuple
 def _as_tuple(x):
     return x if (isinstance(x,tuple)) else (x,)
-

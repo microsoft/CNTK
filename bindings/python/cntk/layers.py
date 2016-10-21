@@ -15,7 +15,7 @@ import time
 from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
 from cntk.learner import sgd, fsadagrad
 from cntk.ops import parameter, input_variable, placeholder_variable, combine
-from cntk.ops import times, cross_entropy_with_softmax, classification_error, convolution, batch_normalization
+from cntk.ops import times, cross_entropy_with_softmax, classification_error, convolution, pooling, batch_normalization
 import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
@@ -125,8 +125,8 @@ def Embedding(shape=None, init=None, weights=None):
 # helper to create a new initializer object from an existing one, while updating members
 # BUGBUG: Currently not really working, only for glorot_uniform.
 def _init_with(init, members):
-    d = init.__dict__
-    return glorot_uniform(**members) # BUGBUG: currently no way to add these fields to an existing initializer
+    return init
+    #return glorot_uniform(**members) # BUGBUG: currently no way to add these fields to an existing initializer
 
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape) )
@@ -167,7 +167,8 @@ def Convolution(filter_shape,        # e.g. (3,3)
     #init_kernel = glorot_uniform(filter_rank=-filter_rank, output_rank=1)
     init_kernel = _init_with(init, Record(filter_rank=filter_rank, output_rank=-1))
     # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag
-    d = init_kernel.__dict__
+    #d = init_kernel.__dict__
+    #x = init_kernel.filter_rank
     W = Parameter(output_channels_shape + kernel_shape, init=init_kernel)                             # (K, C, H, W) aka [ W x H x C x K ]
     b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias) if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
@@ -192,31 +193,32 @@ def Convolution(filter_shape,        # e.g. (3,3)
 # TODO: This is not really a layer as it does not hold learnable parameters. So:
 #  - keep it in layer format, since users may think about it this way?
 #  - turn it into a function (lower-case)? Then how would it work inside Sequential() (we'd need partial application)?
-PoolingOp = Record(MAX='max', AVERAGE='average')  # create a const dictionary, acting like an enum  --TODO: what's the correct way?
-def Pooling(op,      # PoolingOp.max or .average
+from cntk.cntk_py import PoolingType_Max, PoolingType_Average
+def Pooling(op,      # PoolingType_Max or _Average
             filter_shape,  # e.g. (3,3)
-            pad=False,
-            #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
-            strides=1):
-    UntestedBranchError("Pooling")
+            strides=1,
+            pad=False):
+    #UntestedBranchError("Pooling")
     x = Placeholder(name='convolution_arg')
-    apply_x = pooling (x, op, filter_shape, strides = strides, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
-    #_name_and_extend_Function(apply_x, op + 'Pooling')
-    return Block(apply_x, op + 'Pooling')
+    apply_x = pooling (x, op, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
 
-def MaxPooling(poolKind,      # PoolingKind.max or .average
-               filter_shape,  # e.g. (3,3)
-               pad=False,
-               #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
-               strides=1):
-    return Pooling(PoolingOp.MAX, filter_shape, pad=pad, strides=strides)
+    if op == PoolingType_Average:
+        op_name = 'AveragePooling'
+    elif op == PoolingType_Max:
+        op_name = 'MaxPooling'
+    else:
+        raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
+    return Block(apply_x, op_name)
 
-def AveragePooling(poolKind,      # PoolingKind.max or .average
-                   filter_shape,  # e.g. (3,3)
-                   pad=False,
-                   #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
-                   strides=1):
-    return Pooling(PoolingOp.AVERAGE, filter_shape, pad=pad, strides=strides)
+def MaxPooling(filter_shape,  # e.g. (3,3)
+               strides=1,
+               pad=False):
+    return Pooling(PoolingType_Max, filter_shape, strides=strides, pad=pad)
+
+def AveragePooling(filter_shape,  # e.g. (3,3)
+                   strides=1,
+                   pad=False):
+    return Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad)
 
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):

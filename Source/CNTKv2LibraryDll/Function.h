@@ -544,7 +544,10 @@ namespace CNTK
                 // This is done by shrinking the filter rank and let the dimensions be inferred from the operand's shape
                 // TODO: Should we do this for all of the axes in kernelShape that have a dimensionailty of NDShape::InferredDimension?
                 if (kernelShape[filterRank - 1] == NDShape::InferredDimension)
+                {
                     filterRank--;
+                    kernelShape = kernelShape.SubShape(0, filterRank);
+                }
 
                 size_t inputRank = operandShape.Rank();
                 NDShape fromShape;
