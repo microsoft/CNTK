@@ -32,7 +32,7 @@ def test_cifar_resnet_error(device_id):
     os.chdir(os.path.join(base_path, '..'))
 
     test_error = cifar_resnet(base_path)
-    expected_test_error = 0.7
+    expected_test_error = 0.5
 
     assert np.allclose(test_error, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)
