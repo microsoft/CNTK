@@ -76,7 +76,7 @@ Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
 Remove-Item $baseDropPath\cntk\*test*.exe
 Remove-Item $baseDropPath\cntk\*.pdb
 # Keep EvalDll.lib
-Remove-Item $baseDropPath\cntk\*.lib  -exclude EvalDll.lib
+Remove-Item $baseDropPath\cntk\*.lib  -exclude EvalDll.lib -exclude CNTKLibrary-2.0.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
