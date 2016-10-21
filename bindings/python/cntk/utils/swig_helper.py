@@ -37,8 +37,8 @@ def map_if_possible(obj):
 def typemap(f):
     '''
     Decorator that upcasts return types from Swig types to cntk types that
-    inherit from Swig. It does so recuresively, e.g. if the return type is a
-    tuple containing a dictionary, it will try to upcase every element in the
+    inherit from Swig. It does so recursively, e.g. if the return type is a
+    tuple containing a dictionary, it will try to upcast every element in the
     tuple and all the keys and values in the dictionary.
     '''
     from functools import wraps

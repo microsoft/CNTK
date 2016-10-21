@@ -243,12 +243,13 @@ def get_data_type(*args):
     """
     Calculates the highest precision numpy data type of the provided parameters.
     If the parameter is a Function instance, it calculates it based on its
-    inputs. Placeholders are ignore in the type determination.
+    inputs. Placeholders are ignored in the type determination.
 
     Args:
-        args (number, ``list``, NumPy array, `Variable`, or `Function`): input
+        args (number, ``list``, NumPy array, :class:`cntk.ops.variables.Variable`, 
+         or :class:`cntk.ops.functions.Function`): input
     Returns:
-        `np.float32`, `np.float64`, or ``None``
+        ``np.float32``, ``np.float64``, or ``None``
     """
 
     dtypes = set()
@@ -256,7 +257,7 @@ def get_data_type(*args):
         args = [args]
 
     for arg in args:
-        if isinstance(arg, (cntk_py.Variable)) and arg.is_placeholder==True:
+        if isinstance(arg, Variable) and arg.is_placeholder==True:
             continue
         if isinstance(arg,
                       (cntk_py.Variable, cntk_py.Value, cntk_py.NDArrayView)):
