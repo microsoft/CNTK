@@ -29,7 +29,7 @@ def _Infer(shape, axis):
 ########################
 
 cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../../.."  # data resides in the CNTK folder
-data_dir = cntk_dir + "/Tutorials/SLUHandsOn"                           # under Tutorials
+data_dir = cntk_dir + "/Examples/Tutorials/SLUHandsOn"                  # under Examples/Tutorials
 vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
 
 model_dir = "./Models"
