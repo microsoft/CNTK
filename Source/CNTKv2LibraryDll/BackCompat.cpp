@@ -257,6 +257,13 @@ namespace CNTK
 
                 opType = PrimitiveOpType::Convolution;
             }
+            else if (node->OperationName() == OperationNameOf(ROIPoolingNode))
+            {
+                auto roiPoolingNode = node->As<ROIPoolingNode<ElementType>>();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameROIOutputShape] = AsNDShape(roiPoolingNode->ROIOutputShape());
+
+                opType = PrimitiveOpType::ROIPooling;
+            }
             else if (node->OperationName() == OperationNameOf(PoolingNode))
             {
                 auto poolingNode = node->As<PoolingNode<ElementType>>();
