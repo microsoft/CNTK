@@ -332,7 +332,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
         normalization_time_constant(`float`, default 5000): time constant for computing running average of
-         mean and variance as a low-pass filtered version of the batch statistics.
+         mean and variance as a low-pass filtered version of the batch statistics. 
         blend_time_constant(`float`, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
@@ -1733,11 +1733,11 @@ def random_sample_inclusion_frequency(
         >>> w = np.concatenate((w1, w2))
         >>> f = random_sample_inclusion_frequency(w, 150, True).eval()
         >>> f[0]
-        1.4985014985014986
+        1.4985015
         >>> f[1]
-        1.4985014985014986
+        1.4985015
         >>> f[110]
-        0.0014985014985014985
+        0.0014985015
         >>> # when switching to sampling without duplicates samples are
         >>> # forced to pick the low weight classes too
         >>> f = random_sample_inclusion_frequency(w, 150, False).eval()
@@ -1903,9 +1903,9 @@ def parameter(shape=None, init=None, device=None, name=''):
     if np.isscalar(init) and not shape:
         shape = ()
         if isinstance(init, np.ndarray):
-            data_type = str(init.dtype)
+            data_type = init.dtype
         else:
-            data_type = 'float32'
+            data_type = np.float32
     else:
         data_type = None
 
@@ -1940,14 +1940,12 @@ def constant(value=None, shape=None, device=None, name=''):
         device = use_default_device()
     if np.isscalar(value) and not shape:
         shape = ()
-        if isinstance(value, np.ndarray):
-            data_type = str(value.dtype)
-        else:
-            data_type = 'float32'
+    if isinstance(value, np.ndarray):
+        dtype = value.dtype
     else:
-        data_type = None
+        dtype = np.float32
 
-    return Constant(value, shape, data_type, device, name)
+    return Constant(value, shape, dtype, device, name)
 
 ##########################################################################
 # normalization ops

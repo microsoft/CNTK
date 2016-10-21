@@ -178,7 +178,7 @@ def _py_dict_to_cntk_dict(py_dict):
                     l.append(cntk_py.DictionaryValueFromDict(
                         _py_dict_to_cntk_dict(e)))
                 else:
-                    l.append(cntk_py.DictionaryValue(v))
+                    l.append(cntk_py.DictionaryValue(e))
             res[k] = cntk_py.DictionaryValue(l)
         else:
             res[k] = cntk_py.DictionaryValue(v)
