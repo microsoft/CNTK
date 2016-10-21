@@ -134,9 +134,11 @@ class Parameter(TensorOpsMixin, cntk_py.Parameter):
 
     Args:
        shape (`tuple`): the shape of the tensor holding the parameters
-       init (`np.ndarray` or `list` or `float` or `int`): Initial value.
+       init (value (`np.ndarray`, `list`, `float`, `int`) or
+        :class:`cntk.initializer`: Initial value.
         If a numpy array is specified the shape argument is ignored and
-        the tensor gets the shape of this argument.
+        the tensor gets the shape of this argument. Alternatively, an
+        initializer from :class:`cntk.initializer` can be specified.
        dtype (`np.float32` or `np.float64`): data type of the values stored.
        device (:class:`cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this parameter
