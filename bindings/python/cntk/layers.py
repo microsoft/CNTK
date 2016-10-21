@@ -122,6 +122,12 @@ def Embedding(shape=None, init=None, weights=None):
     #_name_and_extend_Function(apply_x, 'Embedding')
     return Block(apply_x, 'Embedding', Record(E=E))
 
+# helper to create a new initializer object from an existing one, while updating members
+# BUGBUG: Currently not really working, only for glorot_uniform.
+def _init_with(init, members):
+    d = init.__dict__
+    return glorot_uniform(**members) # BUGBUG: currently no way to add these fields to an existing initializer
+
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape) )
 #    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape) )
@@ -132,7 +138,6 @@ def Embedding(shape=None, init=None, weights=None):
 # TODO: conflict of parameter order: filter_shape or num_filters first?
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
-# TODO [Cha]: Allow to specify the bias initializer
 def Convolution(filter_shape,        # e.g. (3,3)
                 num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension_
                 activation=identity,
@@ -146,7 +151,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
                 reduction_rank=1, # (must be 1 currently)
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0):
-    UntestedBranchError("Convolution")
+    #UntestedBranchError("Convolution")
     if reduction_rank != 1:
         NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
     if transpose:
@@ -159,40 +164,27 @@ def Convolution(filter_shape,        # e.g. (3,3)
     kernel_shape = _INFERRED * reduction_rank + filter_shape # kernel := filter plus reductionDims
 
     # parameters bound to this Function
-    #W = Parameter(output_channels_shape + kernel_shape, init=init, initfilter_rank=filter_rank, initoutput_rank=-1) # (K, C, H, W) aka [ W x H x C x K ]
     #init_kernel = glorot_uniform(filter_rank=-filter_rank, output_rank=1)
-    init_kernel = glorot_uniform(filter_rank=filter_rank, output_rank=-1) # BUGBUG: Signs must be flipped
-    # TODO: should the signs be flipped? In times(), output_rank=1 means count from the right. Should that be flipped as well?
-    # initfilter_rank=-filter_rank, initoutput_rank=-1
-    #init_kernel['outputRank'] = -1
-    #init_kernel['filterRank'] = -filter_rank
-    W = Parameter(output_channels_shape + kernel_shape, init=init_kernel)  # (K, C, H, W) aka [ W x H x C x K ]
-    # BUGBUG: Signs are opposite now for initfilter_rank and initoutput_rank
-    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias) if bias else None                        # (K,    1, 1) aka [ 1 x 1 x     K ]
+    init_kernel = _init_with(init, Record(filter_rank=filter_rank, output_rank=-1))
+    # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag
+    d = init_kernel.__dict__
+    W = Parameter(output_channels_shape + kernel_shape, init=init_kernel)                             # (K, C, H, W) aka [ W x H x C x K ]
+    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias) if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
     # expression
     x = Placeholder(name='convolution_arg')
-    # TODO: can we rename auto_padding to pad?
     # TODO: can we update the parameter order of convolution to match the optional ones as in here? (options order matches Keras)
     # note: map_dims=num_filters not specified in Python (but in BS)
-    #strides = _INFERRED + (1,) * filter_rank # TODO: this is not needed in BS, why here?
     apply_x = convolution (W, x,
-                           #filter_shape,
                            strides=_as_tuple(strides),
                            sharing=_as_tuple(sharing),
                            auto_padding=_as_tuple(pad), #lower_pad=0, upper_pad=0,
+                           # TODO: can we rename auto_padding to pad?
                            transpose=transpose,
                            max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
-
-    #def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-    #                auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False,
-    #                max_temp_mem_size_in_samples=0, name=''):
-
     if bias:
         apply_x = apply_x + b
-    #_extend_Function(apply_x)  # (this gets us the >> operator  --TODO: remove once Function natively supports this)
     apply_x = apply_x >> activation
-    #_name_and_extend_Function(apply_x, 'Convolution')
     return Block(apply_x, 'Convolution', Record(W=W, b=b))
 
 # MaxPooling, AveragePooling -- create a max- or average-pooling layer

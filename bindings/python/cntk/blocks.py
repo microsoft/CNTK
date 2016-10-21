@@ -40,7 +40,7 @@ def UntestedBranchError(name):
 # use this until __call__ is implemented in Function()
 # Also add the >> operator (forward function composition).
 # Returns its arg to allow chaining.
-def _extend_Function(f):
+def _unused_extend_Function(f):
     class FunctionEx(f.__class__): 
         # BUGBUG: Somehow we don't get here anymore. It's fine for now.
         def __dummy__():
@@ -81,10 +81,12 @@ def _extend_Function(f):
 #    _extend_Function(f)
 #    return f
 
-# turn a Function into a Block
+# turn a Function into a Block, with a new name and an optional dictionary of named parameters
+# All layers functions call this at the end.
 # BUGBUG: does not actually exist yet, faking it
 # BUGBUG: should create a new object, but does it in-place instead. Works for current usage, but should be fixed.
-# BUGBUG: combine does not work, so the name actually does not get changed
+# BUGBUG: using combine causes an error ater, so the name actually does not get changed
+# BUGBUG: combine like this won't work for functions with multiple outputs (LSTM)
 def Block(f, op_name, members={}):
     #f = combine([f], op_name)  # 'combine' to create a separate identity so we can reassign the debug name --BUGBUG: "Unknown DataType"
     #_name_node(f, op_name) ; _extend_Function(f)  # debugging

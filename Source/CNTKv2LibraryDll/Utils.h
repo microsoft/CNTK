@@ -155,7 +155,7 @@ namespace CNTK
     {
         // Ensure none of the shape dimensions are unknown
         if (viewShape.HasInferredDimension())
-            InvalidArgument("Cannot create an NDArrayView using a view shape that has unknown dimensions for any of it's axes!");
+            InvalidArgument("Cannot create an NDArrayView using a view shape that has unknown dimensions for any of its axes!");
 
         size_t matrixRowSize = (viewShape.Rank() > 0) ? viewShape[0] : 1;
         size_t matrixColSize = (viewShape.Rank() > 0) ? viewShape.SubShape(1).TotalSize() : 1;
@@ -439,8 +439,8 @@ namespace CNTK
 
     inline std::vector<Axis> GetDerivedDynamicAxes(const Axis& sourceAxis, size_t multiplicativeFactor, int additiveFactor)
     {
-        if (sourceAxis.IsStaticAxis())
-            LogicError("Static axes cannot be derived from to create new dynamic axes!");
+        if (!sourceAxis.IsDynamicAxis())
+            LogicError("Only dynamic axes can be derived from to create new dynamic axes!");
 
         if ((multiplicativeFactor == 0) && (additiveFactor == 0))
             LogicError("Zero size dynamic axes are not allowed!");

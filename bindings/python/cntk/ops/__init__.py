@@ -333,7 +333,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
         normalization_time_constant(`float`, default 5000): time constant for computing running average of
-         mean and variance as a low-pass filtered version of the batch statistics
+         mean and variance as a low-pass filtered version of the batch statistics.
         blend_time_constant(`float`, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
@@ -1847,23 +1847,24 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     '''
     It creates a variable place holder for recurrence networks, when the network's dynamic axes
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
- 
+
     Args:
         shape (`tuple` or `int`): the shape of the variable tensor
         dynamic_axes (`list`): the list of dynamic axes that the actual variable uses
- 
+
     Returns:
         :class:`cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import placeholder_variable, NDShape, Axis
- 
+
     if shape is None:
-        shape = (NDShape.unknown[0],)
- 
+        shape = NDShape.unknown.dimensions()
+    else:
+        shape = sanitize_shape(shape)
+
     if dynamic_axes is None:
         dynamic_axes = Axis.unknown_dynamic_axes
- 
-    shape = sanitize_shape(shape)
+
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
 
