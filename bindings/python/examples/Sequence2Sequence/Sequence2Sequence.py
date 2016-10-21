@@ -12,7 +12,7 @@ import time
 from cntk import Trainer, Axis, text_format_minibatch_source, StreamConfiguration
 from cntk.device import cpu, set_default_device
 from cntk.learner import momentum_sgd, momentum_schedule
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select, plus, hardmax
+from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select, alias, hardmax
 from cntk.ops.functions import CloneMethod
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -74,7 +74,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
         thought_vectorC, label_sequence)
 
     # Decoder
-    decoder_history_hook = plus(label_sequence, 0, name='decoder_history_hook') # work-around for 'alias'
+    decoder_history_hook = alias(label_sequence, name='decoder_history_hook') # copy label_sequence
 
     decoder_input = element_select(is_first_label, label_sentence_start_scattered, past_value(
         decoder_history_hook))
@@ -113,7 +113,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     lr = 0.007
     minibatch_size = 72
     momentum_time_constant = 1100
-    m_schedule = momentum_schedule(math.exp(-1.0 / momentum_time_constant))
+    m_schedule = momentum_schedule(momentum_time_constant)
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
 
@@ -235,7 +235,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
 if __name__ == '__main__':
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    # set_default_device(cpu())
+    #set_default_device(cpu())
 
     error = sequence_to_sequence_translator(debug_output=False, run_test=True)
     print("Error: %f" % error)
