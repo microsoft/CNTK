@@ -129,10 +129,13 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     labels_stream_name  = 'labels'
 
     # readers
+    randomize_data = True
+    if run_test:
+        randomize_data = False # because we want to get an exact error
     train_reader = text_format_minibatch_source(train_path, [
                      StreamConfiguration(feature_stream_name, input_vocab_dim, True, 'S0'),
                      StreamConfiguration(labels_stream_name,  label_vocab_dim, True, 'S1')
-                   ], randomize=True)
+                   ], randomize=randomize_data)
     features_si_tr = train_reader.stream_info(feature_stream_name)
     labels_si_tr   = train_reader.stream_info(labels_stream_name)
 
