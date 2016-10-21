@@ -133,6 +133,9 @@ declare -a openfstFiles=("libfst.so.3")
 # Include files
 declare -a includeFiles=("Eval.h")
 
+# Include files 2.0
+declare -a includeFiles20=("CNTKLibrary.h" "CNTKLibraryInternals.h")
+
 # Set dependency sources paths
 mklVersion="2"
 mklPath="/usr/local/CNTKCustomMKL/$mklVersion/x64/parallel"
@@ -155,6 +158,7 @@ baseBinariesPath="$baseDropPath/cntk"
 baseDependenciesPath="$baseBinariesPath/dependencies/lib"
 baseIncludePath="$baseDropPath/Include"
 includePath="Source/Common/Include"
+includePath20="Source/CNTKv2LibraryDll/API"
 extrasPath="Tools/cntk-binary-drop/linux/$targetConfig"
 gzipFile="BinaryDrops.tar.gz"
 
@@ -182,12 +186,14 @@ mkdir -p $baseIncludePath
 # Copy Include
 echo "Copying Include files..." >&3
 CopyFilesFromList $includePath includeFiles[@] $baseIncludePath 
+echo "Copying Include files for Version 2..." >&3
+CopyFilesFromList $includePath20 includeFiles20[@] $baseIncludePath 
 
 # Copy Examples
 echo "Copying Examples..." >&3
 cp -r Examples $baseDropPath
-# Remove CPPEvalV2Client examples until V2 binaries are included in the binary drop
-rm -rf $baseDropPath/Examples/Evaluation/CPPEvalV2Client
+# Include CPPEvalV2Client examples in 2.0 Beta drop
+# rm -rf $baseDropPath/Examples/Evaluation/CPPEvalV2Client
 
 # Copy Scripts (Scripts folder from the root of the Repo)
 echo "Copying Scripts..." >&3
