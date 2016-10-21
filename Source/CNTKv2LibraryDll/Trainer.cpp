@@ -180,7 +180,7 @@ namespace CNTK
         if (m_distributedTrainer)
         {
             // Aggregation should happen in the same order, the order of parmaters is guaranteed to be the same.
-            std::vector<std::pair<Variable, NDArrayViewPtr>> gradients;
+            std::vector<std::pair<Parameter, NDArrayViewPtr>> gradients;
             gradients.reserve(modelParameters.size());
             for (const auto& parameter : modelParameters)
                 gradients.push_back(std::make_pair(parameter, parameterGradients[parameter]->Data()));

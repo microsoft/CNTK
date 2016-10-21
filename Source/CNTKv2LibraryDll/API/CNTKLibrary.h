@@ -389,6 +389,7 @@ namespace CNTK
         friend class Variable;
         friend class PackedValue;
         friend class MPICommunicatorImpl;
+        friend class BlockMomentumDistributedTrainer;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
@@ -3098,6 +3099,11 @@ namespace CNTK
         }
 
         ///
+        /// Resets smoothed gradients.
+        ///
+        virtual void ResetSmoothedGradients() = 0;
+
+        ///
         /// Returns current (per-sample) learning rate.
         ///
         virtual double LearningRate(size_t minibatchSize) const
@@ -3371,8 +3377,8 @@ namespace CNTK
         /// An empty map is returned when the MinibatchSource has no more data to return.
         ///
         virtual const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(size_t minibatchSizeInSamples,
-                                                                                             size_t minibatchSizeInSequences,
-                                                                                             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) = 0;
+            size_t minibatchSizeInSequences,
+            const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) = 0;
 
         ///
         /// Destruct this MinibatchSource.
@@ -3478,8 +3484,8 @@ namespace CNTK
     /// Compute the per dimension means and variances for each of the specified streams using data from the specified minibatchSource.
     ///
     CNTK_API void ComputeInputPerDimMeansAndInvStdDevs(const MinibatchSourcePtr& minibatchSource,
-                                                       std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndVariances,
-                                                       const DeviceDescriptor& device = DeviceDescriptor::CPUDevice());
+        std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndVariances,
+        const DeviceDescriptor& device = DeviceDescriptor::CPUDevice());
 
     ///
     /// Set the process-wide setting for maximum number of CPU threads to be used by any individual compute operation
@@ -3498,9 +3504,14 @@ namespace CNTK
     {
         size_t m_globalRank;
         std::wstring m_hostId;
+
+        bool IsMain() const
+        {
+            return m_globalRank == 0;
+        }
     };
 
-     inline bool operator==(const DistributedWorkerDescriptor& left, const DistributedWorkerDescriptor& right)
+    inline bool operator==(const DistributedWorkerDescriptor& left, const DistributedWorkerDescriptor& right)
     {
         return ((left.m_globalRank == right.m_globalRank) && (left.m_hostId == right.m_hostId));
     }
@@ -3604,7 +3615,7 @@ namespace CNTK
         CNTK_API virtual void PreMinibatchCallback(const Trainer& trainer) = 0;
 
         // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
-        CNTK_API virtual void PreParameterUpdateCallback(const Trainer& trainer, std::vector<std::pair<Variable, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info) = 0;
+        CNTK_API virtual void PreParameterUpdateCallback(const Trainer& trainer, std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info) = 0;
 
         // Optionally overridable method to get checkpoint state associated with this Distributed train method
         CNTK_API virtual Dictionary GetCheckpointState() const = 0;
@@ -3616,8 +3627,25 @@ namespace CNTK
     };
 
     CNTK_API DistributedTrainerPtr CreateDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate);
+
     CNTK_API DistributedTrainerPtr CreateQuantizedDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate);
+
+    CNTK_API DistributedTrainerPtr CreateBlockMomentumDistributedTrainer(
+        DistributedCommunicatorPtr communicator,
+        size_t blockSize,
+        double blockMomentumAsTimeConstant,
+        bool useNestrovMomentum = true,
+        bool resetSGDMomentumAfterAggregation = true,
+        double blockLearningRate = 1.0);
+
+    CNTK_API DistributedTrainerPtr CreateBlockMomentumDistributedTrainer(
+        DistributedCommunicatorPtr communicator,
+        size_t blockSize,
+        bool useNestrovMomentum = true,
+        bool resetSGDMomentumAfterAggregation = true,
+        double blockLearningRate = 1.0);
 }
+
 
 namespace std 
 {

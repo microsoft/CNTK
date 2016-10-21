@@ -20,7 +20,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static bool ShouldForceConstantRandomSeed() { return m_forceConstantRandomSeed; }
 
         // TODO: Currently the flag is set to false. Should be switched to true after more rigorous testing.
-        static bool UseV2Aggregator() { return false; }
+        static bool UseV2Aggregator() { return true; }
 
     private:
         static std::atomic<bool> m_forceDeterministicAlgorithms;
