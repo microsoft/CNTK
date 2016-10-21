@@ -26,6 +26,7 @@ class Trainer(cntk_py.Trainer):
        loss_function (:class:`cntk.ops.functions.Function`): loss function 
        eval_function (:class:`cntk.ops.functions.Function`): evaluation function
        parameter_learners (`list`): list of learners from :mod:`cntk.learner`
+       distributed_trainer (:class:`cntk.distributed.distributed_trainer`): distributed trainer
     '''
     def __init__(self, model, loss_function, eval_function, parameter_learners, distributed_trainer=None):
         # TODO sanitizing should be removed once Swig's typemaps are in place
