@@ -370,7 +370,7 @@ namespace CNTK
     }
 
     // Todo: move into AllStaticAxes() after upgrade to VS2015
-    /*static*/ const Axis Axis::s_allStaticAxes(Axis::SentinelStaticAxisIndexValueForAllStaticAxes);
+    /*static*/ const Axis s_allStaticAxes(Axis::SentinelStaticAxisIndexValueForAllStaticAxes);
     /*static*/ const Axis& Axis::AllStaticAxes()
     {
         return s_allStaticAxes;
