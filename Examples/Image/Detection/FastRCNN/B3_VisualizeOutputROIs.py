@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os, importlib, sys
 import PARAMETERS
 locals().update(importlib.import_module("PARAMETERS").__dict__)
@@ -37,7 +38,7 @@ for imgIndex in range(0, imdb.num_images):
     nmsKeepIndices = []
     if boUseNonMaximaSurpression:
         nmsKeepIndices = applyNonMaximaSuppression(nmsThreshold, labels, scores, imdb.roidb[imgIndex]['boxes'])
-        print "Non-maxima surpression kept {:4} of {:4} rois (nmsThreshold={})".format(len(nmsKeepIndices), len(labels), nmsThreshold)
+        print ("Non-maxima surpression kept {:4} of {:4} rois (nmsThreshold={})".format(len(nmsKeepIndices), len(labels), nmsThreshold))
 
     # visualize results
     imgDebug = visualizeResults(imgPath, labels, scores, imdb.roidb[imgIndex]['boxes'], cntk_padWidth, cntk_padHeight,
@@ -45,4 +46,4 @@ for imgIndex in range(0, imdb.num_images):
     imshow(imgDebug, waitDuration=0, maxDim = 800)
     # imwrite(imgDebug, visualizationDir + "/" + str(imgIndex) + os.path.basename(imgPath))
 
-print "DONE."
+print ("DONE.")

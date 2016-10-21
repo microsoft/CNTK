@@ -4,9 +4,10 @@
 # Written by Bharath Hariharan
 # --------------------------------------------------------
 
+from __future__ import print_function
 import xml.etree.ElementTree as ET
 import os
-import cPickle
+import pickle as cp
 import numpy as np
 
 def parse_rec(filename):
@@ -109,17 +110,17 @@ def voc_eval(detpath,
         for i, imagename in enumerate(imagenames):
             recs[imagename] = parse_rec(annopath.format(imagename))
             if i % 1000 == 0:
-                print 'Reading annotation for {:d}/{:d}'.format(
-                    i + 1, len(imagenames))
+                print ('Reading annotation for {:d}/{:d}'.format(
+                    i + 1, len(imagenames)))
         # save
         if cachedir:
-            print 'Saving cached annotations to {:s}'.format(cachefile)
+            print ('Saving cached annotations to {:s}'.format(cachefile))
             with open(cachefile, 'w') as f:
-                cPickle.dump(recs, f)
+                cp.dump(recs, f)
     else:
         # load
         with open(cachefile, 'r') as f:
-            recs = cPickle.load(f)
+            recs = cp.load(f)
 
     # extract gt objects for this class
     class_recs = {}

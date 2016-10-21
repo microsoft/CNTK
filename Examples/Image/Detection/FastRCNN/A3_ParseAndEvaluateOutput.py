@@ -6,6 +6,7 @@
 # --------------------------------------------------------
 
 """Test a Fast R-CNN network on an image database."""
+from __future__ import print_function
 import importlib
 from fastRCNN.test import test_net
 from fastRCNN.timer import Timer
@@ -23,7 +24,7 @@ image_set = 'test' # 'train', 'test'
 # Main
 ####################################
 # parse cntk output
-print "Parsing CNTK output for image set: " + image_set
+print ("Parsing CNTK output for image set: " + image_set)
 cntkImgsListPath = cntkFilesDir + image_set + ".txt"
 outParsedDir = cntkFilesDir + image_set + "_parsed/"
 cntkOutputPath = cntkFilesDir + image_set + ".z"
@@ -51,4 +52,4 @@ else:
 # compute mAPs
 test_net(net, imdb, evalTempDir, None, classifier, nmsThreshold, boUsePythonImpl = True)
 
-print "DONE."
+print ("DONE.")
