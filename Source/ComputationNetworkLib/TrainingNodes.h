@@ -149,11 +149,7 @@ public:
 
   virtual void BackpropToNonLooping(size_t inputIndex) override
   {
-    //FrameRange fr(Input(0)->GetMBLayout());
-    //auto gradient = Input(inputIndex)->GradientFor(fr);
-
     Matrix<ElemType>&  gradient = Input(inputIndex)->Gradient();
-
     gradient.AssignFastTripletGradient(Input(0)->Value(), Input(1)->Value(), Gradient(), inputIndex, m_triplet_sampler, m_pairwise, m_margin, m_hard_negative_sample, m_hard_negative_sample_num, m_sample_per_class);
   }
 

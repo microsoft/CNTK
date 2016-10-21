@@ -128,28 +128,14 @@ namespace Microsoft {
                                 memcpy(&m_labels[i], (const char*)(sequence[j]->m_data), sizeof(float));
                             else
                                 memcpy(&m_labels[i], (const char*)(sequence[j]->m_data), sizeof(double));
-                            //std::cout << j << " " << i << " " << m_labels[i] << std::endl;
                         }
                     }
                 };
 
-                // TODO: This will be changed, when we move transformers under the (no-) randomizer, should not deal with multithreading here.
-
-                /*
-                if (m_multithreadedGetNextSequences)
-                {
-                    ExceptionCapture capture;
-#pragma omp parallel for schedule(dynamic)
-                    for (int i = 0; i < m_totalNumberOfSamples; ++i)
-                        capture.SafeRun(process, i);
-                    capture.RethrowIfHappened();
-                }
-                else
-                */
-                {
-                    for (int i = 0; i < m_totalNumberOfSamples; ++i)
-                        process(i);
-                }
+                
+                for (int i = 0; i < m_totalNumberOfSamples; ++i)
+                    process(i);
+                
                 
                 // Prepare for category sampling 
                 class_sample_list_.clear();
