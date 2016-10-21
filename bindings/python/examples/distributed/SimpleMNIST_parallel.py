@@ -1,4 +1,4 @@
-﻿# Copyright (c) Microsoft. All rights reserved.
+# Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -9,8 +9,8 @@ import sys
 import os
 from cntk import Trainer, StreamConfiguration, text_format_minibatch_source, distributed
 from cntk.device import cpu, set_default_device, default, DeviceDescriptor
-from cntk.learner import sgd, learning_rate_schedule
-from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, relu, element_times, constant
+from cntk.learner import sgd
+from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -38,22 +38,10 @@ def simple_mnist(debug_output=False):
     # Instantiate the feedforward classification model
     scaled_input = element_times(constant(0.00390625), input)
     netout = fully_connected_classifier_net(
-        scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, relu)
+        scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
 
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
-
-    communicator = distributed.communicator()
-    workers = communicator.workers()
-    current_worker = communicator.current_worker()
-    print("List all distributed workers")
-    for wk in workers:
-        if current_worker.global_rank == wk.global_rank:
-            print("* {} {}".format(wk.global_rank, wk.host_id))
-        else:
-            print("  {} {}".format(wk.global_rank, wk.host_id))
-
-    #comm2 = communicator.sub_group([current_worker]) #feature not implemented in C++
 
     try:
         rel_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
@@ -68,38 +56,41 @@ def simple_mnist(debug_output=False):
 
     mb_source = text_format_minibatch_source(path, [
         StreamConfiguration(feature_stream_name, input_dim),
-        StreamConfiguration(labels_stream_name, num_output_classes)],
-        distributed_communicator = communicator)
+        StreamConfiguration(labels_stream_name, num_output_classes)])
     features_si = mb_source[feature_stream_name]
     labels_si = mb_source[labels_stream_name]
 
     # Instantiate the trainer object to drive the model training
+    mpi_comm = distributed.communicator()
+    workers = mpi_comm.workers()
+    current_worker = mpi_comm.current_worker()
+    print("List all distributed workers")
+    for wk in workers:
+        if current_worker.global_rank == wk.global_rank:
+            print("* {} {}".format(wk.global_rank, wk.host_id))
+        else:
+            print("  {} {}".format(wk.global_rank, wk.host_id))
             
+    #mpi_comm2 = mpi_comm.sub_group([current_worker]) #feature not implemented in C++
     
-    dist_trainer = distributed.data_parallel_distributed_trainer(communicator, False)
+    dist_trainer = distributed.trainer.data_parallel_distributed_trainer(mpi_comm, False)
     
+    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters,
+        lr=0.003125)], distributed_trainer=dist_trainer)
+
     print("Training on device type:{} id:{}".format('gpu' if default().type() else 'cpu', default().id()))
         
     # Get minibatches of images to train with and perform model training
-    minibatch_size_across_workers = 64
-    epoch_size = 60000
-    num_epochs = 10
+    minibatch_size = 32
+    num_samples_per_sweep = 60000
     num_sweeps_to_train_with = 1
-    num_minibatches_to_train = int(epoch_size * num_epochs / minibatch_size)
-    num_minibatches_to_train = int(num_minibatches_to_train / num_workers) * num_workers
-    
-    lr_per_sample = [0.01]*5+[0.005]
-    lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-
-    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters,
-        lr=lr_schedule)], distributed_trainer=dist_trainer)
-
-    training_progress_output_freq = 500
+    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
+    training_progress_output_freq = 80
 
     if debug_output:
         training_progress_output_freq = training_progress_output_freq/4
 
-    for i in range(0, num_minibatches_to_train):
+    for i in range(0, int(num_minibatches_to_train)):
         mb = mb_source.next_minibatch(minibatch_size)
 
         # Specify the mapping of input variables in the model to actual
