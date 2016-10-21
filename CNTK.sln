@@ -1156,56 +1156,52 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tutorials", "Tutorials", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageHandsOn", "ImageHandsOn", "{2230BF3D-4317-4A3F-A743-DDD6160503F8}"
 	ProjectSection(SolutionItems) = preProject
-		Tutorials\ImageHandsOn\ImageHandsOn.cntk = Tutorials\ImageHandsOn\ImageHandsOn.cntk
+		Examples\Tutorials\ImageHandsOn\ImageHandsOn.cntk = Examples\Tutorials\ImageHandsOn\ImageHandsOn.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SLUHandsOn", "SLUHandsOn", "{CC143D08-567D-4DAC-9E14-264749C19039}"
 	ProjectSection(SolutionItems) = preProject
-		Tutorials\SLUHandsOn\SLUHandsOn.cntk = Tutorials\SLUHandsOn\SLUHandsOn.cntk
+		Examples\Tutorials\SLUHandsOn\SLUHandsOn.cntk = Examples\Tutorials\SLUHandsOn\SLUHandsOn.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pretrained Models", "Pretrained Models", "{0ED2EE97-0A26-4865-871F-11033867BA34}"
-	ProjectSection(SolutionItems) = preProject
-		Tutorials\ImageHandsOn\cifar10.pretrained.cmf = Tutorials\ImageHandsOn\cifar10.pretrained.cmf
-		Tutorials\ImageHandsOn\cifar10.ResNet.cmf = Tutorials\ImageHandsOn\cifar10.ResNet.cmf
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solutions", "Solutions", "{A2A4893C-0D5B-42E2-BFAD-C123AE7FDAFD}"
 	ProjectSection(SolutionItems) = preProject
-		Tutorials\ImageHandsOn\ImageHandsOn_Solution1.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution1.cntk
-		Tutorials\ImageHandsOn\ImageHandsOn_Solution2.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution2.cntk
-		Tutorials\ImageHandsOn\ImageHandsOn_Solution3.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution3.cntk
-		Tutorials\ImageHandsOn\ImageHandsOn_Solution4.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution4.cntk
-		Tutorials\ImageHandsOn\ImageHandsOn_Solution5.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Solution5.cntk
-		Tutorials\ImageHandsOn\ImageHandsOn_Task4_Start.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Task4_Start.cntk
-		Tutorials\ImageHandsOn\ImageHandsOn_Task6.cntk = Tutorials\ImageHandsOn\ImageHandsOn_Task6.cntk
+		Examples\Tutorials\ImageHandsOn\ImageHandsOn_Solution1.cntk = Examples\Tutorials\ImageHandsOn\ImageHandsOn_Solution1.cntk
+		Examples\Tutorials\ImageHandsOn\ImageHandsOn_Solution2.cntk = Examples\Tutorials\ImageHandsOn\ImageHandsOn_Solution2.cntk
+		Examples\Tutorials\ImageHandsOn\ImageHandsOn_Solution3.cntk = Examples\Tutorials\ImageHandsOn\ImageHandsOn_Solution3.cntk
+		Examples\Tutorials\ImageHandsOn\ImageHandsOn_Solution4.cntk = Examples\Tutorials\ImageHandsOn\ImageHandsOn_Solution4.cntk
+		Examples\Tutorials\ImageHandsOn\ImageHandsOn_Solution5.cntk = Examples\Tutorials\ImageHandsOn\ImageHandsOn_Solution5.cntk
+		Examples\Tutorials\ImageHandsOn\ImageHandsOn_Task4_Start.cntk = Examples\Tutorials\ImageHandsOn\ImageHandsOn_Task4_Start.cntk
+		Examples\Tutorials\ImageHandsOn\ImageHandsOn_Task6.cntk = Examples\Tutorials\ImageHandsOn\ImageHandsOn_Task6.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{8CFBD0DB-5F16-48E6-984C-4401317FA10E}"
 	ProjectSection(SolutionItems) = preProject
-		Tutorials\SLUHandsOn\atis.test.ctf = Tutorials\SLUHandsOn\atis.test.ctf
-		Tutorials\SLUHandsOn\atis.train.ctf = Tutorials\SLUHandsOn\atis.train.ctf
+		Examples\Tutorials\SLUHandsOn\atis.test.ctf = Examples\Tutorials\SLUHandsOn\atis.test.ctf
+		Examples\Tutorials\SLUHandsOn\atis.train.ctf = Examples\Tutorials\SLUHandsOn\atis.train.ctf
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solutions", "Solutions", "{BD7FF8C0-EC3A-49CD-9D81-4A8A29B8AD8E}"
 	ProjectSection(SolutionItems) = preProject
-		Tutorials\SLUHandsOn\SLUHandsOn_Solution1.cntk = Tutorials\SLUHandsOn\SLUHandsOn_Solution1.cntk
-		Tutorials\SLUHandsOn\SLUHandsOn_Solution2.cntk = Tutorials\SLUHandsOn\SLUHandsOn_Solution2.cntk
-		Tutorials\SLUHandsOn\SLUHandsOn_Solution3.cntk = Tutorials\SLUHandsOn\SLUHandsOn_Solution3.cntk
-		Tutorials\SLUHandsOn\SLUHandsOn_Solution4.cntk = Tutorials\SLUHandsOn\SLUHandsOn_Solution4.cntk
+		Examples\Tutorials\SLUHandsOn\SLUHandsOn_Solution1.cntk = Examples\Tutorials\SLUHandsOn\SLUHandsOn_Solution1.cntk
+		Examples\Tutorials\SLUHandsOn\SLUHandsOn_Solution2.cntk = Examples\Tutorials\SLUHandsOn\SLUHandsOn_Solution2.cntk
+		Examples\Tutorials\SLUHandsOn\SLUHandsOn_Solution3.cntk = Examples\Tutorials\SLUHandsOn\SLUHandsOn_Solution3.cntk
+		Examples\Tutorials\SLUHandsOn\SLUHandsOn_Solution4.cntk = Examples\Tutorials\SLUHandsOn\SLUHandsOn_Solution4.cntk
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pretrained Models", "Pretrained Models", "{4727594B-A052-4834-B0E8-57DBB9ADEF13}"
 	ProjectSection(SolutionItems) = preProject
-		Tutorials\SLUHandsOn\slu.forward.backward.cmf = Tutorials\SLUHandsOn\slu.forward.backward.cmf
-		Tutorials\SLUHandsOn\slu.forward.cmf = Tutorials\SLUHandsOn\slu.forward.cmf
-		Tutorials\SLUHandsOn\slu.forward.lookahead.cmf = Tutorials\SLUHandsOn\slu.forward.lookahead.cmf
-		Tutorials\SLUHandsOn\slu.forward.nobn.cmf = Tutorials\SLUHandsOn\slu.forward.nobn.cmf
+		Examples\Tutorials\SLUHandsOn\slu.forward.backward.cmf = Examples\Tutorials\SLUHandsOn\slu.forward.backward.cmf
+		Examples\Tutorials\SLUHandsOn\slu.forward.cmf = Examples\Tutorials\SLUHandsOn\slu.forward.cmf
+		Examples\Tutorials\SLUHandsOn\slu.forward.lookahead.cmf = Examples\Tutorials\SLUHandsOn\slu.forward.lookahead.cmf
+		Examples\Tutorials\SLUHandsOn\slu.forward.nobn.cmf = Examples\Tutorials\SLUHandsOn\slu.forward.nobn.cmf
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{4A59163B-1EDE-4439-9E7D-40A30B82A3A0}"
 	ProjectSection(SolutionItems) = preProject
-		Tutorials\ImageHandsOn\CifarConverter.py = Tutorials\ImageHandsOn\CifarConverter.py
+		Examples\Tutorials\ImageHandsOn\CifarConverter.py = Examples\Tutorials\ImageHandsOn\CifarConverter.py
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "TIMIT", "TIMIT", "{B586AA4C-0BB9-4629-9EDA-25FF2618AC9F}"
@@ -2410,6 +2406,7 @@ Global
 		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{CC8DDDCB-D53A-4B30-8596-AEF1C493DB31} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 		{9F999212-AFC5-4EAC-AA78-F7247D46C456} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
+		{8BE0642A-A3AA-4A64-95D0-C78FB285B2A4} = {47755F2E-D674-4175-9E38-8EA053455072}
 		{2230BF3D-4317-4A3F-A743-DDD6160503F8} = {8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}
 		{CC143D08-567D-4DAC-9E14-264749C19039} = {8BE0642A-A3AA-4A64-95D0-C78FB285B2A4}
 		{0ED2EE97-0A26-4865-871F-11033867BA34} = {2230BF3D-4317-4A3F-A743-DDD6160503F8}

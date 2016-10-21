@@ -200,7 +200,6 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
       * If ``arg`` is a NumPy array and its type is neither `np.float32` nor `np.float64`, it sets it to `np.float32`.
       * If ``arg`` is an op, it is assumed that it has only one output, which will be returned.
 
-
     Args:
         arg (number, NumPy array, :class:`cntk.ops.variables.Variable`, or :class:`cntk.ops.functions.Function`): input
         fallback_dtype (NumPy dtype): fallback dtype in case ``arg`` is a list
@@ -232,7 +231,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     if isinstance(arg, list) and not arg:
         raise ValueError('input is empty')
 
-    if not isinstance(arg, np.ndarray):
+    if not isinstance(arg, np.ndarray) or arg.dtype!=fallback_dtype:
         arg = np.asarray(arg, dtype=fallback_dtype)
     if reshape:
         arg = np.reshape(arg, reshape)
@@ -242,26 +241,30 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
 
 def get_data_type(*args):
     """
-    Calculates the highest precision numpy datatype of the provided parameters.
+    Calculates the highest precision numpy data type of the provided parameters.
     If the parameter is a Function instance, it calculates it based on its
-    inputs.
+    inputs. Placeholders are ignored in the type determination.
 
     Args:
-        args (number, `list`, NumPy array, `Variable`, or `Function`): input
+        args (number, ``list``, NumPy array, :class:`cntk.ops.variables.Variable`, 
+         or :class:`cntk.ops.functions.Function`): input
     Returns:
-        `np.float32` or `np.float64`
+        ``np.float32``, ``np.float64``, or ``None``
     """
+    from ..ops.variables import Variable
 
     dtypes = set()
     if len(args) == 1 and isinstance(args, cntk_py.Function):
         args = [args]
 
     for arg in args:
+        if isinstance(arg, Variable) and arg.is_placeholder==True:
+            continue
         if isinstance(arg,
                       (cntk_py.Variable, cntk_py.Value, cntk_py.NDArrayView)):
             if cntk_py.DataType_Double == arg.get_data_type():
                 dtypes.add(np.float64)
-            else:
+            elif cntk_py.DataType_Float == arg.get_data_type():
                 dtypes.add(np.float32)
         elif isinstance(arg, np.ndarray):
             if arg.dtype not in (np.float32, np.float64):
@@ -279,7 +282,7 @@ def get_data_type(*args):
                 dtypes.add(np.float64)
             else:
                 dtypes.add(np.float32)
-        else:
+            else:
             # We don't know anything so we convert everything to float32. If it
             # works, we know the type.
             # TODO figure out a better/faster way.
@@ -291,7 +294,7 @@ def get_data_type(*args):
     elif np.float32 in dtypes:
         return np.float32
     else:
-        raise ValueError('could not determine data type')
+        None
 
 
 def pad_to_dense(batch):
@@ -426,24 +429,23 @@ def sanitize_value(shape, value, dtype, device):
     the CNTK core.
 
     Args:
-        shape (`tuple`): shape of the value
-        value (`None` or value that can be cast to NumPy array): the value to
+        shape (``tuple``): shape of the value
+        value (``None`` or value that can be cast to NumPy array): the value to
          be converted
-        dtype: data type (`np.float32` or `np.float64`)
+        dtype: data type (``np.float32`` or ``np.float64``)
         device (:class:`cntk.device.DeviceDescriptor`): device this value should be put
          on
 
     Returns:
         :class:`NDArrayView` object representing ``value``
     '''
-    np_dtype = sanitize_dtype_numpy(dtype)
-    cntk_dtype = sanitize_dtype_cntk(dtype)
-
     if value is None:
         if shape is None:
             raise ValueError('you need to specify at least shape or value')
+        cntk_dtype = sanitize_dtype_cntk(dtype)
         ndav = create_NDArrayView(shape, cntk_dtype, device)
     else:
+        np_dtype = sanitize_dtype_numpy(dtype)
         if not isinstance(value, np.ndarray) or value.dtype != np_dtype:
             if np.isscalar(value) and shape:
                 value = np.full(shape, value, dtype=np_dtype)
@@ -614,24 +616,31 @@ def create_Value_from_NumPy(nd, dev):
 
 
 def sanitize_dtype_numpy(dtype):
-    if dtype in ('float', 'float32', np.float32):
+    is_type = isinstance(dtype, type) or isinstance(dtype, np.dtype)
+    is_str = isinstance(dtype, str)
+    if is_type and dtype in (int, np.float32) or \
+            hasattr(dtype, 'kind') and dtype.kind in 'iu' \
+            or is_str and dtype in ('float', 'float32'):
         return np.float32
-    elif dtype in ('double', 'float64', np.float64):
+    elif is_type and dtype in (float, np.float64) or \
+            is_str and dtype in ('double', 'float64'):
+        # The Python type 'float' is a np.float64
         return np.float64
     else:
         raise ValueError('data type "%s" is not supported' % dtype)
 
 
 def sanitize_dtype_cntk(dtype):
-    if dtype in (cntk_py.DataType_Float, cntk_py.DataType_Double,
-                 cntk_py.DataType_Unknown):
+    if isinstance(dtype, int) and dtype in (cntk_py.DataType_Float, cntk_py.DataType_Double, cntk_py.DataType_Unknown):
         return dtype
-    if dtype in ('float', 'float32', np.float32):
-        return cntk_py.DataType_Float
-    elif dtype in ('double', 'float64', np.float64):
-        return cntk_py.DataType_Double
-    elif not dtype:
+    if dtype is None:
         return cntk_py.DataType_Unknown
+    
+    dtype = sanitize_dtype_numpy(dtype)
+    if dtype == np.float32:
+        return cntk_py.DataType_Float
+    elif dtype == np.float64:
+        return cntk_py.DataType_Double
     else:
         raise ValueError('data type "%s" is not supported' % dtype)
 
@@ -641,13 +650,13 @@ def sanitize_axis(axis):
     Sanitizes the axis.
 
     Args:
-        axis (`:class:Axis` or `int` or `None`): the axis to be used.
+        axis (:class:`cntk.axis.Axis` or ``int`` or ``None``): the axis to be used.
 
-          * `:class:Axis`: use axis instance directly (will convert row- to
+          * :class:`cntk.axis.Axis`: use axis instance directly (will convert row- to
              col-major in case of static axis.
-          * `int`: if positive, use it as static axis. If negative, count from
+          * ``int``: if positive, use it as static axis. If negative, count from
             last to first axis
-          * `None`: denote all available axes
+          * ``None``: denote all available axes
     '''
     if axis is None:
         return Axis.all_static_axes()
