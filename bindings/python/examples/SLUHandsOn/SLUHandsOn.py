@@ -90,8 +90,7 @@ def train(reader, model, max_epochs):
 
     # trainer object
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner = fsadagrad(z.parameters, lr_schedule, time_constant,
-                        targetAdagradAvDenom=1, gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
+    learner = fsadagrad(z.parameters, lr_schedule, time_constant, gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
     trainer = Trainer(z, ce, pe, [learner])
     #_extend_Trainer(trainer)  # TODO: should be just baked in
