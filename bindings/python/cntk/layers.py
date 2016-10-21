@@ -12,11 +12,9 @@ import numpy as np
 import sys
 import os
 import time
-from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
 from cntk.learner import sgd, fsadagrad
 from cntk.ops import parameter, input_variable, placeholder_variable, combine
 from cntk.ops import times, cross_entropy_with_softmax, classification_error, convolution, pooling, batch_normalization
-import itertools
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
 from cntk.blocks import *  # TODO: reduce to what we actually use
@@ -82,9 +80,7 @@ def Dense(shape, init=_default_initializer, activation=identity, input_rank=None
     apply_x = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
     if b:
         apply_x = apply_x + b
-    #_extend_Function(apply_x)  # (this gets us the >> operator  --TODO: remove once Function natively supports this)
     apply_x = apply_x >> activation
-    #_name_and_extend_Function(apply_x, 'Dense')
     return Block(apply_x, 'Dense', Record(W=W, b=b))
 
 # Embedding -- create a linear embedding layer
@@ -121,7 +117,6 @@ def Embedding(shape=None, init=None, weights=None):
     # expression
     x = Placeholder(name='embedding_arg')
     apply_x = times(x, E)
-    #_name_and_extend_Function(apply_x, 'Embedding')
     return Block(apply_x, 'Embedding', Record(E=E))
 
 # helper to create a new initializer object from an existing one, while updating members
@@ -171,15 +166,12 @@ def Convolution(filter_shape,        # e.g. (3,3)
     #init_kernel = glorot_uniform(filter_rank=-filter_rank, output_rank=1)
     init_kernel = _init_with(init, Record(filter_rank=filter_rank, output_rank=-1))
     # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag
-    #d = init_kernel.__dict__
-    #x = init_kernel.filter_rank
     W = Parameter(output_channels_shape + kernel_shape,             init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
     b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
     # expression
     x = Placeholder(name='convolution_arg')
-    # TODO: can we update the parameter order of convolution to match the optional ones as in here? (options order matches Keras)
-    # note: map_dims=num_filters not specified in Python (but in BS)
+    # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
     apply_x = convolution (W, x,
                            strides=_as_tuple(strides),
                            sharing=_as_tuple(sharing),
@@ -252,9 +244,6 @@ def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
     f_x_h_c.replace_placeholders(replacements)  # binds _h_c := prev_state
     apply_x = combine([h.owner])     # the Function that yielded 'h', so we get to know its inputs
     # apply_x is a Function x -> h
-    #_name_and_extend_Function(apply_x, 'Recurrence')
-    if _trace_layers:
-        _log_node(apply_x)
     return Block(apply_x, 'Recurrence', Record(over=over))
 
 # Delay -- delay input
@@ -270,8 +259,7 @@ def Delay(T=1, initial_state=None):
         apply_x = future_value(x, time_step=T, initial_state=initial_state)
     else:
         apply_x = x
-    #_name_and_extend_Function(apply_x, 'Delay')
-    return Block(apply_x, 'Delay', Record(T=T))
+    return Block(apply_x, 'Delay')
 
 # Dropout -- create a drop-out layer
 # Per-node dropout probabilities not yet supported, so one could also just use dropout directly.
@@ -280,11 +268,11 @@ def Dropout(prob=None):
     if prob is not None:
         raise NotImplementedError("Dropout: Dropout probability can currently not be specified per-layer.")
     apply_x = dropout
-    #_name_and_extend_Function(apply_x, 'Dropout')
     return Block(apply_x, 'Dropout')
 
 # BatchNormalization -- create a batch-normalization layer
-def BatchNormalization(_inf, spatial_rank=0,  # reduce over these dims. E.g. 2 to reduce over (h,w) in a (C, H, W)-shaped input
+def BatchNormalization(#_inf,
+                       spatial_rank=0,  # reduce over these dims. E.g. 2 to reduce over (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=5000, blend_time_constant=0,
                        epsilon=0.00001, use_cntk_engine=True):
@@ -293,26 +281,21 @@ def BatchNormalization(_inf, spatial_rank=0,  # reduce over these dims. E.g. 2 t
 
     # parameters bound to this Function
     norm_shape  = _INFERRED + (1,) * spatial_rank
-    norm_shape  = _inf   # BUGBUG: remove once inference works
+    #norm_shape  = _inf   # BUGBUG: remove once inference works
     if spatial_rank != 0:
         UntestedBranchError("BatchNormalization spatial_rank != 0:")
     scale       = Parameter(norm_shape, init=constant_initializer(init_scale))
     bias        = Parameter(norm_shape, init=constant_initializer(0))
-    # BUGBUG: We need a parameter that is not updated, but is not a constant either
-    # BUGBUG: the following fails: "ValueError: setting an array element with a sequence."
-    #run_mean     = Constant(constant_initializer(0), shape=norm_shape)  # note: disable learning since these are updated differently
-    #run_variance = Constant(constant_initializer(0), shape=norm_shape)
-    import numpy as np
-    init_stat = np.zeros(_inf, dtype=np.float32)
-    run_mean     = Constant(init_stat)  # BUGBUG: replace by above once inference works
-    run_variance = Constant(init_stat)
+    # BUGBUG: We need a parameter that is not updated, but is not a constant either. We fake it as a Constant.
+    run_mean     = Constant(0, shape=norm_shape)  # note: disable learning since these are updated differently
+    run_variance = Constant(0, shape=norm_shape)
+    # BUGBUG: ^^ fails with "ValueError: negative dimensions are not allowed"
 
     # expression
     x = Placeholder(name='batch_normalization_arg')
     apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, spatial_rank > 0, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
                                   #use_cntk_engine=use_cntk_engine)
                                   use_cudnn_engine=not use_cntk_engine)
-    #_name_and_extend_Function(apply_x, 'BatchNormalization')
     return Block(apply_x, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
 # LayerNormalization -- create a layer-normalization layer
@@ -330,5 +313,4 @@ def LayerNormalization(initial_scale=1, initial_bias=0):
     std = sqrt (reduce_mean (x0 * x0))
     x_hat = element_divide (x0, std)
     apply_x = x_hat * scale + bias    # denormalize with learned parameters
-    #_name_and_extend_Function(apply_x, 'LayerNormalization')
     return Block(apply_x, 'LayerNormalization', Record(scale=scale, bias=bias))
