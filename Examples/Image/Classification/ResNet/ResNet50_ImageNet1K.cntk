@@ -10,7 +10,7 @@ outputDir = "$rootDir$/Output" ;
 modelPath = "$outputDir$/Models/ResNet_50"
 stderr = "$outputDir$/ResNet_50_BS_out"
 
-parallelTrain = "true"
+parallelTrain = true
 
 TrainNetwork = {
     action = "train"
@@ -79,20 +79,20 @@ TrainNetwork = {
 
     SGD = {
         epochSize = 0
-        minibatchSize = 128
-        maxEpochs = 125
-        learningRatesPerMB = 0.5*30: 0.05*30: 0.005*30: 0.0005
+        minibatchSize = 256
+        maxEpochs = 120
+        learningRatesPerMB = 1*30: 0.1*30: 0.01*30: 0.001
         momentumPerMB = 0.9
         gradUpdateType = "None"
         L2RegWeight = 0.0001
         dropoutRate = 0
         numMBsToShowResult = 500
 
-        disableWkInBatchNormal = true
+        disableRegInBatchNormalization = true
 
         ParallelTrain = {
             parallelizationMethod = "DataParallelSGD"
-            distributedMBReading = "true"
+            distributedMBReading = true
             parallelizationStartEpoch = 1
             DataParallelSGD = {
                 gradientBits = 32
@@ -100,88 +100,91 @@ TrainNetwork = {
         }
     }
 
-    reader={
-        readerType="ImageReader"
-        file="$DataDir$/train_map.txt"
-        randomize="Auto"
-        features={
-            width=224
-            height=224
-            channels=3
-            cropType="Random"
-            hflip="true"
-            cropRatio=0.46666:0.875
-            jitterType="UniRatio"
-            meanFile="$ConfigDir$/ImageNet1K_mean.xml"
+    reader = {
+        readerType = "ImageReader"
+        file = "$DataDir$/train_map.txt"
+        randomize = "Auto"
+        features = {
+            width = 224
+            height = 224
+            channels = 3
+            cropType = "Random"
+            jitterType = "UniRatio"
+            cropRatio = 0.46666:0.875
+            hflip = true
+            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
         }
-        labels={
-            labelDim=1000
+        labels = {
+            labelDim = 1000
         }
     }
 
-    #reader = {
-    #    verbosity = 0 ; randomize = true
-    #    deserializers = ({
-    #        type = "ImageDeserializer" ; module = "ImageReader"
-    #        file = "$dataDir$/train_map.txt"
-    #        input = {
-    #            features = { transforms = (
-    #                { type = "Crop" ; cropType = "random" ; cropRatio = 0.46666:0.875 ; jitterType = "uniRatio" } :
-    #                { type = "Scale" ; width = 224 ; height = 224 ; channels = 3 ; interpolations = "linear" } :
-    #                { type = "Mean" ; meanFile = "$ConfigDir$/ImageNet1K_mean.xml" } : 
-    #                { type = "Transpose" }
-    #            )}
-    #            labels = { labelDim = 1000 }
-    #        }
-    #    })
-    #}
+    cvReader = {
+        readerType = "ImageReader"
+        file = "$DataDir$/val_map.txt"
+        randomize = "None"
+        features = {
+            width = 224
+            height = 224
+            channels = 3
+            cropType = "Center"
+            cropRatio = 0.875
+            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+        }
+        labels = {
+            labelDim = 1000
+        }
+    }
 }
 
 
 BNStatistics = {
-    action = "pbn"
+    action = "bnstat"
     modelPath = "$modelPath$"
     minibatchSize = 256
-    iters = 30
+    itersPerNode = 30
+    enableDistributedMBReading = true
 
     reader = {
-        verbosity = 0 ; randomize = true
-        deserializers = ({
-            type = "ImageDeserializer" ; module = "ImageReader"
-            file = "$dataDir$/train_map.txt"
-            input = {
-                features = { transforms = (
-                    { type = "Crop" ; cropType = "random" ; cropRatio = 0.46666:0.875 ; jitterType = "uniRatio" } :
-                    { type = "Scale" ; width = 224 ; height = 224 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Mean" ; meanFile = "$ConfigDir$/ImageNet1K_mean.xml" } : 
-                    { type = "Transpose" }
-                )}
-                labels = { labelDim = 1000 }
-            }
-        })
+        readerType = "ImageReader"
+        file = "$DataDir$/train_map.txt"
+        randomize = "Auto"
+        features = {
+            width = 224
+            height = 224
+            channels = 3
+            cropType = "Random"
+            hflip = true
+            cropRatio = 0.46666:0.875
+            jitterType = "UniRatio"
+            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+        }
+        labels = {
+            labelDim = 1000
+        }
     }
 }
 
 Eval = {
     action = "test"
     modelPath = "$modelPath$.PBN"
-    # Set minibatch size for testing.
-    minibatchSize = 100
+    minibatchSize = 200
     evalNodeNames = errs:top5Errs
 
-    reader = {
-        verbosity = 0 ; randomize = false
-        deserializers = ({
-            type = "ImageDeserializer" ; module = "ImageReader"
-            file = "$dataDir$/train_map.txt"
-            input = {
-                features = { transforms = (
-                    { type = "Crop" ; cropType = "center" ; cropRatio = 0.875 ; jitterType = "uniRatio" } :
-                    { type = "Scale" ; width = 224 ; height = 224 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Mean" ; meanFile = "$ConfigDir$/ImageNet1K_mean.xml" }
-                )}
-                labels = { labelDim = 1000 }
-            }
-        })
-    }   
+    reader={
+        readerType = "ImageReader"
+        file = "$DataDir$/val_map.txt"
+        randomize = "None"
+        features = {
+            width = 224
+            height = 224
+            channels = 3
+            cropType = "Center"
+            cropRatio = 0.875
+            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+        }
+        labels = {
+            labelDim = 1000
+        }
+    } 
 }
