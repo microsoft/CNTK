@@ -158,8 +158,9 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
 
     # make things more basic for running a quicker test
     if run_test:
-        epoch_size = 100000
+        epoch_size = 5000
         max_epochs = 1
+        training_progress_output_freq = 30
 
     for epoch in range(max_epochs):
         loss_numer = 0
@@ -180,8 +181,8 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
             metric_numer += trainer.previous_minibatch_evaluation_average * samples
             denom += samples
 
-            # every 500 MBs evaluate on a test sequence to visually show how we're doing
-            if mbs % 500 == 0:
+            # every N MBs evaluate on a test sequence to visually show how we're doing
+            if mbs % training_progress_output_freq == 0:
                 mb_valid = valid_reader.next_minibatch(minibatch_size)
                 valid_args = {'raw_input': mb_valid[features_si_va], 'raw_labels': mb_valid[labels_si_va]}
 
