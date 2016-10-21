@@ -32,7 +32,7 @@ namespace CNTK
         }
 
         // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
-        void PreParameterUpdateCallback(const Trainer& /*trainer*/, std::vector<std::pair<Variable, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info) override
+        void PreParameterUpdateCallback(const Trainer& /*trainer*/, std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info) override
         {
             std::vector<NDArrayViewPtr> headerToAggregate;
             headerToAggregate.push_back(info.evalCriterionValue);
