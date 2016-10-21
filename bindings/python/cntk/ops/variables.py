@@ -1,7 +1,7 @@
 import numpy as np
 from cntk import cntk_py, utils
 from ..tensor import TensorOpsMixin
-from ..utils import typemap, sanitize_precision, sanitize_value
+from ..utils import typemap, sanitize_precision, sanitize_value, sanitize_dtype_cntk
 
 
 class Variable(TensorOpsMixin, cntk_py.Variable):
@@ -209,9 +209,13 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
             else:
                 dtype = np.float32
 
-        ndav = sanitize_value(shape, value, dtype, device)
-
-        super(Constant, self).__init__(ndav, name)
+        if np.isscalar(value):
+            super(Constant, self).__init__(shape, sanitize_dtype_cntk(dtype), value)
+        else:
+            ndav = sanitize_value(shape, value, dtype, device)
+            super(Constant, self).__init__(ndav, name) 
+        #ndav = sanitize_value(shape, value, dtype, device)
+        #super(Constant, self).__init__(ndav, name)
 
 
                 

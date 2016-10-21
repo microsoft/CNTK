@@ -282,7 +282,7 @@ def get_data_type(*args):
                 dtypes.add(np.float64)
             else:
                 dtypes.add(np.float32)
-            else:
+        else:
             # We don't know anything so we convert everything to float32. If it
             # works, we know the type.
             # TODO figure out a better/faster way.

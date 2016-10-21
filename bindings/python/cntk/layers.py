@@ -290,6 +290,8 @@ def BatchNormalization(#_inf,
     run_mean     = Constant(0, shape=norm_shape)  # note: disable learning since these are updated differently
     run_variance = Constant(0, shape=norm_shape)
     # BUGBUG: ^^ fails with "ValueError: negative dimensions are not allowed"
+    #run_mean     = Parameter(norm_shape, init=constant_initializer(0))  # note: disable learning since these are updated differently
+    #run_variance = Parameter(norm_shape, init=constant_initializer(0))
 
     # expression
     x = Placeholder(name='batch_normalization_arg')
