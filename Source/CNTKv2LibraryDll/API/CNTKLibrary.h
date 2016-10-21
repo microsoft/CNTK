@@ -895,6 +895,9 @@ namespace CNTK
         CNTK_API static const int SentinelStaticAxisIndexValueForAllStaticAxes;
         CNTK_API static const int SentinelStaticAxisIndexValueForUnknownAxes;
 
+        // Todo: move into Axis::AllStaticAxes() after upgrade to VS2015
+        static const Axis s_allStaticAxes;
+
         class UniqueDynamicAxesNames
         {
         public:
@@ -1197,6 +1200,7 @@ namespace CNTK
             // the underlying underlying uninitialized value as a ptr and free it.
             *this = std::move(other);
         }
+
         DictionaryValue& operator=(const DictionaryValue& other)
         {
             if (this != &other)
@@ -2721,10 +2725,11 @@ namespace CNTK
     /// This overload uses an initial state value of 0.
     /// Throws an exception of the operand has more than one dynamic axis.
     ///
+    /// Todo: move into PastValue() after upgrade to VS2015.
+    static const auto defaultPastValueInitialState = Constant::Scalar(0.0f);
     inline FunctionPtr PastValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
     {
-        static const auto defaultInitialState = Constant::Scalar(0.0f);
-        return PastValue(operand, defaultInitialState, offset, name);
+        return PastValue(operand, defaultPastValueInitialState, offset, name);
     }
 
     ///
@@ -2738,10 +2743,11 @@ namespace CNTK
     /// This overload uses an initial state value of 0.
     /// Throws an exception of the operand has more than one dynamic axis.
     ///
+    /// Todo: move into FutureValue() after upgrade to VS2015
+    static const auto defaultFutureValueInitialState = Constant::Scalar(0.0f);
     inline FunctionPtr FutureValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
     {
-        static const auto defaultInitialState = Constant::Scalar(0.0f);
-        return FutureValue(operand, defaultInitialState, offset, name);
+        return FutureValue(operand, defaultFutureValueInitialState, offset, name);
     }
 
     ///

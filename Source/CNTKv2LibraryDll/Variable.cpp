@@ -301,11 +301,11 @@ namespace CNTK
         return dict;
     }
 
+    // Todo: move into Deserialize() after upgrade to VS2015
+    static const vector<std::wstring> s_requiredDictionaryKeysInVariable = {typeKey, uidKey, kindKey, dataTypeKey, dynamicAxisKey, isSparseKey, nameKey, needsGradientKey, shapeKey};
     /*static*/ Variable Variable::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
     {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, uidKey, kindKey, dataTypeKey, dynamicAxisKey, isSparseKey, nameKey, needsGradientKey, shapeKey };
-
-        size_t version = ValidateDictionary<Variable>(dict, s_requiredDictionaryKeys, s_variableTypeValue, s_serializationVersion);
+        size_t version = ValidateDictionary<Variable>(dict, s_requiredDictionaryKeysInVariable, s_variableTypeValue, s_serializationVersion);
 
         const auto& uid = dict[uidKey].Value<std::wstring>();
 

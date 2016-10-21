@@ -69,6 +69,13 @@ namespace CNTK
 
     /*static*/ const std::wstring CompositeMinibatchSource::MinibatchSourcePositionAttributeName = L"minibatchSourcePosition";
 
+    // Todo: move into CompositeMinibatchSource() after upgrade to VS2015.
+    static const std::unordered_map<std::wstring, std::wstring> deserializerTypeNameToModuleNameMap = {
+        {L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader"},
+        {L"ImageDeserializer", L"ImageReader"},
+        {L"HTKFeatureDeserializer", L"HTKDeserializers"},
+        {L"HTKMLFDeserializer", L"HTKDeserializers"},
+    };
     CompositeMinibatchSource::CompositeMinibatchSource(const Dictionary& configuration, DistributedCommunicatorPtr communicator)
         : m_epochEndReached(false), m_prevMinibatchSize(0), m_epochSize(MinibatchSource::InfinitelyRepeat), m_truncationLength(0), m_communicator(communicator)
     {
@@ -79,13 +86,6 @@ namespace CNTK
         auto& deserializerConfigurations = augmentedConfiguration[L"deserializers"].Value<std::vector<DictionaryValue>>();
         for (auto& deserializerConfig : deserializerConfigurations)
         {
-            static const std::unordered_map<std::wstring, std::wstring> deserializerTypeNameToModuleNameMap = {
-                { L"CNTKTextFormatDeserializer", L"CNTKTextFormatReader" },
-                { L"ImageDeserializer",          L"ImageReader"          },
-                { L"HTKFeatureDeserializer",     L"HTKDeserializers"     },
-                { L"HTKMLFDeserializer",         L"HTKDeserializers"     },
-            };
-
             auto& deserializerConfigDict = deserializerConfig.Value<Dictionary>();
             auto deserializerTypeName = deserializerConfigDict[L"type"].Value<std::wstring>();
             if (deserializerTypeName == L"ImageDeserializer")

@@ -355,24 +355,26 @@ namespace CNTK
     /*static*/ const std::vector<Axis> Axis::DefaultInputVariableDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
     /*static*/ const std::vector<Axis> Axis::UnknownDynamicAxes = { Axis(SentinelStaticAxisIndexValueForUnknownAxes) };
 
+    // Todo: move into DefaultDynamicAxis() after upgrade to VS2015
+    static const Axis s_defaultDynamicAxis(L"defaultDynamicAxis");
     /*static*/ const Axis& Axis::DefaultDynamicAxis()
     {
-        static const Axis s_defaultDynamicAxis(L"defaultDynamicAxis");
         return s_defaultDynamicAxis;
     }
 
+    // Todo: move into DeafultBatchAxis() after upgrade to VS2015
+    static const Axis s_defaultBatchAxis(L"defaultBatchAxis", false);
     /*static*/ const Axis& Axis::DefaultBatchAxis()
     {
-        static const Axis s_defaultBatchAxis(L"defaultBatchAxis", false);
         return s_defaultBatchAxis;
     }
 
+    // Todo: move into AllStaticAxes() after upgrade to VS2015
+    /*static*/ const Axis Axis::s_allStaticAxes(Axis::SentinelStaticAxisIndexValueForAllStaticAxes);
     /*static*/ const Axis& Axis::AllStaticAxes()
     {
-        static const Axis s_allStaticAxes(SentinelStaticAxisIndexValueForAllStaticAxes);
         return s_allStaticAxes;
     }
-
 
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {

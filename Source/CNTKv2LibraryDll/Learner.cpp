@@ -310,11 +310,11 @@ namespace CNTK
         return checkpoint;
     }
 
+    // Todo: Move into RestoreFromCheckpoint() after upgrade to VS2015.
+    static const vector<std::wstring> s_requiredDictionaryKeysInLearnerBase = {typeKey, sampleCountKey, minibatchCountKey, learningRateScheduleKey};
     /*virtual*/ void LearnerBase::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
     {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, sampleCountKey, minibatchCountKey, learningRateScheduleKey };
-        
-        ValidateDictionary<LearnerBase>(checkpoint, s_requiredDictionaryKeys, s_learnerTypeValue, CurrentVersion());
+        ValidateDictionary<LearnerBase>(checkpoint, s_requiredDictionaryKeysInLearnerBase, s_learnerTypeValue, CurrentVersion());
 
         m_sampleCount = checkpoint[sampleCountKey].Value<size_t>();
         m_minibatchCount = checkpoint[minibatchCountKey].Value<size_t>();

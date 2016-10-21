@@ -338,12 +338,12 @@ namespace CNTK
         return dict;
     }
 
+    // Todo: move into Deserialize() after upgrade to VS2015
+    static const vector<std::wstring> s_requiredDictionaryKeysInTrainingParameterSchedule = {typeKey, unitKey, scheduleKey};
      template <typename T>
     /*static*/ TrainingParameterSchedule<T>  TrainingParameterSchedule<T>::Deserialize(const Dictionary& dict)
     {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, unitKey, epochSizeKey, scheduleKey };
-
-        ValidateDictionary<TrainingParameterSchedule<T>>(dict, s_requiredDictionaryKeys, s_trainingParameterScheduleTypeValue, s_serializationVersion);
+        ValidateDictionary<TrainingParameterSchedule<T>>(dict, s_requiredDictionaryKeysInTrainingParameterSchedule, s_trainingParameterScheduleTypeValue, s_serializationVersion);
 
         return TrainingParameterSchedule<T>(dict);
     }
