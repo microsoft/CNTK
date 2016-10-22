@@ -51,7 +51,7 @@ def create_model():
     return Sequential([
         #Stabilizer(),
         Embedding(emb_dim),
-        BatchNormalization(),
+        #BatchNormalization(),
         Recurrence(LSTM(hidden_dim, enable_self_stabilization=False), go_backwards=False,
                    #),
                    initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
@@ -72,6 +72,7 @@ def train(reader, model, max_epochs):
 
     # apply model to input
     z = model(query)
+    #z = model(Stabilizer()(query))
 
     # loss and metric
     ce = cross_entropy_with_softmax(z, slot_labels)

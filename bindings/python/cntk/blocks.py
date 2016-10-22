@@ -139,18 +139,18 @@ def _Identity(name='identity_arg'):
 identity = _Identity()
 
 def Stabilizer(steepness=4):
-    UntestedBranchError("Stabilizer")
+    #UntestedBranchError("Stabilizer")
     # currently fails with "RuntimeError: The 1 leading dimensions of the right operand with shape [1] do not match the left operand's trailing dimensions with shape [943]"
 
-    # earlier,
-    # This was tested ad-hoc, and it works with linear stabilizer, but not with softplus,
-    # which shows that it is not a bug in this code but maybe some time-stamp problem.
+    # When applied to a known input, it works with linear stabilizer, but not with softplus,
+    # which is explaninable as time stamp not being updated in model update.
 
     # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
     # this behaves linear for weights around 1, yet guarantees positiveness
 
     # parameters bound to this Function
     param = Parameter((1), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
+    #param = Parameter((1), init=1, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
     # TODO: compute this strange value directly in Python
 
     # expression
@@ -162,7 +162,7 @@ def Stabilizer(steepness=4):
     #beta = log (exp (param))   # HAS NO EFFECT
     #beta = (exp (param))   # HAS NO EFFECT
     #beta = steepness * param * (1/steepness) # HAS NO EFFECT
-    beta = param # TODO: replace by function above
+    beta = param # TODO: replace by softplus once the time-stamp issue is gone. Softplus works better.
     apply_x = beta * x
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
