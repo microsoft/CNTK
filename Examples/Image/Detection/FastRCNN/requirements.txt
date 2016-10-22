@@ -6,5 +6,4 @@ matplotlib
 EasyDict
 numpy
 scikit-learn
-scikit-image
 scipy
