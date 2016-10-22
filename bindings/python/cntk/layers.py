@@ -205,9 +205,13 @@ def AveragePooling(filter_shape,  # e.g. (3,3)
     return Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad)
 
 # Recurrence() -- run a block recurrently over a time sequence
-def Recurrence(over, go_backwards=False, initial_state=None):
+def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
+    initial_state = initial_state if _is_given(initial_state) else _current_default_options.initial_state
+    # if initial state is given and a numeric constant, then turn it into a Constant() object
+    if np.isscalar(initial_state):
+        initial_state = Constant(initial_state, shape=(1)) # TODO: This should be automatically done inside the API.
     if go_backwards:
         UntestedBranchError("Recurrence, go_backwards option") # TODO: test in SLUHandsOn.py bidirectional
     def previous_hook(state):

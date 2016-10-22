@@ -48,15 +48,13 @@ def create_reader(path):
 ########################
 
 def create_model():
-  #with default_options(enable_self_stabilization=False):
+  # the following injects an option to mimic the BS version identically
+  with default_options(enable_self_stabilization=False, initial_state=0.1):
     return Sequential([
         #Stabilizer(),
         Embedding(emb_dim),
         #BatchNormalization(),
-        Recurrence(LSTM(hidden_dim), go_backwards=False,
-                   #),
-                   initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
-                   # BUGBUG: initial_state=0.1 should work
+        Recurrence(LSTM(hidden_dim), go_backwards=False),
         #Stabilizer(),
         #BatchNormalization(),
         Dense(label_dim)

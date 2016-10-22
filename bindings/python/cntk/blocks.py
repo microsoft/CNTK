@@ -34,14 +34,18 @@ _INFERRED = (InferredDimension,)  # as a tuple, makes life easier
 def UntestedBranchError(name):
     raise NotImplementedError("Untested code branch: " + name)
 
+# This record contains the defaults for a number of optional parameters to layers.
+# These can be overwritten temporarily by saying
+#    with default_options(init=..., ...):
+#        # code block within which the changed defaults are active
 _current_default_options = Record(
     init=glorot_uniform(),
-    activation=None,       # Dense() and Convolution() have no activation by default
+    activation=None,                  # Dense() and Convolution() have no activation by default
     pad=False,
     bias=True,
     init_bias=0,
-    enable_self_stabilization=False # Stabilizer() and LSTM()
-    # TODO: add initial_state?
+    enable_self_stabilization=False,  # Stabilizer() and LSTM()
+    initial_state=None                # Recurrence()
 )
 
 _default_sentinel           = Record() # This is a singleton sentinel value we recognize and replace in _initializer_for()
@@ -54,6 +58,7 @@ init_bias_default_or_0                     = _default_sentinel_init_bias
 bias_default_or_True                       = _default_sentinel
 pad_default_or_False                       = _default_sentinel
 enable_self_stabilization_default_or_False = _default_sentinel
+initial_state_default_or_None              = _default_sentinel_init_bias
 
 # check whether a parameter is a default
 # This is meant to be used by implementations of layers that take default values that may default to default-defaults.
