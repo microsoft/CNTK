@@ -5,18 +5,14 @@
 # ==============================================================================
 
 import numpy as np
-import sys
-import os
-import time
 import math
  
 from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
-#from cntk.io import ReaderConfig
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-from cntk.initializer import glorot_uniform, gaussian, he_normal
+from cntk.initializer import glorot_uniform, he_normal
 from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu, convolution, pooling, PoolingType_Max
@@ -141,6 +137,12 @@ def max_pool_layer(input, pool_size, stride):
 def dropout_layer(input, rate):
     return dropout(input, dropout_rate=rate)
 
+# HACK: express the outdated gaussian() initializer as a he_normal
+# TODO: replace all gaussian() calls by inlining
+#from cntk.initializer import gaussian
+def gaussian(scale=1):
+    return he_normal(scale=scale * math.sqrt(0.02))
+
 # Define basic model
 def create_basic_model(input):
     net = {}
@@ -198,22 +200,22 @@ def create_basic_model_with_batch_normalization(input):
 def create_basic_model_layer(input):
     net = {}
 
-    #with default_options(activation=relu):
-    model = Sequential([
-        [
-            Convolution((5,5), 32, init=gaussian(scale=0.0043), activation=relu, pad=True),
-            MaxPooling((3,3), strides=(2,2))
-        ],[
-            Convolution((5,5), 32, init=gaussian(scale=1.414), activation=relu, pad=True),
-            MaxPooling((3,3), strides=(2,2))
-        ],[
-            Convolution((5,5), 64, init=gaussian(scale=1.414), activation=relu, pad=True),
-            MaxPooling((3,3), strides=(2,2))
-        ],
+    with default_options(activation=relu, pad=True):
+        model = Sequential([
+            [
+                Convolution((5,5), 32, init=gaussian(scale=0.0043)),
+                MaxPooling((3,3), strides=(2,2))
+            ],[
+                Convolution((5,5), 32, init=gaussian(scale=1.414)),
+                MaxPooling((3,3), strides=(2,2))
+            ],[
+                Convolution((5,5), 64, init=gaussian(scale=1.414)),
+                MaxPooling((3,3), strides=(2,2))
+            ],
 
-        Dense(64, init=gaussian(scale=12), activation = relu),
-        Dense(10, init=gaussian(scale=1.5), activation = None)
-    ])
+            Dense(64, init=gaussian(scale=12)),
+            Dense(10, init=gaussian(scale=1.5), activation=None)
+        ])
 
     # TODO: unify the patterns
     net['fc5'] = model(input)
@@ -230,8 +232,8 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     label_var = input_variable((num_classes))
 
     # apply model to input
-    #model = create_basic_model(input_var)
-    model = create_basic_model_layer(input_var)
+    model = create_basic_model(input_var)
+    #model = create_basic_model_layer(input_var)
     z = model['fc5']
 
     #
@@ -338,6 +340,13 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
 
 if __name__=='__main__':
     os.chdir(data_path) # BUGBUG: This is only needed because ImageReader uses relative paths in the map file. Ugh.
+
+    # TODO: leave these in for now as debugging aids; remove for beta
+    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
+    set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
+    #set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
+    #force_deterministic_algorithms()
+    # TODO: do the above; they lead to slightly different results, so not doing it for now
 
     reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', True)
     reader_test  = create_reader(data_path, 'test_map.txt',  'CIFAR-10_mean.xml', False)
