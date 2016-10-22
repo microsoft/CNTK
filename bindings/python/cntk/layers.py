@@ -30,7 +30,7 @@ from cntk.blocks import _current_default_options, _is_given, _initializer_for, _
 def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_default_or_None,
           input_rank=None, map_rank=None,
           bias=bias_default_or_True, init_bias=init_bias_default_or_0):
-    activation = activation_default_or_None(activation)
+    activation = _resolve_activation(activation)
     bias       = bias if _is_given(bias) else _current_default_options.bias
     output_shape = _as_tuple(shape)
 
@@ -126,7 +126,6 @@ def Convolution(filter_shape,        # e.g. (3,3)
                 activation=activation_default_or_None,
                 init=init_default_or_glorot_uniform,
                 pad=pad_default_or_False,
-                #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
                 strides=1,
                 sharing=True,     # (must be True currently)
                 bias=bias_default_or_True,
@@ -135,7 +134,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0):
     #UntestedBranchError("Convolution")
-    activation = activation_default_or_None(activation)
+    activation = _resolve_activation(activation)
     pad  = pad  if _is_given(pad ) else _current_default_options.pad
     bias = bias if _is_given(bias) else _current_default_options.bias
     # TODO: there must be a Python trick to do this as a function call on locals or so
@@ -163,7 +162,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
     apply_x = convolution (W, x,
                            strides=_as_tuple(strides),
                            sharing=_as_tuple(sharing),
-                           auto_padding=_as_tuple(pad), #lower_pad=0, upper_pad=0,
+                           auto_padding=_as_tuple(pad),
                            # TODO: can we rename auto_padding to pad?
                            transpose=transpose,
                            max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)

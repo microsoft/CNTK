@@ -96,7 +96,7 @@ def default_options(**kwargs):
     return OptionsStack(**kwargs)
 
 # resolve activation option against current default
-def activation_default_or_None(activation):
+def _resolve_activation(activation):
     # if none is passed to caller then use the default
     if activation is not _default_sentinel:
         activation = _current_default_options.activation
