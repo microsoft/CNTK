@@ -20,15 +20,18 @@ from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-from cntk.blocks import _initializer_for, _default_activation, _INFERRED
+from cntk.blocks import _current_default_options, _is_given, _initializer_for, _INFERRED
 
 # Dense -- create a fully-connected linear projection layer with optional non-linear activation
 # Note: shape may describe a tensor as well.
 # input_rank given: number of inferred axes to add to W (map_rank must not be given)
 # map_rank   given: expand W to leave exactly mapRank axes (input_rank must not be given)
 # none       given: expand W to all (same as map_rank=0)
-def Dense(shape, init=DEFAULT_WEIGHT_INITIALIZER, activation=DEFAULT_ACTIVATION, input_rank=None, map_rank=None, bias=True, init_bias=0):
-    activation = _default_activation(activation)
+def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_default_or_None,
+          input_rank=None, map_rank=None,
+          bias=bias_default_or_True, init_bias=init_bias_default_or_0):
+    activation = activation_default_or_None(activation)
+    bias       = bias if _is_given(bias) else _current_default_options.bias
     output_shape = _as_tuple(shape)
 
     if input_rank is not None and map_rank is not None:
@@ -85,7 +88,7 @@ def Embedding(shape=None, init=None, weights=None):
         if shape is None:
             raise ValueError('Embedding: output shape must be specified')
         if init is None:
-            init = DEFAULT_WEIGHT_INITIALIZER
+            init = init_default_or_glorot_uniform
         shape = _as_tuple(shape)
         weight_shape = _INFERRED + shape
         E = Parameter(weight_shape, init=init, name='E')
@@ -120,19 +123,22 @@ def Embedding(shape=None, init=None, weights=None):
 #  - num_filters first is what Keras does
 def Convolution(filter_shape,        # e.g. (3,3)
                 num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension_
-                activation=DEFAULT_ACTIVATION,
-                init=DEFAULT_WEIGHT_INITIALIZER,
-                pad=False,
+                activation=activation_default_or_None,
+                init=init_default_or_glorot_uniform,
+                pad=pad_default_or_False,
                 #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
                 strides=1,
                 sharing=True,     # (must be True currently)
-                bias=True,
-                init_bias=0,
+                bias=bias_default_or_True,
+                init_bias=init_bias_default_or_0,
                 reduction_rank=1, # (must be 1 currently)
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0):
     #UntestedBranchError("Convolution")
-    activation = _default_activation(activation)
+    activation = activation_default_or_None(activation)
+    pad  = pad  if _is_given(pad ) else _current_default_options.pad
+    bias = bias if _is_given(bias) else _current_default_options.bias
+    # TODO: there must be a Python trick to do this as a function call on locals or so
     if reduction_rank != 1:
         NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
     if transpose:

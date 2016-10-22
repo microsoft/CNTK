@@ -48,6 +48,8 @@ def create_reader(path):
 ########################
 
 def create_model():
+  from cntk.ops import relu  # temp
+  with default_options(init_bias=0):
     return Sequential([
         #Stabilizer(),
         Embedding(emb_dim),

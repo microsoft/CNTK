@@ -35,59 +35,83 @@ def UntestedBranchError(name):
     raise NotImplementedError("Untested code branch: " + name)
 
 _current_default_options = Record(
+    init=glorot_uniform(),
     activation=None,       # Dense() and Convolution() have no activation by default
-    init=glorot_uniform()  # BUGBUG: init_bias will also fall back to this
-    # TODO: pad
+    pad=False,
+    bias=True,
+    init_bias=0
+    # TODO: stabilizer?
 )
 
-DEFAULT_WEIGHT_INITIALIZER = Record() # This is a singleton sentinel value we recognize and replace in _initializer_for()
-DEFAULT_ACTIVATION = Record()
+_default_sentinel           = Record() # This is a singleton sentinel value we recognize and replace in _initializer_for()
+_default_sentinel_init      = Record() # use different ones for init andinit_bias so we can distinguish them in _initializer_for()
+_default_sentinel_init_bias = Record()
+# in function signatures we use symbols that indicate the default default in their name
+init_default_or_glorot_uniform = _default_sentinel_init
+activation_default_or_None     = _default_sentinel
+init_bias_default_or_0         = _default_sentinel_init_bias
+bias_default_or_True           = _default_sentinel
+pad_default_or_False           = _default_sentinel
 
-# use:
+# check whether a parameter is a default
+# This is meant to be used by implementations of layers that take default values that may default to default-defaults.
+def _is_given(p):
+    return p is not _default_sentinel and p is not _default_sentinel_init and p is not _default_sentinel_init_bias
+
+# scope guard for overriding defaults
 # with default_options(activation=relu, init=gaussian(), pad=True)
+#     model = Convolution((3,3), 32) >> Convolution((3,3), 64)  # will have relu activation and padding
 def default_options(**kwargs):
-    class OptionsStack:
+    class OptionsStack: # implement Python's 'with' protocol
+        # constructor prepares the updated record of defaults and remembers it
         def __init__(self, **kwargs):
             new_options = kwargs
             merged_options = _current_default_options.__dict__
+            # we merge the newly provided options with the current defaults
+            # Only names that already exist may be used (cannot create new default variables).
+            # TODO: we may consider a more generic mechanism where one can overwrite all, if Python allows that.
             for key in new_options:
                 try:
                     merged_options[key]
                 except:
                     raise TypeError("default_options() got an unexpected keyword argument '{}'".format(key))
                 merged_options[key] = new_options[key]
-            self.new_default_options = Record(**merged_options)
+            self.new_default_options = Record(**merged_options) # this is the new options record that entering the with section will activate
+        # entering with block: replaces the current defaults with the new ones, after remembering the old ones
         def __enter__(self):
             global _current_default_options
             self.saved_default_options = _current_default_options
             _current_default_options = self.new_default_options
-            #return self.cr
+        # exiting with block: restore previous remembered defaults
         def __exit__(self, type, value, traceback):
             global _current_default_options
             _current_default_options = self.saved_default_options
-            pass
     return OptionsStack(**kwargs)
 
 # resolve activation option against current default
-def _default_activation(activation):
+def activation_default_or_None(activation):
     # if none is passed to caller then use the default
-    if activation is DEFAULT_ACTIVATION:
+    if activation is not _default_sentinel:
         activation = _current_default_options.activation
-
     # activation=None is implemented as activation=identity
     if activation is None:
         activation = identity
-
     return activation
 
 # create the complete initializer for a given 'init' parameter, to pass to parameter()
 # This is called from Parameter() and every place that injects rank parameters.
 # It does a few things:
-#  - maps DEFAULT_WEIGHT_INITIALIZER to default  --TODO: we should have a global setting for that
+#  - maps init_default_or_glorot_uniform to default  --TODO: we should have a global setting for that
 #  - creates a new initializer object from an existing one, while updating members
 def _initializer_for(init, rank_params=None):
     if init is None:
         raise ValueError("init parameter cannot be None")
+
+    # if default then select
+    if init is _default_sentinel_init:
+        init = _current_default_options.init
+    elif init is _default_sentinel_init_bias:
+        init = _current_default_options.init_bias
 
     # scalar constant: that's it, nothing further to do here
     if np.isscalar(init):
@@ -95,13 +119,6 @@ def _initializer_for(init, rank_params=None):
         from _cntk_py import constant_initializer
         return constant_initializer(init)
         #return init # TODO: change to this once this works, e.g. for layers.BatchNormalization()
-
-    # if default then select
-    if init is DEFAULT_WEIGHT_INITIALIZER:
-        # TODO: select the default from global settings
-        from cntk.initializer import initializer_with_rank
-        # BUGBUG: This breaks random init seeds
-        init = _current_default_options.init
 
     # implant additional rank parameters
     if rank_params:
@@ -164,6 +181,7 @@ def _Identity(name='identity_arg'):
 # TODO: This should become a C++-side Function, e.g. like sigmoid
 identity = _Identity()
 
+# TODO: add a flag enable_self_stabilizer (maybe rename it) default to True, overridable by default_options
 def Stabilizer(steepness=4):
     #UntestedBranchError("Stabilizer")
     # currently fails with "RuntimeError: The 1 leading dimensions of the right operand with shape [1] do not match the left operand's trailing dimensions with shape [943]"
@@ -192,7 +210,7 @@ def Stabilizer(steepness=4):
     apply_x = beta * x
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
-def LSTM(shape, cell_shape=None, use_peepholes=False, init=DEFAULT_WEIGHT_INITIALIZER, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
+def LSTM(shape, cell_shape=None, use_peepholes=False, init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0, enable_self_stabilization=False): # (x, (h, c))
 
     has_projection = cell_shape is not None
     has_aux = False
