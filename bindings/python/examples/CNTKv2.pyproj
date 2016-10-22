@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{1a078fc2-21c0-4f42-9a5b-0e84e944bc74}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>ImageHandsOn\ImageHandsOn.py</StartupFile>
+    <StartupFile>test\SLUHandsOn_test.py</StartupFile>
     <SearchPath>$(RepoRootPath)$(Platform)\$(Configuration);$(RepoRootPath)bindings\python;$(RepoRootPath)bindings\python\examples</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>

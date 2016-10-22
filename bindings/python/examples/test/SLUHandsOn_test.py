@@ -4,17 +4,16 @@
 # for full license information.
 # ==============================================================================
 
-# TODO: This does not work yet, need to figure out the right pattern.
-
 import numpy as np
 from cntk import DeviceDescriptor
 
 # this emulates a "main" function for SLUHandsOn
-from examples.SLUHandsOn.SLUHandsOn import *
-#from examples.SLUHandsOn.SLUHandsOn import _Infer  # TODO: remove
-def slu_hands_on():
+def _run_slu_hands_on_1():
+    from examples.SLUHandsOn.SLUHandsOn import data_dir, create_reader, create_model, train
+    from _cntk_py import set_fixed_random_seed
+    set_fixed_random_seed(1) # to become invariant to initialization order, which is a valid change
     reader = create_reader(data_dir + "/atis.train.ctf")
-    model = create_model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
+    model = create_model()
     loss, metric = train(reader, model, max_epochs=1)
     return metric, loss  # note: strange order
 
@@ -24,11 +23,10 @@ def test_seq_classification_error(device_id):
     from cntk.utils import cntk_device
     DeviceDescriptor.set_default_device(cntk_device(device_id))
 
-    # BUGBUG: Currently broken due to dimension inference. TODO: bring back once dim inference works again.
-    #evaluation_avg, loss_avg = slu_hands_on()
-    #
-    #expected_avg = [0.15570838301766451, 0.7846451368305728]
-    #assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+    evaluation_avg, loss_avg = _run_slu_hands_on_1()
+
+    expected_avg = [0.15570838301766451, 0.7846451368305728]
+    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
 if __name__=='__main__':
     test_seq_classification_error(0)

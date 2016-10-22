@@ -9,9 +9,9 @@
 
 # TODO: further clean up the dependencies
 import numpy as np
-import sys
-import os
-import time
+#import sys
+#import os
+#import time
 from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
@@ -28,58 +28,43 @@ from cntk.ops.variables import Variable
 _trace_layers = False
 #_trace_layers = True  # uncomment this to log creation of graph through layers
 
-_default_initializer = glorot_uniform()
 _INFERRED = (InferredDimension,)  # as a tuple, makes life easier
 
+# call this for all untested branches
 def UntestedBranchError(name):
-    # pass
     raise NotImplementedError("Untested code branch: " + name)
 
-# "upgrade" a current Function to add additional operators and methods, as a temporary stopgap
-# at end of each layer constructor, return _extend_Function(z, 'Type (for debugging)')
-# use this until __call__ is implemented in Function()
-# Also add the >> operator (forward function composition).
-# Returns its arg to allow chaining.
-def _unused_extend_Function(f):
-    class FunctionEx(f.__class__): 
-        # BUGBUG: Somehow we don't get here anymore. It's fine for now.
-        def __dummy__():
-            pass
-        #def __call__(self, *args):
-        #    f = self
-        #    _function_name = _node_name(f)  # these are for logging/debugging only
-        #    _function_description = _node_description(f)
-        #    _arg_description = ", ".join([_node_name(f) for f in list(args)])
-        #    #f = super(Function, self).f()
-        #    f = super(Function, f)(*args)
-        #    _name_and_extend_Function(f, _function_name)
-        #    if _trace_layers:
-        #        print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
-        #    return f
-        ## needed here to call into FunctionEx.__call__ instead of Function.__call__
-        #def __rshift__(self, other):
-        #    return other(self)
-        def _name(self):  # retrieve the debug name
-            return _node_name(self)
-    if hasattr(f, '__dummy__'):  # already extended: don't do it again
-        return f
-    f.__class__ = FunctionEx
-    if _trace_layers:
-        print("def {}".format(_node_description(f)))
-    return f
+_current_default_weight_initializer = glorot_uniform()
+DEFAULT_WEIGHT_INITIALIZER = Record() # This is a singleton sentinel value we recognize and replace in _initializer_for()
 
-# name and extend; in this order, so that _extend_Function can print a meaningful log message
-#def _name_and_extend_Function(f, name=None):
-#    if name is not None:
-#        _name_node(f, name)
-#    _extend_Function(f)
+# create the complete initializer for a given 'init' parameter, to pass to parameter()
+# This is called from Parameter() and every place that injects rank parameters.
+# It does a few things:
+#  - maps DEFAULT_WEIGHT_INITIALIZER to default  --TODO: we should have a global setting for that
+#  - creates a new initializer object from an existing one, while updating members
+def _initializer_for(init, rank_params=None):
+    if init is None:
+        raise ValueError("init parameter cannot be None")
 
-# give a new name to a function, by wrapping it
-#def _wrap_rename_Function(f, name):
-#    f = combine([f], name)  # 'combine' to create a separate identity so we can reassign the debug name
-#    _name_node(f, name)
-#    _extend_Function(f)
-#    return f
+    # scalar constant: that's it, nothing further to do here
+    if np.isscalar(init):
+        # BUGBUG: this is sometimes required when dimensions are unknown; shouldn't.
+        from _cntk_py import constant_initializer
+        return constant_initializer(init)
+        #return init # TODO: change to this once this works, e.g. for layers.BatchNormalization()
+
+    # if default then select
+    if init is DEFAULT_WEIGHT_INITIALIZER:
+        # TODO: select the default from global settings
+        #init = _current_default_weight_initializer
+        init = glorot_uniform()
+
+    # implant additional rank parameters
+    if rank_params:
+        from cntk.initializer import initializer_with_rank
+        init = initializer_with_rank(init, **rank_params)
+
+    return init
 
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
 # All layers functions call this at the end.
@@ -95,11 +80,8 @@ def Block(f, op_name, members={}):
     return f
 
 # some mappings--these currently exist only so that I can name the nodes for debugging
-# TODO: random init parameters: init_filter_rank=0, init_output_rank=1, init_on_cpu_only=True, random_seed=-1
-# init must be given
 def Parameter(shape, init, name=''):
-    if init is None:
-        raise "Parameter: init cannot be None"
+    init = _initializer_for(init)
     p = parameter(shape, init=init, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'parameter')   # these are factory methods for things with state
 
@@ -166,20 +148,20 @@ def Stabilizer(steepness=4):
     apply_x = beta * x
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
-def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
+def LSTM(shape, cell_shape=None, use_peepholes=False, init=DEFAULT_WEIGHT_INITIALIZER, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
+
     has_projection = cell_shape is not None
     has_aux = False
 
     if has_aux:
         UntestedBranchError("LSTM, has_aux option")
-    if has_projection:
-        UntestedBranchError("LSTM, projection")
 
     shape = _as_tuple(shape)
 
     cell_shape = _as_tuple(cell_shape) if cell_shape is not None else shape
     if len(shape) != 1 or len(cell_shape) != 1:
         raise ValueError("LSTM: shape and cell_shape must be vectors (rank-1 tensors)")
+        # otherwise we'd need to fix slicing and Param initializers
 
     stack_axis = -1  # stacking along the fastest-changing one, to match BS
     # determine stacking dimensions
@@ -198,6 +180,8 @@ def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer,
     Co = Parameter(            cell_shape,         init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
 
     Wmr = Parameter(cell_shape + shape, init=init) if has_projection else None  # final projection
+    if Wmr:
+        UntestedBranchError("LSTM, projection")
 
     Sdh = Stabilizer() if enable_self_stabilization else identity
     Sdc = Stabilizer() if enable_self_stabilization else identity

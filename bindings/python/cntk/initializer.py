@@ -146,7 +146,7 @@ def bilinear(kernel_width, kernel_height):
     '''
     return cntk_py.bilinear_initializer(kernel_width, kernel_height)
 
-def with_rank(initializer, output_rank, filter_rank):
+def initializer_with_rank(initializer, output_rank=None, filter_rank=None):
     '''
     override output_rank and filter_rank specification in a random initializer
     constructed without an explciti output_rank and filter_rank specification
@@ -159,4 +159,8 @@ def with_rank(initializer, output_rank, filter_rank):
     Returns:
         new initializer for `:class:cntk.variables.Parameter` with specified output_rank and filter_rank
     '''
+    if output_rank is None:
+        output_rank = SentinelValueForInferParamInitRank
+    if filter_rank is None:
+        filter_rank = SentinelValueForInferParamInitRank
     return cntk_py.random_initializer_with_rank(initializer, output_rank, filter_rank)
