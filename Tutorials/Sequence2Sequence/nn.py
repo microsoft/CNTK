@@ -229,8 +229,9 @@ def ones_like(x):
 
 def past_value_window(N, input, axis=1):
 
-    ones_like_input = ones_like(input)
-
+    #ones_like_input = ones_like(input)
+    ones_like_input = plus(times(input, constant(0, shape=(128, 1))), constant(1, shape=(1)))
+    
     last_value=[]
     last_valid=[]
     value = None
@@ -242,9 +243,8 @@ def past_value_window(N, input, axis=1):
             valid = ones_like_input
         else:
             value = past_value(input, time_step=t)
-            # TODO: valid needs to be a different shape from value... fix!!!
-            valid = past_value(ones_like_input, time_step=t)
-
+            valid = past_value(ones_like_input, time_step=t)     
+        
         last_value.append(sequence.last(value))
         last_valid.append(sequence.last(valid))
 
@@ -254,7 +254,8 @@ def past_value_window(N, input, axis=1):
 
     # workaround
     value = reshape(value_a, shape=(input.shape[0], N))
-    valid = reshape(valid_a, shape=(input.shape[0], N))
+    #valid = reshape(valid_a, shape=(input.shape[0], N))
+    valid = reshape(valid_a, shape=(1, N))
 
     # value[t] = value of t steps in the past; valid[t] = true if there was a value t steps in the past
     return value, valid
@@ -294,7 +295,9 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
         # u = v * tanh(W1h + W2d)
         v = parameter(shape=(1, attention_dim))
         u = times(v, stabilize(element_times(tanh_out, projected_attention_window_broadcast()[2])))
-        u_valid = plus(u, log(projected_attention_window_broadcast()[2])) # broadcast u's first axis up to the attention_dim
+        u_valid = plus(u, log(projected_attention_window_broadcast()[2]))
+
+        import pdb; pdb.set_trace()
 
         attention_weights = my_softmax(u_valid, 1)
         weighted_attention_window = element_times(projected_attention_window_broadcast()[1], attention_weights)
