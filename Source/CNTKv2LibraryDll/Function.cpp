@@ -87,6 +87,13 @@ namespace CNTK
                 {
                     var = placeholderReplacements.at(placeholder);
                     replacedPlaceholders.insert(placeholder);
+
+                    // If shape or dynamic axes of the placeholder are known but unknown in the replacement, we update the replacement's shape/dynamic axes
+                    if (var.Shape().IsUnknown() && !placeholder.Shape().IsUnknown())
+                        var.m_dataFields->m_shape = placeholder.Shape();
+
+                    if ((var.DynamicAxes() == Axis::UnknownDynamicAxes) && (placeholder.DynamicAxes() != Axis::UnknownDynamicAxes))
+                        var.m_dataFields->m_dynamicAxes = placeholder.DynamicAxes();
                 }
             }
         };
@@ -145,7 +152,7 @@ namespace CNTK
 
             if (visitedFunctions[this] > 1)
             {
-                if (currentOutputVar.Shape() != newOutputVar.Shape())
+                if (!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape()))
                 {
                     recurrentNodeOutputModified = true;
                     currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
@@ -163,8 +170,9 @@ namespace CNTK
                     currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
                 }
 
-                if ((currentOutputVar.GetDataType() != newOutputVar.GetDataType()) ||
-                    (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
+                if ((!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape())) ||
+                    ((newOutputVar.GetDataType() != DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType())) ||
+                    ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())))
                 {
                     InvalidArgument("Inconsistency in output variable shape, DataType or Dynamic axes computed after replaced placeholders vs. existing output properties, for the Recurrent Function");
                 }
@@ -587,41 +595,26 @@ namespace CNTK
             if (!allInputDynamicAxesEmpty)
             {
                 outputDynamicAxes = Axis::UnknownDynamicAxes;
-            for (auto inputVar : inputs)
-            {
-                auto currentInputDynamicAxes = inputVar.DynamicAxes();
+                for (auto inputVar : inputs)
+                {
+                    auto currentInputDynamicAxes = inputVar.DynamicAxes();
                     if (!currentInputDynamicAxes.empty() && (currentInputDynamicAxes != Axis::UnknownDynamicAxes))
                     {
                         if (outputDynamicAxes == Axis::UnknownDynamicAxes)
-                    outputDynamicAxes = currentInputDynamicAxes;
-                else
-                {
+                            outputDynamicAxes = currentInputDynamicAxes;
+                        else
+                        {
                             if (currentInputDynamicAxes != outputDynamicAxes)
-                        LogicError("Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands");
+                                LogicError("Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands");
+                        }
+                    }
                 }
-            }
-        }
             }
         }
 
         NDShape outputShape;
         bool areAnyInputShapesUnknown = (std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return input.Shape().IsUnknown(); }) != inputs.end());
-        bool areAllInputShapesUnknown = (std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.Shape().IsUnknown(); }) == inputs.end());
-        auto canOpInferOutputShapeWithUnknownInputShape = [](PrimitiveOpType op) {
-            return ((op == PrimitiveOpType::Plus) ||
-                    (op == PrimitiveOpType::Minus) ||
-                    (op == PrimitiveOpType::ElementTimes) ||
-                    (op == PrimitiveOpType::Equal) ||
-                    (op == PrimitiveOpType::NotEqual) ||
-                    (op == PrimitiveOpType::Less) ||
-                    (op == PrimitiveOpType::LessEqual) ||
-                    (op == PrimitiveOpType::Greater) ||
-                    (op == PrimitiveOpType::GreaterEqual) ||
-                    (op == PrimitiveOpType::PastValue) ||
-                    (op == PrimitiveOpType::FutureValue));
-        };
-
-        if (areAllInputShapesUnknown || (areAnyInputShapesUnknown && !canOpInferOutputShapeWithUnknownInputShape(op)))
+        if (areAnyInputShapesUnknown)
             outputShape = NDShape::Unknown;
         else
         {

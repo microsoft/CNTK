@@ -265,10 +265,10 @@ def LSTM(shape, cell_shape=None, use_peepholes=False,
     Sht = Stabilizer() if enable_self_stabilization else identity
 
     def create_hc_placeholder():
-        return (Placeholder(name='hPh'), Placeholder(name='cPh')) # (h, c)
+        return (placeholder_variable(shape, name='hPh'), placeholder_variable(cell_shape, name='cPh')) # (h, c)
 
     # parameters to model function
-    x = Placeholder(name='lstm_block_arg')
+    x = placeholder_variable(name='lstm_block_arg')
     prev_state = create_hc_placeholder()
 
     # formula of model function

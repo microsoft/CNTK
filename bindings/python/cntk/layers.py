@@ -214,25 +214,24 @@ def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_
     if go_backwards:
         UntestedBranchError("Recurrence, go_backwards option") # TODO: test in SLUHandsOn.py bidirectional
     def previous_hook(state):
-        if hasattr(state, 'outputs'):
-           outputs = state.outputs
-           if len(outputs) > 1:  # if multiple then apply to each element
-               return tuple([previous_hook(s) for s in outputs])
+        if isinstance (state, tuple):  # if multiple then apply to each element
+            return tuple([previous_hook(s) for s in state])
         # not a tuple: must be a 'scalar', i.e. a single element
         return past_value  (state, initial_state) if not go_backwards else \
                future_value(state, initial_state)
     x = Placeholder(name='recurrence_arg')
-    prev_state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
-    f_x_h_c = over(x, prev_state_forward) # apply the recurrent over
+    state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
+    prev_state = previous_hook(state_forward)  # delay (h, c)
+    f_x_h_c = over(x, prev_state) # apply the recurrent over
     # this returns a Function (x, (h_prev, c_prev)) -> (h, c)
+    h_c = f_x_h_c.outputs
+    replacements = { value_forward: value for (value_forward, value) in zip(list(_as_tuple(state_forward)), h_c) }
+    f_x_h_c.replace_placeholders(replacements)  # resolves state_forward := h_c
     h = f_x_h_c.outputs[0]  # 'h' is a Variable (the output of a Function that computed it)
     if _trace_layers:
         _log_node(h)
         _log_node(combine([h.owner]))
-    prev_state = previous_hook(f_x_h_c)  # delay (h, c)
-    replacements = { value_forward: value.output for (value_forward, value) in zip(list(prev_state_forward), list(prev_state)) }
-    f_x_h_c.replace_placeholders(replacements)  # binds _h_c := prev_state
-    apply_x = combine([h.owner])     # the Function that yielded 'h', so we get to know its inputs
+    apply_x = combine([h])     # the Function that yielded 'h', so we get to know its inputs
     # apply_x is a Function x -> h
     return Block(apply_x, 'Recurrence', Record(over=over))
 
