@@ -297,8 +297,6 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
         u = times(v, stabilize(element_times(tanh_out, projected_attention_window_broadcast()[2])))
         u_valid = plus(u, log(projected_attention_window_broadcast()[2]))
 
-        import pdb; pdb.set_trace()
-
         attention_weights = my_softmax(u_valid, 1)
         weighted_attention_window = element_times(projected_attention_window_broadcast()[1], attention_weights)
 
