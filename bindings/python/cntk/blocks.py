@@ -139,7 +139,10 @@ def _Identity(name='identity_arg'):
 identity = _Identity()
 
 def Stabilizer(steepness=4):
-    #UntestedBranchError("Stabilizer")
+    UntestedBranchError("Stabilizer")
+    # currently fails with "RuntimeError: The 1 leading dimensions of the right operand with shape [1] do not match the left operand's trailing dimensions with shape [943]"
+
+    # earlier,
     # This was tested ad-hoc, and it works with linear stabilizer, but not with softplus,
     # which shows that it is not a bug in this code but maybe some time-stamp problem.
 
@@ -161,7 +164,6 @@ def Stabilizer(steepness=4):
     #beta = steepness * param * (1/steepness) # HAS NO EFFECT
     beta = param # TODO: replace by function above
     apply_x = beta * x
-    #_name_and_extend_Function(apply_x, 'Stabilizer')
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
 def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))

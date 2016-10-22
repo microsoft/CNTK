@@ -10,7 +10,6 @@ from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
-#from cntk.io import CNTKTextFormatMinibatchSource
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 from cntk import Trainer
 from cntk.learner import sgd, fsadagrad, learning_rate_schedule, momentum_schedule
@@ -48,27 +47,17 @@ def create_reader(path):
 # define the model     #
 ########################
 
-def create_model():  # TODO: all the _inf stuff will go away once dimension inference works. Should this be a function then?
-    # helper function that will go away once dimension inference works for Recurrence()
-    def _Infer(shape, axis=None):
-        from cntk import Axis
-        from cntk.utils import Record, _as_tuple
-        if axis is None:
-            axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]
-        return Record(shape=_as_tuple(shape), axis=axis, with_shape = lambda new_shape: _Infer(new_shape, axis))
-
-    _inf_emb_dim = _Infer(shape=emb_dim)
-
+def create_model():
     return Sequential([
         #Stabilizer(),
         Embedding(emb_dim),
-        #BatchNormalization(_inf=emb_dim), # TODO: remove _inf once it works
+        BatchNormalization(),
         Recurrence(LSTM(hidden_dim, enable_self_stabilization=False), go_backwards=False,
                    #),
                    initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
                    # BUGBUG: initial_state=0.1 should work
         #Stabilizer(),
-        #BatchNormalization(_inf=hidden_dim), # TODO: remove _inf once it works
+        #BatchNormalization(),
         Dense(label_dim)
     ])
 
@@ -78,8 +67,8 @@ def create_model():  # TODO: all the _inf stuff will go away once dimension infe
 
 def train(reader, model, max_epochs):
     # Input variables denoting the features and label data
-    query       = Input(input_dim,  is_sparse=False)  # TODO: make sparse once it works
-    slot_labels = Input(num_labels, is_sparse=True)
+    query       = Input(input_dim,  is_sparse=False)
+    slot_labels = Input(num_labels, is_sparse=True)  # TODO: make sparse once it works
 
     # apply model to input
     z = model(query)

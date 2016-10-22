@@ -22,8 +22,8 @@ from cntk.blocks import _trace_layers  # (debugging)
 from cntk.initializer import glorot_uniform
 from _cntk_py import constant_initializer # BUGBUG: Should not be necessary, should just type-cast under the hood.
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", ".."))
+#abs_path = os.path.dirname(os.path.abspath(__file__))
+#sys.path.append(os.path.join(abs_path, "..", ".."))
 # TODO: move these out from examples
 #from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_value, print_training_progress, negate
 
@@ -275,22 +275,18 @@ def BatchNormalization(#_inf,
                        init_scale=1,
                        normalization_time_constant=5000, blend_time_constant=0,
                        epsilon=0.00001, use_cntk_engine=True):
-    #UntestedBranchError("BatchNormalization")
     # Note: This has been tested ad-hoc in SLUHandsOn.py, and gives quite precisely the expected improvement. So this works. Just need to fix _inf.
 
     # parameters bound to this Function
     norm_shape  = _INFERRED + (1,) * spatial_rank
-    #norm_shape  = _inf   # BUGBUG: remove once inference works
     if spatial_rank != 0:
         UntestedBranchError("BatchNormalization spatial_rank != 0:")
-    scale       = Parameter(norm_shape, init=constant_initializer(init_scale))
-    bias        = Parameter(norm_shape, init=constant_initializer(0))
-    # BUGBUG: We need a parameter that is not updated, but is not a constant either. We fake it as a Constant.
-    run_mean     = Constant(0, shape=norm_shape)  # note: disable learning since these are updated differently
+    #scale        = Parameter(norm_shape, init=init_scale) # BUGBUG: fails with "ValueError: negative dimensions are not allowed"
+    #bias         = Parameter(norm_shape, init=0)
+    scale        = Parameter(norm_shape, init=constant_initializer(init_scale))
+    bias         = Parameter(norm_shape, init=constant_initializer(0))
+    run_mean     = Constant(0, shape=norm_shape)  # note: these are not really constants; they are updated differently
     run_variance = Constant(0, shape=norm_shape)
-    # BUGBUG: ^^ fails with "ValueError: negative dimensions are not allowed"
-    #run_mean     = Parameter(norm_shape, init=constant_initializer(0))  # note: disable learning since these are updated differently
-    #run_variance = Parameter(norm_shape, init=constant_initializer(0))
 
     # expression
     x = Placeholder(name='batch_normalization_arg')
