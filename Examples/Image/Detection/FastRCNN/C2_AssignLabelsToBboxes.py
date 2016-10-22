@@ -1,4 +1,10 @@
-from Tkinter import *
+from __future__ import print_function
+try:
+    # for Python2
+    from Tkinter import *
+except ImportError:
+    # for Python3
+    from tkinter import *
 from PIL import ImageTk
 from cntk_helpers import *
 
@@ -6,7 +12,7 @@ from cntk_helpers import *
 ####################################
 # Parameters
 ####################################
-imgDir = "C:/Users/pabuehle/Desktop/newImgs/"
+imgDir = "C:/Users/chazhang/Desktop/newImgs/"
 classes = ("avocado", "orange", "butter", "champagne", "cheese", "eggBox", "gerkin", "joghurt", "ketchup",
            "orangeJuice", "onion", "pepper", "sausage", "tomato", "water", "apple", "milk",
            "tabasco", "soySauce", "mustard", "beer")
@@ -38,10 +44,10 @@ for objectIndex,objectName in enumerate(objectNames):
 # loop over all images
 imgFilenames = getFilesInDirectory(imgDir, ".jpg")
 for imgIndex, imgFilename in enumerate(imgFilenames):
-    print imgIndex, imgFilename
+    print (imgIndex, imgFilename)
     labelsPath = os.path.join(imgDir, imgFilename[:-4] + ".bboxes.labels.tsv")
     if os.path.exists(labelsPath):
-        print "Skipping image {:3} ({}) since annotation file already exists: {}".format(imgIndex, imgFilename, labelsPath)
+        print ("Skipping image {:3} ({}) since annotation file already exists: {}".format(imgIndex, imgFilename, labelsPath))
         continue
 
     # load image and ground truth rectangles
@@ -70,9 +76,9 @@ for imgIndex, imgFilename in enumerate(imgFilenames):
             tk.update()
 
         # store result
-        print "Button pressed = ", global_lastButtonPressed
+        print ("Button pressed = ", global_lastButtonPressed)
         labels.append(global_lastButtonPressed)
 
     writeFile(labelsPath, labels)
 tk.destroy()
-print "DONE."
+print ("DONE.")

@@ -1,8 +1,11 @@
+from __future__ import print_function
+from builtins import str
 import pdb, sys, os, time
 import numpy as np
 import selectivesearch
 from easydict import EasyDict
 from fastRCNN.nms import nms as nmsPython
+from builtins import range
 
 
 ####################################
@@ -138,10 +141,10 @@ def roiTransformPadScaleParams(imgWidth, imgHeight, padWidth, padHeight, boResiz
     w_offset = ((targetw - imgWidth) / 2.)
     h_offset = ((targeth - imgHeight) / 2.)
     if boResizeImg and w_offset > 0 and h_offset > 0:
-        print "ERROR: both offsets are > 0:", imgCounter, imgWidth, imgHeight, w_offset, h_offset
+        print ("ERROR: both offsets are > 0:", imgCounter, imgWidth, imgHeight, w_offset, h_offset)
         error
     if (w_offset < 0 or h_offset < 0):
-        print "ERROR: at least one offset is < 0:", imgWidth, imgHeight, w_offset, h_offset, scale
+        print ("ERROR: at least one offset is < 0:", imgWidth, imgHeight, w_offset, h_offset, scale)
     return targetw, targeth, w_offset, h_offset, scale
 
 def roiTransformPadScale(rect, w_offset, h_offset, scale = 1.0):
@@ -188,7 +191,7 @@ def checkCntkOutputFile(cntkImgsListPath, cntkOutputPath, cntkNrRois, outputDim)
     with open(cntkOutputPath) as fp:
         for imgIndex in range(len(imgPaths)):
             if imgIndex % 100 == 1:
-                print "Checking cntk output file, image %d of %d..." % (imgIndex, len(imgPaths))
+                print ("Checking cntk output file, image %d of %d..." % (imgIndex, len(imgPaths)))
             for roiIndex in range(cntkNrRois):
                 assert (fp.readline() != "")
         assert (fp.readline() == "") # test if end-of-file is reached
@@ -206,9 +209,9 @@ def parseCntkOutput(cntkImgsListPath, cntkOutputPath, outParsedDir, cntkNrRois, 
         for imgIndex in range(len(imgPaths)):
             line = fp.readline()
             if skip5Mod != None and imgIndex % 5 != skip5Mod:
-                print "Skipping image {} (skip5Mod = {})".format(imgIndex, skip5Mod)
+                print ("Skipping image {} (skip5Mod = {})".format(imgIndex, skip5Mod))
                 continue
-            print "Parsing cntk output file, image %d of %d" % (imgIndex, len(imgPaths))
+            print ("Parsing cntk output file, image %d of %d" % (imgIndex, len(imgPaths)))
 
             # convert to floats
             data = []
@@ -236,8 +239,8 @@ def readCntkRoiLabels(roiLabelsPath, nrRois, roiDim, stopAtImgIndex = None):
         if stopAtImgIndex and imgIndex == stopAtImgIndex:
             break
         roiLabels.append([])
-        pos = line.find("|roiLabels ")
-        valuesString = line[pos + 10:].strip().split(" ")
+        pos = line.find(b'|roiLabels ')
+        valuesString = line[pos + 10:].strip().split(b' ')
         assert (len(valuesString) == nrRois * roiDim)
 
         for boxIndex in range(nrRois):
@@ -253,8 +256,8 @@ def readCntkRoiCoordinates(imgPaths, cntkRoiCoordsPath, nrRois, padWidth, padHei
         if stopAtImgIndex and imgIndex == stopAtImgIndex:
             break
         roiCoords.append([])
-        pos = line.find("|rois ")
-        valuesString = line[pos + 5:].strip().split(" ")
+        pos = line.find(b'|rois ')
+        valuesString = line[pos + 5:].strip().split(b' ')
         assert (len(valuesString) == nrRois * 4)
 
         imgWidth, imgHeight = imWidthHeight(imgPaths[imgIndex])
@@ -283,7 +286,7 @@ def getAbsoluteROICoordinates(roi, imgWidth, imgHeight, padWidth, padHeight, res
 
     elif resizeMethod == "pad" or resizeMethod == "padScale":
         if resizeMethod == "padScale":
-            scale = 1.0 * padWidth / max(imgWidth, imgHeight)
+            scale = float(padWidth) / max(imgWidth, imgHeight)
             imgWidthScaled  = int(round(imgWidth * scale))
             imgHeightScaled = int(round(imgHeight * scale))
         else:
@@ -291,17 +294,19 @@ def getAbsoluteROICoordinates(roi, imgWidth, imgHeight, padWidth, padHeight, res
             imgWidthScaled = imgWidth
             imgHeightScaled = imgHeight
 
-        w_offset = ((padWidth - imgWidthScaled) / 2.)
-        h_offset = ((padHeight - imgHeightScaled) / 2.)
+        w_offset = float(padWidth - imgWidthScaled) / 2.0
+        h_offset = float(padHeight - imgHeightScaled) / 2.0
         if resizeMethod == "padScale":
             assert(w_offset == 0 or h_offset == 0)
-        rect = [roi[0] * padWidth  - w_offset,
-                roi[1] * padHeight - h_offset,
-                roi[2] * padWidth  - w_offset,
-                roi[3] * padHeight - h_offset]
+        
+        x0 = max(roi[0] * padWidth  - w_offset, 0) 
+        y0 = max(roi[1] * padHeight - h_offset, 0)
+        rect = [x0, y0, 
+                x0 + (roi[2] - roi[0]) * padWidth,
+                y0 + (roi[3] - roi[1]) * padHeight]
         rect = [int(round(r / scale)) for r in rect]
     else:
-        print "ERROR: Unknown resize method '%s'" % resizeMethod
+        print ("ERROR: Unknown resize method '%s'" % resizeMethod)
         error
     assert(min(rect) >=0 and max(rect[0],rect[2]) <= imgWidth and max(rect[1],rect[3]) <= imgHeight)
     return rect
@@ -435,7 +440,7 @@ def visualizeResults(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padH
 def applyNonMaximaSuppression(nmsThreshold, labels, scores, coords):
     # generate input for nms
     allIndices = []
-    nmsRects = [[[]] for _ in xrange(max(labels) + 1)]
+    nmsRects = [[[]] for _ in range(max(labels) + 1)]
     coordsWithScores = np.hstack((coords, np.array([scores]).T))
     for i in range(max(labels) + 1):
         indices = np.where(np.array(labels) == i)[0]
@@ -457,12 +462,12 @@ def apply_nms(all_boxes, thresh, boUsePythonImpl = True):
     """Apply non-maximum suppression to all predicted boxes output by the test_net method."""
     num_classes = len(all_boxes)
     num_images = len(all_boxes[0])
-    nms_boxes = [[[] for _ in xrange(num_images)]
-                 for _ in xrange(num_classes)]
-    nms_keepIndices = [[[] for _ in xrange(num_images)]
-                 for _ in xrange(num_classes)]
-    for cls_ind in xrange(num_classes):
-        for im_ind in xrange(num_images):
+    nms_boxes = [[[] for _ in range(num_images)]
+                 for _ in range(num_classes)]
+    nms_keepIndices = [[[] for _ in range(num_images)]
+                 for _ in range(num_classes)]
+    for cls_ind in range(num_classes):
+        for im_ind in range(num_images):
             dets = all_boxes[cls_ind][im_ind]
             if dets == []:
                 continue
@@ -603,16 +608,16 @@ def deleteAllFilesInDirectory(directory, fileEndswithString, boPromptUser = Fals
     if boPromptUser:
         userInput = raw_input('--> INPUT: Press "y" to delete files in directory ' + directory + ": ")
         if not (userInput.lower() == 'y' or userInput.lower() == 'yes'):
-            print "User input is %s: exiting now." % userInput
+            print ("User input is %s: exiting now." % userInput)
             exit()
     for filename in getFilesInDirectory(directory):
         if fileEndswithString == None or filename.lower().endswith(fileEndswithString):
             deleteFile(directory + "/" + filename)
 
 def removeLineEndCharacters(line):
-    if line.endswith('\r\n'):
+    if line.endswith(b'\r\n'):
         return line[:-2]
-    elif line.endswith('\n'):
+    elif line.endswith(b'\n'):
         return line[:-1]
     else:
         return line
@@ -620,7 +625,7 @@ def removeLineEndCharacters(line):
 def splitString(string, delimiter='\t', columnsToKeepIndices=None):
     if string == None:
         return None
-    items = string.split(delimiter)
+    items = string.decode('utf-8').split(delimiter)
     if columnsToKeepIndices != None:
         items = getColumns([items], columnsToKeepIndices)
         items = items[0]
@@ -646,10 +651,10 @@ def imread(imgPath, boThrowErrorIfExifRotationTagSet = True):
 
     rotation = rotationFromExifTag(imgPath)
     if boThrowErrorIfExifRotationTagSet and rotation != 0:
-        print "Error: exif roation tag set, image needs to be rotated by %d degrees." % rotation
+        print ("Error: exif roation tag set, image needs to be rotated by %d degrees." % rotation)
     img = cv2.imread(imgPath)
     if img is None:
-        print "ERROR: cannot load image " + imgPath
+        print ("ERROR: cannot load image " + imgPath)
         error
     if rotation != 0:
         img = imrotate(img, -90).copy()  # got this error occassionally without copy "TypeError: Layout of the output array img is incompatible with cv::Mat"
@@ -667,7 +672,7 @@ def rotationFromExifTag(imgPath):
     rotation = 0
     if imageExifTags != None and orientationExifId != None and orientationExifId in imageExifTags:
         orientation = imageExifTags[orientationExifId]
-        # print "orientation = " + str(imageExifTags[orientationExifId])
+        # print ("orientation = " + str(imageExifTags[orientationExifId]))
         if orientation == 1 or orientation == 0:
             rotation = 0 # no need to do anything
         elif orientation == 6:
@@ -675,7 +680,7 @@ def rotationFromExifTag(imgPath):
         elif orientation == 8:
             rotation = 90
         else:
-            print "ERROR: orientation = " + str(orientation) + " not_supported!"
+            print ("ERROR: orientation = " + str(orientation) + " not_supported!")
             error
     return rotation
 
@@ -700,15 +705,22 @@ def imHeight(input):
     return imWidthHeight(input)[1]
 
 def imWidthHeight(input):
-    if type(input) is str or type(input) is unicode:
-        width, height = Image.open(input).size #this does not load the full image
-    else:
-        width =  input.shape[1]
-        height = input.shape[0]
+    width, height = Image.open(input).size #this does not load the full image
     return width,height
 
+def imArrayWidth(input):
+    return imArrayWidthHeight(input)[0]
+
+def imArrayHeight(input):
+    return imArrayWidthHeight(input)[1]
+    
+def imArrayWidthHeight(input):
+    width =  input.shape[1]
+    height = input.shape[0]
+    return width,height
+ 
 def imshow(img, waitDuration=0, maxDim = None, windowName = 'img'):
-    if isinstance(img, basestring): #test if 'img' is a string
+    if isinstance(img, str): #test if 'img' is a string
         img = cv2.imread(img)
     if maxDim is not None:
         scaleVal = 1.0 * maxDim / max(img.shape[:2])
