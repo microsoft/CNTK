@@ -10,7 +10,8 @@ from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
-from cntk.io import CNTKTextFormatMinibatchSource, StreamDef
+from cntk.io import CNTKTextFormatMinibatchSource
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef
 from cntk import Trainer
 from cntk.learner import sgd, fsadagrad, learning_rate_schedule, momentum_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
@@ -37,11 +38,11 @@ hidden_dim = 300
 ########################
 
 def create_reader(path):
-    return CNTKTextFormatMinibatchSource(path, streams=Record(
+    return MinibatchSource(CTFDeserializer(path, streams=Record(
         query         = StreamDef(shape=input_dim,   is_sparse=True, alias='S0'),
         intent_unused = StreamDef(shape=num_intents, is_sparse=True, alias='S1'),  # BUGBUG: unused, and should infer dim
         slot_labels   = StreamDef(shape=label_dim,   is_sparse=True, alias='S2')
-    ))
+    )))
 
 ########################
 # define the model     #
@@ -150,9 +151,10 @@ if __name__=='__main__':
     #set_default_device(gpu(0))
 
     # TODO: leave these in for now as debugging aids; remove for beta
-    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed
+    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
-    set_fixed_random_seed(1000000)  # TODO: remove debugging facilities once this all works
+    set_fixed_random_seed(1)  # TODO: remove debugging facilities once this all works
+    force_deterministic_algorithms()
 
     reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model()

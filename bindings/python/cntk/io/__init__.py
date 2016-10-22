@@ -59,6 +59,20 @@ class MinibatchSource(cntk_py.MinibatchSource):
     :func:`cntk.trainer.Trainer.train_minibatch` function.
     '''
 
+    def __init__(self, deserializers=None, randomize=True, epoch_size=MAX_UI64):
+        if not isinstance(deserializers, (list,tuple)):
+            deserializers = [deserializers] # allow passing a single item or a list
+        reader_config = ReaderConfig(deserializers=deserializers, randomize=randomize, epoch_size=epoch_size)
+        source = minibatch_source(reader_config)
+        # transplant into this class instance
+        self.__dict__ = source.__dict__
+        # transplant all members of deserializers into a record called streams
+        streams = {}
+        for si in self.stream_infos():
+            streams[si.m_name] = si
+        from ..utils import Record
+        self.streams = Record(**streams)
+
     def stream_infos(self):
         '''
         Describes the stream that this source produces.
@@ -376,6 +390,52 @@ class ImageDeserializer(Deserializer):
 # TODO get away from cntk_py.text_format_minibatch_source and set it up
 # similarly to ImageDeserializer
 #
+
+
+#class TextFormatDeserializer(Deserializer): # TODO: either call it CNTKTextFormat or CTF. TextFormat is confusable with plain text
+class CTFDeserializer(Deserializer):
+    '''
+    This class configures the text reader that reads text-encoded files from a file with lines of the form
+         [Sequence_Id](Sample)+ 
+        where
+         Sample=|Input_Name (Value )* 
+    Args:
+        filename (`str`): file name containing the text input
+    See also:
+        https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
+    '''
+
+    def __init__(self, filename, streams=None):
+        super(CTFDeserializer, self).__init__('CNTKTextFormatDeserializer')
+        self['file'] = filename
+        self['input'] = self.input = {}
+        # connect all streams (: StreamDef) if given
+        if streams is not None:
+            for key in streams:
+                s = streams[key]
+                self.map_input(key, s.dim, "sparse" if s.is_sparse else "dense", alias=s.alias)
+
+    def map_input(self, node, dim, format="dense", alias=None):
+        '''
+        Maps node (either node instance or node name) to a part of the text input, 
+        either specified by the node name or the alias in the text file.
+        Example: for node name 'Apples' an input line could look like this:
+        |Apples 0 1 2 3 4 5 6 7 8 9
+        Args:
+            node (`str` or input node): node or its name
+            dim (`int`): specifies the dimension of the input value vector 
+             (for dense input this directly corresponds to the number of values in each sample, 
+             for sparse this represents the upper bound on the range of possible index values).
+            format (`str`, default 'dense'): 'dense' or 'sparse'. Specifies the input type. 
+            alias (`str`, default None): None or alias name. Optional abbreviated name that 
+             is used in the text file to avoid repeating long input names. For details please
+             see https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
+        '''
+        if not isinstance(node, str):
+            node = node.name()
+        if alias is None:
+            alias=node
+        self.input[node] = dict(dim=dim, format=format, alias=alias)
 
 
 @typemap

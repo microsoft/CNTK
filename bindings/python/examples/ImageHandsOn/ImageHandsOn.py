@@ -14,7 +14,8 @@ from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
-from cntk.io import ReaderConfig, ImageDeserializer
+#from cntk.io import ReaderConfig
+from cntk.io import MinibatchSource, ImageDeserializer
 from cntk.initializer import glorot_uniform, gaussian, he_normal
 from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule
@@ -45,6 +46,7 @@ def create_reader(path, map_file, mean_file, train):
         raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
                            (map_file, mean_file, cifar_py3, cifar_py3))
 
+    # TODO: construct ImageDeserializer with transforms directly
     deserializer = ImageDeserializer(map_file)
     if train:
         deserializer.map_features(features_stream_name,
@@ -62,7 +64,8 @@ def create_reader(path, map_file, mean_file, train):
 
     deserializer.map_labels(labels_stream_name, num_classes)
 
-    return ReaderConfig(deserializer, epoch_size = sys.maxsize).minibatch_source()
+    #return ReaderConfig(deserializer, epoch_size = sys.maxsize).minibatch_source()
+    return MinibatchSource(deserializer)
 
 #
 # helper APIs that define layers and shows low level APIs usage. 
@@ -203,8 +206,8 @@ def create_basic_model_layer(input):
 def train_and_evaluate(reader_train, reader_test, max_epochs):
 
     # Map reader streams
-    features_slot = reader_train[features_stream_name]
-    labels_slot   = reader_train[labels_stream_name]
+    features_slot = reader_train.streams.features
+    labels_slot   = reader_train.streams.labels
 
     # Input variables denoting the features and label data
     input_var = input_variable((num_channels, image_height, image_width), features_slot.m_element_type)
@@ -308,9 +311,15 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     print("")
 
 if __name__=='__main__':
-    os.chdir(data_path)
+    os.chdir(data_path) # BUGBUG: This is only needed because ImageReader uses relative paths in the map file. Ugh.
 
     reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', True)
     reader_test  = create_reader(data_path, 'test_map.txt',  'CIFAR-10_mean.xml', False)
+
+    # temp for Frank, to be removed
+    #data_path = abs_path
+    #os.chdir(data_path)
+    #reader_train = create_reader(data_path, 'cifar-10-batches-py/train_map.txt', 'cifar-10-batches-py/CIFAR-10_mean.xml', True)
+    #reader_test  = create_reader(data_path, 'cifar-10-batches-py/test_map.txt',  'cifar-10-batches-py/CIFAR-10_mean.xml', False)
 
     train_and_evaluate(reader_train, reader_test, max_epochs=10)
