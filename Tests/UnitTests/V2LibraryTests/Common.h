@@ -13,6 +13,13 @@
 #define NDEBUG
 #endif
 
+#ifdef _MSC_VER
+// In case of asserts in debug mode, print the message into stderr and throw exception
+int HandleDebugAssert(int /* reportType */,
+                      char *message, // fully assembled debug user message
+                      int *returnValue); // returnValue - retVal value of zero continues execution
+#endif
+
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
