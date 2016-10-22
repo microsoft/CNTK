@@ -19,8 +19,9 @@ from cntk.persist import save_model, load_model
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
-sys.path.append("/home/wdarling/cntk/bindings/python")
-from examples.common.nn import LSTMP_component_with_self_stabilization, stabilize, linear_layer, print_training_progress, create_attention_augment_hook
+from nn import LSTMP_component_with_self_stabilization, stabilize, linear_layer, print_training_progress, create_attention_augment_hook
+
+path_to_cntk = "../.."
 
 # Creates and trains a sequence to sequence model
 def sequence_to_sequence_translator(debug_output=False, save_model=False):
@@ -113,11 +114,11 @@ def sequence_to_sequence_translator(debug_output=False, save_model=False):
     ng = z.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
 
     # load the vocab
-    vocab_path = "/home/wdarling/cntk/Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.mapping"
+    vocab_path = path_to_cntk + "/Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.mapping"
     vocab = [w.strip() for w in open(vocab_path).readlines()]
     i2w = { i:ch for i,ch in enumerate(vocab) }
 
-    train_path = r"/home/wdarling/cntk/Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.train-dev-20-21.ctf"
+    train_path = path_to_cntk + "/Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.train-dev-20-21.ctf"
     test_path = r"tiny.ctf"
 
     # reader(s)
@@ -229,12 +230,12 @@ def write(model_filename):
     model = load_model(np.float32, model_filename)
 
     # load the vocab
-    vocab_path = "/home/wdarling/cntk/Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.mapping"
+    vocab_path = path_to_cntk + "/Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.mapping"
     vocab = [w.strip() for w in open(vocab_path).readlines()]
     i2w = { i:ch for i,ch in enumerate(vocab) }
 
     # setup data...
-    rel_path = r"/home/wdarling/cntk/Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.test.ctf"
+    rel_path = path_to_cntk + "/Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.test.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
 
     path = "tiny.ctf"
