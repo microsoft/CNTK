@@ -199,6 +199,7 @@ def _py_dict_to_cntk_dict(py_dict):
     return res
 
 
+# TODO: This should be a private function; use MinibatchSource(deserializer, ...).
 @typemap
 def minibatch_source(config):
     '''
@@ -211,7 +212,7 @@ def minibatch_source(config):
     cntk_dict = _py_dict_to_cntk_dict(config)
     return cntk_py.create_composite_minibatch_source(cntk_dict)
 
-
+# TODO: This should be a private class.
 class ReaderConfig(dict):
     '''
     Reader configuration.
@@ -284,10 +285,22 @@ class ImageDeserializer(Deserializer):
         https://github.com/microsoft/cntk/wiki/Image-reader
     '''
 
-    def __init__(self, filename):
+    def __init__(self, filename, streams=None):
         super(ImageDeserializer, self).__init__('ImageDeserializer')
         self['file'] = filename
         self['input'] = self.input = {}
+        # In ImageDeserializer, stream field names are hard-coded as "image" and "label".
+        # These are configured in a somewhat inconsistent way.
+        if streams is not None:
+            for key in streams:
+                s = streams[key]
+                node = s.stream_alias
+                if node == "image":
+                    self.map_features(key, s.transforms)
+                elif node == "label":
+                    self.map_labels(key, s.dim)
+                else:
+                    raise ValueError("ImageDeserializer: invalid field name '{}', allowed are 'image' and 'label'".format(node))
 
     def map_features(self, node, transforms):
         '''
@@ -320,7 +333,7 @@ class ImageDeserializer(Deserializer):
         '''
         if not isinstance(node, str):
             node = node.name()
-        self.input[node] = dict(labelDim=num_classes)
+        self.input[node] = dict(labelDim=num_classes) # reader distinguishes labels from features by calling this 'labelDim'
 
     @staticmethod
     def crop(crop_type='center', ratio=1.0, jitter_type='uniRatio'):
@@ -438,6 +451,7 @@ class CTFDeserializer(Deserializer):
         self.input[node] = dict(dim=dim, format=format, alias=alias)
 
 
+# TODO: This should not exist; use MinibatchSource(CTFDeserializer(...))
 @typemap
 def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64, randomize=True):
     '''
@@ -459,6 +473,7 @@ def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64, rand
                                                 epoch_size, randomize)
 
 
+# TODO: this should be a private class; use StreamDef instead
 class StreamConfiguration(cntk_py.StreamConfiguration):
     '''
     Configuration of a stream in a text format reader. This can be used in
@@ -480,6 +495,7 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
 
 
 # wrapper around text_format_minibatch_source() that attaches a record of streams
+# TODO: This should not exist; use MinibatchSource(CTFDeserializer(...))
 def CNTKTextFormatMinibatchSource(path, streams, epoch_size=None):
     from cntk.utils import _ClassFromDict
     # convert streams into StreamConfiguration format
@@ -494,10 +510,19 @@ def CNTKTextFormatMinibatchSource(path, streams, epoch_size=None):
     return source
 
 
-# stream definition for CNTKTextFormatMinibatchSource
-def StreamDef(shape, is_sparse, alias):
-    from cntk.utils import Record
-    return Record(dim=shape, is_sparse=is_sparse, stream_alias=alias)
-    # TODO: why stream_alias and not alias?
+# stream definition for use in StreamDefs
+from cntk.utils import Record
+def StreamDef(field, shape=None, is_sparse=False, transforms=None):
+    # note: the names used inside here are required by the C++ code which looks them up in a dictionary
+    config = dict(stream_alias=field, is_sparse=is_sparse)
+    if shape is not None:
+        config['dim'] = shape
+    if transforms is not None:
+        config['transforms'] = transforms
+    return Record(**config)
     # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension
     # TODO: dim should be inferred from the file, at least for dense
+
+# StreamDefs for use in constructing deserializers
+# StreamDefs(query = StreamDef(...), labels = StreamDef(...), ...)
+StreamDefs = Record

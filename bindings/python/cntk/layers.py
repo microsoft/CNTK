@@ -313,6 +313,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0):
     mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
     x0 = x - mean;
     std = sqrt (reduce_mean (x0 * x0))
-    x_hat = element_divide (x0, std)
+    #x_hat = element_divide (x0, std)
+    x_hat = x0 / std
     apply_x = x_hat * scale + bias    # denormalize with learned parameters
     return Block(apply_x, 'LayerNormalization', Record(scale=scale, bias=bias))
