@@ -39,19 +39,21 @@ _current_default_options = Record(
     activation=None,       # Dense() and Convolution() have no activation by default
     pad=False,
     bias=True,
-    init_bias=0
-    # TODO: stabilizer?
+    init_bias=0,
+    enable_self_stabilization=False # Stabilizer() and LSTM()
+    # TODO: add initial_state?
 )
 
 _default_sentinel           = Record() # This is a singleton sentinel value we recognize and replace in _initializer_for()
 _default_sentinel_init      = Record() # use different ones for init andinit_bias so we can distinguish them in _initializer_for()
 _default_sentinel_init_bias = Record()
 # in function signatures we use symbols that indicate the default default in their name
-init_default_or_glorot_uniform = _default_sentinel_init
-activation_default_or_None     = _default_sentinel
-init_bias_default_or_0         = _default_sentinel_init_bias
-bias_default_or_True           = _default_sentinel
-pad_default_or_False           = _default_sentinel
+init_default_or_glorot_uniform             = _default_sentinel_init
+activation_default_or_None                 = _default_sentinel
+init_bias_default_or_0                     = _default_sentinel_init_bias
+bias_default_or_True                       = _default_sentinel
+pad_default_or_False                       = _default_sentinel
+enable_self_stabilization_default_or_False = _default_sentinel
 
 # check whether a parameter is a default
 # This is meant to be used by implementations of layers that take default values that may default to default-defaults.
@@ -182,7 +184,11 @@ def _Identity(name='identity_arg'):
 identity = _Identity()
 
 # TODO: add a flag enable_self_stabilizer (maybe rename it) default to True, overridable by default_options
-def Stabilizer(steepness=4):
+# This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
+def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_default_or_False):
+    enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
+    if not enable_self_stabilization: # disabled (typically through global option)
+        return identity
     #UntestedBranchError("Stabilizer")
     # currently fails with "RuntimeError: The 1 leading dimensions of the right operand with shape [1] do not match the left operand's trailing dimensions with shape [943]"
 
@@ -210,8 +216,11 @@ def Stabilizer(steepness=4):
     apply_x = beta * x
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
-def LSTM(shape, cell_shape=None, use_peepholes=False, init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0, enable_self_stabilization=False): # (x, (h, c))
+def LSTM(shape, cell_shape=None, use_peepholes=False,
+         init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,
+         enable_self_stabilization=enable_self_stabilization_default_or_False): # (x, (h, c))
 
+    enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
     has_projection = cell_shape is not None
     has_aux = False
 

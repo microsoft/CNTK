@@ -48,13 +48,12 @@ def create_reader(path):
 ########################
 
 def create_model():
-  from cntk.ops import relu  # temp
-  with default_options(init_bias=0):
+  #with default_options(enable_self_stabilization=False):
     return Sequential([
         #Stabilizer(),
         Embedding(emb_dim),
         #BatchNormalization(),
-        Recurrence(LSTM(hidden_dim, enable_self_stabilization=False), go_backwards=False,
+        Recurrence(LSTM(hidden_dim), go_backwards=False,
                    #),
                    initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
                    # BUGBUG: initial_state=0.1 should work

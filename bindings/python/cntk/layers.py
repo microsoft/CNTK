@@ -258,6 +258,7 @@ def Dropout(prob=None):
     return Block(apply_x, 'Dropout')
 
 # BatchNormalization -- create a batch-normalization layer
+# TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
 def BatchNormalization(spatial_rank=0,  # reduce over these dims. E.g. 2 to reduce over (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=5000, blend_time_constant=0,
