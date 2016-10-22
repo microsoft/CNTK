@@ -2370,7 +2370,7 @@ namespace CNTK
 
         CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl() const;
 
-        void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions);
+        void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified);
 
         virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
                                                 std::unordered_set<const Function*>& visitedFunctions,
