@@ -151,13 +151,13 @@ def where(condition, name=''):
         >>> import cntk.ops as C
         >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
-        >>> z = C.greater(C.reduce_sum(x),60)
+        >>> z = C.greater(C.reduce_sum(x), 60)
+        >>> x0 = np.reshape(np.arange(24.0, dtype=np.float32), (4,3,2))
+        >>> z.eval({x:x0}).flatten()
+        array([ 0.,  0.,  1.,  1.], dtype=float32)
         >>> y = C.sequence.where(z)
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
-        >>> z.eval({x:x0})
-        array([[ 0.,  0.,  1.,  1.]], dtype=float32)
-        >>> y.eval({x:x0})
-        array([[ 2.,  3.]], dtype=float32)
+        >>> y.eval({x:x0}).flatten()
+        array([ 2.,  3.], dtype=float32)
 
     Args:
         condition: the symbolic sequence of booleans

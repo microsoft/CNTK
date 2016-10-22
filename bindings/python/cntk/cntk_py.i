@@ -31,8 +31,9 @@
 %rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";
 %rename("%(utitle)s", %$isvariable) "";
 
-%template() std::vector<size_t>;
 %template() std::vector<bool>;
+%template() std::vector<size_t>;
+%template() std::vector<float>;
 %template() std::vector<double>;
 %template() std::vector<std::vector<size_t>>;
 %template() std::vector<std::vector<float>>;
@@ -375,9 +376,9 @@ fail:
     try { $action }
     catch (Swig::DirectorException &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
     catch (std::runtime_error &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
-    catch (std::invalid_argument &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
+    catch (std::invalid_argument &e) { SWIG_exception(SWIG_ValueError,e.what()); }
     catch (std::logic_error &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
-    catch (...) { SWIG_exception(SWIG_RuntimeError,"Runtime exception"); }
+    catch (...) { SWIG_exception(SWIG_UnknownError,"Runtime exception"); }
 }
 
 
@@ -953,6 +954,31 @@ fail:
 // end NDMask
 
 //
+// Value
+//
+%extend CNTK::Value {
+    static CNTK::ValuePtr CNTK::Value::CreateDenseFloat(const CNTK::NDShape& sampleShape, const std::vector<std::vector<float>>& sequences, 
+        const CNTK::DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::Create<float>(sampleShape, sequences, device, readOnly);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateDenseDouble(const CNTK::NDShape& sampleShape, const std::vector<std::vector<double>>& sequences, 
+        const CNTK::DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::Create<double>(sampleShape, sequences, device, readOnly);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateOneHotFloat(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, 
+        const CNTK::DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::Create<float>(vocabularySize, oneHotSequences, device, readOnly);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateOneHotDouble(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, 
+        const CNTK::DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::Create<double>(vocabularySize, oneHotSequences, device, readOnly);
+    }
+}
+
+//
 // NDArrayView
 //
 %extend CNTK::NDArrayView {
@@ -994,6 +1020,64 @@ fail:
         {
             NDArrayView  tmp(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
             view = new NDArrayView(DataType::Double, tmp.Shape(), device);
+            view->CopyFrom(tmp);
+        }
+        else
+        {
+            throw std::logic_error("NumPy array of type float32 or float64 expected");
+        }
+
+        return view;
+    }
+
+    NDArrayView(const CNTK::NDShape& shape, PyObject* pyData, PyObject* pyColStarts, PyObject* pyRowIndices, const CNTK::DeviceDescriptor& device, bool readOnly) 
+    {
+        //
+        // pyData, pyColStarts, and pyRowIndices are fed by
+        // scipy.sparse.csr_matrix's data, indptr, and indices
+        //
+
+        if (!PyArray_Check((PyArrayObject*)pyData))
+        {
+            throw std::logic_error("sparse data must be a NumPy array");
+        }
+
+        if (!PyArray_Check((PyArrayObject*)pyColStarts))
+        {
+            throw std::logic_error("indices must be a NumPy array");
+        }
+
+        if (!PyArray_Check((PyArrayObject*)pyRowIndices))
+        {
+            throw std::logic_error("index pointers must be a NumPy array");
+        }
+
+        PyArrayObject* data = (PyArrayObject*)pyData;
+        PyArrayObject* indices = (PyArrayObject*)pyColStarts;
+        PyArrayObject* indptr = (PyArrayObject*)pyRowIndices;
+
+        int typecode = PyArray_TYPE(data);
+        size_t numNonZeroValues = PyArray_SIZE(data);
+        
+        NDArrayView* view;
+        if (typecode == NPY_FLOAT)
+        {
+            NDArrayView  tmp(shape, 
+             (CNTK::SparseIndexType*)PyArray_DATA(indices), 
+             (CNTK::SparseIndexType*)PyArray_DATA(indptr), 
+             (float*)PyArray_DATA(data), numNonZeroValues, 
+             DeviceDescriptor::CPUDevice(), readOnly);
+            view = new NDArrayView(DataType::Float, StorageFormat::SparseCSC, tmp.Shape(), device);
+            view->CopyFrom(tmp);
+        }
+        else if (typecode == NPY_DOUBLE)
+        {
+            NDArrayView  tmp(shape, 
+             (CNTK::SparseIndexType*)PyArray_DATA(indices), 
+             (CNTK::SparseIndexType*)PyArray_DATA(indptr), 
+             (double*)PyArray_DATA(data), numNonZeroValues, 
+             DeviceDescriptor::CPUDevice(), readOnly);
+            view = new NDArrayView(DataType::Double, StorageFormat::SparseCSC, tmp.Shape(), device);
             view->CopyFrom(tmp);
         }
         else
@@ -1079,7 +1163,7 @@ DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
 %py_hash_for(NDShape)
 
 %py_eq_for(Axis, Axis_eq)
-%py_hash_for(Axis, Axis_eq)
+%py_hash_for(Axis)
 
 %py_eq_for(DeviceDescriptor, DeviceDescriptor_eq)
 

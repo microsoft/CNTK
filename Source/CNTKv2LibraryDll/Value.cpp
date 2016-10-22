@@ -92,6 +92,8 @@ namespace CNTK
             {
                 colStarts[(i * maxSequenceLength) + j] = (SparseIndexType)nonZeroValues.size();
                 nonZeroValues.push_back(1);
+                if (oneHotSequences[i][j] >= vocabularySize)
+                    InvalidArgument("Value::Create: one-hot data exceeds vocabulary size");
                 rowIndices.push_back((SparseIndexType)(oneHotSequences[i][j]));
             }
 
