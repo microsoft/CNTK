@@ -734,9 +734,26 @@ namespace CNTK
         case PrimitiveOpType::LessEqual:
         case PrimitiveOpType::Greater:
         case PrimitiveOpType::GreaterEqual:
+        case PrimitiveOpType::PastValue:
+        case PrimitiveOpType::FutureValue:
+        {
             assert(inputs.size() == 2);
-                outputShape = BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);
+            if ((op == PrimitiveOpType::PastValue) || (op == PrimitiveOpType::FutureValue))
+            {
+                Variable inputOperandVar = inputs[0];
+                Variable initialStateVar = inputs[1];
+
+                // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
+                if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes) && (inputOperandVar.DynamicAxes().size() != 2))
+                    LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
+
+                if (!initialStateVar.DynamicAxes().empty())
+                    LogicError("Currently PastValue/FutureValue Function does not support initial state operand with dynamic axes!");
+            }
+
+            outputShape = BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);
             break;
+        }
         case PrimitiveOpType::Times:
         {
             assert(inputs.size() == 2);
@@ -817,23 +834,6 @@ namespace CNTK
                 reductionAxes.push_back(i);
 
             outputShape = ReductionOpOutputShape(op, predictionShape, reductionAxes, /*preserveReductionAxes =*/ false);
-            break;
-        }
-        case PrimitiveOpType::PastValue:
-        case PrimitiveOpType::FutureValue:
-        {
-            assert(inputs.size() == 2);
-            Variable inputOperandVar = inputs[0];
-            Variable initialStateVar = inputs[1];
-
-            // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
-                if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes) && (inputOperandVar.DynamicAxes().size() != 2))
-                    LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
-
-                if (!initialStateVar.DynamicAxes().empty())
-                    LogicError("Currently PastValue/FutureValue Function does not support initial state operand with dynamic axes!");
-
-                outputShape = BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);
             break;
         }
         case PrimitiveOpType::ReduceElements:

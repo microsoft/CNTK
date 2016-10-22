@@ -247,6 +247,31 @@ namespace CNTK
             else if (node->OperationName() == OperationNameOf(ConvolutionNode))
             {
                 auto convolutionNode = node->As<ConvolutionNode<ElementType>>();
+
+                // Some legacy CNTK v1 models store the convolution filter parameters in 2D form with the trailing
+                // tensor dimensions flattended into the column dimension of the 2D paramater matrix
+                // We need to recover the actual tensor shape of the parameter in this case
+                auto& convolutionMapVar = inputVars[0];
+                if (convolutionNode->IsConvolution2D())
+                {
+                    assert(convolutionMapVar.Shape().Rank() == 2);
+                    assert(convolutionMapVar.IsConstant() || convolutionMapVar.IsParameter());
+                    auto kernelShape = AsNDShape(convolutionNode->KernelShape());
+                    NDShape actualConvolutionMapShape = kernelShape.AppendShape({ convolutionMapVar.Shape()[0] });
+                    
+                    if (actualConvolutionMapShape.TotalSize() != convolutionMapVar.Shape().TotalSize())
+                        LogicError("The convolutionMap tensor shape's (%S) size does not match the shape of the legacy 2D convolution map!");
+
+                    auto oldConvolutionMapValue = convolutionMapVar.IsConstant() ? Constant(convolutionMapVar).Value() : Parameter(convolutionMapVar).Value();
+                    auto oldConvolutionMapMatrix = oldConvolutionMapValue->GetMatrix<ElementType>();
+
+                    auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(oldConvolutionMapMatrix->AsReference()), AsTensorViewShape(actualConvolutionMapShape));
+                    auto newConvolutionMapValue = MakeSharedObject<NDArrayView>(oldConvolutionMapValue->GetDataType(), oldConvolutionMapValue->Device(), oldConvolutionMapValue->GetStorageFormat(), actualConvolutionMapShape, oldConvolutionMapValue->IsReadOnly(), tensorView);
+
+                    // Lets replace the convolutionMapVar with a new properly reshaped Parameter/Constant
+                    convolutionMapVar = convolutionMapVar.IsConstant() ? Variable(Constant(newConvolutionMapValue, convolutionMapVar.Name(), convolutionMapVar.Uid())) : Variable(Parameter(newConvolutionMapValue, convolutionMapVar.Name(), convolutionMapVar.Uid()));
+                }
+
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(convolutionNode->Strides());
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(convolutionNode->Sharing());
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(convolutionNode->AutoPad());

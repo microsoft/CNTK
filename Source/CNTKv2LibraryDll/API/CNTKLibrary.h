@@ -391,6 +391,13 @@ namespace CNTK
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
+        template <typename ElementType>
+        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+
     public:
         ///
         /// Construct a NDArrayView with the specified 'dataBuffer' as the backing storage.

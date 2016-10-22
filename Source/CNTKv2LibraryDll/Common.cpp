@@ -15,6 +15,8 @@
 #include "GPUMatrix.h"
 #include "Globals.h"
 
+extern bool g_shareNodeValueMatrices;
+
 namespace CNTK
 {
     namespace Internal
@@ -56,6 +58,11 @@ namespace CNTK
         bool IsAutomaticUnpackingOfPackedValuesDisabled()
         {
             return s_disableAutomaticUnpackingOfPackedValues.load();
+        }
+
+        void SetForwardValuesSharing(bool enableSharing)
+        {
+            g_shareNodeValueMatrices = enableSharing;
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
