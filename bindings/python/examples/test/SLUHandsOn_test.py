@@ -11,7 +11,7 @@ from cntk import DeviceDescriptor
 
 # this emulates a "main" function for SLUHandsOn
 from examples.SLUHandsOn.SLUHandsOn import *
-from examples.SLUHandsOn.SLUHandsOn import _Infer  # TODO: remove
+#from examples.SLUHandsOn.SLUHandsOn import _Infer  # TODO: remove
 def slu_hands_on():
     reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
