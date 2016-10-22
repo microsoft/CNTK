@@ -296,12 +296,15 @@ class ImageDeserializer(Deserializer):
                 s = streams[key]
                 node = s.stream_alias
                 if node == "image":
+                    # BUGBUG: Can dim not be specified as well?
+                    # TODO: clean this up and use a unified internal representation
                     self.map_features(key, s.transforms)
                 elif node == "label":
                     self.map_labels(key, s.dim)
                 else:
                     raise ValueError("ImageDeserializer: invalid field name '{}', allowed are 'image' and 'label'".format(node))
 
+    # TODO: should be a private method; use constructor only
     def map_features(self, node, transforms):
         '''
         Maps feature node (either node instance or node name) to the transforms
@@ -320,6 +323,7 @@ class ImageDeserializer(Deserializer):
             transforms = [transforms] if transforms else []
         self.input[node] = dict(transforms=transforms)
 
+    # TODO: should be a private method; use constructor only
     def map_labels(self, node, num_classes):
         '''
         Maps label node (either node instance or node name)
@@ -426,8 +430,10 @@ class CTFDeserializer(Deserializer):
         if streams is not None:
             for key in streams:
                 s = streams[key]
-                self.map_input(key, s.dim, "sparse" if s.is_sparse else "dense", alias=s.alias)
+                # TODO: guard against any other fields, such as transformers, which is not valid here
+                self.map_input(key, s.dim, "sparse" if s.is_sparse else "dense", alias=s.stream_alias)
 
+    # TODO: should be a private method; use constructor only
     def map_input(self, node, dim, format="dense", alias=None):
         '''
         Maps node (either node instance or node name) to a part of the text input, 
@@ -496,7 +502,7 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
 
 # wrapper around text_format_minibatch_source() that attaches a record of streams
 # TODO: This should not exist; use MinibatchSource(CTFDeserializer(...))
-def CNTKTextFormatMinibatchSource(path, streams, epoch_size=None):
+def _unused_CNTKTextFormatMinibatchSource(path, streams, epoch_size=None): # TODO: delete this
     from cntk.utils import _ClassFromDict
     # convert streams into StreamConfiguration format
     # TODO: stream_alias should default to 'key'
@@ -511,6 +517,7 @@ def CNTKTextFormatMinibatchSource(path, streams, epoch_size=None):
 
 
 # stream definition for use in StreamDefs
+# returns a record { stream_alias, is_sparse, optional dim, optional transforms }
 from cntk.utils import Record
 def StreamDef(field, shape=None, is_sparse=False, transforms=None):
     # note: the names used inside here are required by the C++ code which looks them up in a dictionary

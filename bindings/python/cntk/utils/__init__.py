@@ -797,12 +797,15 @@ class _ClassFromDict(dict):
     def __init__(self, args_dict):
         super(_ClassFromDict, self).__init__(args_dict)
         # TODO: try to delete __setattr__ to make it immutable
-        for key in args_dict:   # self.__dict__.update(args_dict)
-            self[key] = args_dict[key]
-    def __getattr__(self, k):
-        return self.get(k)
-    # can use __slot__ to hide __setattr__(), and cannot be extended
-    # cf. https://pypi.python.org/pypi/frozendict/0.4
+        self.__dict__.update(args_dict)
+        #for key in args_dict:   # self.__dict__.update(args_dict)
+        #    self[key] = args_dict[key]
+    def __getattr__(self, key):
+        if key not in self:
+            raise AttributeError("record has no attribute '{}'".format(key))
+        return self[key]
+    def __setattr__(self, key, value):
+        raise AttributeError('record is immutable')
 
 
 # easier construction of records

@@ -10,7 +10,7 @@ from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
-from cntk.io import CNTKTextFormatMinibatchSource
+#from cntk.io import CNTKTextFormatMinibatchSource
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 from cntk import Trainer
 from cntk.learner import sgd, fsadagrad, learning_rate_schedule, momentum_schedule
@@ -63,7 +63,7 @@ def create_model():  # TODO: all the _inf stuff will go away once dimension infe
         #Stabilizer(),
         Embedding(emb_dim),
         #BatchNormalization(_inf=emb_dim), # TODO: remove _inf once it works
-        Recurrence(LSTM(hidden_dim, _inf=_inf_emb_dim, enable_self_stabilization=False), _inf=_inf_emb_dim, go_backwards=False,
+        Recurrence(LSTM(hidden_dim, enable_self_stabilization=False), go_backwards=False,
                    #),
                    initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
                    # BUGBUG: initial_state=0.1 should work

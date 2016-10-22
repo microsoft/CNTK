@@ -217,11 +217,11 @@ def AveragePooling(filter_shape,  # e.g. (3,3)
     return Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad)
 
 # Recurrence() -- run a block recurrently over a time sequence
-def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
+def Recurrence(over, go_backwards=False, initial_state=None):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
     if go_backwards:
-        UntestedBranchError("Recurrence, go_backwards option")
+        UntestedBranchError("Recurrence, go_backwards option") # TODO: test in SLUHandsOn.py bidirectional
     def previous_hook(state):
         if hasattr(state, 'outputs'):
            outputs = state.outputs
@@ -230,8 +230,7 @@ def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
         # not a tuple: must be a 'scalar', i.e. a single element
         return past_value  (state, initial_state) if not go_backwards else \
                future_value(state, initial_state)
-    x = PlaceholderWithShape(_inf=_inf, name='recurrence_arg')
-    #x = Placeholder(name='recurrence_arg') # BUGBUG: Fails with "Variable with unknown dynamic axes detected when compiling the Function graph!"
+    x = Placeholder(name='recurrence_arg')
     prev_state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
     f_x_h_c = over(x, prev_state_forward) # apply the recurrent over
     # this returns a Function (x, (h_prev, c_prev)) -> (h, c)

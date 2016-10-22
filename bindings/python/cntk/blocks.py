@@ -164,8 +164,7 @@ def Stabilizer(steepness=4):
     #_name_and_extend_Function(apply_x, 'Stabilizer')
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
-# TODO: For now, shape and cell_shape can only be rank-1 vectors
-def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
+def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
     has_projection = cell_shape is not None
     has_aux = False
 
@@ -177,6 +176,8 @@ def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initia
     shape = _as_tuple(shape)
 
     cell_shape = _as_tuple(cell_shape) if cell_shape is not None else shape
+    if len(shape) != 1 or len(cell_shape) != 1:
+        raise ValueError("LSTM: shape and cell_shape must be vectors (rank-1 tensors)")
 
     stack_axis = -1  # stacking along the fastest-changing one, to match BS
     # determine stacking dimensions
@@ -202,12 +203,6 @@ def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initia
     Sht = Stabilizer() if enable_self_stabilization else identity
 
     def create_hc_placeholder():
-        # BUGBUG: This will go away
-        #def _Infer(shape):
-        #    from cntk import Axis
-        #    from cntk.utils import Record, _as_tuple
-        #    return Record(shape=_as_tuple(shape), axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()], with_shape = lambda new_shape: _Infer(new_shape, axis))
-        return (PlaceholderWithShape(_inf=_inf.with_shape(shape), name='hPh'), PlaceholderWithShape(_inf=_inf.with_shape(cell_shape), name='cPh')) # (h, c)
         return (Placeholder(name='hPh'), Placeholder(name='cPh')) # (h, c)
 
     # parameters to model function
@@ -257,7 +252,7 @@ def LSTM(shape, _inf, cell_shape=None, use_peepholes=False, init=_default_initia
     # TODO: figure out how to do scoping, and also rename all the apply... to expression
     apply_x_h_c = combine ([h, c])
     # return to caller a helper function to create placeholders for recurrence
+    # Note that this function will only exist in the object returned here, but not any cloned version of it.
     apply_x_h_c.create_placeholder = create_hc_placeholder
-    #_name_and_extend_Function(apply_x_h_c, 'LSTM')
     #return Block(apply_x_h_c, 'LSTM') # BUGBUG: fails with "RuntimeError: A Function instance with more than one output cannot be implicitly converted to a Variable"
     return apply_x_h_c
