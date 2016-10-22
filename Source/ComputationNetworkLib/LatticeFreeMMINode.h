@@ -63,20 +63,20 @@ class LatticeFreeMMINode : public ComputationNodeNonLooping /*ComputationNode*/<
     
 public:
     LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_squashingFactor(1.0), m_usePrior(true), m_alignmentWindow(0), m_ceweight(0), m_l2NormFactor(0), m_totalFrameNumberOfCurrentMinibatch(0)
+        : Base(deviceId, name), m_squashingFactor(1.0), m_alignmentWindow(0), m_ceweight(0), m_totalFrameNumberOfCurrentMinibatch(0)
     {
         InitMatrixes();
     }
 
-    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const bool usePrior, const int alignmentWindow, const ElemType ceweight, const ElemType l2NormFactor)
-        : Base(deviceId, name), m_squashingFactor(squashingFactor), m_usePrior(usePrior), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_l2NormFactor(l2NormFactor), m_totalFrameNumberOfCurrentMinibatch(0)
+    LatticeFreeMMINode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& fstFilePath, const wstring& smapFilePath, const ElemType squashingFactor, const int alignmentWindow, const ElemType ceweight)
+        : Base(deviceId, name), m_squashingFactor(squashingFactor), m_alignmentWindow(alignmentWindow), m_ceweight(ceweight), m_totalFrameNumberOfCurrentMinibatch(0)
     {
         InitMatrixes();
         InitializeFromTfstFiles(fstFilePath, smapFilePath);
     }
 
     LatticeFreeMMINode(const ScriptableObjects::IConfigRecordPtr configp)
-        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"usePrior"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"), configp->Get(L"l2NormFactor"))
+        : LatticeFreeMMINode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"fstFilePath"), configp->Get(L"smapFilePath"), configp->Get(L"squashingFactor"), configp->Get(L"alignmentWindow"), configp->Get(L"ceweight"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -103,10 +103,6 @@ public:
                     m_softmax->InplaceExp();
                     Matrix<ElemType>::ScaleAndAdd(m_ceweight, *m_softmax, m_squashingFactor * (1 - m_ceweight), *m_posteriorsDen);
                     Matrix<ElemType>::Scale(m_squashingFactor * (1 - m_ceweight) + m_ceweight, *m_posteriorsNum);
-                }
-                if (m_l2NormFactor != 0)
-                {
-                    Matrix<ElemType>::ScaleAndAdd(m_l2NormFactor, Input(1)->ValueFor(fr), *m_posteriorsDen);
                 }
 
                 if (m_totalFrameNumberOfCurrentMinibatch > 0)
@@ -218,12 +214,11 @@ public:
 
         // first compute the softmax (column-wise)
         // Note that we need both log and non-log for gradient computation.
+
         m_likelihoods->AssignLogSoftmaxOf(*inputValue, true);
         if (m_ceweight != 0)
             m_softmax->SetValue(*m_likelihoods);
-
-        if (m_usePrior)
-            (*m_likelihoods) -= Input(2)->ValueAsMatrix();
+        (*m_likelihoods) -= Input(2)->ValueAsMatrix();
 
         if (m_squashingFactor != (ElemType)1.0)    // squashing factor
             (*m_likelihoods) *= m_squashingFactor;
@@ -233,15 +228,9 @@ public:
 
         double logNumeratorWithCE = CalculateNumeratorsWithCE(*inputLabel, nf);
         double logDenominator = ForwardBackwardProcessForDenorminator(nf, *m_posteriorsDen, *m_tmap, *m_tmapTranspose, *m_smap, *m_smapTranspose);
-
-        double l2NormScore = 0;
-        if (m_l2NormFactor != 0)
-        {
-            l2NormScore = Matrix<ElemType>::InnerProductOfMatrices(*inputValue, *inputValue) * 0.5 * m_l2NormFactor;
-        }
-
+        
         // Got the final numbers
-        m_savedCriterionValue = (1 - m_ceweight) * logDenominator - logNumeratorWithCE + l2NormScore;
+        m_savedCriterionValue = (1 - m_ceweight) * logDenominator - logNumeratorWithCE;
         ElemType finalValue = (ElemType)(m_savedCriterionValue);
         Value().Resize(1, 1);
         Value().SetValue(finalValue);
@@ -286,10 +275,8 @@ public:
         {
             auto node = dynamic_pointer_cast<LatticeFreeMMINode<ElemType>>(nodeP);
             node->m_squashingFactor = m_squashingFactor;
-            node->m_usePrior = m_usePrior;
             node->m_alignmentWindow = m_alignmentWindow;
             node->m_ceweight = m_ceweight;
-            node->m_l2NormFactor = m_l2NormFactor;
             node->m_fsa = m_fsa;
             node->m_tmap->SetValue(*m_tmap);
             node->m_smap->SetValue(*m_smap);
@@ -386,10 +373,8 @@ public:
     {
         Base::Save(fstream);
         fstream << m_squashingFactor;
-        fstream << m_usePrior;
         fstream << m_alignmentWindow;
         fstream << m_ceweight;
-        fstream << m_l2NormFactor;
         fstream << *m_tmap;
         fstream << *m_smap;
         SaveFsa(fstream);
@@ -407,10 +392,8 @@ public:
     {
         Base::Load(fstream, modelVersion);
         fstream >> m_squashingFactor;
-        fstream >> m_usePrior;
         fstream >> m_alignmentWindow;
         fstream >> m_ceweight;
-        fstream >> m_l2NormFactor;
         LoadMatrix(fstream, m_tmap);
         LoadMatrix(fstream, m_smap);
         //m_tmapTranspose = make_shared<Matrix<ElemType>>(m_tmap->Transpose(), m_deviceId);
@@ -425,7 +408,7 @@ public:
             Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
             char str[4096];
-            sprintf(str, "squashingFactor=%f usePrior=%d alignmentWindow=%d ceweight=%f l2NormFactor=%f", this->m_squashingFactor, this->m_usePrior, this->m_alignmentWindow, this->m_ceweight, this->m_l2NormFactor);
+            sprintf(str, "squashingFactor=%f alignmentWindow=%d ceweight=%f", this->m_squashingFactor, this->m_alignmentWindow, this->m_ceweight);
             fstream << string(str);
         }
 
@@ -517,10 +500,8 @@ protected:
     bool m_firstPassFinished;
     double m_savedCriterionValue;
     ElemType m_squashingFactor;
-    bool m_usePrior;
     int m_alignmentWindow;
     ElemType m_ceweight;
-    ElemType m_l2NormFactor;
     vector<map<int, pair<int, ElemType>>> m_fsa;
     shared_ptr<Matrix<ElemType>> m_tmap;
     shared_ptr<Matrix<ElemType>> m_smap;

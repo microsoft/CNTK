@@ -144,6 +144,9 @@ template <class ElemType>
 double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<ElemType>& labelMatrix, const size_t nf)
 {
     if (nf == 0) return 0;
+#ifdef _DEBUG
+    fprintf(stderr, "nf %d\n", nf);
+#endif
 
     // Temp, hardalignment
     if (m_alignmentWindow == 0)
@@ -271,9 +274,9 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     }
 
 #ifdef _DEBUG
-    cout << "log forward score: " << logForwardScore << endl;
+    fprintf(stderr, "log forward score: %lf\n", logForwardScore);
     double logBackwardScore = m_betas[0] + m_likelihoodBuffer[m_senoneSequence[0].Senone];
-    cout << "log backward score: " << logBackwardScore << endl;
+    fprintf(stderr, "log backward score: %lf\n", logBackwardScore);
 #endif
     
     // asign posteriors to m_posteriorsNum
@@ -371,8 +374,8 @@ double LatticeFreeMMINode<ElemType>::ForwardBackwardProcessForDenorminator(const
         absum = (ElemType)1.0 / column.SumOfElements();
 
 #ifdef _DEBUG
-        double lfp = -log(absum) + bwlogscale + sumfwscale[f];
-        assert((lfp / logForwardPath < 1.01 && lfp / logForwardPath > 0.99) || (lfp < 1e-3 && lfp > -1e-3 && logForwardPath < 1e-3 && logForwardPath > -1e-3));  // total path scores should remain constant
+        //double lfp = -log(absum) + bwlogscale + sumfwscale[f];
+        //assert((lfp / logForwardPath < 1.01 && lfp / logForwardPath > 0.99) || (lfp < 1e-3 && lfp > -1e-3 && logForwardPath < 1e-3 && logForwardPath > -1e-3));  // total path scores should remain constant
         bwlogscale -= log(scale);
 #endif
 
@@ -390,18 +393,20 @@ double LatticeFreeMMINode<ElemType>::ForwardBackwardProcessForDenorminator(const
 
 #ifdef _DEBUG
 
-    cout << "log forward score: " << logForwardPath << endl;
+    fprintf(stderr, "log forward score: %lf\n", logForwardPath);
 
     // get the total backward probability
     // verify it matches total forward probability
     ElemType bwscore = m_currAlpha->GetValue(0, 0);
     double logbwscore = log(bwscore) + bwlogscale;
-    cout << "log backward score: " << logbwscore << endl;
+
+    fprintf(stderr, "log backward score: %lf\n", logbwscore);
 
     // verify the posterior sum
-    ElemType tp = posteriors.SumOfElements();
-    assert(tp / nf > 0.99 && tp / nf < 1.01);
+    //ElemType tp = posteriors.SumOfElements();
+    //assert(tp / nf > 0.99 && tp / nf < 1.01);
 #endif
+
     if (std::isnan(logForwardPath))
         RuntimeError("logForwardPath in denorminator should not be nan.");
     return logForwardPath;
