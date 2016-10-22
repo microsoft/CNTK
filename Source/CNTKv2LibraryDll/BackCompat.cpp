@@ -260,7 +260,7 @@ namespace CNTK
                     NDShape actualConvolutionMapShape = kernelShape.AppendShape({ convolutionMapVar.Shape()[0] });
                     
                     if (actualConvolutionMapShape.TotalSize() != convolutionMapVar.Shape().TotalSize())
-                        LogicError("The convolutionMap tensor shape's (%S) size does not match the shape of the legacy 2D convolution map!");
+                        LogicError("The convolutionMap tensor shape's (%S) size does not match the size (%d) of the legacy 2D convolution map!", AsStringForErrorReporting(actualConvolutionMapShape).c_str(), (int)convolutionMapVar.Shape().TotalSize());
 
                     auto oldConvolutionMapValue = convolutionMapVar.IsConstant() ? Constant(convolutionMapVar).Value() : Parameter(convolutionMapVar).Value();
                     auto oldConvolutionMapMatrix = oldConvolutionMapValue->GetMatrix<ElementType>();

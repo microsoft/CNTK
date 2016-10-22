@@ -151,13 +151,13 @@ namespace CNTK
                     currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
                 }
 
-                if (currentOutputVar.GetDataType() == DataType::Unknown)
+                if ((currentOutputVar.GetDataType() == DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType()))
                 {
                     recurrentNodeOutputModified = true;
                     currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
                 }
 
-                if (currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes)
+                if ((currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
                 {
                     recurrentNodeOutputModified = true;
                     currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
@@ -1243,6 +1243,7 @@ namespace CNTK
         do
         {
             recurrentNodeOutputModified = false;
+            functionVisitCounts.clear();
             RootFunction()->ValidateOrUpdateOutputs(functionVisitCounts, recurrentNodeOutputModified);
             numValidationPasses++;
         } while (recurrentNodeOutputModified && (numValidationPasses < maxNumValidationPassesAllowed));
