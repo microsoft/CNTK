@@ -310,7 +310,8 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
         current_minibatch = min(minibatch_size, epoch_size - sample_count)
 
         # Fetch next test min batch.
-        data = reader_test.next_minibatch(current_minibatch)
+        data = reader_train.next_minibatch(current_minibatch, input_map=input_map)
+        #data = reader_test.next_minibatch(current_minibatch)
 
         # minibatch data to be trained with
         #metric_numer += trainer.test_minibatch(input_map) * current_minibatch
@@ -330,13 +331,13 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
 if __name__=='__main__':
     os.chdir(data_path) # BUGBUG: This is only needed because ImageReader uses relative paths in the map file. Ugh.
 
-    #reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', True)
-    #reader_test  = create_reader(data_path, 'test_map.txt',  'CIFAR-10_mean.xml', False)
+    reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', True)
+    reader_test  = create_reader(data_path, 'test_map.txt',  'CIFAR-10_mean.xml', False)
 
     # temp for Frank, to be removed
-    data_path = abs_path
-    os.chdir(data_path)
-    reader_train = create_reader(data_path, 'cifar-10-batches-py/train_map.txt', 'cifar-10-batches-py/CIFAR-10_mean.xml', True)
-    reader_test  = create_reader(data_path, 'cifar-10-batches-py/test_map.txt',  'cifar-10-batches-py/CIFAR-10_mean.xml', False)
+    #data_path = abs_path
+    #os.chdir(data_path)
+    #reader_train = create_reader(data_path, 'cifar-10-batches-py/train_map.txt', 'cifar-10-batches-py/CIFAR-10_mean.xml', True)
+    #reader_test  = create_reader(data_path, 'cifar-10-batches-py/test_map.txt',  'cifar-10-batches-py/CIFAR-10_mean.xml', False)
 
     train_and_evaluate(reader_train, reader_test, max_epochs=10)
