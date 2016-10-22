@@ -196,21 +196,28 @@ def create_basic_model_with_batch_normalization(input):
 
 # Task 3: Implement Task 1 and 2 using layer API
 def create_basic_model_layer(input):
-   net = {}
+    net = {}
 
-   net['conv1'] = Convolution((5,5), 32, init=gaussian(scale=0.0043), activation = relu, pad = True)(input)
-   net['pool1'] = MaxPooling((3,3), strides=(2,2))(net['conv1'])
+    model = Sequential([
+        [
+            Convolution((5,5), 32, init=gaussian(scale=0.0043), activation=relu, pad=True),
+            MaxPooling((3,3), strides=(2,2))
+        ],[
+            Convolution((5,5), 32, init=gaussian(scale=1.414), activation=relu, pad=True),
+            MaxPooling((3,3), strides=(2,2))
+        ],[
+            Convolution((5,5), 64, init=gaussian(scale=1.414), activation=relu, pad=True),
+            MaxPooling((3,3), strides=(2,2))
+        ],
 
-   net['conv2'] = Convolution((5,5), 32, init=gaussian(scale=1.414), activation = relu, pad = True)(net['pool1'])
-   net['pool2'] = MaxPooling((3,3), strides=(2,2))(net['conv2'])
+        Dense(64, init=gaussian(scale=12), activation = relu),
+        Dense(10, init=gaussian(scale=1.5), activation = None)
+    ])
 
-   net['conv3'] = Convolution((5,5), 64, init=gaussian(scale=1.414), activation=relu, pad = True)(net['pool2'])
-   net['pool3'] = MaxPooling((3,3), strides=(2,2))(net['conv3'])
+    # TODO: unify the patterns
+    net['fc5'] = model(input)
 
-   net['fc4'] = Dense(64, init=gaussian(scale=12), activation = relu)(net['pool3'])
-   net['fc5'] = Dense(10, init=gaussian(scale=1.5), activation = None)(net['fc4'])
-
-   return net
+    return net
 
 #
 # Train and evaluate the network.
