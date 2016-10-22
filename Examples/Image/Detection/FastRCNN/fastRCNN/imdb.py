@@ -8,9 +8,15 @@
 import os
 import os.path as osp
 import PIL
-from cython_bbox import bbox_overlaps
 import numpy as np
 import scipy.sparse
+from builtins import range
+
+import sys
+if sys.version_info[0] < 3: 
+    from utils2_win64.cython_bbox import bbox_overlaps
+else:
+    from .utils3_win64.cython_bbox import bbox_overlaps
 
 class imdb(object):
     """Image database."""
@@ -94,8 +100,8 @@ class imdb(object):
     def append_flipped_images(self):
         num_images = self.num_images
         widths = [PIL.Image.open(self.image_path_at(i)).size[0]
-                  for i in xrange(num_images)]
-        for i in xrange(num_images):
+                  for i in range(num_images)]
+        for i in range(num_images):
             boxes = self.roidb[i]['boxes'].copy()
             oldx1 = boxes[:, 0].copy()
             oldx2 = boxes[:, 2].copy()
@@ -113,7 +119,7 @@ class imdb(object):
         # Record max overlap value for each gt box
         # Return vector of overlap values
         gt_overlaps = np.zeros(0)
-        for i in xrange(self.num_images):
+        for i in range(self.num_images):
             gt_inds = np.where(self.roidb[i]['gt_classes'] > 0)[0]
             gt_boxes = self.roidb[i]['boxes'][gt_inds, :]
 
@@ -125,7 +131,7 @@ class imdb(object):
 
             # gt_overlaps = np.hstack((gt_overlaps, overlaps.max(axis=0)))
             _gt_overlaps = np.zeros((gt_boxes.shape[0]))
-            for j in xrange(gt_boxes.shape[0]):
+            for j in range(gt_boxes.shape[0]):
                 argmax_overlaps = overlaps.argmax(axis=0)
                 max_overlaps = overlaps.max(axis=0)
                 gt_ind = max_overlaps.argmax()
@@ -154,7 +160,7 @@ class imdb(object):
         assert len(box_list) == self.num_images, \
                 'Number of boxes must match number of ground-truth images'
         roidb = []
-        for i in xrange(self.num_images):
+        for i in range(self.num_images):
             boxes = box_list[i]
             num_boxes = boxes.shape[0]
             overlaps = np.zeros((num_boxes, self.num_classes), dtype=np.float32)
@@ -182,7 +188,7 @@ class imdb(object):
     @staticmethod
     def merge_roidbs(a, b):
         assert len(a) == len(b)
-        for i in xrange(len(a)):
+        for i in range(len(a)):
             if a[i]: #if image has at least one annotated object
                 a[i]['boxes'] = np.vstack((a[i]['boxes'], b[i]['boxes']))
                 a[i]['gt_classes'] = np.hstack((a[i]['gt_classes'],
