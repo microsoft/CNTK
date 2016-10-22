@@ -143,7 +143,7 @@ if __name__=='__main__':
     # TODO: leave these in for now as debugging aids; remove for beta
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
-    set_fixed_random_seed(1)  # TODO: remove debugging facilities once this all works
+    set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     force_deterministic_algorithms()
 
     reader = create_reader(data_dir + "/atis.train.ctf")

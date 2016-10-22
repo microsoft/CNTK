@@ -198,6 +198,7 @@ def create_basic_model_with_batch_normalization(input):
 def create_basic_model_layer(input):
     net = {}
 
+    #with default_options(activation=relu):
     model = Sequential([
         [
             Convolution((5,5), 32, init=gaussian(scale=0.0043), activation=relu, pad=True),

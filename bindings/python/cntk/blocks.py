@@ -34,8 +34,51 @@ _INFERRED = (InferredDimension,)  # as a tuple, makes life easier
 def UntestedBranchError(name):
     raise NotImplementedError("Untested code branch: " + name)
 
-_current_default_weight_initializer = glorot_uniform()
+_current_default_options = Record(
+    activation=None,       # Dense() and Convolution() have no activation by default
+    init=glorot_uniform()  # BUGBUG: init_bias will also fall back to this
+    # TODO: pad
+)
+
 DEFAULT_WEIGHT_INITIALIZER = Record() # This is a singleton sentinel value we recognize and replace in _initializer_for()
+DEFAULT_ACTIVATION = Record()
+
+# use:
+# with default_options(activation=relu, init=gaussian(), pad=True)
+def default_options(**kwargs):
+    class OptionsStack:
+        def __init__(self, **kwargs):
+            new_options = kwargs
+            merged_options = _current_default_options.__dict__
+            for key in new_options:
+                try:
+                    merged_options[key]
+                except:
+                    raise TypeError("default_options() got an unexpected keyword argument '{}'".format(key))
+                merged_options[key] = new_options[key]
+            self.new_default_options = Record(**merged_options)
+        def __enter__(self):
+            global _current_default_options
+            self.saved_default_options = _current_default_options
+            _current_default_options = self.new_default_options
+            #return self.cr
+        def __exit__(self, type, value, traceback):
+            global _current_default_options
+            _current_default_options = self.saved_default_options
+            pass
+    return OptionsStack(**kwargs)
+
+# resolve activation option against current default
+def _default_activation(activation):
+    # if none is passed to caller then use the default
+    if activation is DEFAULT_ACTIVATION:
+        activation = _current_default_options.activation
+
+    # activation=None is implemented as activation=identity
+    if activation is None:
+        activation = identity
+
+    return activation
 
 # create the complete initializer for a given 'init' parameter, to pass to parameter()
 # This is called from Parameter() and every place that injects rank parameters.
@@ -56,8 +99,9 @@ def _initializer_for(init, rank_params=None):
     # if default then select
     if init is DEFAULT_WEIGHT_INITIALIZER:
         # TODO: select the default from global settings
-        #init = _current_default_weight_initializer
-        init = glorot_uniform()
+        from cntk.initializer import initializer_with_rank
+        # BUGBUG: This breaks random init seeds
+        init = _current_default_options.init
 
     # implant additional rank parameters
     if rank_params:
