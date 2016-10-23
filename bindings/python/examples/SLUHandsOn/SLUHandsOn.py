@@ -49,9 +49,10 @@ def create_reader(path):
 
 def create_model():
   # the following injects an option to mimic the BS version identically
-  with default_options(enable_self_stabilization=False, initial_state=0.1):
+  with default_options(initial_state=0.1):
+   #with default_options(enable_self_stabilization=True):
     return Sequential([
-        #Stabilizer(),
+        #Stabilizer(enable_self_stabilization=True),
         Embedding(emb_dim),
         #BatchNormalization(),
         Recurrence(LSTM(hidden_dim), go_backwards=False),
@@ -101,8 +102,8 @@ def train(reader, model, max_epochs):
 
     # process minibatches and perform model training
     log_number_of_parameters(z) ; print()
-    #progress_printer = ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
-    progress_printer = ProgressPrinter(tag='Training')
+    progress_printer = ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
+    #progress_printer = ProgressPrinter(tag='Training')
 
     t = 0
     for epoch in range(max_epochs):         # loop over epochs
@@ -119,9 +120,9 @@ def train(reader, model, max_epochs):
             #        print (name, np.asarray(nl[0].value))
             #trace_node('W')
             #trace_node('stabilizer_param')
-        progress_printer.epoch_summary(with_metric=True)
+        loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
-    return loss_numer/loss_denom, metric_numer/metric_denom
+    return loss, metric
 
 #############################
 # main function boilerplate #

@@ -25,6 +25,7 @@ def test_seq_classification_error(device_id):
 
     evaluation_avg, loss_avg = _run_slu_hands_on_1()
 
+    # ng] loss = 0.783951 * 36061, metric = 15.5% * 3606
     expected_avg = [0.15570838301766451, 0.7846451368305728]
     assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 

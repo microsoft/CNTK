@@ -104,7 +104,7 @@ class ProgressPrinter:
                 print("Finished Epoch [{}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {}".format(self.epochs, self.tag, avg_loss, samples, avg_metric*100.0, samples))
             else:
                 print("Finished Epoch [{}]: {}loss = {:0.6f} * {}".format(self.epochs, self.tag, avg_loss, samples))
-
+            return avg_loss, avg_metric, samples  # BUGBUG: for freq=0, we don't return anything here
 
     def update(self, loss, minibatch_size, metric=None):
         '''

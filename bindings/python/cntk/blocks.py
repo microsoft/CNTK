@@ -210,17 +210,11 @@ identity = _Identity()
 # TODO: add a flag enable_self_stabilizer (maybe rename it) default to True, overridable by default_options
 # This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
 def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_default_or_False):
-    enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
-    if not enable_self_stabilization: # disabled (typically through global option)
-        return identity
-    #UntestedBranchError("Stabilizer")
-    # currently fails with "RuntimeError: The 1 leading dimensions of the right operand with shape [1] do not match the left operand's trailing dimensions with shape [943]"
-
-    # When applied to a known input, it works with linear stabilizer, but not with softplus,
-    # which is explaninable as time stamp not being updated in model update.
-
-    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
-    # this behaves linear for weights around 1, yet guarantees positiveness
+    if _is_given(enable_self_stabilization):
+        raise NotImplementedError('Stagbilizer: enable_self_stabilization flag not implemented yet')
+    #enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
+    #if not enable_self_stabilization: # disabled (typically through global option)
+    #    return identity
 
     # parameters bound to this Function
     param = Parameter((1), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
@@ -229,14 +223,11 @@ def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_
 
     # expression
     x = Placeholder(name='stabilizer_arg')
+
+    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
+    # this behaves linear for weights around 1, yet guarantees positiveness
     # TODO: risk of confusion; can these functions be namespaced?
-    #beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething
-    #from cntk import log, exp
-    #beta = log (param - 0.99537863 + 2.7182818284590452353602874713527)   # HAS NO EFFECT
-    #beta = log (exp (param))   # HAS NO EFFECT
-    #beta = (exp (param))   # HAS NO EFFECT
-    #beta = steepness * param * (1/steepness) # HAS NO EFFECT
-    beta = param # TODO: replace by softplus once the time-stamp issue is gone. Softplus works better.
+    beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething
     apply_x = beta * x
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
