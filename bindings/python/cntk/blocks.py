@@ -41,7 +41,7 @@ def UntestedBranchError(name):
 _current_default_options = Record(
     init=glorot_uniform(),
     activation=None,                  # Dense() and Convolution() have no activation by default
-    pad=False,
+    pad=False, # BUGBUG: not done for pooling at present. Need a special default? How to name?
     bias=True,
     init_bias=0,
     enable_self_stabilization=False,  # Stabilizer() and LSTM()
@@ -58,7 +58,7 @@ init_bias_default_or_0                     = _default_sentinel_init_bias
 bias_default_or_True                       = _default_sentinel
 pad_default_or_False                       = _default_sentinel
 enable_self_stabilization_default_or_False = _default_sentinel
-initial_state_default_or_None              = _default_sentinel_init_bias
+initial_state_default_or_None              = _default_sentinel
 
 # check whether a parameter is a default
 # This is meant to be used by implementations of layers that take default values that may default to default-defaults.
@@ -98,7 +98,7 @@ def default_options(**kwargs):
 # resolve activation option against current default
 def _resolve_activation(activation):
     # if none is passed to caller then use the default
-    if activation is not _default_sentinel:
+    if activation is _default_sentinel:
         activation = _current_default_options.activation
     # activation=None is implemented as activation=identity
     if activation is None:

@@ -15,6 +15,7 @@ from cntk import Trainer
 from cntk.learner import sgd, fsadagrad, learning_rate_schedule, momentum_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
 from examples.common.nn import print_training_progress
+from cntk.utils.progress_print import *
 
 ########################
 # variables and stuff  #
@@ -71,7 +72,6 @@ def train(reader, model, max_epochs):
 
     # apply model to input
     z = model(query)
-    #z = model(Stabilizer()(query))
 
     # loss and metric
     ce = cross_entropy_with_softmax(z, slot_labels)
@@ -81,7 +81,7 @@ def train(reader, model, max_epochs):
     epoch_size = 36000
     minibatch_size = 70
     num_mbs_to_show_result = 100
-    momentum_as_time_constant = minibatch_size / -math.log(0.9)
+    momentum_as_time_constant = minibatch_size / -math.log(0.9)  # TODO: Change to round number. This is 664.39. 700?
 
     lr_per_sample = [0.003]*2+[0.0015]*12+[0.0003]
 
@@ -100,19 +100,15 @@ def train(reader, model, max_epochs):
     }
 
     # process minibatches and perform model training
+    log_number_of_parameters(z) ; print()
+    progress_printer = ProgressPrinter(tag='Training')
+
     t = 0
-    mbs = 0
     for epoch in range(max_epochs):
-        loss_numer = 0  # TODO: find a nicer way of tracking, this is clumsy
-        loss_denom = 0
-        metric_numer = 0
-        metric_denom = 0
         epoch_end = (epoch+1) * epoch_size
         while t < epoch_end:
             data = reader.next_minibatch(min(minibatch_size, epoch_end-t), input_map=input_map)
             # BUGBUG? The change of minibatch_size parameter has no effect.
-            #if data is None:
-            #    break
             trainer.train_minibatch(data)
             #def trace_node(name):
             #    nl = [n for n in z.parameters if n.name() == name]
@@ -120,14 +116,9 @@ def train(reader, model, max_epochs):
             #        print (name, np.asarray(nl[0].value))
             #trace_node('W')
             #trace_node('stabilizer_param')
-            loss_numer += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count  # too much code for something this simple
-            loss_denom +=                                           trainer.previous_minibatch_sample_count
-            metric_numer += trainer.previous_minibatch_evaluation_average * trainer.previous_minibatch_sample_count
-            metric_denom +=                                                 trainer.previous_minibatch_sample_count
-            print_training_progress(trainer, mbs if mbs > 10 else 0, num_mbs_to_show_result)
+            progress_printer.update_with_trainer(trainer, with_metric=True)
             t += data[slot_labels].num_samples
-            mbs += 1
-        print("--- EPOCH {} DONE: loss = {:0.6f} * {}, metric = {:0.1f}% * {} ---".format(epoch+1, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
+        progress_printer.epoch_summary(with_metric=True)
 
     return loss_numer/loss_denom, metric_numer/metric_denom
 
@@ -136,9 +127,6 @@ def train(reader, model, max_epochs):
 #############################
 
 if __name__=='__main__':
-    # TODO: get closure on Amit's feedback "Not the right pattern as we discussed over email. Please change to set_default_device(gpu(0))"
-    #set_default_device(gpu(0))
-
     # TODO: leave these in for now as debugging aids; remove for beta
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works

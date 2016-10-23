@@ -16,6 +16,7 @@ from cntk.initializer import glorot_uniform, he_normal
 from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu, convolution, pooling, PoolingType_Max
+from cntk.utils.progress_print import *
 
 #
 # Paths relative to current python file.
@@ -200,19 +201,13 @@ def create_basic_model_with_batch_normalization(input):
 def create_basic_model_layer(input):
     net = {}
 
-    with default_options(activation=relu, pad=True):
+    with default_options(activation=relu):
         model = Sequential([
+            LayerStack(3, lambda i:
             [
-                Convolution((5,5), 32, init=gaussian(scale=0.0043)),
-                MaxPooling((3,3), strides=(2,2))
-            ],[
-                Convolution((5,5), 32, init=gaussian(scale=1.414)),
-                MaxPooling((3,3), strides=(2,2))
-            ],[
-                Convolution((5,5), 64, init=gaussian(scale=1.414)),
-                MaxPooling((3,3), strides=(2,2))
-            ],
-
+                Convolution((5,5), [32,32,64][i], init=gaussian(scale=[0.0043,1.414,1.414][i]), pad=True),
+                MaxPooling((3,3), strides=(2,2))    #, BatchNormalization(spatial_rank=2)  # Note: I know this BN is not the same as above
+            ]),
             Dense(64, init=gaussian(scale=12)),
             Dense(10, init=gaussian(scale=1.5), activation=None)
         ])
@@ -250,7 +245,7 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
 
     # For basic model
     lr_per_sample       = [0.00015625]*10+[0.000046875]*10+[0.0000156]
-    momentum_per_sample = 0.9 ** (1.0 / minibatch_size)
+    momentum_per_sample = 0.9 ** (1.0 / minibatch_size)  # BUGBUG: why does this work? Should be as time const, no?
     l2_reg_weight       = 0.03
 
     # For basic model with batch normalization
@@ -270,42 +265,32 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
         label_var: reader_train.streams.labels
     }
 
+    log_number_of_parameters(z) ; print()
+    progress_printer = ProgressPrinter(tag='Training')
+
     # process minibatches and perform model training
     for epoch in range(max_epochs):
-        loss_numer      = 0 
-        loss_denom      = 0
-        metric_numer    = 0
-        metric_denom    = 0
-        sample_count    = 0
-
+        sample_count = 0
         while sample_count < epoch_size:
             current_minibatch = min(minibatch_size, epoch_size - sample_count)
 
             # fetch next mini batch.
             data = reader_train.next_minibatch(current_minibatch, input_map=input_map)
-            #data = reader_train.next_minibatch(current_minibatch)
 
             # minibatch data to be trained with
-            #trainer.train_minibatch(input_map)
             trainer.train_minibatch(data)
 
-            # Keep track of some statistics.
-            loss_numer   += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count 
-            loss_denom   +=                                           trainer.previous_minibatch_sample_count
-            metric_numer += trainer.previous_minibatch_evaluation_average * trainer.previous_minibatch_sample_count
-            metric_denom +=                                                 trainer.previous_minibatch_sample_count
-
-            # Keep track of the number of samples processed so far.
+            # keep track of the number of samples processed so far
             sample_count += data[label_var].num_samples
-            if sample_count <= 10 * minibatch_size:
-                print(" Minibatch[{} of {}]: [Training] ce = {:0.6f} * {}, errs = {:0.1f}% * {}".format(epoch+1, max_epochs, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
-            #if current_minibatch != minibatch_size:
-            #    break
 
-        print("Finished Epoch[{} of {}]: [Training] ce = {:0.6f} * {}, errs = {:0.1f}% * {}".format(epoch+1, max_epochs, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
+            # progress
+            progress_printer.update_with_trainer(trainer, with_metric=True)
+
+        progress_printer.epoch_summary(with_metric=True)
     
     #
     # Evaluation action
+    # TODO: This should be a separate function call.
     #
     epoch_size     = 10000
     minibatch_size = 16
@@ -316,6 +301,7 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     sample_count    = 0
     minibatch_index = 0
 
+    #progress_printer = ProgressPrinter(freq=100, first=10, tag='Eval')
     while sample_count < epoch_size:
         current_minibatch = min(minibatch_size, epoch_size - sample_count)
 
@@ -343,9 +329,9 @@ if __name__=='__main__':
 
     # TODO: leave these in for now as debugging aids; remove for beta
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
-    #set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
-    #force_deterministic_algorithms()
+    #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
+    set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
+    force_deterministic_algorithms()
     # TODO: do the above; they lead to slightly different results, so not doing it for now
 
     reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', True)
