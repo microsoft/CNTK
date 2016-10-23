@@ -365,7 +365,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
 # TODO: unCamelCase and integrate upcoming CR
 @typemap
 def fsadagrad(parameters, lr, momentum,
-        targetAdagradAvDenom = 0.0025, varianceTimeConstant = 720000,
+        targetAdagradAvDenom = 1, varianceTimeConstant = 720000,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10,
         gradient_clipping_with_truncation=True):
@@ -412,6 +412,21 @@ def fsadagrad(parameters, lr, momentum,
     return cntk_py.fsada_grad_learner(parameters, lr, momentum,
             targetAdagradAvDenom, varianceTimeConstant,
             additional_options)
+
+# prototype/emulation of renamed version
+def adam_sgd(parameters, lr_per_sample, momentum_time_constant,
+             variance_time_constant = 720000,
+             low_memory=True,
+             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
+             gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10,
+             gradient_clipping_with_truncation=True):
+    if not low_memory:
+        raise NotImplementedError('adam: low_memory=True currently required')
+    return fsadagrad(parameters, lr_per_sample, momentum_time_constant,
+        targetAdagradAvDenom=1, varianceTimeConstant = variance_time_constant,
+        l1_regularization_weight=l1_regularization_weight, l2_regularization_weight=l2_regularization_weight,
+        gaussian_noise_injection_std_dev=gaussian_noise_injection_std_dev, gradient_clipping_threshold_per_sample=gradient_clipping_threshold_per_sample,
+        gradient_clipping_with_truncation=gradient_clipping_with_truncation)
 
 @typemap
 def rmsprop(parameters, lr,

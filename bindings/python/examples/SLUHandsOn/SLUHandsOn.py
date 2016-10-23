@@ -12,7 +12,7 @@ from cntk.models import *  # higher abstraction level, e.g. entire standard mode
 from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 from cntk import Trainer
-from cntk.learner import sgd, fsadagrad, learning_rate_schedule, momentum_schedule
+from cntk.learner import adam_sgd, learning_rate_schedule, momentum_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
 from examples.common.nn import print_training_progress
 
@@ -86,9 +86,10 @@ def train(reader, model, max_epochs):
 
     # trainer object
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner = fsadagrad(z.parameters, lr_schedule, momentum_as_time_constant,
-                        targetAdagradAvDenom=1, gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
-    # BUGBUG: targetAdagradAvDenom must be removed from the interface, and default to 1
+    learner = adam_sgd(z.parameters,
+                       lr_per_sample=lr_schedule, momentum_time_constant=momentum_as_time_constant,
+                       low_memory=True,
+                       gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
     trainer = Trainer(z, ce, pe, [learner])
 
@@ -100,6 +101,7 @@ def train(reader, model, max_epochs):
 
     # process minibatches and perform model training
     log_number_of_parameters(z) ; print()
+    #progress_printer = ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
     progress_printer = ProgressPrinter(tag='Training')
 
     t = 0
