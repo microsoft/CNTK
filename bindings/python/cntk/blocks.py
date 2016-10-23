@@ -42,6 +42,8 @@ _current_default_options = Record(
     init=glorot_uniform(),
     activation=None,                  # Dense() and Convolution() have no activation by default
     pad=False, # BUGBUG: not done for pooling at present. Need a special default? How to name?
+    # ^^ This should be addressed by allowing configs per layer type.
+    #    To be addressed as a per-layer default. See default_options below.
     bias=True,
     init_bias=0,
     enable_self_stabilization=False,  # Stabilizer() and LSTM()
@@ -66,34 +68,48 @@ def _is_given(p):
     return p is not _default_sentinel and p is not _default_sentinel_init and p is not _default_sentinel_init_bias
 
 # scope guard for overriding defaults
-# with default_options(activation=relu, init=gaussian(), pad=True)
+# with default_options(activation=relu, init=he_normal(), pad=True):
 #     model = Convolution((3,3), 32) >> Convolution((3,3), 64)  # will have relu activation and padding
+# to limit it to a specific operation or set of operations, use e.g.
+# with default_options(activation=relu, init=he_normal()):
+#     with default_options_for(Convolution, pad=True):
+#         ...
+# TODO: actually implement this
+class _OptionsStack: # implement Python's 'with' protocol
+    # constructor prepares the updated record of defaults and remembers it
+    def __init__(self, layer_subset=None, **kwargs):
+        if layer_subset:
+            raise NotImplementedError('default_options not yet implemented per layer')
+        new_options = kwargs
+        # TODO: layer subset
+        merged_options = _current_default_options.__dict__
+        # we merge the newly provided options with the current defaults
+        # Only names that already exist may be used (cannot create new default variables).
+        # TODO: we may consider a more generic mechanism where one can overwrite all, if Python allows that.
+        for key in new_options:
+            try:
+                merged_options[key]
+            except:
+                raise TypeError("default_options() got an unexpected keyword argument '{}'".format(key))
+            merged_options[key] = new_options[key]
+        self.new_default_options = Record(**merged_options) # this is the new options record that entering the with section will activate
+    # entering with block: replaces the current defaults with the new ones, after remembering the old ones
+    def __enter__(self):
+        global _current_default_options
+        self.saved_default_options = _current_default_options
+        _current_default_options = self.new_default_options
+    # exiting with block: restore previous remembered defaults
+    def __exit__(self, type, value, traceback):
+        global _current_default_options
+        _current_default_options = self.saved_default_options
+
 def default_options(**kwargs):
-    class OptionsStack: # implement Python's 'with' protocol
-        # constructor prepares the updated record of defaults and remembers it
-        def __init__(self, **kwargs):
-            new_options = kwargs
-            merged_options = _current_default_options.__dict__
-            # we merge the newly provided options with the current defaults
-            # Only names that already exist may be used (cannot create new default variables).
-            # TODO: we may consider a more generic mechanism where one can overwrite all, if Python allows that.
-            for key in new_options:
-                try:
-                    merged_options[key]
-                except:
-                    raise TypeError("default_options() got an unexpected keyword argument '{}'".format(key))
-                merged_options[key] = new_options[key]
-            self.new_default_options = Record(**merged_options) # this is the new options record that entering the with section will activate
-        # entering with block: replaces the current defaults with the new ones, after remembering the old ones
-        def __enter__(self):
-            global _current_default_options
-            self.saved_default_options = _current_default_options
-            _current_default_options = self.new_default_options
-        # exiting with block: restore previous remembered defaults
-        def __exit__(self, type, value, traceback):
-            global _current_default_options
-            _current_default_options = self.saved_default_options
-    return OptionsStack(**kwargs)
+    return _OptionsStack(None, **kwargs)
+
+def default_options_for(layer_subset, **kwargs):
+    if not isinstance(layer_subset, list):
+        layer_subset = [layer_subset]
+    return _OptionsStack(layer_subset, **kwargs)
 
 # resolve activation option against current default
 def _resolve_activation(activation):

@@ -202,15 +202,16 @@ def create_basic_model_layer(input):
     net = {}
 
     with default_options(activation=relu):
-        model = Sequential([
-            LayerStack(3, lambda i:
-            [
-                Convolution((5,5), [32,32,64][i], init=gaussian(scale=[0.0043,1.414,1.414][i]), pad=True),
-                MaxPooling((3,3), strides=(2,2))    #, BatchNormalization(spatial_rank=2)  # Note: I know this BN is not the same as above
-            ]),
-            Dense(64, init=gaussian(scale=12)),
-            Dense(10, init=gaussian(scale=1.5), activation=None)
-        ])
+        #with default_options_for(Convolution, pad=True):  # TODO: implement this
+            model = Sequential([
+                LayerStack(3, lambda i:
+                [
+                    Convolution((5,5), [32,32,64][i], init=gaussian(scale=[0.0043,1.414,1.414][i]), pad=True),
+                    MaxPooling((3,3), strides=(2,2))    #, BatchNormalization(spatial_rank=2)  # Note: I know this BN is not the same as above
+                ]),
+                Dense(64, init=gaussian(scale=12)),
+                Dense(10, init=gaussian(scale=1.5), activation=None)
+            ])
 
     # TODO: unify the patterns
     net['fc5'] = model(input)
