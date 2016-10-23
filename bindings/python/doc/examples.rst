@@ -27,5 +27,5 @@ directory:
    - NumPy interoperability example showing how to train a simple feed-forward
    network with training data fed using NumPy arrays.
 
--  `SLUHandsOn <https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/SLUHandsOn/SLUHandsOn.py>`__
-   – Language Understanding.
+-  `SLUHandsOn <https://github.com/Microsoft/CNTK/blob/v2.alpha4/bindings/python/examples/SLUHandsOn/SLUHandsOn.py>`__
+   - Language Understanding.
