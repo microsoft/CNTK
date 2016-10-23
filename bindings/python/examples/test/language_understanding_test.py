@@ -9,7 +9,7 @@ from cntk import DeviceDescriptor
 
 # this emulates a "main" function for SLUHandsOn
 def _run_lu_1():
-    from examples.language_understanding.language_understanding import data_dir, create_reader, create_model, train
+    from examples.LanguageUnderstanding.LanguageUnderstanding import data_dir, create_reader, create_model, train
     from _cntk_py import set_fixed_random_seed
     set_fixed_random_seed(1) # to become invariant to initialization order, which is a valid change
     reader = create_reader(data_dir + "/atis.train.ctf")
