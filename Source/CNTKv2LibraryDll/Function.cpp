@@ -3023,7 +3023,7 @@ namespace CNTK
 
         FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name)
         {
-            auto dataPadded = Internal::Scatter(operand, Sequence::IsFirst(broadcastAs), broadcastAs.DynamicAxes());
+            auto dataPadded = Internal::Scatter(operand, Sequence::IsFirst(broadcastAs), operand.DynamicAxes());
             auto placeHolderOutput = PlaceholderVariable(operand.Shape(), broadcastAs.DynamicAxes());
             auto output = ElementSelect(Sequence::IsFirst(broadcastAs), dataPadded, PastValue(placeHolderOutput), name);
             return output->ReplacePlaceholders({ { placeHolderOutput, output } });
@@ -3091,9 +3091,9 @@ namespace CNTK
             return Internal::GatherPacked(operand, Internal::PackedIndex(/*layout of*/ operand, Where(condition, newDynamicAxes)), name);
         }
 
-        FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name)
+        FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::vector<Axis>& whereNodeDynamicAxes, const std::wstring& name)
         {
-            return Internal::ScatterPacked(operand, Internal::PackedIndex(/*layout of*/ condition, Where(condition, newDynamicAxes)), /*layout of*/ condition, name);
+            return Internal::ScatterPacked(operand, Internal::PackedIndex(/*layout of*/ condition, Where(condition, whereNodeDynamicAxes)), /*layout of*/ condition, name);
         }
 
         FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name)
