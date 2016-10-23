@@ -1,4 +1,9 @@
-﻿<#
+﻿#
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
+
+<#
   .SYNOPSIS
  Use this cmdlet to install CNTK2 
 
@@ -16,9 +21,6 @@
  - Anaconda3 will be installed into [c:\local\Anaconda3-4.1.1-Windows-x86_64]
  - A CNTK-PY34 environment will be created in [c:\local\Anaconda3-4.1.1-Windows-x86_64\envs]
  - CNTK will be installed into the CNTK-PY34 environment
- 
- .PARAMETER cntkWhl
- This is an optional parameter and can be used the specify the download location for the CNTK2 WHL file
 
  .PARAMETER AnacondaBasePath
  This is an optional parameter and can be used to specify the install location for Anaconda
@@ -28,9 +30,9 @@
 
  .PARAMETER ForceWheelUpdate
  Will uninstall an existing CNTK wheel and install a new wheel
-
+ go
  .PARAMETER RepoTag
- Optional parameter to specify a specific tag to checked-out in the CNTK-repo
+ Optional parameter to specify a specific tag to check-out in the CNTK-repo
 
 .EXAMPLE
  .\installer.ps1
@@ -48,8 +50,6 @@
 
 [CmdletBinding()]
 Param(
-    [parameter(Mandatory=$false, Position=0)]
-    [string] $cntkWhl = "https://cntk.ai/pippackages/gpu/cntk-2.0a4-cp34-cp34m-win_amd64.whl",
     [parameter(Mandatory=$false)]
     [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64",
     [parameter(Mandatory=$false)]
@@ -65,9 +65,6 @@ $cntkRootDir = split-path $MyDir | split-path
 
 $roboCopyCmd    = "C:\Windows\System32\robocopy.exe"
 $localCache     = "$MyDir\InstallCache"
-
-$cntkWhlSplit = $cntkWhl.Split("/")
-$cntkWhlName = $cntkWhlSplit[$cntkWhlSplit.Count - 1]
 
 # Get the current script's directory and Dot-source the a file with common Powershell script function 
 # residing in the the current script's directory

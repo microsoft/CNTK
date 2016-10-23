@@ -715,6 +715,7 @@ void BestGpu::QueryNvmlData()
                 if (GetCurrentProcessId() == info.pid || name.length() == 0)
                     continue;
 #ifdef _WIN32
+                // TODO: add python?
                 cntkFound = cntkFound || EqualCI(name, "cntk.exe"); // recognize ourselves
                 cntkFound = cntkFound || EqualCI(name, "cn.exe") || EqualCI(name, "dbn.exe"); // also recognize some MS-proprietary legacy tools
 #else

@@ -338,11 +338,6 @@ namespace CNTK
         return{ paddedOutputMapCount, kernelShape };
     }
 
-    inline double MomentumValueForMB(double momentumPerSample, size_t minibatchSize)
-    {
-        return std::pow(momentumPerSample, minibatchSize);
-    }
-
     template <typename SourceElementType, typename TargetElementType>
     inline TargetElementType* Copy(const SourceElementType* src, size_t srcSize)
     {
