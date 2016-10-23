@@ -83,6 +83,46 @@ class Learner(cntk_py.Learner):
         return super(Learner, self).learning_rate()
 
 @typemap
+def training_parameter_schedule(schedule, units=1):
+    '''
+    Create a training parameter schedule.
+
+    Examples:
+        >>> # Use a fixed value 0.01 for all samples
+        >>> s = training_parameter_schedule(0.01)
+        >>> s[0], s[1]
+        (0.01, 0.01)
+
+        >>> # Use 0.01 for the first 1000 samples, then 0.001 for the remaining ones
+        >>> s = training_parameter_schedule([0.01, 0.001], 1000)
+        >>> s[0], s[1], s[1000], s[1001]
+        (0.01, 0.01, 0.001, 0.001)
+
+        >>> # Use 0.1 for the first 1200 samples, then 0.01 for the next 1500,
+        >>> # followed by 0.001 for the remaining ones
+        >>> s = training_parameter_schedule([(12, 0.1), (15, 0.01), (1, 0.001)], 100)
+        >>> s[0], s[1199], s[1200], s[2699], s[2700], s[5000]
+        (0.1, 0.1, 0.01, 0.01, 0.001, 0.001)
+
+    Args:
+        schedule (`float` or `list`): if `float`, is the parameter schedule to be used
+         for all samples. In case of list, the elements are used as the
+         values for ``units`` samples.
+        units (`int`): number of samples as a scheduling unit
+
+    Returns:
+        training parameter schedule
+    '''
+    if isinstance(schedule, cntk_py.training_parameter_schedule_double):
+        return schedule
+    if isinstance(schedule, (int, float)):
+        return cntk_py.training_parameter_schedule_double(schedule)
+    if isinstance(schedule, list):
+        return cntk_py.training_parameter_schedule_double(schedule, units)
+
+    raise ValueError('schedule must be either a float or a list, not %s'%type(schedule))
+
+@typemap
 def learning_rate_schedule(lr, units=1):
     '''
     Create a learning rate schedule.
@@ -107,13 +147,7 @@ def learning_rate_schedule(lr, units=1):
     Returns:
         schedule for learning rates per sample
     '''
-    if isinstance(lr, float):
-        return cntk_py.learning_rates_per_sample(lr)
-
-    if not isinstance(lr, list):
-        raise ValueError('lr must be either a float or a list, not %s'%type(lr))
-
-    return cntk_py.learning_rates_per_sample(lr, units)
+    return training_parameter_schedule(lr, units)
 
 @typemap
 def momentum_schedule(momentum, units=1):
@@ -145,19 +179,18 @@ def momentum_schedule(momentum, units=1):
     Returns:
         momentum schedule
     '''
+    if isinstance(momentum, cntk_py.training_parameter_schedule_double):
+        return momentum
+
     # FIXME: Swig does not see MomentumValuesAsTimeConstants as an inherited
     # type of MomentumValuesPerSample, so we are doing the conversion
     # explicitly for now. This has to be solved in the Swig layer eventually.
     to_per_sample = lambda x: 0 if x==0 else math.exp(-1.0 / x)
 
     if isinstance(momentum, (int, float)):
-        return cntk_py.momentums_per_sample(to_per_sample(momentum))
+        return training_parameter_schedule(to_per_sample(momentum), units)
 
-
-    if not isinstance(momentum, list):
-        raise ValueError('momentum must be either a float or a list, not %s'%type(momentum))
-
-    return cntk_py.momentums_per_sample([to_per_sample(m) for m in momentum], units)
+    return training_parameter_schedule([to_per_sample(m) for m in momentum], units)
 
 @typemap
 def momentum_schedule_per_sample(momentum, units=1):
@@ -184,13 +217,7 @@ def momentum_schedule_per_sample(momentum, units=1):
     Returns:
         schedule for momentum per sample
     '''
-    if isinstance(momentum, (int, float)):
-        return cntk_py.momentums_per_sample(momentum)
-
-    if not isinstance(momentum, list):
-        raise ValueError('momentum must be either a float or a list, not %s'%type(momentum))
-
-    return cntk_py.momentums_per_sample(momentum, units)
+    return training_parameter_schedule(momentum, units)
 
 
 # TODO figure out how to pass infty to C++ in a portable way
@@ -221,8 +248,9 @@ def sgd(parameters, lr,
     Returns:
         Instance of a :class:`cntk.learner.Learner` that can be passed to the :class:`cntk.trainer.Trainer`
     '''
-    if isinstance(lr, (int, float)):
+
         lr = learning_rate_schedule(lr)
+    gaussian_noise_injection_std_dev = training_parameter_schedule(gaussian_noise_injection_std_dev)
 
     additional_options = cntk_py.AdditionalLearningOptions()
     additional_options.l1_regularization_weight = l1_regularization_weight
@@ -261,11 +289,9 @@ def momentum_sgd(parameters, lr, momentum,
     Returns:
         Instance of a :class:`cntk.learner.Learner` that can be passed to the :class:`cntk.trainer.Trainer`
     '''
-    if isinstance(lr, (int, float)):
-        lr = learning_rate_schedule(lr)
-
-    if isinstance(momentum, (int, float)):
-        momentum = momentum_schedule(momentum)
+    lr = learning_rate_schedule(lr)
+    momentum = momentum_schedule(momentum)
+    gaussian_noise_injection_std_dev = training_parameter_schedule(gaussian_noise_injection_std_dev)
 
     additional_options = cntk_py.AdditionalLearningOptions()
     additional_options.l1_regularization_weight = l1_regularization_weight
@@ -305,11 +331,9 @@ def nesterov(parameters, lr, momentum,
     Returns:
         Instance of a :class:`cntk.learner.Learner` that can be passed to the :class:`cntk.trainer.Trainer`
     '''
-    if isinstance(lr, (int, float)):
-        lr = learning_rate_schedule(lr)
-
-    if isinstance(momentum, (int, float)):
-        momentum = momentum_schedule(momentum)
+    lr = learning_rate_schedule(lr)
+    momentum = momentum_schedule(momentum)
+    gaussian_noise_injection_std_dev = training_parameter_schedule(gaussian_noise_injection_std_dev)
 
     additional_options = cntk_py.AdditionalLearningOptions()
     additional_options.l1_regularization_weight = l1_regularization_weight
@@ -349,8 +373,8 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
     Returns:
         Instance of a :class:`cntk.learner.Learner` that can be passed to the :class:`cntk.trainer.Trainer`
     '''
-    if isinstance(lr, (int, float)):
-        lr = learning_rate_schedule(lr)
+    lr = learning_rate_schedule(lr)
+    gaussian_noise_injection_std_dev = training_parameter_schedule(gaussian_noise_injection_std_dev)
 
     additional_options = cntk_py.AdditionalLearningOptions()
     additional_options.l1_regularization_weight = l1_regularization_weight
@@ -364,8 +388,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
 
 # TODO: unCamelCase and integrate upcoming CR
 @typemap
-def fsadagrad(parameters, lr, momentum,
-        targetAdagradAvDenom = 1, varianceTimeConstant = 720000,
+def fsadagrad(parameters, lr, momentum, varianceMomentum = 720000,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10,
         gradient_clipping_with_truncation=True):
@@ -379,10 +402,7 @@ def fsadagrad(parameters, lr, momentum,
          rates per sample.
         momentum (`float` or output of `:func:momentum_schedule`): momentum as time constant.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
-        targetAdagradAvDenom ('float', optional): FSAdaGrad magic number,
-         defaults to 0.0025 (1/400)
-        varianceTimeConstant ('long', optional): FSAdaGrad magic number,
-         defaults to 720000 ( 2 * 3600 * 100)
+        varianceMomentum (`float` or output of `:func:momentum_schedule`): variance momentum values.
         l1_regularization_weight ('float', optional): the L1 regularization weight per sample,
          defaults to 0.0
         l2_regularization_weight ('float', optional): the L2 regularization weight per sample,
@@ -396,11 +416,10 @@ def fsadagrad(parameters, lr, momentum,
     Returns:
         Instance of a :class:`cntk.learner.Learner` that can be passed to the :class:`cntk.trainer.Trainer`
     '''
-    if isinstance(lr, (int, float)):
-        lr = learning_rate_schedule(lr)
-
-    if isinstance(momentum, (int, float)):
-        momentum = momentum_schedule(momentum)
+    lr = learning_rate_schedule(lr)
+    momentum = momentum_schedule(momentum)
+    varianceMomentum = momentum_schedule(varianceMomentum)
+    gaussian_noise_injection_std_dev = training_parameter_schedule(gaussian_noise_injection_std_dev)
 
     additional_options = cntk_py.AdditionalLearningOptions()
     additional_options.l1_regularization_weight = l1_regularization_weight
@@ -410,8 +429,7 @@ def fsadagrad(parameters, lr, momentum,
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
     return cntk_py.fsada_grad_learner(parameters, lr, momentum,
-            targetAdagradAvDenom, varianceTimeConstant,
-            additional_options)
+            varianceMomentum, additional_options)
 
 # prototype/emulation of renamed version
 def adam_sgd(parameters, lr_per_sample, momentum_time_constant,
@@ -462,8 +480,8 @@ def rmsprop(parameters, lr,
     Returns:
         Instance of a :class:`cntk.learner.Learner` that can be passed to the :class:`cntk.trainer.Trainer`
     '''
-    if isinstance(lr, (int, float)):
-        lr = learning_rate_schedule(lr)
+    lr = learning_rate_schedule(lr)
+    gaussian_noise_injection_std_dev = training_parameter_schedule(gaussian_noise_injection_std_dev)
 
     additional_options = cntk_py.AdditionalLearningOptions()
     additional_options.l1_regularization_weight = l1_regularization_weight
