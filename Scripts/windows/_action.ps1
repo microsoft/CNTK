@@ -1,4 +1,9 @@
-﻿function ActionOperations()
+﻿#
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
+
+function ActionOperations()
 {
     Write-Host "Performing install operations"
 
@@ -51,8 +56,7 @@ function InstallExe(
         $runningOn = ((Get-WmiObject -class Win32_OperatingSystem).Caption).ToUpper()
         $platform  = ($platform.ToString()).ToUpper()
 
-        if (-not $runningOn.StartsWith($platform))
-        {
+        if (-not $runningOn.StartsWith($platform)) {
             return
         }
     }
@@ -70,8 +74,8 @@ function InstallExe(
     
     if ( ($processWait -ne $null) -and ($Execute) -and ($false) ) {
         do {
-    	    start-sleep 20
-	        $pwait = Get-Process $processWait -ErrorAction SilentlyContinue
+            start-sleep 20
+            $pwait = Get-Process $processWait -ErrorAction SilentlyContinue
         } while (-not ($pwait -eq $null))
     }
     
@@ -91,8 +95,6 @@ function InstallWheel(
     $EnvName      = $table["EnvName"]
     $message      = $table["message"]
     $whlDirectory = $table["WheelDirectory"]
-
-    
 
     Write-Host $message
     if (-not $Execute) {
@@ -213,16 +215,16 @@ function CreateBatch(
 
     $func = $table["Function"]
     $filename = $table["Filename"]
-    $command = $table["Command"]
 
     if (-not $Execute) {
-        Write-Host "Create-Bach [$filename]:No-Execute flag. No file created"
+        Write-Host "Create-Batch [$filename]:No-Execute flag. No file created"
         return
     }
 
     Remove-Item -Path $filename -ErrorAction SilentlyContinue | Out-Null
 
-    add-content -Path $filename -Value $command -ErrorAction SilentlyContinue
+    add-content -Path $filename -Value "$AnacondaBasePath\Scripts\activate $AnacondaBasePath\envs\cntk-py34" -Encoding Ascii 
+    add-content =Path $filename -Value "set PATH=%PATH%;$cntkRootDir\cntk" -Encoding Ascii
 }
 
 

@@ -1,4 +1,7 @@
-﻿
+﻿#
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
 
 function FunctionIntro(
     [Parameter(Mandatory = $true)][hashtable] $table
@@ -59,12 +62,12 @@ Write-Host "
 
 CNTK v2 Python install complete.
 
-To activate the CNTK v2 Python environment, start a command shell and run
+To activate the CNTK Python environment and set the PATH to include CNTK, start a command shell and run
    $cntkRootDir\scripts\cntkpy34.bat
 
 
 Please checkout examples in the CNTK repository clone here:
-    c:\clone\cntk\bindings\python\examples
+    c:\repos\cntk\bindings\python\examples
 
 "
 }
