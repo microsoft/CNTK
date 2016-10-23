@@ -35,6 +35,60 @@ class Function(cntk_py.Function):
     will relay to its only output.
     '''
 
+
+    # define input shapes, in-place
+    # e.g.
+    # model.declare_args(42)
+    # pass a list of objects that define the dimensions etc. of the placeholders
+    # Currently you can pass either
+    def declare_args(self, *arg_types):
+        placeholders = self.placeholders  # the unbound parameters to fill in
+        if len(arg_types) != len(placeholders):
+            raise TypeError("CNTK Function.declare_inputs() expected {} arguments, got {}".format(len(placeholders), len(arg_types)))
+        def to_input(arg):
+            if isinstance(arg, cntk_py.Variable):
+                return arg
+            else:
+                from cntk import input_variable
+                return input_variable(arg)
+        args = [to_input(arg) for arg in arg_types]
+        self.replace_placeholders(dict(zip(placeholders, args)))
+
+
+    # call a function, i.e. clone with all placeholders/inputs replaced
+    def __call__(self, *args):
+        if not isinstance(args, tuple):  # normalize single argument into tuple
+            args = (args,)
+        # flatten args to a list. Note it may be a a tuple or even a nested tree of tuples, e.g. LSTM (x, (h, c))
+        def flatten_tuple(args):
+            if not isinstance(args, tuple): # not a tuple: singleton; create a singleton tuple
+                return (args,)
+            from operator import add
+            from functools import reduce
+            return reduce(add, [(flatten_tuple(item)) for item in args])
+        args = list(flatten_tuple(args))  # normalize nested arg tuples into flat tuple  --TODO: is there a standard function to do this?
+        # TODO: This should not be necessary, or go into Function.replace_placeholders()
+        def _output_of(arg):  # helper to get the output of an arg; use arg itself if no output() method (that'd be a Variable)
+            try:
+                return arg.output
+            except AttributeError:
+                return arg  # Variables have no output()
+        args = [_output_of(arg) for arg in args]  # normalize args to their outputs  --BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
+        #from cntk.ops import combine
+        #args = [combine([arg]) for arg in args]  # BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
+        placeholders = self.placeholders  # the unbound parameters to fill in
+        if len(args) != len(placeholders):
+            raise TypeError("CNTK Function expected {} arguments, got {}".format(len(placeholders), len(args)))
+        return self.clone(CloneMethod.share, dict(zip(placeholders, args)))
+
+    # forward function composition (other o self)
+    def __rshift__(self, other):
+        return other(self)
+
+    # backward function composition (self o other)
+    def __lshift__(self, other):
+        return self(other)
+
     def __getattr__(self, name):
         if name in self.__dict__:
             return self.__dict__[name]
@@ -249,7 +303,6 @@ class Function(cntk_py.Function):
         return super(Function, self).inputs()
 
     @property
-    @typemap
     def name(self):
         '''
         Name of this function
@@ -257,7 +310,6 @@ class Function(cntk_py.Function):
         return super(Function, self).name()
 
     @property
-    @typemap
     def op_name(self):
         '''
         Name of the operation that this Function performs
@@ -298,20 +350,35 @@ class Function(cntk_py.Function):
         return super(Function, self).placeholders()
 
     @typemap
-    def replace_placeholder(self, substitutions):
+    def replace_placeholders(self, substitutions):
         '''
-        In-place replace the only placeholder in the function graph with the
-        specified substitutions.
+        In-place replace specified placeholders in the Function graph with the
+        specified replacements in the map.
 
         Args:
-            substitutions (:class:`cntk.ops.variables.Variable`): the variable that will replace the placeholder
+            substitutions (``dict``): map from placeholder to variables
+
+        Returns:
+            :class:`Function`: itself
+        '''
+        return super(Function, self).replace_placeholders(substitutions)
+
+    @typemap
+    def replace_placeholder(self, substitution):
+        '''
+        In-place replace the only placeholder in the function graph with the
+        specified substitution.
+
+        Args:
+            substitution (:class:`cntk.ops.variables.Variable`): the variable
+             that will replace the placeholder 
 
         Returns:
             :class:`Function`: itself
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
-        return super(Function, self).replace_placeholder(substitutions)
+        return super(Function, self).replace_placeholder(substitution)
 
     @typemap
     def restore_from_model(self, filename):

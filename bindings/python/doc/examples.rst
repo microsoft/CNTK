@@ -10,7 +10,7 @@ directory:
    images. (follow the instructions in
    Examples/Image/DataSets/MNIST/README.md)
 
--  `CifarRest <https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/CifarResNet/CifarResNet.py>`__:
+-  `CifarResNet <https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/CifarResNet/CifarResNet.py>`__:
    An image classification ResNet model for training on the CIFAR image
    dataset. (follow the instructions in
    Examples/Image/DataSets/CIFAR-10/README.md to get the CIFAR dataset
@@ -24,8 +24,8 @@ directory:
    trains on the CMUDict corpus.
 
 -  `NumpyInterop <https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/NumpyInterop/FeedForwardNet.py>`__
-   - numpy interop example showing how to train a simple feed-forward
-   network with training data fed using numpy arrays.
+   - NumPy interoperability example showing how to train a simple feed-forward
+   network with training data fed using NumPy arrays.
 
--  `SLUHandson <https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/SLUHandson/SLUHandson.py>`__
+-  `SLUHandsOn <https://github.com/Microsoft/CNTK/blob/v2.alpha4/bindings/python/examples/SLUHandsOn/SLUHandsOn.py>`__
    - Language Understanding.

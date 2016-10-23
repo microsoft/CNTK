@@ -353,6 +353,9 @@ namespace CNTK
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
 
+            // All operand shapes should be known
+            assert((leftOperandShape != NDShape::Unknown) && (rightOperandShape != NDShape::Unknown));
+
             const auto& shapeWithSmallerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? rightOperandShape : leftOperandShape;
             const auto& shapeWithLargerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? leftOperandShape : rightOperandShape;
             size_t numOutputAxes = shapeWithLargerNumAxes.Rank();
@@ -836,6 +839,8 @@ namespace CNTK
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 
         bool m_networkMatricesAllocated;
+
+        std::unordered_map<Parameter, size_t> m_lastRecordedParameterValueTimeStamps;
 
         static const size_t s_serializationVersion = 1;
     };

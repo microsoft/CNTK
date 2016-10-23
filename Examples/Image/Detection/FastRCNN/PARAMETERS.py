@@ -1,8 +1,9 @@
+from __future__ import print_function
 from cntk_helpers import *
 from imdb_data import imdb_data
 import fastRCNN, time, datetime
 from fastRCNN.pascal_voc import pascal_voc # as nmsPython
-print datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
+print (datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
 # dataset name
 datasetName = "grocery"
@@ -14,12 +15,12 @@ datasetName = "grocery"
 # default parameters
 ############################
 # cntk params
-cntk_nrRois = 2000 # how many ROIs to zero-pad
+cntk_nrRois = 2000  # 2000 # how many ROIs to zero-pad
 cntk_padWidth = 1000
 cntk_padHeight = 1000
 
 # directories
-rootDir = "C:/src/CNTK/Examples/Image/Detection/FastRCNN/"
+rootDir = "D:/GitHub/CNTK/Examples/Image/Detection/FastRCNN/"
 imgDir = rootDir + "../../Datasets/Grocery/"
 pascalDataDir = rootDir + "../../Datasets/Pascal/"
 
@@ -54,8 +55,8 @@ nmsThreshold = 0.3          # Non-Maxima suppression threshold (in range [0,1]).
 ############################
 if datasetName.startswith("grocery"):
     classes = ('__background__',  # always index 0
-               "avocado", "orange", "butter", "champagne", "eggBox", "gerkin", "joghurt", "ketchup",
-               "orangeJuice", "onion", "pepper", "tomato", "water", "milk", "tabasco", "mustard")
+               'avocado', 'orange', 'butter', 'champagne', 'eggBox', 'gerkin', 'joghurt', 'ketchup',
+               'orangeJuice', 'onion', 'pepper', 'tomato', 'water', 'milk', 'tabasco', 'mustard')
 
     # roi generation
     roi_minDimRel = 0.04
@@ -96,7 +97,7 @@ elif datasetName.startswith("pascalVoc"):
     imdbs = dict()
     for image_set, year in zip(["train", "test"], ["2007", "2007"]):
         imdbs[image_set] = fastRCNN.pascal_voc(lutImageSet[image_set], year, classes, cntk_nrRois, cacheDir = cntkFilesDir, devkit_path=pascalDataDir)
-        print "Number of {} images: {}".format(image_set, imdbs[image_set].num_images)
+        print ("Number of {} images: {}".format(image_set, imdbs[image_set].num_images))
 
 else:
      ERROR
@@ -112,5 +113,5 @@ assert cntk_padWidth == cntk_padHeight, "ERROR: different width and height for p
 assert classifier.lower() in ['svm','nn'], "ERROR: only 'nn' or 'svm' classifier supported."
 assert not (datasetName == 'pascalVoc' and classifier == 'svm'), "ERROR: while technically possibly, writing 2nd-last layer of CNTK model for all pascalVOC images takes too much disk memory."
 
-print "PARAMETERS: datasetName = " + datasetName
-print "PARAMETERS: cntk_nrRois = {}".format(cntk_nrRois)
+print ("PARAMETERS: datasetName = " + datasetName)
+print ("PARAMETERS: cntk_nrRois = {}".format(cntk_nrRois))

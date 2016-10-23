@@ -32,7 +32,7 @@ if __name__ == "__main__":
     filename = directory + "/AlexNet.model"
     if not os.path.exists(filename):
         url = "https://www.cntk.ai/Models/AlexNet/AlexNet.model"
-        print ('Downloading model from ' + url + '...')
+        print ('Downloading model from ' + url + ', may take a while...')
         urlretrieve(url, filename)
         print ('Saved model as ' + filename)
     else:

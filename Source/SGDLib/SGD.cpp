@@ -932,7 +932,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     EpochCriterion         epochCriterionLastLogged  = epochCriterion;
     vector<EpochCriterion> epochEvalErrorsLastLogged = epochEvalErrors;
 
-    // NOTE: For ResNet, the regularization in BatchNormalization should be disable.
+    // NOTE: For ResNet, the regularization in BatchNormalization should be disabled.
     if (m_disableRegInBatchNormalization) {
         let bnNodes = net->GetNodesWithType(L"BatchNormalization");
         for (auto &node : bnNodes)

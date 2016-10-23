@@ -73,6 +73,7 @@ EmbeddingLayer {outDim,                                   # dimension of embeddi
 #    in     : [ (shifting dims)  |  (reduction dim)  |                |  (sample dims) ]
 #    kernel : [ (filter dims)    |  (reduction dim)  |  (output dim)  |                ]
 #    out    : [ (shifting dims)] |                   |  (output dim)  |  (sample dims) ]
+# BUGBUG: filterShape should be first, so that numOutputChannels can default to 1 (to denote a normal filter), and remaining parameters consistent with Times()
 ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     filterShape,         # e.g. (3:3)
                     bias = true,

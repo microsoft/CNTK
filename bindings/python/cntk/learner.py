@@ -274,7 +274,7 @@ def momentum_sgd(parameters, lr, momentum,
          These can be obtained by the root operator's ``parameters``.
         lr ('float' or output of `:func:learning_rate_schedule`): learning
          rates per sample.
-        momentum (`float` or output of `:func:momentum_schedule`): momentum values per sample.
+        momentum (`float` or output of `:func:momentum_schedule`): momentum as time constant.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         l1_regularization_weight ('float', optional): the L1 regularization weight per sample,
          defaults to 0.0
@@ -316,7 +316,7 @@ def nesterov(parameters, lr, momentum,
          These can be obtained by the root operator's ``parameters``.
         lr ('float' or output of `:func:learning_rate_schedule`): learning
          rates per sample.
-        momentum (`float` or output of `:func:momentum_schedule`): momentum values per sample.
+        momentum (`float` or output of `:func:momentum_schedule`): momentum as time constant.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         l1_regularization_weight ('float', optional): the L1 regularization weight per sample,
          defaults to 0.0
@@ -400,7 +400,7 @@ def fsadagrad(parameters, lr, momentum, varianceMomentum = 720000,
          These can be obtained by the root operator's ``parameters``.
         lr ('float' or output of `:func:learning_rate_schedule`): learning
          rates per sample.
-        momentum (`float` or output of `:func:momentum_schedule`): momentum values per sample.
+        momentum (`float` or output of `:func:momentum_schedule`): momentum as time constant.
          Refer to https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits
         varianceMomentum (`float` or output of `:func:momentum_schedule`): variance momentum values.
         l1_regularization_weight ('float', optional): the L1 regularization weight per sample,

@@ -13,6 +13,13 @@
 #define NDEBUG
 #endif
 
+#ifdef _MSC_VER
+// In case of asserts in debug mode, print the message into stderr and throw exception
+int HandleDebugAssert(int /* reportType */,
+                      char *message, // fully assembled debug user message
+                      int *returnValue); // returnValue - retVal value of zero continues execution
+#endif
+
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
@@ -175,7 +182,7 @@ inline CNTK::FunctionPtr FullyConnectedFeedForwardClassifierNet(CNTK::Variable i
     for (size_t i = 1; i < numHiddenLayers; ++i)
         classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
 
-    auto outputTimesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, CNTK::DefaultRandomSeed(), device));
+    auto outputTimesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, CNTK::SentinelValueForAutoSelectRandomSeed, device));
     return Times(outputTimesParam, classifierRoot, 1, outputName);
 }
 

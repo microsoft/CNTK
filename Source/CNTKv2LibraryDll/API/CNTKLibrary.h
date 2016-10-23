@@ -374,7 +374,7 @@ namespace CNTK
 
     typedef int SparseIndexType;
 
-    CNTK_API unsigned long DefaultRandomSeed();
+    static const unsigned long SentinelValueForAutoSelectRandomSeed = std::numeric_limits<unsigned long>::max() - 2; // An arbitrary choice of sentinel value
 
     ///
     /// Denotes a multi-dimensional writable or read-only array of elemental values.
@@ -391,6 +391,13 @@ namespace CNTK
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
+        template <typename ElementType>
+        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+
     public:
         ///
         /// Construct a NDArrayView with the specified 'dataBuffer' as the backing storage.
@@ -594,13 +601,13 @@ namespace CNTK
         /// Static method to construct a new NDArrayView object whose contents are drawn from a normal distribution with the specified mean and standard deviation..
         ///
         template <typename ElementType>
-        CNTK_API static NDArrayViewPtr RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed = DefaultRandomSeed(), const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static NDArrayViewPtr RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Static method to construct a new NDArrayView object whose contents are drawn from a uniform distribution in the specified value range.
         ///
         template <typename ElementType>
-        CNTK_API static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed = DefaultRandomSeed(), const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
     private:
         // Disallow copy and move construction and assignment
@@ -1722,9 +1729,10 @@ private:
             std::vector<Axis> m_dynamicAxes;
             bool m_isSparse;
             std::wstring m_uid;
+            std::atomic<size_t> m_valueTimeStamp;
 
             VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid)
+                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)
             {
                 if (value && (type != value->GetDataType()))
                     InvalidArgument("The DataType of the Parameter/Constant Variable does not match the DataType of the associated Value");
@@ -1886,19 +1894,21 @@ private:
         return Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, /*needsGradient =*/ false, dynamicAxes, /*isSparse =*/ false, name, Internal::GenerateUid(VariableKind::Output));
     }
 
+    static const int SentinelValueForInferParamInitRank = std::numeric_limits<int>::max();
     static const int DefaultParamInitScale = 1;
     static const int DefaultParamInitOutputRank = 1;
     static const int DefaultParamInitFilterRank = 0;
 
     CNTK_API ParameterInitializer ConstantInitializer(double value = 0.0);
-    CNTK_API ParameterInitializer UniformInitializer(double scale = DefaultParamInitScale, unsigned long seed = DefaultRandomSeed());
-    CNTK_API ParameterInitializer GaussianInitializer(int outputRank = DefaultParamInitOutputRank, int filterRank = DefaultParamInitFilterRank, double scale = DefaultParamInitScale, unsigned long seed = DefaultRandomSeed());
-    CNTK_API ParameterInitializer XavierInitializer(int outputRank = DefaultParamInitOutputRank, int filterRank = DefaultParamInitFilterRank, double scale = DefaultParamInitScale, unsigned long seed = DefaultRandomSeed());
-    CNTK_API ParameterInitializer GlorotUniformInitializer(int outputRank = DefaultParamInitOutputRank, int filterRank = DefaultParamInitFilterRank, double scale = DefaultParamInitScale, unsigned long seed = DefaultRandomSeed());
-    CNTK_API ParameterInitializer GlorotNormalInitializer(int outputRank = DefaultParamInitOutputRank, int filterRank = DefaultParamInitFilterRank, double scale = DefaultParamInitScale, unsigned long seed = DefaultRandomSeed());
-    CNTK_API ParameterInitializer HeUniformInitializer(int outputRank = DefaultParamInitOutputRank, int filterRank = DefaultParamInitFilterRank, double scale = DefaultParamInitScale, unsigned long seed = DefaultRandomSeed());
-    CNTK_API ParameterInitializer HeNormalInitializer(int outputRank = DefaultParamInitOutputRank, int filterRank = DefaultParamInitFilterRank, double scale = DefaultParamInitScale, unsigned long seed = DefaultRandomSeed());
+    CNTK_API ParameterInitializer UniformInitializer(double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
+    CNTK_API ParameterInitializer GaussianInitializer(int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
+    CNTK_API ParameterInitializer XavierInitializer(int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
+    CNTK_API ParameterInitializer GlorotUniformInitializer(int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
+    CNTK_API ParameterInitializer GlorotNormalInitializer(int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
+    CNTK_API ParameterInitializer HeUniformInitializer(int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
+    CNTK_API ParameterInitializer HeNormalInitializer(int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer BilinearInitializer(size_t kernelWidth, size_t kernelHeight);
+    CNTK_API ParameterInitializer RandomInitializerWithRank(const ParameterInitializer& initializer, int outputRank, int filterRank);
 
     ///
     /// Denotes Parameter inputs of a Function.
@@ -1964,6 +1974,13 @@ private:
         NDArrayViewPtr Value() const
         {
             return Variable::Value();
+        }
+
+        size_t CurrentValueTimeStamp() const { return m_dataFields->m_valueTimeStamp.load(); }
+
+        void RecordValueUpdate()
+        {
+            m_dataFields->m_valueTimeStamp++;
         }
 
     private:
@@ -2363,7 +2380,7 @@ namespace CNTK
 
         CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl() const;
 
-        void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions);
+        void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified);
 
         virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
                                                 std::unordered_set<const Function*>& visitedFunctions,

@@ -208,3 +208,6 @@ bindings/python/cntk/libs/
 bindings/python/cntk/cntk_py_wrap.cpp
 bindings/python/cntk/cntk_py_wrap.h
 bindings/python/dist/
+bindings/python/cntk/c_plus_c.mod
+bindings/python/cntk/i_plus_c_0.mod
+bindings/python/cntk/i_plus_i_0.mod

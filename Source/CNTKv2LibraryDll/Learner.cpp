@@ -268,12 +268,15 @@ namespace CNTK
         PreProcess<ElementType>(parameterValue, gradientValue, trainingSampleCount);
         Update(parameter, gradientValue, smoothedGradientValue, trainingSampleCount);
         PostProcess<ElementType>(parameter, gradientValue, trainingSampleCount);
+
+        auto paramRef = parameter;
+        paramRef.RecordValueUpdate();
     }
 
     string LearnerBase::LearnerType() const
     {
         return Typename(this);
-        } 
+    } 
 
     static const std::wstring s_learnerTypeValue = L"Learner";
 

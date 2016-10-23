@@ -5,11 +5,13 @@
 # Written by Ross Girshick
 # --------------------------------------------------------
 
+from __future__ import print_function
+from builtins import range
 import sys, os
 from cntk_helpers import *
 import scipy.sparse
 import scipy.io as sio
-import cPickle
+import pickle as cp
 import numpy as np
 import fastRCNN
 
@@ -24,7 +26,7 @@ class imdb_data(fastRCNN.imdb):
         self._cacheDir = cacheDir #cache_path
         self._imgSubdirs ={'train': ['positive', 'negative'], 'test': ['testImages']}
         self._classes = classes
-        self._class_to_ind = dict(zip(self.classes, xrange(self.num_classes)))
+        self._class_to_ind = dict(zip(self.classes, range(self.num_classes)))
         self._image_ext = '.jpg'
         self._image_index, self._image_subdirs = self._load_image_set_index()
         self._roidb_handler = self.selective_search_roidb
@@ -72,14 +74,14 @@ class imdb_data(fastRCNN.imdb):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} gt roidb loaded from {}'.format(self.name, cache_file)
+                roidb = cp.load(fid)
+            print ('{} gt roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         gt_roidb = [self._load_annotation(i) for i in range(self.num_images)]
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote gt roidb to {}'.format(cache_file)
+            cp.dump(gt_roidb, fid, cp.HIGHEST_PROTOCOL)
+        print ('wrote gt roidb to {}'.format(cache_file))
 
         return gt_roidb
 
@@ -95,8 +97,11 @@ class imdb_data(fastRCNN.imdb):
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} ss roidb loaded from {}'.format(self.name, cache_file)
+                if sys.version_info[0] < 3: 
+                    roidb = cp.load(fid)
+                else: 
+                    roidb = cp.load(fid, encoding='latin1')
+            print ('{} ss roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
 
@@ -111,8 +116,8 @@ class imdb_data(fastRCNN.imdb):
 
         #Keep max of e.g. 2000 rois
         if self._maxNrRois and self._maxNrRois > 0:
-            print "Only keeping the first %d ROIs.." % self._maxNrRois
-            for i in xrange(self.num_images):
+            print ("Only keeping the first %d ROIs.." % self._maxNrRois)
+            for i in range(self.num_images):
                 gt_overlaps = roidb[i]['gt_overlaps']
                 gt_overlaps = gt_overlaps.todense()[:self._maxNrRois]
                 gt_overlaps = scipy.sparse.csr_matrix(gt_overlaps)
@@ -121,8 +126,8 @@ class imdb_data(fastRCNN.imdb):
                 roidb[i]['gt_classes'] = roidb[i]['gt_classes'][:self._maxNrRois]
 
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote ss roidb to {}'.format(cache_file)
+            cp.dump(roidb, fid, cp.HIGHEST_PROTOCOL)
+        print ('wrote ss roidb to {}'.format(cache_file))
 
         return roidb
 
@@ -163,7 +168,7 @@ class imdb_data(fastRCNN.imdb):
         gt_classes = np.zeros(num_objs, dtype=np.int32)
         overlaps = np.zeros((num_objs, self.num_classes), dtype=np.float32)
         for bboxIndex,(bbox,label) in enumerate(zip(bboxes,labels)):
-            cls = self._class_to_ind[label]
+            cls = self._class_to_ind[label.decode('utf-8')]
             boxes[bboxIndex, :] = bbox
             gt_classes[bboxIndex] = cls
             overlaps[bboxIndex, cls] = 1.0
@@ -204,7 +209,7 @@ class imdb_data(fastRCNN.imdb):
             imgSubir  = os.path.normpath(imgPath).split(os.path.sep)[-2]
             if imgSubir != 'negative':
                 gtBoxes, gtLabels = readGtAnnotation(imgPath)
-                gtBoxes = [box for box, label in zip(gtBoxes, gtLabels) if label == self.classes[classIndex]]
+                gtBoxes = [box for box, label in zip(gtBoxes, gtLabels) if label.decode('utf-8') == self.classes[classIndex]]
             else:
                 gtBoxes = []
             gtInfos.append({'bbox': np.array(gtBoxes),
@@ -219,7 +224,7 @@ class imdb_data(fastRCNN.imdb):
         for imgIndex in range(self.num_images):
             dets = all_boxes[classIndex][imgIndex]
             if dets != []:
-                for k in xrange(dets.shape[0]):
+                for k in range(dets.shape[0]):
                     detImgIndices.append(imgIndex)
                     detConfidences.append(dets[k, -1])
                     # the VOCdevkit expects 1-based indices

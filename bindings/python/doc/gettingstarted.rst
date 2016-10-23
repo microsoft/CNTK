@@ -1,18 +1,7 @@
 Getting started 
 ===============
 
-.. _here: https://github.com/Microsoft/CNTK/wiki/Recomended-CNTK-2.0-Setup
-
-Installation
-------------
-You have the choice of installing CNTK from binary distributions or from the GitHub sources for both Windows and Linux environment with optional support for Nvidia GPU. CNTK V2 provides Python and C++ APIs. 
-
-Click here_ for the installation steps.
-
-
-After Installation
-------------------
-After going through the installation steps above, you can start using CNTK from Python right away:
+After going through the installation steps, you can start using CNTK from Python right away:
 
     >>> import cntk
     >>> cntk.__version__
