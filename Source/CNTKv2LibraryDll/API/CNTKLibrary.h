@@ -1729,9 +1729,10 @@ private:
             std::vector<Axis> m_dynamicAxes;
             bool m_isSparse;
             std::wstring m_uid;
+            std::atomic<size_t> m_valueTimeStamp;
 
             VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid)
+                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)
             {
                 if (value && (type != value->GetDataType()))
                     InvalidArgument("The DataType of the Parameter/Constant Variable does not match the DataType of the associated Value");
@@ -1973,6 +1974,13 @@ private:
         NDArrayViewPtr Value() const
         {
             return Variable::Value();
+        }
+
+        size_t CurrentValueTimeStamp() const { return m_dataFields->m_valueTimeStamp.load(); }
+
+        void RecordValueUpdate()
+        {
+            m_dataFields->m_valueTimeStamp++;
         }
 
     private:
