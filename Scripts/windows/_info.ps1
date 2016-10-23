@@ -60,11 +60,10 @@ Write-Host "
 CNTK v2 Python install complete.
 
 To activate the CNTK v2 Python environment, start a command shell and run
+   $cntkRootDir\scripts\cntkpy34.bat
 
-   C:\local\Anaconda3-4.1.1-Windows-x86_64\Scripts\activate cntk-py34
 
 Please checkout examples in the CNTK repository clone here:
-
     c:\clone\cntk\bindings\python\examples
 
 "
