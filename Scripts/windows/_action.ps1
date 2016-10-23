@@ -89,15 +89,23 @@ function InstallWheel(
 
     $BasePath     = $table["BasePath"]
     $EnvName      = $table["EnvName"]
-    $whl          = $table["whl"]
     $message      = $table["message"]
     $whlDirectory = $table["WheelDirectory"]
+
+    
 
     Write-Host $message
     if (-not $Execute) {
          Write-Host  "** Running in DEMOMODE - setting Exit Code **: 0"
          return 
     }
+
+    $whlFile = Get-ChildItem $cntkRootDir\cntk\Python\cntk*.whl
+    if ($whlFile -eq $null) {
+        throw "No WHL file found at $cntkRootDir\cntk\Python"
+    }
+    $whl = $whlFile.FullName
+
     $condaExe = Join-Path $BasePath 'Scripts\conda.exe'
     $newPaths = Invoke-DosCommand $condaExe (Write-Output ..activate cmd.exe $EnvName)
 
@@ -196,6 +204,27 @@ function ExtractAllFromZip(
     }
     return $true
 }
+
+function CreateBatch(
+    [Parameter(Mandatory = $true)][hashtable] $table
+)
+{
+    FunctionIntro $table
+
+    $func = $table["Function"]
+    $filename = $table["Filename"]
+    $command = $table["Command"]
+
+    if (-not $Execute) {
+        Write-Host "Create-Bach [$filename]:No-Execute flag. No file created"
+        return
+    }
+
+    Remove-Item -Path $filename -ErrorAction SilentlyContinue | Out-Null
+
+    add-content -Path $filename -Value $command -ErrorAction SilentlyContinue
+}
+
 
 function DoProcess(
     [string]  $command,
