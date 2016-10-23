@@ -7,15 +7,34 @@
 # ==============================================================================
 
 # Log steps, stop on error
+# TODO cut down on logging
 set -x -e -o pipefail
 
-USAGE="Usage: $0 <url-of-cntk-python-wheel> [--force]"
-CNTK_PIP_URL=${1?$USAGE}
-FORCE=$(! [ "$2" = "--force" ]; echo $?)
+REPO_TAG=v2.alpha4
 
-# Change to the script's directory
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-cd "$SCRIPT_DIR"
+USAGE="Usage: [--force]"
+FORCE=$(! [ "$0" = "--force" ]; echo $?)
+
+SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
+
+# Go to the drop root
+cd "$SCRIPT_DIR/../.."
+
+CNTK_BIN_PATH="$PWD/cntk/bin"
+CNTK_LIB_PATH="$PWD/cntk/lib"
+CNTK_DEP_LIB_PATH="$PWD/cntk/dependencies/lib"
+CNTK_EXAMPLES_PATH="$PWD/Examples"
+CNTK_BINARY="$CNTK_BIN_PATH/cntk"
+CNTK_PY34_ENV_FILE="$SCRIPT_DIR/conda-linux-cntk-py34-environment.yml"
+CNTK_WHEEL_PATH="cntk/python/cntk-2.0a4-cp34-cp34m-linux_x86_64.whl"
+test -d "$CNTK_BIN_PATH" && test -d "$CNTK_LIB_PATH" && test -d "$CNTK_DEP_LIB_PATH" && 
+test -d "$CNTK_EXAMPLES_PATH" && test -x "$CNTK_BINARY" &&
+test -f "$CNTK_PY34_ENV_FILE" && test -f "$CNTK_WHEEL_PATH" || {
+  echo Cannot find expected drop content. Please double-check that this is a
+  echo CNTK binary drop for Linux. Go to https://github.com/Microsoft/CNTK/wiki
+  echo for help.
+  exit 1
+}
 
 # Check for tested OS (note: only a warning, we can live with lsb-release not being available)
 [[ "$(lsb_release -i)" =~ :.*Ubuntu ]] && [[ "$(lsb_release -r)" =~ :.*(14\.04|16\.04) ]] || {
@@ -43,18 +62,15 @@ else
   PACKAGES+=" openmpi-bin"
 fi
 
+# TODO for Pillow
+#PACKAGES+=" build-essential libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev"
+
 if dpkg -s $PACKAGES 1>/dev/null 2>/dev/null; then
   printf "Packages already installed, skipping.\n"
 else
   sudo apt-get update
   sudo apt-get install -y --no-install-recommends $PACKAGES
 fi
-
-# Check URL early on for feedback
-wget --spider -q "$CNTK_PIP_URL" || {
-  printf "Please double-check URL '%s', does it exist?\n$USAGE" "$CNTK_PIP_URL"
-  exit 1
-}
 
 #########################################
 # On Ubuntu 14.04: OpenMPI build
@@ -99,40 +115,26 @@ fi
 
 CONDA="$HOME/anaconda3/bin/conda"
 [ -x "$CONDA" ]
-ACTIVATE="$HOME/anaconda3/bin/activate"
-[ -x "$ACTIVATE" ]
+PY_ACTIVATE="$HOME/anaconda3/bin/activate"
+[ -x "$PY_ACTIVATE" ]
 
 CNTK_PY34_ENV_PREFIX="$ANACONDA_PREFIX/envs/cntk-py34"
 if [ -d "$CNTK_PY34_ENV_PREFIX" ]; then
   printf "Path '%s' already exists, skipping CNTK Python 3.4 environment setup\n" "$CNTK_PY34_ENV_PREFIX"
 else
-  CNTK_PY34_ENV_FILE=conda-linux-cntk-py34-environment.yml
-
-  cat >| "$CNTK_PY34_ENV_FILE" <<CONDAENV
-name: cntk-py34
-dependencies:
-- matplotlib=1.5.3=np111py34_0
-- jupyter=1.0.0=py34_3
-- numpy=1.11.1=py34_0
-- python=3.4.4=5
-- scipy=0.18.1=np111py34_0
-- pip:
-  - pytest==3.0.2
-  - sphinx==1.4.6
-  - sphinx-rtd-theme==0.1.9
-  - twine==1.8.1
-CONDAENV
-
   # (--force shouldn't be needed)
-  "$CONDA" env create --quiet --force --file "$CNTK_PY34_ENV_FILE" --prefix "$CNTK_PY34_ENV_PREFIX"
-
+  "$CONDA" env create --quiet --force --file "$CNTK_PY34_ENV_FILE" --prefix "$CNTK_PY34_ENV_PREFIX" || {
+    echo Creating Anaconda environment failed.
+    rm -rf "$CNTK_PY34_ENV_PREFIX"
+    exit 1
+  }
 fi
 
 ###########################################
 # Install CNTK module
 
 set +x
-source "$ACTIVATE" "$CNTK_PY34_ENV_PREFIX"
+source "$PY_ACTIVATE" "$CNTK_PY34_ENV_PREFIX"
 set -x
 
 CNTK_MODULE_DIR="$CNTK_PY34_ENV_PREFIX/lib/python3.4/site-packages/cntk"
@@ -142,12 +144,12 @@ if [ -e "$CNTK_MODULE_DIR" ]; then
     printf "Removing previously installed CNTK module\n"
     pip uninstall --yes cntk
 
-    pip install "$CNTK_PIP_URL"
+    pip install "$CNTK_WHEEL_PATH"
   else
     printf "There is already a CNTK module installed, and --force was not specified, skipping Pip installation.\n"
   fi
 else
-  pip install "$CNTK_PIP_URL"
+  pip install "$CNTK_WHEEL_PATH"
 fi
 
 ###########################################
@@ -156,30 +158,69 @@ fi
 CNTK_WORKING_COPY="$HOME/repos/cntk"
 
 if [ -d "$CNTK_WORKING_COPY" ]; then
-  printf "Path '%s' already exists, skipping CNTK clone\n" "$CNTK_WORKING_COPY"
+  printf "Path '%s' already exists, skipping CNTK clone\nMake sure to checkout $REPO_TAG\n" "$CNTK_WORKING_COPY"
 else
   mkdir -p "$HOME/repos"
   CNTK_GIT_CLONE_URL=https://github.com/Microsoft/CNTK.git
-  git clone --recursive "$CNTK_GIT_CLONE_URL" "$HOME/repos/cntk"
+  git clone --branch $REPO_TAG --recursive "$CNTK_GIT_CLONE_URL" "$HOME/repos/cntk"
 fi
 
-OPENMPI_MESSAGE=
+LD_LIBRARY_PATH_SETTING="$CNTK_LIB_PATH:$CNTK_DEP_LIB_PATH"
 if [ "$BUILD_OPENMPI" = "1" ]; then
-  OPENMPI_MESSAGE=$(printf "\n  export LD_LIBRARY_PATH=%s:\$LD_LIBRARY_PATH" "$OPENMPI_PREFIX/lib")
+  LD_LIBRARY_PATH_SETTING=":$OPENMPI_PREFIX/lib"
 fi
+LD_LIBRARY_PATH_SETTING+=":\$LD_LIBRARY_PATH"
+
+###########################################
+# Create an activation script
+
+ACTIVATE_SCRIPT_NAME=activate-cntk
+cat >| "$ACTIVATE_SCRIPT_NAME" <<ACTIVATE
+if [ -z "\$BASH_VERSION" ]; then
+  echo Error: only Bash is supported.
+elif [ "\$(basename "\$0" 2> /dev/null)" == "$ACTIVATE_SCRIPT_NAME" ]; then
+  echo Error: this script is meant to be sourced. Run 'source activate-cntk'
+else
+  export PATH="$CNTK_BIN_PATH:\$PATH"
+  export LD_LIBRARY_PATH="$LD_LIBRARY_PATH_SETTING"
+  source "$PY_ACTIVATE" "$CNTK_PY34_ENV_PREFIX"
+
+  cat <<MESSAGE
+
+************************************************************
+CNTK is activated.
+
+Please check out CNTK Python examples in the CNTK repository clone here:
+
+  $CNTK_WORKING_COPY/bindings/python/examples
+
+Please check out CNTK Brainscript examples here:
+
+  $CNTK_EXAMPLES_PATH
+
+************************************************************
+MESSAGE
+
+fi
+
+
+ACTIVATE
 
 cat <<FINALMESSAGE
 
 ************************************************************
-CNTK v2 Python install complete.
+CNTK install complete.
 
-To activate the CNTK v2 Python environment, run
-$OPENMPI_MESSAGE
-  source "$ACTIVATE" "$CNTK_PY34_ENV_PREFIX"
+To activate the CNTK environment, run
+  source "$PWD/$ACTIVATE_SCRIPT_NAME"
 
-Please checkout examples in the CNTK repository clone here:
+Please check out CNTK Python examples in the CNTK repository clone here:
 
   $CNTK_WORKING_COPY/bindings/python/examples
+
+Please check out CNTK Brainscript examples here:
+
+  $CNTK_EXAMPLES_PATH
 
 ************************************************************
 FINALMESSAGE
