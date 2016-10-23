@@ -6,12 +6,10 @@
 
 # blocks -- basic building blocks that are semantically not layers (not used in a layered fashion)
 #           e.g. the LSTM
+# TODO: This has become too large. Need to break out some locally used stuff into another module.
 
 # TODO: further clean up the dependencies
 import numpy as np
-#import sys
-#import os
-#import time
 from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
@@ -181,16 +179,11 @@ def Constant(init, shape=None, name=''):
 def Input(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')
 
-def Placeholder(name='placeholder'):
-    p = placeholder_variable(name=name) # TODO: use (*args, **kwargs) once got rid of _inf
-    _name_node(p, name)
-    if _trace_layers:
-        print("new " + _node_description(p))
-    return p
-
-# TODO: this is a left-over until inference works
-def PlaceholderWithShape(_inf, name='placeholder'):
-    p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis, name=name)
+def Placeholder(shape=None, name='placeholder'):
+    if shape is not None:
+        p = placeholder_variable(shape=shape, name=name) # TODO: use (*args, **kwargs)?
+    else:
+        p = placeholder_variable(name=name) # TODO: use (*args, **kwargs)?
     _name_node(p, name)
     if _trace_layers:
         print("new " + _node_description(p))
@@ -275,8 +268,9 @@ def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
     Sct = Stabilizer() if enable_self_stabilization else identity
     Sht = Stabilizer() if enable_self_stabilization else identity
 
-    def create_hc_placeholder():  # TODO: rename
-        return (placeholder_variable(shape, name='hPh'), placeholder_variable(cell_shape, name='cPh')) # (h, c)
+    def create_hc_placeholder():
+        # we pass the known dimensions here, which makes dimension inference easier
+        return (Placeholder(shape=shape, name='hPh'), Placeholder(shape=cell_shape, name='cPh')) # (h, c)
 
     # parameters to model function
     x = Placeholder(name='lstm_block_arg')

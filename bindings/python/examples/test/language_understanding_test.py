@@ -16,7 +16,8 @@ from cntk.utils import *
 from examples.LanguageUnderstanding.LanguageUnderstanding import data_dir, create_reader, create_model, train, emb_dim, hidden_dim, label_dim
 
 def create_test_model():
-    with default_options(initial_state=0.1, enable_self_stabilization=True, use_peepholes=True):
+    # this selects additional nodes and alternative paths
+    with default_options(enable_self_stabilization=True, use_peepholes=True):
         return Sequential([
             Stabilizer(),
             Embedding(emb_dim),
@@ -39,7 +40,7 @@ def test_seq_classification_error(device_id):
     model = create_test_model()
     loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
     log_number_of_parameters(model, trace_level=1) ; print()
-    expected_avg = [0.15570838301766451, 0.7846451368305728]
+    expected_avg = [0.084, 0.407364]
     assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
     # test of the example itself
