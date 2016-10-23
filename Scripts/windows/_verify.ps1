@@ -20,13 +20,29 @@
         }
     }
 
-    Write-Host "List of Operations to be performed"
-    $($global:operationList).Info
-    #foreach ($item in $global:operationList) {
-    #    $info = $item.Info
-    #    Write-Host "    $info"
-    #}
-    Write-Host
+    Write-Host 
+
+    if ($global:operationList.Count -gt 0) {
+        Write-Host "The following operations will be performed:"
+
+        foreach ($item in $global:operationList) {
+            $info = $item.Info
+            Write-Host " * $info"
+        }
+        
+        Write-Host 
+        Write-Host "Do you want to continue? (y/n)"
+        
+        $choice = GetKey '^[yYnN]+$'
+
+        if ($choice -contains "y") {
+            return $true
+        }
+    }
+    else {
+        Write-Host "No additional installation required"
+    }
+    return $false
 }
 
 function VerifyItem(
