@@ -10,22 +10,25 @@ import numpy as np
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
-def _test_text_format():
+def test_text_format(tmpdir):
     from cntk.io import text_format_minibatch_source, StreamConfiguration, MinibatchSource
 
-    # 0	|x 560	|y 1 0 0 0 0
-    # 0	|x 0
-    # 0	|x 0
-    # 1	|x 560	|y 0 1 0 0 0
-    # 1	|x 0
-    # 1	|x 0
-    # 1	|x 424
-    path = os.path.join(abs_path, 'tf_data.txt')
+    mbdata = r'''0	|x 560:1	|y 1 0 0 0 0
+0	|x 0:1
+0	|x 0:1
+1	|x 560:1	|y 0 1 0 0 0
+1	|x 0:1
+1	|x 0:1
+1	|x 424:1
+'''
+    tmpfile = str(tmpdir/'mbdata.txt')
+    with open(tmpfile, 'w') as f:
+        f.write(mbdata)
 
     input_dim = 1000
     num_output_classes = 5
 
-    mb_source = text_format_minibatch_source(path, [
+    mb_source = text_format_minibatch_source(tmpfile, [
                     StreamConfiguration( 'features', input_dim, True, 'x' ),
                     StreamConfiguration( 'labels', num_output_classes, False, 'y')])
     assert isinstance(mb_source, MinibatchSource)
