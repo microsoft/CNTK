@@ -840,6 +840,8 @@ namespace CNTK
 
         bool m_networkMatricesAllocated;
 
+        std::unordered_map<Parameter, size_t> m_lastRecordedParameterValueTimeStamps;
+
         static const size_t s_serializationVersion = 1;
     };
 

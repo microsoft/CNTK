@@ -1765,6 +1765,12 @@ namespace CNTK
                     }
                 }
             }
+
+            // Record the timestamps of Parameter values
+            assert(m_lastRecordedParameterValueTimeStamps.empty());
+            auto functionParameters = Parameters();
+            for (auto parameter : functionParameters)
+                m_lastRecordedParameterValueTimeStamps.insert({ parameter, parameter.CurrentValueTimeStamp() });
         }
 
 
@@ -1772,7 +1778,7 @@ namespace CNTK
         {
             ComputationNodeBasePtr backpropRootNode;
 
-            // Now recursively create the network in a top-down fashion
+            // Now recursively traverse the network in a top-down fashion
             auto rootFunction = RootFunction();
             auto rootFunctionOutputs = rootFunction->Outputs();
             std::vector<ComputationNodeBasePtr> forwardRootNodes;
@@ -2401,6 +2407,19 @@ namespace CNTK
         list<ComputationNodeBasePtr> dropoutNodes = m_computationNetwork->GetNodesWithType(OperationNameOf(DropoutNode));
         for (auto& nodeIter : dropoutNodes)
             nodeIter->SetEvalTimeStampOutdatedWrtAll();
+        
+        // Bump the timestamp of the parameter nodes whose values have changed
+        for (auto& paramTimeStampRecord : m_lastRecordedParameterValueTimeStamps)
+        {
+            auto parameter = paramTimeStampRecord.first;
+            auto prevTimeStamp = paramTimeStampRecord.second;
+            auto newTimeStamp = parameter.CurrentValueTimeStamp();
+            if (newTimeStamp > prevTimeStamp)
+            {
+                paramTimeStampRecord.second = newTimeStamp;
+                m_variableToNodeMap[parameter]->BumpEvalTimeStamp();
+            }
+        }
 
         // The 'outputsToRetainBackwardStateFor' nodes also need to be evaluated if not already specified in 'outputs'
         for (auto rootVarForBackprop : outputsToRetainBackwardStateFor)
