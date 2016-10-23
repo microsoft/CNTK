@@ -211,8 +211,6 @@ def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_
     # if initial state is given and a numeric constant, then turn it into a Constant() object
     if np.isscalar(initial_state):
         initial_state = Constant(initial_state, shape=(1)) # TODO: This should be automatically done inside the API.
-    if go_backwards:
-        UntestedBranchError("Recurrence, go_backwards option") # TODO: test in SLUHandsOn.py bidirectional
     def previous_hook(state):
         if isinstance (state, tuple):  # if multiple then apply to each element
             return tuple([previous_hook(s) for s in state])
@@ -261,16 +259,16 @@ def Dropout(prob=None):
 
 # BatchNormalization -- create a batch-normalization layer
 # TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
-def BatchNormalization(spatial_rank=0,  # reduce over these dims. E.g. 2 to reduce over (h,w) in a (C, H, W)-shaped input
+def BatchNormalization(map_rank=None,  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=5000, blend_time_constant=0,
                        epsilon=0.00001, use_cntk_engine=True):
-    # Note: This has been tested ad-hoc in SLUHandsOn.py, and gives quite precisely the expected improvement. So this works. Just need to fix _inf.
+    # TODO: make map_rank a default option, once per-layer type defaults are implemented
 
     # parameters bound to this Function
-    norm_shape  = _INFERRED + (1,) * spatial_rank
-    if spatial_rank != 0:
-        UntestedBranchError("BatchNormalization spatial_rank != 0:")
+    norm_shape  = _INFERRED
+    if map_rank is not None and map_rank != 1:
+        UntestedBranchError("BatchNormalization map_rank can only be 1 or None for now")
     scale        = Parameter(norm_shape, init=init_scale)
     bias         = Parameter(norm_shape, init=0)
     run_mean     = Constant(0, shape=norm_shape)  # note: these are not really constants; they are updated differently
@@ -278,7 +276,7 @@ def BatchNormalization(spatial_rank=0,  # reduce over these dims. E.g. 2 to redu
 
     # expression
     x = Placeholder(name='batch_normalization_arg')
-    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, spatial_rank > 0, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
+    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
                                   #use_cntk_engine=use_cntk_engine)
                                   use_cudnn_engine=not use_cntk_engine)
     return Block(apply_x, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))

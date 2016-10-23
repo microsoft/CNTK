@@ -166,6 +166,7 @@ def log_number_of_parameters(model, trace_level=0):
     from functools import reduce
     from operator import add, mul
     total_parameters = reduce(add, [reduce(mul, p1.shape) for p1 in parameters], 0)
+    # BUGBUG: If model has uninferred dimensions, we should catch that and fail here
     print("Training {} parameters in {} parameter tensors.".format(total_parameters, len(parameters)))
     if trace_level > 0:
         print()

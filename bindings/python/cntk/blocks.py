@@ -47,12 +47,13 @@ _current_default_options = Record(
     bias=True,
     init_bias=0,
     enable_self_stabilization=False,  # Stabilizer() and LSTM()
-    initial_state=None                # Recurrence()
+    initial_state=None,               # Recurrence()
+    use_peepholes=False               # LSTM()
 )
 
-_default_sentinel           = Record() # This is a singleton sentinel value we recognize and replace in _initializer_for()
-_default_sentinel_init      = Record() # use different ones for init andinit_bias so we can distinguish them in _initializer_for()
-_default_sentinel_init_bias = Record()
+_default_sentinel           = '(default)'           # This is a singleton sentinel value we recognize and replace in _initializer_for()
+_default_sentinel_init      = '(init default)'      # use different ones for init andinit_bias so we can distinguish them in _initializer_for()
+_default_sentinel_init_bias = '(init_bias default)'
 # in function signatures we use symbols that indicate the default default in their name
 init_default_or_glorot_uniform             = _default_sentinel_init
 activation_default_or_None                 = _default_sentinel
@@ -61,6 +62,7 @@ bias_default_or_True                       = _default_sentinel
 pad_default_or_False                       = _default_sentinel
 enable_self_stabilization_default_or_False = _default_sentinel
 initial_state_default_or_None              = _default_sentinel
+use_peepholes_default_or_False             = _default_sentinel
 
 # check whether a parameter is a default
 # This is meant to be used by implementations of layers that take default values that may default to default-defaults.
@@ -231,10 +233,11 @@ def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_
     apply_x = beta * x
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
-def LSTM(shape, cell_shape=None, use_peepholes=False,
+def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
          init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,
          enable_self_stabilization=enable_self_stabilization_default_or_False): # (x, (h, c))
 
+    use_peepholes             = use_peepholes             if _is_given(use_peepholes)             else _current_default_options.use_peepholes
     enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
     has_projection = cell_shape is not None
     has_aux = False
@@ -266,19 +269,17 @@ def LSTM(shape, cell_shape=None, use_peepholes=False,
     Co = Parameter(            cell_shape,         init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
 
     Wmr = Parameter(cell_shape + shape, init=init) if has_projection else None  # final projection
-    if Wmr:
-        UntestedBranchError("LSTM, projection")
 
     Sdh = Stabilizer() if enable_self_stabilization else identity
     Sdc = Stabilizer() if enable_self_stabilization else identity
     Sct = Stabilizer() if enable_self_stabilization else identity
     Sht = Stabilizer() if enable_self_stabilization else identity
 
-    def create_hc_placeholder():
+    def create_hc_placeholder():  # TODO: rename
         return (placeholder_variable(shape, name='hPh'), placeholder_variable(cell_shape, name='cPh')) # (h, c)
 
     # parameters to model function
-    x = placeholder_variable(name='lstm_block_arg')
+    x = Placeholder(name='lstm_block_arg')
     prev_state = create_hc_placeholder()
 
     # formula of model function
