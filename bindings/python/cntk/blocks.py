@@ -95,9 +95,12 @@ class _OptionsStack: # implement Python's 'with' protocol
         self.new_default_options = Record(**merged_options) # this is the new options record that entering the with section will activate
     # entering with block: replaces the current defaults with the new ones, after remembering the old ones
     def __enter__(self):
+        # BUGBUG: __init__ should just remember the new options, but merging should happen here
+        #         So that we can say with xxx as foo: with yyy: with foo: ... where foo re-applies to current.
         global _current_default_options
         self.saved_default_options = _current_default_options
         _current_default_options = self.new_default_options
+        return self
     # exiting with block: restore previous remembered defaults
     def __exit__(self, type, value, traceback):
         global _current_default_options

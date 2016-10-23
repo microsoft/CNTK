@@ -103,20 +103,20 @@ def train(reader, model, max_epochs):
     progress_printer = ProgressPrinter(tag='Training')
 
     t = 0
-    for epoch in range(max_epochs):
+    for epoch in range(max_epochs):         # loop over epochs
         epoch_end = (epoch+1) * epoch_size
-        while t < epoch_end:
-            data = reader.next_minibatch(min(minibatch_size, epoch_end-t), input_map=input_map)
-            # BUGBUG? The change of minibatch_size parameter has no effect.
-            trainer.train_minibatch(data)
+        while t < epoch_end:               # loop over minibatches on the epoch
+            # BUGBUG? The change of minibatch_size parameter vv has no effect.
+            data = reader.next_minibatch(min(minibatch_size, epoch_end-t), input_map=input_map) # fetch minibatch
+            trainer.train_minibatch(data)                                   # update model with it
+            t += data[slot_labels].num_samples                              # count samples processed so far
+            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
             #def trace_node(name):
             #    nl = [n for n in z.parameters if n.name() == name]
             #    if len(nl) > 0:
             #        print (name, np.asarray(nl[0].value))
             #trace_node('W')
             #trace_node('stabilizer_param')
-            progress_printer.update_with_trainer(trainer, with_metric=True)
-            t += data[slot_labels].num_samples
         progress_printer.epoch_summary(with_metric=True)
 
     return loss_numer/loss_denom, metric_numer/metric_denom

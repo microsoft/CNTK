@@ -28,7 +28,7 @@ model_path = os.path.join(abs_path, "Models")
 # model dimensions
 image_height = 32
 image_width  = 32
-num_channels = 3
+num_channels = 3  # RGB
 num_classes  = 10
 
 #
@@ -40,7 +40,7 @@ def create_reader(path, map_file, mean_file, train):
         raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
                            (map_file, mean_file, cifar_py3, cifar_py3))
 
-    # transformation pipeline for the features differs between training and test
+    # transformation pipeline for the features has jitter/crop only when training
     transforms = []
     if train:
         transforms += [
@@ -51,29 +51,10 @@ def create_reader(path, map_file, mean_file, train):
         ImageDeserializer.mean(mean_file)
     ]
     # deserializer
-    # ImageDeserializer exposes two fields with fixed names 'image' (first column of map file) and 'label' (second column)
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
-        features = StreamDef(field='image', transforms=transforms),
-        labels   = StreamDef(field='label', shape=num_classes)
+        features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+        labels   = StreamDef(field='label', shape=num_classes)      # and second as 'label'
     )))
-    #if train:
-    #    deserializer.map_features(features_stream_name,
-    #        [
-    #            ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio'),
-    #            ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
-    #            ImageDeserializer.mean(mean_file)
-    #        ])
-    #else:
-    #    deserializer.map_features(features_stream_name,
-    #        [
-    #            ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
-    #            ImageDeserializer.mean(mean_file)
-    #        ])
-    #
-    #deserializer.map_labels(labels_stream_name, num_classes)
-
-    #return ReaderConfig(deserializer, epoch_size = sys.maxsize).minibatch_source()
-    #return MinibatchSource(deserializer)
 
 #
 # helper APIs that define layers and shows low level APIs usage. 
@@ -268,24 +249,14 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     log_number_of_parameters(z) ; print()
     progress_printer = ProgressPrinter(tag='Training')
 
-    # process minibatches and perform model training
-    for epoch in range(max_epochs):
+    # perform model training
+    for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
-        while sample_count < epoch_size:
-            current_minibatch = min(minibatch_size, epoch_size - sample_count)
-
-            # fetch next mini batch.
-            data = reader_train.next_minibatch(current_minibatch, input_map=input_map)
-
-            # minibatch data to be trained with
-            trainer.train_minibatch(data)
-
-            # keep track of the number of samples processed so far
-            sample_count += data[label_var].num_samples
-
-            # progress
-            progress_printer.update_with_trainer(trainer, with_metric=True)
-
+        while sample_count < epoch_size:  # loop over minibatches in the epoch
+            data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count), input_map=input_map) # fetch minibatch.
+            trainer.train_minibatch(data)                                   # update model with it
+            sample_count += data[label_var].num_samples                     # count samples processed so far
+            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
     
     #
