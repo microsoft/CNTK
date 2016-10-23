@@ -16,7 +16,6 @@ from cntk.initializer import glorot_uniform, he_normal
 from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu, convolution, pooling, PoolingType_Max
-from cntk.utils.progress_print import *
 
 #
 # Paths relative to current python file.

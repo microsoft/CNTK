@@ -1,3 +1,10 @@
+# ==============================================================================
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
+# TODO: Let's switch to import logging in the future instead of print. [ebarsoum]
 class ProgressPrinter:
     '''
     Accumulates training time statistics (loss and metric)
@@ -9,12 +16,13 @@ class ProgressPrinter:
     def __init__(self, freq=None, first=0, tag=''):
         '''
         Constructor. The optional ``freq`` parameter determines how often
-        printing will occur. The default value of 0 means an geometric
+        printing will occur. The value of 0 means an geometric
         schedule (1,2,4,...). A value > 0 means a arithmetic schedule
-        (freq, 2*freq, 3*freq,...)
+        (freq, 2*freq, 3*freq,...), and a value of None means no per-minibatch log.
         '''
+        from sys import maxsize
         if freq is None:
-            freq = 2000000000 # TODO: Should be INT_MAX
+            freq = maxsize
         self.loss_since_start    = 0
         self.metric_since_start  = 0
         self.samples_since_start = 0
@@ -156,9 +164,8 @@ class ProgressPrinter:
 def log_number_of_parameters(model, trace_level=0):
     parameters = model.parameters
     from functools import reduce
-    sum  = lambda f, g: f + g
-    prod = lambda f, g: f * g
-    total_parameters = reduce(sum, [reduce(prod, p1.shape, 1) for p1 in parameters], 0)
+    from operator import add, mul
+    total_parameters = reduce(add, [reduce(mul, p1.shape) for p1 in parameters], 0)
     print("Training {} parameters in {} parameter tensors.".format(total_parameters, len(parameters)))
     if trace_level > 0:
         print()

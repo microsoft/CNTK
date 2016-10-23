@@ -15,7 +15,6 @@ from cntk import Trainer
 from cntk.learner import sgd, fsadagrad, learning_rate_schedule, momentum_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
 from examples.common.nn import print_training_progress
-from cntk.utils.progress_print import *
 
 ########################
 # variables and stuff  #
