@@ -281,7 +281,7 @@ def get_data_type(*args):
             var_type = var_outputs[0].get_data_type()
             if cntk_py.DataType_Double == var_type:
                 dtypes.add(np.float64)
-            elif cntk_py.DataType_Float == var_type:
+            else:
                 dtypes.add(np.float32)
         else:
             # We don't know anything so we convert everything to float32. If it
@@ -797,12 +797,15 @@ class _ClassFromDict(dict):
     def __init__(self, args_dict):
         super(_ClassFromDict, self).__init__(args_dict)
         # TODO: try to delete __setattr__ to make it immutable
-        for key in args_dict:   # self.__dict__.update(args_dict)
-            self[key] = args_dict[key]
-    def __getattr__(self, k):
-        return self.get(k)
-    # can use __slot__ to hide __setattr__(), and cannot be extended
-    # cf. https://pypi.python.org/pypi/frozendict/0.4
+        self.__dict__.update(args_dict)
+        #for key in args_dict:   # self.__dict__.update(args_dict)
+        #    self[key] = args_dict[key]
+    def __getattr__(self, key):
+        if key not in self:
+            raise AttributeError("record has no attribute '{}'".format(key))
+        return self[key]
+    def __setattr__(self, key, value):
+        raise AttributeError('record is immutable')
 
 
 # easier construction of records
@@ -810,8 +813,6 @@ class _ClassFromDict(dict):
 def Record(**kwargs):
     return _ClassFromDict(kwargs)
 
-
 # type-cast a shape given as a scalar into a tuple
 def _as_tuple(x):
     return x if (isinstance(x,tuple)) else (x,)
-

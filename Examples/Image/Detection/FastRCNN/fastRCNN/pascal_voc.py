@@ -5,15 +5,16 @@
 # Written by Ross Girshick
 # --------------------------------------------------------
 
+from __future__ import print_function
 import os, pdb
 import xml.dom.minidom as minidom
 import numpy as np
 import scipy.sparse
 import scipy.io as sio
-import cPickle
+import pickle as cp
 import subprocess
-from imdb import imdb
-from voc_eval import voc_eval
+from .imdb import imdb
+from .voc_eval import voc_eval
 #from fastRCNN.imdb import imdb
 #from fastRCNN.voc_eval import voc_eval
 
@@ -28,7 +29,7 @@ class pascal_voc(imdb):
         self._devkit_path = self._get_default_path() if devkit_path is None \
                             else os.path.join(devkit_path, 'VOCdevkit' + self._year)
         self._data_path = os.path.join(self._devkit_path, 'VOC' + self._year)
-        self._classes = classes
+        self._classes = classes.decode('utf-8')
                          #('__background__', # always index 0
                          # 'aeroplane', 'bicycle', 'bird', 'boat',
                          # 'bottle', 'bus', 'car', 'cat', 'chair',
@@ -104,15 +105,15 @@ class pascal_voc(imdb):
         cache_file = os.path.join(self.cache_path, self.name + '_gt_roidb.pkl')
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} gt roidb loaded from {}'.format(self.name, cache_file)
+                roidb = cp.load(fid)
+            print ('{} gt roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         gt_roidb = [self._load_pascal_annotation(index)
                     for index in self.image_index]
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(gt_roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote gt roidb to {}'.format(cache_file)
+            cp.dump(gt_roidb, fid, cp.HIGHEST_PROTOCOL)
+        print ('wrote gt roidb to {}'.format(cache_file))
 
         return gt_roidb
 
@@ -128,8 +129,8 @@ class pascal_voc(imdb):
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} ss roidb loaded from {}'.format(self.name, cache_file)
+                roidb = cp.load(fid)
+            print ('{} ss roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         if int(self._year) == 2007 or not self._image_set.startswith('test'):
@@ -141,7 +142,7 @@ class pascal_voc(imdb):
 
         # Keep max of e.g. 2000 rois
         if type(self._maxNrRois) == int:
-            print "Only keep the first %d ROIs..." % self._maxNrRois
+            print ("Only keep the first %d ROIs..." % self._maxNrRois)
             for i in xrange(self.num_images):
                 gt_overlaps = roidb[i]['gt_overlaps']
                 gt_overlaps = gt_overlaps.todense()[:self._maxNrRois]
@@ -151,8 +152,8 @@ class pascal_voc(imdb):
                 roidb[i]['gt_overlaps'] = roidb[i]['gt_overlaps'] = gt_overlaps
 
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote ss roidb to {}'.format(cache_file)
+            cp.dump(roidb, fid, cp.HIGHEST_PROTOCOL)
+        print ('wrote ss roidb to {}'.format(cache_file))
 
         return roidb
 
@@ -183,16 +184,16 @@ class pascal_voc(imdb):
 
         if os.path.exists(cache_file):
             with open(cache_file, 'rb') as fid:
-                roidb = cPickle.load(fid)
-            print '{} ss roidb loaded from {}'.format(self.name, cache_file)
+                roidb = cp.load(fid)
+            print ('{} ss roidb loaded from {}'.format(self.name, cache_file))
             return roidb
 
         gt_roidb = self.gt_roidb()
         ss_roidb = self._load_selective_search_IJCV_roidb(gt_roidb)
         roidb = imdb.merge_roidbs(gt_roidb, ss_roidb)
         with open(cache_file, 'wb') as fid:
-            cPickle.dump(roidb, fid, cPickle.HIGHEST_PROTOCOL)
-        print 'wrote ss roidb to {}'.format(cache_file)
+            cp.dump(roidb, fid, cp.HIGHEST_PROTOCOL)
+        print ('wrote ss roidb to {}'.format(cache_file))
 
         return roidb
 
@@ -218,7 +219,7 @@ class pascal_voc(imdb):
         format.
         """
         filename = os.path.join(self._data_path, 'Annotations', index + '.xml')
-        # print 'Loading: {}'.format(filename)
+        # print ('Loading: {}'.format(filename))
         def get_data_from_tag(node, tag):
             return node.getElementsByTagName(tag)[0].childNodes[0].data
 
@@ -260,7 +261,7 @@ class pascal_voc(imdb):
         for cls_ind, cls in enumerate(self.classes):
             if cls == '__background__':
                 continue
-            print 'Writing {} VOC results file'.format(cls)
+            print ('Writing {} VOC results file'.format(cls))
             filename = self._get_voc_results_file_template(output_dir).format(cls)
             with open(filename, 'wt') as f:
                 for im_ind, index in enumerate(self.image_index):
@@ -326,7 +327,7 @@ class pascal_voc(imdb):
         if use_07_metric == None:
             use_07_metric = True if int(self._year) < 2010 else False
 
-        print 'VOC07 metric? ' + ('Yes' if use_07_metric else 'No')
+        print ('VOC07 metric? ' + ('Yes' if use_07_metric else 'No'))
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
         for i, cls in enumerate(self._classes):
@@ -340,7 +341,7 @@ class pascal_voc(imdb):
             aps += [ap]
             print('AP for {} = {:.4f}'.format(cls, ap))
             with open(os.path.join(output_dir, cls + '_pr.pkl'), 'w') as f:
-                cPickle.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
+                cp.dump({'rec': rec, 'prec': prec, 'ap': ap}, f)
         print('Mean AP = {:.4f}'.format(np.mean(aps)))
         # print('~~~~~~~~')
         # print('Results:')

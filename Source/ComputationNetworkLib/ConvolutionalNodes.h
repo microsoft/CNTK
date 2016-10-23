@@ -141,6 +141,7 @@ public:
     }
 
     TensorShape KernelShape() const { return m_kernelShape; }
+    TensorShape MapCount() const { return m_mapCount; }
     TensorShape Strides() const { return m_stride; }
     std::vector<bool> Sharing() const { return m_sharing; }
     std::vector<bool> AutoPad() const { return m_autoPad; }
@@ -485,6 +486,8 @@ public:
         if (m_convEng != nullptr)
             m_convEng->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
     }
+
+    bool IsConvolution2D() const { return m_convolution2D; }
 
 protected:
     // Flag that indicates whether the node is created using 2D-syntax.

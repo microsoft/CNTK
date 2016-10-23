@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os, sys, importlib
 import shutil, time
 import subprocess
@@ -36,7 +37,7 @@ shutil.copy(cntkTemplateDir + "fastrcnn.cntk", cntkFilesDir)
 tstart = datetime.datetime.now()
 os.environ['ACML_FMA'] = str(0)
 cmdStr = cntkCmdStrPattern.format(cntkFilesDir, cntk_args)
-print cmdStr
+print (cmdStr)
 pid = subprocess.Popen(cmdStr, cwd = cntkFilesDir)
 pid.wait()
 print ("Time running cntk [s]: " + str((datetime.datetime.now() - tstart).total_seconds()))
@@ -49,4 +50,4 @@ for filename in filenames:
         os.remove(modelDir + filename)
 assert pid.returncode == 0, "ERROR: cntk ended with exit code {}".format(pid.returncode)
 
-print "DONE."
+print ("DONE.")

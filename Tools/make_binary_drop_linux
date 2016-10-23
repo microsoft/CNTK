@@ -169,7 +169,8 @@ mkdir -p $baseBinariesPath
 echo "Copying build binaries..." >&3
 cp -r $buildPath/* $baseBinariesPath
 # Remove unnessesary file(s) if exist(s)
-rm -rf $baseBinariesPath/python
+# Add Python artefacts to 2.0 Beta Drop
+# rm -rf $baseBinariesPath/python
 rm -f $baseBinariesPath/bin/brainscripttests
 rm -f $baseBinariesPath/bin/cppevalclient
 rm -f $baseBinariesPath/bin/evaltests

@@ -1,0 +1,90 @@
+name: cntk-py34 
+dependencies:
+- _nb_ext_conf=0.3.0=py34_0
+- anaconda-client=1.5.1=py34_0
+- backports_abc=0.4=py34_0
+- clyent=1.2.2=py34_0
+- colorama=0.3.7=py34_0
+- cycler=0.10.0=py34_0
+- decorator=4.0.10=py34_0
+- entrypoints=0.2.2=py34_0
+- icu=57.1=vc10_0
+- ipykernel=4.5.0=py34_0
+- ipython=5.1.0=py34_0
+- ipython_genutils=0.1.0=py34_0
+- ipywidgets=5.2.2=py34_0
+- jinja2=2.8=py34_1
+- jpeg=8d=vc10_2
+- jsonschema=2.5.1=py34_0
+- jupyter=1.0.0=py34_3
+- jupyter_client=4.4.0=py34_0
+- jupyter_console=5.0.0=py34_0
+- jupyter_core=4.2.0=py34_0
+- libpng=1.6.22=vc10_0
+- markupsafe=0.23=py34_2
+- matplotlib=1.5.3=np111py34_0
+- mistune=0.7.3=py34_0
+- mkl=11.3.3=1
+- nb_anacondacloud=1.2.0=py34_0
+- nb_conda=2.0.0=py34_0
+- nb_conda_kernels=2.0.0=py34_0
+- nbconvert=4.2.0=py34_0
+- nbformat=4.1.0=py34_0
+- nbpresent=3.0.2=py34_0
+- notebook=4.2.3=py34_0
+- numpy=1.11.2=py34_0
+- openssl=1.0.2j=vc10_0
+- path.py=8.2.1=py34_0
+- pickleshare=0.7.4=py34_0
+- pip=8.1.2=py34_0
+- prompt_toolkit=1.0.3=py34_0
+- pygments=2.1.3=py34_0
+- pyparsing=2.1.4=py34_0
+- pyqt=5.6.0=py34_0
+- python=3.4.4=5
+- python-dateutil=2.5.3=py34_0
+- pytz=2016.7=py34_0
+- pyyaml=3.12=py34_0
+- pyzmq=15.4.0=py34_0
+- qt=5.6.0=vc10_0
+- qtconsole=4.2.1=py34_2
+- requests=2.11.1=py34_0
+- scipy=0.18.1=np111py34_0
+- setuptools=27.2.0=py34_1
+- simplegeneric=0.8.1=py34_1
+- sip=4.18=py34_0
+- six=1.10.0=py34_0
+- tk=8.5.18=vc10_0
+- tornado=4.4.2=py34_0
+- traitlets=4.3.1=py34_0
+- vs2010_runtime=10.00.40219.1=2
+- wcwidth=0.1.7=py34_0
+- wheel=0.29.0=py34_0
+- widgetsnbextension=1.2.6=py34_0
+- win_unicode_console=0.5=py34_0
+- zlib=1.2.8=vc10_3
+- pip:
+  - alabaster==0.7.9
+  - args==0.1.0
+  - babel==2.3.4
+  - backports-abc==0.4
+  - clint==0.5.1
+  - docutils==0.12
+  - imagesize==0.7.1
+  - ipython-genutils==0.1.0
+  - jupyter-client==4.4.0
+  - jupyter-console==5.0.0
+  - jupyter-core==4.2.0
+  - nb-anacondacloud==1.2.0
+  - nb-conda==2.0.0
+  - nb-conda-kernels==2.0.0
+  - pkginfo==1.3.2
+  - prompt-toolkit==1.0.3
+  - py==1.4.31
+  - pytest==3.0.3
+  - requests-toolbelt==0.7.0
+  - snowballstemmer==1.2.1
+  - sphinx==1.4.8
+  - sphinx-rtd-theme==0.1.9
+  - twine==1.8.1
+  - win-unicode-console==0.5

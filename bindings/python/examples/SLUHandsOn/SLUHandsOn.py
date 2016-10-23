@@ -10,19 +10,11 @@ from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
-from cntk.io import CNTKTextFormatMinibatchSource, StreamDef
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 from cntk import Trainer
-from cntk.learner import fsadagrad, learning_rate_schedule
+from cntk.learner import sgd, fsadagrad, learning_rate_schedule, momentum_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
 from examples.common.nn import print_training_progress
-
-# helper function that will go away once dimension inference works and has been updated here
-from cntk import Axis
-def _Infer(shape, axis):
-    from cntk.utils import Record, _as_tuple
-    return Record(shape=_as_tuple(shape), axis=axis, with_shape = lambda new_shape: _Infer(new_shape, axis))
-
-#### User code begins here
 
 ########################
 # variables and stuff  #
@@ -45,24 +37,29 @@ hidden_dim = 300
 ########################
 
 def create_reader(path):
-    return CNTKTextFormatMinibatchSource(path, streams=Record(
-        query         = StreamDef(shape=input_dim,   is_sparse=True, alias='S0'),
-        intent_unused = StreamDef(shape=num_intents, is_sparse=True, alias='S1'),  # BUGBUG: unused, and should infer dim
-        slot_labels   = StreamDef(shape=label_dim,   is_sparse=True, alias='S2')
-    ))
+    return MinibatchSource(CTFDeserializer(path, StreamDefs(
+        query         = StreamDef(field='S0', shape=input_dim,   is_sparse=True),
+        intent_unused = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # BUGBUG: unused, and should infer dim
+        slot_labels   = StreamDef(field='S2', shape=label_dim,   is_sparse=True)
+    )))
 
 ########################
 # define the model     #
 ########################
 
-def create_model(_inf):  # TODO: all the _inf stuff will go away once dimension inference works. Should this be a function then?
+def create_model():
     return Sequential([
-        Embedding(shape=emb_dim, _inf=_inf),
-        Recurrence(over=LSTM(shape=hidden_dim, _inf=_inf.with_shape(emb_dim)), _inf=_inf.with_shape(emb_dim), go_backwards=False,
+        #Stabilizer(),
+        Embedding(emb_dim),
+        #BatchNormalization(),
+        Recurrence(LSTM(hidden_dim, enable_self_stabilization=False), go_backwards=False,
                    #),
                    initial_state=Constant(0.1, shape=(1))),   # (this last option mimics a default in BS to recreate identical results)
-        Linear(shape=label_dim, _inf=_inf.with_shape(hidden_dim))
-    ], _inf=_inf)
+                   # BUGBUG: initial_state=0.1 should work
+        #Stabilizer(),
+        #BatchNormalization(),
+        Dense(label_dim)
+    ])
 
 ########################
 # train action         #
@@ -70,11 +67,12 @@ def create_model(_inf):  # TODO: all the _inf stuff will go away once dimension 
 
 def train(reader, model, max_epochs):
     # Input variables denoting the features and label data
-    query       = Input(input_dim,  is_sparse=False)  # TODO: make sparse once it works
-    slot_labels = Input(num_labels, is_sparse=True)
+    query       = Input(input_dim,  is_sparse=False)
+    slot_labels = Input(num_labels, is_sparse=True)  # TODO: make sparse once it works
 
     # apply model to input
     z = model(query)
+    #z = model(Stabilizer()(query))
 
     # loss and metric
     ce = cross_entropy_with_softmax(z, slot_labels)
@@ -84,17 +82,17 @@ def train(reader, model, max_epochs):
     epoch_size = 36000
     minibatch_size = 70
     num_mbs_to_show_result = 100
-    time_constant = minibatch_size / math.log(1/0.9)
+    momentum_as_time_constant = minibatch_size / -math.log(0.9)
 
     lr_per_sample = [0.003]*2+[0.0015]*12+[0.0003]
 
     # trainer object
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner = fsadagrad(z.parameters, lr_schedule, time_constant,
+    learner = fsadagrad(z.parameters, lr_schedule, momentum_as_time_constant,
                         targetAdagradAvDenom=1, gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
+    # BUGBUG: targetAdagradAvDenom must be removed from the interface, and default to 1
 
     trainer = Trainer(z, ce, pe, [learner])
-    #_extend_Trainer(trainer)  # TODO: should be just baked in
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -112,12 +110,17 @@ def train(reader, model, max_epochs):
         metric_denom = 0
         epoch_end = (epoch+1) * epoch_size
         while t < epoch_end:
-            # BUGBUG: RuntimeError: GetNextMinibatch: Changing minibatch sizes across calls is currently unsupported
-            #data, num_samples = next_minibatch(reader, min(minibatch_size, epoch_size-t), input_map)
-            data = reader.next_minibatch(minibatch_size, input_map=input_map)
-            if data is None:
-                break
+            data = reader.next_minibatch(min(minibatch_size, epoch_end-t), input_map=input_map)
+            # BUGBUG? The change of minibatch_size parameter has no effect.
+            #if data is None:
+            #    break
             trainer.train_minibatch(data)
+            #def trace_node(name):
+            #    nl = [n for n in z.parameters if n.name() == name]
+            #    if len(nl) > 0:
+            #        print (name, np.asarray(nl[0].value))
+            #trace_node('W')
+            #trace_node('stabilizer_param')
             loss_numer += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count  # too much code for something this simple
             loss_denom +=                                           trainer.previous_minibatch_sample_count
             metric_numer += trainer.previous_minibatch_evaluation_average * trainer.previous_minibatch_sample_count
@@ -133,14 +136,20 @@ def train(reader, model, max_epochs):
 # main function boilerplate #
 #############################
 
-def main():
-    #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
+if __name__=='__main__':
+    # TODO: get closure on Amit's feedback "Not the right pattern as we discussed over email. Please change to set_default_device(gpu(0))"
+    #set_default_device(gpu(0))
+
+    # TODO: leave these in for now as debugging aids; remove for beta
+    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
+    set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
+    set_fixed_random_seed(1)  # TODO: remove debugging facilities once this all works
+    force_deterministic_algorithms()
+
     reader = create_reader(data_dir + "/atis.train.ctf")
-    model = create_model(_inf=_Infer(shape=input_dim, axis=[Axis.default_batch_axis(), Axis.default_dynamic_axis()]))
-    # TODO: Currently this fails with a mismatch error if axes ^^ are given in opposite order. I think it shouldn't.
+    model = create_model()
     # train
     train(reader, model, max_epochs=8)
     # test (TODO)
     reader = create_reader(data_dir + "/atis.test.ctf")
     #test(reader, model_dir + "/slu.cmf")  # TODO: what is the correct pattern here?
-

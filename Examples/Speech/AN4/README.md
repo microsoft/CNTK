@@ -38,12 +38,12 @@ or prefix the call to the cntk executable with the corresponding folder.
 
 ### Run
 
-Run the example from the Speech/Data folder using:
+Run the example from the Speech/Data folder using (or use the LSTM variant):
 
 `cntk configFile=../Config/FeedForward.cntk`
 
 or run from any folder and specify the Data folder as the `currentDirectory`, 
-e.g. running from the Speech folder using:
+e.g. running from the Speech folder using (or use the LSTM variant):
 
 `cntk configFile=Config/FeedForward.cntk currentDirectory=Data`
 
