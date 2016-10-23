@@ -914,6 +914,8 @@ namespace CNTK
     ///
     class Axis final
     {
+        friend bool operator==(const Axis& first, const Axis& second);
+
         CNTK_API static const std::wstring StaticAxisNamePrefix;
 
         CNTK_API static const int SentinelStaticAxisIndexValueForDynamicAxes;
