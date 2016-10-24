@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, StreamConfiguration, text_format_minibatch_source, distributed, persist
+from cntk import Trainer, StreamConfiguration, text_format_minibatch_source, distributed
 from cntk.device import cpu, set_default_device, default, DeviceDescriptor
 from cntk.learner import sgd, learning_rate_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, relu, element_times, constant
