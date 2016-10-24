@@ -309,6 +309,7 @@ namespace CNTK
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlendTimeConstant] = batchNormalizationNode->BlendTimeConstant();
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEpsilon] = batchNormalizationNode->Epsilon();
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUseCuDNNEngine] = !batchNormalizationNode->UseCNTKEngine();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSamplesSeen] = batchNormalizationNode->GetSamplesSeen();
 
                 opType = PrimitiveOpType::BatchNormalization;
             }
