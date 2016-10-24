@@ -9,38 +9,29 @@
 
 # TODO: clean up the dependencies
 import numpy as np
-import sys
-import os
-import time
-from cntk.learner import sgd, fsadagrad
 from cntk.ops import parameter, input_variable, placeholder_variable, combine
-from cntk.ops import times, cross_entropy_with_softmax, classification_error, convolution, pooling, batch_normalization
+from cntk.ops import times, convolution, pooling, batch_normalization
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
 from cntk.blocks import *  # TODO: reduce to what we actually use
 from cntk.blocks import _trace_layers  # (debugging)
-from cntk.initializer import glorot_uniform
-from _cntk_py import constant_initializer # BUGBUG: Should not be necessary, should just type-cast under the hood.
-
-#abs_path = os.path.dirname(os.path.abspath(__file__))
-#sys.path.append(os.path.join(abs_path, "..", ".."))
-# TODO: move these out from examples
-#from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_value, print_training_progress, negate
 
 from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-from cntk.blocks import _default_initializer, _INFERRED
+from cntk.blocks import _current_default_options, _is_given, _initializer_for, _resolve_activation, _INFERRED
 
 # Dense -- create a fully-connected linear projection layer with optional non-linear activation
 # Note: shape may describe a tensor as well.
 # input_rank given: number of inferred axes to add to W (map_rank must not be given)
 # map_rank   given: expand W to leave exactly mapRank axes (input_rank must not be given)
 # none       given: expand W to all (same as map_rank=0)
-def Dense(shape, init=_default_initializer, activation=identity, input_rank=None, map_rank=None, bias=True, init_bias=0):
-    if activation is None: # we must accept None here as well
-        activation = identity
+def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_default_or_None,
+          input_rank=None, map_rank=None,
+          bias=bias_default_or_True, init_bias=init_bias_default_or_0):
+    activation = _resolve_activation(activation)
+    bias       = bias if _is_given(bias) else _current_default_options.bias
     output_shape = _as_tuple(shape)
 
     if input_rank is not None and map_rank is not None:
@@ -72,8 +63,9 @@ def Dense(shape, init=_default_initializer, activation=identity, input_rank=None
         infer_input_rank_to_map = map_rank  # infer W to use all input dims except the first static 'map_rank' ones
 
     # parameters bound to this Function
-    W = Parameter(input_shape + output_shape, init=init     , name='W')
-    b = Parameter(              output_shape, init=init_bias, name='b') if bias else None
+    init_weights = _initializer_for(init, Record(output_rank=output_rank))
+    W = Parameter(input_shape + output_shape, init=init_weights, name='W')
+    b = Parameter(              output_shape, init=init_bias,    name='b') if bias else None
 
     # expression of this function
     x = Placeholder(name='dense_arg')
@@ -96,7 +88,7 @@ def Embedding(shape=None, init=None, weights=None):
         if shape is None:
             raise ValueError('Embedding: output shape must be specified')
         if init is None:
-            init = _default_initializer
+            init = init_default_or_glorot_uniform
         shape = _as_tuple(shape)
         weight_shape = _INFERRED + shape
         E = Parameter(weight_shape, init=init, name='E')
@@ -119,12 +111,6 @@ def Embedding(shape=None, init=None, weights=None):
     apply_x = times(x, E)
     return Block(apply_x, 'Embedding', Record(E=E))
 
-# helper to create a new initializer object from an existing one, while updating members
-# BUGBUG: Currently not really working, only for glorot_uniform.
-def _init_with(init, members):
-    return init
-    #return glorot_uniform(**members) # BUGBUG: currently no way to add these fields to an existing initializer
-
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape) )
 #    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape) )
@@ -137,20 +123,21 @@ def _init_with(init, members):
 #  - num_filters first is what Keras does
 def Convolution(filter_shape,        # e.g. (3,3)
                 num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension_
-                activation=identity,
-                init=_default_initializer,
-                pad=False,
-                #lowerPad=None, upperPad=None, # TODO: clean this up; leaving it out for now
+                activation=activation_default_or_None,
+                init=init_default_or_glorot_uniform,
+                pad=pad_default_or_False,
                 strides=1,
                 sharing=True,     # (must be True currently)
-                bias=True,
-                init_bias=0,
+                bias=bias_default_or_True,
+                init_bias=init_bias_default_or_0,
                 reduction_rank=1, # (must be 1 currently)
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0):
     #UntestedBranchError("Convolution")
-    if activation is None: # we must accept None here as well
-        activation = identity
+    activation = _resolve_activation(activation)
+    pad  = pad  if _is_given(pad ) else _current_default_options.pad
+    bias = bias if _is_given(bias) else _current_default_options.bias
+    # TODO: there must be a Python trick to do this as a function call on locals or so
     if reduction_rank != 1:
         NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
     if transpose:
@@ -164,7 +151,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
 
     # parameters bound to this Function
     #init_kernel = glorot_uniform(filter_rank=-filter_rank, output_rank=1)
-    init_kernel = _init_with(init, Record(filter_rank=filter_rank, output_rank=-1))
+    init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
     # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag
     W = Parameter(output_channels_shape + kernel_shape,             init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
     b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
@@ -175,7 +162,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
     apply_x = convolution (W, x,
                            strides=_as_tuple(strides),
                            sharing=_as_tuple(sharing),
-                           auto_padding=_as_tuple(pad), #lower_pad=0, upper_pad=0,
+                           auto_padding=_as_tuple(pad),
                            # TODO: can we rename auto_padding to pad?
                            transpose=transpose,
                            max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
@@ -217,11 +204,13 @@ def AveragePooling(filter_shape,  # e.g. (3,3)
     return Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad)
 
 # Recurrence() -- run a block recurrently over a time sequence
-def Recurrence(over, go_backwards=False, initial_state=None):
+def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
-    if go_backwards:
-        UntestedBranchError("Recurrence, go_backwards option") # TODO: test in SLUHandsOn.py bidirectional
+    initial_state = initial_state if _is_given(initial_state) else _current_default_options.initial_state
+    # if initial state is given and a numeric constant, then turn it into a Constant() object
+    if np.isscalar(initial_state):
+        initial_state = Constant(initial_state, shape=(1)) # TODO: This should be automatically done inside the API.
     def previous_hook(state):
         if isinstance (state, tuple):  # if multiple then apply to each element
             return tuple([previous_hook(s) for s in state])
@@ -269,27 +258,25 @@ def Dropout(prob=None):
     return Block(apply_x, 'Dropout')
 
 # BatchNormalization -- create a batch-normalization layer
-def BatchNormalization(#_inf,
-                       spatial_rank=0,  # reduce over these dims. E.g. 2 to reduce over (h,w) in a (C, H, W)-shaped input
+# TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
+def BatchNormalization(map_rank=None,  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=5000, blend_time_constant=0,
                        epsilon=0.00001, use_cntk_engine=True):
-    # Note: This has been tested ad-hoc in SLUHandsOn.py, and gives quite precisely the expected improvement. So this works. Just need to fix _inf.
+    # TODO: make map_rank a default option, once per-layer type defaults are implemented
 
     # parameters bound to this Function
-    norm_shape  = _INFERRED + (1,) * spatial_rank
-    if spatial_rank != 0:
-        UntestedBranchError("BatchNormalization spatial_rank != 0:")
-    #scale        = Parameter(norm_shape, init=init_scale) # BUGBUG: fails with "ValueError: negative dimensions are not allowed"
-    #bias         = Parameter(norm_shape, init=0)
-    scale        = Parameter(norm_shape, init=constant_initializer(init_scale))
-    bias         = Parameter(norm_shape, init=constant_initializer(0))
+    norm_shape  = _INFERRED
+    if map_rank is not None and map_rank != 1:
+        UntestedBranchError("BatchNormalization map_rank can only be 1 or None for now")
+    scale        = Parameter(norm_shape, init=init_scale)
+    bias         = Parameter(norm_shape, init=0)
     run_mean     = Constant(0, shape=norm_shape)  # note: these are not really constants; they are updated differently
     run_variance = Constant(0, shape=norm_shape)
 
     # expression
     x = Placeholder(name='batch_normalization_arg')
-    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, spatial_rank > 0, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
+    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
                                   #use_cntk_engine=use_cntk_engine)
                                   use_cudnn_engine=not use_cntk_engine)
     return Block(apply_x, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
@@ -300,7 +287,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0):
 
     # parameters bound to this Function
     scale = Parameter((1), init=initial_scale)  # TODO: offer Softplus version for protection, as for Stabilizer
-    bias = Parameter((1), init=initial_bias)
+    bias  = Parameter((1), init=initial_bias)
 
     # expression
     x = Placeholder(name='layer_normalization_arg')

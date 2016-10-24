@@ -6,12 +6,10 @@
 
 # blocks -- basic building blocks that are semantically not layers (not used in a layered fashion)
 #           e.g. the LSTM
+# TODO: This has become too large. Need to break out some locally used stuff into another module.
 
 # TODO: further clean up the dependencies
 import numpy as np
-import sys
-import os
-import time
 from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
@@ -28,58 +26,132 @@ from cntk.ops.variables import Variable
 _trace_layers = False
 #_trace_layers = True  # uncomment this to log creation of graph through layers
 
-_default_initializer = glorot_uniform()
 _INFERRED = (InferredDimension,)  # as a tuple, makes life easier
 
+# call this for all untested branches
 def UntestedBranchError(name):
-    # pass
     raise NotImplementedError("Untested code branch: " + name)
 
-# "upgrade" a current Function to add additional operators and methods, as a temporary stopgap
-# at end of each layer constructor, return _extend_Function(z, 'Type (for debugging)')
-# use this until __call__ is implemented in Function()
-# Also add the >> operator (forward function composition).
-# Returns its arg to allow chaining.
-def _unused_extend_Function(f):
-    class FunctionEx(f.__class__): 
-        # BUGBUG: Somehow we don't get here anymore. It's fine for now.
-        def __dummy__():
-            pass
-        #def __call__(self, *args):
-        #    f = self
-        #    _function_name = _node_name(f)  # these are for logging/debugging only
-        #    _function_description = _node_description(f)
-        #    _arg_description = ", ".join([_node_name(f) for f in list(args)])
-        #    #f = super(Function, self).f()
-        #    f = super(Function, f)(*args)
-        #    _name_and_extend_Function(f, _function_name)
-        #    if _trace_layers:
-        #        print("{} = {} ({})".format(_node_description(f), _function_description, _arg_description))
-        #    return f
-        ## needed here to call into FunctionEx.__call__ instead of Function.__call__
-        #def __rshift__(self, other):
-        #    return other(self)
-        def _name(self):  # retrieve the debug name
-            return _node_name(self)
-    if hasattr(f, '__dummy__'):  # already extended: don't do it again
-        return f
-    f.__class__ = FunctionEx
-    if _trace_layers:
-        print("def {}".format(_node_description(f)))
-    return f
+# This record contains the defaults for a number of optional parameters to layers.
+# These can be overwritten temporarily by saying
+#    with default_options(init=..., ...):
+#        # code block within which the changed defaults are active
+_current_default_options = Record(
+    init=glorot_uniform(),
+    activation=None,                  # Dense() and Convolution() have no activation by default
+    pad=False, # BUGBUG: not done for pooling at present. Need a special default? How to name?
+    # ^^ This should be addressed by allowing configs per layer type.
+    #    To be addressed as a per-layer default. See default_options below.
+    bias=True,
+    init_bias=0,
+    enable_self_stabilization=False,  # Stabilizer() and LSTM()
+    initial_state=None,               # Recurrence()
+    use_peepholes=False               # LSTM()
+)
 
-# name and extend; in this order, so that _extend_Function can print a meaningful log message
-#def _name_and_extend_Function(f, name=None):
-#    if name is not None:
-#        _name_node(f, name)
-#    _extend_Function(f)
+_default_sentinel           = '(default)'           # This is a singleton sentinel value we recognize and replace in _initializer_for()
+_default_sentinel_init      = '(init default)'      # use different ones for init andinit_bias so we can distinguish them in _initializer_for()
+_default_sentinel_init_bias = '(init_bias default)'
+# in function signatures we use symbols that indicate the default default in their name
+init_default_or_glorot_uniform             = _default_sentinel_init
+activation_default_or_None                 = _default_sentinel
+init_bias_default_or_0                     = _default_sentinel_init_bias
+bias_default_or_True                       = _default_sentinel
+pad_default_or_False                       = _default_sentinel
+enable_self_stabilization_default_or_False = _default_sentinel
+initial_state_default_or_None              = _default_sentinel
+use_peepholes_default_or_False             = _default_sentinel
 
-# give a new name to a function, by wrapping it
-#def _wrap_rename_Function(f, name):
-#    f = combine([f], name)  # 'combine' to create a separate identity so we can reassign the debug name
-#    _name_node(f, name)
-#    _extend_Function(f)
-#    return f
+# check whether a parameter is a default
+# This is meant to be used by implementations of layers that take default values that may default to default-defaults.
+def _is_given(p):
+    return p is not _default_sentinel and p is not _default_sentinel_init and p is not _default_sentinel_init_bias
+
+# scope guard for overriding defaults
+# with default_options(activation=relu, init=he_normal(), pad=True):
+#     model = Convolution((3,3), 32) >> Convolution((3,3), 64)  # will have relu activation and padding
+# to limit it to a specific operation or set of operations, use e.g.
+# with default_options(activation=relu, init=he_normal()):
+#     with default_options_for(Convolution, pad=True):
+#         ...
+# TODO: actually implement this
+class _OptionsStack: # implement Python's 'with' protocol
+    # constructor prepares the updated record of defaults and remembers it
+    def __init__(self, layer_subset=None, **kwargs):
+        if layer_subset:
+            raise NotImplementedError('default_options not yet implemented per layer')
+        new_options = kwargs
+        # TODO: layer subset
+        merged_options = _current_default_options.__dict__
+        # we merge the newly provided options with the current defaults
+        # Only names that already exist may be used (cannot create new default variables).
+        # TODO: we may consider a more generic mechanism where one can overwrite all, if Python allows that.
+        for key in new_options:
+            try:
+                merged_options[key]
+            except:
+                raise TypeError("default_options() got an unexpected keyword argument '{}'".format(key))
+            merged_options[key] = new_options[key]
+        self.new_default_options = Record(**merged_options) # this is the new options record that entering the with section will activate
+    # entering with block: replaces the current defaults with the new ones, after remembering the old ones
+    def __enter__(self):
+        # BUGBUG: __init__ should just remember the new options, but merging should happen here
+        #         So that we can say with xxx as foo: with yyy: with foo: ... where foo re-applies to current.
+        global _current_default_options
+        self.saved_default_options = _current_default_options
+        _current_default_options = self.new_default_options
+        return self
+    # exiting with block: restore previous remembered defaults
+    def __exit__(self, type, value, traceback):
+        global _current_default_options
+        _current_default_options = self.saved_default_options
+
+def default_options(**kwargs):
+    return _OptionsStack(None, **kwargs)
+
+def default_options_for(layer_subset, **kwargs):
+    if not isinstance(layer_subset, list):
+        layer_subset = [layer_subset]
+    return _OptionsStack(layer_subset, **kwargs)
+
+# resolve activation option against current default
+def _resolve_activation(activation):
+    # if none is passed to caller then use the default
+    if activation is _default_sentinel:
+        activation = _current_default_options.activation
+    # activation=None is implemented as activation=identity
+    if activation is None:
+        activation = identity
+    return activation
+
+# create the complete initializer for a given 'init' parameter, to pass to parameter()
+# This is called from Parameter() and every place that injects rank parameters.
+# It does a few things:
+#  - maps init_default_or_glorot_uniform to default  --TODO: we should have a global setting for that
+#  - creates a new initializer object from an existing one, while updating members
+def _initializer_for(init, rank_params=None):
+    if init is None:
+        raise ValueError("init parameter cannot be None")
+
+    # if default then select
+    if init is _default_sentinel_init:
+        init = _current_default_options.init
+    elif init is _default_sentinel_init_bias:
+        init = _current_default_options.init_bias
+
+    # scalar constant: that's it, nothing further to do here
+    if np.isscalar(init):
+        # BUGBUG: this is sometimes required when dimensions are unknown; shouldn't.
+        from _cntk_py import constant_initializer
+        return constant_initializer(init)
+        #return init # TODO: change to this once this works, e.g. for layers.BatchNormalization()
+
+    # implant additional rank parameters
+    if rank_params:
+        from cntk.initializer import initializer_with_rank
+        init = initializer_with_rank(init, **rank_params)
+
+    return init
 
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
 # All layers functions call this at the end.
@@ -95,11 +167,8 @@ def Block(f, op_name, members={}):
     return f
 
 # some mappings--these currently exist only so that I can name the nodes for debugging
-# TODO: random init parameters: init_filter_rank=0, init_output_rank=1, init_on_cpu_only=True, random_seed=-1
-# init must be given
 def Parameter(shape, init, name=''):
-    if init is None:
-        raise "Parameter: init cannot be None"
+    init = _initializer_for(init)
     p = parameter(shape, init=init, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'parameter')   # these are factory methods for things with state
 
@@ -110,16 +179,11 @@ def Constant(init, shape=None, name=''):
 def Input(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')
 
-def Placeholder(name='placeholder'):
-    p = placeholder_variable(name=name) # TODO: use (*args, **kwargs) once got rid of _inf
-    _name_node(p, name)
-    if _trace_layers:
-        print("new " + _node_description(p))
-    return p
-
-# TODO: this is a left-over until inference works
-def PlaceholderWithShape(_inf, name='placeholder'):
-    p = placeholder_variable(shape=_as_tuple(_inf.shape), dynamic_axes=_inf.axis, name=name)
+def Placeholder(shape=None, name='placeholder'):
+    if shape is not None:
+        p = placeholder_variable(shape=shape, name=name) # TODO: use (*args, **kwargs)?
+    else:
+        p = placeholder_variable(name=name) # TODO: use (*args, **kwargs)?
     _name_node(p, name)
     if _trace_layers:
         print("new " + _node_description(p))
@@ -138,15 +202,14 @@ def _Identity(name='identity_arg'):
 # TODO: This should become a C++-side Function, e.g. like sigmoid
 identity = _Identity()
 
-def Stabilizer(steepness=4):
-    #UntestedBranchError("Stabilizer")
-    # currently fails with "RuntimeError: The 1 leading dimensions of the right operand with shape [1] do not match the left operand's trailing dimensions with shape [943]"
-
-    # When applied to a known input, it works with linear stabilizer, but not with softplus,
-    # which is explaninable as time stamp not being updated in model update.
-
-    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
-    # this behaves linear for weights around 1, yet guarantees positiveness
+# TODO: add a flag enable_self_stabilizer (maybe rename it) default to True, overridable by default_options
+# This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
+def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_default_or_False):
+    if _is_given(enable_self_stabilization):
+        raise NotImplementedError('Stagbilizer: enable_self_stabilization flag not implemented yet')
+    #enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
+    #if not enable_self_stabilization: # disabled (typically through global option)
+    #    return identity
 
     # parameters bound to this Function
     param = Parameter((1), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
@@ -155,31 +218,32 @@ def Stabilizer(steepness=4):
 
     # expression
     x = Placeholder(name='stabilizer_arg')
+
+    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
+    # this behaves linear for weights around 1, yet guarantees positiveness
     # TODO: risk of confusion; can these functions be namespaced?
-    #beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething
-    #from cntk import log, exp
-    #beta = log (param - 0.99537863 + 2.7182818284590452353602874713527)   # HAS NO EFFECT
-    #beta = log (exp (param))   # HAS NO EFFECT
-    #beta = (exp (param))   # HAS NO EFFECT
-    #beta = steepness * param * (1/steepness) # HAS NO EFFECT
-    beta = param # TODO: replace by softplus once the time-stamp issue is gone. Softplus works better.
+    beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething
     apply_x = beta * x
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
-def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer, init_bias=0, enable_self_stabilization=False): # (x, (h, c))
+def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
+         init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,
+         enable_self_stabilization=enable_self_stabilization_default_or_False): # (x, (h, c))
+
+    use_peepholes             = use_peepholes             if _is_given(use_peepholes)             else _current_default_options.use_peepholes
+    enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
     has_projection = cell_shape is not None
     has_aux = False
 
     if has_aux:
         UntestedBranchError("LSTM, has_aux option")
-    if has_projection:
-        UntestedBranchError("LSTM, projection")
 
     shape = _as_tuple(shape)
 
     cell_shape = _as_tuple(cell_shape) if cell_shape is not None else shape
     if len(shape) != 1 or len(cell_shape) != 1:
         raise ValueError("LSTM: shape and cell_shape must be vectors (rank-1 tensors)")
+        # otherwise we'd need to fix slicing and Param initializers
 
     stack_axis = -1  # stacking along the fastest-changing one, to match BS
     # determine stacking dimensions
@@ -205,10 +269,11 @@ def LSTM(shape, cell_shape=None, use_peepholes=False, init=_default_initializer,
     Sht = Stabilizer() if enable_self_stabilization else identity
 
     def create_hc_placeholder():
-        return (placeholder_variable(shape, name='hPh'), placeholder_variable(cell_shape, name='cPh')) # (h, c)
+        # we pass the known dimensions here, which makes dimension inference easier
+        return (Placeholder(shape=shape, name='hPh'), Placeholder(shape=cell_shape, name='cPh')) # (h, c)
 
     # parameters to model function
-    x = placeholder_variable(name='lstm_block_arg')
+    x = Placeholder(name='lstm_block_arg')
     prev_state = create_hc_placeholder()
 
     # formula of model function

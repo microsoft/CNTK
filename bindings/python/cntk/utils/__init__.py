@@ -11,9 +11,8 @@ import scipy.sparse
 from .. import cntk_py
 from cntk.device import cpu, gpu, use_default_device
 from .swig_helper import typemap
-from .progress_print import ProgressPrinter
 from ..axis import Axis
-
+from .progress_print import *
 
 def sanitize_precision(precision):
     '''
