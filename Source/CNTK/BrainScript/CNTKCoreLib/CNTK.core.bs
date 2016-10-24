@@ -786,7 +786,7 @@ Sequences = [
     ].out
 
     # rolling window over past N samples
-    # returns a record [ value=..., valid=... ], both being 1-step sequences of [dim x N]. N can optionally be moved to axes >2.
+    # returns a record [ value=..., valid=... ], both being 1-step sequences of [K x N] (K=dim for value and 1 for valid). N can optionally be moved to axes >2.
     # This implementation is suboptimal in that it creates copies for the intermediate steps.
     PastValueWindow (N, in, axis=2) = [
         isLast = Loop.IsLast (in)

@@ -15,6 +15,7 @@ from cntk.models import *
 from cntk.utils import *
 from cntk.ops import splice
 from examples.LanguageUnderstanding.LanguageUnderstanding import data_dir, create_reader, create_model, train, evaluate, emb_dim, hidden_dim, num_labels
+from cntk.persist import load_model, save_model
 
 def test_a_model(what, model, expected_avg):
     print("--- {} ---".format(what))
@@ -23,6 +24,11 @@ def test_a_model(what, model, expected_avg):
     loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
     print("-->", evaluation_avg, loss_avg)
     assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+    # save and load--test this for as many configs as possible
+    #path = data_dir + "/model.cmf"
+    #save_model(model, path)
+    #model = load_model(path)
+    # BUGBUG: fails with "RuntimeError: Reading a DictionaryValue as the wrong type; Reading as type int when actual type is SizeT"
     # test
     #reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
     #evaluate(reader, model)
@@ -106,13 +112,23 @@ def test_seq_classification_error(device_id):
                 Dense(num_labels)
             ]), [0.08574360112032389, 0.41847621578367716])
 
-    # test of the example itself
-    # this emulates the main code in the PY file
-    reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
-    model = create_model()
-    loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
-    expected_avg = [0.15570838301766451, 0.7846451368305728]
-    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+        # test of the example itself
+        # this emulates the main code in the PY file
+        reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
+        model = create_model()
+        loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
+        expected_avg = [0.15570838301766451, 0.7846451368305728]
+        assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+    
+        # save and load (as an illustration)
+        #path = data_dir + "/model.cmf"
+        #save_model(model, path)
+        #model = load_model(path)
+        # BUGBUG: fails with "RuntimeError: Reading a DictionaryValue as the wrong type; Reading as type int when actual type is SizeT"
+    
+        # test
+        reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
+        evaluate(reader, model)
 
 if __name__=='__main__':
     test_seq_classification_error(0)

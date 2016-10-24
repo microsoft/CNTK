@@ -14,8 +14,10 @@ from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.initializer import glorot_uniform, he_normal
 from cntk import Trainer
-from cntk.learner import momentum_sgd, learning_rate_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu, convolution, pooling, PoolingType_Max
+from cntk.learner import momentum_sgd, learning_rate_schedule
+from cntk.persist import load_model, save_model
+
 
 ########################
 # variables and paths  #
@@ -303,7 +305,10 @@ def evaluate(reader, model):
     label_var = input_variable((num_classes))
 
     # apply model to input
-    z = model(input_var)
+    #z = model(input_var)
+    input_var = model.arguments[0]  # workaround
+    z = model
+    # BUGBUG: still fails eval with "RuntimeError: __v2libuid__BatchNormalization456__v2libname__BatchNormalization11: inference mode is used, but nothing has been trained."
 
     # loss and metric
     ce = cross_entropy_with_softmax(z, label_var)
@@ -354,6 +359,11 @@ if __name__=='__main__':
     reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', is_training=True)
     reader_test  = create_reader(data_path, 'test_map.txt',  'CIFAR-10_mean.xml', is_training=False)
     train_and_evaluate(reader_train, reader_test, model, max_epochs=10)
+
+    # save and load (as an illustration)
+    path = data_path + "/model.cmf"
+    save_model(model, path)
+    model = load_model(path)
 
     # test
     reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', is_training=False)

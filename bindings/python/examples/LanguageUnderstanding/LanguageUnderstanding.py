@@ -12,8 +12,9 @@ from cntk.models import *  # higher abstraction level, e.g. entire standard mode
 from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer
-from cntk.learner import adam_sgd, learning_rate_schedule, momentum_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, splice
+from cntk.learner import adam_sgd, learning_rate_schedule, momentum_schedule
+from cntk.persist import load_model, save_model
 
 ########################
 # variables and paths  #
@@ -176,6 +177,12 @@ if __name__=='__main__':
     # train
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
     train(reader, model, max_epochs=8)
+
+    # save and load (as an illustration)
+    #path = data_dir + "/model.cmf"
+    #save_model(model, path)
+    #model = load_model(path)
+    # BUGBUG: fails with "RuntimeError: Reading a DictionaryValue as the wrong type; Reading as type int when actual type is SizeT" (for splice)
 
     # test
     reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)

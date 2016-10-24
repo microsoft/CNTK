@@ -4,15 +4,10 @@
 # for full license information.
 # ==============================================================================
 
-#import numpy as np
-#from cntk.utils import cntk_device
-#from cntk.device import set_default_device
-#from cntk.io import ReaderConfig, ImageDeserializer
-#import pytest
-
 import numpy as np
 from cntk import DeviceDescriptor
 from cntk.cntk_py import DeviceKind_GPU
+from cntk.persist import load_model, save_model
 import os
 
 TOLERANCE_ABSOLUTE = 1E-1
@@ -32,8 +27,6 @@ def test_cifar_convnet_error(device_id):
         pytest.skip('test only runs on GPU')
     DeviceDescriptor.set_default_device(cntk_device(device_id))
 
-    #from cntk.device import set_default_device
-    # TODO: leave these in for now as debugging aids; remove for beta
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
     set_fixed_random_seed(1)
@@ -52,26 +45,15 @@ def test_cifar_convnet_error(device_id):
     expected_avg = [5.47968, 1.5783466666030883]
     assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
-    # test  --BUGBUG: this pattern requires a fix in inference in Convolution
+    # save and load
+    path = data_path + "/model.cmf"
+    save_model(model, path)
+    model = load_model(path)
+
+    # test
     reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', is_training=False)
     evaluate(reader_test, model)
-
-    #try:
-    #    base_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
-    #                            *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
-    #except KeyError:
-    #    base_path = os.path.join(
-    #        *"../../../../Examples/Image/Datasets/CIFAR-10/cifar-10-batches-py".split("/"))
-    #
-    #base_path = os.path.normpath(base_path)
-    #os.chdir(os.path.join(base_path, '..'))
-
-    # TODO: finish this
-    #test_error = cifar_convnet(base_path)
-    #expected_test_error = 0.5
-
-    #assert np.allclose(test_error, expected_test_error,
-    #                   atol=TOLERANCE_ABSOLUTE)
+    # BUGBUG: fails eval with "RuntimeError: __v2libuid__BatchNormalization226__v2libname__BatchNormalization19: inference mode is used, but nothing has been trained."
 
 if __name__=='__main__':
     test_cifar_convnet_error(0)

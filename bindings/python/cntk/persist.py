@@ -18,7 +18,7 @@ def save_model(root_op, filename):
     cntk_py.save_as_legacy_model(root_op, filename)
 
 @typemap
-def load_model(data_type, filename, device=None):
+def load_model(filename, data_type='float', device=None):
     '''
     Load the network in ``filename``, that has been saved using
     `:func:save_model`.
