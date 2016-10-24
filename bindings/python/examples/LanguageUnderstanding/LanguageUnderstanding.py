@@ -10,7 +10,7 @@ from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer
 from cntk.learner import adam_sgd, learning_rate_schedule, momentum_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
@@ -41,7 +41,7 @@ def create_reader(path, is_training):
         query         = StreamDef(field='S0', shape=input_dim,   is_sparse=True),
         intent_unused = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # BUGBUG: unused, and should infer dim
         slot_labels   = StreamDef(field='S2', shape=label_dim,   is_sparse=True)
-    )), randomize=is_training, epoch_size = None if is_training else 0)
+    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
 
 ########################
 # define the model     #
@@ -72,8 +72,9 @@ def train(reader, model, max_epochs):
     pe = classification_error      (z, slot_labels)
 
     # training config
-    epoch_size = 36000                    if max_epochs > 1 else 1000   # for fast testing
+    epoch_size = 36000
     minibatch_size = 70
+    epoch_size = 1000 ; max_epochs = 1 # for faster testing
     num_mbs_to_show_result = 100
     momentum_as_time_constant = minibatch_size / -math.log(0.9)  # TODO: Change to round number. This is 664.39. 700?
 
@@ -152,11 +153,7 @@ def evaluate(reader, model):
         if not data:                                                      # until we hit the end
             break
         metric = evaluator.test_minibatch(data)                           # evaluate minibatch
-        _loss = 0 # evaluator.previous_minibatch_loss_average  --BUGBUG: crashes Python
-        _ns = progress_printer.update(_loss, data[slot_labels].num_samples, metric) # log progress
-        #if _ns >= 10984:  # BUGBUG: currently the only way it seems
-        #    break
-        # BUGBUG: progress printer does not know that there is no loss reported for testing
+        progress_printer.update(0, data[slot_labels].num_samples, metric) # log progress
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric

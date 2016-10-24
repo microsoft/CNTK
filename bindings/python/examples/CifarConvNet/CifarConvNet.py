@@ -11,7 +11,7 @@ from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
-from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
+from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.initializer import glorot_uniform, he_normal
 from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule
@@ -58,7 +58,7 @@ def create_reader(path, map_file, mean_file, is_training):
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
         features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
         labels   = StreamDef(field='label', shape=num_classes)      # and second as 'label'
-    )), randomize=is_training, epoch_size = None if is_training else 0)
+    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
 
 ########################
 # define the model     #
@@ -69,7 +69,7 @@ def conv_layer(input, num_filters, filter_size, init, strides=(1,1), nonlinearit
     if nonlinearity is None:
         nonlinearity = lambda x: x
 
-    channel_count = input.shape[0]
+    channel_count = -1  #input.shape[0]
 
     b_param = parameter(shape=(num_filters, 1, 1))
     w_param = parameter(shape=(num_filters, channel_count, filter_size[0], filter_size[1]), init=init)
@@ -209,7 +209,7 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
     label_var = input_variable((num_classes))
 
     # apply model to input
-    if model is None:  # use the old way
+    if model is None:  # use the old way  --TODO: move this out from here
         model = create_basic_model(input_var)
         z = model['fc5']
     else:
@@ -220,8 +220,9 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
     pe = classification_error      (z, label_var)
 
     # training config
-    epoch_size     = 50000         if max_epochs>1 else 1000  # TODO: remove this
+    epoch_size     = 50000
     minibatch_size = 64
+    epoch_size = 1000 ; max_epochs = 1 # for faster testing
 
     # For basic model
     lr_per_sample       = [0.00015625]*10+[0.000046875]*10+[0.0000156]
@@ -265,7 +266,6 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
     # Evaluation action
     # TODO: This should be a separate function call.
     #
-    epoch_size     = 10000
     minibatch_size = 1000
 
     # process minibatches and evaluate the model
@@ -277,7 +277,9 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
     progress_printer = ProgressPrinter(freq=100, first=10, tag='Evaluation')
     #progress_printer = ProgressPrinter(tag='Evaluation')
     while True:
-        data = reader_train.next_minibatch(minibatch_size, input_map=input_map)
+        data = reader_test.next_minibatch(minibatch_size, input_map=input_map)
+        if not data:
+            break
         metric += trainer.test_minibatch(data)
         metric_numer = metric * minibatch_size
         metric_denom += minibatch_size
@@ -285,8 +287,6 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
         # Keep track of the number of samples processed so far.
         sample_count += data[label_var].num_samples
         minibatch_index += 1
-        if sample_count >= epoch_size: # BUGBUG: currently only way to know we are at the end
-            break
 
     print("")
     print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
@@ -326,11 +326,7 @@ def evaluate(reader, model):
         if not data:                                                      # until we hit the end
             break
         metric = evaluator.test_minibatch(data)                           # evaluate minibatch
-        _loss = 0 # evaluator.previous_minibatch_loss_average  --BUGBUG: crashes Python
-        _ns = progress_printer.update(_loss, data[slot_labels].num_samples, metric) # log progress
-        if _ns >= 10000:  # BUGBUG: currently the only way it seems
-            break
-        # BUGBUG: progress printer does not know that there is no loss reported for testing
+        progress_printer.update(0, data[slot_labels].num_samples, metric) # log progress
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric
@@ -350,14 +346,14 @@ if __name__=='__main__':
     # TODO: do the above; they lead to slightly different results, so not doing it for now
 
     # create model
-    model = None#create_basic_model_layer()
+    model = None#create_basic_model_layer()   # TODO: clean this up more
 
     # train
     os.chdir(data_path) # BUGBUG: This is only needed because ImageReader uses relative paths in the map file. Ugh.
     reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', is_training=True)
     reader_test  = create_reader(data_path, 'test_map.txt',  'CIFAR-10_mean.xml', is_training=False)
-    train_and_evaluate(reader_train, reader_test, model, max_epochs=1)   #10) # TODO: change back to 10, and move up; also remove test from there
+    train_and_evaluate(reader_train, reader_test, model, max_epochs=10)
 
-    # test
-    reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', is_training=False)
-    evaluate(reader_test, model)
+    # test  --BUGBUG: this pattern requires a fix in inference in Convolution
+    #reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', is_training=False)
+    #evaluate(reader_test, model)
