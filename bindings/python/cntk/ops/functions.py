@@ -413,3 +413,12 @@ class Function(cntk_py.Function):
         The primitive function at the root of the graph of functions underlying this function.
         '''
         return super(Function, self).root_function()
+
+    @property
+    @typemap
+    def uid(self):
+        '''
+        The internally generated unique name of the function.
+        '''
+        return super(Function, self).uid()
+
