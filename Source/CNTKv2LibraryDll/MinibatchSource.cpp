@@ -62,15 +62,15 @@ namespace CNTK
         return *(*(matchingStreamInfos.begin()));
     }
 
-    MinibatchSourcePtr CreateCompositeMinibatchSource(const Dictionary& configuration)
+    MinibatchSourcePtr CreateCompositeMinibatchSource(const Dictionary& configuration, DistributedCommunicatorPtr communicator)
     {
-        return MinibatchSourcePtr(new CompositeMinibatchSource(configuration));
+        return MinibatchSourcePtr(new CompositeMinibatchSource(configuration, communicator));
     }
 
     /*static*/ const std::wstring CompositeMinibatchSource::MinibatchSourcePositionAttributeName = L"minibatchSourcePosition";
 
-    CompositeMinibatchSource::CompositeMinibatchSource(const Dictionary& configuration)
-        : m_epochEndReached(false), m_prevMinibatchSize(0), m_epochSize(SIZE_MAX), m_truncationLength(0)
+    CompositeMinibatchSource::CompositeMinibatchSource(const Dictionary& configuration, DistributedCommunicatorPtr communicator)
+        : m_epochEndReached(false), m_prevMinibatchSize(0), m_epochSize(SIZE_MAX), m_truncationLength(0), m_communicator(communicator)
     {
         // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
         // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
@@ -168,10 +168,9 @@ namespace CNTK
 
             if (m_prevMinibatchSize == 0)
             {
-                // TODO: Add support for distributed reading
                 EpochConfiguration epochConfig;
-                epochConfig.m_numberOfWorkers = 1;
-                epochConfig.m_workerRank = 0;
+                epochConfig.m_numberOfWorkers = m_communicator ? m_communicator->Workers().size() : 1;
+                epochConfig.m_workerRank = m_communicator ? m_communicator->CurrentWorker().m_globalRank : 0;
                 epochConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
                 epochConfig.m_truncationSize = m_truncationLength;
 
@@ -212,10 +211,9 @@ namespace CNTK
                 for (const auto& s : m_streamInfos)
                     inputDescriptions[s.m_name] = AsCNTKImplDeviceId(device);
 
-                // TODO: Add support for distributed reading
                 ReaderConfiguration newConfig;
-                newConfig.m_numberOfWorkers = 1;
-                newConfig.m_workerRank = 0;
+                newConfig.m_numberOfWorkers = m_communicator ? m_communicator->Workers().size() : 1;
+                newConfig.m_workerRank = m_communicator ? m_communicator->CurrentWorker().m_globalRank : 0;
                 newConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
                 newConfig.m_truncationSize = m_truncationLength;
 

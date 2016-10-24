@@ -3,6 +3,7 @@ dependencies:
 - jupyter=1.0.0=py34_3
 - matplotlib=1.5.3=np111py34_0
 - numpy=1.11.2=py34_0
+- pillow=3.4.2=py34_0
 - pip=8.1.2=py34_0
 - python=3.4.4=5
 - pyyaml=3.12=py34_0
@@ -11,7 +12,6 @@ dependencies:
 - six=1.10.0=py34_0
 - wheel=0.29.0=py34_0
 - pip:
-  - pillow==3.4.2
   - pytest==3.0.3
   - sphinx==1.4.8
   - sphinx-rtd-theme==0.1.9
