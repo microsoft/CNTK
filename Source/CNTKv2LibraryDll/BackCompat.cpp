@@ -138,8 +138,8 @@ namespace CNTK
                 {
                     auto sliceNode = node->As<SliceNode<ElementType>>();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(sliceNode->Axis());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndex] = sliceNode->BeginIndex();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndex] = sliceNode->EndIndex();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndex] = (int)sliceNode->BeginIndex();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndex] = (int)sliceNode->EndIndex();
 
                     opType = PrimitiveOpType::Slice;
                 }
@@ -260,7 +260,7 @@ namespace CNTK
                         assert(convolutionMapVar.IsConstant() || convolutionMapVar.IsParameter());
                         auto kernelShape = AsNDShape(convolutionNode->KernelShape());
                         NDShape actualConvolutionMapShape = kernelShape.AppendShape({ convolutionMapVar.Shape()[0] });
-                    
+
                         if (actualConvolutionMapShape.TotalSize() != convolutionMapVar.Shape().TotalSize())
                             LogicError("The convolutionMap tensor shape's (%S) size does not match the size (%d) of the legacy 2D convolution map!", AsStringForErrorReporting(actualConvolutionMapShape).c_str(), (int)convolutionMapVar.Shape().TotalSize());
 
@@ -311,6 +311,7 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlendTimeConstant] = batchNormalizationNode->BlendTimeConstant();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEpsilon] = batchNormalizationNode->Epsilon();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUseCuDNNEngine] = !batchNormalizationNode->UseCNTKEngine();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSamplesSeen] = batchNormalizationNode->GetSamplesSeen();
 
                     opType = PrimitiveOpType::BatchNormalization;
                 }

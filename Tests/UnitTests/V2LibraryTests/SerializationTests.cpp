@@ -631,7 +631,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 
-    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { L"features", inputDim, true, L"x" }, { L"labels", numOutputClasses, false, L"y" } }, 0);
+    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { L"features", inputDim, true, L"x" }, { L"labels", numOutputClasses, false, L"y" } }, MinibatchSource::FullDataSweep);
     auto featureStreamInfo = minibatchSource->StreamInfo(features);
     auto labelStreamInfo = minibatchSource->StreamInfo(labels);
 

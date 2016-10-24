@@ -502,7 +502,10 @@ EVAL_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
 EVAL_SRC+=$(CNTK_COMMON_SRC)
 EVAL_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 
-EVAL_OBJ:=$(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SRC)))
+EVAL_OBJ:=\
+	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(EVAL_SRC))) \
+	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(EVAL_SRC))) \
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(EVAL_SRC)))
 
 EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL_LIBS+=$(EVAL_LIB)
@@ -531,7 +534,7 @@ $(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_SAMPLE_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH)
 
 
 ########################################
@@ -863,7 +866,10 @@ CNTK_SRC+=$(CNTK_COMMON_SRC)
 CNTK_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
 CNTK_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 
-CNTK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTK_SRC)))
+CNTK_OBJ :=\
+	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(CNTK_SRC))) \
+	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(CNTK_SRC))) \
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(CNTK_SRC)))
 
 CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
@@ -910,7 +916,7 @@ $(UNITTEST_EVAL) : $(UNITTEST_EVAL_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) -l$(CNTKMATH)
 
 #TODO: create project specific makefile or rules to avoid adding project specific path to the global path
 INCLUDEPATH += $(SOURCEDIR)/Readers/CNTKTextFormatReader
@@ -957,7 +963,10 @@ UNITTEST_NETWORK_SRC += $(CNTK_COMMON_SRC)
 UNITTEST_NETWORK_SRC += $(SEQUENCE_TRAINING_LIB_SRC)
 UNITTEST_NETWORK_SRC += $(SGDLIB_SRC)
 
-UNITTEST_NETWORK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_NETWORK_SRC)))
+UNITTEST_NETWORK_OBJ :=\
+	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(UNITTEST_NETWORK_SRC))) \
+	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(UNITTEST_NETWORK_SRC))) \
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(UNITTEST_NETWORK_SRC)))
 
 UNITTEST_NETWORK := $(BINDIR)/networktests
 

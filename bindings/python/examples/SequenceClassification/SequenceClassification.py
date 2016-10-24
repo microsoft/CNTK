@@ -12,6 +12,7 @@ from cntk import Trainer, Axis, text_format_minibatch_source, StreamConfiguratio
 from cntk.device import cpu, set_default_device
 from cntk.learner import sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error
+from cntk.io import FULL_DATA_SWEEP
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -54,7 +55,7 @@ def train_sequence_classifier(debug_output=False):
 
     mb_source = text_format_minibatch_source(path, [
         StreamConfiguration(feature_stream_name, input_dim, True, 'x'),
-        StreamConfiguration(labels_stream_name, num_output_classes, False, 'y')], 0)
+        StreamConfiguration(labels_stream_name, num_output_classes, False, 'y')], FULL_DATA_SWEEP)
 
     features_si = mb_source[features]
     labels_si = mb_source[label]

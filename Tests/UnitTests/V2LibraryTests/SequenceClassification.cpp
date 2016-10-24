@@ -40,7 +40,7 @@ void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool useSparseLa
         prediction = predictionVar;
     }
 
-    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { featuresName, inputDim, true, L"x" }, { labelsName, numOutputClasses, false, L"y" } }, 0);
+    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { featuresName, inputDim, true, L"x" }, { labelsName, numOutputClasses, false, L"y" } }, MinibatchSource::FullDataSweep);
     const size_t minibatchSize = 200;
     
     auto featureStreamInfo = minibatchSource->StreamInfo(featuresName);
@@ -80,7 +80,7 @@ void TestLearningRateControl(const DeviceDescriptor& device)
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 
-    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { featuresName, inputDim, true, L"x" }, { labelsName, numOutputClasses, false, L"y" } }, 0);
+    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { featuresName, inputDim, true, L"x" }, { labelsName, numOutputClasses, false, L"y" } }, MinibatchSource::FullDataSweep);
     auto featureStreamInfo = minibatchSource->StreamInfo(features);
     auto labelStreamInfo = minibatchSource->StreamInfo(labels);
 

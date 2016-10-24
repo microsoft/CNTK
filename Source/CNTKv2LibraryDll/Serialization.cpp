@@ -185,13 +185,13 @@ namespace CNTK
         proto::Axis* dst = new proto::Axis();
         dst->set_static_axis_idx(src.StaticAxisIndex(false));
         dst->set_name(ToString(src.Name()));
-        dst->set_is_ordered_dynamic_axis(!src.IsStaticAxis() && src.IsOrdered());
+        dst->set_is_ordered_dynamic_axis(src.IsOrdered());
         return dst;
     }
 
     /*static*/ Axis* Serializer::CreateFromProto(const proto::Axis& src)
     {
-        if (Axis(src.static_axis_idx()).IsStaticAxis())
+        if (!Axis(src.static_axis_idx()).IsDynamicAxis())
         {
             return new Axis(src.static_axis_idx());
         }
