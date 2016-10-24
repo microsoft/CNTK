@@ -584,14 +584,10 @@ namespace CNTK
 
                 // Infer dimensions of learnable parameters
                 auto paramShape = operands[i].Shape();
-                if (inferDimensions && (paramShape.IsUnknown() || ((paramShape.Rank() == 1) && paramShape.HasInferredDimension())) && !mainOperandShape.HasInferredDimension())
+                if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasInferredDimension())
                 {
-                    paramShape = mainOperandShape;
-                    if (spatial)
-                    {
-                        for (size_t i = 0; i < mainOperandShape.Rank() - 1; ++i)
-                            paramShape[i] = 1;
-                    }
+                    size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
+                    paramShape[0] = total;
                     std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
                     UpdateOperandShapes(newParamShape);
                 }

@@ -7,7 +7,9 @@
 from .. import cntk_py
 from ..utils import typemap
 from cntk.device import use_default_device
-MAX_UI64 = int('0xffffffffffffffff', 16)
+
+INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
+FULL_DATA_SWEEP = cntk_py.MinibatchSource.full_data_sweep
 
 class MinibatchData(cntk_py.MinibatchData):
     '''
@@ -59,7 +61,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
     :func:`cntk.trainer.Trainer.train_minibatch` function.
     '''
 
-    def __init__(self, deserializers=None, randomize=True, epoch_size=None):
+    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT):
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
         reader_config = ReaderConfig(deserializers=deserializers, randomize=randomize, epoch_size=epoch_size)
@@ -221,13 +223,11 @@ class ReaderConfig(dict):
         deserializers ('list', default is empty): list of deserializers
          (:class:`ImageDeserializer` for now).
         randomize (`bool`, default True): randomize images before every epoch
-        epoch_size (`int`): epoch size. 0 means one pass; None means duplicate infinitely.
+        epoch_size (`int`): epoch size. FULL_DATA_SWEEP means one pass;
+         INFINITELY_REPEAT means duplicate infinitely (with different randomization each time).
     '''
 
-    def __init__(self, deserializers=None, randomize=True, epoch_size=None):
-
-        if epoch_size is None:
-            epoch_size = MAX_UI64
+    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT):
         self['epochSize'] = epoch_size
         if not isinstance(deserializers, (list, tuple)):
             deserializers = [deserializers]
@@ -462,7 +462,7 @@ class CTFDeserializer(Deserializer):
 
 # TODO: This should not exist; use MinibatchSource(CTFDeserializer(...))
 @typemap
-def text_format_minibatch_source(path, stream_configs, epoch_size=MAX_UI64, randomize=True):
+def text_format_minibatch_source(path, stream_configs, epoch_size=INFINITELY_REPEAT, randomize=True):
     '''
     Creates a minibatch source from a CNTKTextFormatReader file.
 
@@ -501,22 +501,6 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
 
     def __init__(self, name, dim, is_sparse=False, stream_alias=''):
         return super(StreamConfiguration, self).__init__(name, dim, is_sparse, stream_alias)
-
-
-# wrapper around text_format_minibatch_source() that attaches a record of streams
-# TODO: This should not exist; use MinibatchSource(CTFDeserializer(...))
-def _unused_CNTKTextFormatMinibatchSource(path, streams, epoch_size=None): # TODO: delete this
-    from cntk.utils import _ClassFromDict
-    # convert streams into StreamConfiguration format
-    # TODO: stream_alias should default to 'key'
-    stream_configs = [ StreamConfiguration(key, dim=value.dim, is_sparse=value.is_sparse, stream_alias=value.stream_alias) for (key, value) in streams.items() ]
-    if epoch_size is not None:  # TODO: use MAX_UI64, now that we have access
-        source = text_format_minibatch_source(path, stream_configs, epoch_size)
-    else:
-        source = text_format_minibatch_source(path, stream_configs)
-    # attach a dictionary of the streams
-    source.streams = _ClassFromDict({ name : source.stream_info(name) for name in streams.keys() })
-    return source
 
 
 # stream definition for use in StreamDefs
