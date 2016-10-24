@@ -5,10 +5,10 @@
 
 <#
   .SYNOPSIS
- Use this cmdlet to install CNTK2 
+ Use this cmdlet to install CNTK 
 
  .DESCRIPTION
- The script will download and install the CNTK v2 prerequisites and Anaconda environment
+ The script will download and install the CNTK prerequisites and Anaconda environment
 
  It will analyse your machine and will determine which components are required. 
  The required components will be downloaded and cached.
@@ -18,19 +18,20 @@
  - If required MSMPI will be installed
  - Git will be installed if required
  - CNTK source will be downloaded from Git and copied into [c:\repos\cntk]
- - Anaconda3 will be installed into [c:\local\Anaconda3-4.1.1-Windows-x86_64]
- - A CNTK-PY34 environment will be created in [c:\local\Anaconda3-4.1.1-Windows-x86_64\envs]
+ - Anaconda3 will be installed into [<AnacondaBasePath>]
+ - A CNTK-PY34 environment will be created in [<AnacondaBasePath>\envs]
  - CNTK will be installed into the CNTK-PY34 environment
 
  .PARAMETER AnacondaBasePath
- This is an optional parameter and can be used to specify the install location for Anaconda
+ This is an optional parameter and can be used to specify an already installed Anaconda3 installation.
+ By default a version of Anaconda3 will be installed into [C:\local\Anaconda3-4.1.1-Windows-x86_64]
 
  .PARAMETER Execute
  This is an optional parameter. Without setting this switch, no changes to the machine setup/installation will be performed
 
  .PARAMETER ForceWheelUpdate
  Will uninstall an existing CNTK wheel and install a new wheel
- go
+
  .PARAMETER RepoTag
  Optional parameter to specify a specific tag to check-out in the CNTK-repo
 
