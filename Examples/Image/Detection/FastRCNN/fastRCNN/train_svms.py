@@ -56,7 +56,7 @@ class SVMTrainer(object):
         total_sum = 0.0
         count = 0.0
         num_images = min(num_images, self.imdb.num_images)
-        inds = np.random.choice(xrange(self.imdb.num_images), size=num_images, replace=False)
+        inds = np.random.choice(range(self.imdb.num_images), size=num_images, replace=False)
 
         for i_, i in enumerate(inds):
             #im = cv2.imread(self.imdb.image_path_at(i))
@@ -78,12 +78,12 @@ class SVMTrainer(object):
     def _get_pos_counts(self):
         counts = np.zeros((len(self.imdb.classes)), dtype=np.int)
         roidb = self.imdb.roidb
-        for i in xrange(len(roidb)):
-            for j in xrange(1, self.imdb.num_classes):
+        for i in range(len(roidb)):
+            for j in range(1, self.imdb.num_classes):
                 I = np.where(roidb[i]['gt_classes'] == j)[0]
                 counts[j] += len(I)
 
-        for j in xrange(1, self.imdb.num_classes):
+        for j in range(1, self.imdb.num_classes):
             print('class {:s} has {:d} positives'.
                   format(self.imdb.classes[j], counts[j]))
 
@@ -91,13 +91,13 @@ class SVMTrainer(object):
 
     def get_pos_examples(self):
         counts = self._get_pos_counts()
-        for i in xrange(len(counts)):
+        for i in range(len(counts)):
             self.trainers[i].alloc_pos(counts[i])
 
         _t = Timer()
         roidb = self.imdb.roidb
         num_images = len(roidb)
-        for i in xrange(num_images):
+        for i in range(num_images):
             #im = cv2.imread(self.imdb.image_path_at(i))
             #if roidb[i]['flipped']:
             #    im = im[:, ::-1, :]
@@ -108,7 +108,7 @@ class SVMTrainer(object):
             scores, boxes, feat = self.im_detect(self.net, i, gt_boxes, self.feature_scale, gt_inds, boReturnClassifierScore = False)
             _t.toc()
             #feat = self.net.blobs[self.layer].data
-            for j in xrange(1, self.imdb.num_classes):
+            for j in range(1, self.imdb.num_classes):
                 cls_inds = np.where(roidb[i]['gt_classes'][gt_inds] == j)[0]
                 if len(cls_inds) > 0:
                     cls_feat = feat[cls_inds, :]
@@ -146,7 +146,7 @@ class SVMTrainer(object):
         for epoch in range(0,self.svm_nrEpochs):
 
             # num_images = 100
-            for i in xrange(num_images):
+            for i in range(num_images):
                 print "*** EPOCH = %d, IMAGE = %d *** " % (epoch, i)
                 #im = cv2.imread(self.imdb.image_path_at(i))
                 #if roidb[i]['flipped']:
@@ -156,7 +156,7 @@ class SVMTrainer(object):
                 scores, boxes, feat = self.im_detect(self.net, i, roidb[i]['boxes'], self.feature_scale)
                 _t.toc()
                 #feat = self.net.blobs[self.layer].data
-                for j in xrange(1, self.imdb.num_classes):
+                for j in range(1, self.imdb.num_classes):
                     hard_inds = \
                         np.where((scores[:, j] > self.hard_thresh) &
                                  (roidb[i]['gt_overlaps'][:, j].toarray().ravel() <
@@ -199,7 +199,7 @@ class SVMTrainer(object):
 
         # One final SVM retraining for each class
         # Install SVMs into net
-        for j in xrange(1, self.imdb.num_classes):
+        for j in range(1, self.imdb.num_classes):
             new_w_b = self.trainers[j].append_neg_and_retrain(force=True)
             self.update_net(j, new_w_b[0], new_w_b[1])
 
