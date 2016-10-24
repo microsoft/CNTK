@@ -118,12 +118,6 @@ def max_pool_layer(input, pool_size, stride):
 def dropout_layer(input, rate):
     return dropout(input, dropout_rate=rate)
 
-# HACK: express the outdated gaussian() initializer as a he_normal
-# TODO: replace all gaussian() calls by inlining
-#from cntk.initializer import gaussian
-def gaussian(scale=1):
-    return he_normal(scale=scale * math.sqrt(0.02))
-
 # Define basic model
 def create_basic_model(input):
     net = {}
@@ -145,35 +139,37 @@ def create_basic_model(input):
 # Task 1: Adding Dropout
 def create_basic_model_with_dropout(input):
     net = {}
-    net['conv1'] = conv_layer(input, 32, (5,5), init = gaussian(scale=0.0043))
+
+    net['conv1'] = conv_layer(input, 32, (5,5), init=glorot_uniform(scale=0.1557/256))
     net['pool1'] = max_pool_layer(net['conv1'], (3,3), (2,2))
 
-    net['conv2'] = conv_layer(net['pool1'], 32, (5,5), init = gaussian(scale=1.414))
+    net['conv2'] = conv_layer(net['pool1'], 32, (5,5), init=glorot_uniform(scale=0.2))
     net['pool2'] = max_pool_layer(net['conv2'], (3,3), (2,2))
 
-    net['conv3'] = conv_layer(net['pool2'], 64, (5,5), init = gaussian(scale=1.414))
+    net['conv3'] = conv_layer(net['pool2'], 64, (5,5), init=glorot_uniform(scale=0.2))
     net['pool3'] = max_pool_layer(net['conv3'], (3,3), (2,2))
 
-    net['fc4']   = dense_layer(net['pool3'], 64, init = gaussian(scale=12))
+    net['fc4']   = dense_layer(net['pool3'], 64, init=glorot_uniform(scale=1.697))
     net['drop4'] = dropout_layer(net['fc4'], 0.75)
-    net['fc5']   = dense_layer(net['drop4'], 10, init = gaussian(scale=1.5), nonlinearity=None)
+    net['fc5']   = dense_layer(net['drop4'], 10, init=glorot_uniform(scale=0.212), nonlinearity=None)
 
     return net
 
 # Task 2: Adding Batch Normalization
 def create_basic_model_with_batch_normalization(input):
     net = {}
-    net['conv1'] = conv_bn_layer(input, 32, (5,5), init = gaussian(scale=0.0043))
+
+    net['conv1'] = conv_bn_layer(input, 32, (5,5), init=glorot_uniform(scale=0.1557/256))
     net['pool1'] = max_pool_layer(net['conv1'], (3,3), (2,2))
 
-    net['conv2'] = conv_bn_layer(net['pool1'], 32, (5,5), init = gaussian(scale=1.414))
+    net['conv2'] = conv_bn_layer(net['pool1'], 32, (5,5), init=glorot_uniform(scale=0.2))
     net['pool2'] = max_pool_layer(net['conv2'], (3,3), (2,2))
 
-    net['conv3'] = conv_bn_layer(net['pool2'], 64, (5,5), init = gaussian(scale=1.414))
+    net['conv3'] = conv_bn_layer(net['pool2'], 64, (5,5), init=glorot_uniform(scale=0.2))
     net['pool3'] = max_pool_layer(net['conv3'], (3,3), (2,2))
 
-    net['fc4']   = dense_bn_layer(net['pool3'], 64, init = gaussian(scale=12))
-    net['fc5']   = dense_layer(net['fc4'], 10, init = gaussian(scale=1.5), nonlinearity=None)
+    net['fc4']   = dense_bn_layer(net['pool3'], 64, init=glorot_uniform(scale=1.697))
+    net['fc5']   = dense_layer(net['fc4'], 10, init=glorot_uniform(scale=0.212), nonlinearity=None)
 
     return net
 
@@ -254,13 +250,13 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count), input_map=input_map) # fetch minibatch.
             trainer.train_minibatch(data)                                   # update model with it
+
             sample_count += data[label_var].num_samples                     # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
     
     #
     # Evaluation action
-    # TODO: This should be a separate function call.
     #
     epoch_size     = 10000
     minibatch_size = 16
@@ -276,19 +272,15 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
         current_minibatch = min(minibatch_size, epoch_size - sample_count)
 
         # Fetch next test min batch.
-        data = reader_train.next_minibatch(current_minibatch, input_map=input_map)
-        #data = reader_test.next_minibatch(current_minibatch)
+        data = reader_test.next_minibatch(current_minibatch, input_map=input_map)
 
         # minibatch data to be trained with
-        #metric_numer += trainer.test_minibatch(input_map) * current_minibatch
         metric_numer += trainer.test_minibatch(data) * current_minibatch
         metric_denom += current_minibatch
 
         # Keep track of the number of samples processed so far.
         sample_count += data[label_var].num_samples
         minibatch_index += 1
-        if current_minibatch != minibatch_size:
-            break
 
     print("")
     print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
