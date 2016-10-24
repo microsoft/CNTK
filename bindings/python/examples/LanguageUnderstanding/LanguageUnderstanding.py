@@ -16,9 +16,10 @@ from cntk.learner import adam_sgd, learning_rate_schedule, momentum_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
 
 ########################
-# variables and stuff  #
+# variables and paths  #
 ########################
 
+# paths
 cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../../.."  # data resides in the CNTK folder
 data_dir = cntk_dir + "/Examples/Tutorials/SLUHandsOn"                  # under Examples/Tutorials
 vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
@@ -146,7 +147,6 @@ def evaluate(reader, model):
     #progress_printer = ProgressPrinter(tag='Evaluation')
 
     while True:
-        # BUGBUG? The change of minibatch_size parameter vv has no effect.
         minibatch_size = 1000
         data = reader.next_minibatch(minibatch_size, input_map=input_map) # fetch minibatch
         if not data:                                                      # until we hit the end
