@@ -58,7 +58,7 @@ def create_reader(path, map_file, mean_file, is_training):
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
         features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
         labels   = StreamDef(field='label', shape=num_classes)      # and second as 'label'
-    )), randomize=is_training, epoch_size = None if is_training else None)   # BUGBUG: 0) gives "RuntimeError: Reading a DictionaryValue as the wrong type; Reading as type unsigned __int64 when actual type is Int"
+    )), randomize=is_training, epoch_size = None if is_training else 0)
 
 ########################
 # define the model     #
@@ -74,6 +74,8 @@ def conv_layer(input, num_filters, filter_size, init, strides=(1,1), nonlinearit
     b_param = parameter(shape=(num_filters, 1, 1))
     w_param = parameter(shape=(num_filters, channel_count, filter_size[0], filter_size[1]), init=init)
     r       = convolution(w_param, input, (channel_count, strides[0], strides[1])) + b_param
+    #r       = convolution(w_param, input, (channel_count, strides[0], strides[1]), auto_padding=(True,)) + b_param
+    #r       = convolution(w_param, input, (strides[0], strides[1]), auto_padding=(True,)) + b_param
     r       = nonlinearity(r)
 
     return r
@@ -190,7 +192,7 @@ def create_basic_model_layer():
             return Sequential([
                 LayerStack(3, lambda i: [
                     Convolution((5,5), [32,32,64][i], init=gaussian(scale=[0.0043,1.414,1.414][i]), pad=True),
-                    MaxPooling((3,3), strides=(2,2))    #, BatchNormalization(map_rank=1)  # Note: I know this BN is not the same as above
+                    MaxPooling((3,3), strides=(2,2))    , BatchNormalization(map_rank=1)  # Note: I know this BN is not the same as above
                 ]),
                 Dense(64, init=gaussian(scale=12)),
                 Dense(10, init=gaussian(scale=1.5), activation=None)
@@ -338,15 +340,17 @@ def evaluate(reader, model):
 #############################
 
 if __name__=='__main__':
+    #from cntk.device import set_default_device
+    #set_default_device(cntk_device(1))
     # TODO: leave these in for now as debugging aids; remove for beta
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
+    #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     force_deterministic_algorithms()
     # TODO: do the above; they lead to slightly different results, so not doing it for now
 
     # create model
-    model = create_basic_model_layer()
+    model = None#create_basic_model_layer()
 
     # train
     os.chdir(data_path) # BUGBUG: This is only needed because ImageReader uses relative paths in the map file. Ugh.

@@ -41,7 +41,7 @@ def create_reader(path, is_training):
         query         = StreamDef(field='S0', shape=input_dim,   is_sparse=True),
         intent_unused = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # BUGBUG: unused, and should infer dim
         slot_labels   = StreamDef(field='S2', shape=label_dim,   is_sparse=True)
-    )), randomize=is_training, epoch_size = None if is_training else None)   # BUGBUG: 0) gives "RuntimeError: Reading a DictionaryValue as the wrong type; Reading as type unsigned __int64 when actual type is Int"
+    )), randomize=is_training, epoch_size = None if is_training else 0)
 
 ########################
 # define the model     #
@@ -72,7 +72,7 @@ def train(reader, model, max_epochs):
     pe = classification_error      (z, slot_labels)
 
     # training config
-    epoch_size = 36000  #                  if max_epochs > 1 else 1000   # for fast testing
+    epoch_size = 36000                    if max_epochs > 1 else 1000   # for fast testing
     minibatch_size = 70
     num_mbs_to_show_result = 100
     momentum_as_time_constant = minibatch_size / -math.log(0.9)  # TODO: Change to round number. This is 664.39. 700?
@@ -154,8 +154,8 @@ def evaluate(reader, model):
         metric = evaluator.test_minibatch(data)                           # evaluate minibatch
         _loss = 0 # evaluator.previous_minibatch_loss_average  --BUGBUG: crashes Python
         _ns = progress_printer.update(_loss, data[slot_labels].num_samples, metric) # log progress
-        if _ns >= 10984:  # BUGBUG: currently the only way it seems
-            break
+        #if _ns >= 10984:  # BUGBUG: currently the only way it seems
+        #    break
         # BUGBUG: progress printer does not know that there is no loss reported for testing
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
