@@ -75,23 +75,18 @@ def simple_mnist(debug_output=False):
 
     # Instantiate the trainer object to drive the model training
             
-    num_workers = len(workers)
-    worker_rank = current_worker.global_rank
-
     
     dist_trainer = distributed.data_parallel_distributed_trainer(communicator, False)
     
     print("Training on device type:{} id:{}".format('gpu' if default().type() else 'cpu', default().id()))
         
     # Get minibatches of images to train with and perform model training
-    minibatch_size = 32
-    minibatch_size = int(minibatch_size_across_workers / num_workers)
+    minibatch_size_across_workers = 64
     epoch_size = 60000
     num_epochs = 10
     num_sweeps_to_train_with = 1
-    # otherwise, some worker will get stuck in aggregating gradients if one exit loop earlier
-    num_minibatches_to_train = int(epoch_size / minibatch_size) * num_epochs
-    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
+    num_minibatches_to_train = int(epoch_size * num_epochs / minibatch_size)
+    num_minibatches_to_train = int(num_minibatches_to_train / num_workers) * num_workers
     
     lr_per_sample = [0.01]*5+[0.005]
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
@@ -107,16 +102,13 @@ def simple_mnist(debug_output=False):
     for i in range(0, num_minibatches_to_train):
         mb = mb_source.next_minibatch(minibatch_size)
 
-        # for distributed worker, skip mb to make sure each worker sees different input
-        if (i % num_workers) != worker_rank: continue
-
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
         arguments = {input: mb[features_si],
                      label: mb[labels_si]}
         trainer.train_minibatch(arguments)
 
-        print_training_progress(trainer, int(i / num_workers), training_progress_output_freq)
+        print_training_progress(trainer, i, training_progress_output_freq)
 
     # Load test data
     try:
