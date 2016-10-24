@@ -118,7 +118,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
              the next minibatch. Must be > 0.
             minibatch_size_in_sequences (`int`, defaults to `None`): number of
              samples to retrieve for the next minibatch. Must be > 0.
-            input_map (`dict`): mapping of :class:`cntk.ops.variabls.Variable`
+            input_map (`dict`): mapping of :class:`cntk.ops.variables.Variable`
              to :class:`StreamInformation` which will be used to convert the
              returned data.
             device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor
@@ -126,7 +126,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Returns:
             A mapping of :class:`StramInformation` to :class:`MinibatchData` if
             ``input_map`` was not specified. Otherwise, the returned value will
-            be a mapping of :class:`cntk.ops.variabls.Variable` to class:`MinibatchData`.
+            be a mapping of :class:`cntk.ops.variables.Variable` to class:`MinibatchData`.
         '''
         if device is None:
             device = use_default_device()
