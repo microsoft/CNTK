@@ -43,6 +43,18 @@ def simple_mnist(debug_output=False):
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
 
+    communicator = distributed.communicator()
+    workers = communicator.workers()
+    current_worker = communicator.current_worker()
+    print("List all distributed workers")
+    for wk in workers:
+        if current_worker.global_rank == wk.global_rank:
+            print("* {} {}".format(wk.global_rank, wk.host_id))
+        else:
+            print("  {} {}".format(wk.global_rank, wk.host_id))
+
+    #comm2 = communicator.sub_group([current_worker]) #feature not implemented in C++
+
     try:
         rel_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
                                 *"Image/MNIST/v0/Train-28x28_cntk_text.txt".split("/"))
@@ -56,40 +68,23 @@ def simple_mnist(debug_output=False):
 
     mb_source = text_format_minibatch_source(path, [
         StreamConfiguration(feature_stream_name, input_dim),
-        StreamConfiguration(labels_stream_name, num_output_classes)])
+        StreamConfiguration(labels_stream_name, num_output_classes)],
+        distributed_communicator = communicator)
     features_si = mb_source[feature_stream_name]
     labels_si = mb_source[labels_stream_name]
 
     # Instantiate the trainer object to drive the model training
-    mpi_comm = distributed.communicator()
-    workers = mpi_comm.workers()
-    current_worker = mpi_comm.current_worker()
-    print("List all distributed workers")
-    for wk in workers:
-        if current_worker.global_rank == wk.global_rank:
-            print("* {} {}".format(wk.global_rank, wk.host_id))
-        else:
-            print("  {} {}".format(wk.global_rank, wk.host_id))
-
-    num_workers = len(workers)
-    worker_rank = current_worker.global_rank
-
-    #mpi_comm2 = mpi_comm.sub_group([current_worker]) #feature not implemented in C++
     
-    dist_trainer = distributed.trainer.data_parallel_distributed_trainer(mpi_comm, False)
+    dist_trainer = distributed.data_parallel_distributed_trainer(communicator, False)
     
     print("Training on device type:{} id:{}".format('gpu' if default().type() else 'cpu', default().id()))
         
     # Get minibatches of images to train with and perform model training
-    minibatch_size_across_workers = 64
-    minibatch_size = int(minibatch_size_across_workers / num_workers)
+    minibatch_size = 64
     epoch_size = 60000
     num_epochs = 10
 
-    # Make sure each worker has the same amount of data, or use distributed reader in future
-    # otherwise, some worker will get stuck in aggregating gradients if one exit loop earlier
-    num_minibatches_to_train = int(epoch_size / minibatch_size) * num_epochs
-    num_minibatches_to_train = int(num_minibatches_to_train / num_workers) * num_workers
+    num_minibatches_to_train = int(epoch_size * num_epochs / minibatch_size)
     
     lr_per_sample = [0.01]*5+[0.005]
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
@@ -105,16 +100,13 @@ def simple_mnist(debug_output=False):
     for i in range(0, num_minibatches_to_train):
         mb = mb_source.next_minibatch(minibatch_size)
 
-        # for distributed worker, skip mb to make sure each worker sees different input
-        if (i % num_workers) != worker_rank: continue
-
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
         arguments = {input: mb[features_si],
                      label: mb[labels_si]}
         trainer.train_minibatch(arguments)
 
-        print_training_progress(trainer, int(i / num_workers), training_progress_output_freq)
+        print_training_progress(trainer, i, training_progress_output_freq)
 
     # Load test data
     try:
