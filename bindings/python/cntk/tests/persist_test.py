@@ -21,7 +21,7 @@ def test_load_save_constant(tmpdir):
     filename = str(tmpdir / 'c_plus_c.mod')
     save_model(root_node, filename)
 
-    loaded_node = load_model('float', filename)
+    loaded_node = load_model(filename)
     loaded_result = loaded_node.eval()
     assert np.allclose(loaded_result, expected)
 
@@ -37,7 +37,7 @@ def test_load_save_input(tmpdir):
     filename = str(tmpdir / 'i_plus_c_0.mod')
     save_model(root_node, filename)
 
-    loaded_node = load_model('float', filename)
+    loaded_node = load_model(filename)
 
     # Test spefying the input node names by order
     loaded_result = loaded_node.eval([input1])
@@ -57,7 +57,7 @@ def test_load_save_inputs(tmpdir):
     filename = str(tmpdir / 'i_plus_i_0.mod')
     save_model(root_node, filename)
 
-    loaded_node = load_model('float', filename)
+    loaded_node = load_model(filename)
 
     # Test specifying the input nodes by name
     loaded_result = loaded_node.eval({'i1': input1, 'i2': input2})
