@@ -207,6 +207,8 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
     print("")
 
+    return metric_numer/metric_denom
+
 if __name__=='__main__':
     # TODO: leave these in for now as debugging aids; remove for beta
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
@@ -218,4 +220,4 @@ if __name__=='__main__':
     reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 
-    train_and_evaluate(reader_train, reader_test, max_epochs=10)
+    train_and_evaluate(reader_train, reader_test, max_epochs=5)
