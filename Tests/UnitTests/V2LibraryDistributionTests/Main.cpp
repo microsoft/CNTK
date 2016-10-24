@@ -74,6 +74,15 @@ void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, 
 
 int main(int /*argc*/, char* /*argv*/[])
 {
+
+#if defined(_MSC_VER)
+    // in case of asserts in debug mode, print the message into stderr and throw exception
+    if (_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, HandleDebugAssert) == -1) {
+        fprintf(stderr, "_CrtSetReportHook2 failed.\n");
+        return -1;
+    }
+#endif
+
     // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking 
     // which will have a silent performance degradation otherwise
     Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
@@ -83,5 +92,10 @@ int main(int /*argc*/, char* /*argv*/[])
 
     if (IsGPUAvailable())
         TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), communicator);
+
+#if defined(_MSC_VER)
+    _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);
+#endif
+
     return 0;
 }

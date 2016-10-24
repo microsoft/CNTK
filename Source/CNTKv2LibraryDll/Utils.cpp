@@ -13,7 +13,7 @@ using namespace std;
 
 namespace CNTK
 {
-        template<typename T>
+    template<typename T>
     T* CreateDataPtr(const T& value)
     {
         return new T(value);
@@ -111,7 +111,7 @@ namespace CNTK
             NDArrayView* viewPtr2 = reinterpret_cast<NDArrayView*>(other.m_data.m_ptr);
 
             return Internal::AreEqual(*viewPtr1, *viewPtr2);
-            }
+        }
         default:
             NOT_IMPLEMENTED;
         }
@@ -124,7 +124,7 @@ namespace CNTK
 
     
 
-        
+
     Dictionary::Dictionary()
         : m_dictionaryData(new unordered_map <wstring, DictionaryValue>)
     {
@@ -179,7 +179,7 @@ namespace CNTK
 
     void Dictionary::Add(const Dictionary& other)
     {
-        for (auto kv : *(other.m_dictionaryData))
+        for (auto& kv : *(other.m_dictionaryData))
         {
             if (Contains(kv.first))
                 InvalidArgument("Dictionary::Add: This dictionary already contains an entry with key %S that is being attempted to add from the 'other' dinctionary", kv.first.c_str());
@@ -231,14 +231,14 @@ namespace CNTK
     }
 
     template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(T value) 
-        : m_schedule({ make_pair(0, value) }), m_unit(1)
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(T value, UnitType unit) 
+        : m_schedule({ make_pair(0, value) }), m_unit(unit), m_epochSize(EntireSweep)
     {
     }
 
     template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<T>& schedule, size_t unit) 
-        : m_unit(unit)
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<T>& schedule, size_t epochSize, UnitType unit) 
+        : m_unit(unit), m_epochSize(epochSize)
     {
         std::vector<std::pair<size_t, T>> s(schedule.size());
         for (auto i = 0; i < schedule.size(); ++i)
@@ -250,8 +250,8 @@ namespace CNTK
     }
 
     template <typename T>
-    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<std::pair<size_t, T>>& schedule, size_t unit)
-        : m_unit(unit)
+    TrainingParameterSchedule<T>::TrainingParameterSchedule(const vector<std::pair<size_t, T>>& schedule, size_t epochSize, UnitType unit)
+        : m_unit(unit), m_epochSize(epochSize)
     {
         ConstructSchedule(schedule);
     }
@@ -259,23 +259,21 @@ namespace CNTK
     template <typename T>
     void TrainingParameterSchedule<T>::ConstructSchedule(const std::vector<std::pair<size_t, T>>& schedule)
     {
-        // TODO: 0 will be used to mean "the entire sweep"
-        if (m_unit == 0)
-            RuntimeError("TrainingParameterSchedule::ConstructSchedule : 'unit' cannot be 0.");
+        const auto epochSize = (m_epochSize == EntireSweep) ? 1 : m_epochSize;
 
         if (schedule.size() == 0)
             RuntimeError("TrainingParameterSchedule::ConstructSchedule : schedule is empty.");
 
-        size_t count = 0;
+        size_t unitCount = 0;
         for (int i = 0; i < schedule.size(); ++i)
         {
             const auto& pair = schedule[i];
             // Unit count for all, but last element must be non-zero.
             if (i < (schedule.size() - 1) && pair.first == 0)
-                RuntimeError("TrainingParameterSchedule::ConstructSchedule : unit count cannot be 0.");
+                RuntimeError("TrainingParameterSchedule::ConstructSchedule : unit count in the 'schedule' argument cannot be 0.");
 
-            count += pair.first;
-            m_schedule[m_unit * count] = pair.second;
+            unitCount += (pair.first != 0) ? pair.first : 1;
+            m_schedule[epochSize * unitCount] = pair.second;
         }
     }
 
@@ -284,13 +282,13 @@ namespace CNTK
     {
     }
 
-    // Returns the element whose key is greater than the required sample count 
+    // Returns the element whose key is greater than the required unit count 
     // or the last element if no such key exists.
     template <typename T>
-    /*virtual*/ const T& TrainingParameterSchedule<T>::operator[](size_t sampleCount) const
+    /*virtual*/ const T& TrainingParameterSchedule<T>::operator[](size_t count) const
     {
         assert(m_schedule.size() > 0);
-        auto it = m_schedule.upper_bound(sampleCount);
+        auto it = m_schedule.upper_bound(count);
         if (it == m_schedule.end())
         {
             --it;
@@ -304,7 +302,7 @@ namespace CNTK
     // cannot be defaulted due to a bug in VS2013 (https://connect.microsoft.com/VisualStudio/feedback/details/1255564)
     template <typename T>
     TrainingParameterSchedule<T>::TrainingParameterSchedule(TrainingParameterSchedule<T>&& that)
-        :m_schedule(move(that.m_schedule)), m_unit(that.m_unit)
+        :m_schedule(move(that.m_schedule)), m_unit(that.m_unit), m_epochSize(that.m_epochSize)
     {
     }
 
@@ -316,6 +314,7 @@ namespace CNTK
     TrainingParameterSchedule<T>& TrainingParameterSchedule<T>::operator=(TrainingParameterSchedule<T>&& that)
     {
         m_schedule = move(that.m_schedule);
+        m_epochSize = that.m_epochSize;
         m_unit = that.m_unit;
         return *this;
     }
@@ -333,7 +332,8 @@ namespace CNTK
         Dictionary dict;
         dict[versionKey] = CurrentVersion();
         dict[typeKey] = s_trainingParameterScheduleTypeValue;
-        dict[unitKey] = m_unit;
+        dict[epochSizeKey] = m_epochSize;
+        dict[unitKey] = static_cast<size_t>(m_unit);
         dict[scheduleKey] = schedule;
         return dict;
     }
@@ -341,7 +341,7 @@ namespace CNTK
      template <typename T>
     /*static*/ TrainingParameterSchedule<T>  TrainingParameterSchedule<T>::Deserialize(const Dictionary& dict)
     {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, unitKey, scheduleKey };
+        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, unitKey, epochSizeKey, scheduleKey };
 
         ValidateDictionary<TrainingParameterSchedule<T>>(dict, s_requiredDictionaryKeys, s_trainingParameterScheduleTypeValue, s_serializationVersion);
 
@@ -351,7 +351,8 @@ namespace CNTK
     template <typename T>
     TrainingParameterSchedule<T>::TrainingParameterSchedule(const Dictionary& dictionary)
     {
-        m_unit = dictionary[unitKey].Value<size_t>();
+        m_unit = UnitType(dictionary[unitKey].Value<size_t>());
+        m_epochSize = dictionary[epochSizeKey].Value<size_t>();
         Dictionary schedule = dictionary[scheduleKey].Value<Dictionary>();
         vector<std::wstring> keys = schedule.Keys();
         std::map<size_t, T> map;
@@ -361,7 +362,7 @@ namespace CNTK
         }
     }
 
-    void MomentumValuesAsTimeConstants::ConvertToPerSampleValues()
+    void MomentumAsTimeConstantSchedule::ConvertToPerSampleValues()
     {
         for (auto& it : m_schedule)
         {

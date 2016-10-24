@@ -180,6 +180,7 @@ def classification_error(output_vector, target_vector, axis=-1, topN=1, name='')
 
 
 @typemap
+# TODO: Reorder the kwargs to match a known toolkit, e.g. Keras; cf. layers.Convolution()
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                 auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False,
                 max_temp_mem_size_in_samples=0, name=''):
@@ -1896,6 +1897,7 @@ def parameter(shape=None, init=None, device=None, name=''):
         :class:`cntk.ops.variables.Parameter`
     '''
 
+    from cntk.cntk_py import NDShape
     from .variables import Parameter
     if not device:
         device = use_default_device()
@@ -1907,6 +1909,8 @@ def parameter(shape=None, init=None, device=None, name=''):
         else:
             data_type = np.float32
     else:
+        if shape is None:
+            shape = NDShape.unknown.dimensions()
         data_type = None
 
     return Parameter(shape, init, data_type, device, name)
@@ -1938,7 +1942,8 @@ def constant(value=None, shape=None, device=None, name=''):
     from .variables import Constant
     if not device:
         device = use_default_device()
-    if np.isscalar(value) and not shape:
+    #if np.isscalar(value) and not shape:
+    if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
         shape = ()
     if isinstance(value, np.ndarray):
         dtype = value.dtype

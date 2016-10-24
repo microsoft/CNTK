@@ -353,6 +353,9 @@ namespace CNTK
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
 
+            // All operand shapes should be known
+            assert((leftOperandShape != NDShape::Unknown) && (rightOperandShape != NDShape::Unknown));
+
             const auto& shapeWithSmallerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? rightOperandShape : leftOperandShape;
             const auto& shapeWithLargerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? leftOperandShape : rightOperandShape;
             size_t numOutputAxes = shapeWithLargerNumAxes.Rank();
@@ -581,13 +584,14 @@ namespace CNTK
 
                 // Infer dimensions of learnable parameters
                 auto paramShape = operands[i].Shape();
-                // BUGBUG: Parameter dimensions are totally wrong. E.g. a valid spatial bias for [15 x 15 x 32] is currently [32 x 1].
-                //         The correct bias shape should be [1 x 1 x 32]. That can be specified but leads to different results for unknown reasons.
-                //         Until this has been corrected, we need a workaround that infers the wrong dimensions.
-                if (inferDimensions && (paramShape.Rank() == 1) && (paramShape[0] == NDShape::InferredDimension) && !mainOperandShape.HasInferredDimension())
+                if (inferDimensions && (paramShape.IsUnknown() || ((paramShape.Rank() == 1) && paramShape.HasInferredDimension())) && !mainOperandShape.HasInferredDimension())
                 {
-                    size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
-                    paramShape[0] = total;
+                    paramShape = mainOperandShape;
+                    if (spatial)
+                    {
+                        for (size_t i = 0; i < mainOperandShape.Rank() - 1; ++i)
+                            paramShape[i] = 1;
+                    }
                     std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
                     UpdateOperandShapes(newParamShape);
                 }
@@ -836,6 +840,8 @@ namespace CNTK
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 
         bool m_networkMatricesAllocated;
+
+        std::unordered_map<Parameter, size_t> m_lastRecordedParameterValueTimeStamps;
 
         static const size_t s_serializationVersion = 1;
     };

@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import chr
 import os, sys, importlib, shutil
 from cntk_helpers import *
 
@@ -5,7 +7,7 @@ from cntk_helpers import *
 ####################################
 # Parameters
 ####################################
-imgDir = "C:/Users/pabuehle/Desktop/newImgs/"
+imgDir = "C:/Users/chazhang/Desktop/newImgs/"
 
 # no need to change these params
 drawingImgSize = 1000.0
@@ -34,7 +36,7 @@ def event_cv2_drawRectangles(event, x, y, flags, param):
         pt2 = (x, y)
         minPt = (min(pt1[0], pt2[0]), min(pt1[1], pt2[1]))
         maxPt = (max(pt1[0], pt2[0]), max(pt1[1], pt2[1]))
-        imgWidth, imgHeight = imWidthHeight(global_image)
+        imgWidth, imgHeight = imArrayWidthHeight(global_image)
         minPt = ptClip(minPt, imgWidth, imgHeight)
         maxPt = ptClip(maxPt, imgWidth, imgHeight)
         global_bboxes.append(minPt + maxPt)
@@ -65,16 +67,16 @@ imgFilenames = [f for f in os.listdir(imgDir) if f.lower().endswith(".jpg")]
 
 # loop over each image and get annotation
 for imgFilenameIndex,imgFilename in enumerate(imgFilenames):
-    print imgFilenameIndex, imgFilename
+    print (imgFilenameIndex, imgFilename)
     imgPath = os.path.join(imgDir, imgFilename)
     bBoxPath = imgPath[:-4] + ".bboxes.tsv"
 
     # skip image if ground truth already exists
     if os.path.exists(bBoxPath):
-        print "Skipping image {0} since ground truth already exists".format(imgFilename)
+        print ("Skipping image {0} since ground truth already exists".format(imgFilename))
         continue
     else:
-        print "Processing image {0} of {1}: {2}".format(imgFilenameIndex, len(imgFilenames), imgPath)
+        print ("Processing image {0} of {1}: {2}".format(imgFilenameIndex, len(imgFilenames), imgPath))
 
     # prepare image window and callback
     global_bboxes = []
@@ -85,7 +87,7 @@ for imgFilenameIndex,imgFilename in enumerate(imgFilenames):
 
     # process user input
     while True:
-        key = unichr(cv2.waitKey())
+        key = chr(cv2.waitKey())
 
         # undo/remove last rectangle
         if key == "u":
@@ -98,7 +100,7 @@ for imgFilenameIndex,imgFilename in enumerate(imgFilenames):
         # skip image
         elif key == "s":
             if os.path.exists(bBoxPath):
-                print "Skipping image hence deleting existing bbox file: " + bBoxPath
+                print ("Skipping image hence deleting existing bbox file: " + bBoxPath)
                 os.remove(bBoxPath)
             break
 

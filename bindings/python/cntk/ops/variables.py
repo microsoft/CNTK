@@ -1,7 +1,7 @@
 import numpy as np
 from cntk import cntk_py, utils
 from ..tensor import TensorOpsMixin
-from ..utils import typemap, sanitize_precision, sanitize_value
+from ..utils import typemap, sanitize_precision, sanitize_value, sanitize_dtype_cntk
 
 
 class Variable(TensorOpsMixin, cntk_py.Variable):
@@ -196,7 +196,8 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
-       dtype (`np.float32` or `np.float64`): data type to store the values as.
+        BUGBUG: Document initializers
+       data_type (`np.float32` or `np.float64`): data type to store the values as.
        device (:class:`cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
     '''
@@ -208,9 +209,30 @@ class Constant(TensorOpsMixin, cntk_py.Constant):
             else:
                 dtype = np.float32
 
-        ndav = sanitize_value(shape, value, dtype, device)
+        if np.isscalar(value):
+            super(Constant, self).__init__(utils.sanitize_shape(shape), sanitize_dtype_cntk(dtype), value)
+        else:
+            ndav = sanitize_value(shape, value, dtype, device)
+            super(Constant, self).__init__(ndav, name) 
+        #ndav = sanitize_value(shape, value, dtype, device)
+        #super(Constant, self).__init__(ndav, name)
 
-        super(Constant, self).__init__(ndav, name)
+
+                
+        ##ndav = sanitize_value(shape, value, data_type, device)
+        ##super(Constant, self).__init__(ndav, name)
+        #
+        ## from Parameter: [fseide]
+        #if isinstance(value, (np.ndarray, list, float, int)):
+        #    ndav = sanitize_value(shape, value, data_type, device)
+        #    super(Constant, self).__init__(ndav, name)
+        #else:
+        #    shape = utils.sanitize_shape(shape)
+        #    data_type  = utils.sanitize_dtype_cntk(data_type)
+        #    super(Constant, self).__init__(shape, data_type, value,
+        #            device, name)
+
+
 
     #TODO how to expose Scalar ?
     @property

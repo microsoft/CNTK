@@ -5,17 +5,14 @@
 # ==============================================================================
 
 import numpy as np
-import sys
-import os
-import time
 import math
  
 from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
-from cntk.io import ReaderConfig, ImageDeserializer
-from cntk.initializer import glorot_uniform, gaussian, he_normal
+from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
+from cntk.initializer import glorot_uniform, he_normal
 from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu, convolution, pooling, PoolingType_Max
@@ -31,10 +28,8 @@ model_path = os.path.join(abs_path, "Models")
 # model dimensions
 image_height = 32
 image_width  = 32
-num_channels = 3
+num_channels = 3  # RGB
 num_classes  = 10
-features_stream_name = 'features'
-labels_stream_name   = 'labels'
 
 #
 # Define the reader for both training and evaluation action.
@@ -45,24 +40,21 @@ def create_reader(path, map_file, mean_file, train):
         raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
                            (map_file, mean_file, cifar_py3, cifar_py3))
 
-    deserializer = ImageDeserializer(map_file)
+    # transformation pipeline for the features has jitter/crop only when training
+    transforms = []
     if train:
-        deserializer.map_features(features_stream_name,
-            [
-                ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio'),
-                ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
-                ImageDeserializer.mean(mean_file)
-            ])
-    else:
-        deserializer.map_features(features_stream_name,
-            [
-                ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
-                ImageDeserializer.mean(mean_file)
-            ])
-
-    deserializer.map_labels(labels_stream_name, num_classes)
-
-    return ReaderConfig(deserializer, epoch_size = sys.maxsize).minibatch_source()
+        transforms += [
+            ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio') # train uses jitter
+        ]
+    transforms += [
+        ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
+        ImageDeserializer.mean(mean_file)
+    ]
+    # deserializer
+    return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
+        features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+        labels   = StreamDef(field='label', shape=num_classes)      # and second as 'label'
+    )))
 
 #
 # helper APIs that define layers and shows low level APIs usage. 
@@ -126,6 +118,12 @@ def max_pool_layer(input, pool_size, stride):
 def dropout_layer(input, rate):
     return dropout(input, dropout_rate=rate)
 
+# HACK: express the outdated gaussian() initializer as a he_normal
+# TODO: replace all gaussian() calls by inlining
+#from cntk.initializer import gaussian
+def gaussian(scale=1):
+    return he_normal(scale=scale * math.sqrt(0.02))
+
 # Define basic model
 def create_basic_model(input):
     net = {}
@@ -179,39 +177,38 @@ def create_basic_model_with_batch_normalization(input):
 
     return net
 
-# Task 3: Implement Task 1 and 2 using layer API, when it is ready.
-# def create_basic_model_layer(input):
-#    net = {}
+# Task 3: Implement Task 1 and 2 using layer API
+def create_basic_model_layer(input):
+    net = {}
 
-#    net['conv1'] = Convolution((5,5), 32, init=gaussian(scale=0.0043), activation = relu, pad = True)(input)
-#    net['pool1'] = Pooling(PoolingKind.MAX, (3,3), stride=(2,2))(net['conv1'])
+    with default_options(activation=relu):
+        #with default_options_for(Convolution, pad=True):  # TODO: implement this
+            model = Sequential([
+                LayerStack(3, lambda i: [
+                    Convolution((5,5), [32,32,64][i], init=gaussian(scale=[0.0043,1.414,1.414][i]), pad=True),
+                    MaxPooling((3,3), strides=(2,2))    #, BatchNormalization(spatial_rank=2)  # Note: I know this BN is not the same as above
+                ]),
+                Dense(64, init=gaussian(scale=12)),
+                Dense(10, init=gaussian(scale=1.5), activation=None)
+            ])
 
-#    net['conv2'] = Convolution((5,5), 32, init=gaussian(scale=1.414), activation = relu, pad = True)(net['pool1'])
-#    net['pool2'] = Pooling(PoolingKind.MAX, (3,3), stride=(2,2))(net['conv2'])
+    # TODO: unify the patterns
+    net['fc5'] = model(input)
 
-#    net['conv3'] = Convolution((5,5), 64, init=gaussian(scale=1.414), activation=relu, pad = True)(net['pool2'])
-#    net['pool3'] = Pooling(PoolingKind.MAX, (3,3), stride=(2,2))(net['conv3'])
-
-#    net['fc4'] = Dense(64, init=gaussian(scale=12), activation = relu)(net['pool3'])
-#    net['fc5'] = Dense(10, init=gaussian(scale=1.5), activation = relu)(net['fc4'])
-
-#    return net
+    return net
 
 #
 # Train and evaluate the network.
 #
 def train_and_evaluate(reader_train, reader_test, max_epochs):
 
-    # Map reader streams
-    features_slot = reader_train[features_stream_name]
-    labels_slot   = reader_train[labels_stream_name]
-
     # Input variables denoting the features and label data
-    input_var = input_variable((num_channels, image_height, image_width), features_slot.m_element_type)
-    label_var = input_variable((num_classes), labels_slot.m_element_type)
+    input_var = input_variable((num_channels, image_height, image_width))
+    label_var = input_variable((num_classes))
 
     # apply model to input
     model = create_basic_model(input_var)
+    #model = create_basic_model_layer(input_var)
     z = model['fc5']
 
     #
@@ -228,7 +225,7 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
 
     # For basic model
     lr_per_sample       = [0.00015625]*10+[0.000046875]*10+[0.0000156]
-    momentum_per_sample = 0.9 ** (1.0 / minibatch_size)
+    momentum_per_sample = 0.9 ** (1.0 / minibatch_size)  # BUGBUG: why does this work? Should be as time const, no?
     l2_reg_weight       = 0.03
 
     # For basic model with batch normalization
@@ -242,36 +239,28 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
                                l2_regularization_weight = l2_reg_weight)
     trainer     = Trainer(z, ce, pe, [learner])
 
-    # process minibatches and perform model training
-    for epoch in range(max_epochs):
-        loss_numer      = 0 
-        loss_denom      = 0
-        metric_numer    = 0
-        metric_denom    = 0
-        sample_count    = 0
+    # define mapping from reader streams to network inputs
+    input_map = {
+        input_var: reader_train.streams.features,
+        label_var: reader_train.streams.labels
+    }
 
-        while sample_count < epoch_size:
-            current_minibatch = min(minibatch_size, epoch_size - sample_count)
+    log_number_of_parameters(z) ; print()
+    progress_printer = ProgressPrinter(tag='Training')
 
-            # fetch next mini batch.
-            data = reader_train.next_minibatch(current_minibatch)
-
-            # minibatch data to be trained with
-            trainer.train_minibatch({input_var: data[features_slot], label_var: data[labels_slot]})
-
-            # Keep track of some statistics.
-            loss_numer   += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count 
-            loss_denom   +=                                           trainer.previous_minibatch_sample_count
-            metric_numer += trainer.previous_minibatch_evaluation_average * trainer.previous_minibatch_sample_count
-            metric_denom +=                                                 trainer.previous_minibatch_sample_count
-
-            # Keep track of the number of samples processed so far.
-            sample_count += data[labels_slot].num_samples
-
-        print("Finished Epoch[{} of {}]: [Training] ce = {:0.6f} * {}, errs = {:0.1f}% * {}".format(epoch+1, max_epochs, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
+    # perform model training
+    for epoch in range(max_epochs):       # loop over epochs
+        sample_count = 0
+        while sample_count < epoch_size:  # loop over minibatches in the epoch
+            data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count), input_map=input_map) # fetch minibatch.
+            trainer.train_minibatch(data)                                   # update model with it
+            sample_count += data[label_var].num_samples                     # count samples processed so far
+            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
+        progress_printer.epoch_summary(with_metric=True)
     
     #
     # Evaluation action
+    # TODO: This should be a separate function call.
     #
     epoch_size     = 10000
     minibatch_size = 16
@@ -282,28 +271,46 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     sample_count    = 0
     minibatch_index = 0
 
+    #progress_printer = ProgressPrinter(freq=100, first=10, tag='Eval')
     while sample_count < epoch_size:
         current_minibatch = min(minibatch_size, epoch_size - sample_count)
 
         # Fetch next test min batch.
-        data = reader_test.next_minibatch(current_minibatch)
+        data = reader_train.next_minibatch(current_minibatch, input_map=input_map)
+        #data = reader_test.next_minibatch(current_minibatch)
 
         # minibatch data to be trained with
-        metric_numer += trainer.test_minibatch({input_var: data[features_slot], label_var: data[labels_slot]}) * current_minibatch
+        #metric_numer += trainer.test_minibatch(input_map) * current_minibatch
+        metric_numer += trainer.test_minibatch(data) * current_minibatch
         metric_denom += current_minibatch
 
         # Keep track of the number of samples processed so far.
-        sample_count += data[labels_slot].num_samples
+        sample_count += data[label_var].num_samples
         minibatch_index += 1
+        if current_minibatch != minibatch_size:
+            break
 
     print("")
     print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
     print("")
 
 if __name__=='__main__':
-    os.chdir(data_path)
+    os.chdir(data_path) # BUGBUG: This is only needed because ImageReader uses relative paths in the map file. Ugh.
+
+    # TODO: leave these in for now as debugging aids; remove for beta
+    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
+    #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
+    set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
+    force_deterministic_algorithms()
+    # TODO: do the above; they lead to slightly different results, so not doing it for now
 
     reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', True)
-    reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', False)
+    reader_test  = create_reader(data_path, 'test_map.txt',  'CIFAR-10_mean.xml', False)
+
+    # temp for Frank, to be removed
+    #data_path = abs_path
+    #os.chdir(data_path)
+    #reader_train = create_reader(data_path, 'cifar-10-batches-py/train_map.txt', 'cifar-10-batches-py/CIFAR-10_mean.xml', True)
+    #reader_test  = create_reader(data_path, 'cifar-10-batches-py/test_map.txt',  'cifar-10-batches-py/CIFAR-10_mean.xml', False)
 
     train_and_evaluate(reader_train, reader_test, max_epochs=10)

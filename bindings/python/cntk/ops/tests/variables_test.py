@@ -66,3 +66,9 @@ def test_placeholder():
     p2 = placeholder_variable(shape=(2,1))
     op = times(p1, [[1],[2]])
 
+def test_constant_shape_inf():
+    shape = (-1,4)
+    c = constant(value=2, shape=shape)
+    assert np.allclose(c.shape, shape)
+    with pytest.raises(RuntimeError):
+        c.value
