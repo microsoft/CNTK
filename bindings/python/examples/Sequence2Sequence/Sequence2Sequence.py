@@ -7,8 +7,6 @@
 import numpy as np
 import sys
 import os
-import math
-import time
 from cntk import Trainer, Axis, save_model, load_model #, text_format_minibatch_source, StreamConfiguration
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, set_default_device
@@ -36,7 +34,7 @@ def find(name, expression):
     assert len(vars) == 1
     return vars[0]
 
-# Average of evaluation errors of all test minibatches    
+# Average of evaluation errors of all test minibatches
 def test_translator(z, trainer, input_vocab_dim, label_vocab_dim, debug_output=False):
     # now setup a test run
     rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.test.ctf"
@@ -49,7 +47,7 @@ def test_translator(z, trainer, input_vocab_dim, label_vocab_dim, debug_output=F
         find('raw_labels',z) : test_reader.streams.labels
     }
 
-    test_minibatch_size = 1024 
+    test_minibatch_size = 1024
 
     # Get minibatches of sequences to test and perform testing
     i = 0
@@ -167,14 +165,11 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     train_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
     valid_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tiny.ctf")
 
-    feature_stream_name = 'features'
-    labels_stream_name  = 'labels'
-
     # readers
     randomize_data = True
     if run_test:
         randomize_data = False # because we want to get an exact error
-   
+
     train_reader = create_reader(train_path, randomize_data, input_vocab_dim, label_vocab_dim)
     train_bind = {
         raw_input  : train_reader.streams.features,
@@ -199,13 +194,13 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
         epoch_size = 5000
         max_epochs = 1
         training_progress_output_freq = 30
-        
+
     valid_reader = create_reader(valid_path, False, input_vocab_dim, label_vocab_dim)
     valid_bind = {
             find('raw_input',ng)  : valid_reader.streams.features,
             find('raw_labels',ng) : valid_reader.streams.labels
         }
-        
+
     for epoch in range(max_epochs):
         loss_numer = 0
         metric_numer = 0
@@ -235,24 +230,24 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
             mbs += 1
 
         print("--- EPOCH %d DONE: loss = %f, errs = %f ---" % (epoch, loss_numer/denom, 100.0*(metric_numer/denom)))
-       
+
 
     error1 = test_translator(z, trainer, input_vocab_dim, label_vocab_dim)
 
     save_model(z, "seq2seq.dnn")
     z = load_model(np.float32, "seq2seq.dnn")
 
-    label_seq_axis = Axis('labelAxis')    
+    label_seq_axis = Axis('labelAxis')
     label_sequence = slice(find('raw_labels',z), label_seq_axis, 1, 0)
     ce = cross_entropy_with_softmax(z, label_sequence)
     errs = classification_error(z, label_sequence)
     trainer = Trainer(z, ce, errs, [momentum_sgd(
                     z.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)])
-    
+
     error2 = test_translator(z, trainer, input_vocab_dim, label_vocab_dim)
-    
+
     assert error1 == error2
-    
+
     return error1
 
 if __name__ == '__main__':
