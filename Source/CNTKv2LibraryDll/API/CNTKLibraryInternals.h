@@ -154,7 +154,11 @@ namespace CNTK
     class Function;
     class Variable;
     class Axis;
+    class DeviceDescriptor;
     enum class PrimitiveOpType : unsigned int;
+    enum class DataType : unsigned int;
+
+    class Serializer;
 
     // Similar to make_shared except that it associates a custom deleter with the shared_ptr to ensure
     // that objects are deleted on the same side of the library DLL where they are allocated
@@ -238,5 +242,15 @@ namespace CNTK
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2);
+
+        CNTK_API ::CNTK::FunctionPtr LoadLegacyModel(::CNTK::DataType dataType, const std::wstring& modelFile, const ::CNTK::DeviceDescriptor& computeDevice);
+
+        CNTK_API void SaveAsLegacyModel(const ::CNTK::FunctionPtr& rootFunction, const std::wstring& modelFile);
+
+        template <typename ElementType>
+        Variable GetVariable(const  Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                             std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, ::CNTK::Variable>& nodeToVariableMap,
+                             std::unordered_map<::CNTK::Variable, ::CNTK::Variable>& placeholderReplacements,
+                             std::unordered_set<::CNTK::FunctionPtr>& allPrimitiveFunctions);
     }
 }

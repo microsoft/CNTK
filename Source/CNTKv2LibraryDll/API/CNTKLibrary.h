@@ -394,10 +394,10 @@ namespace CNTK
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
         template <typename ElementType>
-        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
 
     public:
         ///
@@ -1079,6 +1079,7 @@ namespace CNTK
     /// TODO: We need to have native support for DictionaryValue<vector> and DictionaryValue<NDArrayView>.
     class DictionaryValue final
     {
+        friend class Serializer;
     public:
         enum class Type : unsigned int
         {
@@ -1355,6 +1356,7 @@ namespace CNTK
         CNTK_API bool operator==(const DictionaryValue& other) const;
         CNTK_API bool operator!=(const DictionaryValue& other) const;
 
+
         friend CNTK_API std::istream& operator>>(std::istream& stream, DictionaryValue& us);
         friend CNTK_API std::ostream& operator<<(std::ostream& stream, const DictionaryValue& us);
 
@@ -1429,7 +1431,7 @@ namespace CNTK
             void* m_ptr;
         } m_data;
 
-        const size_t version = 1;
+         static const size_t s_version = 1;
     };
 
     ///
@@ -1439,6 +1441,7 @@ namespace CNTK
     {
         friend inline void AddConfigString(std::wstringstream& s, const DictionaryValue& value, size_t numIndentationSpaces);
         friend class CompositeMinibatchSource;
+        friend class Serializer;
     public:
         CNTK_API Dictionary();
         CNTK_API ~Dictionary();
@@ -1469,28 +1472,24 @@ namespace CNTK
             return Contains(key.c_str());
         }
 
-        CNTK_API std::vector<std::wstring> Keys() const
-        {
-            std::vector<std::wstring> keys;
-            keys.reserve(m_dictionaryData->size());
-            for (const auto&it : *m_dictionaryData)
-            {
-                keys.push_back(it.first);
-            }
-            return keys;
-        }
-
         CNTK_API void Add(const Dictionary& other);
 
         CNTK_API bool operator==(const Dictionary& other) const;
         CNTK_API bool operator!=(const Dictionary& other) const;
+
+        typedef std::unordered_map<std::wstring, DictionaryValue>::const_iterator ConstDictionaryIterator;
+
+        ConstDictionaryIterator begin() const { return m_dictionaryData->begin(); }
+        ConstDictionaryIterator cbegin() const { return m_dictionaryData->cbegin(); }
+        ConstDictionaryIterator end() const { return m_dictionaryData->end(); }
+        ConstDictionaryIterator cend() const { return m_dictionaryData->cend(); }
 
         friend CNTK_API std::istream& operator>>(std::istream& stream, Dictionary& us);
         friend CNTK_API std::ostream& operator<<(std::ostream& stream, const Dictionary& us);
 
     private:
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
-        const size_t version = 1;
+        static const size_t s_version = 1;
     };
 
     ///
@@ -1567,10 +1566,10 @@ namespace CNTK
         friend struct std::hash;
 
         template <typename ElementType>
-        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
 
 #ifndef SWIG
     private:
@@ -1920,10 +1919,10 @@ private:
         friend struct std::hash;
 
         template <typename ElementType>
-        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
 
     public:
         ///
@@ -2005,10 +2004,10 @@ private:
         friend struct std::hash;
 
         template <typename ElementType>
-        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
 
     public:
         ///
@@ -2252,7 +2251,7 @@ namespace CNTK
         /// TODO: add a second overload with a 'function builder' parameter that would allow hooking
         /// user-defined op-codes with custom functionality.
         ///
-        CNTK_API static FunctionPtr Deserialize(const Dictionary& modelDictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
     public:
         ///
@@ -2355,9 +2354,19 @@ namespace CNTK
         CNTK_API FunctionPtr ReplacePlaceholder(const Variable& placeholderReplacement);
 
         ///
-        /// Restore the models parameters from a saved model file
+        /// Save this function graph into a model file
         ///
-        CNTK_API void RestoreFromLegacyModel(const std::wstring& modelFilePath);
+        CNTK_API void SaveModel(const std::wstring& modelFile, bool useLegacyModelFormat = true);
+
+        ///
+        /// Restore the models parameters (in-place) from a model file
+        ///
+        CNTK_API void RestoreModel(const std::wstring& modelFilePath);
+
+        ///
+        /// Load a function from a model file
+        ///
+        CNTK_API static FunctionPtr LoadModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
     private:
 
@@ -2870,16 +2879,6 @@ namespace CNTK
     }
 
     ///
-    /// Load a legacy CNTK v1 format model
-    ///
-    CNTK_API FunctionPtr LoadLegacyModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
-
-    /// 
-    /// Save a Composite Function instance to a file in CNTK legacy model format
-    ///
-    CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
-
-    ///
     /// A collection of key-value pairs that represents a training parameter schedule
     /// (e.g., learning rate, momentum schedule) in terms of the number of samples.
     /// This class is designed to simplify Learner's factory methods and provides a number of 
@@ -3249,13 +3248,12 @@ namespace CNTK
         ///
         /// Checkpoint the model and other Trainer state at the specified file location
         ///
-        CNTK_API void SaveCheckpoint(const std::wstring& modelFilePath, bool usingLegacyModelFormat = true);
+        CNTK_API void SaveCheckpoint(const std::wstring& filePath, bool usingLegacyModelFormat = true);
 
         ///
         /// Restore the model and trainer state from a previously saved model and checkpoint from the specified file location
         ///
-        /// TODO: drop the legacy flag and auto-detect model format.
-        CNTK_API void RestoreFromCheckpoint(const std::wstring& modelFilePath, bool usingLegacyModelFormat = true);
+        CNTK_API void RestoreFromCheckpoint(const std::wstring& filePath);
 
         ///
         /// Model being trained by 'this' Trainer.

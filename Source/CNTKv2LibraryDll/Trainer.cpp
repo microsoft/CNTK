@@ -7,6 +7,7 @@
 #include "CNTKLibrary.h"
 #include "Utils.h"
 #include "Function.h"
+#include "Serialization.h"
 
 namespace CNTK
 {
@@ -220,29 +221,9 @@ namespace CNTK
         return modelFilePath + checkpointExt;
     }
 
-    std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
-    {
-        std::ios_base::openmode mode = std::ios_base::binary | (readOnly ? std::ios_base::in : std::ios_base::out);
-#ifdef _MSC_VER
-        return std::make_shared<std::fstream>(filePath, mode);
-#else
-        return std::make_shared<std::fstream>(wtocharpath(filePath.c_str()).c_str(), mode);
-#endif
-    }
-
     void Trainer::SaveCheckpoint(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
     {
-        if (usinglegacyModelFormat)
-        {
-            SaveAsLegacyModel(m_combinedTrainingFunction, modelFilePath);
-        }
-        else
-        {
-             Dictionary model = m_combinedTrainingFunction->Serialize();
-             auto stream = GetFstream(modelFilePath, false);
-            *stream << model;
-             stream->flush();
-        }
+        m_combinedTrainingFunction->SaveModel(modelFilePath, usinglegacyModelFormat);
 
         vector<DictionaryValue> learnerStates;
 
@@ -260,20 +241,10 @@ namespace CNTK
         ckpStream->flush();
     }
 
-    void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
+    void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
     {
         // Restore the model's parameters
-        if (usinglegacyModelFormat)
-        {
-            m_combinedTrainingFunction->RestoreFromLegacyModel(modelFilePath);
-        }
-        else
-        { 
-            auto stream = GetFstream(modelFilePath, true);
-            Dictionary model;
-            *stream >> model;
-            m_combinedTrainingFunction->RestoreFromCheckpoint(model);
-        }
+         m_combinedTrainingFunction->RestoreModel(modelFilePath);
 
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
         auto ckpStream = GetFstream(trainerStateCheckpointFilePath, true);
