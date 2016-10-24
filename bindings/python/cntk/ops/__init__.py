@@ -1897,6 +1897,7 @@ def parameter(shape=None, init=None, device=None, name=''):
         :class:`cntk.ops.variables.Parameter`
     '''
 
+    from cntk.cntk_py import NDShape
     from .variables import Parameter
     if not device:
         device = use_default_device()
@@ -1908,6 +1909,8 @@ def parameter(shape=None, init=None, device=None, name=''):
         else:
             data_type = np.float32
     else:
+        if shape is None:
+            shape = NDShape.unknown.dimensions()
         data_type = None
 
     return Parameter(shape, init, data_type, device, name)

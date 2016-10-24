@@ -866,12 +866,12 @@ namespace CNTK
                 break;
             }
             case PrimitiveOpType::BatchNormalization:
-                {
+            {
                 assert(inputs.size() == 5);
-                    auto spatial = functionConfig[PrimitiveFunction::AttributeNameSpatial].Value<bool>();
-                    outputShape = BatchNormalizationOutputShape(inputs, spatial, inferDimensions);
+                auto spatial = functionConfig[PrimitiveFunction::AttributeNameSpatial].Value<bool>();
+                outputShape = BatchNormalizationOutputShape(inputs, spatial, inferDimensions);
                 break;
-                }
+            }
             case PrimitiveOpType::PackedIndex:
                 outputShape = UnaryElementwiseOpOutputShape(inputs[1].Shape());
                 break;

@@ -584,13 +584,14 @@ namespace CNTK
 
                 // Infer dimensions of learnable parameters
                 auto paramShape = operands[i].Shape();
-                // BUGBUG: Parameter dimensions are totally wrong. E.g. a valid spatial bias for [15 x 15 x 32] is currently [32 x 1].
-                //         The correct bias shape should be [1 x 1 x 32]. That can be specified but leads to different results for unknown reasons.
-                //         Until this has been corrected, we need a workaround that infers the wrong dimensions.
-                if (inferDimensions && (paramShape.Rank() == 1) && (paramShape[0] == NDShape::InferredDimension) && !mainOperandShape.HasInferredDimension())
+                if (inferDimensions && (paramShape.IsUnknown() || ((paramShape.Rank() == 1) && paramShape.HasInferredDimension())) && !mainOperandShape.HasInferredDimension())
                 {
-                    size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
-                    paramShape[0] = total;
+                    paramShape = mainOperandShape;
+                    if (spatial)
+                    {
+                        for (size_t i = 0; i < mainOperandShape.Rank() - 1; ++i)
+                            paramShape[i] = 1;
+                    }
                     std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
                     UpdateOperandShapes(newParamShape);
                 }
