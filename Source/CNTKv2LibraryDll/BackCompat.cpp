@@ -136,8 +136,8 @@ namespace CNTK
             {
                 auto sliceNode = node->As<SliceNode<ElementType>>();
                 primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(sliceNode->Axis());
-                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndex] = sliceNode->BeginIndex();
-                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndex] = sliceNode->EndIndex();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndex] = (int)sliceNode->BeginIndex();
+                primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndex] = (int)sliceNode->EndIndex();
 
                 opType = PrimitiveOpType::Slice;
             }
