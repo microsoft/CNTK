@@ -3,47 +3,46 @@
 # for full license information.
 # ==============================================================================
 
-def dfs_walk(node, visitor, accum, visited):
+def dfs_walk(node, visitor):
     '''
-    Generic function to walk the graph.
-
+    Generic function that walks through the graph starting at ``node`` and
+    uses function ``visitor`` on each node to check whether it should be
+    returned.
+ 
     Args:
         node (graph node): the node to start the journey from
         visitor (Python function or lambda): function that takes a node as
-         argument and returns `True` if that node should be returned.
-        accum (`list`): accumulator of nodes while traversing the graph
-        visited (`set`): set of nodes that have already been visited.
-         Initialize with empty set.
-    '''
-    if node in visited:
-        return
-    visited.add(node)
-    if hasattr(node, 'root_function'):
-        node = node.root_function
-        for child in node.inputs:
-            dfs_walk(child, visitor, accum, visited)
-    elif hasattr(node, 'is_output') and node.is_output:
-        dfs_walk(node.owner, visitor, accum, visited)
-
-    if visitor(node):
-        accum.append(node)
-
-def visit(node, visitor):
-    '''
-    Generic function that walks through the graph starting at `node` and
-    applies function `visitor` on each of those.
-
-    Args:
-        node (graph node): the node to start the journey from
-        visitor (Python function or lambda): function that takes a node as
-         argument and returns `True` if that node should be returned.
+         argument and returns ``True`` if that node should be returned.
 
     Returns:
-        List of nodes, for which `visitor` was `True`
+        List of nodes, for which ``visitor`` was ``True``
     '''
-    nodes = []
-    dfs_walk(node, visitor, nodes, set())
-    return nodes
+    stack = [node]
+    accum = []
+    visited = set()
+
+    while stack:
+        node = stack.pop()
+        if node in visited:
+            continue
+
+        try:
+            # Function node
+            stack.extend(node.root_function.inputs)
+        except AttributeError:
+            # OutputVariable node
+            try:
+                if node.is_output:
+                    stack.append(node.owner)
+            except AttributeError:
+                pass
+
+        if visitor(node):
+            accum.append(node)
+
+        visited.add(node)
+
+    return accum
 
 def find_nodes_by_name(node, node_name):
     '''
@@ -57,5 +56,5 @@ def find_nodes_by_name(node, node_name):
     Returns:
         List of nodes having the specified name
     '''
-    return visit(node, lambda x: x.name == node_name)
+    return dfs_walk(node, lambda x: x.name == node_name)
 

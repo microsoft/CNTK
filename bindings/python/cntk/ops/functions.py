@@ -90,11 +90,11 @@ class Function(cntk_py.Function):
         return self(other)
 
     def __getattr__(self, name):
-        if name in self.__dict__:
+        try:
             return self.__dict__[name]
-
-        if len(self.outputs) == 1:
-            return getattr(self.output, name)
+        except KeyError:
+            if len(self.outputs) == 1:
+                return getattr(self.output, name)
 
         raise AttributeError("'%s' object has no attribute '%s'" %
                              (type(self), name))

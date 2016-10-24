@@ -6,18 +6,28 @@
 import numpy as np
 from ..graph import *
 from ..ops import *
+from ..axis import Axis
 
 def _graph_dict():
+    # This function creates a graph that has no real meaning other than
+    # providing something to traverse.
     d = {}
     
-    d['i1'] = input_variable(shape=(2,3), name='i1')
-    d['i2'] = input_variable(shape=(2,3), name='i2')
+    batch_axis = Axis.default_batch_axis()
+    input_seq_axis = Axis('ia')
+    input_dynamic_axes = [batch_axis, input_seq_axis]
+
+    d['i1'] = input_variable(shape=(2,3), dynamic_axes=input_dynamic_axes, name='i1')
+    d['i2'] = input_variable(shape=(2,3), dynamic_axes=input_dynamic_axes, name='i2')
 
     d['p1'] = parameter(shape=(3,2), name='p1')
 
     
     d['op1'] = plus(d['i1'], d['i2'], name='op1')
     d['op2'] = times(d['op1'], d['p1'], name='op2')
+
+    #d['slice'] = slice(d['i2'], Axis.default_dynamic_axis(), 0, 3)
+    #label_sentence_start = sequence.first(raw_labels)
 
     # no name
     d['p2'] = parameter(shape=(2,2))
@@ -26,9 +36,9 @@ def _graph_dict():
     d['op3a'] = plus(d['op2'], d['p2'], name='op3')
     d['op3b'] = plus(d['op3a'], d['p2'], name='op3')
     
-    d['past'] = past_value(d['op3b'], name='past')
+    d['first'] = sequence.first(d['op3b'], name='past')
 
-    d['root'] = d['past']
+    d['root'] = d['first']
 
     return d
     
@@ -47,5 +57,3 @@ def test_find_nodes():
 
     none = find_nodes_by_name(d['root'], 'none')
     assert none == []
-
-
