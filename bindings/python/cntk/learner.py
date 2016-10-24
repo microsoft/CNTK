@@ -248,8 +248,7 @@ def sgd(parameters, lr,
     Returns:
         Instance of a :class:`cntk.learner.Learner` that can be passed to the :class:`cntk.trainer.Trainer`
     '''
-
-        lr = learning_rate_schedule(lr)
+    lr = learning_rate_schedule(lr)
     gaussian_noise_injection_std_dev = training_parameter_schedule(gaussian_noise_injection_std_dev)
 
     additional_options = cntk_py.AdditionalLearningOptions()
@@ -441,7 +440,7 @@ def adam_sgd(parameters, lr_per_sample, momentum_time_constant,
     if not low_memory:
         raise NotImplementedError('adam: low_memory=True currently required')
     return fsadagrad(parameters, lr_per_sample, momentum_time_constant,
-        targetAdagradAvDenom=1, varianceTimeConstant = variance_time_constant,
+        varianceMomentum = variance_time_constant,
         l1_regularization_weight=l1_regularization_weight, l2_regularization_weight=l2_regularization_weight,
         gaussian_noise_injection_std_dev=gaussian_noise_injection_std_dev, gradient_clipping_threshold_per_sample=gradient_clipping_threshold_per_sample,
         gradient_clipping_with_truncation=gradient_clipping_with_truncation)

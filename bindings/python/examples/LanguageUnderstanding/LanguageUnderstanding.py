@@ -47,16 +47,10 @@ def create_reader(path):
 ########################
 
 def create_model():
-  # the following injects an option to mimic the BS version identically
-  with default_options(initial_state=0.1):
-   #with default_options(enable_self_stabilization=True):
+  with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
-        #Stabilizer(enable_self_stabilization=True),
         Embedding(emb_dim),
-        #BatchNormalization(),
         Recurrence(LSTM(hidden_dim), go_backwards=False),
-        #Stabilizer(),
-        #BatchNormalization(),
         Dense(label_dim)
     ])
 
