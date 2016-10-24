@@ -173,13 +173,19 @@ private:
             // If the current node did not process any samples, the gradients should be zero'd
             for (size_t i = 0; i < gradients.size(); ++i)
                 gradients[i]->SetValue(0);
+
+            if (m_useAsyncAggregation)
+            {
+                std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(deviceId));
+                mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<ElemType>();
+            }
         }
 
         // Prepare gradients.
         std::vector<::CNTK::NDArrayViewPtr> valuesToAggregate;
         for (size_t i = 0; i < gradients.size(); ++i)
         {
-            if (gradients[i]->Data() == nullptr)
+            if (gradients[i]->Data() == nullptr) // Hack in case of eval.
                 continue;
 
             ::CNTK::NDShape shape{ gradients[i]->GetNumElements() };
