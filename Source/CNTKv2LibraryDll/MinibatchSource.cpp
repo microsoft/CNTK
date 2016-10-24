@@ -70,7 +70,7 @@ namespace CNTK
     /*static*/ const std::wstring CompositeMinibatchSource::MinibatchSourcePositionAttributeName = L"minibatchSourcePosition";
 
     CompositeMinibatchSource::CompositeMinibatchSource(const Dictionary& configuration)
-        : m_epochEndReached(false), m_prevMinibatchSize(0), m_epochSize(SIZE_MAX), m_truncationLength(0)
+        : m_epochEndReached(false), m_prevMinibatchSize(0), m_epochSize(MinibatchSource::InfinitelyRepeat), m_truncationLength(0)
     {
         // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
         // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
@@ -127,7 +127,7 @@ namespace CNTK
         if (augmentedConfiguration.Contains(epochSizeConfigurationKey))
             m_epochSize = augmentedConfiguration[epochSizeConfigurationKey].Value<size_t>();
 
-        if (m_epochSize == 0)
+        if (m_epochSize == MinibatchSource::FullDataSweep)
             m_epochSize = Microsoft::MSR::CNTK::requestDataSize;
 
         const wchar_t* truncatedConfigurationKey = L"truncated";
