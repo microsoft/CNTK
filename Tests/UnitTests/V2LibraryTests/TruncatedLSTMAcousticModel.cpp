@@ -68,7 +68,7 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
     auto features = InputVariable({ baseFeaturesDim }, DataType::Float, L"features");
     auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels");
 
-    const size_t numSamplesForFeatureStatistics = 0;
+    const size_t numSamplesForFeatureStatistics = MinibatchSource::FullDataSweep;
     Dictionary frameModeConfig;
     frameModeConfig[L"frameMode"] = true;
     auto minibatchSource = CreateMinibatchSource(baseFeaturesDim, numOutputClasses, frameModeConfig, numSamplesForFeatureStatistics, false);
