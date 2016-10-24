@@ -25,10 +25,9 @@ def test_a_model(what, model, expected_avg):
     print("-->", evaluation_avg, loss_avg)
     assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
     # save and load--test this for as many configs as possible
-    #path = data_dir + "/model.cmf"
-    #save_model(model, path)
-    #model = load_model(path)
-    # BUGBUG: fails with "RuntimeError: Reading a DictionaryValue as the wrong type; Reading as type int when actual type is SizeT"
+    path = data_dir + "/model.cmf"
+    save_model(model, path)
+    model = load_model(path)
     # test
     #reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
     #evaluate(reader, model)
@@ -119,13 +118,10 @@ def test_seq_classification_error(device_id):
         loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
         expected_avg = [0.15570838301766451, 0.7846451368305728]
         assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
-    
-        # save and load (as an illustration)
-        #path = data_dir + "/model.cmf"
-        #save_model(model, path)
-        #model = load_model(path)
-        # BUGBUG: fails with "RuntimeError: Reading a DictionaryValue as the wrong type; Reading as type int when actual type is SizeT"
-    
+
+        # example also saves and loads; we skip it here, so that we get a test case of no save/load
+        # (we save/load in all cases above)
+
         # test
         reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
         evaluate(reader, model)

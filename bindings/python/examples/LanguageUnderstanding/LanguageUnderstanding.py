@@ -179,10 +179,9 @@ if __name__=='__main__':
     train(reader, model, max_epochs=8)
 
     # save and load (as an illustration)
-    #path = data_dir + "/model.cmf"
-    #save_model(model, path)
-    #model = load_model(path)
-    # BUGBUG: fails with "RuntimeError: Reading a DictionaryValue as the wrong type; Reading as type int when actual type is SizeT" (for splice)
+    path = data_dir + "/model.cmf"
+    save_model(model, path)
+    model = load_model(path)
 
     # test
     reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
