@@ -223,8 +223,8 @@ function CreateBatch(
 
     Remove-Item -Path $filename -ErrorAction SilentlyContinue | Out-Null
 
-    add-content -Path $filename -Value "$AnacondaBasePath\Scripts\activate $AnacondaBasePath\envs\cntk-py34" -Encoding Ascii 
     add-content -Path $filename -Value "set PATH=%PATH%;$cntkRootDir\cntk" -Encoding Ascii
+    add-content -Path $filename -Value "$AnacondaBasePath\Scripts\activate $AnacondaBasePath\envs\cntk-py34" -Encoding Ascii 
 }
 
 

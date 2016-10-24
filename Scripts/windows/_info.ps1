@@ -25,7 +25,7 @@ function DisplayStart()
 {
     Write-Host "
 
-This script will setup the CNTK prequisites and the CNTK v2 Python environment onto the machine.
+This script will setup the CNTK prequisites and the CNTK Python environment onto the machine.
 More help is given by calling get-help .\installer.ps1
 
 The script will analyse your machine and will determine which components are required. 
@@ -36,8 +36,8 @@ Repeated operation of this script will reuse already downloaded components.
 - If required MSMPI will be installed
 - If required the Git-tool will be installed
 - CNTK source will be downloaded in [c:\repos\cntk]
-- Anaconda3 will be installed into [c:\local\Anaconda3-4.1.1-Windows-x86_6]
-- A CNTK-PY34 environment will be created in [c:\local\Anaconda3-4.1.1-Windows-x86_6\envs]
+- Anaconda3 will be installed into [$AnacondaBasePath]
+- A CNTK-PY34 environment will be created in [$AnacondaBasePath\envs]
 
 
 1 - I agree and want to contiue

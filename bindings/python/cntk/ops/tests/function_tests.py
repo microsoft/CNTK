@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 from ..functions import *
 from ...trainer import *
-from .. import constant, parameter, input_variable, placeholder_variable, times
+from .. import constant, parameter, input_variable, placeholder_variable, times, plus
 
 
 def test_variable_forwarding():
@@ -75,3 +75,15 @@ def test_replace_placeholder_s():
     op = times(p, right_val)
     op.replace_placeholder(c)
     assert op.eval() == 26
+
+def test_exception_for_unnamed_arguments():
+    i1 = input_variable((1,2), name='i1')
+    i2 = input_variable((2,1), name='i2')
+    root_node = plus(i1, i2)
+    input1 = [[[1,2]]]
+    input2 = [[[[1],[2]]]]
+
+    with pytest.raises(Exception):
+        # not allowed, since plus has more than 1 input
+        result = root_node.eval([input1, input2])
+
