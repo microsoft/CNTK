@@ -84,7 +84,8 @@ def simple_mnist(debug_output=False):
     epoch_size = 60000
     num_epochs = 10
 
-    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
+    num_minibatches_to_train = int(epoch_size / minibatch_size) * num_epochs
+    num_minibatches_to_train = int(num_minibatches_to_train / num_workers) * num_workers
     
     lr_per_sample = [0.01]*5+[0.005]
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
