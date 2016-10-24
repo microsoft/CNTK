@@ -58,7 +58,7 @@ def create_model():
 ########################
 
 def train(reader, model, max_epochs):
-    model.set_signature(Input(vocab_size,  is_sparse=False))
+    model.set_signature(Input(vocab_size, is_sparse=False))
 
     # Input variables denoting the features and label data
     query         = Input(vocab_size,  is_sparse=False)  # TODO: make sparse once it works
@@ -126,7 +126,7 @@ def train(reader, model, max_epochs):
 
 def evaluate(reader, model):
     # Input variables denoting the features and label data
-    query       = Input(vocab_size,  is_sparse=False)
+    query       = Input(vocab_size, is_sparse=False)
     slot_labels = Input(num_labels, is_sparse=True)  # TODO: make sparse once it works
 
     # apply model to input

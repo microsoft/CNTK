@@ -213,6 +213,7 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
         model = create_basic_model(input_var)
         z = model['fc5']
     else:
+        model.set_signature((num_channels, image_height, image_width))
         z = model(input_var)
 
     # loss and metric
@@ -222,7 +223,7 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
     # training config
     epoch_size     = 50000
     minibatch_size = 64
-    epoch_size = 1000 ; max_epochs = 1 # for faster testing
+    #epoch_size = 1000 ; max_epochs = 1 # for faster testing
 
     # For basic model
     lr_per_sample       = [0.00015625]*10+[0.000046875]*10+[0.0000156]
@@ -260,8 +261,6 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
-    #return loss, metric # return values from last epoch
-
     #
     # Evaluation action
     # TODO: This should be a separate function call.
@@ -292,6 +291,8 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
     print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
     print("")
 
+    return loss, metric # return values from last epoch
+
 ########################
 # eval action          #
 ########################
@@ -310,12 +311,12 @@ def evaluate(reader, model):
 
     # define mapping from reader streams to network inputs
     input_map = {
-        input_var: reader_train.streams.features,
-        label_var: reader_train.streams.labels
+        input_var: reader.streams.features,
+        label_var: reader.streams.labels
     }
 
     # process minibatches and perform evaluation
-    dummy_learner = adam_sgd(z.parameters, lr_per_sample=1, momentum_time_constant=0, low_memory=True) # BUGBUG: should not be needed
+    dummy_learner = momentum_sgd(z.parameters, 1, 0) # BUGBUG: should not be needed
     evaluator = Trainer(z, ce, pe, [dummy_learner])
     progress_printer = ProgressPrinter(freq=100, first=10, tag='Evaluation') # more detailed logging
     #progress_printer = ProgressPrinter(tag='Evaluation')
@@ -346,7 +347,7 @@ if __name__=='__main__':
     # TODO: do the above; they lead to slightly different results, so not doing it for now
 
     # create model
-    model = None#create_basic_model_layer()   # TODO: clean this up more
+    model = create_basic_model_layer()   # TODO: clean this up more
 
     # train
     os.chdir(data_path) # BUGBUG: This is only needed because ImageReader uses relative paths in the map file. Ugh.
@@ -354,6 +355,7 @@ if __name__=='__main__':
     reader_test  = create_reader(data_path, 'test_map.txt',  'CIFAR-10_mean.xml', is_training=False)
     train_and_evaluate(reader_train, reader_test, model, max_epochs=10)
 
-    # test  --BUGBUG: this pattern requires a fix in inference in Convolution
-    #reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', is_training=False)
+    # test
+    reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', is_training=False)
+    # BUGBUG: fails with "RuntimeError: __v2libuid__BatchNormalization430__v2libname__BatchNormalization19: inference mode is used, but nothing has been trained."
     #evaluate(reader_test, model)
