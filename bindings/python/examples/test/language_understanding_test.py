@@ -37,20 +37,20 @@ def test_seq_classification_error(device_id):
 
     # test of the example itself
     # this emulates the main code in the PY file
-    if device_id >= 0: # BatchNormalization currently does not run on CPU
-        reader = create_reader(data_dir + "/atis.train.ctf")
-        model = create_model()
-        loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
-        expected_avg = [0.15570838301766451, 0.7846451368305728]
-        assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+    reader = create_reader(data_dir + "/atis.train.ctf")
+    model = create_model()
+    loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
+    expected_avg = [0.15570838301766451, 0.7846451368305728]
+    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
     # test of a config like in the example but with additions to test many code paths
-    reader = create_reader(data_dir + "/atis.train.ctf")
-    model = create_test_model()
-    loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
-    log_number_of_parameters(model, trace_level=1) ; print()
-    expected_avg = [0.084, 0.407364]
-    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+    if device_id >= 0: # BatchNormalization currently does not run on CPU
+        reader = create_reader(data_dir + "/atis.train.ctf")
+        model = create_test_model()
+        loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
+        log_number_of_parameters(model, trace_level=1) ; print()
+        expected_avg = [0.084, 0.407364]
+        assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
 if __name__=='__main__':
     test_seq_classification_error(0)
