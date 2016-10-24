@@ -69,7 +69,7 @@ namespace CNTK
 
     /*static*/ const std::wstring CompositeMinibatchSource::MinibatchSourcePositionAttributeName = L"minibatchSourcePosition";
 
-    CompositeMinibatchSource::CompositeMinibatchSource(const Dictionary& configuration)
+    CompositeMinibatchSource::CompositeMinibatchSource(const Dictionary& configuration, DistributedCommunicatorPtr communicator)
         : m_epochEndReached(false), m_prevMinibatchSize(0), m_epochSize(MinibatchSource::InfinitelyRepeat), m_truncationLength(0), m_communicator(communicator)
     {
         // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
