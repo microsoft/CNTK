@@ -27,7 +27,7 @@ After running the script, the toy dataset will be installed under the `Image/Dat
 
 ### Setup
 
-Currently, CNTK only supports `Python 3.4`, and we hereby assume you already have it installed. To run the code in this example, you need to install a few additional packages. Under Python 3.4, run:
+Currently, CNTK only supports `Python 3.4`, and we hereby assume you already have it installed. To run the code in this example, you need to install a few additional packages. Under Python 3.4 (64bit version assumed), run:
 
 `pip install -r requirements.txt`
 
