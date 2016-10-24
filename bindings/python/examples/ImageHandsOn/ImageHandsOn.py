@@ -130,17 +130,17 @@ def dropout_layer(input, rate):
 def create_basic_model(input):
     net = {}
 
-    net['conv1'] = conv_layer(input, 32, (5,5), init = gaussian(scale=0.0043))
+    net['conv1'] = conv_layer(input, 32, (5,5), init=glorot_uniform(scale=0.1557/256))
     net['pool1'] = max_pool_layer(net['conv1'], (3,3), (2,2))
 
-    net['conv2'] = conv_layer(net['pool1'], 32, (5,5), init = gaussian(scale=1.414))
+    net['conv2'] = conv_layer(net['pool1'], 32, (5,5), init=glorot_uniform(scale=0.2))
     net['pool2'] = max_pool_layer(net['conv2'], (3,3), (2,2))
 
-    net['conv3'] = conv_layer(net['pool2'], 64, (5,5), init = gaussian(scale=1.414))
+    net['conv3'] = conv_layer(net['pool2'], 64, (5,5), init=glorot_uniform(scale=0.2))
     net['pool3'] = max_pool_layer(net['conv3'], (3,3), (2,2))
 
-    net['fc4']   = dense_layer(net['pool3'], 64, init = gaussian(scale=12))
-    net['fc5']   = dense_layer(net['fc4'], 10, init = gaussian(scale=1.5), nonlinearity = None)
+    net['fc4']   = dense_layer(net['pool3'], 64, init=glorot_uniform(scale=1.697))
+    net['fc5']   = dense_layer(net['fc4'], 10, init=glorot_uniform(scale=0.212), nonlinearity = None)
 
     return net
 
@@ -267,8 +267,6 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
 
             # Keep track of the number of samples processed so far.
             sample_count += data[labels_slot].num_samples
-            if current_minibatch != minibatch_size:
-                break
 
         print("Finished Epoch[{} of {}]: [Training] ce = {:0.6f} * {}, errs = {:0.1f}% * {}".format(epoch+1, max_epochs, loss_numer/loss_denom, loss_denom, metric_numer/metric_denom*100.0, metric_denom))
     
@@ -297,8 +295,6 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
         # Keep track of the number of samples processed so far.
         sample_count += data[labels_slot].num_samples
         minibatch_index += 1
-        if current_minibatch != minibatch_size:
-            break
 
     print("")
     print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))

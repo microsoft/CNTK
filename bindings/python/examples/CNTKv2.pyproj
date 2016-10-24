@@ -16,7 +16,8 @@
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <IsWindowsApplication>False</IsWindowsApplication>
     <Environment>PYTHONPATH=$(SolutionDir)bindings\python;$(SolutionDir)bindings\python\examples</Environment>
-    <InterpreterPath>c:\Program Files\Anaconda3\envs\cntk\python.exe</InterpreterPath>
+    <InterpreterPath>
+    </InterpreterPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
