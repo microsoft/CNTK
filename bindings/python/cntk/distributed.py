@@ -89,7 +89,7 @@ class communicator:
         self.data.sub_group(raw_list)
         return
 
-class trainer:
+class distributed_trainer:
     '''
     A distributed trainer that can be passed to the :class:`cntk.trainer.Trainer`
 
@@ -99,17 +99,16 @@ class trainer:
     def __init__(self, distributed_trainer):
         self.data = distributed_trainer
 
-    @staticmethod
-    def data_parallel_distributed_trainer(communicator, use_async_buffered_parameter_update):
-        '''
-        Creates a data parallel distributed trainer using `communicator` with
-        option `use_async_buffered_parameter_update`.
+def data_parallel_distributed_trainer(communicator, use_async_buffered_parameter_update):
+    '''
+    Creates a data parallel distributed trainer using `communicator` with
+    option `use_async_buffered_parameter_update`.
 
-        Args:
-            communicator (:class:`cntk.distributed.communicator`): distributed communicator
-            use_async_buffered_parameter_update (`bool`): use async buffered parameter update
+    Args:
+        communicator (:class:`cntk.distributed.communicator`): distributed communicator
+        use_async_buffered_parameter_update (`bool`): use async buffered parameter update
 
-        Returns:
-            :class:`cntk.distributed.trainer`: a distributed trainer instance
-        '''
-        return trainer(cntk_py.create_data_parallel_distributed_trainer(communicator.data, use_async_buffered_parameter_update))
+    Returns:
+        :class:`cntk.distributed.trainer`: a distributed trainer instance
+    '''
+    return distributed_trainer(cntk_py.create_data_parallel_distributed_trainer(communicator.data, use_async_buffered_parameter_update))
