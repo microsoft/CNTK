@@ -147,6 +147,7 @@ class ProgressPrinter:
             else:
                 print(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d}'.format(
                     first_mb, self.updates, avg_loss, samples))
+        return self.samples_since_start # so that we can trigger on this
 
     def update_with_trainer(self, trainer, with_metric=False):
         '''
@@ -157,7 +158,7 @@ class ProgressPrinter:
             trainer (:class:`cntk.trainer.Trainer`): trainer from which information is gathered
             with_metric (`bool`): whether to update the metric accumulators
         '''
-        self.update(trainer.previous_minibatch_loss_average,trainer.previous_minibatch_sample_count, trainer.previous_minibatch_evaluation_average if with_metric else None)
+        self.update(trainer.previous_minibatch_loss_average, trainer.previous_minibatch_sample_count, trainer.previous_minibatch_evaluation_average if with_metric else None)
 
         
 # print the total number of parameters to log

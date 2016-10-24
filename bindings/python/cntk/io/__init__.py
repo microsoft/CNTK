@@ -59,7 +59,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
     :func:`cntk.trainer.Trainer.train_minibatch` function.
     '''
 
-    def __init__(self, deserializers=None, randomize=True, epoch_size=MAX_UI64):
+    def __init__(self, deserializers=None, randomize=True, epoch_size=None):
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
         reader_config = ReaderConfig(deserializers=deserializers, randomize=randomize, epoch_size=epoch_size)
@@ -221,17 +221,20 @@ class ReaderConfig(dict):
         deserializers ('list', default is empty): list of deserializers
          (:class:`ImageDeserializer` for now).
         randomize (`bool`, default True): randomize images before every epoch
-        epoch_size (`int`): epoch size
+        epoch_size (`int`): epoch size. 0 means one pass; None means duplicate infinitely.
     '''
 
-    def __init__(self, deserializers=None, randomize=True, epoch_size=MAX_UI64):
+    def __init__(self, deserializers=None, randomize=True, epoch_size=None):
 
+        if epoch_size is None:
+            epoch_size = MAX_UI64
         self['epochSize'] = epoch_size
         if not isinstance(deserializers, (list, tuple)):
             deserializers = [deserializers]
         self['deserializers'] = self.deserializers = deserializers or []
         self['randomize'] = randomize
 
+    # TODO: This should be deleted; do it the other way round and create MinibatchSource() directly with the same parameter
     @typemap
     def minibatch_source(self):
         '''
