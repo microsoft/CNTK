@@ -38,10 +38,10 @@ class Function(cntk_py.Function):
 
     # define input shapes, in-place
     # e.g.
-    # model.declare_args(42)
+    # model.set_signature(42)
     # pass a list of objects that define the dimensions etc. of the placeholders
     # Currently you can pass either
-    def declare_args(self, *arg_types):
+    def set_signature(self, *arg_types):
         placeholders = self.placeholders  # the unbound parameters to fill in
         if len(arg_types) != len(placeholders):
             raise TypeError("CNTK Function.declare_inputs() expected {} arguments, got {}".format(len(placeholders), len(arg_types)))
@@ -77,9 +77,14 @@ class Function(cntk_py.Function):
         #from cntk.ops import combine
         #args = [combine([arg]) for arg in args]  # BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
         placeholders = self.placeholders  # the unbound parameters to fill in
-        if len(args) != len(placeholders):
-            raise TypeError("CNTK Function expected {} arguments, got {}".format(len(placeholders), len(args)))
-        return self.clone(CloneMethod.share, dict(zip(placeholders, args)))
+        arguments    = self.arguments     # alternatively, parameters that already have dimensions
+        if len(placeholders) > 0:
+            if len(arguments) > 0:
+                raise TypeError("CNTK Function currently cannot mix placeholders and inputs")
+            arguments = placeholders
+        if len(args) != len(arguments):
+            raise TypeError("CNTK Function expected {} arguments, got {}".format(len(arguments), len(args)))
+        return self.clone(CloneMethod.share, dict(zip(arguments, args)))
 
     # forward function composition (other o self)
     def __rshift__(self, other):

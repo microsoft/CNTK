@@ -13,7 +13,7 @@ from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer
 from cntk.learner import adam_sgd, learning_rate_schedule, momentum_schedule
-from cntk.ops import cross_entropy_with_softmax, classification_error
+from cntk.ops import cross_entropy_with_softmax, classification_error, splice
 
 ########################
 # variables and paths  #
@@ -27,8 +27,6 @@ vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in v
 model_dir = "./Models"
 
 # model dimensions
-input_dim  = vocab_size
-label_dim  = num_labels
 emb_dim    = 150
 hidden_dim = 300
 
@@ -38,21 +36,42 @@ hidden_dim = 300
 
 def create_reader(path, is_training):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
-        query         = StreamDef(field='S0', shape=input_dim,   is_sparse=True),
+        query         = StreamDef(field='S0', shape=vocab_size,  is_sparse=True),
         intent_unused = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # BUGBUG: unused, and should infer dim
-        slot_labels   = StreamDef(field='S2', shape=label_dim,   is_sparse=True)
+        slot_labels   = StreamDef(field='S2', shape=num_labels,  is_sparse=True)
     )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
 
 ########################
 # define the model     #
 ########################
 
+def with_lookahead():
+    x = Placeholder()
+    future_x = future_value(x, initial_state=Constant(0))
+    apply_x = splice ([x, future_x])
+    return apply_x
+
+def BiRecurrence(fwd, bwd):
+    F = Recurrence(fwd)
+    G = Recurrence(fwd, go_backwards=True)
+    x = Placeholder()
+    apply_x = splice ([F(x), G(x)])
+    return apply_x
+
+#select_last = slice(Placeholder(), Axis.default_dynamic_axis(), -1, 0)
+# BUGBUG: Fails with "RuntimeError: The specified dynamic axis named defaultDynamicAxis does not match any of the dynamic axes of the operand"
+
 def create_model():
   with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
         Embedding(emb_dim),
+        #with_lookahead(),
+        #BatchNormalization(),
         Recurrence(LSTM(hidden_dim), go_backwards=False),
-        Dense(label_dim)
+        #BiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
+        #select_last,
+        #Recurrence(LSTM(hidden_dim), go_backwards=False),
+        Dense(num_labels)
     ])
 
 ########################
@@ -60,9 +79,12 @@ def create_model():
 ########################
 
 def train(reader, model, max_epochs):
+    model.set_signature(Input(vocab_size,  is_sparse=False))
+
     # Input variables denoting the features and label data
-    query       = Input(input_dim,  is_sparse=False)
-    slot_labels = Input(num_labels, is_sparse=True)  # TODO: make sparse once it works
+    query         = Input(vocab_size,  is_sparse=False)  # TODO: make sparse once it works
+    intent_labels = Input(num_intents, is_sparse=True)
+    slot_labels   = Input(num_labels,  is_sparse=True)
 
     # apply model to input
     z = model(query)
@@ -125,7 +147,7 @@ def train(reader, model, max_epochs):
 
 def evaluate(reader, model):
     # Input variables denoting the features and label data
-    query       = Input(input_dim,  is_sparse=False)
+    query       = Input(vocab_size,  is_sparse=False)
     slot_labels = Input(num_labels, is_sparse=True)  # TODO: make sparse once it works
 
     # apply model to input
