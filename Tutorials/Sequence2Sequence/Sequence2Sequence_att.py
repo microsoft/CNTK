@@ -30,11 +30,11 @@ def sequence_to_sequence_translator(debug_output=False, save_model=False):
     input_vocab_dim = 69
     label_vocab_dim = 69
 
-    hidden_dim = 128
+    hidden_dim = 32
     num_layers = 1
 
     use_attention = True
-    attention_dim = 128
+    attention_dim = 32
     attention_span = 20
 
     # Source and target inputs to the model
@@ -178,8 +178,12 @@ def sequence_to_sequence_translator(debug_output=False, save_model=False):
                 mb_test = test_reader.next_minibatch(minibatch_size)
                 test_args = {'raw_input': mb_test[features_si_te], 'raw_labels': mb_test[labels_si_te]}
 
+                #C.cntk_py.set_computation_network_trace_level(1000000)
+
                 e = ng.eval(test_args)
                 print_sequences(e, i2w)
+                
+                #C.cntk_py.set_computation_network_trace_level(0)
 
                 print_training_progress(trainer, mbs, training_progress_output_freq)
 

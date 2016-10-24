@@ -227,10 +227,11 @@ def ones_like(x):
         return element_times(y, zero)
     return plus(zeroes_like(x), one)
 
+# create a past value window that returns two records: a value, shape=(N,dim), and a valid window, shape=(1,dim)
 def past_value_window(N, input, axis=1):
 
     #ones_like_input = ones_like(input)
-    ones_like_input = plus(times(input, constant(0, shape=(128, 1))), constant(1, shape=(1)))
+    ones_like_input = plus(times(input, constant(0, shape=(input.shape[0], 1))), constant(1, shape=(1)))
     
     last_value=[]
     last_valid=[]
@@ -249,13 +250,13 @@ def past_value_window(N, input, axis=1):
         last_valid.append(sequence.last(valid))
 
     # can't get splice to stack rows 'beside' each other, so stack on top and then reshape...
+    # BUGBUG: below results in warning due to incompatible something... investigate
     value_a = splice(last_value, axis=0)
     valid_a = splice(last_valid, axis=0)
 
     # workaround
-    value = reshape(value_a, shape=(input.shape[0], N))
-    #valid = reshape(valid_a, shape=(input.shape[0], N))
-    valid = reshape(valid_a, shape=(1, N))
+    value = reshape(value_a, shape=(N, input.shape[0]))
+    valid = reshape(valid_a, shape=(N, 1))
 
     # value[t] = value of t steps in the past; valid[t] = true if there was a value t steps in the past
     return value, valid
@@ -277,31 +278,35 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
     def projected_attention_window_broadcast():
         W = parameter(shape=(attention_dim, encoder_output_dim), init=glorot_uniform())
 
-        projected_value = sequence.broadcast_as(times(W, stabilize(element_times(aw_value, aw_valid))), 
+        projected_value = sequence.broadcast_as(times(stabilize(element_times(aw_value, aw_valid)), W), 
                                                           decoder_dynamic_axis)
         value           = sequence.broadcast_as(aw_value, decoder_dynamic_axis)
         valid           = sequence.broadcast_as(aw_valid, decoder_dynamic_axis)
 
+        # should be shape=(attention_span, attention_dim)
         return projected_value, value, valid
 
     # the function that gets passed to the LSTM function as the augment_input_hook parameter
     def augment_input_hook(input, prev_state):
         output_dim = prev_state.shape[0]
-        W = parameter(shape=(attention_dim, output_dim), init=glorot_uniform())
-        projectedH = times(W, stabilize(reshape(prev_state, shape=(output_dim,1))), output_rank=1)
+        W = parameter(shape=(output_dim, attention_dim), init=glorot_uniform())
 
-        tanh_out = tanh(projectedH + projected_attention_window_broadcast()[0])  # (attention_dim, attention_span)
+        projectedH = times(stabilize(prev_state), W, output_rank=1)
 
+        tanh_out = tanh(projectedH + projected_attention_window_broadcast()[0])  # (attention_span, attention_dim)
+        
         # u = v * tanh(W1h + W2d)
-        v = parameter(shape=(1, attention_dim))
-        u = times(v, stabilize(element_times(tanh_out, projected_attention_window_broadcast()[2])))
+        v = parameter(shape=(attention_dim, 1))
+               
+        u = times(stabilize(element_times(tanh_out, projected_attention_window_broadcast()[2])), v) # (attention_span, 1)
         u_valid = plus(u, log(projected_attention_window_broadcast()[2]))
 
         attention_weights = my_softmax(u_valid, 1)
+        # the window should be shape=(attention_span, output_dim)
         weighted_attention_window = element_times(projected_attention_window_broadcast()[1], attention_weights)
 
-        ones = constant(value=1, shape=(attention_span, 1))
-        weighted_attention_avg = stabilize(times(weighted_attention_window, ones, output_rank=1))
+        ones = constant(value=1, shape=(1, attention_span))
+        weighted_attention_avg = stabilize(times(ones, weighted_attention_window, output_rank=1))
 
         return reshape(weighted_attention_avg, shape=(output_dim))
 
