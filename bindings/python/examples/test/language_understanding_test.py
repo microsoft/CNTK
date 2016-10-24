@@ -13,27 +13,99 @@ from cntk.blocks import *
 from cntk.layers import *
 from cntk.models import *
 from cntk.utils import *
-from examples.LanguageUnderstanding.LanguageUnderstanding import data_dir, create_reader, create_model, train, emb_dim, hidden_dim, label_dim
+from cntk.ops import splice
+from examples.LanguageUnderstanding.LanguageUnderstanding import data_dir, create_reader, create_model, train, evaluate, emb_dim, hidden_dim, num_labels
 
-def create_test_model():
-    # this selects additional nodes and alternative paths
-    with default_options(enable_self_stabilization=True, use_peepholes=True):
-        return Sequential([
-            Stabilizer(),
-            Embedding(emb_dim),
-            BatchNormalization(),
-            Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
-            BatchNormalization(map_rank=1),
-            Dense(label_dim)
-        ])
+def test_a_model(what, model, expected_avg):
+    print("--- {} ---".format(what))
+    # train
+    reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
+    loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
+    print("-->", evaluation_avg, loss_avg)
+    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+    # test
+    #reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
+    #evaluate(reader, model)
+    # BUGBUG: fails eval with "RuntimeError: __v2libuid__BatchNormalization456__v2libname__BatchNormalization11: inference mode is used, but nothing has been trained."
+
+def with_lookahead():
+    x = Placeholder()
+    future_x = future_value(x, initial_state=Constant(0))
+    apply_x = splice ([x, future_x])
+    return apply_x
+
+def BiRecurrence(fwd, bwd):
+    F = Recurrence(fwd)
+    G = Recurrence(fwd, go_backwards=True)
+    x = Placeholder()
+    apply_x = splice ([F(x), G(x)])
+    return apply_x
 
 def test_seq_classification_error(device_id):
     from cntk.utils import cntk_device
     DeviceDescriptor.set_default_device(cntk_device(device_id))
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed
-    set_computation_network_trace_level(1)
+    #set_computation_network_trace_level(1)
     set_fixed_random_seed(1) # to become invariant to initialization order, which is a valid change
+
+    if device_id >= 0: # BatchNormalization currently does not run on CPU
+        # change to intent classifier   --moved up here since this fails, as repro
+        # BUGBUG: Broken, need to pass new criterion to train().
+        #with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
+        #    select_last = slice(Placeholder(), Axis.default_dynamic_axis(), -1, 0)
+        #    # BUGBUG: Fails with "RuntimeError: The specified dynamic axis named defaultDynamicAxis does not match any of the dynamic axes of the operand"
+        #    test_a_model('change to intent classifier', Sequential([
+        #        Embedding(emb_dim),
+        #        with_lookahead(),
+        #        BatchNormalization(),
+        #        BiRecurrence(LSTM(hidden_dim)),
+        #        BatchNormalization(),
+        #        select_last,  # fails here with an axis problem
+        #        Dense(num_labels)
+        #    ]), [0.084, 0.407364])
+
+        # plus BatchNorm
+        with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
+            test_a_model('plus BatchNorm', Sequential([
+                Embedding(emb_dim),
+                BatchNormalization(),
+                Recurrence(LSTM(hidden_dim), go_backwards=False),
+                BatchNormalization(),
+                Dense(num_labels)
+            ]), [0.05662627214996811, 0.2968516879905391])
+
+        # plus lookahead
+        with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
+            test_a_model('plus lookahead', Sequential([
+                Embedding(emb_dim),
+                with_lookahead(),
+                BatchNormalization(),
+                Recurrence(LSTM(hidden_dim), go_backwards=False),
+                BatchNormalization(),
+                Dense(num_labels)
+            ]), [0.057901888466764646, 0.3044637752807047])
+
+        # replace lookahead by bidirectional model
+        with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
+            test_a_model('replace lookahead by bidirectional model', Sequential([
+                Embedding(emb_dim),
+                BatchNormalization(),
+                BiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
+                BatchNormalization(),
+                Dense(num_labels)
+            ]), [0.0579573500457558, 0.3214986774820327])
+
+        # test of a config like in the example but with additions to test many code paths
+        with default_options(enable_self_stabilization=True, use_peepholes=True):
+            test_a_model('alternate paths', Sequential([
+                Stabilizer(),
+                Embedding(emb_dim),
+                BatchNormalization(),
+                Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
+                BatchNormalization(map_rank=1),
+                Dense(num_labels)
+            ]), [0.08574360112032389, 0.41847621578367716])
 
     # test of the example itself
     # this emulates the main code in the PY file
@@ -42,15 +114,6 @@ def test_seq_classification_error(device_id):
     loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
     expected_avg = [0.15570838301766451, 0.7846451368305728]
     assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
-
-    # test of a config like in the example but with additions to test many code paths
-    if device_id >= 0: # BatchNormalization currently does not run on CPU
-        reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
-        model = create_test_model()
-        loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
-        log_number_of_parameters(model, trace_level=1) ; print()
-        expected_avg = [0.084, 0.407364]
-        assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
 if __name__=='__main__':
     test_seq_classification_error(0)

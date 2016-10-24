@@ -45,32 +45,11 @@ def create_reader(path, is_training):
 # define the model     #
 ########################
 
-def with_lookahead():
-    x = Placeholder()
-    future_x = future_value(x, initial_state=Constant(0))
-    apply_x = splice ([x, future_x])
-    return apply_x
-
-def BiRecurrence(fwd, bwd):
-    F = Recurrence(fwd)
-    G = Recurrence(fwd, go_backwards=True)
-    x = Placeholder()
-    apply_x = splice ([F(x), G(x)])
-    return apply_x
-
-#select_last = slice(Placeholder(), Axis.default_dynamic_axis(), -1, 0)
-# BUGBUG: Fails with "RuntimeError: The specified dynamic axis named defaultDynamicAxis does not match any of the dynamic axes of the operand"
-
 def create_model():
   with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
         Embedding(emb_dim),
-        #with_lookahead(),
-        #BatchNormalization(),
         Recurrence(LSTM(hidden_dim), go_backwards=False),
-        #BiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
-        #select_last,
-        #Recurrence(LSTM(hidden_dim), go_backwards=False),
         Dense(num_labels)
     ])
 
@@ -96,7 +75,7 @@ def train(reader, model, max_epochs):
     # training config
     epoch_size = 36000
     minibatch_size = 70
-    epoch_size = 1000 ; max_epochs = 1 # for faster testing
+    #epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
     num_mbs_to_show_result = 100
     momentum_as_time_constant = minibatch_size / -math.log(0.9)  # TODO: Change to round number. This is 664.39. 700?
 
