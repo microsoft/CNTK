@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, StreamConfiguration, text_format_minibatch_source, distributed, persist
+from cntk import Trainer, StreamConfiguration, text_format_minibatch_source, distributed
 from cntk.device import cpu, set_default_device, default, DeviceDescriptor
 from cntk.learner import sgd, learning_rate_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, relu, element_times, constant
@@ -87,7 +87,7 @@ def simple_mnist(debug_output=False):
     minibatch_size = 32
     minibatch_size = int(minibatch_size_across_workers / num_workers)
     epoch_size = 60000
-    num_epochs = 5
+    num_epochs = 10
     num_sweeps_to_train_with = 1
     # otherwise, some worker will get stuck in aggregating gradients if one exit loop earlier
     num_minibatches_to_train = int(epoch_size / minibatch_size) * num_epochs
