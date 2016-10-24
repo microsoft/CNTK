@@ -299,16 +299,19 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
         v = parameter(shape=(attention_dim, 1))
                
         u = times(stabilize(element_times(tanh_out, projected_attention_window_broadcast()[2])), v) # (attention_span, 1)
-        u_valid = plus(u, log(projected_attention_window_broadcast()[2]))
+        u_valid = plus(u, log(projected_attention_window_broadcast()[2]), name='u_valid')
 
         attention_weights = alias(my_softmax(u_valid, 1), name='attention_weights')
         # the window should be shape=(attention_span, output_dim)
-        weighted_attention_window = element_times(projected_attention_window_broadcast()[1], attention_weights)
+        weighted_attention_window = element_times(projected_attention_window_broadcast()[1], attention_weights, 
+                                                  name='weighted_attention_window')
 
-        ones = constant(value=1, shape=(1, attention_span))
-        weighted_attention_avg = stabilize(times(ones, weighted_attention_window, output_rank=1))
+        ones = constant(value=1, shape=(attention_span))
+        # weighted_attention_avg should be shape=(output_dim)
+        weighted_attention_avg = times(ones, stabilize(weighted_attention_window), output_rank=1, 
+                                       name='weighted_attention_avg')
 
-        return reshape(weighted_attention_avg, shape=(output_dim))
+        return weighted_attention_avg
 
     return augment_input_hook
 
