@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+﻿# Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -7,10 +7,10 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, StreamConfiguration, text_format_minibatch_source, distributed
+from cntk import Trainer, StreamConfiguration, text_format_minibatch_source, distributed, persist
 from cntk.device import cpu, set_default_device, default, DeviceDescriptor
-from cntk.learner import sgd
-from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
+from cntk.learner import sgd, learning_rate_schedule
+from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, relu, element_times, constant
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -38,7 +38,7 @@ def simple_mnist(debug_output=False):
     # Instantiate the feedforward classification model
     scaled_input = element_times(constant(0.00390625), input)
     netout = fully_connected_classifier_net(
-        scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
+        scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, relu)
 
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
@@ -70,28 +70,43 @@ def simple_mnist(debug_output=False):
             print("* {} {}".format(wk.global_rank, wk.host_id))
         else:
             print("  {} {}".format(wk.global_rank, wk.host_id))
-            
+
+    num_workers = len(workers)
+    worker_rank = current_worker.global_rank
+
     #mpi_comm2 = mpi_comm.sub_group([current_worker]) #feature not implemented in C++
     
     dist_trainer = distributed.trainer.data_parallel_distributed_trainer(mpi_comm, False)
     
-    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters,
-        lr=0.003125)], distributed_trainer=dist_trainer)
-
     print("Training on device type:{} id:{}".format('gpu' if default().type() else 'cpu', default().id()))
         
     # Get minibatches of images to train with and perform model training
-    minibatch_size = 32
-    num_samples_per_sweep = 60000
-    num_sweeps_to_train_with = 1
-    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
-    training_progress_output_freq = 80
+    minibatch_size_across_workers = 64
+    minibatch_size = int(minibatch_size_across_workers / num_workers)
+    epoch_size = 60000
+    num_epochs = 5
+
+    # Make sure each worker has the same amount of data, or use distributed reader in future
+    # otherwise, some worker will get stuck in aggregating gradients if one exit loop earlier
+    num_minibatches_to_train = int(epoch_size / minibatch_size) * num_epochs
+    num_minibatches_to_train = int(num_minibatches_to_train / num_workers) * num_workers
+    
+    lr_per_sample = [0.01]*5+[0.005]
+    lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
+
+    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters,
+        lr=lr_schedule)], distributed_trainer=dist_trainer)
+
+    training_progress_output_freq = 500
 
     if debug_output:
         training_progress_output_freq = training_progress_output_freq/4
 
-    for i in range(0, int(num_minibatches_to_train)):
+    for i in range(0, num_minibatches_to_train):
         mb = mb_source.next_minibatch(minibatch_size)
+
+        # for distributed worker, skip mb to make sure each worker sees different input
+        if (i % num_workers) != worker_rank: continue
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
@@ -99,7 +114,7 @@ def simple_mnist(debug_output=False):
                      label: mb[labels_si]}
         trainer.train_minibatch(arguments)
 
-        print_training_progress(trainer, i, training_progress_output_freq)
+        print_training_progress(trainer, int(i / num_workers), training_progress_output_freq)
 
     # Load test data
     try:
