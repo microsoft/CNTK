@@ -177,7 +177,7 @@ if __name__=='__main__':
 
     # train
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
-    train(reader, model, max_epochs=1)
+    train(reader, model, max_epochs=8)
 
     # test
     reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
