@@ -892,7 +892,11 @@ namespace CNTK
         CNTK_API static const std::wstring StaticAxisNamePrefix;
 
         CNTK_API static const int SentinelStaticAxisIndexValueForDynamicAxes;
+        CNTK_API static const int SentinelStaticAxisIndexValueForAllStaticAxes;
         CNTK_API static const int SentinelStaticAxisIndexValueForUnknownAxes;
+
+        // Todo: move into Axis::AllStaticAxes() after upgrade to VS2015
+        static const Axis s_allStaticAxes;
 
         class UniqueDynamicAxesNames
         {
@@ -932,7 +936,6 @@ namespace CNTK
 
     public:
         CNTK_API static const std::vector<Axis> DefaultInputVariableDynamicAxes;
-        CNTK_API static const int SentinelStaticAxisIndexValueForAllStaticAxes;
 
         ///
         /// Axis object representing unknown dynamic axes
