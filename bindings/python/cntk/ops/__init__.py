@@ -199,15 +199,15 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
 
     Example:
-	>>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
-	>>> x = C.input_variable(img.shape)
-	>>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
-	>>> kernel = C.constant(value = filter)
-	>>> C.convolution(kernel , x, auto_padding = [False]).eval({x: img})
-	array([[[[[  6.,   8.,  10.,  12.],
-		  [ 16.,  18.,  20.,  22.],
-		  [ 26.,  28.,  30.,  32.],
-		  [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
+    >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
+    >>> x = C.input_variable(img.shape)
+    >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
+    >>> kernel = C.constant(value = filter)
+    >>> C.convolution(kernel , x, auto_padding = [False]).eval({x: img})
+    array([[[[[  6.,   8.,  10.,  12.],
+              [ 16.,  18.,  20.,  22.],
+              [ 26.,  28.,  30.,  32.],
+              [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
 
     Args:
         convolution_map: convolution filter weights, stored as a tensor of dimensions [outChannels x M1 x M2 x ... x Mn],
@@ -281,14 +281,14 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
 
     Example:
-	>>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-	>>> x = C.input_variable(img.shape)
-	>>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : img})
-	array([[[[[  2.5,   4.5],
-		  [ 10.5,  12.5]]]]], dtype=float32)
-	>>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : img})
-	array([[[[[  5.,   7.],
-		  [ 13.,  15.]]]]], dtype=float32)
+    >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+    >>> x = C.input_variable(img.shape)
+    >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : img})
+    array([[[[[  2.5,   4.5],
+              [ 10.5,  12.5]]]]], dtype=float32)
+    >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : img})
+    array([[[[[  5.,   7.],
+              [ 13.,  15.]]]]], dtype=float32)
 
     Args:
         operand: pooling input
@@ -1860,7 +1860,7 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     if shape is None:
         shape = NDShape.unknown.dimensions()
     else:
-    shape = sanitize_shape(shape)
+        shape = sanitize_shape(shape)
 
     if dynamic_axes is None:
         dynamic_axes = Axis.unknown_dynamic_axes()
@@ -1942,7 +1942,7 @@ def constant(value=None, shape=None, device=None, name=''):
     #if np.isscalar(value) and not shape:
     if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
         shape = ()
-        if isinstance(value, np.ndarray):
+    if isinstance(value, np.ndarray):
         dtype = value.dtype
     else:
         dtype = np.float32
