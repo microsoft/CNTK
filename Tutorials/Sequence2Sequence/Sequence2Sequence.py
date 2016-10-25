@@ -13,70 +13,45 @@ from cntk.device import cpu, set_default_device
 from cntk.learner import momentum_sgd, momentum_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select, alias, hardmax
 from cntk.ops.functions import CloneMethod
+from cntk.graph import find_nodes_by_name
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 sys.path.append(os.path.join(abs_path, "..", "..", "bindings", "python"))
 from examples.common.nn import LSTMP_component_with_self_stabilization, stabilize, linear_layer, print_training_progress
 
-# Given a vocab and tensor, print the output
-def print_sequences(sequences, i2w):
-    for s in sequences:
-        print([i2w[np.argmax(w)] for w in s], sep=" ")
+########################
+# variables and stuff  #
+########################
 
-def create_reader(path, randomize, input_vocab_dim, label_vocab_dim, size=INFINITELY_REPEAT):
+cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../.."    # data resides in the CNTK folder
+data_dir = cntk_dir + "/Examples/SequenceToSequence/CMUDict/Data/"  # under Examples/SequenceToSequence
+model_dir = "./Models"
+input_vocab_size = 69
+label_vocab_size = 69
+
+# model dimensions
+input_vocab_dim  = input_vocab_size
+label_vocab_dim  = label_vocab_size
+hidden_dim = 256
+num_layers = 1
+
+########################
+# define the reader    #
+########################
+
+def create_reader(path, randomize, size=INFINITELY_REPEAT):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         features  = StreamDef(field='S0', shape=input_vocab_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=label_vocab_dim,  is_sparse=True)
     )), randomize=randomize, epoch_size = size)
 
-# helper function to find variables by name
-# which is necessary when cloning or loading the model
-def find_arg_by_name(name, expression):
-    vars = [i for i in expression.arguments if i.name == name]
-    assert len(vars) == 1
-    return vars[0]
+########################
+# define the model     #
+########################
 
-# Average of evaluation errors of all test minibatches
-def translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim, debug_output=False):
-    # now setup a test run
-    rel_path = r"../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.test.ctf"
-    test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
-
-    test_reader = create_reader(test_path, False, input_vocab_dim, label_vocab_dim, FULL_DATA_SWEEP)
-
-    test_bind = {
-        find_arg_by_name('raw_input',z)  : test_reader.streams.features,
-        find_arg_by_name('raw_labels',z) : test_reader.streams.labels
-    }
-
-    test_minibatch_size = 1024
-
-    # Get minibatches of sequences to test and perform testing
-    i = 0
-    total_error = 0.0
-    while True:
-        mb = test_reader.next_minibatch(test_minibatch_size, input_map=test_bind)
-        if mb is None: break
-        mb_error = trainer.test_minibatch(mb)
-        total_error += mb_error
-
-        if debug_output:
-            print("Minibatch {}, Error {} ".format(i, mb_error))
-        i += 1
-    return total_error/i
-
-
-# Creates and trains a sequence to sequence translation model
-def sequence_to_sequence_translator():
-
-    input_vocab_dim = 69
-    label_vocab_dim = 69
-
-    # network complexity; initially low for faster testing
-    hidden_dim = 256
-    num_layers = 1
-
+def create_model():
+    
     # Source and target inputs to the model
     batch_axis = Axis.default_batch_axis()
     input_seq_axis = Axis('inputAxis')
@@ -94,8 +69,8 @@ def sequence_to_sequence_translator():
     input_sequence = raw_input
 
     # Drop the sentence start token from the label, for decoder training
-    label_sequence = slice(raw_labels, label_seq_axis, 1, 0) # <s> A B C </s> --> A B C </s>
-    label_sentence_start = sequence.first(raw_labels)        # <s>
+    label_sequence = slice(raw_labels, label_seq_axis, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
+    label_sentence_start = sequence.first(raw_labels)                               # <s>
 
     is_first_label = sequence.is_first(label_sequence)       # <s> 0 0 0 ...
     label_sentence_start_scattered = sequence.scatter(
@@ -140,16 +115,30 @@ def sequence_to_sequence_translator():
 
     # Softmax output layer
     z = linear_layer(stabilize(decoder_output), label_vocab_dim)
+    
+    return z
 
+########################
+# train action         #
+########################
+
+def train(train_reader, valid_reader, vocab, i2w, model, max_epochs):
+    
+    # do some hooks that we won't need in the future
+    raw_labels = find_arg_by_name('raw_labels', model)    
+    
+    label_sequence = find_nodes_by_name(model, 'label_sequence')[0]    
+    decoder_history_hook = find_nodes_by_name(model, 'decoder_history_hook')[0]  
+        
     # Criterion nodes
-    ce = cross_entropy_with_softmax(z, label_sequence)
-    errs = classification_error(z, label_sequence)
+    ce = cross_entropy_with_softmax(model, label_sequence)
+    errs = classification_error(model, label_sequence)
 
     # network output for decoder history
-    net_output = hardmax(z)
+    net_output = hardmax(model)
 
     # make a clone of the graph where the ground truth is replaced by the network output
-    ng = z.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
+    new_model = model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
 
     # Instantiate the trainer object to drive the model training
     lr = 0.007
@@ -158,39 +147,24 @@ def sequence_to_sequence_translator():
     m_schedule = momentum_schedule(momentum_time_constant)
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
-    learner = momentum_sgd(z.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)
-    trainer = Trainer(z, ce, errs, learner)
-
-    # setup data
-    rel_path = r"../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.train-dev-20-21.ctf"
-    train_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
-    valid_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tiny.ctf")
-
-    # readers
-    train_reader = create_reader(train_path, True, input_vocab_dim, label_vocab_dim)
-    train_bind = {
-        raw_input  : train_reader.streams.features,
-        raw_labels : train_reader.streams.labels
-    }
-
-    # get the vocab for printing output sequences in plaintext
-    rel_path = r"../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.mapping"
-    vocab_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
-    vocab = [w.strip() for w in open(vocab_path).readlines()]
-    i2w = { i:ch for i,ch in enumerate(vocab) }
+    learner = momentum_sgd(model.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)
+    trainer = Trainer(model, ce, errs, learner)
 
     # Get minibatches of sequences to train with and perform model training
     i = 0
     mbs = 0
     epoch_size = 908241
-    max_epochs = 10
     training_progress_output_freq = 500
 
-    valid_reader = create_reader(valid_path, False, input_vocab_dim, label_vocab_dim)
+    # bind inputs to data from readers
+    train_bind = {
+        find_arg_by_name('raw_input' , model) : train_reader.streams.features,
+        find_arg_by_name('raw_labels', model) : train_reader.streams.labels
+    }
     valid_bind = {
-            find_arg_by_name('raw_input',ng)  : valid_reader.streams.features,
-            find_arg_by_name('raw_labels',ng) : valid_reader.streams.labels
-        }
+        find_arg_by_name('raw_input' , new_model) : valid_reader.streams.features,
+        find_arg_by_name('raw_labels', new_model) : valid_reader.streams.labels
+    }
 
     for epoch in range(max_epochs):
         loss_numer = 0
@@ -211,7 +185,7 @@ def sequence_to_sequence_translator():
             # every N MBs evaluate on a test sequence to visually show how we're doing
             if mbs % training_progress_output_freq == 0:
                 mb_valid = valid_reader.next_minibatch(minibatch_size, input_map=valid_bind)
-                e = ng.eval(mb_valid)
+                e = new_model.eval(mb_valid)
                 print_sequences(e, i2w)
 
             print_training_progress(trainer, mbs, training_progress_output_freq)
@@ -222,13 +196,47 @@ def sequence_to_sequence_translator():
 
         if save_model:
             # save the model every epoch
-            model_filename = "model_epoch%d.dnn" % epoch
-            save_model(ng, model_filename)
+            model_filename = os.path.join(model_dir, "model_epoch%d.dnn" % epoch)
+            save_model(new_model, model_filename)
             print("Saved model to '%s'" % model_filename)
+
+########################
+# helper functions     #
+########################
+
+def get_vocab(path):
+    # get the vocab for printing output sequences in plaintext
+    vocab = [w.strip() for w in open(path).readlines()]
+    i2w = { i:ch for i,ch in enumerate(vocab) }
+    
+    return (vocab, i2w)
+
+# Given a vocab and tensor, print the output
+def print_sequences(sequences, i2w):
+    for s in sequences:
+        print([i2w[np.argmax(w)] for w in s], sep=" ")
+
+# helper function to find variables by name
+# which is necessary when cloning or loading the model
+def find_arg_by_name(name, expression):
+    vars = [i for i in expression.arguments if i.name == name]
+    assert len(vars) == 1
+    return vars[0]
+
+
+#############################
+# main function boilerplate #
+#############################
     
 if __name__ == '__main__':
-    # Specify the target device to be used for computing, if you do not want to
-    # use the best available one, e.g.
-    #set_default_device(cpu())
 
-    sequence_to_sequence_translator()
+    # hook up data
+    train_reader = create_reader(data_dir + "cmudict-0.7b.train-dev-20-21.ctf", True)
+    valid_reader = create_reader("tiny.ctf", False)
+    vocab, i2w = get_vocab(data_dir + "cmudict-0.7b.mapping")
+
+    # create model
+    model = create_model()
+    
+    # train
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10)
