@@ -1,3 +1,8 @@
+//
+// <copyright file="NoMultiversoWrapper.h" company="Microsoft">
+//     Copyright (c) Microsoft Corporation.  All rights reserved.
+// </copyright>
+//
 #pragma once
 
 #include "ASGDCommon.h"

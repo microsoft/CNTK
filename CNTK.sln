@@ -137,9 +137,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ComputationNetworkLib", "Source\ComputationNetworkLib\ComputationNetworkLib.vcxproj", "{928ABD1B-4D3B-4017-AEF1-0FA1B4467513}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SGDLib", "Source\SGDLib\SGDLib.vcxproj", "{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}"
-	ProjectSection(ProjectDependencies) = postProject
-		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelTraining", "ParallelTraining", "{5E666C53-2D82-49C9-9127-3FDDC321C741}"
 	ProjectSection(SolutionItems) = preProject

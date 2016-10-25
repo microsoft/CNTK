@@ -473,8 +473,6 @@ $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
 
-
-
 ########################################
 # LibEval
 ########################################
@@ -853,7 +851,7 @@ endif
 ifeq ("$(CNTK_ENABLE_ASGD)","true")
 
 ifeq (,$(wildcard Source/Multiverso/include/multiverso/*.h))
-  $(error Build with Multiverso was requested but cannot find the code. Please check https://github.com/Microsoft/DMTK to learn more.)
+  $(error Build with Multiverso was requested but cannot find the code. Please check https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#24-data-parallel-asgd to learn more.)
 endif
 
 lMULTIVERSO:=-lmultiverso

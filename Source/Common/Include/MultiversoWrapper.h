@@ -1,3 +1,8 @@
+//
+// <copyright file="MultiversoWrapper.h" company="Microsoft">
+//     Copyright (c) Microsoft Corporation.  All rights reserved.
+// </copyright>
+//
 #pragma once
 
 // the header files located in Source\Multiverso\include
@@ -72,21 +77,21 @@ MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
         m_isSycned = true;
         m_useAsyncBuffered = false;
     }
-    //Pipeline releated variables
+    // Pipeline releated variables
     m_localBufferNum = m_useAsyncBuffered ? 2 : 1;
     m_bufferSwapIndex = new int[m_localBufferNum];
 
-    //CPU asynchronous buffer
+    // CPU asynchronous buffer
     m_cpuAsyncBuffer = new ElemType*[m_localBufferNum];
 
-    //Get option used by multiverso sparse update
+    // Get option used by multiverso sparse update
     m_getOptions.reserve(m_localBufferNum);
     m_addOptions.reserve(m_localBufferNum);
     
 #ifndef CPUONLY
-    //GPU asynchronous buffer
+    // GPU asynchronous buffer
     m_gpuAsyncBuffer.resize(m_localBufferNum);
-    //creat an communication stream for the data tranfer between GPU and CPU
+    // creat an communication stream for the data tranfer between GPU and CPU
     CudaErrorCheck(cudaStreamCreate(&_commStream));
 #endif
     m_bufferIndexInUse = 0;
@@ -225,13 +230,13 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
             Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 #ifndef CPUONLY
-            //CNTK model -> GPU buffer
+            // CNTK model -> GPU buffer
             CudaErrorCheck(cudaMemcpy(m_gpuAsyncBuffer[m_bufferIndexInUse][i].Data(),
                                       mat.Data(),
                                       mat.GetNumElements() * sizeof(ElemType),
                                       cudaMemcpyDeviceToDevice));
 
-            //GPU buffer -> CNTK model
+            // GPU buffer -> CNTK model
             CudaErrorCheck(cudaMemcpy(mat.Data(),
                                       m_gpuAsyncBuffer[m_bufferSwapIndex[m_bufferIndexInUse]][i].Data(),
                                       mat.GetNumElements() * sizeof(ElemType),
@@ -261,7 +266,7 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
             for (int widx = 0; widx < m_tableCount; widx++)
             {
                 ElemType * px = m_deltaArray + m_tableOffsets[widx];
-                //GPU buffer -> CPU buffer
+                // GPU buffer -> CPU buffer
                 CudaErrorCheck(cudaMemcpyAsync(px,
                                                m_gpuAsyncBuffer[m_bufferIndexInUse][widx].Data(),
                                                m_gpuAsyncBuffer[m_bufferIndexInUse][widx].GetNumElements() * sizeof(ElemType),
@@ -511,7 +516,7 @@ private:
         m_matrixMap = new std::vector< multiverso::MatrixWorker<ElemType>*>();
         m_serverMap = new std::vector< multiverso::MatrixServer<ElemType>*>();
 
-        //weights
+        // weights
         std::wstring sparse_tag{ L"Sparse" };
 #endif
         int i = 0;
@@ -570,7 +575,7 @@ private:
         for (int i = 0; i < m_localBufferNum; i++)
             m_gpuAsyncBuffer[i].reserve(m_tableCount);
 
-        //create pinned memory
+        // create pinned memory
         for (int i = 0; i < m_localBufferNum; ++i)
             CudaErrorCheck(cudaMallocHost((void **)&m_cpuAsyncBuffer[i], sizeof(ElemType) * (m_totalModelSize), cudaHostAllocPortable));
 
@@ -605,7 +610,7 @@ private:
         float factor = 0;
         int   nTotalSamples = samplesSinceLastSync;
         // TODO[qiwye] will conflict with multiverso
-        //m_pMPI->AllReduce(&nTotalSamples, 1);
+        // m_pMPI->AllReduce(&nTotalSamples, 1);
 
         if (nTotalSamples <= 0)
         {
@@ -651,7 +656,7 @@ private:
     std::vector<multiverso::MatrixWorker<ElemType>*>* m_matrixMap;
     std::vector<multiverso::MatrixServer<ElemType>*>* m_serverMap;
     std::vector<bool> m_isSparseArray;
-    //Todo(qiwye): using ArrayTable for less comunications between servers and workers.
+    // Todo(qiwye): using ArrayTable for less comunications between servers and workers.
 #else
     multiverso::ArrayServer<ElemType>* m_serverArray;
     multiverso::ArrayWorker<ElemType>* m_workerArray;
@@ -689,7 +694,7 @@ private:
 
     MPIWrapperPtr m_pMPI;
 
-    //GPU double buffer
+    // GPU double buffer
     std::vector<std::vector<Matrix<ElemType>   >> m_gpuAsyncBuffer;
     int m_tableCount;
 

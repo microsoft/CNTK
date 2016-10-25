@@ -85,7 +85,7 @@ makebuildinfo()
         else
             printf "#define _WITH_1BITSGD_ \"no\"\n"
         fi
-	    if [ ! -z "$WITH_ASGD" ]; then 
+        if [ ! -z "$WITH_ASGD" ]; then 
             printf "#define _WITH_ASGD_ \"yes\"\n"
         else
             printf "#define _WITH_ASGD_ \"no\"\n"
