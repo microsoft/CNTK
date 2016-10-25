@@ -4,29 +4,42 @@
 # for full license information.
 # ==============================================================================
 
-import sys
 import os
-from cntk import Trainer
-from cntk.device import cpu, set_default_device
-from cntk.learner import momentum_sgd, learning_rate_schedule
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, element_times, pooling, AVG_POOLING, relu
+import math
+import numpy as np
+
+from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-#from cntk.initializer import he_normal, glorot_uniform
+from cntk.initializer import glorot_uniform
+from cntk import Trainer
+from cntk.learner import momentum_sgd, learning_rate_schedule
+from cntk.ops import cross_entropy_with_softmax, classification_error, relu, convolution, pooling, AVG_POOLING
+from cntk.ops import input_variable, constant, parameter, combine, times, element_times
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
+#
+# Paths relative to current python file.
+#
+abs_path   = os.path.dirname(os.path.abspath(__file__))
+cntk_path  = os.path.normpath(os.path.join(abs_path, "..", "..", "..", ".."))
+data_path  = os.path.join(cntk_path, "Examples", "Image", "Datasets", "CIFAR-10")
+model_path = os.path.join(abs_path, "Models")
+
+#
+# Layer wrappers
+#
 sys.path.append(os.path.join(abs_path, "..", ".."))
-from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, linear_layer, print_training_progress
+from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, linear_layer
 
-TRAIN_MAP_FILENAME = 'train_map.txt'
-MEAN_FILENAME = 'CIFAR-10_mean.xml'
-TEST_MAP_FILENAME = 'test_map.txt'
+# model dimensions
+image_height = 32
+image_width  = 32
+num_channels = 3  # RGB
+num_classes  = 10
 
-# Instantiates the CNTK built-in minibatch source for reading images to be used for training the residual net
-# The minibatch source is configured using a hierarchical dictionary of key:value pairs
-
-
-def create_reader(path, map_file, mean_file, is_training, image_width, image_height, num_channels, num_classes):
-    # warn if the corpus is not downloaded or placed at expected location
+#
+# Define the reader for both training and evaluation action.
+#
+def create_reader(map_file, mean_file, train):
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         cifar_py3 = "" if sys.version_info.major < 3 else "_py3"
         raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
@@ -34,9 +47,9 @@ def create_reader(path, map_file, mean_file, is_training, image_width, image_hei
 
     # transformation pipeline for the features has jitter/crop only when training
     transforms = []
-    if is_training:
+    if train:
         transforms += [
-            ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio') # is_training uses jitter
+            ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio') # train uses jitter
         ]
     transforms += [
         ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
@@ -46,9 +59,11 @@ def create_reader(path, map_file, mean_file, is_training, image_width, image_hei
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
         features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
         labels   = StreamDef(field='label', shape=num_classes)      # and second as 'label'
-    )), randomize=is_training, epoch_size = sys.maxsize)
+    )))
 
-
+#
+# Resnet building blocks
+#
 def resnet_basic(input, out_feature_map_count, bn_time_const):
     c1 = conv_bn_relu_layer(input, out_feature_map_count, [3, 3], [1, 1], bn_time_const)
     c2 = conv_bn_layer(c1, out_feature_map_count, [3, 3], [1, 1], bn_time_const)
@@ -72,8 +87,10 @@ def resnet_basic_stack3(input, out_feature_map_count, bn_time_const):
     r3 = resnet_basic(r12, out_feature_map_count, bn_time_const)
     return r3
 
+#   
 # Defines the residual network model for classifying images
-def resnet_classifer(input, num_classes):
+#
+def create_resnet_model(input, num_classes):
     bn_time_const = 4096
 
     c_map1 = 16
@@ -102,84 +119,97 @@ def resnet_classifer(input, num_classes):
     pool = pooling(r3_2, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
     return linear_layer(pool, num_classes)
 
-# Trains a residual network model on the Cifar image dataset
-def cifar_resnet(base_path, debug_output=False):
-    image_height = 32
-    image_width = 32
-    num_channels = 3
-    num_classes = 10
-
-    reader_train = create_reader(base_path, 'train_map.txt', 'CIFAR-10_mean.xml',
-        True, image_width, image_height, num_channels, num_classes)
+#
+# Train and evaluate the network.
+#
+def train_and_evaluate(reader_train, reader_test, max_epochs):
 
     # Input variables denoting the features and label data
-    image_input = input_variable(
-        (num_channels, image_height, image_width))
+    input_var = input_variable((num_channels, image_height, image_width))
     label_var = input_variable((num_classes))
 
-    # Instantiate the resnet classification model
-    classifier_output = resnet_classifer(image_input, num_classes)
+    # apply model to input
+    z = create_resnet_model(input_var, 10)
 
-    ce = cross_entropy_with_softmax(classifier_output, label_var)
-    pe = classification_error(classifier_output, label_var)
+    #
+    # Training action
+    #
 
-    mb_size = 128
-    num_mb_per_epoch = 100
-    num_epochs = 10
-    num_mbs = num_mb_per_epoch * num_epochs
+    # loss and metric
+    ce = cross_entropy_with_softmax(z, label_var)
+    pe = classification_error(z, label_var)
 
-    lr_per_sample = [1/mb_size]*80+[0.1/mb_size]*40+[0.01/mb_size]
-    lr_schedule = learning_rate_schedule(lr_per_sample, units=mb_size * num_mb_per_epoch)
-    momentum_per_sample=0.9**(1.0/mb_size)
+    # training config
+    epoch_size     = 50000
+    minibatch_size = 128
 
-    # Instantiate the trainer object to drive the model training
-    trainer = Trainer(classifier_output, ce, pe,
-                      [momentum_sgd(classifier_output.parameters, lr_schedule, momentum_per_sample, l2_regularization_weight=0.0001)])
+    # Set learning parameters
+    lr_per_sample       = [1/minibatch_size]*80+[0.1/minibatch_size]*40+[0.01/minibatch_size]
+    lr_schedule         = learning_rate_schedule(lr_per_sample, units=epoch_size)
+    momentum_per_sample = 0.9**(1.0/minibatch_size)
+    l2_reg_weight       = 0.0001
+    
+    # trainer object
+    lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
+    learner     = momentum_sgd(z.parameters, lr_schedule, momentum_per_sample, 
+                               l2_regularization_weight = l2_reg_weight)
+    trainer     = Trainer(z, ce, pe, [learner])
 
-    # Get minibatches of images to train with and perform model training
-    training_progress_output_freq = 100
-
-    if debug_output:
-        training_progress_output_freq = training_progress_output_freq/3
-
+    # define mapping from reader streams to network inputs
     input_map = {
-        image_input: reader_train.streams.features,
+        input_var: reader_train.streams.features,
         label_var: reader_train.streams.labels
     }
 
-    for i in range(0, num_mbs):
-        mb = reader_train.next_minibatch(mb_size, input_map=input_map)
-        trainer.train_minibatch(mb)
-        print_training_progress(trainer, i, training_progress_output_freq)
+    log_number_of_parameters(z) ; print()
+    progress_printer = ProgressPrinter(tag='Training')
 
-    reader_test = create_reader(base_path, 'test_map.txt', 'CIFAR-10_mean.xml',
-        False, image_width, image_height, num_channels, num_classes)
+    # perform model training
+    for epoch in range(max_epochs):       # loop over epochs
+        sample_count = 0
+        while sample_count < epoch_size:  # loop over minibatches in the epoch
+            data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count), input_map=input_map) # fetch minibatch.
+            trainer.train_minibatch(data)                                   # update model with it
 
-    input_map = {
-        image_input: reader_test.streams.features,
-        label_var: reader_test.streams.labels
-    }
+            sample_count += data[label_var].num_samples                     # count samples processed so far
+            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
+        progress_printer.epoch_summary(with_metric=True)
+    
+    #
+    # Evaluation action
+    #
+    epoch_size     = 10000
+    minibatch_size = 16
 
-    mb_size = 128
-    num_mbs = 100
+    # process minibatches and evaluate the model
+    metric_numer    = 0
+    metric_denom    = 0
+    sample_count    = 0
+    minibatch_index = 0
 
-    total_error = 0.0
-    for i in range(0, num_mbs):
-        mb = reader_test.next_minibatch(mb_size, input_map=input_map)
-        error = trainer.test_minibatch(mb)
-        total_error += error
+    #progress_printer = ProgressPrinter(freq=100, first=10, tag='Eval')
+    while sample_count < epoch_size:
+        current_minibatch = min(minibatch_size, epoch_size - sample_count)
 
-    return total_error / num_mbs
+        # Fetch next test min batch.
+        data = reader_test.next_minibatch(current_minibatch, input_map=input_map)
 
-if __name__ == '__main__':
-    # Specify the target device to be used for computing, if you do not want to
-    # use the best available one, e.g.
-    # set_default_device(cpu())
+        # minibatch data to be trained with
+        metric_numer += trainer.test_minibatch(data) * current_minibatch
+        metric_denom += current_minibatch
 
-    base_path = os.path.abspath(os.path.normpath(os.path.join(
-        *"../../../../Examples/Image/Datasets/CIFAR-10/".split("/"))))
+        # Keep track of the number of samples processed so far.
+        sample_count += data[label_var].num_samples
+        minibatch_index += 1
 
-    os.chdir(base_path)
+    print("")
+    print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
+    print("")
 
-    error = cifar_resnet(base_path)
-    print("Error: %f" % error)
+    return metric_numer/metric_denom
+
+if __name__=='__main__':
+    reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
+    reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
+
+    train_and_evaluate(reader_train, reader_test, max_epochs=5)
