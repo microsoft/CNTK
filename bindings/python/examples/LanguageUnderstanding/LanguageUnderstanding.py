@@ -10,17 +10,16 @@ from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 from cntk import Trainer
 from cntk.ops import cross_entropy_with_softmax, classification_error, splice
 from cntk.learner import adam_sgd, learning_rate_schedule, momentum_schedule
 from cntk.persist import load_model, save_model
 
 ########################
-# variables and paths  #
+# variables and stuff  #
 ########################
 
-# paths
 cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../../.."  # data resides in the CNTK folder
 data_dir = cntk_dir + "/Examples/Tutorials/SLUHandsOn"                  # under Examples/Tutorials
 vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
@@ -35,7 +34,7 @@ hidden_dim = 300
 # define the reader    #
 ########################
 
-def create_reader(path, is_training):
+def create_reader(path):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         query         = StreamDef(field='S0', shape=vocab_size,  is_sparse=True),
         intent_unused = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # BUGBUG: unused, and should infer dim
@@ -216,11 +215,9 @@ if __name__=='__main__':
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     force_deterministic_algorithms()
 
-    # create the model
+    reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model()
-
     # train
-    reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
     train(reader, model, max_epochs=8)
 
     # save and load (as an illustration)

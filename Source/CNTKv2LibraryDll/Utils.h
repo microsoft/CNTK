@@ -487,4 +487,6 @@ namespace CNTK
         if (axis.StaticAxisIndex() >= (int)operandShape.Rank())
             InvalidArgument("The specified axis index (%d) exceeds the static #axes (%d) of the corresponding operand", (int)axis.StaticAxisIndex(), (int)operandShape.Rank());
     }
+
+     std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly);
 }

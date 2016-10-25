@@ -20,6 +20,8 @@
 #include <vector>
 #include <memory>
 
+#include "CommonMatrix.h"
+
 #define FFLUSH_SUCCESS 0
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -131,8 +133,12 @@ public:
         }
 
         initialized = true;
-        fprintf(stderr, "MPIWrapper: initializing MPI\n");
-        fflush(stderr);
+        
+        if (GetMathLibTraceLevel() > 0)
+        {
+            fprintf(stderr, "MPIWrapper: initializing MPI\n");
+            fflush(stderr);
+        }
 
         MPI_Init_DL() || MpiFail("mpiaggregator: MPI_Init");
         MPI_Comm_rank(MPI_COMM_WORLD, &m_myRank);
@@ -159,12 +165,15 @@ public:
         // by default we use all of them
         RequestNodes("MPIWrapper");
 
-        if (m_numMPINodes > 1)
-            fprintf(stderr, "mpihelper: we are cog %d in a gearbox of %d\n", (int) m_myRank, (int) m_numMPINodes);
-        else
-            fprintf(stderr, "mpihelper: only one MPI process: MPI operation will be boring\n");
+        if (GetMathLibTraceLevel() > 0)
+        {
+            if (m_numMPINodes > 1)
+                fprintf(stderr, "mpihelper: we are cog %d in a gearbox of %d\n", (int) m_myRank, (int) m_numMPINodes);
+            else
+                fprintf(stderr, "mpihelper: only one MPI process: MPI operation will be boring\n");
 
-        fflush(stderr);
+            fflush(stderr);
+        }
 
         // do an initial handshake
         Ping("mpihelper");
@@ -199,7 +208,10 @@ public:
     // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
     ~MPIWrapper()
     {
-        fprintf(stderr, "~MPIWrapper\n");
+        if (GetMathLibTraceLevel() > 0)
+        {
+            fprintf(stderr, "~MPIWrapper\n");
+        }
 
         // Do not finalize in event of an exception since calling MPI_Finalize without
         // all pending communications being finished results in a hang
@@ -234,12 +246,19 @@ private:
         std::array<int, 1> handshake;
         handshake[0] = 1;
 
-        fprintf(stderr, "ping [%s]: %d nodes pinging each other\n", msg, (int) NumNodesInUse());
-        fflush(stderr);
+        if (GetMathLibTraceLevel() > 0)
+        {
+            fprintf(stderr, "ping [%s]: %d nodes pinging each other\n", msg, (int) NumNodesInUse());
+            fflush(stderr);
+        }
 
         AllReduce(handshake);
-        fprintf(stderr, "ping [%s]: all %d nodes responded\n", msg, handshake[0]);
-        fflush(stderr);
+
+        if (GetMathLibTraceLevel() > 0)
+        {
+            fprintf(stderr, "ping [%s]: all %d nodes responded\n", msg, handshake[0]);
+            fflush(stderr);
+        }
     }
 
     void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/)
@@ -276,10 +295,14 @@ private:
         }
 
         m_numNodesInUse = requestednodes;
-        fprintf(stderr, "requestnodes [%s]: using %d out of %d MPI nodes (%d requested); we (%d) are %s\n",
-                msg, (int) m_numNodesInUse, (int) m_numMPINodes, (int) requestednodes,
-                (int) CurrentNodeRank(), IsIdle() ? "out (idle)" : "in (participating)");
-        fflush(stderr);
+
+        if (GetMathLibTraceLevel() > 0)
+        {
+            fprintf(stderr, "requestnodes [%s]: using %d out of %d MPI nodes (%d requested); we (%d) are %s\n",
+                    msg, (int) m_numNodesInUse, (int) m_numMPINodes, (int) requestednodes,
+                    (int) CurrentNodeRank(), IsIdle() ? "out (idle)" : "in (participating)");
+            fflush(stderr);
+        }
         Ping("requestnodes (after change)");
     }
 

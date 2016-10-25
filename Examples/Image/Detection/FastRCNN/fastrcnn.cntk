@@ -22,7 +22,7 @@ rootDir = "."
 dataDir = "$rootDir$/data/"
 outputDir = "$rootDir$/Output"
 
-modelPath = "$outputDir$/Fast-RCNN"
+modelPath = "$outputDir$/Fast-RCNN.model"
 #stderr = "$outputDir$/Fast-RCNN.log"
 
 ImageH = 1000

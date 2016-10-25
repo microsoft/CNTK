@@ -291,4 +291,9 @@ namespace CNTK
                 m_gpuDataTransferers[i]->WaitForCopyCPUToGPUAsync();
         }
     }
+
+    void  MPICommunicatorImpl::Barrier()
+    {
+        m_mpi->WaitAll();
+    }
 }

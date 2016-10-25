@@ -7,9 +7,8 @@
 import numpy as np
 import sys
 import os
-import math
-import time
-from cntk import Trainer, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk import Trainer, Axis, save_model, load_model #, text_format_minibatch_source, StreamConfiguration
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, set_default_device
 from cntk.learner import momentum_sgd, momentum_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select, alias, hardmax
@@ -23,6 +22,49 @@ from examples.common.nn import LSTMP_component_with_self_stabilization, stabiliz
 def print_sequences(sequences, i2w):
     for s in sequences:
         print([i2w[np.argmax(w)] for w in s], sep=" ")
+
+def create_reader(path, randomize, input_vocab_dim, label_vocab_dim, size=INFINITELY_REPEAT):
+    return MinibatchSource(CTFDeserializer(path, StreamDefs(
+        features  = StreamDef(field='S0', shape=input_vocab_dim,  is_sparse=True),
+        labels    = StreamDef(field='S1', shape=label_vocab_dim,  is_sparse=True)
+    )), randomize=randomize, epoch_size = size)
+
+# helper function to find variables by name
+# which is necessary when cloning or loading the model
+def find_arg_by_name(name, expression):
+    vars = [i for i in expression.arguments if i.name == name]
+    assert len(vars) == 1
+    return vars[0]
+
+# Average of evaluation errors of all test minibatches
+def translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim, debug_output=False):
+    # now setup a test run
+    rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.test.ctf"
+    test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
+
+    test_reader = create_reader(test_path, False, input_vocab_dim, label_vocab_dim, FULL_DATA_SWEEP)
+
+    test_bind = {
+        find_arg_by_name('raw_input',z)  : test_reader.streams.features,
+        find_arg_by_name('raw_labels',z) : test_reader.streams.labels
+    }
+
+    test_minibatch_size = 1024
+
+    # Get minibatches of sequences to test and perform testing
+    i = 0
+    total_error = 0.0
+    while True:
+        mb = test_reader.next_minibatch(test_minibatch_size, input_map=test_bind)
+        if mb is None: break
+        mb_error = trainer.test_minibatch(mb)
+        total_error += mb_error
+
+        if debug_output:
+            print("Minibatch {}, Error {} ".format(i, mb_error))
+        i += 1
+    return total_error/i
+
 
 # Creates and trains a sequence to sequence translation model
 
@@ -116,35 +158,24 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     m_schedule = momentum_schedule(momentum_time_constant)
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
-
-    trainer = Trainer(z, ce, errs, [momentum_sgd(
-                      z.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)])
+    learner = momentum_sgd(z.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)
+    trainer = Trainer(z, ce, errs, learner)
 
     # setup data
     rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.train-dev-20-21.ctf"
     train_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
     valid_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tiny.ctf")
 
-    feature_stream_name = 'features'
-    labels_stream_name  = 'labels'
-
     # readers
     randomize_data = True
     if run_test:
         randomize_data = False # because we want to get an exact error
-    train_reader = text_format_minibatch_source(train_path, [
-                     StreamConfiguration(feature_stream_name, input_vocab_dim, True, 'S0'),
-                     StreamConfiguration(labels_stream_name,  label_vocab_dim, True, 'S1')
-                   ], randomize=randomize_data)
-    features_si_tr = train_reader.stream_info(feature_stream_name)
-    labels_si_tr   = train_reader.stream_info(labels_stream_name)
 
-    valid_reader = text_format_minibatch_source(valid_path, [
-                     StreamConfiguration(feature_stream_name, input_vocab_dim, True, 'S0'),
-                     StreamConfiguration(labels_stream_name,  label_vocab_dim, True, 'S1')
-                   ], randomize=False)
-    features_si_va = valid_reader.stream_info(feature_stream_name)
-    labels_si_va   = valid_reader.stream_info(labels_stream_name)
+    train_reader = create_reader(train_path, randomize_data, input_vocab_dim, label_vocab_dim)
+    train_bind = {
+        raw_input  : train_reader.streams.features,
+        raw_labels : train_reader.streams.labels
+    }
 
     # get the vocab for printing output sequences in plaintext
     rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.mapping"
@@ -165,18 +196,21 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
         max_epochs = 1
         training_progress_output_freq = 30
 
+    valid_reader = create_reader(valid_path, False, input_vocab_dim, label_vocab_dim)
+    valid_bind = {
+            find_arg_by_name('raw_input',ng)  : valid_reader.streams.features,
+            find_arg_by_name('raw_labels',ng) : valid_reader.streams.labels
+        }
+
     for epoch in range(max_epochs):
         loss_numer = 0
         metric_numer = 0
         denom = 0
 
         while i < (epoch+1) * epoch_size:
-
             # get next minibatch of training data
-            mb_train = train_reader.next_minibatch(minibatch_size)
-
-            train_args = {'raw_input': mb_train[features_si_tr], 'raw_labels': mb_train[labels_si_tr]}
-            trainer.train_minibatch(train_args)
+            mb_train = train_reader.next_minibatch(minibatch_size, input_map=train_bind)
+            trainer.train_minibatch(mb_train)
 
             # collect epoch-wide stats
             samples = trainer.previous_minibatch_sample_count
@@ -186,55 +220,34 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
 
             # every N MBs evaluate on a test sequence to visually show how we're doing
             if mbs % training_progress_output_freq == 0:
-                mb_valid = valid_reader.next_minibatch(minibatch_size)
-                valid_args = {'raw_input': mb_valid[features_si_va], 'raw_labels': mb_valid[labels_si_va]}
-
-                e = ng.eval(valid_args)
+                mb_valid = valid_reader.next_minibatch(minibatch_size, input_map=valid_bind)
+                e = ng.eval(mb_valid)
                 print_sequences(e, i2w)
 
             print_training_progress(trainer, mbs, training_progress_output_freq)
-            i += mb_train[labels_si_tr].num_samples
+            i += mb_train[raw_labels].num_samples
             mbs += 1
 
         print("--- EPOCH %d DONE: loss = %f, errs = %f ---" % (epoch, loss_numer/denom, 100.0*(metric_numer/denom)))
 
 
-    # now setup a test run
-    rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.test.ctf"
-    test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
+    error1 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
 
-    test_reader = text_format_minibatch_source(test_path, [
-                     StreamConfiguration(feature_stream_name, input_vocab_dim, True, 'S0'),
-                     StreamConfiguration(labels_stream_name,  label_vocab_dim, True, 'S1')
-                   ], 10000, randomize=False)
-    features_si_te = test_reader.stream_info(feature_stream_name)
-    labels_si_te   = test_reader.stream_info(labels_stream_name)
+    save_model(z, "seq2seq.dnn")
+    z = load_model("seq2seq.dnn")
 
-    test_minibatch_size = 1024 
+    label_seq_axis = Axis('labelAxis')
+    label_sequence = slice(find_arg_by_name('raw_labels',z), label_seq_axis, 1, 0)
+    ce = cross_entropy_with_softmax(z, label_sequence)
+    errs = classification_error(z, label_sequence)
+    trainer = Trainer(z, ce, errs, [momentum_sgd(
+                    z.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)])
 
-    # Get minibatches of sequences to test and perform testing
-    i = 0
-    total_error = 0.0
-    while True:
-        mb = test_reader.next_minibatch(test_minibatch_size)
-        if len(mb) == 0:
-            break
+    error2 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
 
-        # Specify the mapping of input variables in the model to actual
-        # minibatch data to be tested with
-        arguments = {raw_input: mb[features_si_te],
-                     raw_labels: mb[labels_si_te]}
-        mb_error = trainer.test_minibatch(arguments)
+    assert error1 == error2
 
-        total_error += mb_error
-
-        if debug_output:
-            print("Minibatch {}, Error {} ".format(i, mb_error))
-
-        i += 1
-
-    # Average of evaluation errors of all test minibatches
-    return total_error / i
+    return error1
 
 if __name__ == '__main__':
     # Specify the target device to be used for computing, if you do not want to

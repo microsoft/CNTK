@@ -45,6 +45,8 @@ namespace CNTK
             std::vector<NDArrayViewPtr>& outValues,
             const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
 
+        virtual void Barrier() override;
+
         virtual ~MPICommunicatorImpl() {}
 
     private:

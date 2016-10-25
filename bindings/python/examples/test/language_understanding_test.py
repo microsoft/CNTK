@@ -46,6 +46,7 @@ def BiRecurrence(fwd, bwd):
     apply_x = splice ([F(x), G(x)])
     return apply_x
 
+# TODO: the name is wrong
 def test_seq_classification_error(device_id):
     DeviceDescriptor.set_default_device(cntk_device(device_id))
 
@@ -101,30 +102,38 @@ def test_seq_classification_error(device_id):
             ]), [0.0579573500457558, 0.3214986774820327])
 
         # test of a config like in the example but with additions to test many code paths
-        with default_options(enable_self_stabilization=True, use_peepholes=True):
+    with default_options(enable_self_stabilization=True, use_peepholes=True):
             test_a_model('alternate paths', Sequential([
-                Stabilizer(),
-                Embedding(emb_dim),
-                BatchNormalization(),
-                Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
-                BatchNormalization(map_rank=1),
+            Stabilizer(),
+            Embedding(emb_dim),
+            BatchNormalization(),
+            Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
+            BatchNormalization(map_rank=1),
                 Dense(num_labels)
             ]), [0.08574360112032389, 0.41847621578367716])
 
-        # test of the example itself
-        # this emulates the main code in the PY file
-        reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
-        model = create_model()
-        loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
-        expected_avg = [0.15570838301766451, 0.7846451368305728]
-        assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+    # test of the example itself
+    # this emulates the main code in the PY file
+    reader = create_reader(data_dir + "/atis.train.ctf")
+    model = create_model()
+    loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
+    expected_avg = [0.15570838301766451, 0.7846451368305728]
+    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
+    # test of a config like in the example but with additions to test many code paths
+    if device_id >= 0: # BatchNormalization currently does not run on CPU
+        reader = create_reader(data_dir + "/atis.train.ctf")
+        model = create_test_model()
+        loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
+        log_number_of_parameters(model, trace_level=1) ; print()
+        expected_avg = [0.084, 0.407364]
+        assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
         # example also saves and loads; we skip it here, so that we get a test case of no save/load
         # (we save/load in all cases above)
 
-        # test
-        reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
-        evaluate(reader, model)
+    # test
+    reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
+    evaluate(reader, model)
 
 if __name__=='__main__':
     test_seq_classification_error(0)

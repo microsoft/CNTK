@@ -10,7 +10,7 @@
 # TODO: clean up the dependencies
 import numpy as np
 from cntk.ops import parameter, input_variable, placeholder_variable, combine
-from cntk.ops import times, convolution, pooling, batch_normalization
+from cntk.ops import times, convolution, pooling, batch_normalization, dropout
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
 from cntk.blocks import *  # TODO: reduce to what we actually use
@@ -249,12 +249,10 @@ def Delay(T=1, initial_state=None):
     return Block(apply_x, 'Delay')
 
 # Dropout -- create a drop-out layer
-# Per-node dropout probabilities not yet supported, so one could also just use dropout directly.
-def Dropout(prob=None):
-    UntestedBranchError("Dropout")
-    if prob is not None:
-        raise NotImplementedError("Dropout: Dropout probability can currently not be specified per-layer.")
-    apply_x = dropout
+def Dropout(prob):
+    # expression
+    x = Placeholder(name='dropout_arg')
+    apply_x = dropout(x, dropout_rate=prob)
     return Block(apply_x, 'Dropout')
 
 # BatchNormalization -- create a batch-normalization layer
