@@ -57,19 +57,42 @@ def create_reader(map_file, mean_file, train):
     )))
 
 #
-# Define VGG9 network.
+# Define a VGG like network for Cifar dataset.
+#
+#       | VGG9          |
+#       | ------------- |
+#       | conv3-64      |
+#       | conv3-64      |
+#       | max3          |
+#       |               |
+#       | conv3-96      |
+#       | conv3-96      |
+#       | max3          |
+#       |               |
+#       | conv3-128     |
+#       | conv3-128     |
+#       | max3          |
+#       |               |
+#       | FC-1024       |
+#       | dropout0.5    |
+#       |               |
+#       | FC-1024       |
+#       | dropout0.5    |
+#       |               |
+#       | FC-10         |
 #
 def create_vgg9_model(input, num_classes):
     with default_options(activation=relu):
         model = Sequential([
             LayerStack(3, lambda i: [
-                Convolution((5,5), [64,96,128][i], pad=True),
-                Convolution((5,5), [64,96,128][i], pad=True),
+                Convolution((3,3), [64,96,128][i], pad=True),
+                Convolution((3,3), [64,96,128][i], pad=True),
                 MaxPooling((3,3), strides=(2,2))
             ]),
-            Dense(1024),
-            Dropout(0.75),
-            Dense(1024),
+            LayerStack(2, lambda : [
+                Dense(1024),
+                Dropout(0.5)
+            ]),
             Dense(num_classes, activation=None)
         ])
 
