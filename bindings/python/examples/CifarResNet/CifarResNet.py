@@ -210,13 +210,6 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     return metric_numer/metric_denom
 
 if __name__=='__main__':
-    # TODO: leave these in for now as debugging aids; remove for beta
-    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
-    set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
-    #force_deterministic_algorithms()
-    # TODO: do the above; they lead to slightly different results, so not doing it for now
-
     reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 

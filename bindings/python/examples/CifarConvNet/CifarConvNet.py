@@ -61,20 +61,17 @@ def create_reader(map_file, mean_file, train):
 #
 def create_vgg9_model(input, num_classes):
     with default_options(activation=relu):
-        #with default_options_for(Convolution, pad=True):  # TODO: implement this
-            model = Sequential([
-                LayerStack(3, lambda i: [
-                    Convolution((5,5), [64,96,128][i], pad=True),
-                    Convolution((5,5), [64,96,128][i], pad=True),
-                    MaxPooling((3,3), strides=(2,2))
-                    #Dropout(None)  # Need per node support
-                ]),
-                Dense(1024),
-                #Dropout(None),  # Need per node support
-                Dense(1024),
-                #Dropout(None),  # Need per node support
-                Dense(num_classes, activation=None)
-            ])
+        model = Sequential([
+            LayerStack(3, lambda i: [
+                Convolution((5,5), [64,96,128][i], pad=True),
+                Convolution((5,5), [64,96,128][i], pad=True),
+                MaxPooling((3,3), strides=(2,2))
+            ]),
+            Dense(1024),
+            Dropout(0.75),
+            Dense(1024),
+            Dense(num_classes, activation=None)
+        ])
 
     return model(input)
 
@@ -175,4 +172,4 @@ if __name__=='__main__':
     reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 
-    train_and_evaluate(reader_train, reader_test, max_epochs=10)
+    train_and_evaluate(reader_train, reader_test, max_epochs=5)

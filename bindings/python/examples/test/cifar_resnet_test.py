@@ -32,6 +32,12 @@ def test_cifar_resnet_error(device_id):
     base_path = os.path.normpath(base_path)
     os.chdir(os.path.join(base_path, '..'))
 
+    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
+    set_computation_network_trace_level(1) 
+    set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
+    #force_deterministic_algorithms()
+    # TODO: do the above; they lead to slightly different results, so not doing it for now
+
     reader_train = create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
 
