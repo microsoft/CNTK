@@ -160,9 +160,11 @@ def cifar_resnet(base_path, debug_output=False):
     lr_schedule = learning_rate_schedule(lr_per_sample, units=mb_size * num_mb_per_epoch)
     momentum_per_sample=0.9**(1.0/128)
     
+    learner = momentum_sgd(classifier_output.parameters, lr_schedule,
+            momentum_per_sample, l2_regularization_weight=0.0001)
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(classifier_output, ce, pe,
-                      [momentum_sgd(classifier_output.parameters, lr_schedule, momentum_per_sample, l2_regularization_weight=0.0001)])
+    trainer = Trainer(classifier_output, ce, pe, learner)
+                      
 
     # Get minibatches of images to train with and perform model training
     training_progress_output_freq = 100
