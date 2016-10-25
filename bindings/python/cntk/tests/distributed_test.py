@@ -48,6 +48,9 @@ def test_trainer(tmpdir):
     trainer.save_checkpoint(p)
     trainer.restore_from_checkpoint(p)
 
+    communicator.barrier()
+    distributed.communicator.finalize()
+    
     assert trainer.model.name == 'z'
 
     # Ensure that Swig is not leaking raw types
