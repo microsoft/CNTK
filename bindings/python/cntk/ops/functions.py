@@ -90,11 +90,11 @@ class Function(cntk_py.Function):
         return self(other)
 
     def __getattr__(self, name):
-        if name in self.__dict__:
+        try:
             return self.__dict__[name]
-
-        if len(self.outputs) == 1:
-            return getattr(self.output, name)
+        except KeyError:
+            if len(self.outputs) == 1:
+                return getattr(self.output, name)
 
         raise AttributeError("'%s' object has no attribute '%s'" %
                              (type(self), name))
@@ -413,3 +413,12 @@ class Function(cntk_py.Function):
         The primitive function at the root of the graph of functions underlying this function.
         '''
         return super(Function, self).root_function()
+
+    @property
+    @typemap
+    def uid(self):
+        '''
+        The internally generated unique name of the function.
+        '''
+        return super(Function, self).uid()
+

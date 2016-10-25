@@ -62,7 +62,7 @@ def train_sequence_classifier(debug_output=False):
 
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(classifier_output, ce, pe,
-                      [sgd(classifier_output.parameters, lr=0.0005)])
+                      sgd(classifier_output.parameters, lr=0.0005))
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 200

@@ -33,6 +33,9 @@ class Trainer(cntk_py.Trainer):
         loss_function = sanitize_function(loss_function)
         eval_function = sanitize_function(eval_function)
 
+        if not isinstance(parameter_learners, list):
+            parameter_learners = [parameter_learners]
+
         super(Trainer, self).__init__(model, loss_function, eval_function,
                 parameter_learners)
 

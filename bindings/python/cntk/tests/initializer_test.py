@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from ..initializer import *
-from .. import parameter, input_variable, momentums_per_sample
+from .. import parameter
 
 
 def _check(init, name):
