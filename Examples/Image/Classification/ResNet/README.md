@@ -9,6 +9,8 @@
 |Training  |Stochastic gradient descent with momentum.
 |Comments  |See below.
 
+The recipes above are in BrainScript. For Python click [here](https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/CifarResNet/CifarResNet.py).
+
 ## Running the example
 
 ### Getting the data
