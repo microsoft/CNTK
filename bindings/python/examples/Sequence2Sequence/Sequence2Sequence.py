@@ -37,7 +37,7 @@ def find_arg_by_name(name, expression):
     return vars[0]
 
 # Average of evaluation errors of all test minibatches
-def test_translator(z, trainer, input_vocab_dim, label_vocab_dim, debug_output=False):
+def translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim, debug_output=False):
     # now setup a test run
     rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.test.ctf"
     test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
@@ -232,7 +232,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
         print("--- EPOCH %d DONE: loss = %f, errs = %f ---" % (epoch, loss_numer/denom, 100.0*(metric_numer/denom)))
 
 
-    error1 = test_translator(z, trainer, input_vocab_dim, label_vocab_dim)
+    error1 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
 
     save_model(z, "seq2seq.dnn")
     z = load_model(np.float32, "seq2seq.dnn")
@@ -244,7 +244,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     trainer = Trainer(z, ce, errs, [momentum_sgd(
                     z.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)])
 
-    error2 = test_translator(z, trainer, input_vocab_dim, label_vocab_dim)
+    error2 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
 
     assert error1 == error2
 
