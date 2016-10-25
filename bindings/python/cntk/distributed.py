@@ -7,12 +7,12 @@ from . import cntk_py
 from . import trainer
 
 __doc__= '''\
-Distributed trainers manages trainers in distributed environment.
+Distributed trainers manage trainers in distributed environment.
 '''
 
 class worker_descriptor:
     '''
-    Distributed worker descriptor, returned by :class:`cntk.distributed.communicator` instance.
+    Distributed worker descriptor, returned by :class:`communicator` instance.
 
     Args:
        descriptor (:class:`cntk.cntk_py.DistributedWorkerDescriptor`): internal distributed worker descriptor
@@ -24,20 +24,14 @@ class worker_descriptor:
     @property
     def global_rank(self):
         '''
-        Returns the global rank of the worker.
-
-        Returns:
-            `int`: the global rank of the worker.
+        (`int`) The global rank of the worker.
         '''
         return self.data.m_global_rank
 
     @property
     def host_id(self):
         '''
-        Returns the host id of the worker.
-
-        Returns:
-            `str`: the host id of the worker.
+        (`str`) The host id of the worker.
         '''
         return self.data.m_host_id
 
@@ -48,27 +42,22 @@ class communicator:
     '''
     def __init__(self, distributed_communicator):
         self.data = distributed_communicator
-        return
     
     def workers(self):
         '''
         Returns workers in this communicator.
         
         Returns:
-            (`list`) of :class:`cntk.distributed.worker_descriptor`: workers in this communicator.
+            (`list`) of :class:`worker_descriptor`: workers in this communicator.
         '''
-        raw_list = self.data.workers()
-        ret = []
-        for w in raw_list:
-            ret.append(worker_descriptor(w))
-        return ret
+        return [worker_descriptor(w) for w in self.data.workers()]
 
     def current_worker(self):
         '''
         Returns worker descriptor of current process.
         
         Returns:
-            :class:`cntk.distributed.worker_descriptor`: descriptor of current process.
+            :class:`worker_descriptor`: descriptor of current process.
         '''
         raw = self.data.current_worker()
         return worker_descriptor(raw)
@@ -78,12 +67,10 @@ class communicator:
         sync point to make sure all workers reach the same state
         '''
         self.data.barrier()
-        return
         
     @staticmethod
     def finalize():
         cntk_py.DistributedCommunicator.finalize();
-        return
 
 class distributed_trainer:
     '''
@@ -122,13 +109,13 @@ def data_parallel_distributed_trainer(communicator, use_async_buffered_parameter
     option `use_async_buffered_parameter_update`.
 
     Args:
-        communicator (:class:`cntk.distributed.communicator`): distributed communicator
+        communicator (:class:`communicator`): distributed communicator
         use_async_buffered_parameter_update (`bool`): use async buffered parameter update
 
     Returns:
-        :class:`cntk.distributed.trainer`: a distributed trainer instance
+        :class:`trainer`: a distributed trainer instance
     '''
-    if (isinstance(communicator.data, cntk.cntk_py.QuantizedDistributedCommunicator)):
+    if (isinstance(communicator.data, cntk_py.QuantizedDistributedCommunicator)):
         return distributed_trainer(cntk_py.create_quantized_data_parallel_distributed_trainer(communicator.data, use_async_buffered_parameter_update))
     else:
         return distributed_trainer(cntk_py.create_data_parallel_distributed_trainer(communicator.data, use_async_buffered_parameter_update))

@@ -12,31 +12,37 @@ from ..learner import *
 from .. import distributed
 from .. import cross_entropy_with_softmax, classification_error, parameter, \
         input_variable, times, plus, reduce_sum
+        
+def run_distributed_trainer(tmpdir, quantized):
 
-def disabled_test_trainer(tmpdir):
-    in1 = input_variable(shape=(1,))
-    labels = input_variable(shape=(1,))
-    p = parameter(shape=(2,), init=10)
+    in1 = input_variable(shape=1)
+    labels = input_variable(shape=1)
+    p = parameter(shape=2, init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
 
     m_schedule = momentum_schedule(1100)
 
-    communicator = distributed.communicator(distributed.quantized_mpi_communicator(1))
+    if quantized:
+        communicator = distributed.communicator(distributed.quantized_mpi_communicator(1))
+    else:
+        communicator = distributed.communicator(distributed.mpi_communicator())
+
     workers = communicator.workers()
     current_worker = communicator.current_worker()
     print("List all distributed workers")
+    found_rank = False
     for wk in workers:
         if current_worker.global_rank == wk.global_rank:
-            print("* {} {}".format(wk.global_rank, wk.host_id))
-        else:
-            print("  {} {}".format(wk.global_rank, wk.host_id))
-
+            found_rank = True
+    
+    assert found_rank
+            
     dist_trainer = distributed.data_parallel_distributed_trainer(communicator, False)
 
     trainer = Trainer(z, ce, errs, \
-            [sgd(z.parameters, 0.007, m_schedule, 0.5, True)],
+            sgd(z.parameters, 0.007, m_schedule, 0.5, True),
             distributed_trainer=dist_trainer)
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
@@ -49,7 +55,6 @@ def disabled_test_trainer(tmpdir):
     trainer.restore_from_checkpoint(p)
 
     communicator.barrier()
-    distributed.communicator.finalize()
     
     assert trainer.model.name == 'z'
 
@@ -57,3 +62,8 @@ def disabled_test_trainer(tmpdir):
     assert isinstance(trainer.model, Function)
     assert trainer.model.__doc__
     assert isinstance(trainer.parameter_learners[0], Learner)
+    
+def test_distributed(tmpdir):
+    run_distributed_trainer(tmpdir, False)
+    run_distributed_trainer(tmpdir, True)
+    distributed.communicator.finalize()

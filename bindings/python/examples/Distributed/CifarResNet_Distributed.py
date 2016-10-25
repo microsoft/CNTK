@@ -86,6 +86,8 @@ def cifar_resnet(data_path, run_test, num_epochs, communicator=None, save_model_
         training_progress_output_freq = training_progress_output_freq/4
         
     for i in range(0, num_mbs):
+    
+        # NOTE: depends on network, the mb_size can be changed dynamically here
         mb = minibatch_source.next_minibatch(mb_size)
 
         # Specify the mapping of input variables in the model to actual
@@ -128,13 +130,31 @@ def cifar_resnet(data_path, run_test, num_epochs, communicator=None, save_model_
         return 0
 
 if __name__ == '__main__':
+    # check if we have multiple-GPU, and fallback to 1 GPU if not
+    devices = device.all_devices()
+    gpu_count = 0
+    for dev in devices:
+        gpu_count += dev.type()
+    print("Found {} GPUs".format(gpu_count))
+    
+    if gpu_count == 0:
+        print("No GPU found, exiting")
+        quit()
+
     data_path = os.path.abspath(os.path.normpath(os.path.join(
         *"../../../../Examples/Image/DataSets/CIFAR-10/".split("/"))))
 
     os.chdir(data_path)
 
-    # Create distributed communicator for 1-bit SGD
-    communicator = distributed.communicator(distributed.quantized_mpi_communicator(1))
+    # Create distributed communicator for 1-bit SGD for better scaling to multiple GPUs
+    # If you'd like to avoid quantization loss, use simple one instead
+    quantization_bit = 1
+
+    if (quantization_bit == 32):
+        communicator = distributed.communicator(distributed.mpi_communicator())
+    else:
+        communicator = distributed.communicator(distributed.quantized_mpi_communicator(quantization_bit))
+
     workers = communicator.workers()
     current_worker = communicator.current_worker()
     print("List all distributed workers")
@@ -143,6 +163,10 @@ if __name__ == '__main__':
             print("* {} {}".format(wk.global_rank, wk.host_id))
         else:
             print("  {} {}".format(wk.global_rank, wk.host_id))
+
+    if gpu_count == 1 and len(workers) > 1 :
+        print("Warning: running distributed training on 1-GPU will be slow")
+        device.set_default_device(gpu(0))
 
     print("Training on device type:{} id:{}".format('gpu' if device.default().type() else 'cpu', device.default().id()))
 
