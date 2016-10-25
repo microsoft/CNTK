@@ -62,11 +62,11 @@ class MinibatchSource(cntk_py.MinibatchSource):
     :func:`cntk.trainer.Trainer.train_minibatch` function.
     '''
 
-    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT):
+    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_communicator=None):
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
         reader_config = ReaderConfig(deserializers=deserializers, randomize=randomize, epoch_size=epoch_size)
-        source = minibatch_source(reader_config)
+        source = minibatch_source(reader_config, distributed_communicator)
         # transplant into this class instance
         self.__dict__ = source.__dict__
         # transplant all members of deserializers into a record called streams
