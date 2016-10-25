@@ -73,6 +73,7 @@ EmbeddingLayer {outDim,                                   # dimension of embeddi
 #    in     : [ (shifting dims)  |  (reduction dim)  |                |  (sample dims) ]
 #    kernel : [ (filter dims)    |  (reduction dim)  |  (output dim)  |                ]
 #    out    : [ (shifting dims)] |                   |  (output dim)  |  (sample dims) ]
+# BUGBUG: filterShape should be first, so that numOutputChannels can default to 1 (to denote a normal filter), and remaining parameters consistent with Times()
 ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     filterShape,         # e.g. (3:3)
                     bias = true,
@@ -580,7 +581,7 @@ MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, l
 # 2D pooling
 MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
-ROIPooling (input, ROIs, shape) = new ComputationNode { operation = 'ROIPooling' ; inputs = _AsNodes (input : ROIs) ; outputShape = new TensorShape [ dims = shape ] ; tag='' /*plus the function args*/ } 
+ROIPooling (input, ROIs, shape) = new ComputationNode { operation = 'ROIPooling' ; inputs = _AsNodes (input : ROIs) ; roiOutputShape = new TensorShape [ dims = shape ] ; tag='' /*plus the function args*/ } 
 ColumnwiseCrossProduct = KhatriRaoProduct // deprecated 
 ErrorPrediction = ClassificationError   # legacy name
 Delay = PastValue 

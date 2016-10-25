@@ -26,6 +26,13 @@ void MultiThreadsEvaluation(bool);
 
 int main()
 {
+#if defined(_MSC_VER)
+    // in case of asserts in debug mode, print the message into stderr and throw exception
+    if (_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, HandleDebugAssert) == -1) {
+        fprintf(stderr, "_CrtSetReportHook2 failed.\n");
+        return -1;
+    }
+#endif
 
 #ifndef CPUONLY
     fprintf(stderr, "Run tests on %s device using GPU build.\n", IsGPUAvailable() ? "GPU" : "CPU");
@@ -62,4 +69,8 @@ int main()
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);
+
+#if defined(_MSC_VER)
+    _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);
+#endif
 }

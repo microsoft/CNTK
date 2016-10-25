@@ -15,7 +15,7 @@ def test_sequence_to_sequence(device_id):
     from cntk.utils import cntk_device
     set_default_device(cntk_device(device_id))
 
-    error = sequence_to_sequence_translator()
+    error = sequence_to_sequence_translator(False, True)
 
-    expected_error = 0.8596881547969316
+    expected_error =  0.830361
     assert np.allclose(error, expected_error, atol=TOLERANCE_ABSOLUTE)

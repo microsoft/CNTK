@@ -1,22 +1,17 @@
-# Copyright (c) Microsoft. All rights reserved.
+﻿# Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
 import numpy as np
-import sys
-import os
 from cntk.ops import *
-from cntk.utils import sanitize_dtype_cntk, get_train_eval_criterion, get_train_loss
-from cntk.initializer import glorot_uniform
+from cntk.utils import get_train_eval_criterion, get_train_loss
+from cntk.initializer import glorot_uniform, he_normal
 
 
 def linear_layer(input_var, output_dim):
-    shape = input_var.shape()
-
-    input_dim = shape[0]
-    times_param = parameter(shape=(input_dim, output_dim), init=glorot_uniform())
+    times_param = parameter(shape=(list(input_var.shape)+[output_dim]), init=glorot_uniform())
     bias_param = parameter(shape=(output_dim), init=0)
 
     t = times(input_var, times_param)
@@ -38,62 +33,31 @@ def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim, 
     return linear_layer(r, num_output_classes)
 
 
-def conv_bn_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const):
-    shape = input.shape()
-    num_in_channels = shape[0]
+def conv_bn_layer(input, out_feature_map_count, kernel_shape, strides, bn_time_const, b_value=0, sc_value=1):
+    num_in_channels = input.shape[0]
+    kernel_width = kernel_shape[0]
+    kernel_height = kernel_shape[1]
+    v_stride = strides[0]
+    h_stride = strides[1]
     #TODO: use RandomNormal to initialize, needs to be exposed in the python api
-    conv_params = parameter(shape=(out_feature_map_count, num_in_channels, kernel_height, kernel_width), init=glorot_uniform(output_rank=-1, filter_rank=2))
+    conv_params = parameter(shape=(out_feature_map_count, num_in_channels, kernel_height, kernel_width), init=he_normal())
     conv_func = convolution(conv_params, input, (num_in_channels, v_stride, h_stride))
 
     #TODO: initialize using b_value and sc_value, needs to be exposed in the python api
     bias_params = parameter(shape=(out_feature_map_count), init=b_value)
     scale_params = parameter(shape=(out_feature_map_count), init=sc_value)
-    running_mean = constant((out_feature_map_count), 0.0)
-    running_invstd = constant((out_feature_map_count), 0.0)
-    return batch_normalization(conv_func, scale_params, bias_params, running_mean, running_invstd, True, bn_time_const, 0.0, 0.000000001)
+    running_mean = constant(0., (out_feature_map_count))
+    running_invstd = constant(0., (out_feature_map_count))
+    return batch_normalization(conv_func, scale_params, bias_params, running_mean, running_invstd, True, bn_time_const, use_cudnn_engine=True)
 
 
-def conv_bn_relu_layer(input, out_feature_map_count, kernel_width, kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const):
-    conv_bn_function = conv_bn_layer(input, out_feature_map_count, kernel_width,
-                                     kernel_height, h_stride, v_stride, w_scale, b_value, sc_value, bn_time_const)
+def conv_bn_relu_layer(input, out_feature_map_count, kernel_shape, strides, bn_time_const, b_value=0, sc_value=1):
+    conv_bn_function = conv_bn_layer(input, out_feature_map_count, kernel_shape, strides, bn_time_const, b_value, sc_value)
     return relu(conv_bn_function)
 
 
-def resnet_node2(input, out_feature_map_count, kernel_width, kernel_height, w_scale, b_value, sc_value, bn_time_const):
-    c1 = conv_bn_relu_layer(input, out_feature_map_count, kernel_width,
-                            kernel_height, 1, 1, w_scale, b_value, sc_value, bn_time_const)
-    c2 = conv_bn_layer(c1, out_feature_map_count, kernel_width,
-                       kernel_height, 1, 1, w_scale, b_value, sc_value, bn_time_const)
-    p = c2 + input
-    return relu(p)
-
-
-def proj_layer(w_proj, input, h_stride, v_stride, b_value, sc_value, bn_time_const):
-    shape = input.shape()
-    num_in_channels = shape[0]
-    conv_func = convolution(w_proj, input, (num_in_channels, v_stride, h_stride))
-    out_feature_map_count = w_proj.shape()[-1];
-    #TODO: initialize using b_value and sc_value, needs to be exposed in the python api
-    bias_params = parameter(shape=(out_feature_map_count), init=b_value)
-    scale_params = parameter(shape=(out_feature_map_count), init=sc_value)
-    running_mean = constant((out_feature_map_count), 0.0)
-    running_invstd = constant((out_feature_map_count), 0.0)
-    return batch_normalization(conv_func, scale_params, bias_params, running_mean, running_invstd, True, bn_time_const)
-
-
-def resnet_node2_inc(input, out_feature_map_count, kernel_width, kernel_height, w_scale, b_value, sc_value, bn_time_const, w_proj):
-    c1 = conv_bn_relu_layer(input, out_feature_map_count, kernel_width,
-                            kernel_height, 2, 2, w_scale, b_value, sc_value, bn_time_const)
-    c2 = conv_bn_layer(c1, out_feature_map_count, kernel_width,
-                       kernel_height, 1, 1, w_scale, b_value, sc_value, bn_time_const)
-
-    c_proj = proj_layer(w_proj, input, 2, 2, b_value, sc_value, bn_time_const)
-    p = c2 + c_proj
-    return relu(p)
-
-
 def embedding(input, embedding_dim):
-    input_dim = input.shape()[0]
+    input_dim = input.shape[0]
 
     embedding_parameters = parameter(shape=(input_dim, embedding_dim), init=glorot_uniform())
     return times(input, embedding_parameters)
@@ -105,18 +69,18 @@ def select_last(operand):
 
 def stabilize(operand):
     scalar_constant = 4.0
-    f = constant(sanitize_dtype_cntk(np.float32), scalar_constant)
-    fInv = constant(sanitize_dtype_cntk(np.float32), 1.0 / scalar_constant)
+    f = constant(scalar_constant)
+    fInv = constant(1.0 / scalar_constant)
 
-    beta = element_times(fInv, log(constant(sanitize_dtype_cntk(
-        np.float32), 1.0) + exp(element_times(f, parameter(init=0.99537863)))))
+    beta = element_times(fInv, 
+            log(1.0 + exp(element_times(f, parameter(init=0.99537863)))))
     return element_times(beta, operand)
 
 
 def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
-    input_dim = input.shape()[0]
-    output_dim = prev_output.shape()[0]
-    cell_dim = prev_cell_state.shape()[0]
+    input_dim = input.shape[0]
+    output_dim = prev_output.shape[0]
+    cell_dim = prev_cell_state.shape[0]
 
     Wxo = parameter(shape=(input_dim, cell_dim), init=glorot_uniform())
     Wxi = parameter(shape=(input_dim, cell_dim), init=glorot_uniform())
@@ -203,9 +167,9 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
 
 def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurrence_hookH=past_value, recurrence_hookC=past_value):
     dh = placeholder_variable(
-        shape=(output_dim), dynamic_axes=input.dynamic_axes())
+        shape=(output_dim), dynamic_axes=input.dynamic_axes)
     dc = placeholder_variable(
-        shape=(cell_dim), dynamic_axes=input.dynamic_axes())
+        shape=(cell_dim), dynamic_axes=input.dynamic_axes)
 
     LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc)
     actualDh = recurrence_hookH(LSTMCell[0])
@@ -214,7 +178,7 @@ def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurre
     # Form the recurrence loop by replacing the dh and dc placeholders with
     # the actualDh and actualDc
     LSTMCell[0].replace_placeholders(
-        {dh: actualDh.output(), dc: actualDc.output()})
+        {dh: actualDh.output, dc: actualDc.output})
     
     return (LSTMCell[0], LSTMCell[1])
 

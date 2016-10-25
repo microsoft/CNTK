@@ -41,7 +41,7 @@ typedef unsigned char byte;
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 MATH_API void SetMathLibTraceLevel(int traceLevel);
-int GetMathLibTraceLevel();
+MATH_API int GetMathLibTraceLevel();
 
 class MATH_API TracingGPUMemoryAllocator
 {

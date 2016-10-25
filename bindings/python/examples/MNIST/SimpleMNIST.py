@@ -10,7 +10,7 @@ import os
 from cntk import Trainer, StreamConfiguration, text_format_minibatch_source
 from cntk.device import cpu, set_default_device
 from cntk.learner import sgd
-from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, sigmoid, element_times, constant
+from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error, relu, element_times, constant
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -36,9 +36,9 @@ def simple_mnist(debug_output=False):
     label = input_variable(num_output_classes, np.float32)
 
     # Instantiate the feedforward classification model
-    scaled_input = element_times(constant((), 0.00390625), input)
+    scaled_input = element_times(constant(0.00390625), input)
     netout = fully_connected_classifier_net(
-        scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
+        scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, relu)
 
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
@@ -61,21 +61,21 @@ def simple_mnist(debug_output=False):
     labels_si = mb_source[labels_stream_name]
 
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters(),
+    trainer = Trainer(netout, ce, pe, [sgd(netout.parameters,
         lr=0.003125)])
 
     # Get minibatches of images to train with and perform model training
-    minibatch_size = 32
+    minibatch_size = 64
     num_samples_per_sweep = 60000
-    num_sweeps_to_train_with = 1
+    num_sweeps_to_train_with = 10
     num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
-    training_progress_output_freq = 80
+    training_progress_output_freq = 500
 
     if debug_output:
         training_progress_output_freq = training_progress_output_freq/4
 
     for i in range(0, int(num_minibatches_to_train)):
-        mb = mb_source.get_next_minibatch(minibatch_size)
+        mb = mb_source.next_minibatch(minibatch_size)
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
@@ -101,12 +101,12 @@ def simple_mnist(debug_output=False):
     labels_si = test_mb_source[labels_stream_name]
 
     # Test data for trained model
-    test_minibatch_size = 512
+    test_minibatch_size = 1024
     num_samples = 10000
     num_minibatches_to_test = num_samples / test_minibatch_size
     test_result = 0.0
     for i in range(0, int(num_minibatches_to_test)):
-        mb = test_mb_source.get_next_minibatch(test_minibatch_size)
+        mb = test_mb_source.next_minibatch(test_minibatch_size)
 
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be tested with

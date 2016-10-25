@@ -152,7 +152,7 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
                                  cntk_device(device_id),
                                  backward_pass=True)
 
-        resulted_non_zeros += np.count_nonzero(forward[dropout_node.output()])
+        resulted_non_zeros += np.count_nonzero(forward[dropout_node.output])
 
     resulted_non_zeros /= count
     num_elements = np.multiply.reduce(shape)

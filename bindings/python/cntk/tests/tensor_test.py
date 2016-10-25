@@ -5,16 +5,10 @@
 # ==============================================================================
 
 from ..tensor import *
-#from ..ops.cntk2 import Abs, Plus, Minus, ElementTimes
-from ..ops import constant, input_variable, plus, times, past_value
+from ..ops import constant, parameter
 import numpy as np
 
 import pytest
-
-# keeping things short
-A = np.asarray
-I = input_variable
-
 
 def test_overload_exception():
     c = constant(value=list(range(0, 10)))
@@ -30,3 +24,23 @@ def test_eval_scalar():
     c = constant(value=2)
     assert (c+3).eval() == 5.0
     assert np.all((c+[3,4]).eval() == [5,6])
+
+def test_numpy_conversion():
+    from ..utils import sanitize_value
+    from ..cntk_py import Value
+
+    # check NDArrayView
+    ndav = sanitize_value((2,3), 1, np.float32, None)
+    assert np.all(np.asarray(ndav) == np.ones((2,3)))
+
+    # check Value
+    assert np.all(np.asarray(Value(ndav)) == np.ones((2,3)))
+
+    # check Constant
+    c = constant(1, shape=(2,3))
+    assert np.all(np.asarray(c) == np.ones((2,3)))
+    
+    #check Parameter
+    p = parameter(shape=(2,3), init=1)
+    assert np.all(np.asarray(p) == np.ones((2,3)))
+    

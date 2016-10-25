@@ -150,7 +150,6 @@ def test_op_element_times(left_operand, right_operand, device_id, precision):
 
 
 # -- element divide tests --
-# TODO: enable once the function is exposed
 @pytest.mark.parametrize("left_operand, right_operand", TENSOR_PAIRS)
 def test_op_element_divide(left_operand, right_operand, device_id, precision):
     expected_forward = [AA([left_operand]) / AA([right_operand])]
@@ -169,19 +168,14 @@ def test_op_element_divide(left_operand, right_operand, device_id, precision):
                     left_operand, right_operand,
                     expected_forward, expected_backward)
 
-
-# -- identity function tests --
-# TODO enable this once the function is exposed
-IDENTITY_TENSORS = [
+NEGATE_TENSORS = [
     ([30.]),
     ([[30.]]),
     ([[1.5, 2.1]]),
     ([[100., 200.], [300., 400.], [10., 20.]]),
     ([[30, 40], [1, 2], [0.1, 0.2]])
 ]
-
-
-@pytest.mark.parametrize("operand", IDENTITY_TENSORS)
+@pytest.mark.parametrize("operand", NEGATE_TENSORS)
 def test_op_negate(operand, device_id, precision):
     t = -1 * AA(operand, dtype=PRECISION_TO_TYPE[precision])
 

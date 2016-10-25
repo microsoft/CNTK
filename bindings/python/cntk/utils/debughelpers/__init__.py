@@ -9,7 +9,7 @@ import sys
 import os
 import time
 from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
-from cntk.learner import sgd, fsadagrad, learning_rates_per_sample, momentums_per_sample
+from cntk.learner import sgd, fsadagrad
 from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 import itertools
 import cntk.utils
@@ -39,7 +39,7 @@ def _node_name(n):
     try:
         name = n.what()
     except:
-        name = n.name()
+        name = n.name
     # internal node names (not explicitly named)
     if name == '':
         if hasattr(n, 'is_placeholder') and n.is_placeholder:
@@ -53,10 +53,10 @@ def _node_name(n):
 def _node_description(n):
     desc = _node_name(n)
     if hasattr(n, 'inputs'):
-        inputs = n.inputs()
+        inputs = n.inputs
         #desc = "{} [{}]".format(desc, ", ".join([_node_name(p) for p in inputs]))
-        func_params = [input for input in inputs if input.is_parameter()]
-        func_args   = [input for input in inputs if input.is_placeholder()]
+        func_params = [input for input in inputs if input.is_parameter]
+        func_args   = [input for input in inputs if input.is_placeholder]
         if func_params:
             desc = "{} {{{}}}".format(desc, ", ".join([_node_name(p) for p in func_params]))
         desc = "{} <{}>".format(desc, ", ".join([_node_name(func_arg) for func_arg in func_args]))
