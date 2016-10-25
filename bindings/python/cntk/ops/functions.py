@@ -382,7 +382,19 @@ class Function(cntk_py.Function):
         return super(Function, self).replace_placeholder(substitution)
 
     @typemap
-    def restore_from_model(self, filename):
+    def save_model(self, filename, use_legacy_format=True):
+        '''
+        Save this function graph into a model file
+
+        Args:
+            filename (`str`): model path
+            use_legacy_format (`str`): if 'True', model is stored using legacy format.
+             Otherwise, it's stored using protobuf-based protocol serialization.
+        '''
+        return super(Function, self).save_model(filename, use_legacy_format)
+
+    @typemap
+    def restore_model(self, filename):
         '''
         Restore the models parameters from a saved model file
 
@@ -392,7 +404,7 @@ class Function(cntk_py.Function):
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file
         '''
-        return super(Function, self).restore_from_legacy_model(filename)
+        return super(Function, self).restore_model(filename)
 
     @property
     @typemap
