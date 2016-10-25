@@ -4,6 +4,11 @@
 # for full license information.
 # ==============================================================================
 
+# NOTE:
+# This example is meant as an illustration of how to use CNTKs distributed training feature from the python API.
+# The training hyper parameters here are not necessarily optimal and for optimal convergence need to be tuned 
+# for specific parallelization degrees that you want to run the example with.
+
 import numpy as np
 import sys
 import os
@@ -12,7 +17,7 @@ from cntk.learner import momentum_sgd, learning_rate_schedule
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, element_times, pooling, AVG_POOLING, relu
 from cntk.io import ReaderConfig, ImageDeserializer
 from cntk.initializer import he_normal, glorot_uniform
-from examples.CifarResNet.CifarResNet import create_test_mb_source, resnet_classifer
+from examples.CifarResNet.CifarResNet import create_reader, create_resnet_model
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -22,36 +27,8 @@ TRAIN_MAP_FILENAME = 'train_map.txt'
 MEAN_FILENAME = 'CIFAR-10_mean.xml'
 TEST_MAP_FILENAME = 'test_map.txt'
 
-# Instantiates the CNTK built-in minibatch source for reading images to be used for training the residual net
-# The minibatch source is configured using a hierarchical dictionary of key:value pairs
-
-def create_mb_source(features_stream_name, labels_stream_name, image_height,
-                     image_width, num_channels, num_classes, cifar_data_path,
-                     distributed_communicator):
-
-    path = os.path.normpath(os.path.join(abs_path, cifar_data_path))
-    map_file = os.path.join(path, TRAIN_MAP_FILENAME)
-    mean_file = os.path.join(path, MEAN_FILENAME)
-
-    if not os.path.exists(map_file) or not os.path.exists(mean_file):
-        cifar_py3 = "" if sys.version_info.major < 3 else "_py3"
-        raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
-                           (map_file, mean_file, cifar_py3, cifar_py3))
-
-    image = ImageDeserializer(map_file)
-    image.map_features(features_stream_name,
-            [ImageDeserializer.crop(crop_type='Random', ratio=0.8,
-                jitter_type='uniRatio'),
-             ImageDeserializer.scale(width=image_width, height=image_height,
-                 channels=num_channels, interpolations='linear'),
-             ImageDeserializer.mean(mean_file)])
-    image.map_labels(labels_stream_name, num_classes)
-
-    rc = ReaderConfig(image, epoch_size=sys.maxsize)
-    return rc.minibatch_source(distributed_communicator)
-
 # Trains a residual network model on the Cifar image dataset
-def cifar_resnet(base_path, run_test, num_epochs, communicator=None, save_model_filename=None, load_model_filename=None, debug_output=False):
+def cifar_resnet(data_path, run_test, num_epochs, communicator=None, save_model_filename=None, load_model_filename=None, debug_output=False):
     image_height = 32
     image_width = 32
     num_channels = 3
@@ -60,9 +37,8 @@ def cifar_resnet(base_path, run_test, num_epochs, communicator=None, save_model_
     feats_stream_name = 'features'
     labels_stream_name = 'labels'
 
-    minibatch_source = create_mb_source(feats_stream_name, labels_stream_name, 
-                        image_height, image_width, num_channels, num_classes, base_path,
-                        distributed_communicator = communicator)
+    minibatch_source = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True,
+                                     distributed_communicator = communicator)
 
     features_si = minibatch_source[feats_stream_name]
     labels_si = minibatch_source[labels_stream_name]
@@ -71,12 +47,12 @@ def cifar_resnet(base_path, run_test, num_epochs, communicator=None, save_model_
     
     if load_model_filename:
         print("Loading model:", load_model_filename)
-        classifier_output = persist.load_model('float', load_model_filename)
+        classifier_output = persist.load_model(load_model_filename)
         image_input = classifier_output.arguments[0]
     else:
         image_input = input_variable(
             (num_channels, image_height, image_width), features_si.m_element_type)
-        classifier_output = resnet_classifer(image_input, num_classes)
+        classifier_output = create_resnet_model(image_input, num_classes)
 
     # Input variables denoting the features and label data
     label_var = input_variable((num_classes), features_si.m_element_type)
@@ -127,8 +103,7 @@ def cifar_resnet(base_path, run_test, num_epochs, communicator=None, save_model_
         persist.save_model(classifier_output, save_model_filename)
 
     if run_test:
-        test_minibatch_source = create_test_mb_source(feats_stream_name, labels_stream_name,
-                        image_height, image_width, num_channels, num_classes, base_path)
+        test_minibatch_source = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
         features_si = test_minibatch_source[feats_stream_name]
         labels_si = test_minibatch_source[labels_stream_name]
 
@@ -153,10 +128,10 @@ def cifar_resnet(base_path, run_test, num_epochs, communicator=None, save_model_
         return 0
 
 if __name__ == '__main__':
-    base_path = os.path.abspath(os.path.normpath(os.path.join(
+    data_path = os.path.abspath(os.path.normpath(os.path.join(
         *"../../../../Examples/Image/Datasets/CIFAR-10/".split("/"))))
 
-    os.chdir(base_path)
+    os.chdir(data_path)
 
     # Create distributed communicator for 1-bit SGD
     communicator = distributed.communicator(distributed.quantized_mpi_communicator(1))
@@ -177,12 +152,12 @@ if __name__ == '__main__':
 
     # training the start model only in one worker
     if communicator.current_worker().global_rank == 0:
-        cifar_resnet(base_path, save_model_filename=start_model, communicator=None, run_test=False, num_epochs=num_start_epochs)
+        cifar_resnet(data_path, save_model_filename=start_model, communicator=None, run_test=False, num_epochs=num_start_epochs)
     
     communicator.barrier()
     
     # train in parallel
-    error = cifar_resnet(base_path, load_model_filename=start_model, communicator=communicator, run_test=True, num_epochs=num_parallel_epochs)
+    error = cifar_resnet(data_path, load_model_filename=start_model, communicator=communicator, run_test=True, num_epochs=num_parallel_epochs)
     
     print("Error: %f" % error)
 
