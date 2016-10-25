@@ -1,6 +1,16 @@
-# CNTK
-
 ## Latest news
+*2016-10-25.* New CNTK Name, new Web Site and V 2.0 Beta 1 Release  
+
+CNTK becomes **The Microsoft Cognitive Toolkit**. See more at our [new Web Site](https://www.microsoft.com/en-us/research/product/cognitive-toolkit/).
+
+Highlights of this Release:
+* CNTK can now be used as a library with [brand new C++ and Python APIs](https://github.com/microsoft/cntk/wiki/CNTK-Library-API)
+* New Python Examples and Tutorials
+* Support of Fast R-CNN algorithm
+* Improvements in CNTK Evaluation library including support of CNTK APIs
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_1_Release_Notes). You will find there links to the materials about the new features.  
+
 *2016-10-03.* V 1.7.2 Binary release  
 **This is a Hot Fix Release. It affects all users of Model Evaluation Library**
 
