@@ -180,6 +180,9 @@ def Constant(init, shape=None, name=''):
 def Input(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')
 
+# use this for set_signature()
+variable_of_type = Input
+
 def variable_type_of(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')
 
@@ -192,6 +195,8 @@ def Placeholder(shape=None, name='placeholder'):
     if _trace_layers:
         print("new " + _node_description(p))
     return p
+
+SymbolicArgument = Placeholder  # Placeholder is too overloaded; we should use this instead everywhere
 
 # If we have C++-side Function identity, in same pattern as e.g. sigmoid, then that would suffice.
 def _Identity(name='identity_arg'):

@@ -93,7 +93,6 @@ class Trainer(cntk_py.Trainer):
 
         return updated
 
-
     def test_minibatch(self, arguments, device=None):
         '''
         Test the model on the specified batch of samples using the evaluation
@@ -203,3 +202,38 @@ class Trainer(cntk_py.Trainer):
         The number of samples in the last minibatch trained with
         '''
         return super(Trainer, self).previous_minibatch_sample_count()
+
+    # BUGBUG: Should not need to take 'criterion', Trainer should know.
+    def train_minibatch_from_data(self, criterion, *stream_values):
+        def get_args(crit, stream_values):
+            return { criterion.arguments[i]: stream_values[i] for i in range(len(stream_values)) }
+        args = get_args(self.loss_function, stream_values)
+        return self.train_minibatch(args)
+
+    # BUGBUG: Should not need to take 'criterion', Trainer should know.
+    def test_minibatch_from_data(self, criterion, *stream_values):
+        def get_args(crit, stream_values):
+            return { criterion.arguments[i]: stream_values[i] for i in range(len(stream_values)) }
+        args = get_args(self.loss_function, stream_values)
+        return self.test_minibatch(args)
+
+
+# criterion_function = Function: (model args, labels) --> (loss, metric)
+def create_trainer(model_function, criterion_function, parameter_learners, distributed_trainer=None):
+    '''
+    Create a trainer to train the specified ``criterion_function`` for ``model``, using the
+    specified set of ``parameter_learners`` for updating the model's parameters
+    using computed gradients.
+
+    Args:
+       model (:class:`cntk.ops.functions.Function`): root node of the function to train
+       criterion (:class:`cntk.ops.functions.Function`): root node of the criterion function to train
+       parameter_learners (`list`): list of learners from :mod:`cntk.learner`
+       distributed_trainer (:class:`cntk.distributed.distributed_trainer`): distributed trainer
+    '''
+    outputs = criterion_function.outputs
+    if len(outputs) != 1 and len(outputs) != 2:
+        raise ValueError('criterion_function must have one (loss) or two (loss, metric) outputs')
+    loss_function   = outputs[0]
+    metric_function = outputs[1] if len(outputs) == 2 else None
+    return Trainer(model_function, loss_function, metric_function, parameter_learners, distributed_trainer)

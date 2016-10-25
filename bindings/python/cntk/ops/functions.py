@@ -36,23 +36,33 @@ class Function(cntk_py.Function):
     '''
 
 
+    def _get_arguments(self):
+        return [arg for arg in self.inputs if arg.is_input or arg.is_placeholder]
+
     # define input shapes, in-place
     # e.g.
     # model.set_signature(42)
     # pass a list of objects that define the dimensions etc. of the placeholders
     # Currently you can pass either
     def set_signature(self, *arg_types):
-        placeholders = self.placeholders  # the unbound parameters to fill in
+        placeholders = self._get_arguments()  # the function arguments to fill in
         if len(arg_types) != len(placeholders):
             raise TypeError("CNTK Function.declare_inputs() expected {} arguments, got {}".format(len(placeholders), len(arg_types)))
         def to_input(arg):
-            if isinstance(arg, cntk_py.Variable):
+            if arg is None or isinstance(arg, cntk_py.Variable):
                 return arg
             else:
                 from cntk import input_variable
                 return input_variable(arg)
         args = [to_input(arg) for arg in arg_types]
-        self.replace_placeholders(dict(zip(placeholders, args)))
+        #self.replace_placeholders(dict(zip(placeholders, args)))
+        for pair in zip(placeholders, args):
+            try:
+                if pair[1] is not None:
+                    self.replace_placeholders({pair[0]: pair[1]})
+                # BUGBUG: fails with "At least one of the placeholders specified for replacement was not found in the function"
+            except:
+                pass # workaround
 
 
     # call a function, i.e. clone with all placeholders/inputs replaced
@@ -76,12 +86,7 @@ class Function(cntk_py.Function):
         args = [_output_of(arg) for arg in args]  # normalize args to their outputs  --BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
         #from cntk.ops import combine
         #args = [combine([arg]) for arg in args]  # BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
-        placeholders = self.placeholders  # the unbound parameters to fill in
-        arguments    = self.arguments     # alternatively, parameters that already have dimensions
-        if len(placeholders) > 0:
-            if len(arguments) > 0:
-                raise TypeError("CNTK Function currently cannot mix placeholders and inputs")
-            arguments = placeholders
+        arguments    = self._get_arguments()     # function inputs (bound or unbound)
         if len(args) != len(arguments):
             raise TypeError("CNTK Function expected {} arguments, got {}".format(len(arguments), len(args)))
         return self.clone(CloneMethod.share, dict(zip(arguments, args)))

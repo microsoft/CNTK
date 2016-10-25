@@ -215,7 +215,7 @@ def minibatch_source(config, distributed_communicator):
     '''
     cntk_dict = _py_dict_to_cntk_dict(config)
     if (distributed_communicator == None):
-    return cntk_py.create_composite_minibatch_source(cntk_dict)
+        return cntk_py.create_composite_minibatch_source(cntk_dict)
     else:
         return cntk_py.create_composite_minibatch_source(cntk_dict, distributed_communicator.data)
 
