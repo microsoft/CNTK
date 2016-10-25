@@ -2746,7 +2746,7 @@ namespace CNTK
     ///
     /// Todo: move into FutureValue() after upgrade to VS2015
     /// static const auto defaultFutureValueInitialState = Constant::Scalar(0.0f);
-    static const Constant defaultFutureValueInitialState = {{}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice()};;
+    static const Constant defaultFutureValueInitialState = {{}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice()};
     inline FunctionPtr FutureValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
     {
         return FutureValue(operand, defaultFutureValueInitialState, offset, name);
