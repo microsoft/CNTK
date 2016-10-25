@@ -220,8 +220,6 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
             # every N MBs evaluate on a test sequence to visually show how we're doing
             if mbs % training_progress_output_freq == 0:
                 mb_valid = valid_reader.next_minibatch(minibatch_size, input_map=valid_bind)
-                if mb_valid is None:
-                    print("adgkljas")
                 e = ng.eval(mb_valid)
                 print_sequences(e, i2w)
 
