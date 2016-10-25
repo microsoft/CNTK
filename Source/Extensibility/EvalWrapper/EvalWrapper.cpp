@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 #include <memory>
+#include <iostream>
 #include <msclr\marshal_cppstd.h>
 
 #include "CNTKException.h"
@@ -19,11 +20,14 @@
 
 #using <System.dll>
 #using <System.Collections.dll>
+#using <System.Drawing.dll>
 
 using namespace std;
 using namespace System;
 using namespace System::Collections::Generic;
 using namespace System::Collections;
+using namespace System::Drawing;
+using namespace System::Drawing::Imaging;
 using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Extensibility { namespace Managed {
@@ -346,28 +350,168 @@ public:
         }
     }
 
-    /// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
-    /// <param name="inputs"></param>
-    /// <param name="outputKey"></param>
-    /// <param name="outputSize"></param>
-    /// <returns>Results for specified layer</returns>
-    __declspec(deprecated) List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey, int outputSize)
-    {
-        List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
-        for (int i = 0; i < outputSize; i++)
-        {
-            outputs->Add(*(gcnew ElemType));
-        }
+	/// <summary>Evaluates the model against the given bitmap input, and retrieves the output layer data</summary>
+	/// <param name="outputKey"></param>
+	/// <returns>Results for specified layer</returns>
+	List<ElemType>^ EvaluateImage(Bitmap^ image, String^ outputKey)
+	{
+		std::cout << "EvaluateImage: Entering";
+		if (m_eval == nullptr)
+		{
+			throw gcnew ObjectDisposedException("Object has been disposed.");
+		}
+		auto stopwatch = gcnew System::Diagnostics::Stopwatch();
+		stopwatch->Start();
+		bool hasAlphaChannel;
+		if (image->PixelFormat == PixelFormat::Format24bppRgb)
+		{
+			hasAlphaChannel = false;
+		}
+		else if (image->PixelFormat == PixelFormat::Format32bppArgb)
+		{
+			hasAlphaChannel = true;
+		}
+		else
+		{
+			throw gcnew ArgumentException("Pixel format of input bitmap is not recognized, must be one of { Format24bppRgb, Format32bppArgb}.");
+		}
+		int imageWidth = image->Width;
+		int imageHeight = image->Height;
+		// The total number of pixels in one channel of the image.
+		int channelStride = imageWidth * imageHeight;
+		// The total number of bytes in all channels of the image.
+		int numBytes = channelStride * 3;
+		auto outDims = GetNodeDimensions(NodeGroup::Output);
+		int outputSize = outDims[outputKey];
+		auto inDims = GetNodeDimensions(NodeGroup::Input);
+		int inputSize = inDims["features"];
+		// #pixels * #channels in the image must match the input dimension of the network.
+		if (inputSize != numBytes)
+		{
+			auto message = String::Format("Input image has invalid size. Expected an image with Width * Height = {0}, but got Width = {1}, Height = {2}",
+				inputSize / 3, imageWidth, imageHeight);
+			throw gcnew ArgumentException(message);
+		}
+		// Generate a list that will hold the model outputs.
+		auto outputList = gcnew List<ElemType>(outputSize);
+		for (int i = 0; i < outputSize; i++)
+		{
+			outputList->Add(*(gcnew ElemType));
+		}
+		auto outputMap = gcnew Dictionary<String^, List<ElemType>^>();
+		outputMap->Add(outputKey, outputList);
 
-        Dictionary<String^, List<ElemType>^>^ outputMap = gcnew Dictionary<String^, List<ElemType>^>();
-        outputMap->Add(outputKey, outputs);
+		std::map<std::wstring, std::vector<ElemType>*> stdInputs;
+		std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
 
-        Evaluate(inputs, outputMap);
+		auto rect = gcnew System::Drawing::Rectangle(0, 0, imageWidth, imageHeight);
+		auto bitmap = image->LockBits(*rect, ImageLockMode::ReadOnly, image->PixelFormat);
+		auto bytes = reinterpret_cast<byte*>(bitmap->Scan0.ToPointer());
+		int bitmapStride = bitmap->Stride;
+		std::vector<ElemType>* featureVector = new std::vector<ElemType>(numBytes);
+		//shared_ptr<std::vector<ElemType>> featureVector(new std::vector<ElemType>(numBytes));
+		int index;
+		for (int c = 0; c < 3; c++)
+		{
+			for (int h = 0; h < imageHeight; h++)
+			{
+				for (int w = 0; w < imageWidth; w++)
+				{
+					if (hasAlphaChannel)
+					{
+						index = h * bitmapStride + w * 4 + c;
+					}
+					else
+					{
+						index = h * bitmapStride + w * 3 + c;
+					}
+					(*featureVector)[channelStride * c + imageWidth * h + w] = (ElemType)(bytes[index]);
+				}
+			}
+		}
+		image->UnlockBits(bitmap);
+		std::cout << "EvaluateImage: Feature vectors computed";
+		try
+		{
+			std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
+			const WCHAR inputKey[] = L"features";
+			shared_ptr<std::vector<ElemType>> f2(featureVector);
+			stdInputs.insert(MapEntry(inputKey, f2.get()));
 
-        return outputMap[outputKey];
-    }
+			// This is copied directly from the above Evaluate method, but could be 
+			// simplified if we always want to restrict to 1 output value only.
+			for each (auto item in outputMap)
+			{
+				pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
+				// Why do we have to initialize the output nodes at all?
+				// Can we skip that?
+				shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
+				sharedOutputVectors.push_back(ptr);
+				stdOutputs.insert(MapEntry(key, ptr.get()));
+			}
 
-    /// <summary>Evaluates the model against input data and retrieves the desired output layer data</summary>
+			auto t = stopwatch->ElapsedTicks;
+			stopwatch->Stop();
+			std::cout << "Time until model call: " << t << "ms" << std::endl;
+			try
+			{
+				std::cout << "EvaluateImage: Starting model evaluation";
+				m_eval->Evaluate(stdInputs, stdOutputs);
+				std::cout << "EvaluateImage: Finished model evaluation";
+			}
+			catch (const exception& ex)
+			{
+				std::cout << "EvaluateImage: Exception in model evaluation";
+				throw GetCustomException(ex);
+			}
+
+			auto enumerator = outputMap->Keys->GetEnumerator();
+			for (auto& map_item : stdOutputs)
+			{
+				// Retrieve the layer key
+				enumerator.MoveNext();
+				auto key = enumerator.Current;
+
+				auto &refVec = *(map_item.second);
+				int index;
+				for (auto& vec : refVec)
+				{
+					outputMap[key][index++] = vec;
+				}
+			}
+			std::cout << "EvaluateImage: Finished copying to managed output";
+		}
+		catch (Exception^)
+		{
+			std::cout << "EvaluateImage: Caught other exception";
+			throw;
+		}
+		std::cout << "EvaluateImage: Exiting";
+		return outputMap[outputKey];
+	}
+
+	/// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
+	/// <param name="inputs"></param>
+	/// <param name="outputKey"></param>
+	/// <param name="outputSize"></param>
+	/// <returns>Results for specified layer</returns>
+	__declspec(deprecated) List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey, int outputSize)
+	{
+		List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
+		for (int i = 0; i < outputSize; i++)
+		{
+			outputs->Add(*(gcnew ElemType));
+		}
+
+		Dictionary<String^, List<ElemType>^>^ outputMap = gcnew Dictionary<String^, List<ElemType>^>();
+		outputMap->Add(outputKey, outputs);
+
+		Evaluate(inputs, outputMap);
+
+		return outputMap[outputKey];
+	}
+
+	/// <summary>Evaluates the model against input data and retrieves the desired output layer data</summary>
     /// <param name="inputs"></param>
     /// <param name="outputKey"></param>
     /// <returns>Results for requested layer</returns>
@@ -548,6 +692,7 @@ void emit()
     f.Evaluate(nullptr, nullDictF);
     f.Evaluate(nullptr, "");
     f.Evaluate("");
+	f.EvaluateImage(nullptr, "");
     f.CreateNetwork("");
     f.CreateNetwork("", 0);
     f.CreateNetwork("", nullptr);
@@ -559,7 +704,8 @@ void emit()
     d.Evaluate(nullptr, nullDictD);
     d.Evaluate(nullptr, "");
     d.Evaluate("");
-    d.CreateNetwork("");
+	f.EvaluateImage(nullptr, "");
+	d.CreateNetwork("");
     d.CreateNetwork("", 0);
     d.CreateNetwork("", nullptr);
     d.CreateNetwork("", 0,nullptr);
