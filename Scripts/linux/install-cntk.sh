@@ -10,7 +10,7 @@
 # TODO cut down on logging
 set -x -e -o pipefail
 
-REPO_TAG=v2.alpha4
+REPO_TAG=v2.0.beta1.0
 
 USAGE="Usage: [--force]"
 FORCE=$(! [ "$0" = "--force" ]; echo $?)
