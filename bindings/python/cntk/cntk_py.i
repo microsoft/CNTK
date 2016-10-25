@@ -74,7 +74,7 @@
 //
 %feature("shadow") CNTK::Variable::DynamicAxes %{
 def dynamic_axes(self):
-    return ($action(self))[::-1]
+    return tuple(reversed($action(self)))
 %}
 
 %fragment("NDShapeToTuple", "header")
