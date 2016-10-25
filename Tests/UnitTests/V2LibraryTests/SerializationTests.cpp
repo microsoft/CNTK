@@ -16,13 +16,10 @@ using namespace std;
 
 using namespace Microsoft::MSR::CNTK;
 
-static const size_t maxNestingDepth = 10;
-static const size_t maxNestedDictSize = 10;
-static const size_t maxNestedVectorSize = 100;
-static const size_t maxNDShapeSize = 100;
 
-static const size_t maxNumAxes = 10;
-static const size_t maxDimSize = 15;
+static const size_t maxNDShapeSize = 10;
+static const size_t maxNumAxes = 3;
+static const size_t maxDimSize = 5;
 
 
 static size_t keyCounter = 0;
@@ -31,31 +28,33 @@ static uniform_real_distribution<float> float_dist = uniform_real_distribution<f
 
 static std::wstring tempFilePath = L"serialization.tmp";
 
-DictionaryValue CreateDictionaryValue(DictionaryValue::Type, size_t);
+DictionaryValue CreateDictionaryValue(DictionaryValue::Type, size_t, size_t);
 
 DictionaryValue::Type GetType()
 {
     return DictionaryValue::Type(rng() % (unsigned int) DictionaryValue::Type::NDArrayView + 1);
 }
 
-void AddKeyValuePair(Dictionary& dict, size_t depth)
+void AddKeyValuePair(Dictionary& dict, size_t maxSize, size_t maxDepth)
 {
     auto type = GetType();
-    while (depth >= maxNestingDepth && 
-           type == DictionaryValue::Type::Vector ||
-           type == DictionaryValue::Type::Dictionary)
+    if (maxDepth <= 0)
     {
-        type = GetType();
+        while (type == DictionaryValue::Type::Vector || type == DictionaryValue::Type::Dictionary)
+        {
+            type = GetType();
+        }
     }
-    dict[L"key" + to_wstring(keyCounter++)] = CreateDictionaryValue(type, depth);
+    
+    dict[L"key" + to_wstring(keyCounter++)] = CreateDictionaryValue(type, maxSize, maxDepth);
 }
 
-Dictionary CreateDictionary(size_t size, size_t depth = 0) 
+Dictionary CreateDictionary(size_t size, size_t depth) 
 {
     Dictionary dict;
     for (auto i = 0; i < size; ++i)
     {
-        AddKeyValuePair(dict, depth);
+        AddKeyValuePair(dict, size-1, depth-1);
     }
 
     return dict;
@@ -88,8 +87,9 @@ NDArrayViewPtr CreateNDArrayView()
         CreateNDArrayView<float>(numAxes, device) : CreateNDArrayView<double>(numAxes, device);
 }
 
-DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t depth)
+DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t maxSize, size_t maxDepth)
 {
+    if (maxSize == 0) maxSize = 1;
     switch (type)
     {
     case DictionaryValue::Type::Bool:
@@ -103,7 +103,7 @@ DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t depth)
     case DictionaryValue::Type::Double:
         return DictionaryValue(double_dist(rng));
     case DictionaryValue::Type::String:
-        return DictionaryValue(to_wstring(rng()));
+        return DictionaryValue(((rng() % 2 == 0) ?L"string_" : L"\u0441\u0442\u0440\u043E\u043A\u0430_") + to_wstring(rng()));
     case DictionaryValue::Type::Axis:
         return ((rng() % 2) == 0) ? DictionaryValue(Axis(0)) : DictionaryValue(Axis(L"newDynamicAxis_" + to_wstring(rng())));
     case DictionaryValue::Type::NDShape:
@@ -119,16 +119,19 @@ DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t depth)
     case DictionaryValue::Type::Vector:
     {   
         auto type = GetType();
-        size_t size = rng() % maxNestedVectorSize + 1;
+        size_t size = rng() % maxSize + 1;
         vector<DictionaryValue> vector(size);
         for (auto i = 0; i < size; i++)
         {
-            vector[i] = CreateDictionaryValue(type, depth + 1);
+            vector[i] = CreateDictionaryValue(type, maxSize-1, maxDepth-1);
         }
         return DictionaryValue(vector);
     }
     case DictionaryValue::Type::Dictionary:
-        return DictionaryValue(CreateDictionary(rng() % maxNestedDictSize  + 1, depth + 1));
+    {
+        size_t size = rng() % maxSize + 1;
+        return DictionaryValue(CreateDictionary(size, maxDepth));
+    }
     case DictionaryValue::Type::NDArrayView:
         return DictionaryValue(*(CreateNDArrayView()));
     default:
@@ -141,7 +144,7 @@ void TestDictionarySerialization(size_t dictSize)
     if ((_wunlink(tempFilePath.c_str()) != 0) && (errno != ENOENT))
         std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
 
-    Dictionary originalDict = CreateDictionary(dictSize);
+    Dictionary originalDict = CreateDictionary(dictSize, dictSize);
     
     {
         fstream stream;
@@ -160,6 +163,33 @@ void TestDictionarySerialization(size_t dictSize)
     
     if (originalDict != deserializedDict)
         throw std::runtime_error("TestDictionarySerialization: original and deserialized dictionaries are not identical.");
+}
+
+template <typename ElementType>
+void TestLargeValueSerialization(size_t numElements) 
+{
+    if ((_wunlink(tempFilePath.c_str()) != 0) && (errno != ENOENT))
+        std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
+
+    DictionaryValue originalValue(*NDArrayView::RandomUniform<ElementType>({ numElements }, -0.5, 0.5, CNTK::SentinelValueForAutoSelectRandomSeed, DeviceDescriptor::CPUDevice()));
+
+    {
+        fstream stream;
+        OpenStream(stream, tempFilePath, false);
+        stream << originalValue;
+        stream.flush();
+    }
+
+    DictionaryValue deserializedValue;
+
+    {
+        fstream stream;
+        OpenStream(stream, tempFilePath, true);
+        stream >> deserializedValue;
+    }
+    
+    if (originalValue != deserializedValue)
+        throw std::runtime_error("TestLargeValueSerialization: original and deserialized values are not identical.");
 }
 
 template <typename ElementType>
@@ -381,7 +411,7 @@ void TestFunctionSerialization(const DeviceDescriptor& device)
     TestFunctionSaveAndLoad(BuildLSTMClassifierNet(inputVar, 5, device), device);
 }
 
-Trainer BuildTrainer(const FunctionPtr& function, const Variable& labels, LearningRatesPerSample lr = 0.005, MomentumValuesPerSample m = 0.0)
+Trainer BuildTrainer(const FunctionPtr& function, const Variable& labels, LearningRateSchedule lr = 0.005, MomentumSchedule m = 0.0)
 {
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(function, labels, L"lossFunction");
     auto prediction = CNTK::ClassificationError(function, labels, L"classificationError");
@@ -472,10 +502,10 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
 
     const size_t minibatchSize = 50;
     auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
-    auto actualMBSize = minibatchData[labelStreamInfo].m_numSamples;
+     auto actualMBSize = minibatchData[labelStreamInfo].m_numSamples;
 
-    LearningRatesPerSample learningRateSchedule({ { 2, 0.005 }, { 2, 0.0025 }, { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
-    MomentumValuesPerSample momentumValues({ { 2, exp(-1.0 / 100) }, { 2, exp(-1.0 / 200) }, { 2, exp(-1.0 / 400) }, { 2, exp(-1.0 / 800) } }, actualMBSize);
+    LearningRateSchedule learningRateSchedule({ { 2, 0.005 }, { 2, 0.0025 }, { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
+    MomentumAsTimeConstantSchedule momentumValues({ { 2, 100 }, { 2, 200 }, { 2, 400 }, { 2, 800 } }, actualMBSize);
 
 
     auto trainer1 = BuildTrainer(function1, labels, learningRateSchedule, momentumValues);
@@ -484,7 +514,7 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
     assert(AreEqual(function1, function2));
 
     trainer2.SaveCheckpoint(L"trainer.v2.checkpoint", false);
-    trainer2.RestoreFromCheckpoint(L"trainer.v2.checkpoint", false);
+    trainer2.RestoreFromCheckpoint(L"trainer.v2.checkpoint");
 
     if (!AreEqual(function1, function2))
     {
@@ -508,7 +538,7 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
     for (int i = 0; i < 3; ++i)
     {
         trainer2.SaveCheckpoint(L"trainer.v2.checkpoint", false);
-        trainer2.RestoreFromCheckpoint(L"trainer.v2.checkpoint", false);
+        trainer2.RestoreFromCheckpoint(L"trainer.v2.checkpoint");
 
         if (!AreEqual(function1, function2))
         {
@@ -601,7 +631,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
     auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
 
-    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { L"features", inputDim, true, L"x" }, { L"labels", numOutputClasses, false, L"y" } }, 0);
+    auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { L"features", inputDim, true, L"x" }, { L"labels", numOutputClasses, false, L"y" } }, MinibatchSource::FullDataSweep);
     auto featureStreamInfo = minibatchSource->StreamInfo(features);
     auto labelStreamInfo = minibatchSource->StreamInfo(labels);
 
@@ -609,32 +639,32 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
     auto actualMBSize = minibatchData[labelStreamInfo].m_numSamples;
 
-    LearningRatesPerSample learningRateSchedule({ { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
+    LearningRateSchedule learningRateSchedule({ { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
     auto learner = SGDLearner(classifierOutput->Parameters(), learningRateSchedule);
     Trainer trainer(classifierOutput, trainingLoss, prediction, { learner });
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
 
     const wchar_t* modelFile = L"seq2seq.model";
-    SaveAsLegacyModel(classifierOutput, modelFile);
+    classifierOutput->SaveModel(modelFile);
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     auto MB2Loss = trainer.PreviousMinibatchLossAverage();
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
 
-    classifierOutput->RestoreFromLegacyModel(modelFile);
+    classifierOutput->RestoreModel(modelFile);
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     auto postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 
-    classifierOutput->RestoreFromLegacyModel(modelFile);
-    SaveAsLegacyModel(classifierOutput, modelFile);
+    classifierOutput->RestoreModel(modelFile);
+    classifierOutput->SaveModel(modelFile);
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
 
-    classifierOutput->RestoreFromLegacyModel(modelFile);
+    classifierOutput->RestoreModel(modelFile);
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
@@ -645,9 +675,14 @@ void SerializationTests()
 {
     fprintf(stderr, "\nSerializationTests..\n");
 
+    TestDictionarySerialization(1);
+    TestDictionarySerialization(2);
     TestDictionarySerialization(4);
     TestDictionarySerialization(8);
     TestDictionarySerialization(16);
+
+    TestLargeValueSerialization<double>(10000000);
+    TestLargeValueSerialization<float>(100000000);
 
     TestLearnerSerialization<float>(5, DeviceDescriptor::CPUDevice());
     TestLearnerSerialization<double>(10, DeviceDescriptor::CPUDevice());

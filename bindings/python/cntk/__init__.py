@@ -20,7 +20,4 @@ from .io import *
 from .persist import load_model, save_model
 from .device import *
 
-# TODO wrap
-from .cntk_py import momentums_per_sample
-
 DATATYPE = np.float32

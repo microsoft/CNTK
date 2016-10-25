@@ -185,6 +185,7 @@ namespace CNTK
         static const std::wstring AttributeNameNormalizationTimeConstant;
         static const std::wstring AttributeNameBlendTimeConstant;
         static const std::wstring AttributeNameEpsilon;
+        static const std::wstring AttributeNameSamplesSeen;
         static const std::wstring AttributeNameUseCuDNNEngine;
         static const std::wstring AttributeNameNewDynamicAxes;
         static const std::wstring AttributeNameBeginIndex;
@@ -353,13 +354,8 @@ namespace CNTK
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
 
-            // At least one of the operand shapes should be known
-            assert((leftOperandShape != NDShape::Unknown) || (rightOperandShape != NDShape::Unknown));
-
-            if (leftOperandShape == NDShape::Unknown)
-                leftOperandShape = rightOperandShape;
-            else if (rightOperandShape == NDShape::Unknown)
-                rightOperandShape = leftOperandShape;
+            // All operand shapes should be known
+            assert((leftOperandShape != NDShape::Unknown) && (rightOperandShape != NDShape::Unknown));
 
             const auto& shapeWithSmallerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? rightOperandShape : leftOperandShape;
             const auto& shapeWithLargerNumAxes = (leftOperandShape.Rank() > rightOperandShape.Rank()) ? leftOperandShape : rightOperandShape;
@@ -589,10 +585,7 @@ namespace CNTK
 
                 // Infer dimensions of learnable parameters
                 auto paramShape = operands[i].Shape();
-                // BUGBUG: Parameter dimensions are totally wrong. E.g. a valid spatial bias for [15 x 15 x 32] is currently [32 x 1].
-                //         The correct bias shape should be [1 x 1 x 32]. That can be specified but leads to different results for unknown reasons.
-                //         Until this has been corrected, we need a workaround that infers the wrong dimensions.
-                if (inferDimensions && (paramShape.Rank() == 1) && (paramShape[0] == NDShape::InferredDimension) && !mainOperandShape.HasInferredDimension())
+                if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasInferredDimension())
                 {
                     size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
                     paramShape[0] = total;
@@ -654,7 +647,7 @@ namespace CNTK
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
-        friend void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
+        friend void Internal::SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
 
         friend void ComputeInputPerDimMeansAndInvStdDevs(const MinibatchSourcePtr& minibatchSource,
                                                          std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>>& computedMeanAndInvStdDevs,
@@ -844,6 +837,8 @@ namespace CNTK
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 
         bool m_networkMatricesAllocated;
+
+        std::unordered_map<Parameter, size_t> m_lastRecordedParameterValueTimeStamps;
 
         static const size_t s_serializationVersion = 1;
     };

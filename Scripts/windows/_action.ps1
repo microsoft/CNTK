@@ -1,4 +1,9 @@
-﻿function ActionOperations()
+﻿#
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
+
+function ActionOperations()
 {
     Write-Host "Performing install operations"
 
@@ -51,8 +56,7 @@ function InstallExe(
         $runningOn = ((Get-WmiObject -class Win32_OperatingSystem).Caption).ToUpper()
         $platform  = ($platform.ToString()).ToUpper()
 
-        if (-not $runningOn.StartsWith($platform))
-        {
+        if (-not $runningOn.StartsWith($platform)) {
             return
         }
     }
@@ -70,8 +74,8 @@ function InstallExe(
     
     if ( ($processWait -ne $null) -and ($Execute) -and ($false) ) {
         do {
-    	    start-sleep 20
-	        $pwait = Get-Process $processWait -ErrorAction SilentlyContinue
+            start-sleep 20
+            $pwait = Get-Process $processWait -ErrorAction SilentlyContinue
         } while (-not ($pwait -eq $null))
     }
     
@@ -89,7 +93,6 @@ function InstallWheel(
 
     $BasePath     = $table["BasePath"]
     $EnvName      = $table["EnvName"]
-    $whl          = $table["whl"]
     $message      = $table["message"]
     $whlDirectory = $table["WheelDirectory"]
 
@@ -98,6 +101,13 @@ function InstallWheel(
          Write-Host  "** Running in DEMOMODE - setting Exit Code **: 0"
          return 
     }
+
+    $whlFile = Get-ChildItem $cntkRootDir\cntk\Python\cntk*.whl
+    if ($whlFile -eq $null) {
+        throw "No WHL file found at $cntkRootDir\cntk\Python"
+    }
+    $whl = $whlFile.FullName
+
     $condaExe = Join-Path $BasePath 'Scripts\conda.exe'
     $newPaths = Invoke-DosCommand $condaExe (Write-Output ..activate cmd.exe $EnvName)
 
@@ -196,6 +206,27 @@ function ExtractAllFromZip(
     }
     return $true
 }
+
+function CreateBatch(
+    [Parameter(Mandatory = $true)][hashtable] $table
+)
+{
+    FunctionIntro $table
+
+    $func = $table["Function"]
+    $filename = $table["Filename"]
+
+    if (-not $Execute) {
+        Write-Host "Create-Batch [$filename]:No-Execute flag. No file created"
+        return
+    }
+
+    Remove-Item -Path $filename -ErrorAction SilentlyContinue | Out-Null
+
+    add-content -Path $filename -Value "set PATH=%PATH%;$cntkRootDir\cntk" -Encoding Ascii
+    add-content -Path $filename -Value "$AnacondaBasePath\Scripts\activate $AnacondaBasePath\envs\cntk-py34" -Encoding Ascii 
+}
+
 
 function DoProcess(
     [string]  $command,

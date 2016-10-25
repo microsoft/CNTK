@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{1a078fc2-21c0-4f42-9a5b-0e84e944bc74}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>ImageHandsOn\ImageHandsOn.py</StartupFile>
+    <StartupFile>test\language_understanding_test.py</StartupFile>
     <SearchPath>$(RepoRootPath)$(Platform)\$(Configuration);$(RepoRootPath)bindings\python;$(RepoRootPath)bindings\python\examples</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -29,37 +29,36 @@
     <OutputPath>bin\Release_NoOpt\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="CifarConvNet\CifarConvNet.py" />
     <Compile Include="CifarResNet\CifarResNet.py" />
     <Compile Include="common\layers.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="common\nn.py" />
     <Compile Include="common\__init__.py" />
-    <Compile Include="ImageHandsOn\ImageHandsOn.py" />
+    <Compile Include="LanguageUnderstanding\LanguageUnderstanding.py" />
     <Compile Include="MNIST\SimpleMNIST.py" />
     <Compile Include="NumpyInterop\FeedForwardNet.py" />
     <Compile Include="Sequence2Sequence\Sequence2Sequence.py" />
     <Compile Include="SequenceClassification\SequenceClassification.py" />
-    <Compile Include="SLUHandsOn\SLUHandsOn.py" />
-    <Compile Include="Speech\EndToEnd.py" />
     <Compile Include="test\cifar_resnet_test.py" />
+    <Compile Include="test\cifar_convnet_test.py" />
     <Compile Include="test\feed_forward_net_test.py" />
+    <Compile Include="test\language_understanding_test.py" />
     <Compile Include="test\sequence_classification_test.py" />
     <Compile Include="test\sequence_to_sequence_test.py" />
     <Compile Include="test\simple_mnist_test.py" />
-    <Compile Include="test\SLUHandsOn_test.py" />
     <Compile Include="__init__.py" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="CifarConvNet\" />
     <Folder Include="CifarResNet" />
     <Folder Include="common" />
-    <Folder Include="ImageHandsOn\" />
+    <Folder Include="LanguageUnderstanding\" />
     <Folder Include="MNIST" />
     <Folder Include="NumpyInterop" />
     <Folder Include="Sequence2Sequence" />
     <Folder Include="SequenceClassification" />
-    <Folder Include="SLUHandsOn\" />
-    <Folder Include="Speech\" />
     <Folder Include="test\" />
   </ItemGroup>
   <ItemGroup>

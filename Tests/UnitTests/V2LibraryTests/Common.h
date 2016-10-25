@@ -13,6 +13,13 @@
 #define NDEBUG
 #endif
 
+#ifdef _MSC_VER
+// In case of asserts in debug mode, print the message into stderr and throw exception
+int HandleDebugAssert(int /* reportType */,
+                      char *message, // fully assembled debug user message
+                      int *returnValue); // returnValue - retVal value of zero continues execution
+#endif
+
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
@@ -118,8 +125,8 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
             std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
 
-    CNTK::SaveAsLegacyModel(functionPtr, tempModelPath);
-    functionPtr = CNTK::LoadLegacyModel(functionPtr->Outputs()[0].GetDataType(), tempModelPath, device);
+    functionPtr->SaveModel(tempModelPath);
+    functionPtr = CNTK::Function::LoadModel(functionPtr->Outputs()[0].GetDataType(), tempModelPath, device);
 
     if (_wunlink(tempModelPath.c_str()) != 0)
          std::runtime_error("Error deleting temp model file 'feedForward.net'");
@@ -372,7 +379,7 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
     #else
     stream.open(wtocharpath(filename.c_str()).c_str(), mode);
     #endif
-    stream.exceptions(std::ios_base::failbit | std::ios_base::badbit);  
+    stream.exceptions(std::ios_base::badbit);  
 }
 
 inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)

@@ -1,4 +1,7 @@
-﻿
+﻿#
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
 
 function FunctionIntro(
     [Parameter(Mandatory = $true)][hashtable] $table
@@ -22,7 +25,7 @@ function DisplayStart()
 {
     Write-Host "
 
-This script will setup the CNTK prequisites and the CNTK v2 Python environment onto the machine.
+This script will setup the CNTK prequisites and the CNTK Python environment onto the machine.
 More help is given by calling get-help .\installer.ps1
 
 The script will analyse your machine and will determine which components are required. 
@@ -33,8 +36,8 @@ Repeated operation of this script will reuse already downloaded components.
 - If required MSMPI will be installed
 - If required the Git-tool will be installed
 - CNTK source will be downloaded in [c:\repos\cntk]
-- Anaconda3 will be installed into [c:\local\Anaconda3-4.1.1-Windows-x86_6]
-- A CNTK-PY34 environment will be created in [c:\local\Anaconda3-4.1.1-Windows-x86_6\envs]
+- Anaconda3 will be installed into [$AnacondaBasePath]
+- A CNTK-PY34 environment will be created in [$AnacondaBasePath\envs]
 
 
 1 - I agree and want to contiue
@@ -59,13 +62,12 @@ Write-Host "
 
 CNTK v2 Python install complete.
 
-To activate the CNTK v2 Python environment, start a command shell and run
+To activate the CNTK Python environment and set the PATH to include CNTK, start a command shell and run
+   $cntkRootDir\scripts\cntkpy34.bat
 
-   C:\local\Anaconda3-4.1.1-Windows-x86_64\Scripts\activate cntk-py34
 
 Please checkout examples in the CNTK repository clone here:
-
-    c:\clone\cntk\bindings\python\examples
+    c:\repos\cntk\bindings\python\examples
 
 "
 }

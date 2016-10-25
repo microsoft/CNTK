@@ -11,9 +11,8 @@ import scipy.sparse
 from .. import cntk_py
 from cntk.device import cpu, gpu, use_default_device
 from .swig_helper import typemap
-from .progress_print import ProgressPrinter
 from ..axis import Axis
-
+from .progress_print import *
 
 def sanitize_precision(precision):
     '''
@@ -36,14 +35,13 @@ def sanitize_precision(precision):
 
 def cntk_device(device_id):
     '''
-    Converts the legacy device ID as it was used in CNTK 1 to CNTK
-    DeviceDescriptor instance.
+    Converts the legacy device ID as it was used in CNTK 1 to a :class:`cntk.device.DeviceDescriptor` instance.
 
     Args:
         device_id (int): device id, -1 for CPU, 0 or higher for GPU
 
     Returns:
-        CNTK DeviceDescriptor
+        :class:`cntk.device.DeviceDescriptor`
     '''
     if device_id == -1:
         return cpu()
@@ -166,7 +164,7 @@ def get_temp_filename(directory=None):
 
     Args:
         directory (str): optional directory, in which the temporary file will
-         be created
+        be created
 
     Returns:
         Filename of the temporary file
@@ -339,7 +337,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
     mask.
 
     Args:
-        var (`:class:cntk.ops.variables.Variable`): variable node for which the ``batch`` is
+        var (:class:`cntk.ops.variables.Variable`): variable node for which the ``batch`` is
          meant
         batch (`list` of NumPy arrays): input
         seq_starts (`list` of `bool` or `None`): if `None`, every sequence is
@@ -348,7 +346,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
          continuation of the previous one (`False`)
 
     Returns:
-        `:class:cntk.cntk_py.Value`: converted batch
+        :class:`cntk.cntk_py.Value`: converted batch
     '''
     from ..cntk_py import Value
 
@@ -367,7 +365,7 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
             use_mask =  len(var.dynamic_axes) > 1
 
     if device is None:
-        device = cntk_py.DeviceDescriptor.use_default_device()
+        device = use_default_device()
 
     if not use_mask and seq_starts is not None:
         raise ValueError('specification of individual sequence begins does not'
@@ -476,20 +474,20 @@ def sanitize_function(arg):
 def sanitize_var_map(op_arguments, arguments, precision=None,
                      device=None):
     '''
-    Sanitizes a dictionary of `Variable`s to input data such that it can be
-    handed off to the :meth:`cntk.ops.functions.Function.forward` method.
+    Sanitizes a dictionary of `Variable` s to input data such that it can be
+    handed off to the evaluation methods (:meth:`cntk.ops.functions.Function.forward`, :meth:`cntk.ops.functions.Function.backward`, :meth:`cntk.Trainer.train_minibatch` and
+    :meth:`cntk.Trainer.test_minibatch`).
 
     Args:
         op_arguments (:class:`cntk.ops.functions.Function`): arguments of the root function. In
-         forward pass it is typically `op.arguments`, in backward mode it is
+         :meth:`cntk.ops.functions.Function.forward` pass it is typically `op.arguments`, in :meth:`cntk.ops.functions.Function.backward` pass it is
          `op.outputs`
-        arguments (`dict` or `list` or `tuple`): maps variables to their
-         input data. The interpretation depends on the input type
-
-            * `dict`: keys are input variable or names and values are the input data.
-            * `list`: elements are input data in the order their respective variables have been defined in the network.
-
-         In both cases, every every sample in the data will be interpreted
+        arguments: maps variables to their
+         input data. The interpretation depends on the input type:
+          * `dict`: keys are input variable or names and values are the input data.
+          * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+            For nodes with more than one input, only `dict` is allowed.
+         In both cases, every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
          previous sequence, specify ``arguments`` as `tuple`: the
          first element will be used as ``arguments``, and the second one will
@@ -499,7 +497,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          :class:`cntk.io.MinibatchData` instance.
         precision (`str` or `np.float32` or `np.float64`): if string it can be
          one of 'float' 'float32, 'double', 'float64', or `None`
-        device (`DeviceDescriptor` or `None`): CNTK DeviceDescriptor
+        device (:class:`cntk.device.DeviceDescriptor` or `None`): CNTK DeviceDescriptor
 
     Returns:
         `dict` that maps variables to sanitized batches
@@ -522,16 +520,18 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
         raise ValueError('your graph has %i inputs, but you specified %i' %
                         (len(op_arguments), len(arguments)))
 
-    if isinstance(arguments, list):
-        arguments = dict(zip(op_arguments, arguments))
-
     if isinstance(arguments, dict):
         arg_names = [var.name for var in op_arguments]
         name_counter = collections.Counter(arg_names)
 
         var_name_map = dict((var.name, var) for var in op_arguments)
     else:
-        raise ValueError('type "%s" is not supported' % type(arguments))
+        if len(op_arguments) == 1:
+            name_counter = collections.Counter([op_arguments[0].name])
+            var_name_map = dict([(op_arguments[0].name, op_arguments[0])])
+            arguments = dict([(op_arguments[0], arguments)])
+        else:
+            raise ValueError('non-dict argument (%s) is not supported for nodes with more than one input' % type(arguments).__name__)
 
     sample_sizes = [len(v) for v in arguments.values()]
     if len(set(sample_sizes)) != 1:
@@ -681,6 +681,7 @@ def sanitize_dynamic_axes(axes):
 def get_train_loss(trainer):
     '''
     Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
+
     Args:
         trainer (:class:`Trainer`): the trainer used.
     Returns:
@@ -694,6 +695,7 @@ def get_train_loss(trainer):
 def get_train_eval_criterion(trainer):
     '''
     Fetch the train evaluation criterion (e.g., classification error) from the last minibatch and copy it to the CPU in case it is on the GPU.
+
     Args:
         trainer (:class:`Trainer`): the trainer used.
     Returns:
@@ -744,12 +746,11 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
 
     Args:
         op (:class:`Function`): operation to evaluate
-        arguments (`dict` or `list` or `tuple`): maps variables to their
-         input data. The interpretation depends on the input type:
-
+        arguments: maps variables to their input data. The
+         interpretation depends on the input type:
            * `dict`: keys are input variable or names, and values are the input data.
-           * `list`: elements are input data in the order their respective variables have been defined in the network.
-
+          * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+           For nodes with more than one input, only `dict` is allowed.
          In both cases, every every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
          previous sequence, specify ``arguments`` as `tuple`: the

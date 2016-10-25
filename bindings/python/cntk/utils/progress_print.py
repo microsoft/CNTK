@@ -1,3 +1,10 @@
+# ==============================================================================
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root
+# for full license information.
+# ==============================================================================
+
+# TODO: Let's switch to import logging in the future instead of print. [ebarsoum]
 class ProgressPrinter:
     '''
     Accumulates training time statistics (loss and metric)
@@ -6,13 +13,16 @@ class ProgressPrinter:
     It provides the number of samples, average loss and average metric
     since the last print or since the start of accumulation.
     '''
-    def __init__(self, freq=0):
+    def __init__(self, freq=None, first=0, tag=''):
         '''
         Constructor. The optional ``freq`` parameter determines how often
-        printing will occur. The default value of 0 means an geometric
+        printing will occur. The value of 0 means an geometric
         schedule (1,2,4,...). A value > 0 means a arithmetic schedule
-        (freq, 2*freq, 3*freq,...)
+        (freq, 2*freq, 3*freq,...), and a value of None means no per-minibatch log.
         '''
+        from sys import maxsize
+        if freq is None:
+            freq = maxsize
         self.loss_since_start    = 0
         self.metric_since_start  = 0
         self.samples_since_start = 0
@@ -22,6 +32,8 @@ class ProgressPrinter:
         self.updates             = 0
         self.epochs              = 0
         self.freq                = freq
+        self.first               = first
+        self.tag                 = '' if not tag else "[{}] ".format(tag)
 
         if freq==0:
             print(' average      since    average      since      examples')
@@ -89,10 +101,10 @@ class ProgressPrinter:
             self.updates = 0
             avg_loss, avg_metric, samples = self.reset_start()
             if with_metric:
-                print("--- Finished Epoch {}: loss = {:0.6f} * {}, metric = {:0.1f}% * {} ---".format(self.epochs, avg_loss, samples, avg_metric*100.0, samples))
+                print("Finished Epoch [{}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {}".format(self.epochs, self.tag, avg_loss, samples, avg_metric*100.0, samples))
             else:
-                print("--- Finished Epoch {}: loss = {:0.6f} * {} ---".format(self.epochs, avg_loss, samples))
-
+                print("Finished Epoch [{}]: {}loss = {:0.6f} * {}".format(self.epochs, self.tag, avg_loss, samples))
+            return avg_loss, avg_metric, samples  # BUGBUG: for freq=0, we don't return anything here
 
     def update(self, loss, minibatch_size, metric=None):
         '''
@@ -123,14 +135,18 @@ class ProgressPrinter:
                 print(' {:8.3g}   {:8.3g}   {:8s}   {:8s}    {:10d}'.format(
                     self.avg_loss_since_start(), avg_loss,
                     '', '', self.samples_since_start))
-        elif self.freq > 0 and self.updates % self.freq == 0:
+        elif self.freq > 0 and (self.updates % self.freq == 0 or self.updates <= self.first):
             avg_loss, avg_metric, samples = self.reset_last()
+            if self.updates <= self.first: # printing individual MBs
+                first_mb = self.updates
+            else:
+                first_mb = max(self.updates - self.freq + 1, self.first+1)
             if metric is not None:
                 print(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d}, metric = {:0.1f}% * {:d}'.format(
-                    self.updates - self.freq + 1, self.updates, avg_loss, samples, avg_metric*100.0, samples))
+                    first_mb, self.updates, avg_loss, samples, avg_metric*100.0, samples))
             else:
                 print(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d}'.format(
-                    self.updates - self.freq + 1, self.updates, avg_loss, samples))
+                    first_mb, self.updates, avg_loss, samples))
 
     def update_with_trainer(self, trainer, with_metric=False):
         '''
@@ -142,3 +158,17 @@ class ProgressPrinter:
             with_metric (`bool`): whether to update the metric accumulators
         '''
         self.update(trainer.previous_minibatch_loss_average,trainer.previous_minibatch_sample_count, trainer.previous_minibatch_evaluation_average if with_metric else None)
+
+        
+# print the total number of parameters to log
+def log_number_of_parameters(model, trace_level=0):
+    parameters = model.parameters
+    from functools import reduce
+    from operator import add, mul
+    total_parameters = reduce(add, [reduce(mul, p1.shape) for p1 in parameters], 0)
+    # BUGBUG: If model has uninferred dimensions, we should catch that and fail here
+    print("Training {} parameters in {} parameter tensors.".format(total_parameters, len(parameters)))
+    if trace_level > 0:
+        print()
+        for p in parameters:
+            print ("\t{}".format(p.shape))

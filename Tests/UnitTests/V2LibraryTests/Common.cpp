@@ -8,6 +8,24 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifdef _MSC_VER
+// In case of asserts in debug mode, print the message into stderr and throw exception
+int HandleDebugAssert(int /* reportType */,
+                      char *message,
+                      int *returnValue)
+{
+    fprintf(stderr, "C-Runtime error: %s\n", message);
+
+    if (returnValue) {
+        // Return 0 to continue operation and NOT start the debugger.
+        *returnValue = 0;
+    }
+
+    // Return true to ensure no message box is displayed.
+    return true;
+}
+#endif
+
 bool IsGPUAvailable()
 {
     static bool isGPUDeviceAvailable;

@@ -10,7 +10,7 @@ using namespace CNTK;
 using namespace std::placeholders;
 
 // TODO: Move to other file.
-void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, DistributedCommunicatorPtr communicator)
+void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, DistributedTrainerPtr distributedTrainer, size_t rank)
 {
     const size_t inputDim = 2;
     const size_t numOutputClasses = 2;
@@ -24,7 +24,7 @@ void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, 
 
     auto featureStreamName = L"features";
     auto labelsStreamName = L"labels";
-    auto minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } }, 0, false);
+    auto minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } }, MinibatchSource::FullDataSweep, false);
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
@@ -52,7 +52,7 @@ void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, 
         Variable trainingLossVar = trainingLoss;
         Variable predictionVar = prediction;
         auto combinedNet = Combine({ trainingLoss, prediction, classifierOutput }, L"feedForwardClassifier");
-        SaveAndReloadModel<float>(combinedNet, { &input, &labels, &trainingLossVar, &predictionVar, &classifierOutputVar }, device, communicator->CurrentWorker().m_globalRank);
+        SaveAndReloadModel<float>(combinedNet, { &input, &labels, &trainingLossVar, &predictionVar, &classifierOutputVar }, device, rank);
 
         classifierOutput = classifierOutputVar;
         trainingLoss = trainingLossVar;
@@ -61,7 +61,6 @@ void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, 
 
     double learningRatePerSample = 0.02;
     minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { L"features", inputDim }, { L"labels", numOutputClasses } });
-    auto distributedTrainer = CreateDataParallelDistributedTrainer(communicator, false);
     Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) }, distributedTrainer);
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
@@ -74,14 +73,41 @@ void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, 
 
 int main(int /*argc*/, char* /*argv*/[])
 {
+
+#if defined(_MSC_VER)
+    // in case of asserts in debug mode, print the message into stderr and throw exception
+    if (_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, HandleDebugAssert) == -1) {
+        fprintf(stderr, "_CrtSetReportHook2 failed.\n");
+        return -1;
+    }
+#endif
+
     // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking 
     // which will have a silent performance degradation otherwise
     Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
 
-    auto communicator = MPICommunicator();
-    TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice(), communicator);
+    {
+        auto communicator = MPICommunicator();
+        auto distributedTrainer = CreateDataParallelDistributedTrainer(communicator, false);
+        TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice(), distributedTrainer, communicator->CurrentWorker().m_globalRank);
 
-    if (IsGPUAvailable())
-        TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), communicator);
+        if (IsGPUAvailable())
+            TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+    }
+
+    {
+        auto communicator = QuantizedMPICommunicator(true, true, 32);
+        auto distributedTrainer = CreateQuantizedDataParallelDistributedTrainer(communicator, false);
+        TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice(), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+
+        if (IsGPUAvailable())
+            TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+    }
+
+#if defined(_MSC_VER)
+    _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);
+#endif
+
+    DistributedCommunicator::Finalize();
     return 0;
 }

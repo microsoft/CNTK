@@ -1,3 +1,4 @@
+
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -23,17 +24,24 @@ class Trainer(cntk_py.Trainer):
 
     Args:
        model (:class:`cntk.ops.functions.Function`): root node of the function to train
-       loss_function (:class:`cntk.ops.functions.Function`): loss function
+       loss_function (:class:`cntk.ops.functions.Function`): loss function 
        eval_function (:class:`cntk.ops.functions.Function`): evaluation function
        parameter_learners (`list`): list of learners from :mod:`cntk.learner`
+       distributed_trainer (:class:`cntk.distributed.distributed_trainer`): distributed trainer
     '''
-    def __init__(self, model, loss_function, eval_function, parameter_learners):
+    def __init__(self, model, loss_function, eval_function, parameter_learners, distributed_trainer=None):
         # TODO sanitizing should be removed once Swig's typemaps are in place
         model = sanitize_function(model)
         loss_function = sanitize_function(loss_function)
         eval_function = sanitize_function(eval_function)
+        if not isinstance(parameter_learners, list):
+            parameter_learners = [parameter_learners]
 
-        super(Trainer, self).__init__(model, loss_function, eval_function,
+        if distributed_trainer:
+            super(Trainer, self).__init__(model, loss_function, eval_function,
+                parameter_learners, distributed_trainer.data)
+        else:
+            super(Trainer, self).__init__(model, loss_function, eval_function,
                 parameter_learners)
 
     def train_minibatch(self, arguments, outputs=None, device=None):
@@ -41,12 +49,12 @@ class Trainer(cntk_py.Trainer):
         Optimize model parameters using the specified 'arguments' minibatch of training samples.
 
         Args:
-            arguments (`dict` or `list` or `tuple`): maps variables to their
+            arguments: maps variables to their
              input data. The interpretation depends on the input type:
 
-               * `dict`: keys are input variable or names, and values are the input data.
-               * `list`: elements are input data in the order their respective variables have been defined in the network.
-
+               * `dict`: keys are input variable or names, and values are the input data. 
+               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+                For nodes with more than one input, only `dict` is allowed.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
@@ -61,7 +69,7 @@ class Trainer(cntk_py.Trainer):
              to be performed.
 
         Returns:
-            `bool` or `tuple`:
+            `bool` or `tuple`: 
             If ``outputs`` have not been provided, the returned value is `True`
             if updates have been performed, `False` if all parameter learners
             indicate end of learning (through their update). Otherwise, the
@@ -89,16 +97,15 @@ class Trainer(cntk_py.Trainer):
     def test_minibatch(self, arguments, device=None):
         '''
         Test the model on the specified batch of samples using the evaluation
-        Function specified during construction of the Trainer.
-        of samples.
+        Function specified during construction of the Trainer. 
 
         Args:
-            arguments (`dict` or `list` or `tuple`): maps variables to their
+            arguments: maps variables to their
              input data. The interpretation depends on the input type:
 
-               * `dict`: keys are input variable or names, and values are the input data.
-               * `list`: elements are input data in the order their respective variables have been defined in the network.
-
+               * `dict`: keys are input variable or names, and values are the input data. 
+               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+                For nodes with more than one input, only `dict` is allowed.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
@@ -120,16 +127,18 @@ class Trainer(cntk_py.Trainer):
 
         return super(Trainer, self).test_minibatch(arguments, device)
 
-    def save_checkpoint(self, filename):
+    def save_checkpoint(self, filename, use_legacy_format=True):
         '''
         Saves a checkpoint of the model and other Trainer state at the
         specified file location.
 
         Args:
             filename (`str`): filename to store the checkpoint
+            use_legacy_format (`str`): if 'True', model is stored using legacy format.
+             Otherwise, it's stored using protobuf-based protocol serialization.
         '''
 
-        super(Trainer, self).save_checkpoint(filename)
+        super(Trainer, self).save_checkpoint(filename, use_legacy_format)
 
     def restore_from_checkpoint(self, filename):
         '''
@@ -149,7 +158,7 @@ class Trainer(cntk_py.Trainer):
         The model that the trainer is training.
         '''
         return super(Trainer, self).model()
-
+        
     @property
     @typemap
     def loss_function(self):

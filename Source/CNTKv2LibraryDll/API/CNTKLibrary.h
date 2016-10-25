@@ -388,15 +388,16 @@ namespace CNTK
         friend class LearnerBase;
         friend class Variable;
         friend class PackedValue;
+        friend class MPICommunicatorImpl;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
         template <typename ElementType>
-        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
 
     public:
         ///
@@ -454,7 +455,7 @@ namespace CNTK
         {}
 
         ///
-        /// Construct a NDArrayView with the buffer underlying the specified std::vector or std::aray being the underlying storage.
+        /// Construct a NDArrayView with the buffer underlying the specified std::vector or std::array being the underlying storage.
         /// The container must be at least as large as the total size of the specified 'viewShape' and should outlive the created NDArrayView object.
         ///
         template <typename ContainerType, typename std::enable_if<std::is_same<ContainerType, std::vector<typename ContainerType::value_type>>::value ||
@@ -464,7 +465,7 @@ namespace CNTK
         {}
 
         ///
-        /// Construct a read-only NDArrayView with the buffer underlying the specified std::vector or std::aray being the underlying storage.
+        /// Construct a read-only NDArrayView with the buffer underlying the specified std::vector or std::array being the underlying storage.
         /// The container must be the same size as the total size of the specified 'viewShape' and should outlive the created NDArrayView object.
         ///
         template <typename ContainerType, typename std::enable_if<std::is_same<ContainerType, std::vector<typename ContainerType::value_type>>::value ||
@@ -1078,6 +1079,7 @@ namespace CNTK
     /// TODO: We need to have native support for DictionaryValue<vector> and DictionaryValue<NDArrayView>.
     class DictionaryValue final
     {
+        friend class Serializer;
     public:
         enum class Type : unsigned int
         {
@@ -1354,6 +1356,7 @@ namespace CNTK
         CNTK_API bool operator==(const DictionaryValue& other) const;
         CNTK_API bool operator!=(const DictionaryValue& other) const;
 
+
         friend CNTK_API std::istream& operator>>(std::istream& stream, DictionaryValue& us);
         friend CNTK_API std::ostream& operator<<(std::ostream& stream, const DictionaryValue& us);
 
@@ -1428,7 +1431,7 @@ namespace CNTK
             void* m_ptr;
         } m_data;
 
-        const size_t version = 1;
+         static const size_t s_version = 1;
     };
 
     ///
@@ -1438,6 +1441,7 @@ namespace CNTK
     {
         friend inline void AddConfigString(std::wstringstream& s, const DictionaryValue& value, size_t numIndentationSpaces);
         friend class CompositeMinibatchSource;
+        friend class Serializer;
     public:
         CNTK_API Dictionary();
         CNTK_API ~Dictionary();
@@ -1468,28 +1472,24 @@ namespace CNTK
             return Contains(key.c_str());
         }
 
-        CNTK_API std::vector<std::wstring> Keys() const
-        {
-            std::vector<std::wstring> keys;
-            keys.reserve(m_dictionaryData->size());
-            for (const auto&it : *m_dictionaryData)
-            {
-                keys.push_back(it.first);
-            }
-            return keys;
-        }
-
         CNTK_API void Add(const Dictionary& other);
 
         CNTK_API bool operator==(const Dictionary& other) const;
         CNTK_API bool operator!=(const Dictionary& other) const;
+
+        typedef std::unordered_map<std::wstring, DictionaryValue>::const_iterator ConstDictionaryIterator;
+
+        ConstDictionaryIterator begin() const { return m_dictionaryData->begin(); }
+        ConstDictionaryIterator cbegin() const { return m_dictionaryData->cbegin(); }
+        ConstDictionaryIterator end() const { return m_dictionaryData->end(); }
+        ConstDictionaryIterator cend() const { return m_dictionaryData->cend(); }
 
         friend CNTK_API std::istream& operator>>(std::istream& stream, Dictionary& us);
         friend CNTK_API std::ostream& operator<<(std::ostream& stream, const Dictionary& us);
 
     private:
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
-        const size_t version = 1;
+        static const size_t s_version = 1;
     };
 
     ///
@@ -1566,10 +1566,10 @@ namespace CNTK
         friend struct std::hash;
 
         template <typename ElementType>
-        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
 
 #ifndef SWIG
     private:
@@ -1729,9 +1729,10 @@ private:
             std::vector<Axis> m_dynamicAxes;
             bool m_isSparse;
             std::wstring m_uid;
+            std::atomic<size_t> m_valueTimeStamp;
 
             VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid)
+                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)
             {
                 if (value && (type != value->GetDataType()))
                     InvalidArgument("The DataType of the Parameter/Constant Variable does not match the DataType of the associated Value");
@@ -1918,10 +1919,10 @@ private:
         friend struct std::hash;
 
         template <typename ElementType>
-        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
 
     public:
         ///
@@ -1975,6 +1976,13 @@ private:
             return Variable::Value();
         }
 
+        size_t CurrentValueTimeStamp() const { return m_dataFields->m_valueTimeStamp.load(); }
+
+        void RecordValueUpdate()
+        {
+            m_dataFields->m_valueTimeStamp++;
+        }
+
     private:
         explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
             : Variable(value->Shape(), VariableKind::Parameter, value->GetDataType(), value->DeepClone(), true, {}, name, uid)
@@ -1984,7 +1992,7 @@ private:
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
     // However we have a couple of derivatives of the type to extend the base interface and thus we ensure that the derived types do not have additional fields.
     // This check is weak in that the derives types may sneak in some additional fields if the base type had some padding at the end, without changing the object size
-    // but it should be good enough for catching any accidental additon of fields.
+    // but it should be good enough for catching any accidental addition of fields.
     static_assert(sizeof(Parameter) == sizeof(Variable), "The Parameter type should not have any data fields beyond what its base type 'Variable' has.");
 
     ///
@@ -1996,10 +2004,10 @@ private:
         friend struct std::hash;
 
         template <typename ElementType>
-        friend Variable GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                    std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                    std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                    std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
+                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
+                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
 
     public:
         ///
@@ -2080,7 +2088,7 @@ private:
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
     // However we have a couple of derivatives of the type to extend the base interface and thus we ensure that the derived types do not have additional fields.
     // This check is weak in that the derives types may sneak in some additional fields if the base type had some padding at the end, without changing the object size
-    // but it should be good enough for catching any accidental additon of fields.
+    // but it should be good enough for catching any accidental addiiton of fields.
     static_assert(sizeof(Constant) == sizeof(Variable), "The Constant type should not have any data fields beyond what its base type 'Variable' has.");
 }
 
@@ -2155,7 +2163,7 @@ namespace CNTK
         Share,
 
         ///
-        /// New learnable Parameters are created and initialied with the current values of the
+        /// New learnable Parameters are created and initialized with the current values of the
         /// corresponding Parameters of the Function being cloned
         ///
         Clone,
@@ -2182,7 +2190,7 @@ namespace CNTK
 
     public:
         ///
-        /// Computes and stores the values of speficied variables in the 'outputs' map, using provided 'inputs' values corresponding
+        /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values corresponding
         /// to each leaf variable of the function of VariableKind 'Input'.
         /// The variables specified in the 'outputs' map denote the subset of 'this' Function's output variables that the caller wants to obtain values of. 
         /// Callers may specify the storage to be used for storing the 'outputs' Values or pass null in which case the implementation allocates the actual storage
@@ -2243,7 +2251,7 @@ namespace CNTK
         /// TODO: add a second overload with a 'function builder' parameter that would allow hooking
         /// user-defined op-codes with custom functionality.
         ///
-        CNTK_API static FunctionPtr Deserialize(const Dictionary& modelDictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
     public:
         ///
@@ -2346,9 +2354,19 @@ namespace CNTK
         CNTK_API FunctionPtr ReplacePlaceholder(const Variable& placeholderReplacement);
 
         ///
-        /// Restore the models parameters from a saved model file
+        /// Save this function graph into a model file
         ///
-        CNTK_API void RestoreFromLegacyModel(const std::wstring& modelFilePath);
+        CNTK_API void SaveModel(const std::wstring& modelFile, bool useLegacyModelFormat = true);
+
+        ///
+        /// Restore the models parameters (in-place) from a model file
+        ///
+        CNTK_API void RestoreModel(const std::wstring& modelFilePath);
+
+        ///
+        /// Load a function from a model file
+        ///
+        CNTK_API static FunctionPtr LoadModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
     private:
 
@@ -2861,57 +2879,71 @@ namespace CNTK
     }
 
     ///
-    /// Load a legacy CNTK v1 format model
-    ///
-    CNTK_API FunctionPtr LoadLegacyModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
-
-    /// 
-    /// Save a Composite Function instance to a file in CNTK legacy model format
-    ///
-    CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
-
-    ///
-    /// A collection of key-value pairs that represents a training parameter schedule in 
-    /// terms of the number of processed samples (e.g., learning rate and momentum schedules). 
+    /// A collection of key-value pairs that represents a training parameter schedule
+    /// (e.g., learning rate, momentum schedule) in terms of the number of samples.
     /// This class is designed to simplify Learner's factory methods and provides a number of 
     /// convenience constructors to allow easy conversion from a single value, a vector of values 
     /// and a list of pairs to the training schedule. For example, a learning rate schedule 
     /// { { 10, 0.5 }, { 100, 0.3 }, { 20, 0.2 } } indicates that the rate of 0.5 should be
-    /// used for the first 10 units (equivalently, samples if the default unit = 1 is used)
-    /// followed by 0.3 for the next 100 units, and then 0.2 for the remaining 20 units or 
-    /// until the end of training if it takes longer.
+    /// used for the first 10 samples, followed by 0.3 for the next 100 samples, and then 0.2 for
+    /// the remaining 20 samples or until the end of training if it takes longer.
     ///
     template <typename T>
     class TrainingParameterSchedule : public IDictionarySerializable
     {
     public:
         ///
-        /// Create a schedule with a constant parameter value.
+        /// Indicates whether the values in the schedule are specified on the per-sample or 
+        /// per-minibatch basis.
         ///
-        CNTK_API TrainingParameterSchedule(T value);
+        enum class UnitType : unsigned int
+        {
+            Sample = 0,
+            Minibatch = 1,
+        };
 
         ///
-        /// Create a schedule where the parameter changes its value every 'unit' samples:
-        /// schedule[0] is used for the first 'unit' samples, schedule[1] -- for the second,
+        /// A special value that can be used for the epochSize to indicate that the schedule is sweep-based.
+        ///
+        static const size_t EntireSweep = 0;
+
+        ///
+        /// Create a schedule with a constant parameter value.
+        ///
+        CNTK_API TrainingParameterSchedule(T value, UnitType unit = UnitType::Sample);
+
+        ///
+        /// Create a schedule where the parameter changes its value every 'epochSize' samples:
+        /// schedule[0] is used for the first 'epochSize' samples, schedule[1] -- for the second,
         /// and so on. The last value is then used repeatedly until the end of training.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, size_t unit = 1);
+        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, size_t epochSize = 1, UnitType unit = UnitType::Sample);
 
         ///
         /// Create a schedule using the list of key-value pairs, where the key specifies 
-        /// the number of 'units' the parameter should maintain the corresponding value.
-        /// The value from the last pair is used repeatedly until the end of training.
-        /// For example, {{1, 0.05}, {2, 0.1}, {1, 0.005}} and unit = 100, corresponds to 
-        /// a schedule where the value of '0.05' is used for the first 100 samples, then
-        /// '0.1' is used for the second 200 samples, after which the values is switched
-        /// to '0.005'.
+        /// the number of epochs the parameter should maintain the corresponding value,
+        /// (which 'epochSize' samples in each epoch). The value from the last pair is used 
+        /// repeatedly until the end of training. For example, {{1, 0.05}, {2, 0.1}, {1, 0.005}} 
+        /// and epochSize = 100, corresponds to a schedule where the value of '0.05' is used for 
+        /// the first 100 samples, then '0.1' is used for the second 200 samples, 
+        /// after which the values is switched to '0.005'.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t unit = 1);
+        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = 1, UnitType unit = UnitType::Sample);
 
         ///
-        /// Returns a value corresponding to the absolute sample count from the beginning of training.
+        /// Returns a value corresponding to the absolute sample (or sweep) 
+        /// count from the beginning of training.
         ///
-        CNTK_API virtual const T& operator[](size_t sampleCount) const;
+        CNTK_API const T& operator[](size_t count) const;
+
+        ///
+        /// Returns the unit type for 'this' training parameter schedule. 
+        /// In case when the values are specified on the per-Minibatch basis, they are
+        /// re-scaled by the learning using the actual minibatch size in samples.
+        ///
+        UnitType Unit() const { return m_unit; }
+
+        bool IsSweepBased() const { return m_epochSize == EntireSweep; }
 
         CNTK_API virtual ~TrainingParameterSchedule();
 
@@ -2935,35 +2967,61 @@ namespace CNTK
 
     protected:           
         std::map<size_t, T> m_schedule;
-        size_t m_unit;
-        
+        UnitType m_unit;
+        size_t m_epochSize;
     };
 
-    typedef TrainingParameterSchedule<double> LearningRatesPerSample;
-    typedef TrainingParameterSchedule<double> MomentumValuesPerSample;
+    template <typename T, typename TrainingParameterSchedule<T>::UnitType U>
+    class TrainingParameterPerUnitSchedule : public TrainingParameterSchedule<T>
+    {
+    public:
+        TrainingParameterPerUnitSchedule(double value) 
+            : TrainingParameterSchedule<T>::TrainingParameterSchedule(value, U)
+        { }
+        
+        TrainingParameterPerUnitSchedule(const std::vector<double>& schedule, size_t epochSize = 1) 
+            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, epochSize, U)
+        { }
+        
+        TrainingParameterPerUnitSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epochSize = 1) 
+            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, epochSize, U)
+        { }
+    };
+
+    ///
+    /// Training parameter schedule with per-sample values.
+    ///
+    template <typename T>
+    using TrainingParameterPerSampleSchedule = TrainingParameterPerUnitSchedule<T, TrainingParameterSchedule<T>::UnitType::Sample>;
+
+    ///
+    /// Training parameter schedule with per-minibatch values.
+    ///
+    template <typename T>
+    using TrainingParameterPerMinibatchSchedule = TrainingParameterPerUnitSchedule<T, TrainingParameterSchedule<T>::UnitType::Minibatch>;
 
     ///
     /// This class allows to specify momentum as time constant in place of momentum per sample in 
     /// all of Learners factory methods. The specified values are then automatically converted into 
     /// per sample values.
     /// 
-    class MomentumValuesAsTimeConstants: public MomentumValuesPerSample
+    class MomentumAsTimeConstantSchedule: public TrainingParameterPerSampleSchedule<double>
     {
     public:
-        MomentumValuesAsTimeConstants(double value) 
-            : MomentumValuesPerSample(value)
+        MomentumAsTimeConstantSchedule(double value) 
+            : TrainingParameterPerUnitSchedule(value)
         { 
             ConvertToPerSampleValues();
         }
         
-        MomentumValuesAsTimeConstants(const std::vector<double>& schedule, size_t unit = 1) 
-            : MomentumValuesPerSample(schedule, unit)
+        MomentumAsTimeConstantSchedule(const std::vector<double>& schedule, size_t epochSize = 1) 
+            : TrainingParameterPerUnitSchedule(schedule, epochSize)
         { 
             ConvertToPerSampleValues();
         }
         
-        MomentumValuesAsTimeConstants(const std::vector<std::pair<size_t, double>>& schedule, size_t unit = 1) 
-            : MomentumValuesPerSample(schedule, unit)
+        MomentumAsTimeConstantSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epochSize = 1) 
+            : TrainingParameterPerUnitSchedule(schedule, epochSize)
         { 
             ConvertToPerSampleValues();
         }
@@ -2972,13 +3030,21 @@ namespace CNTK
         CNTK_API void ConvertToPerSampleValues();
     };
 
+    typedef TrainingParameterSchedule<double> LearningRateSchedule;
+    typedef TrainingParameterPerSampleSchedule<double> LearningRatePerSampleSchedule;
+    typedef TrainingParameterPerMinibatchSchedule<double> LearningRatePerMinibatchSchedule;
+
+    typedef TrainingParameterSchedule<double> MomentumSchedule;
+    typedef TrainingParameterPerSampleSchedule<double> MomentumPerSampleSchedule;
+    typedef TrainingParameterPerMinibatchSchedule<double> MomentumPerMinibatchSchedule;
+
     /// A collection of additional options that affect parameter updates and 
     /// are applicable for all standard learners 
     struct AdditionalLearningOptions
     {
         double l1RegularizationWeight = 0.0;
         double l2RegularizationWeight = 0.0;
-        double gaussianNoiseInjectionStdDev = 0.0;
+        TrainingParameterSchedule<double> gaussianNoiseInjectionStdDev = 0.0;
         double gradientClippingThresholdPerSample = std::numeric_limits<double>::infinity();
         bool gradientClippingWithTruncation = true;
     };
@@ -3026,69 +3092,97 @@ namespace CNTK
         ///
         /// Sets a new learning rate overriding the schedule parameter used to construct this learner.
         ///
-        virtual void ResetLearningRate(const LearningRatesPerSample& learningRateSchedule)
+        virtual void ResetLearningRate(const LearningRateSchedule& learningRateSchedule)
         {
             m_learningRateSchedule = learningRateSchedule;
         }
 
         ///
-        /// Returns current learning rate.
+        /// Returns current (per-sample) learning rate.
         ///
-        virtual double LearningRate() const
+        virtual double LearningRate(size_t minibatchSize) const
         {
-            return m_learningRateSchedule[m_sampleCount];
+            auto learningRate = GetCurrentTrainingParameterValue<double>(m_learningRateSchedule);
+            if (m_learningRateSchedule.Unit() == LearningRateSchedule::UnitType::Minibatch)
+            {
+                // learning rate needs to be converted to the per-sample value.
+                return learningRate / minibatchSize;
+            }
+
+            return learningRate;
+        }
+
+        ///
+        /// Retrieves and returns current value from the training parameter schedule.
+        ///
+        template <typename ElementType> 
+        ElementType GetCurrentTrainingParameterValue(const TrainingParameterSchedule<ElementType>& schedule) const
+        {
+            if (schedule.IsSweepBased())
+            {
+                return schedule[m_sweepCount];
+            }
+            else
+            {
+                return schedule[m_sampleCount];
+            }
         }
 
     protected:
-        Learner(const std::vector<Parameter>& parameters, const LearningRatesPerSample& learningRateSchedule)
+        Learner(const std::vector<Parameter>& parameters, const LearningRateSchedule& learningRateSchedule)
             : m_parameters(parameters),
             m_learningRateSchedule(learningRateSchedule),
-            m_sampleCount(0)
+            m_sampleCount(0),
+            m_minibatchCount(0),
+            m_sweepCount(0)
         {}
 
         std::vector<Parameter> m_parameters;
-        LearningRatesPerSample m_learningRateSchedule;
+        LearningRateSchedule m_learningRateSchedule;
         size_t m_sampleCount;
+        size_t m_minibatchCount;
+        size_t m_sweepCount;
     };
 
     ///
     /// Create an instance of the CNTK built-in SGD learner.
     ///
     CNTK_API LearnerPtr SGDLearner(const std::vector<Parameter>& parameters,
-                                   const LearningRatesPerSample& learningRates,
+                                   const LearningRateSchedule& learningRateSchedule,
                                    AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
     /// Create an instance of the CNTK built-in Momentum SGD learner.
     ///
     CNTK_API LearnerPtr MomentumSGDLearner(const std::vector<Parameter>& parameters,
-                                           const LearningRatesPerSample& learningRates,
-                                           const MomentumValuesPerSample& momentumValues,
+                                           const LearningRateSchedule& learningRateSchedule,
+                                           const MomentumSchedule& momentumSchedule,
                                            AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
     /// Create an instance of the CNTK built-in Nesterov's accelerated SGD learner.
     ///
     CNTK_API LearnerPtr NesterovLearner(const std::vector<Parameter>& parameters,
-                                        const LearningRatesPerSample& learningRates,
-                                        const MomentumValuesPerSample& momentumValues,
+                                        const LearningRateSchedule& learningRateSchedule,
+                                        const MomentumSchedule& momentumSchedule,
                                         AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+
+    static MomentumSchedule DefaultFSAdaGradVarianceMomentum = MomentumAsTimeConstantSchedule(2 * 3600 * 100);
 
     ///
     /// Create an instance of the CNTK built-in FSAdaGrad (improved AdaGrad) learner.
     ///
     CNTK_API LearnerPtr FSAdaGradLearner(const std::vector<Parameter>& parameters,
-                                         const LearningRatesPerSample& learningRates,
-                                         const MomentumValuesPerSample& momentumValues,
-                                         const double targetAdagradAvDenom = 0.0025, // 1/400 magic constant 
-                                         const size_t adagradT = 2 * 3600 * 100,
+                                         const LearningRateSchedule& learningRateSchedule,
+                                         const MomentumSchedule& momentumSchedule,
+                                         const MomentumSchedule& varianceMomentumSchedule = DefaultFSAdaGradVarianceMomentum,
                                          AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
     /// Create an instance of the CNTK built-in AdaGrad learner.
     ///
     CNTK_API LearnerPtr AdaGradLearner(const std::vector<Parameter>& parameters,
-                                       const LearningRatesPerSample& learningRates,
+                                       const LearningRateSchedule& learningRateSchedule,
                                        bool needAveMultiplier = true,
                                        AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
@@ -3096,7 +3190,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in RMSProp learner.
     ///
     CNTK_API LearnerPtr RMSPropLearner(const std::vector<Parameter>& parameters,
-                                       const LearningRatesPerSample& learningRates,
+                                       const LearningRateSchedule& learningRateSchedule,
                                        double gamma,
                                        double inc,
                                        double dec,
@@ -3154,13 +3248,12 @@ namespace CNTK
         ///
         /// Checkpoint the model and other Trainer state at the specified file location
         ///
-        CNTK_API void SaveCheckpoint(const std::wstring& modelFilePath, bool usingLegacyModelFormat = true);
+        CNTK_API void SaveCheckpoint(const std::wstring& filePath, bool usingLegacyModelFormat = true);
 
         ///
         /// Restore the model and trainer state from a previously saved model and checkpoint from the specified file location
         ///
-        /// TODO: drop the legacy flag and auto-detect model format.
-        CNTK_API void RestoreFromCheckpoint(const std::wstring& modelFilePath, bool usingLegacyModelFormat = true);
+        CNTK_API void RestoreFromCheckpoint(const std::wstring& filePath);
 
         ///
         /// Model being trained by 'this' Trainer.
@@ -3262,6 +3355,10 @@ namespace CNTK
     class MinibatchSource : public std::enable_shared_from_this<MinibatchSource>
     {
     public:
+        static const size_t InfinitelyRepeat = SIZE_MAX;
+        static const size_t FullDataSweep = SIZE_MAX - 2; // An arbitrary sentinel value
+
+    public:
         ///
         /// Describes the streams 'this' MinibatchSource produces.
         ///
@@ -3325,7 +3422,7 @@ namespace CNTK
     ///
     /// Instantiate the CNTK built-in composite minibatch source.
     ///
-    CNTK_API MinibatchSourcePtr CreateCompositeMinibatchSource(const Dictionary& configuration);
+    CNTK_API MinibatchSourcePtr CreateCompositeMinibatchSource(const Dictionary& configuration, DistributedCommunicatorPtr communicator = nullptr);
 
     struct StreamConfiguration
     {
@@ -3342,7 +3439,7 @@ namespace CNTK
     /// 
     /// Instantiate the CNTK built-in test format minibatch source
     ///
-    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = SIZE_MAX, bool randomize = true)
+    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true, DistributedCommunicatorPtr communicator = nullptr)
     {
         ::CNTK::Dictionary minibatchSourceConfiguration;
         minibatchSourceConfiguration[L"epochSize"] = epochSize;
@@ -3374,7 +3471,7 @@ namespace CNTK
         deserializerConfiguration[L"input"] = inputStreamsConfig;
         minibatchSourceConfiguration[L"deserializers"] = std::vector<::CNTK::DictionaryValue>({ deserializerConfiguration });
 
-        return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+        return CreateCompositeMinibatchSource(minibatchSourceConfiguration, communicator);
     }
 
     ///
@@ -3416,7 +3513,7 @@ namespace CNTK
     {
     public:
         CNTK_API virtual const std::unordered_set<DistributedWorkerDescriptor>& Workers() const = 0;
-        
+
         CNTK_API virtual const DistributedWorkerDescriptor& CurrentWorker() const = 0;
 
         // Creates a new distributed communicator comprising of a subset of the workers in this communicator
@@ -3440,27 +3537,54 @@ namespace CNTK
             std::vector<NDArrayViewPtr>& outputValues,
             const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
 
-        CNTK_API virtual std::future<std::vector<NDArrayViewPtr>> AggregateAsync(
-            const std::vector<NDArrayViewPtr>& values,
-            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
+        virtual ~DistributedCommunicator() {}
 
-        // A collective communication API to perform quantized aggregation of values across all workers of this communicator
-        // TODO: Add an async variant of the QuantizedAggregate method
-        CNTK_API virtual void QuantizedAggregate(
-            const std::vector<NDArrayViewPtr>& inValues,
-            const std::vector<NDArrayViewPtr>& inPreviousQuantizationResidues,
-            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers,
-            const std::vector<NDArrayViewPtr>& aggregatedOutputs,
-            const std::vector<NDArrayViewPtr>& newQuantizationResidues) = 0;
+        // TODO: Currently this is a workaround to free static MPIWrapper, it will go away soon.
+        // Should be called before executable exits.
+        CNTK_API static void Finalize();
+
+        // a barrier to sync all ranks that calls WaitAll() underneath
+        CNTK_API virtual void Barrier() = 0;
 
     protected:
         DistributedCommunicator() {};
     };
 
     ///
+    /// A distributed communicator that supports quantized aggreagtion of values.
+    ///
+    class QuantizedDistributedCommunicator : public DistributedCommunicator
+    {
+    public:
+        // A collective communication API to perform quantized aggregation of values across all workers of this communicator
+        CNTK_API virtual void QuantizedAggregate(
+            const std::vector<NDArrayViewPtr>& inValues,
+            const std::vector<NDArrayViewPtr>& valueQuantizationResidues,
+            const std::vector<NDArrayViewPtr>& stripeQuantizationResidues,
+            std::vector<NDArrayViewPtr>& aggregatedOutputs,
+            std::vector<NDArrayViewPtr>& newQuantizationResidues,
+            std::vector<NDArrayViewPtr>& newStripeQuantizationResidues,
+            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
+
+        CNTK_API virtual void QuantizedAggregateInPlace(
+            std::vector<NDArrayViewPtr>& inValues,
+            std::vector<NDArrayViewPtr>& valueQuantizationResidues,
+            std::vector<NDArrayViewPtr>& stripeQuantizationResidues,
+            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
+
+    protected:
+        QuantizedDistributedCommunicator() {};
+    };
+
+    ///
     /// Built-in MPI-based communicator.
     ///
     CNTK_API DistributedCommunicatorPtr MPICommunicator();
+
+    ///
+    /// Distributed communicator that allows quantized aggregations.
+    ///
+    CNTK_API QuantizedDistributedCommunicatorPtr QuantizedMPICommunicator(bool zeroThresholdFor1Bit, bool useQuantizationForSelfStripe, size_t numQuantizationBits);
 
     /// A collection of additional information needed for the distributed trainer to aggregate the gradients
     struct MinibatchInfo
@@ -3476,7 +3600,7 @@ namespace CNTK
     class DistributedTrainer
     {
     public:
-        // Optional override that gets called before each minbatch during training
+        // Optional override that gets called before each minibatch during training
         CNTK_API virtual void PreMinibatchCallback(const Trainer& trainer) = 0;
 
         // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
@@ -3492,10 +3616,11 @@ namespace CNTK
     };
 
     CNTK_API DistributedTrainerPtr CreateDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate);
+    CNTK_API DistributedTrainerPtr CreateQuantizedDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate);
 }
 
-namespace std {
-
+namespace std 
+{
     template <> struct hash<::CNTK::DistributedWorkerDescriptor>
     {
         size_t operator()(const ::CNTK::DistributedWorkerDescriptor& x) const

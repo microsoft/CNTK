@@ -90,11 +90,11 @@ class Function(cntk_py.Function):
         return self(other)
 
     def __getattr__(self, name):
-        if name in self.__dict__:
+        try:
             return self.__dict__[name]
-
-        if len(self.outputs) == 1:
-            return getattr(self.output, name)
+        except KeyError:
+            if len(self.outputs) == 1:
+                return getattr(self.output, name)
 
         raise AttributeError("'%s' object has no attribute '%s'" %
                              (type(self), name))
@@ -158,12 +158,12 @@ class Function(cntk_py.Function):
         Evaluate the node using the specified ``arguments`` as input.
 
         Args:
-            arguments (`dict` or `list` or `tuple`): maps variables to their
-             input data. The interpretation depends on the input type:
+            arguments: maps variables to their input data. The interpretation depends on
+             the input type:
 
                * `dict`: keys are input variable or names, and values are the input data.
-               * `list`: elements are input data in the order their respective variables have been defined in the network.
-
+               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+                For nodes with more than one input, only `dict` is allowed.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
@@ -179,7 +179,8 @@ class Function(cntk_py.Function):
         Returns:
             `bool`: `True` if updates have been performed
         '''
-        _, output_map = self.forward(arguments or {}, self.outputs, device=device)
+
+        _, output_map = self.forward(arguments, self.outputs, device=device)
 
         if len(output_map) > 1:
             return output_map
@@ -208,12 +209,12 @@ class Function(cntk_py.Function):
             array([[[[ 1.  ,  0.5 ,  0.25]]]], dtype=float32)
 
         Args:
-            arguments (`dict` or `list` or `tuple`): maps variables to their
+            arguments: maps variables to their
              input data. The interpretation depends on the input type:
 
                * `dict`: keys are input variable or names, and values are the input data.
-               * `list`: elements are input data in the order their respective variables have been defined in the network.
-
+               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+                For nodes with more than one input, only `dict` is allowed.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as ``tuple``: the
@@ -381,17 +382,29 @@ class Function(cntk_py.Function):
         return super(Function, self).replace_placeholder(substitution)
 
     @typemap
-    def restore_from_model(self, filename):
+    def save_model(self, filename, use_legacy_format=True):
+        '''
+        Save this function graph into a model file
+
+        Args:
+            filename (`str`): model path
+            use_legacy_format (`str`): if 'True', model is stored using legacy format.
+             Otherwise, it's stored using protobuf-based protocol serialization.
+        '''
+        return super(Function, self).save_model(filename, use_legacy_format)
+
+    @typemap
+    def restore_model(self, filename):
         '''
         Restore the models parameters from a saved model file
 
         Args:
-            filename (`str`): saved model path
+            filename (`str`): saved model path 
 
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file
         '''
-        return super(Function, self).restore_from_legacy_model(filename)
+        return super(Function, self).restore_model(filename)
 
     @property
     @typemap
@@ -400,3 +413,12 @@ class Function(cntk_py.Function):
         The primitive function at the root of the graph of functions underlying this function.
         '''
         return super(Function, self).root_function()
+
+    @property
+    @typemap
+    def uid(self):
+        '''
+        The internally generated unique name of the function.
+        '''
+        return super(Function, self).uid()
+

@@ -41,6 +41,8 @@
 //%template() std::vector<CNTK::DictionaryValue>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 %template() std::vector<std::shared_ptr<CNTK::Learner>>;
+%template() std::pair<size_t, double>;
+%template() std::vector<std::pair<size_t, double>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
 %ignore CNTK::Internal::Combine;
@@ -89,12 +91,6 @@ def dynamic_axes(self):
 
     void __setitem__(const wchar_t* key, CNTK::DictionaryValue value) {
         (*($self))[key] = value;
-    }
-}
-
-%extend CNTK::TrainingParameterSchedule<double> {
-    const double& __getitem__(size_t sampleCount) {
-        return (*($self))[sampleCount];
     }
 }
 
@@ -932,6 +928,7 @@ def dynamic_axes(self):
 %unordered_set_conversion(Variable, SWIGTYPE_p_CNTK__Variable)
 %unordered_set_conversion(Constant, SWIGTYPE_p_CNTK__Constant)
 %unordered_set_conversion(Parameter, SWIGTYPE_p_CNTK__Parameter)
+%unordered_set_conversion(DistributedWorkerDescriptor, SWIGTYPE_p_CNTK__DistributedWorkerDescriptor)
 
 %define %unordered_set_ref_conversion(DATA_TYPE, _SWIG_TYPE)
 
@@ -957,6 +954,7 @@ def dynamic_axes(self):
 %unordered_set_ref_conversion(StreamInformation, SWIGTYPE_p_CNTK__StreamInformation)
 %unordered_set_ref_conversion(LearnerPtr, SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t)
 %unordered_set_ref_conversion(Parameter, SWIGTYPE_p_CNTK__Parameter)
+%unordered_set_ref_conversion(DistributedWorkerDescriptor, SWIGTYPE_p_CNTK__DistributedWorkerDescriptor)
 
 // Unordered map conversion
 
@@ -997,6 +995,9 @@ def dynamic_axes(self):
 %shared_ptr(CNTK::BackPropState)
 %shared_ptr(CNTK::Learner)
 %shared_ptr(CNTK::MinibatchSource)
+%shared_ptr(CNTK::DistributedCommunicator)
+%shared_ptr(CNTK::QuantizedDistributedCommunicator)
+%shared_ptr(CNTK::DistributedTrainer)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
@@ -1174,14 +1175,20 @@ def dynamic_axes(self):
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 
-%template(training_param_schedule_double) CNTK::TrainingParameterSchedule<double>;
+// end of NDArrayView
+
+%extend CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample> {
+    const double& __getitem__(size_t sampleCount) {
+        return (*($self))[sampleCount];
+    }
+}
+
+%template(training_parameter_schedule_double) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
 
 %pythoncode %{
-learning_rates_per_sample = training_param_schedule_double
-momentums_per_sample = training_param_schedule_double
+learning_rates_per_sample = training_parameter_schedule_double
+momentums_per_sample = training_parameter_schedule_double
 %}
-
-// end of NDArrayView
 
 //
 // The following callback code is only for testing. Will have to be merged with
@@ -1250,7 +1257,7 @@ StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and
 # in case of multiple outputs return the function, not the variable
 def get_output_and_keep_reference(self):
     variable = self._output()    
-    variable.owner = self
+    variable.__owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
 
