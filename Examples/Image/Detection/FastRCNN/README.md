@@ -36,17 +36,13 @@ Currently, CNTK only supports `Python 3.4`. We recommend to install anaconda pyt
 conda create --name cntk python=3.4.3 numpy scipy
 activate cntk
 ```
-You will further need Scikit-Image and OpenCV to run these examples, and possibly numpy and scipy if your Python 3.4 package does not come with them. You need to download the corresponding wheel packages and install them manually. For Windows users, visit http://www.lfd.uci.edu/~gohlke/pythonlibs/, and download:
+You will further need Scikit-Image and OpenCV to run these examples. You can download the corresponding wheel packages and install them manually. For Windows users, visit http://www.lfd.uci.edu/~gohlke/pythonlibs/, and download:
 
-    numpy-1.11.2+mkl-cp34-cp34m-win_amd64.whl (optional, if you don't already have it)  
-    scipy-0.18.1-cp34-cp34m-win_amd64.whl (optional, if you don't already have it)  
-    scikit_image-0.12.3-cp34-cp34m-win_amd64.whl  
-    opencv_python-3.1.0-cp34-cp34m-win_amd64.whl
+    scikit_image-0.12.3-cp34-cp34m-win_amd64.whl  
+    opencv_python-3.1.0-cp34-cp34m-win_amd64.whl
 
 Once you download the respective wheel binaries, install them with:
 
-`pip install your_download_folder/numpy-1.11.2+mkl-cp34-cp34m-win_amd64.whl`  
-`pip install your_download_folder/scipy-0.18.1-cp34-cp34m-win_amd64.whl`  
 `pip install your_download_folder/scikit_image-0.12.3-cp34-cp34m-win_amd64.whl`  
 `pip install your_download_folder/opencv_python-3.1.0-cp34-cp34m-win_amd64.whl`
 
