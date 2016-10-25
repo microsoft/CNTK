@@ -29,7 +29,9 @@ def create_reader(path, randomize, input_vocab_dim, label_vocab_dim, size=INFINI
         labels    = StreamDef(field='S1', shape=label_vocab_dim,  is_sparse=True)
     )), randomize=randomize, epoch_size = size)
 
-def find(name, expression):
+# helper function to find variables by name
+# which is necessary when cloning or loading the model
+def find_arg_by_name(name, expression):
     vars = [i for i in expression.arguments if i.name == name]
     assert len(vars) == 1
     return vars[0]
@@ -43,8 +45,8 @@ def test_translator(z, trainer, input_vocab_dim, label_vocab_dim, debug_output=F
     test_reader = create_reader(test_path, False, input_vocab_dim, label_vocab_dim, FULL_DATA_SWEEP)
 
     test_bind = {
-        find('raw_input',z)  : test_reader.streams.features,
-        find('raw_labels',z) : test_reader.streams.labels
+        find_arg_by_name('raw_input',z)  : test_reader.streams.features,
+        find_arg_by_name('raw_labels',z) : test_reader.streams.labels
     }
 
     test_minibatch_size = 1024
@@ -197,8 +199,8 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
 
     valid_reader = create_reader(valid_path, False, input_vocab_dim, label_vocab_dim)
     valid_bind = {
-            find('raw_input',ng)  : valid_reader.streams.features,
-            find('raw_labels',ng) : valid_reader.streams.labels
+            find_arg_by_name('raw_input',ng)  : valid_reader.streams.features,
+            find_arg_by_name('raw_labels',ng) : valid_reader.streams.labels
         }
 
     for epoch in range(max_epochs):
@@ -236,7 +238,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     z = load_model(np.float32, "seq2seq.dnn")
 
     label_seq_axis = Axis('labelAxis')
-    label_sequence = slice(find('raw_labels',z), label_seq_axis, 1, 0)
+    label_sequence = slice(find_arg_by_name('raw_labels',z), label_seq_axis, 1, 0)
     ce = cross_entropy_with_softmax(z, label_sequence)
     errs = classification_error(z, label_sequence)
     trainer = Trainer(z, ce, errs, [momentum_sgd(
