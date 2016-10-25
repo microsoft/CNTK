@@ -9,7 +9,6 @@ import os
 from cntk.utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
-from cntk.io import ReaderConfig, ImageDeserializer
 import pytest
 
 from examples.CifarResNet.CifarResNet import cifar_resnet
@@ -32,7 +31,7 @@ def test_cifar_resnet_error(device_id):
     os.chdir(os.path.join(base_path, '..'))
 
     test_error = cifar_resnet(base_path)
-    expected_test_error = 0.5
+    expected_test_error = 0.566172
 
     assert np.allclose(test_error, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)
