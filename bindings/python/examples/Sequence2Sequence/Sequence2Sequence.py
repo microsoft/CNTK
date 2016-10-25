@@ -158,9 +158,8 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     m_schedule = momentum_schedule(momentum_time_constant)
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
-
-    trainer = Trainer(z, ce, errs, [momentum_sgd(
-                      z.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)])
+    learner = momentum_sgd(z.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)
+    trainer = Trainer(z, ce, errs, learner)
 
     # setup data
     rel_path = r"../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.train-dev-20-21.ctf"
