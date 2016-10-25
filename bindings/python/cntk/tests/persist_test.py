@@ -75,7 +75,7 @@ def test_load_save_unique_input(tmpdir):
     filename = str(tmpdir / 'i_plus_0.mod')
     save_model(root_node, filename)
 
-    loaded_node = load_model('float', filename)
+    loaded_node = load_model(filename)
 
     # Test specifying the only value for an unique input
     loaded_result = loaded_node.eval(input1)
