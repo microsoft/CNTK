@@ -118,7 +118,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
              the next minibatch. Must be > 0.
             minibatch_size_in_sequences (`int`, defaults to `None`): number of
              samples to retrieve for the next minibatch. Must be > 0.
-            input_map (`dict`): mapping of :class:`cntk.ops.variables.Variable`
+            input_map (`dict`): mapping of :class:`cntk.ops.variabls.Variable`
              to :class:`StreamInformation` which will be used to convert the
              returned data.
             device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor
@@ -126,7 +126,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Returns:
             A mapping of :class:`StramInformation` to :class:`MinibatchData` if
             ``input_map`` was not specified. Otherwise, the returned value will
-            be a mapping of :class:`cntk.ops.variables.Variable` to class:`MinibatchData`.
+            be a mapping of :class:`cntk.ops.variabls.Variable` to class:`MinibatchData`.
         '''
         if device is None:
             device = use_default_device()
@@ -223,8 +223,7 @@ class ReaderConfig(dict):
         deserializers ('list', default is empty): list of deserializers
          (:class:`ImageDeserializer` for now).
         randomize (`bool`, default True): randomize images before every epoch
-        epoch_size (`int`): epoch size. FULL_DATA_SWEEP means one pass;
-         INFINITELY_REPEAT means duplicate infinitely (with different randomization each time).
+        epoch_size (`int`): epoch size
     '''
 
     def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT):
@@ -235,7 +234,6 @@ class ReaderConfig(dict):
         self['deserializers'] = self.deserializers = deserializers or []
         self['randomize'] = randomize
 
-    # TODO: This should be deleted; do it the other way round and create MinibatchSource() directly with the same parameter
     @typemap
     def minibatch_source(self):
         '''
@@ -417,9 +415,9 @@ class ImageDeserializer(Deserializer):
 class CTFDeserializer(Deserializer):
     '''
     This class configures the text reader that reads text-encoded files from a file with lines of the form
-         [Sequence_Id](Sample)+
+         [Sequence_Id](Sample)+ 
         where
-         Sample=|Input_Name (Value )*
+         Sample=|Input_Name (Value )* 
     Args:
         filename (`str`): file name containing the text input
     See also:
@@ -440,17 +438,17 @@ class CTFDeserializer(Deserializer):
     # TODO: should be a private method; use constructor only
     def map_input(self, node, dim, format="dense", alias=None):
         '''
-        Maps node (either node instance or node name) to a part of the text input,
+        Maps node (either node instance or node name) to a part of the text input, 
         either specified by the node name or the alias in the text file.
         Example: for node name 'Apples' an input line could look like this:
         |Apples 0 1 2 3 4 5 6 7 8 9
         Args:
             node (`str` or input node): node or its name
-            dim (`int`): specifies the dimension of the input value vector
-             (for dense input this directly corresponds to the number of values in each sample,
+            dim (`int`): specifies the dimension of the input value vector 
+             (for dense input this directly corresponds to the number of values in each sample, 
              for sparse this represents the upper bound on the range of possible index values).
-            format (`str`, default 'dense'): 'dense' or 'sparse'. Specifies the input type.
-            alias (`str`, default None): None or alias name. Optional abbreviated name that
+            format (`str`, default 'dense'): 'dense' or 'sparse'. Specifies the input type. 
+            alias (`str`, default None): None or alias name. Optional abbreviated name that 
              is used in the text file to avoid repeating long input names. For details please
              see https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
         '''
@@ -502,6 +500,22 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
 
     def __init__(self, name, dim, is_sparse=False, stream_alias=''):
         return super(StreamConfiguration, self).__init__(name, dim, is_sparse, stream_alias)
+
+
+# wrapper around text_format_minibatch_source() that attaches a record of streams
+# TODO: This should not exist; use MinibatchSource(CTFDeserializer(...))
+def _unused_CNTKTextFormatMinibatchSource(path, streams, epoch_size=None): # TODO: delete this
+    from cntk.utils import _ClassFromDict
+    # convert streams into StreamConfiguration format
+    # TODO: stream_alias should default to 'key'
+    stream_configs = [ StreamConfiguration(key, dim=value.dim, is_sparse=value.is_sparse, stream_alias=value.stream_alias) for (key, value) in streams.items() ]
+    if epoch_size is not None:  # TODO: use MAX_UI64, now that we have access
+        source = text_format_minibatch_source(path, stream_configs, epoch_size)
+    else:
+        source = text_format_minibatch_source(path, stream_configs)
+    # attach a dictionary of the streams
+    source.streams = _ClassFromDict({ name : source.stream_info(name) for name in streams.keys() })
+    return source
 
 
 # stream definition for use in StreamDefs

@@ -10,16 +10,15 @@ from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 from cntk import Trainer
 from cntk.learner import adam_sgd, learning_rate_schedule, momentum_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
 
 ########################
-# variables and paths  #
+# variables and stuff  #
 ########################
 
-# paths
 cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../../.."  # data resides in the CNTK folder
 data_dir = cntk_dir + "/Examples/Tutorials/SLUHandsOn"                  # under Examples/Tutorials
 vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
@@ -36,12 +35,12 @@ hidden_dim = 300
 # define the reader    #
 ########################
 
-def create_reader(path, is_training):
+def create_reader(path):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         query         = StreamDef(field='S0', shape=input_dim,   is_sparse=True),
         intent_unused = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # BUGBUG: unused, and should infer dim
         slot_labels   = StreamDef(field='S2', shape=label_dim,   is_sparse=True)
-    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+    )))
 
 ########################
 # define the model     #
@@ -74,7 +73,6 @@ def train(reader, model, max_epochs):
     # training config
     epoch_size = 36000
     minibatch_size = 70
-    epoch_size = 1000 ; max_epochs = 1 # for faster testing
     num_mbs_to_show_result = 100
     momentum_as_time_constant = minibatch_size / -math.log(0.9)  # TODO: Change to round number. This is 664.39. 700?
 
@@ -117,45 +115,6 @@ def train(reader, model, max_epochs):
             #trace_node('stabilizer_param')
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
-    return loss, metric # return values from last epoch
-
-########################
-# eval action          #
-########################
-
-def evaluate(reader, model):
-    # Input variables denoting the features and label data
-    query       = Input(input_dim,  is_sparse=False)
-    slot_labels = Input(num_labels, is_sparse=True)  # TODO: make sparse once it works
-
-    # apply model to input
-    z = model(query)
-
-    # loss and metric
-    ce = cross_entropy_with_softmax(z, slot_labels)
-    pe = classification_error      (z, slot_labels)
-
-    # define mapping from reader streams to network inputs
-    input_map = {
-        query       : reader.streams.query,
-        slot_labels : reader.streams.slot_labels
-    }
-
-    # process minibatches and perform evaluation
-    dummy_learner = adam_sgd(z.parameters, lr_per_sample=1, momentum_time_constant=0, low_memory=True) # BUGBUG: should not be needed
-    evaluator = Trainer(z, ce, pe, [dummy_learner])
-    progress_printer = ProgressPrinter(freq=100, first=10, tag='Evaluation') # more detailed logging
-    #progress_printer = ProgressPrinter(tag='Evaluation')
-
-    while True:
-        minibatch_size = 1000
-        data = reader.next_minibatch(minibatch_size, input_map=input_map) # fetch minibatch
-        if not data:                                                      # until we hit the end
-            break
-        metric = evaluator.test_minibatch(data)                           # evaluate minibatch
-        progress_printer.update(0, data[slot_labels].num_samples, metric) # log progress
-    loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
-
     return loss, metric
 
 #############################
@@ -169,13 +128,10 @@ if __name__=='__main__':
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     force_deterministic_algorithms()
 
-    # create the model
+    reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model()
-
     # train
-    reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
     train(reader, model, max_epochs=8)
-
-    # test
-    reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
-    evaluate(reader, model)
+    # test (TODO)
+    reader = create_reader(data_dir + "/atis.test.ctf")
+    #test(reader, model_dir + "/slu.cmf")  # TODO: what is the correct pattern here?

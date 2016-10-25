@@ -17,11 +17,9 @@ from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu, convolution, pooling, PoolingType_Max
 
-########################
-# variables and paths  #
-########################
-
-# paths (are relative to current python file)
+#
+# Paths relative to current python file.
+#
 abs_path   = os.path.dirname(os.path.abspath(__file__))
 cntk_path  = os.path.normpath(os.path.join(abs_path, "..", "..", "..", ".."))
 data_path  = os.path.join(cntk_path, "Examples", "Image", "Datasets", "CIFAR-10")
@@ -44,9 +42,9 @@ def create_reader(map_file, mean_file, train):
 
     # transformation pipeline for the features has jitter/crop only when training
     transforms = []
-    if is_training:
+    if train:
         transforms += [
-            ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio') # is_training uses jitter
+            ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio') # train uses jitter
         ]
     transforms += [
         ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
@@ -56,11 +54,7 @@ def create_reader(map_file, mean_file, train):
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
         features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
         labels   = StreamDef(field='label', shape=num_classes)      # and second as 'label'
-    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
-
-########################
-# define the model     #
-########################
+    )))
 
 #
 # Define a VGG like network for Cifar dataset.
@@ -122,12 +116,11 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
 
     # loss and metric
     ce = cross_entropy_with_softmax(z, label_var)
-    pe = classification_error      (z, label_var)
+    pe = classification_error(z, label_var)
 
     # training config
     epoch_size     = 50000
     minibatch_size = 64
-    epoch_size = 1000 ; max_epochs = 1 # for faster testing
 
     # For basic model
     lr_per_sample       = [0.00015625]*10+[0.000046875]*10+[0.0000156]
@@ -147,8 +140,7 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     }
 
     log_number_of_parameters(z) ; print()
-    progress_printer = ProgressPrinter(freq=100, first=10, tag='Training')
-    #progress_printer = ProgressPrinter(tag='Training')
+    progress_printer = ProgressPrinter(tag='Training')
 
     # perform model training
     for epoch in range(max_epochs):       # loop over epochs
@@ -159,14 +151,13 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
 
             sample_count += data[label_var].num_samples                     # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
-        loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
-
-    #return loss, metric # return values from last epoch
-
+        progress_printer.epoch_summary(with_metric=True)
+    
     #
     # Evaluation action
     #
-    minibatch_size = 1000
+    epoch_size     = 10000
+    minibatch_size = 16
 
     # process minibatches and evaluate the model
     metric_numer    = 0

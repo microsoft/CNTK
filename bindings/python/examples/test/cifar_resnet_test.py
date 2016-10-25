@@ -10,6 +10,7 @@ import sys
 from cntk.utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
+from cntk.io import ReaderConfig, ImageDeserializer
 import pytest
 
 from examples.CifarResNet.CifarResNet import train_and_evaluate, create_reader
