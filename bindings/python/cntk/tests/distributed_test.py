@@ -13,7 +13,7 @@ from .. import distributed
 from .. import cross_entropy_with_softmax, classification_error, parameter, \
         input_variable, times, plus, reduce_sum
 
-def test_trainer(tmpdir):
+def disabled_test_trainer(tmpdir):
     in1 = input_variable(shape=(1,))
     labels = input_variable(shape=(1,))
     p = parameter(shape=(2,), init=10)
