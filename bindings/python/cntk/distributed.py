@@ -46,10 +46,10 @@ class communicator:
     A communicator interface exposing communication primitives that serve as building blocks 
     for distributed training.
     '''
-    def __init__(self):
-        self.data = cntk_py.mpicommunicator()
+    def __init__(self, distributed_communicator):
+        self.data = distributed_communicator
         return
-        
+    
     def workers(self):
         '''
         Returns workers in this communicator.
@@ -73,20 +73,16 @@ class communicator:
         raw = self.data.current_worker()
         return worker_descriptor(raw)
 
-    def sub_group(self, workers):
+    def barrier(self):
         '''
-        Creates a new distributed communicator comprising of a subset of the workers in this communicator.
+        sync point to make sure all workers reach the same state
+        '''
+        self.data.barrier()
+        return
         
-        Args:
-            workers (`list`): list of :class:`cntk.distributed.worker_descriptor` of workers in the new communicator
-
-        Returns:
-            :class:`cntk.distributed.communicator`: comprising specified workers
-        '''
-        raw_list = []
-        for w in workers:
-            raw_list.append(w.data)
-        self.data.sub_group(raw_list)
+    @staticmethod
+    def finalize():
+        cntk_py.DistributedCommunicator.finalize();
         return
 
 class distributed_trainer:
@@ -98,6 +94,27 @@ class distributed_trainer:
     '''
     def __init__(self, distributed_trainer):
         self.data = distributed_trainer
+        
+def mpi_communicator():
+    '''
+    Creates a mpi communicator
+
+    Returns:
+        :class:`cntk.cntk_py.DistributedCommunicator`: a distributed communicator
+    '''
+    return cntk_py.mpicommunicator()
+
+def quantized_mpi_communicator(num_quantization_bits):
+    '''
+    Creates a quantized mpi communicator
+
+    Args:
+        num_quantization_bits (`int`): num_quantization_bits
+
+    Returns:
+        :class:`cntk.cntk_py.QuantizedDistributedCommunicator`: a quantized distributed communicator
+    '''
+    return cntk_py.quantized_mpicommunicator(True, True, num_quantization_bits)
 
 def data_parallel_distributed_trainer(communicator, use_async_buffered_parameter_update):
     '''

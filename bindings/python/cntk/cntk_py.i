@@ -843,57 +843,6 @@ def dynamic_axes(self):
      }
 }
 
-//
-// Converting Python list {DistributedWorkerDescriptor} to std::unordered_set
-//
-%typecheck(1000) std::unordered_set<CNTK::DistributedWorkerDescriptor>& {
-    // '1000' is the typecheck precedence code. It means: check after basic
-    // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
-    $1 = PyList_Check($input) ? 1 : 0;
-}
-
-%typemap(in) std::unordered_set<CNTK::DistributedWorkerDescriptor>& (
-        std::unordered_set<CNTK::DistributedWorkerDescriptor> args_set 
-) {
-     if (PyList_Check($input)) {
-
-        PyObject *item;
-
-        PyObject *iterator = PyObject_GetIter($input);
-        if (iterator == NULL) {
-            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::DistributedWorkerDescriptor"); 
-        }
-
-        while ((item = PyIter_Next(iterator))) {
-            void *raw_var = 0 ;
-            int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__DistributedWorkerDescriptor,  0);
-            if (!SWIG_IsOK(res1)) {
-                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert list element to CNTK::DistributedWorkerDescriptor"); 
-            }
-            if (!raw_var) {
-                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::SWIGTYPE_p_CNTK__DistributedWorkerDescriptor");
-            }
-
-            CNTK::DistributedWorkerDescriptor* var = reinterpret_cast<CNTK::DistributedWorkerDescriptor*>(raw_var);
-
-            args_set.insert(*var);
-
-            Py_DECREF(item);
-        }
-
-        Py_DECREF(iterator);
-
-        if (PyErr_Occurred()) {
-            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::SWIGTYPE_p_CNTK__DistributedWorkerDescriptor"); 
-        }
-
-        $1 = &args_set;
-
-     } else {
-         SWIG_exception(SWIG_ValueError, "list expected");
-     }
-}
-
 %typecheck(1000) const std::unordered_map<CNTK::Variable, CNTK::Variable>& {
     // '1000' is the typecheck precedence code. It means: check after basic
     // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
@@ -1047,6 +996,7 @@ def dynamic_axes(self):
 %shared_ptr(CNTK::Learner)
 %shared_ptr(CNTK::MinibatchSource)
 %shared_ptr(CNTK::DistributedCommunicator)
+%shared_ptr(CNTK::QuantizedDistributedCommunicator)
 %shared_ptr(CNTK::DistributedTrainer)
 
 %include "CNTKLibraryInternals.h"
