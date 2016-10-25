@@ -182,7 +182,7 @@ namespace CNTK
         for (auto& kv : *(other.m_dictionaryData))
         {
             if (Contains(kv.first))
-                InvalidArgument("Dictionary::Add: This dictionary already contains an entry with key %S that is being attempted to add from the 'other' dinctionary", kv.first.c_str());
+                InvalidArgument("Dictionary::Add: This dictionary already contains an entry with key %S that is being attempted to add from the 'other' dictionary", kv.first.c_str());
 
             (*this)[kv.first] = kv.second;
         }
@@ -354,11 +354,9 @@ namespace CNTK
         m_unit = UnitType(dictionary[unitKey].Value<size_t>());
         m_epochSize = dictionary[epochSizeKey].Value<size_t>();
         Dictionary schedule = dictionary[scheduleKey].Value<Dictionary>();
-        vector<std::wstring> keys = schedule.Keys();
-        std::map<size_t, T> map;
-        for (const auto& key : keys)
+        for (const auto& kv : schedule)
         {
-            m_schedule[std::stoll(key)] = schedule[key].Value<T>();
+            m_schedule[std::stoll(kv.first)] = kv.second.Value<T>();
         }
     }
 
@@ -370,6 +368,16 @@ namespace CNTK
             double momPS = momTC == 0.0 ? 0 : exp(-1.0 / momTC);
             it.second = momPS;
         }
+    }
+
+    std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
+    {
+        std::ios_base::openmode mode = std::ios_base::binary | (readOnly ? std::ios_base::in : std::ios_base::out);
+#ifdef _MSC_VER
+        return std::make_shared<std::fstream>(filePath, mode);
+#else
+        return std::make_shared<std::fstream>(wtocharpath(filePath.c_str()).c_str(), mode);
+#endif
     }
 
     template void DictionaryValue::AllocateDataPtr<NDShape>(const NDShape& value);

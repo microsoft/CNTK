@@ -16,6 +16,9 @@
     <ClCompile Include="MinibatchSource.cpp" />
     <ClCompile Include="ComputeInputStatistics.cpp" />
     <ClCompile Include="Serialization.cpp" />
+    <ClCompile Include="proto\CNTK.pb.cc.VS_wrapper.cpp">
+      <Filter>proto</Filter>
+    </ClCompile>
     <ClCompile Include="DistributedCommunicator.cpp" />
     <ClCompile Include="DataParallelDistributedTrainer.cpp" />
     <ClCompile Include="Globals.cpp" />
@@ -46,8 +49,14 @@
     <Filter Include="API">
       <UniqueIdentifier>{ea62180a-fb06-4f33-b472-243fab69be01}</UniqueIdentifier>
     </Filter>
+    <Filter Include="proto">
+      <UniqueIdentifier>{1a93e221-b14c-476a-a53d-c931030acd6e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\bindings\python\cntk\PythonBindings.pyproj" />
+    <None Include="proto\CNTK.proto">
+      <Filter>proto</Filter>
+    </None>
   </ItemGroup>
 </Project>
