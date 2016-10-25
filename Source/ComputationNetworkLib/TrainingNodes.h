@@ -2351,6 +2351,8 @@ public:
         }
     }
 
+    size_t GetSamplesSeen() const { return m_samplesSeen; }
+
 private: // time-constant conversions
 
     // map time constants to exp avg factor
