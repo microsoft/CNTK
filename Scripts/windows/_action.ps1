@@ -106,6 +106,9 @@ function InstallWheel(
     if ($whlFile -eq $null) {
         throw "No WHL file found at $cntkRootDir\cntk\Python"
     }
+    if ($whlFile.Count -gt 1) {
+        Throw "Multiple WHL files found in $cntkRootDir\cntk\Python. Please make sure it contains only the WHL file matching your CNTK download"
+    }
     $whl = $whlFile.FullName
 
     $condaExe = Join-Path $BasePath 'Scripts\conda.exe'
@@ -223,7 +226,7 @@ function CreateBatch(
 
     Remove-Item -Path $filename -ErrorAction SilentlyContinue | Out-Null
 
-    add-content -Path $filename -Value "set PATH=%PATH%;$cntkRootDir\cntk" -Encoding Ascii
+    add-content -Path $filename -Value "set PATH=$cntkRootDir\cntk;%PATH%" -Encoding Ascii
     add-content -Path $filename -Value "$AnacondaBasePath\Scripts\activate $AnacondaBasePath\envs\cntk-py34" -Encoding Ascii 
 }
 
