@@ -3,6 +3,7 @@
 # for full license information.
 # ==============================================================================
 
+import numpy as np
 from cntk import cntk_py
 from .utils.swig_helper import typemap
 from cntk.device import use_default_device
@@ -20,21 +21,23 @@ def save_model(root_op, filename, use_legacy_format=True):
     root_op.save_model(filename, use_legacy_format)
 
 @typemap
-def load_model(data_type, filename, device=None):
+def load_model(filename, dtype=np.float32, device=None):
     '''
     Load the network in ``filename``, that has been saved using
     `:func:save_model`.
 
     Args:
-        data_type ('float' or 'double', or NumPy type): data type of the operation
         filename (`str`): filename to load the model from
-        device (:class:`cntk.device.DeviceDescriptor`, default to default device): instance of DeviceDescriptor
+        dtype ('float', 'double', or NumPy type, default ``np.float32``): data
+         type of the operation
+        device (:class:`cntk.DeviceDescriptor`, default is the default device):
+         instance of DeviceDescriptor
 
     Returns:
         root node
     '''
     from cntk.utils import sanitize_dtype_cntk
-    data_type = sanitize_dtype_cntk(data_type)
+    dtype = sanitize_dtype_cntk(dtype)
     if not device:
         device = use_default_device()
-    return cntk_py.Function.load_model(data_type, filename, device)
+    return cntk_py.Function.load_model(dtype, filename, device)
