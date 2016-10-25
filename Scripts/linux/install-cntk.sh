@@ -10,7 +10,7 @@
 # TODO cut down on logging
 set -x -e -o pipefail
 
-REPO_TAG=v2.alpha4
+REPO_TAG=v2.0.beta1.0
 
 USAGE="Usage: [--force]"
 FORCE=$(! [ "$0" = "--force" ]; echo $?)
@@ -167,7 +167,7 @@ fi
 
 LD_LIBRARY_PATH_SETTING="$CNTK_LIB_PATH:$CNTK_DEP_LIB_PATH"
 if [ "$BUILD_OPENMPI" = "1" ]; then
-  LD_LIBRARY_PATH_SETTING=":$OPENMPI_PREFIX/lib"
+  LD_LIBRARY_PATH_SETTING+=":$OPENMPI_PREFIX/lib"
 fi
 LD_LIBRARY_PATH_SETTING+=":\$LD_LIBRARY_PATH"
 

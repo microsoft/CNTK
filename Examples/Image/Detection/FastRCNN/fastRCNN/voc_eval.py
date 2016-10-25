@@ -115,11 +115,11 @@ def voc_eval(detpath,
         # save
         if cachedir:
             print ('Saving cached annotations to {:s}'.format(cachefile))
-            with open(cachefile, 'w') as f:
+            with open(cachefile, 'wb') as f:
                 cp.dump(recs, f)
     else:
         # load
-        with open(cachefile, 'r') as f:
+        with open(cachefile, 'rb') as f:
             recs = cp.load(f)
 
     # extract gt objects for this class

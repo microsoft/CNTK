@@ -58,7 +58,7 @@ Param(
     [parameter(Mandatory=$false)]
     [switch] $ForceWheelUpdate,
     [parameter(Mandatory=$false)]
-    [string] $RepoTag="v2.alpha4"
+    [string] $RepoTag="v2.0.beta1.0"
 )
 
 $MyDir = Split-Path $MyInvocation.MyCommand.Definition

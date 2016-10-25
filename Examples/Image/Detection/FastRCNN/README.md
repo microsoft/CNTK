@@ -9,6 +9,10 @@
 |Training  |Stochastic gradient descent with momentum.
 |Comments  |See below.
 
+## Tutorial
+
+Check out the CNTK Tutorial on [Object Detection using Fast R-CNN](https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN).
+
 ## Introduction
 
 `Fast R-CNN` is an object detection algorithm proposed by `Ross Girshick` in 2015. The paper is accepted to ICCV 2015, and archived at https://arxiv.org/abs/1504.08083. Fast R-CNN builds on previous work to efficiently classify object proposals using deep convolutional networks. Compared to previous work, Fast R-CNN employs a `region of interest pooling` scheme that allows training to be single stage, with a multi-task loss. It trains the very deep VGG16 network 9x faster than R-CNN, is 213x faster at test-time, and achieves a higher mAP on PASCAL VOC 2012.
@@ -107,26 +111,6 @@ to parse and evaluate the output accuracy. You should see mean average precision
 
 `python B3_VisualizeOutputROIs.py`
 
-## Running Fast R-CNN on Pascal VOC data:
+## Running Fast R-CNN on other data sets
 
-We are still working on enabling the script to run Fast R-CNN on Pascal VOC data, so we only briefly introduce the steps here. Please visit this paper later for more complete and accurate guidance.
-
-- Download the PAscal VOC data to <CntkRoot>/Examples/Image/Datasets/Pascal
--- 2007 trainval: http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar
--- 2007 test:     http://host.robots.ox.ac.uk/pascal/VOC/voc2007/VOCtrainval_06-Nov-2007.tar
--- 2012 trainval: http://host.robots.ox.ac.uk/pascal/VOC/voc2012/VOCtrainval_11-May-2012.tar
-- Additionally you need selective_search_data: http://www.cs.berkeley.edu/~rbg/fast-rcnn-data/selective_search_data.tgz
-- In PARAMETERS.py set datasetName = "pascalVoc".
-
-## Running on your own data
-
-If you want to use another data set than the provided toy example or Pascal, you can capture a few images and label yourselves. We provide two Python scripts to help you.
-
-First, store all your images in a single folder. Edit the `imgDir` in both `C1_DrawBboxesOnImages.py` and `C2_AssignLabelsToBboxes.py` to point to that folder. Save the Python scripts. In `C2_AssignLabelsToBboxes.py`, you may also define your own object categories. If you do modify these categories, you also need to edit `PARAMETERS.py` to reflect that.
-
-In addition, you need to edit `PARAMETERS.py` by:
-- Pick a new name and assign it to `datasetName`.
-- Adjust `imgDir` to the directory where your images reside.
-- Adjust parameters under `project-specific parameter` to your data, i.e. classes etc.
-
-Now you are ready to use the two scripts to do data labeling. With `C1_DrawBboxesOnImages.py`, you may draw all region of interests you want to label. And with `C2_AssignLabelsToBboxes.py`, you can assign a label to each drawn region. The scripts will store the annotations in the correct format for CNTK Fast R-CNN. After all data is labeled, follow instructions earlier to train Fast R-CNN on your new data set.
+To learn more about CNTK Fast R-CNN, e.g. how to run it on Pascal VOC data or on your own data set, please go to the CNTK tutorial on [Object Detection using Fast R-CNN](https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN).
