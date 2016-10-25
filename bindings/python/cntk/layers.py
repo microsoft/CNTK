@@ -121,7 +121,7 @@ def Embedding(shape=None, init=None, weights=None):
 # TODO: conflict of parameter order: filter_shape or num_filters first?
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
-def Convolution(filter_shape,        # e.g. (3,3)
+def Convolution(rf_shape,        # e.g. (3,3)
                 num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension_
                 activation=activation_default_or_None,
                 init=init_default_or_glorot_uniform,
@@ -146,15 +146,15 @@ def Convolution(filter_shape,        # e.g. (3,3)
         NotImplementedError("Convolution: sharing option currently must be True")
     output_channels_shape = _as_tuple(num_filters)
     output_rank = len(output_channels_shape)
-    filter_rank = len(filter_shape)
-    kernel_shape = _INFERRED * reduction_rank + filter_shape # kernel := filter plus reductionDims
+    filter_rank = len(rf_shape)
+    kernel_shape = _INFERRED * reduction_rank + rf_shape # kernel := filter plus reductionDims
 
     # parameters bound to this Function
     #init_kernel = glorot_uniform(filter_rank=-filter_rank, output_rank=1)
     init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
     # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag
     W = Parameter(output_channels_shape + kernel_shape,             init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
-    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
+    b = Parameter(output_channels_shape + (1,) * len(rf_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
     # expression
     x = Placeholder(name='convolution_arg')
@@ -178,12 +178,12 @@ def Convolution(filter_shape,        # e.g. (3,3)
 #  - turn it into a function (lower-case)? Then how would it work inside Sequential() (we'd need partial application)?
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 def Pooling(op,      # PoolingType_Max or _Average
-            filter_shape,  # e.g. (3,3)
+            rf_shape,  # e.g. (3,3)
             strides=1,
             pad=False):
     #UntestedBranchError("Pooling")
     x = Placeholder(name='pooling_arg')
-    apply_x = pooling (x, op, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
+    apply_x = pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
 
     if op == PoolingType_Average:
         op_name = 'AveragePooling'
@@ -193,15 +193,15 @@ def Pooling(op,      # PoolingType_Max or _Average
         raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
     return Block(apply_x, op_name)
 
-def MaxPooling(filter_shape,  # e.g. (3,3)
+def MaxPooling(rf_shape,  # e.g. (3,3)
                strides=1,
                pad=False):
-    return Pooling(PoolingType_Max, filter_shape, strides=strides, pad=pad)
+    return Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad)
 
-def AveragePooling(filter_shape,  # e.g. (3,3)
+def AveragePooling(rf_shape,  # e.g. (3,3)
                    strides=1,
                    pad=False):
-    return Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad)
+    return Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad)
 
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):

@@ -55,23 +55,48 @@ def create_model():
     ])
 
 ########################
+# define the criteria  #
+########################
+
+# compose model function and criterion primitives into a criterion function
+#  takes:   Function: features -> prediction
+#  returns: Function: (features, labels) -> (loss, metric)
+# This function is generic and could be a stock function create_ce_classification_criter().
+def create_criter(model):
+    labels = SymbolicArgument()    # aka Placeholder()
+    ce = cross_entropy_with_softmax(model, labels)
+    pe = classification_error      (model, labels)
+    return combine ([ce, errs]) # (features, labels) -> (loss, metric)
+
+########################
 # train action         #
 ########################
 
 def train(reader, model, max_epochs):
-    model.set_signature(Input(vocab_size, is_sparse=False))
+    # declare model-argument types
+    #Function.declare_arguments({model.arguments[0]: variable_type_of(source.streams.query)})
 
-    # Input variables denoting the features and label data
-    query         = Input(vocab_size,  is_sparse=False)  # TODO: make sparse once it works
-    intent_labels = Input(num_intents, is_sparse=True)
-    slot_labels   = Input(num_labels,  is_sparse=True)
+    # criter: (model args, labels) -> (loss, metric)
+    #   here  (query, slot_labels) -> (ce, errs)
+    criter = create_criter(model)
 
-    # apply model to input
-    z = model(query)
+    # declare remaining criterion-argument types
+    criter.set_signature(variable_type_of(source.streams.query), variable_type_of(source.streams.slot_labels))
+    #Function.declare_arguments({criter.arguments[1]: variable_type_of(source.streams.slot_labels)})
 
-    # loss and metric
-    ce = cross_entropy_with_softmax(z, slot_labels)
-    pe = classification_error      (z, slot_labels)
+    #model.set_signature(Input(vocab_size, is_sparse=False))
+    #
+    ## Input variables denoting the features and label data
+    #query         = Input(vocab_size,  is_sparse=False)  # TODO: make sparse once it works
+    #intent_labels = Input(num_intents, is_sparse=True)
+    #slot_labels   = Input(num_labels,  is_sparse=True)
+    #
+    ## apply model to input
+    #z = model(query)
+    #
+    ## loss and metric
+    #ce = cross_entropy_with_softmax(z, slot_labels)
+    #pe = classification_error      (z, slot_labels)
 
     # training config
     epoch_size = 36000
@@ -120,6 +145,26 @@ def train(reader, model, max_epochs):
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric # return values from last epoch
+
+
+# train() – train model
+#  takes:   minibatch source
+#           reference to a Function: features -> predictions
+#  returns: Function's learnable parameters updated in-place using source
+def train1(source, model):
+
+    # define how to update parameters
+    learner = adam_sgd(criter.parameters, lr_per_sample=...)
+
+    # trainer
+    trainer = Trainer(criter, learner)
+
+    # train minibatches
+    for mb in MinibatchIterator(source, minibatch_size=70, epoch_size=36000, max_epochs=max_epochs):
+        loss, metric = trainer.train_minibatch(mb.query, mb.slot_labels) # takes and returns same as criter()
+
+    return loss, metric
+
 
 ########################
 # eval action          #

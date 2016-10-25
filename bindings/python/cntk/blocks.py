@@ -176,7 +176,11 @@ def Constant(init, shape=None, name=''):
     p = constant (init, shape, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'constant')   # these are factory methods for things with state
 
+# TODO: this function should not be necessary anymore
 def Input(*args, **kwargs):
+    return _name_node(input_variable(*args, **kwargs), 'input')
+
+def variable_type_of(*args, **kwargs):
     return _name_node(input_variable(*args, **kwargs), 'input')
 
 def Placeholder(shape=None, name='placeholder'):
