@@ -231,8 +231,8 @@ def ones_like(x):
 def past_value_window(N, input, axis=1):
 
     #ones_like_input = ones_like(input)
-    ones_like_input = plus(times(input, constant(0, shape=(input.shape[0], 1))), constant(1, shape=(1)))
-    
+    ones_like_input = plus(times(input, constant(0, shape=(input.shape[0],1))), constant(1, shape=(1)))
+        
     last_value=[]
     last_valid=[]
     value = None
@@ -301,7 +301,7 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
         u = times(stabilize(element_times(tanh_out, projected_attention_window_broadcast()[2])), v) # (attention_span, 1)
         u_valid = plus(u, log(projected_attention_window_broadcast()[2]), name='u_valid')
 
-        attention_weights = alias(my_softmax(u_valid, 1), name='attention_weights')
+        attention_weights = alias(my_softmax(u_valid, 0), name='attention_weights')
         # the window should be shape=(attention_span, output_dim)
         weighted_attention_window = element_times(projected_attention_window_broadcast()[1], attention_weights, 
                                                   name='weighted_attention_window')
