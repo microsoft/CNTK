@@ -250,11 +250,10 @@ def past_value_window(N, input, axis=1):
         last_valid.append(sequence.last(valid))
 
     # can't get splice to stack rows 'beside' each other, so stack on top and then reshape...
-    # BUGBUG: below results in warning due to incompatible something... investigate
     value_a = splice(last_value, axis=0)
     valid_a = splice(last_valid, axis=0)
 
-    # workaround
+    # now reshape
     value = reshape(value_a, shape=(N, input.shape[0]))
     valid = reshape(valid_a, shape=(N, 1))
 
@@ -264,6 +263,7 @@ def past_value_window(N, input, axis=1):
 def my_softmax(z, axis):
     Z = reduce_log_sum(z, axis=axis) # reduce along axis
     P = exp(z - Z)
+    
     return P
 
 def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic_axis, encoder_outputH):
