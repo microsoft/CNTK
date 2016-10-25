@@ -234,7 +234,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     error1 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
 
     save_model(z, "seq2seq.dnn")
-    z = load_model(np.float32, "seq2seq.dnn")
+    z = load_model("seq2seq.dnn")
 
     label_seq_axis = Axis('labelAxis')
     label_sequence = slice(find_arg_by_name('raw_labels',z), label_seq_axis, 1, 0)
