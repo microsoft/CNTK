@@ -128,4 +128,7 @@ def data_parallel_distributed_trainer(communicator, use_async_buffered_parameter
     Returns:
         :class:`cntk.distributed.trainer`: a distributed trainer instance
     '''
-    return distributed_trainer(cntk_py.create_data_parallel_distributed_trainer(communicator.data, use_async_buffered_parameter_update))
+    if (isinstance(communicator.data, cntk.cntk_py.QuantizedDistributedCommunicator)):
+        return distributed_trainer(cntk_py.create_quantized_data_parallel_distributed_trainer(communicator.data, use_async_buffered_parameter_update))
+    else:
+        return distributed_trainer(cntk_py.create_data_parallel_distributed_trainer(communicator.data, use_async_buffered_parameter_update))
