@@ -355,13 +355,10 @@ public:
 	/// <returns>Results for specified layer</returns>
 	List<ElemType>^ EvaluateImage(Bitmap^ image, String^ outputKey)
 	{
-		std::cout << "EvaluateImage: Entering";
 		if (m_eval == nullptr)
 		{
 			throw gcnew ObjectDisposedException("Object has been disposed.");
 		}
-		auto stopwatch = gcnew System::Diagnostics::Stopwatch();
-		stopwatch->Start();
 		bool hasAlphaChannel;
 		if (image->PixelFormat == PixelFormat::Format24bppRgb)
 		{
@@ -383,6 +380,7 @@ public:
 		int numBytes = channelStride * 3;
 		auto outDims = GetNodeDimensions(NodeGroup::Output);
 		int outputSize = outDims[outputKey];
+		auto outputList = gcnew List<ElemType>(outputSize);
 		auto inDims = GetNodeDimensions(NodeGroup::Input);
 		int inputSize = inDims["features"];
 		// #pixels * #channels in the image must match the input dimension of the network.
@@ -392,24 +390,12 @@ public:
 				inputSize / 3, imageWidth, imageHeight);
 			throw gcnew ArgumentException(message);
 		}
-		// Generate a list that will hold the model outputs.
-		auto outputList = gcnew List<ElemType>(outputSize);
-		for (int i = 0; i < outputSize; i++)
-		{
-			outputList->Add(*(gcnew ElemType));
-		}
-		auto outputMap = gcnew Dictionary<String^, List<ElemType>^>();
-		outputMap->Add(outputKey, outputList);
-
-		std::map<std::wstring, std::vector<ElemType>*> stdInputs;
-		std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
 
 		auto rect = gcnew System::Drawing::Rectangle(0, 0, imageWidth, imageHeight);
 		auto bitmap = image->LockBits(*rect, ImageLockMode::ReadOnly, image->PixelFormat);
 		auto bytes = reinterpret_cast<byte*>(bitmap->Scan0.ToPointer());
 		int bitmapStride = bitmap->Stride;
 		std::vector<ElemType>* featureVector = new std::vector<ElemType>(numBytes);
-		//shared_ptr<std::vector<ElemType>> featureVector(new std::vector<ElemType>(numBytes));
 		int index;
 		for (int c = 0; c < 3; c++)
 		{
@@ -430,7 +416,8 @@ public:
 			}
 		}
 		image->UnlockBits(bitmap);
-		std::cout << "EvaluateImage: Feature vectors computed";
+		std::map<std::wstring, std::vector<ElemType>*> stdInputs;
+		std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
 		try
 		{
 			std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
@@ -440,54 +427,33 @@ public:
 
 			// This is copied directly from the above Evaluate method, but could be 
 			// simplified if we always want to restrict to 1 output value only.
-			for each (auto item in outputMap)
-			{
-				pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
-				// Why do we have to initialize the output nodes at all?
-				// Can we skip that?
-				shared_ptr<std::vector<ElemType>> ptr = CopyList(item.Value);
-				sharedOutputVectors.push_back(ptr);
-				stdOutputs.insert(MapEntry(key, ptr.get()));
-			}
-
-			auto t = stopwatch->ElapsedTicks;
-			stopwatch->Stop();
-			std::cout << "Time until model call: " << t << "ms" << std::endl;
+			pin_ptr<const WCHAR> key = PtrToStringChars(outputKey);
+			// Do we have to initialize the output nodes?
+			shared_ptr<std::vector<ElemType>> ptr(new std::vector<ElemType>(outputSize));
+			sharedOutputVectors.push_back(ptr);
+			stdOutputs.insert(MapEntry(key, ptr.get()));
 			try
 			{
-				std::cout << "EvaluateImage: Starting model evaluation";
 				m_eval->Evaluate(stdInputs, stdOutputs);
-				std::cout << "EvaluateImage: Finished model evaluation";
 			}
 			catch (const exception& ex)
 			{
-				std::cout << "EvaluateImage: Exception in model evaluation";
 				throw GetCustomException(ex);
 			}
 
-			auto enumerator = outputMap->Keys->GetEnumerator();
-			for (auto& map_item : stdOutputs)
+			auto &refVec = *stdOutputs[key];
+			for (auto& vec : refVec)
 			{
-				// Retrieve the layer key
-				enumerator.MoveNext();
-				auto key = enumerator.Current;
-
-				auto &refVec = *(map_item.second);
-				int index;
-				for (auto& vec : refVec)
-				{
-					outputMap[key][index++] = vec;
-				}
+				// List has been pre-allocated to the right size,
+				// so this should be fast.
+				outputList->Add(vec);
 			}
-			std::cout << "EvaluateImage: Finished copying to managed output";
 		}
 		catch (Exception^)
 		{
-			std::cout << "EvaluateImage: Caught other exception";
 			throw;
 		}
-		std::cout << "EvaluateImage: Exiting";
-		return outputMap[outputKey];
+		return outputList;
 	}
 
 	/// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
