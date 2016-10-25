@@ -12,8 +12,6 @@ from cntk.device import cpu, set_default_device
 from cntk.learner import sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
 
-
-
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, select_last, print_training_progress
