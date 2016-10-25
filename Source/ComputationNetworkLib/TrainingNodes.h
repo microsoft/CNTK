@@ -2229,9 +2229,9 @@ public:
     {
     }
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
-                           double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind) :
+                           double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind, size_t samplesSeen = 0) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(0),
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(samplesSeen),
         m_convertRunningVariancePending(false)
     {
     }
