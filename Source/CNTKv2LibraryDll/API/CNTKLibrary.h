@@ -3439,7 +3439,7 @@ namespace CNTK
     /// 
     /// Instantiate the CNTK built-in test format minibatch source
     ///
-    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true)
+    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true, DistributedCommunicatorPtr communicator = nullptr)
     {
         ::CNTK::Dictionary minibatchSourceConfiguration;
         minibatchSourceConfiguration[L"epochSize"] = epochSize;
@@ -3471,7 +3471,7 @@ namespace CNTK
         deserializerConfiguration[L"input"] = inputStreamsConfig;
         minibatchSourceConfiguration[L"deserializers"] = std::vector<::CNTK::DictionaryValue>({ deserializerConfiguration });
 
-        return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+        return CreateCompositeMinibatchSource(minibatchSourceConfiguration, communicator);
     }
 
     ///
@@ -3542,6 +3542,9 @@ namespace CNTK
         // TODO: Currently this is a workaround to free static MPIWrapper, it will go away soon.
         // Should be called before executable exits.
         CNTK_API static void Finalize();
+
+        // a barrier to sync all ranks that calls WaitAll() underneath
+        CNTK_API virtual void Barrier() = 0;
 
     protected:
         DistributedCommunicator() {};

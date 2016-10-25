@@ -39,7 +39,7 @@ num_classes  = 10
 #
 # Define the reader for both training and evaluation action.
 #
-def create_reader(map_file, mean_file, train):
+def create_reader(map_file, mean_file, train, distributed_communicator=None):
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         cifar_py3 = "" if sys.version_info.major < 3 else "_py3"
         raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
@@ -58,8 +58,8 @@ def create_reader(map_file, mean_file, train):
     # deserializer
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
         features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-        labels   = StreamDef(field='label', shape=num_classes)      # and second as 'label'
-    )))
+        labels   = StreamDef(field='label', shape=num_classes))),      # and second as 'label'
+        distributed_communicator=distributed_communicator)
 
 #
 # Resnet building blocks
@@ -145,14 +145,14 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     minibatch_size = 128
 
     # Set learning parameters
-    lr_per_sample       = [1/minibatch_size]*80+[0.1/minibatch_size]*40+[0.01/minibatch_size]
-    lr_schedule         = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    momentum_per_sample = 0.9**(1.0/minibatch_size)
-    l2_reg_weight       = 0.0001
+    lr_per_sample          = [1/minibatch_size]*80+[0.1/minibatch_size]*40+[0.01/minibatch_size]
+    lr_schedule            = learning_rate_schedule(lr_per_sample, units=epoch_size)
+    momentum_time_constant = -minibatch_size/np.log(0.9)
+    l2_reg_weight          = 0.0001
     
     # trainer object
     lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner     = momentum_sgd(z.parameters, lr_schedule, momentum_per_sample, 
+    learner     = momentum_sgd(z.parameters, lr_schedule, momentum_time_constant,
                                l2_regularization_weight = l2_reg_weight)
     trainer     = Trainer(z, ce, pe, learner)
 
