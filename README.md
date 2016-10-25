@@ -11,6 +11,7 @@ Highlights of this Release:
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_1_Release_Notes). You will find there links to the materials about the new features.  
 
+
 *2016-10-03.* V 1.7.2 Binary release  
 **This is a Hot Fix Release. It affects all users of Model Evaluation Library**
 
@@ -18,6 +19,7 @@ If you are NOT using Model Evaluation Library you may skip this release.
 If you ARE using Model Evaluation Library we **strongly recommend** installing version 1.7.2 instead of **any** previous version you might be using.
 
 See [Release Notes](https://github.com/Microsoft/CNTk/wiki/CNTK_1_7_2_Release_Notes) for details.
+
 
 *2016-09-28.* V 1.7.1 Binary release  
 Highlights of this Release:
@@ -30,6 +32,7 @@ Highlights of this Release:
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_1_Release_Notes) (including the full list of bugs fixed)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
+
 
 *2016-08-31.* V 1.7 Binary release  
 Highlights of this Release:
@@ -44,8 +47,10 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_Release_Notes)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
+
 *2016-08-29.* Two new Tutorials are available:  
 [Image recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (CIFAR-10) and [Language understanding](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (ATIS).
+
 
 *2016-08-10.* We have significantly simplified handling of **Gated Recurrent Units (GRU)**. Read more in the [corresponding article](https://github.com/Microsoft/CNTK/wiki/GRUs-on-CNTK-with-BrainScript).
 
