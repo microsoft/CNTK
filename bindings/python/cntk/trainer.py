@@ -1,3 +1,4 @@
+
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -33,12 +34,14 @@ class Trainer(cntk_py.Trainer):
         model = sanitize_function(model)
         loss_function = sanitize_function(loss_function)
         eval_function = sanitize_function(eval_function)
+        if not isinstance(parameter_learners, list):
+            parameter_learners = [parameter_learners]
 
         if distributed_trainer:
             super(Trainer, self).__init__(model, loss_function, eval_function,
                 parameter_learners, distributed_trainer.data)
         else:
-            super(Trainer, self).__init__(model, loss_function, eval_function,
+        super(Trainer, self).__init__(model, loss_function, eval_function,
                 parameter_learners)
 
     def train_minibatch(self, arguments, outputs=None, device=None):

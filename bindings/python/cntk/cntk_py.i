@@ -1257,7 +1257,7 @@ StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and
 # in case of multiple outputs return the function, not the variable
 def get_output_and_keep_reference(self):
     variable = self._output()    
-    variable.owner = self
+    variable.__owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
 
