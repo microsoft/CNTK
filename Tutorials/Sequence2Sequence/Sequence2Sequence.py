@@ -105,11 +105,10 @@ def create_model():
             recurrence_hookH = past_value
             recurrence_hookC = past_value
         else:
-            isFirst = sequence.is_first(label_sequence)
             recurrence_hookH = lambda operand: element_select(
-                isFirst, thought_vector_broadcastH, past_value(operand))
+                is_first_label, thought_vector_broadcastH, past_value(operand))
             recurrence_hookC = lambda operand: element_select(
-                isFirst, thought_vector_broadcastC, past_value(operand))
+                is_first_label, thought_vector_broadcastC, past_value(operand))
 
         (decoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
             decoder_outputH.output, hidden_dim, hidden_dim, recurrence_hookH, recurrence_hookC)
