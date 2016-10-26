@@ -65,6 +65,6 @@ def run_distributed_trainer(tmpdir, quantized):
     assert isinstance(trainer.parameter_learners[0], Learner)
 
 def test_distributed(tmpdir, is_1bit_sgd):
-    run_distributed_trainer(tmpdir, quantized=use_1bit_sgd)
+    run_distributed_trainer(tmpdir, quantized=is_1bit_sgd)
     distributed.Communicator.finalize()
     

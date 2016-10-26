@@ -13,7 +13,7 @@ _DEFAULT_DEVICE_ID = -1
 def pytest_addoption(parser):
     parser.addoption("--deviceid", action="append", default=[_DEFAULT_DEVICE_ID],
                      help="list of device ids to pass to test functions")
-    parser.addoption("--is1bitsgd", action="append", default=[0],
+    parser.addoption("--is1bitsgd", action="append", default=["0"],
                      help="whether 1-bit SGD is used")
 
 DEVICE_MAP = {
