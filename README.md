@@ -1,18 +1,24 @@
 # Latest news
-##*2016-10-25.* New CNTK Name, new Web Site and V 2.0 Beta 1 Release  
+*2016-10-25.* New CNTK Name, new Web Site and V 2.0 Beta 1 Release  
 
 CNTK becomes **The Microsoft Cognitive Toolkit**. See more at our [new Web Site](https://www.microsoft.com/en-us/research/product/cognitive-toolkit/).
+
+With the today's Release we start delivering CNTK V2 - a major upgrade of Microsoft Cognitive Toolkit.
+
+Expect a set of Beta Releases in the Coming Weeks.
 
 Highlights of this Release:
 * CNTK can now be used as a library with [brand new C++ and Python APIs](https://github.com/microsoft/cntk/wiki/CNTK-Library-API)
 * New Python Examples and Tutorials
+* Support of Protocol Buffers serialization
 * Support of Fast R-CNN algorithm
+* New automated installation procedures
 * Improvements in CNTK Evaluation library including support of CNTK APIs
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_1_Release_Notes). You will find there links to the materials about the new features.  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-
-##*2016-10-03.* V 1.7.2 Binary release  
+*2016-10-03.* V 1.7.2 Binary release  
 **This is a Hot Fix Release. It affects all users of Model Evaluation Library**
 
 If you are NOT using Model Evaluation Library you may skip this release.  
@@ -20,8 +26,7 @@ If you ARE using Model Evaluation Library we **strongly recommend** installing v
 
 See [Release Notes](https://github.com/Microsoft/CNTk/wiki/CNTK_1_7_2_Release_Notes) for details.
 
-
-##*2016-09-28.* V 1.7.1 Binary release  
+*2016-09-28.* V 1.7.1 Binary release  
 Highlights of this Release:
 * Two Breaking Changes related to Layers library default initialization and ```fsAdagrad``` gradient-normalization scheme
 * Improvements in BrainScript
@@ -33,26 +38,22 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_1_Release_Notes) (including the full list of bugs fixed)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-
-##*2016-08-31.* V 1.7 Binary release  
+*2016-08-31.* V 1.7 Binary release  
 Highlights of this Release:
-* Improvements in BrainScript (New library of predefined common layer types, Support of cuDNN5 RNN and Common random-initialization types, improved handling of GRUs)
-* Support of NVIDIA cuDNN 5.1
-* Improvements in Readers and Deserializers
-* Additions to Evaluator Library (Eval Client Sample, Strong Name for EvalWrapper)
-* New in Unit Tests (Linux support, Randomization engines)
+* Improvements in BrainScript (new library of predefined common layer types; common random-initialization types; GRUs)
+* Support of NVIDIA cuDNN 5.1 and cuDNN RNN
+* Improvements in readers and deserializers
+* Additions to Evaluator library (Eval Client Sample, strong name for EvalWrapper)
+* New unit tests incl. Linux support
 * Python API Preview (since V.1.5)
 * Multiple bug fixes
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_Release_Notes)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
+*2016-08-29.* Two new Tutorials are available:  
+[Image recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (CIFAR-10) and [Language understanding](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Language-Understanding) (ATIS).
 
-##*2016-08-29.* Two new Tutorials are available:  
-[Image recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (CIFAR-10) and [Language understanding](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (ATIS).
-
-
-*2016-08-10.* We have significantly simplified handling of **Gated Recurrent Units (GRU)**. Read more in the [corresponding article](https://github.com/Microsoft/CNTK/wiki/GRUs-on-CNTK-with-BrainScript).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
