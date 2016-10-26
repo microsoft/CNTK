@@ -17,6 +17,6 @@ sed 's/^/MPI Rank 2: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank2
 sed 's/^/MPI Rank 3: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank3
 
 # Delete the test data if copied
-#[[ "$Copied" -eq "1" ]] && rm -rf "$DataDir"
+[[ "$Copied" -eq "1" ]] && rm -rf "$DataDir"
 
 exit $ExitCode
