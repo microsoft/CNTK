@@ -9,7 +9,7 @@ Instances=4
 NumCPUThreads=$(threadsPerInstance $Instances)
 
 # cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
-cntkmpirun "-n $Instances" 03_ResNet-parallel.cntk "numCPUThreads=$NumCPUThreads precision=float parallelTrain=true SimpleMultiGPU=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=32]]]]"
+cntkmpirun "-n $Instances" 03_ResNet-parallel.cntk "numCPUThreads=$NumCPUThreads precision=float deviceId=auto parallelTrain=true SimpleMultiGPU=[SGD=[ParallelTrain=[DataParallelSGD=[gradientBits=32]]]]"
 ExitCode=$?
 sed 's/^/MPI Rank 0: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank0
 sed 's/^/MPI Rank 1: /' $TEST_RUN_DIR/"$LogFileName"_Train.logrank1
