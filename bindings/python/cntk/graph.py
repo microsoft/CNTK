@@ -61,10 +61,10 @@ def build_graph(node, visitor, accum, visited, dot_object):
             child_node = pydot.Node(child.uid, label=child.uid + '\nshape:\n' + str(child.shape))
             dot_object.add_node(child_node)
             dot_object.add_edge(pydot.Edge(child_node, cur_node))
-            dfs_walk_plot(child, visitor, accum, visited, dot_object)
+            build_graph(child, visitor, accum, visited, dot_object)
 
     elif hasattr(node, 'is_output') and node.is_output:
-        dfs_walk_plot(node.owner, visitor, accum, visited, dot_object)
+        build_graph(node.owner, visitor, accum, visited, dot_object)
 
     if visitor(node):
         accum.append(node)
@@ -84,7 +84,7 @@ def png_graph(model, path):
                              height=.85, width=.85, fontsize=10)
 
     accum = []
-    dfs_walk_plot(model, lambda x: True, accum, set(), dot_object)
+    build_graph(model, lambda x: True, accum, set(), dot_object)
     dot_object.write_png(path + '\\network_graph.png', prog='dot')
 
 
