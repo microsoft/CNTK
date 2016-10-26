@@ -190,3 +190,7 @@ if __name__ == '__main__':
     error = cifar_resnet(data_path, load_model_filename=start_model, communicator=communicator, run_test=True, num_epochs=num_parallel_epochs)
     
     print("Error: %f" % error)
+    
+    # finalize MPI if there's more than 1 worker
+    if (len(workers)>1):
+        distributed.Communicator.finalize()
