@@ -350,134 +350,159 @@ public:
         }
     }
 
-	/// <summary>Evaluates the model against the given bitmap input, and retrieves the output layer data</summary>
-	/// <param name="outputKey"></param>
-	/// <returns>Results for specified layer</returns>
-	List<ElemType>^ EvaluateImage(Bitmap^ image, String^ outputKey)
-	{
-		if (m_eval == nullptr)
-		{
-			throw gcnew ObjectDisposedException("Object has been disposed.");
-		}
-		bool hasAlphaChannel;
-		if (image->PixelFormat == PixelFormat::Format24bppRgb)
-		{
-			hasAlphaChannel = false;
-		}
-		else if (image->PixelFormat == PixelFormat::Format32bppArgb)
-		{
-			hasAlphaChannel = true;
-		}
-		else
-		{
-			throw gcnew ArgumentException("Pixel format of input bitmap is not recognized, must be one of { Format24bppRgb, Format32bppArgb}.");
-		}
-		int imageWidth = image->Width;
-		int imageHeight = image->Height;
-		// The total number of pixels in one channel of the image.
-		int channelStride = imageWidth * imageHeight;
-		// The total number of bytes in all channels of the image.
-		int numBytes = channelStride * 3;
-		auto outDims = GetNodeDimensions(NodeGroup::Output);
-		int outputSize = outDims[outputKey];
-		auto outputList = gcnew List<ElemType>(outputSize);
-		auto inDims = GetNodeDimensions(NodeGroup::Input);
-		int inputSize = inDims["features"];
-		// #pixels * #channels in the image must match the input dimension of the network.
-		if (inputSize != numBytes)
-		{
-			auto message = String::Format("Input image has invalid size. Expected an image with Width * Height = {0}, but got Width = {1}, Height = {2}",
-				inputSize / 3, imageWidth, imageHeight);
-			throw gcnew ArgumentException(message);
-		}
+    /// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
+    /// <param name="inputs"></param>
+    /// <param name="outputKey"></param>
+    /// <param name="outputSize"></param>
+    /// <returns>Results for specified layer</returns>
+    __declspec(deprecated) List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey, int outputSize)
+    {
+        List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
+        for (int i = 0; i < outputSize; i++)
+        {
+            outputs->Add(*(gcnew ElemType));
+        }
 
-		auto rect = gcnew System::Drawing::Rectangle(0, 0, imageWidth, imageHeight);
-		auto bitmap = image->LockBits(*rect, ImageLockMode::ReadOnly, image->PixelFormat);
-		auto bytes = reinterpret_cast<byte*>(bitmap->Scan0.ToPointer());
-		int bitmapStride = bitmap->Stride;
-		std::vector<ElemType>* featureVector = new std::vector<ElemType>(numBytes);
-		int index;
-		for (int c = 0; c < 3; c++)
-		{
-			for (int h = 0; h < imageHeight; h++)
-			{
-				for (int w = 0; w < imageWidth; w++)
-				{
-					if (hasAlphaChannel)
-					{
-						index = h * bitmapStride + w * 4 + c;
-					}
-					else
-					{
-						index = h * bitmapStride + w * 3 + c;
-					}
-					(*featureVector)[channelStride * c + imageWidth * h + w] = (ElemType)(bytes[index]);
-				}
-			}
-		}
-		image->UnlockBits(bitmap);
-		std::map<std::wstring, std::vector<ElemType>*> stdInputs;
-		std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
-		try
-		{
-			std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
-			const WCHAR inputKey[] = L"features";
-			shared_ptr<std::vector<ElemType>> f2(featureVector);
-			stdInputs.insert(MapEntry(inputKey, f2.get()));
+        Dictionary<String^, List<ElemType>^>^ outputMap = gcnew Dictionary<String^, List<ElemType>^>();
+        outputMap->Add(outputKey, outputs);
 
-			// This is copied directly from the above Evaluate method, but could be 
-			// simplified if we always want to restrict to 1 output value only.
-			pin_ptr<const WCHAR> key = PtrToStringChars(outputKey);
-			// Do we have to initialize the output nodes?
-			shared_ptr<std::vector<ElemType>> ptr(new std::vector<ElemType>(outputSize));
-			sharedOutputVectors.push_back(ptr);
-			stdOutputs.insert(MapEntry(key, ptr.get()));
-			try
-			{
-				m_eval->Evaluate(stdInputs, stdOutputs);
-			}
-			catch (const exception& ex)
-			{
-				throw GetCustomException(ex);
-			}
+        Evaluate(inputs, outputMap);
 
-			auto &refVec = *stdOutputs[key];
-			for (auto& vec : refVec)
-			{
-				// List has been pre-allocated to the right size,
-				// so this should be fast.
-				outputList->Add(vec);
-			}
-		}
-		catch (Exception^)
-		{
-			throw;
-		}
-		return outputList;
-	}
+        return outputMap[outputKey];
+    }
 
-	/// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
-	/// <param name="inputs"></param>
-	/// <param name="outputKey"></param>
-	/// <param name="outputSize"></param>
-	/// <returns>Results for specified layer</returns>
-	__declspec(deprecated) List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey, int outputSize)
-	{
-		List<ElemType>^ outputs = gcnew List<ElemType>(outputSize);
-		for (int i = 0; i < outputSize; i++)
-		{
-			outputs->Add(*(gcnew ElemType));
-		}
+    /// <summary>Evaluates the model against the given bitmap input, and retrieves the output layer data.
+    /// The image is expected to be in RGB format, and must already be re-sized to match the network size.
+    /// The feature vector that is generated will contain 3 channels.</summary>
+    /// <param name="image">The image to work with.</param>
+    /// <param name="outputKey">The name of the output node to retrieve.</param>
+    /// <returns>Results for specified layer</returns>
+    List<ElemType>^ EvaluateRgbImage(Bitmap^ image, String^ outputKey)
+    {
+        if (m_eval == nullptr)
+        {
+            throw gcnew ObjectDisposedException("Object has been disposed.");
+        }
+        bool hasAlphaChannel;
+        if (image->PixelFormat == PixelFormat::Format24bppRgb)
+        {
+            hasAlphaChannel = false;
+        }
+        else if (image->PixelFormat == PixelFormat::Format32bppArgb)
+        {
+            hasAlphaChannel = true;
+        }
+        else
+        {
+            throw gcnew ArgumentException("Pixel format of input bitmap is not recognized, must be one of { Format24bppRgb, Format32bppArgb}.");
+        }
+        int imageWidth = image->Width;
+        int imageHeight = image->Height;
+        // The total number of pixels in one channel of the image.
+        int channelStride = imageWidth * imageHeight;
+        // The number of color channels that will be fed into the network.
+        int numChannels = 3;
+        // The total number of pixels in all channels of the image.
+        int numPixels = channelStride * numChannels;
+        // A dictionary that contains the dimensions of each output node.
+        auto outDims = GetNodeDimensions(NodeGroup::Output);
+        // The dimensions of the requested output node.
+        int outputSize = outDims[outputKey];
+        // A dictionary that contains the names of input nodes, and their dimensionality.
+        auto inDims = GetNodeDimensions(NodeGroup::Input);
+        if (inDims->Count != 1)
+        {
+            throw gcnew InvalidOperationException("The loaded network must contain exactly 1 input node.");
+        }
+        // Read out the single element in the dictionary. The key is the input node name,
+        // value is the dimensionality.
+        auto enumerator = inDims->GetEnumerator();
+        enumerator.MoveNext();
+        String^ inputNodeName = enumerator.Current.Key;
+        int inputSize = enumerator.Current.Value;
+        // #pixels * #channels in the image must match the input dimension of the network.
+        if (inputSize != numPixels)
+        {
+            auto message = String::Format("Input image has invalid size. Expected an image with Width * Height = {0}, but got Width = {1}, Height = {2}",
+                inputSize / numChannels, imageWidth, imageHeight);
+            throw gcnew ArgumentException(message);
+        }
+        // Get the native bitmap structure that is underlying the Bitmap object:
+        // Need to lock the whole image into memory.
+        auto rect = gcnew System::Drawing::Rectangle(0, 0, imageWidth, imageHeight);
+        auto bitmap = image->LockBits(*rect, ImageLockMode::ReadOnly, image->PixelFormat);
+        // The byte array that contains the bitmap.
+        auto bytes = reinterpret_cast<byte*>(bitmap->Scan0.ToPointer());
+        // The offset to go from one scanline of the image to the next one.
+        int bitmapStride = bitmap->Stride;
+        // The feature vector that will be fed into the network.
+        auto featureVector = new std::vector<ElemType>(numPixels);
+        int index;
+        // Copy from the Bitmap byte array to the arrangement that CNTK expects:
+        // First comes the R plane, then G, then B.
+        for (int c = 0; c < 3; c++)
+        {
+            for (int h = 0; h < imageHeight; h++)
+            {
+                for (int w = 0; w < imageWidth; w++)
+                {
+                    // In the input image, each pixel is represented
+                    // by R, G, B, [A] bytes
+                    if (hasAlphaChannel)
+                    {
+                        index = h * bitmapStride + w * 4 + c;
+                    }
+                    else
+                    {
+                        index = h * bitmapStride + w * 3 + c;
+                    }
+                    (*featureVector)[channelStride * c + imageWidth * h + w] = (ElemType)(bytes[index]);
+                }
+            }
+        }
+        image->UnlockBits(bitmap);
 
-		Dictionary<String^, List<ElemType>^>^ outputMap = gcnew Dictionary<String^, List<ElemType>^>();
-		outputMap->Add(outputKey, outputs);
+        std::map<std::wstring, std::vector<ElemType>*> stdInputs;
+        std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
+        // The CLI structure that will be returned to the caller.
+        auto outputList = gcnew List<ElemType>(outputSize);
+        try
+        {
+            std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
+            pin_ptr<const WCHAR> inputKey = PtrToStringChars(inputNodeName);
+            shared_ptr<std::vector<ElemType>> f2(featureVector);
+            stdInputs.insert(MapEntry(inputKey, f2.get()));
 
-		Evaluate(inputs, outputMap);
+            pin_ptr<const WCHAR> key = PtrToStringChars(outputKey);
+            // Do we have to initialize the output nodes?
+            shared_ptr<std::vector<ElemType>> ptr(new std::vector<ElemType>(outputSize));
+            sharedOutputVectors.push_back(ptr);
+            stdOutputs.insert(MapEntry(key, ptr.get()));
+            try
+            {
+                m_eval->Evaluate(stdInputs, stdOutputs);
+            }
+            catch (const exception& ex)
+            {
+                throw GetCustomException(ex);
+            }
 
-		return outputMap[outputKey];
-	}
+            auto &refVec = *stdOutputs[key];
+            for (auto& vec : refVec)
+            {
+                // List has been pre-allocated to the right size,
+                // so this should be fast.
+                outputList->Add(vec);
+            }
+        }
+        catch (Exception^)
+        {
+            throw;
+        }
+        return outputList;
+    }
 
-	/// <summary>Evaluates the model against input data and retrieves the desired output layer data</summary>
+    /// <summary>Evaluates the model against input data and retrieves the desired output layer data</summary>
     /// <param name="inputs"></param>
     /// <param name="outputKey"></param>
     /// <returns>Results for requested layer</returns>
@@ -658,7 +683,7 @@ void emit()
     f.Evaluate(nullptr, nullDictF);
     f.Evaluate(nullptr, "");
     f.Evaluate("");
-	f.EvaluateImage(nullptr, "");
+    f.EvaluateRgbImage(nullptr, "");
     f.CreateNetwork("");
     f.CreateNetwork("", 0);
     f.CreateNetwork("", nullptr);
@@ -670,8 +695,8 @@ void emit()
     d.Evaluate(nullptr, nullDictD);
     d.Evaluate(nullptr, "");
     d.Evaluate("");
-	f.EvaluateImage(nullptr, "");
-	d.CreateNetwork("");
+    d.EvaluateRgbImage(nullptr, "");
+    d.CreateNetwork("");
     d.CreateNetwork("", 0);
     d.CreateNetwork("", nullptr);
     d.CreateNetwork("", 0,nullptr);

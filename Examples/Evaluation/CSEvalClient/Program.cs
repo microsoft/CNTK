@@ -15,6 +15,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.MSR.CNTK.Extensibility.Managed;
+using System.Drawing.Imaging;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 {
@@ -63,7 +64,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         private static void Main(string[] args)
         {
             initialDirectory = Environment.CurrentDirectory;
-            
+
             Console.WriteLine("====== EvaluateModelSingleLayer ========");
             EvaluateModelSingleLayer();
 
@@ -408,14 +409,33 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
 
                     Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
-
                     var resized = bmp.Resize(224, 224, true);
+                    // Measure the time it takes to create the feature vector in
+                    // managed code, versus later in native.
+                    var s = new Stopwatch();
+                    s.Start();
+
                     var resizedCHW = resized.ParallelExtractCHW();
                     var inputs = new Dictionary<string, List<float>>() { {inDims.First().Key, resizedCHW } };
 
                     // We can call the evaluate method and get back the results (single layer output)...
                     var outDims = model.GetNodeDimensions(NodeGroup.Output);
                     outputs = model.Evaluate(inputs, outDims.First().Key);
+                    var evalManaged = s.ElapsedMilliseconds;
+                    s.Restart();
+                    // Now evaluate using the alternative API, where we directly pass the
+                    // native bitmap data to the unmanaged code.
+                    var outputs2 = model.EvaluateRgbImage(resized, outDims.First().Key);
+                    var evalNative = s.ElapsedMilliseconds;
+                    Console.WriteLine("Time spent in model.Evaluate: {0}ms", evalManaged);
+                    Console.WriteLine("Time spent in model.EvaluateRgbImage: {0}ms", evalNative);
+                    Console.WriteLine("Comparing returned node outputs");
+                    Console.WriteLine("Evaluate {0} elems, EvaluateRgbImage {1} elems", outputs.Count, outputs2.Count);
+                    var elems = Math.Min(outputs.Count, outputs2.Count);
+                    foreach (var i in Enumerable.Range(0, Math.Min(10, elems)))
+                    {
+                        Console.WriteLine("Evaluate[{0}]: {1}, EvaluateRgbImage[{0}]: {2}", i, outputs[i], outputs2[i]);
+                    }
                 }
 
                 // Retrieve the outcome index (so we can compare it with the expected index)
