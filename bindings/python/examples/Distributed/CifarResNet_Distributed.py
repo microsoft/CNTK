@@ -190,5 +190,3 @@ if __name__ == '__main__':
     error = cifar_resnet(data_path, load_model_filename=start_model, communicator=communicator, run_test=True, num_epochs=num_parallel_epochs)
     
     print("Error: %f" % error)
-
-    distributed.Communicator.finalize()

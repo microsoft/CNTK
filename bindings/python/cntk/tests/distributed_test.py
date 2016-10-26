@@ -66,5 +66,6 @@ def run_distributed_trainer(tmpdir, quantized):
 
 def test_distributed(tmpdir, is_1bit_sgd):
     run_distributed_trainer(tmpdir, quantized=is_1bit_sgd)
-    distributed.Communicator.finalize()
+	# Don't run this as MPI is not re-enterable in pytest process
+    #distributed.Communicator.finalize()
     
