@@ -80,6 +80,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     activation = (x=>x),
                     init = 'glorotUniform',
                     initValueScale = 1,          # TODO: rename to initScale
+					initBias = 0,
                     #reductionRank = 1,          # TODO: support this
                     stride = 1, pad = false,
                     lowerPad = 0, upperPad = 0,
@@ -92,7 +93,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     filterRank = Length (filterShape)
     kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, Inferred)) # kernel := filter plus reductionDims
     W = ParameterTensor{_ConcatArrays (kernelShape, outputChannelsShape), init = init, initValueScale = initValueScale, initFilterRank = filterRank, initOutputRank = -1}  # [ W x H x C x K ]
-    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = 0)                                 # [ 1 x 1 x     K ]
+    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)                                                       # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     transpose = false # TODO: support this
     apply (x) = {
