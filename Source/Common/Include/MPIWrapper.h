@@ -326,6 +326,7 @@ public:
 
     static void DeleteInstance()
     {
+        s_initialized = false;
         s_mpi = nullptr;
     }
 
