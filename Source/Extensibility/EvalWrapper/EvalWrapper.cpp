@@ -11,7 +11,6 @@
 #include <utility>
 #include <vector>
 #include <memory>
-#include <iostream>
 #include <msclr\marshal_cppstd.h>
 
 #include "CNTKException.h"

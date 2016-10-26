@@ -15,7 +15,6 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.MSR.CNTK.Extensibility.Managed;
-using System.Drawing.Imaging;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 {
