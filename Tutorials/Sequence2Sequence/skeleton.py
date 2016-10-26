@@ -93,22 +93,10 @@ def create_model():
 ########################
 
 def train(train_reader, valid_reader, vocab, i2w, model, max_epochs):
-    
-    # do some hooks that we won't need in the future
-    raw_labels = find_arg_by_name('raw_labels', model)    
-    
-    label_sequence = find_nodes_by_name(model, 'label_sequence')[0]    
-    decoder_history_hook = find_nodes_by_name(model, 'decoder_history_hook')[0]  
-        
+            
     # Criterion nodes
     ce = cross_entropy_with_softmax(model, label_sequence)
     errs = classification_error(model, label_sequence)
-
-    # network output for decoder history
-    net_output = hardmax(model)
-
-    # make a clone of the graph where the ground truth is replaced by the network output
-    new_model = model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
 
     # Instantiate the trainer object to drive the model training
     lr = 0.007
@@ -120,56 +108,21 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs):
     learner = momentum_sgd(model.parameters, lr, m_schedule, clipping_threshold_per_sample, gradient_clipping_with_truncation)
     trainer = Trainer(model, ce, errs, learner)
 
-    # Get minibatches of sequences to train with and perform model training
-    i = 0
-    mbs = 0
-    epoch_size = 908241
-    training_progress_output_freq = 500
-
     # bind inputs to data from readers
     train_bind = {
         find_arg_by_name('raw_input' , model) : train_reader.streams.features,
         find_arg_by_name('raw_labels', model) : train_reader.streams.labels
     }
-    valid_bind = {
-        find_arg_by_name('raw_input' , new_model) : valid_reader.streams.features,
-        find_arg_by_name('raw_labels', new_model) : valid_reader.streams.labels
-    }
 
-    for epoch in range(max_epochs):
-        loss_numer = 0
-        metric_numer = 0
-        denom = 0
+    training_progress_output_freq = 50
+    for i in range(1000):
+        # get next minibatch of training data
+        mb_train = train_reader.next_minibatch(minibatch_size, input_map=train_bind)
+        trainer.train_minibatch(mb_train)
 
-        while i < (epoch+1) * epoch_size:
-            # get next minibatch of training data
-            mb_train = train_reader.next_minibatch(minibatch_size, input_map=train_bind)
-            trainer.train_minibatch(mb_train)
-
-            # collect epoch-wide stats
-            samples = trainer.previous_minibatch_sample_count
-            loss_numer += trainer.previous_minibatch_loss_average * samples
-            metric_numer += trainer.previous_minibatch_evaluation_average * samples
-            denom += samples
-
-            # every N MBs evaluate on a test sequence to visually show how we're doing
-            if mbs % training_progress_output_freq == 0:
-                mb_valid = valid_reader.next_minibatch(minibatch_size, input_map=valid_bind)
-                e = new_model.eval(mb_valid)
-                print_sequences(e, i2w)
-
-            print_training_progress(trainer, mbs, training_progress_output_freq)
-            i += mb_train[raw_labels].num_samples
-            mbs += 1
-
-        print("--- EPOCH %d DONE: loss = %f, errs = %f ---" % (epoch, loss_numer/denom, 100.0*(metric_numer/denom)))
-
-        if save_model:
-            # save the model every epoch
-            model_filename = os.path.join(model_dir, "model_epoch%d.dnn" % epoch)
-            save_model(new_model, model_filename)
-            print("Saved model to '%s'" % model_filename)
-
+        # collect epoch-wide stats
+        print_training_progress(trainer, mbs, training_progress_output_freq)
+        
 ########################
 # helper functions     #
 ########################
