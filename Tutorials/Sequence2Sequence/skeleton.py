@@ -67,7 +67,7 @@ def create_model():
 
 
     # Encoder
-    encoder_outputH = 
+    encoder_output_h = 
 
 
 
@@ -75,27 +75,11 @@ def create_model():
 
 
     # Decoder
-    decoder_history_hook = alias(label_sequence, name='decoder_history_hook') # copy label_sequence
+    decoder_input = 
+    
+    decoder_output_h = 
 
-    decoder_input = element_select(is_first_label, label_sentence_start_scattered, past_value(
-        decoder_history_hook))
 
-    decoder_outputH = stabilize(decoder_input)
-    for i in range(0, num_layers):
-        if (i > 0):
-            recurrence_hookH = past_value
-            recurrence_hookC = past_value
-        else:
-            isFirst = sequence.is_first(label_sequence)
-            recurrence_hookH = lambda operand: element_select(
-                isFirst, thought_vector_broadcastH, past_value(operand))
-            recurrence_hookC = lambda operand: element_select(
-                isFirst, thought_vector_broadcastC, past_value(operand))
-
-        (decoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
-            decoder_outputH.output, hidden_dim, hidden_dim, recurrence_hookH, recurrence_hookC)
-
-    decoder_output = decoder_outputH
 
     # Softmax output layer
     z = 
