@@ -19,7 +19,7 @@ namespace CNTK
         static const std::wstring MinibatchSourcePositionAttributeName;
 
     public:
-        CompositeMinibatchSource(const Dictionary& configuration);
+        CompositeMinibatchSource(const Dictionary& configuration, DistributedCommunicatorPtr communicator);
 
         virtual const std::unordered_set<StreamInformation>& StreamInfos() override { return m_streamInfos; }
 
@@ -41,6 +41,7 @@ namespace CNTK
         }
 
     private: 
+        DistributedCommunicatorPtr m_communicator;
         std::unordered_set<StreamInformation> m_streamInfos;
         bool m_epochEndReached;
         size_t m_prevMinibatchSize;

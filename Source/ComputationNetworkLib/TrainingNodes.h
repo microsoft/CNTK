@@ -1185,7 +1185,7 @@ protected:
 // Provides random sampling functionality.
 //
 // Parameters:
-// * Input(0) Sampling weight vector: Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0) Sampling weight vector: Matrix of shape [numClasses x 1] providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1197,7 +1197,7 @@ class RandomSampleNodeBase : public ComputationNodeNonLooping<ElemType>, public 
     static const std::wstring TypeName(){return L"RandomSampleNodeBase";}
 
 public:
-    RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+    RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates)
     {
         SetRandomSeed((unsigned long)CreateUniqId());
@@ -1221,36 +1221,36 @@ protected:
 
     // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
     // to get the expected number of samples.
-    const std::vector<size_t> RunSampling(long& nTries);
+    const std::vector<size_t> RunSampling(size_t& nTries);
 
 public:
-    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override {
-        // This node does not propagate gradients.
-    }
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override{}
-
+    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override {} // This node does not propagate gradients.
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false;}
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override{}
+    virtual bool GetAllowDuplicates() const { return m_allowDuplicates; }
+    virtual size_t GetNumSamples() const { return m_sizeOfSampledSet; }
 
 protected:
     bool m_allowDuplicates; // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
-    int m_sizeOfSampledSet; // Requested size of sample in case of run-mode = CREATE_SAMPLES.
+    size_t m_sizeOfSampledSet; // Requested size of sample in case of run-mode = CREATE_SAMPLES.
     std::vector<double> m_samplingWeightsPrefixSum;
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleNode(samplingWeights, sizeOfSampledSet, allowDuplicates):
-// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix of shape [nClasses x sizeOfSampledSet] where nClasses is the number of classes (categories) to choose from.
+// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix 
+// of shape [numClasses x sizeOfSampledSet] where numClasses is the number of classes (categories) to choose from.
 // The output has no dynamic axis.
-// The samples are drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
+// The samples are drawn with a probability proportional to the weights w of the vector 'samplingWeights' : p(w_i) = w_i / sum_k(w_k)
 // We get one set of samples for per minibatch.
+// Multiply a 'numClasses' - dimensional vector with this matrix to randomly sample 'sizeOfSampledSet' values from it.
+// The resulting vector has a dimension of 'sizeOfSampledSet'.Currently, only rank - 1 tensors are supported.
 // Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
 //
 // Parameters:
-// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0): Sampling weight vector. Matrix of shape [numClasses x 1] providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1261,7 +1261,7 @@ class RandomSampleNode : public RandomSampleNodeBase<ElemType>
     static const std::wstring TypeName(){ return L"RandomSample"; }
 
 public:
-    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
     {}
 
@@ -1279,13 +1279,13 @@ public:
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleInclusionFrequencyNode(samplingWeights, sizeOfSampledSet, allowDuplicates): 
-// Intended uses are e.g. sampled softmax, noise contrastive estimation etc where it is used together with RandomSampleNode.
+// Intended uses are e.g. sampled softmax, noise contrastive estimation etc. where it is used together with RandomSampleNode.
 // This node estimates how often each class will occur in a set sampled with RandomSampleNode(...) on the average. 
 // If the sampling mode 'allowDuplicates = true' is choosen this is trivial and exact. 
 // For allowDuplicates = false we get some estimate. The value is updated only when the input weights change.
 //
 // Parameters:
-// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0): Sampling weight vector. Matrix of shape (numClasses x 1) providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1295,7 +1295,7 @@ class RandomSampleInclusionFrequencyNode : public RandomSampleNodeBase<ElemType>
     typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName(){ return L"RandomSampleInclusionFrequency"; }
 public:
-    RandomSampleInclusionFrequencyNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+    RandomSampleInclusionFrequencyNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
     {}
 
@@ -2229,9 +2229,9 @@ public:
     {
     }
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
-                           double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind) :
+                           double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind, size_t samplesSeen = 0) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(0),
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(samplesSeen),
         m_convertRunningVariancePending(false)
     {
     }
@@ -2350,6 +2350,8 @@ public:
             node->m_useCntkEngine = m_useCntkEngine;
         }
     }
+
+    size_t GetSamplesSeen() const { return m_samplesSeen; }
 
 private: // time-constant conversions
 
@@ -2560,7 +2562,6 @@ public:
                 runInvStdDev.AssignElementPowerOf(runInvStdDev, 2);
                 runInvStdDev.ElementInverse();
                 runInvStdDev += (float) m_epsilon;
-                runInvStdDev.Print();
                 m_convertRunningVariancePending = false;
             }
 

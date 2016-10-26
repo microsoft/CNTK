@@ -15,9 +15,11 @@
 // ^^ workaround until this line in AggregateGradientsImpl() gets updated: assert(headerCPU->evalErrors[i] == 0);
 #include "AllReduceDistGradAggregator.h"
 #include "BlockMomentumSGD.h"
+#include "V2AllReduceDistGradAggregator.h"
 #endif
 
 #include "SimpleDistGradAggregator.h"
+#include "V2SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
 
 #include <map>
@@ -931,7 +933,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     EpochCriterion         epochCriterionLastLogged  = epochCriterion;
     vector<EpochCriterion> epochEvalErrorsLastLogged = epochEvalErrors;
 
-    // NOTE: For ResNet, the regularization in BatchNormalization should be disable.
+    // NOTE: For ResNet, the regularization in BatchNormalization should be disabled.
     if (m_disableRegInBatchNormalization) {
         let bnNodes = net->GetNodesWithType(L"BatchNormalization");
         for (auto &node : bnNodes)
@@ -1930,14 +1932,23 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int t
         fprintf(stderr, "Initializing dataParallelSGD for %d-bit quantization.\n", numGradientBits);
 
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
-    m_distGradAgg = std::make_shared<AllReduceDistGradAggregator<ElemType>>(m_mpi, numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+    if (Globals::UseV2Aggregator())
+    {
+        auto communicator = ::CNTK::QuantizedMPICommunicator(m_zeroThresholdFor1Bit, true, numGradientBits);
+        m_distGradAgg = std::make_shared<V2AllReduceDistGradAggregator<ElemType>>(communicator, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+    }
+    else
+        m_distGradAgg = std::make_shared<AllReduceDistGradAggregator<ElemType>>(m_mpi, numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
 #else
     if (numGradientBits != (8 * sizeof(ElemType)))
     {
         RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
     }
 
-    m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
+    if (Globals::UseV2Aggregator()) // Currently used to check V2 against baselines.
+        m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace, ::CNTK::MPICommunicator());
+    else
+        m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
 #endif // !CNTK_PARALLEL_TRAINING_SUPPORT
 
     m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) { DistGradHeader::Destroy(ptr); });

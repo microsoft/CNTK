@@ -4,18 +4,24 @@
 # for full license information.
 # ==============================================================================
 
-import numpy as np
 import sys
 import os
-import time
-from cntk import Trainer, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk import Trainer, Axis #, text_format_minibatch_source, StreamConfiguration
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, set_default_device
 from cntk.learner import sgd
-from cntk.ops import input_variable, cross_entropy_with_softmax, combine, classification_error
+from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, select_last, print_training_progress
+
+# Creates the reader
+def create_reader(path, is_training, input_dim, label_dim):
+    return MinibatchSource(CTFDeserializer(path, StreamDefs(
+        features = StreamDef(field='x', shape=input_dim,   is_sparse=True),
+        labels   = StreamDef(field='y', shape=label_dim,   is_sparse=False)
+    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
 
 # Defines the LSTM model for classifying sequences
 def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_dim, cell_dim):
@@ -27,7 +33,6 @@ def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_d
     return linear_layer(thought_vector, num_output_classes)
 
 # Creates and trains a LSTM sequence classification model
-
 def train_sequence_classifier(debug_output=False):
     input_dim = 2000
     cell_dim = 25
@@ -49,42 +54,29 @@ def train_sequence_classifier(debug_output=False):
 
     rel_path = r"../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
-    feature_stream_name = 'features'
-    labels_stream_name = 'labels'
 
-    mb_source = text_format_minibatch_source(path, [
-        StreamConfiguration(feature_stream_name, input_dim, True, 'x'),
-        StreamConfiguration(labels_stream_name, num_output_classes, False, 'y')], 0)
+    reader = create_reader(path, True, input_dim, num_output_classes)
 
-    features_si = mb_source[features]
-    labels_si = mb_source[label]
+    input_map = {
+        features : reader.streams.features,
+        label    : reader.streams.labels
+    }
 
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(classifier_output, ce, pe,
-                      [sgd(classifier_output.parameters, lr=0.0005)])
+                      sgd(classifier_output.parameters, lr=0.0005))
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 200
     training_progress_output_freq = 10
-    i = 0
 
     if debug_output:
         training_progress_output_freq = training_progress_output_freq/3
 
-    while True:
-        mb = mb_source.next_minibatch(minibatch_size)
-
-        if len(mb) == 0:
-            break
-
-        # Specify the mapping of input variables in the model to actual
-        # minibatch data to be trained with
-        arguments = {features: mb[features_si],
-                     label: mb[labels_si]}
-        trainer.train_minibatch(arguments)
-
+    for i in range(251):
+        mb = reader.next_minibatch(minibatch_size, input_map=input_map)
+        trainer.train_minibatch(mb)
         print_training_progress(trainer, i, training_progress_output_freq)
-        i += 1
 
     import copy
 

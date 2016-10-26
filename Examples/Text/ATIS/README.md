@@ -1,6 +1,6 @@
 # Build Language Understanding Models with CNTK
 
-This example demonstrates how to use build language understanding model with CNTK using ATIS data set. This example is similar to 
+This example demonstrates how to use build language understanding model with CNTK using ATIS data set. The recipeice in this example are in BrainScript. For Python click [here](https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/LanguageUnderstanding/LanguageUnderstanding.py).  This example is similar to 
 [SLU example](https://github.com/Microsoft/CNTK/tree/master/Examples/Text/Miscellaneous/SLU). They are different in that
   - CNTKTextFormatReader is used here, instead of LUSequenceReader
   - With CNTKTextFormatReader, the input format is much more flexible. In the example setting, sparse contextual feature vectors are explored

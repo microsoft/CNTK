@@ -1,0 +1,1 @@
+This content has moved, see [here](https://github.com/Microsoft/CNTK/wiki/CNTK-2.0-Python-API).

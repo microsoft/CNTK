@@ -15,7 +15,7 @@ class Axis(cntk_py.Axis):
     'input' variable also have two additional dynamic axes whose dimensions are
     known only when the variable is bound to actual data during compute time
     (viz. sequence axis and batch axis denoting the axis along which multiple
-            sequences are batched). 
+    sequences are batched).
 
     Axis parameters can also be negative, which allows to refere axis starting
     from the last axis. Please be aware that Axis objects work in a

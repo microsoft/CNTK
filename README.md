@@ -1,7 +1,18 @@
-# CNTK
+# Latest news
+##*2016-10-25.* New CNTK Name, new Web Site and V 2.0 Beta 1 Release  
 
-## Latest news
-*2016-10-03.* V 1.7.2 Binary release  
+CNTK becomes **The Microsoft Cognitive Toolkit**. See more at our [new Web Site](https://www.microsoft.com/en-us/research/product/cognitive-toolkit/).
+
+Highlights of this Release:
+* CNTK can now be used as a library with [brand new C++ and Python APIs](https://github.com/microsoft/cntk/wiki/CNTK-Library-API)
+* New Python Examples and Tutorials
+* Support of Fast R-CNN algorithm
+* Improvements in CNTK Evaluation library including support of CNTK APIs
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_1_Release_Notes). You will find there links to the materials about the new features.  
+
+
+##*2016-10-03.* V 1.7.2 Binary release  
 **This is a Hot Fix Release. It affects all users of Model Evaluation Library**
 
 If you are NOT using Model Evaluation Library you may skip this release.  
@@ -9,7 +20,8 @@ If you ARE using Model Evaluation Library we **strongly recommend** installing v
 
 See [Release Notes](https://github.com/Microsoft/CNTk/wiki/CNTK_1_7_2_Release_Notes) for details.
 
-*2016-09-28.* V 1.7.1 Binary release  
+
+##*2016-09-28.* V 1.7.1 Binary release  
 Highlights of this Release:
 * Two Breaking Changes related to Layers library default initialization and ```fsAdagrad``` gradient-normalization scheme
 * Improvements in BrainScript
@@ -21,7 +33,8 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_1_Release_Notes) (including the full list of bugs fixed)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-*2016-08-31.* V 1.7 Binary release  
+
+##*2016-08-31.* V 1.7 Binary release  
 Highlights of this Release:
 * Improvements in BrainScript (New library of predefined common layer types, Support of cuDNN5 RNN and Common random-initialization types, improved handling of GRUs)
 * Support of NVIDIA cuDNN 5.1
@@ -34,14 +47,16 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_Release_Notes)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-*2016-08-29.* Two new Tutorials are available:  
+
+##*2016-08-29.* Two new Tutorials are available:  
 [Image recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (CIFAR-10) and [Language understanding](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (ATIS).
+
 
 *2016-08-10.* We have significantly simplified handling of **Gated Recurrent Units (GRU)**. Read more in the [corresponding article](https://github.com/Microsoft/CNTK/wiki/GRUs-on-CNTK-with-BrainScript).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
-## What is CNTK
+# What is CNTK
 CNTK (http://www.cntk.ai/), the Computational Network Toolkit by Microsoft Research, is a unified deep-learning toolkit that describes neural networks as a series of computational steps via a directed graph. In this directed graph, leaf nodes represent input values or network parameters, while other nodes represent matrix operations upon their inputs. CNTK allows to easily realize and combine popular model types such as feed-forward DNNs, convolutional nets (CNNs), and recurrent networks (RNNs/LSTMs). It implements stochastic gradient descent (SGD, error backpropagation) learning with automatic differentiation and parallelization across multiple GPUs and servers. CNTK has been available under an open-source license since April 2015. It is our hope that the community will take advantage of CNTK to share ideas more quickly through the exchange of open source working code.
 
 Wiki: Go to the [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) for all information on CNTK including [setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine ), [examples](https://github.com/Microsoft/CNTK/wiki/Examples ), etc.

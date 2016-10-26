@@ -13,6 +13,13 @@
 #define NDEBUG
 #endif
 
+#ifdef _MSC_VER
+// In case of asserts in debug mode, print the message into stderr and throw exception
+int HandleDebugAssert(int /* reportType */,
+                      char *message, // fully assembled debug user message
+                      int *returnValue); // returnValue - retVal value of zero continues execution
+#endif
+
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
@@ -101,11 +108,11 @@ static inline FILE *_wfopen(const wchar_t *path, const wchar_t *mode)
 #endif
 
 template <typename ElementType>
-inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector<CNTK::Variable*>& variables, const CNTK::DeviceDescriptor& device)
+inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector<CNTK::Variable*>& variables, const CNTK::DeviceDescriptor& device, size_t rank = 0)
 {
-    static std::wstring s_tempModelPath = L"feedForward.net";
+    const std::wstring tempModelPath = L"feedForward.net" + std::to_wstring((int)rank);
 
-    if ((_wunlink(s_tempModelPath.c_str()) != 0) && (errno != ENOENT))
+    if ((_wunlink(tempModelPath.c_str()) != 0) && (errno != ENOENT))
         std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
     std::unordered_map<std::wstring, CNTK::Variable*> inputVarUids;
@@ -118,10 +125,10 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
             std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
 
-    CNTK::SaveAsLegacyModel(functionPtr, s_tempModelPath);
-    functionPtr = CNTK::LoadLegacyModel(functionPtr->Outputs()[0].GetDataType(), s_tempModelPath, device);
+    functionPtr->SaveModel(tempModelPath);
+    functionPtr = CNTK::Function::LoadModel(functionPtr->Outputs()[0].GetDataType(), tempModelPath, device);
 
-    if (_wunlink(s_tempModelPath.c_str()) != 0)
+    if (_wunlink(tempModelPath.c_str()) != 0)
          std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
     auto inputs = functionPtr->Inputs();
@@ -175,7 +182,7 @@ inline CNTK::FunctionPtr FullyConnectedFeedForwardClassifierNet(CNTK::Variable i
     for (size_t i = 1; i < numHiddenLayers; ++i)
         classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
 
-    auto outputTimesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, CNTK::DefaultRandomSeed(), device));
+    auto outputTimesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, CNTK::SentinelValueForAutoSelectRandomSeed, device));
     return Times(outputTimesParam, classifierRoot, 1, outputName);
 }
 
@@ -372,7 +379,7 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
     #else
     stream.open(wtocharpath(filename.c_str()).c_str(), mode);
     #endif
-    stream.exceptions(std::ios_base::failbit | std::ios_base::badbit);  
+    stream.exceptions(std::ios_base::badbit);  
 }
 
 inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)

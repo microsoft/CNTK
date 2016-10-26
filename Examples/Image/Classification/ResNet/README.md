@@ -1,5 +1,7 @@
 # CNTK Examples: Image/Classification/ResNet
 
+The recipes above are in BrainScript. [For Python click here](https://github.com/Microsoft/CNTK/blob/v2.0.beta1.0/bindings/python/tutorials/CNTK_201A_CIFAR-10_DataLoader.ipynb).
+
 ## Overview
 
 |Data:     |The CIFAR-10 dataset (http://www.cs.toronto.edu/~kriz/cifar.html) and the ILSVRC2012 dataset (http://www.image-net.org/challenges/LSVRC/2012/) for image classification.

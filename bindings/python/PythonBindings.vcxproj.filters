@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Text Include="vsbuild.bat" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="cntk">
+      <UniqueIdentifier>{d0b22515-db40-470b-8388-d255e04fd3a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\utils">
+      <UniqueIdentifier>{109ed49a-2767-4407-a7dd-e647b4b864b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\ops">
+      <UniqueIdentifier>{fb898082-6f65-41e4-9945-5c43e49bf8f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\io">
+      <UniqueIdentifier>{fb0a28e7-a82b-4049-80ac-234316ff76ea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\utils\debughelpers">
+      <UniqueIdentifier>{8203febc-a583-407c-a9d7-b6147b7f14c9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="cntk\__init__.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\blocks.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\cntk_py.i">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\conftest.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\initializer.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\layers.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\learner.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\models.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\pytest.ini">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\tensor.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\trainer.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\utils\persist.py">
+      <Filter>cntk\utils</Filter>
+    </None>
+    <None Include="cntk\utils\swig_helper.py">
+      <Filter>cntk\utils</Filter>
+    </None>
+    <None Include="cntk\ops\__init__.py">
+      <Filter>cntk\ops</Filter>
+    </None>
+    <None Include="cntk\ops\functions.py">
+      <Filter>cntk\ops</Filter>
+    </None>
+    <None Include="cntk\ops\variables.py">
+      <Filter>cntk\ops</Filter>
+    </None>
+    <None Include="cntk\io\__init__.py">
+      <Filter>cntk\io</Filter>
+    </None>
+    <None Include="cntk\utils\__init__.py">
+      <Filter>cntk\utils</Filter>
+    </None>
+    <None Include="setup.py" />
+    <None Include="swig_install.sh" />
+    <None Include="cntk\utils\debughelpers\__init__.py">
+      <Filter>cntk\utils\debughelpers</Filter>
+    </None>
+  </ItemGroup>
+</Project>

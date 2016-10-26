@@ -7,11 +7,12 @@
 #include "CNTKLibrary.h"
 #include "Utils.h"
 #include "Function.h"
+#include "Serialization.h"
 
 namespace CNTK
 {
-    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners)
-        : m_model(model), m_lossFunction(lossFunction), m_evaluationFunction(evaluationFunction), m_parameterLearners(parameterLearners), m_prevMinibatchNumSamples(1)
+    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners, const DistributedTrainerPtr& distributedTrainer)
+        : m_model(model), m_lossFunction(lossFunction), m_evaluationFunction(evaluationFunction), m_parameterLearners(parameterLearners), m_prevMinibatchNumSamples(1), m_distributedTrainer(distributedTrainer)
     {
         std::vector<Variable> combinedFunctionArgs = { m_model, m_lossFunction };
         if (!m_lossFunction->Output().DynamicAxes().empty())
@@ -69,6 +70,10 @@ namespace CNTK
         }
             
     }
+
+    Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners)
+        : Trainer(model, lossFunction, evaluationFunction, parameterLearners, nullptr)
+    {}
 
     Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners)
         : Trainer(model, lossFunction, nullptr, parameterLearners)
@@ -141,6 +146,9 @@ namespace CNTK
 
         outputs.insert(outputsToFetch.begin(), outputsToFetch.end());
 
+        if (m_distributedTrainer)
+            m_distributedTrainer->PreMinibatchCallback(*this);
+
         auto backPropSate = m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice, { m_aggregatedLossFunction });
         m_prevMinibatchAggregateTrainingLossValue = outputs[m_aggregatedLossFunction];
         if (m_aggregatedEvaluationFunction)
@@ -169,6 +177,24 @@ namespace CNTK
 
         m_prevMinibatchNumSamples = GetSampleCount(m_trainingSampleCountVar, outputs[m_trainingSampleCountVar]);
 
+        if (m_distributedTrainer)
+        {
+            // Aggregation should happen in the same order, the order of parmaters is guaranteed to be the same.
+            std::vector<std::pair<Variable, NDArrayViewPtr>> gradients;
+            gradients.reserve(modelParameters.size());
+            for (const auto& parameter : modelParameters)
+                gradients.push_back(std::make_pair(parameter, parameterGradients[parameter]->Data()));
+
+            MinibatchInfo info
+            {
+                m_prevMinibatchNumSamples,
+                m_prevMinibatchAggregateTrainingLossValue->Data(),
+                m_prevMinibatchAggregateEvalCriterionValue->Data()
+            };
+
+            m_distributedTrainer->PreParameterUpdateCallback(*this, gradients, info);
+            m_prevMinibatchNumSamples = info.numberOfSamples;
+        }
 
         bool anyUpdatesPerformed = false;
         for (auto learner : m_parameterLearners)
@@ -195,29 +221,9 @@ namespace CNTK
         return modelFilePath + checkpointExt;
     }
 
-    std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
-    {
-        std::ios_base::openmode mode = std::ios_base::binary | (readOnly ? std::ios_base::in : std::ios_base::out);
-#ifdef _MSC_VER
-        return std::make_shared<std::fstream>(filePath, mode);
-#else
-        return std::make_shared<std::fstream>(wtocharpath(filePath.c_str()).c_str(), mode);
-#endif
-    }
-
     void Trainer::SaveCheckpoint(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
     {
-        if (usinglegacyModelFormat)
-        {
-            SaveAsLegacyModel(m_combinedTrainingFunction, modelFilePath);
-        }
-        else
-        {
-             Dictionary model = m_combinedTrainingFunction->Serialize();
-             auto stream = GetFstream(modelFilePath, false);
-            *stream << model;
-             stream->flush();
-        }
+        m_combinedTrainingFunction->SaveModel(modelFilePath, usinglegacyModelFormat);
 
         vector<DictionaryValue> learnerStates;
 
@@ -235,20 +241,10 @@ namespace CNTK
         ckpStream->flush();
     }
 
-    void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
+    void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
     {
         // Restore the model's parameters
-        if (usinglegacyModelFormat)
-        {
-            m_combinedTrainingFunction->RestoreFromLegacyModel(modelFilePath);
-        }
-        else
-        { 
-            auto stream = GetFstream(modelFilePath, true);
-            Dictionary model;
-            *stream >> model;
-            m_combinedTrainingFunction->RestoreFromCheckpoint(model);
-        }
+         m_combinedTrainingFunction->RestoreModel(modelFilePath);
 
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
         auto ckpStream = GetFstream(trainerStateCheckpointFilePath, true);
