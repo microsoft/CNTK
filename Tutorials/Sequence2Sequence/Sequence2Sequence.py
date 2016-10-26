@@ -113,10 +113,8 @@ def create_model():
         (decoder_output_h, encoder_output_c) = LSTMP_component_with_self_stabilization(
             decoder_output_h.output, hidden_dim, hidden_dim, recurrence_hook_h, recurrence_hook_c)
 
-    decoder_output = decoder_output_h
-
     # Softmax output layer
-    z = linear_layer(stabilize(decoder_output), label_vocab_dim)
+    z = linear_layer(stabilize(decoder_output_h), label_vocab_dim)
     
     return z
 
