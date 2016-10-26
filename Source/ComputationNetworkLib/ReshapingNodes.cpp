@@ -20,6 +20,8 @@
 #include <memory>
 #include <algorithm>
 #include <assert.h>
+#include <stack>
+#include <unordered_map>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -480,5 +482,335 @@ template <class ElemType>
 
 template class ScatterPackedNode<float>;
 template class ScatterPackedNode<double>;
+
+// -----------------------------------------------------------------------
+// CropNode -- crop operation, crops first input according to shape of second
+//             input at offsets which are directly given or automatically calculated.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+CropNode<ElemType>::CropNode(DEVICEID_TYPE deviceId, const wstring& name)
+    : Base(deviceId, name), m_xOffset(numeric_limits<double>::max()), m_yOffset(numeric_limits<double>::max())
+{
+}
+
+template <class ElemType>
+CropNode<ElemType>::CropNode(size_t offsetX, size_t offsetY, DEVICEID_TYPE deviceId, const wstring& name)
+    : CropNode(deviceId, name)
+{
+    m_xOffset = (double)(offsetX);
+    m_yOffset = (double)(offsetY);
+}
+
+template <class ElemType>
+CropNode<ElemType>::CropNode(const ScriptableObjects::IConfigRecordPtr configp)
+    : CropNode(configp->Get(L"deviceId"), L"<placeholder>")
+{
+    // We may have 2 or 4 node inputs, check that and attach them.
+    const auto inputs = GetInputsFromConfig(configp);
+    if (inputs.size() != 2 && inputs.size() != 4)
+        LogicError("Crop node must have 2 or 4 node inputs.");
+
+    AttachInputs(inputs);
+
+    // Here we have 3 possibilities:
+    // 1. 2 input nodes -> auto crop calculation without equivalence nodes
+    // 2. 2 input nodes + 2 parameters -> manual crop with given offsets
+    // 3. 4 inputs -> auto crop calculation with equivalence nodes
+
+    if (inputs.size() == 2)
+    {
+        // We have 2 input nodes related to cropping (no equivalence node inputs given). Check if we have offsets
+        // directly given.
+        if (configp->Exists(L"yOffset") && configp->Exists(L"xOffset"))
+        {
+            // We have manual crop with given offsets (option 2. above). Save given offsets.
+            m_xOffset = configp->Get(L"xOffset");
+            m_yOffset = configp->Get(L"yOffset");
+        }
+        // else: Offsets not given (option 1. above), we have automatic crop calculation without equivalence nodes.
+    }
+    // else: We have 4 node inputs (option 3. above), we have automatic crop calculation with equivalence nodes.
+}
+
+template <class ElemType>
+void CropNode<ElemType>::Validate(bool isFinalValidationPass)
+{
+    Base::Validate(isFinalValidationPass);
+    InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+    // Here we need to determine output dimensions which are same as dimensions of second input.
+    TensorShape inputShape0 = Input(0)->GetSampleLayout();
+    TensorShape inputShape1 = Input(1)->GetSampleLayout();
+
+    SmallVector<size_t> inDims = inputShape0.GetDims();
+    SmallVector<size_t> outDims = inputShape1.GetDims();
+
+    // We assume we have at least two dimensions (first two are to be cropped).
+    if (outDims.size() < 2)
+        RuntimeError("Crop input samples must have at least two dimensions.");
+
+    // Set output dimensions.
+    SetDims(TensorShape(outDims), HasMBLayout());
+
+    if (isFinalValidationPass)
+    {
+        // In final validation pass we compute crop offsets if needed.
+        ComputeCropOffsets();
+
+        // Cropped input must be large enough to allow cropping at given offset.
+        if (inDims[0] < outDims[0] + m_xOffset)
+            RuntimeError("Input is small to be cropped along x dimension in crop node.");
+
+        if (inDims[1] < outDims[1] + m_yOffset)
+            RuntimeError("Input is small to be cropped along y dimension in crop node.");
+    }
+}
+
+template <class ElemType>
+void CropNode<ElemType>::ForwardProp(const FrameRange& /*fr*/)
+{
+    // Our offsets must be initialized here.
+    if (m_xOffset == numeric_limits<double>::max() || m_yOffset == numeric_limits<double>::max())
+        LogicError("Crop offsets not initialized in ForwardProp.");
+
+    // Retrieve input and output views for the values. Input and output views are tensor views
+    // that define parts of first input and output that we operate on (we copy input from input view
+    // to output).
+    CroppedIOViews ioViews = CreateIOViews(&ComputationNode<ElemType>::ValuePtr);
+
+    // Copy values from cropped input to output.
+    ioViews.outputView.AssignCopyOf(ioViews.inputViewCropped);
+}
+
+template <class ElemType>
+void CropNode<ElemType>::BackpropTo(const size_t inputIndex, const FrameRange& /*fr*/)
+{
+    // We propagate gradients just to the cropped input.
+    if (inputIndex == 0)
+    {
+        // Reset input gradients to ensure that non-cropped parts do not affect backprop.
+        Input(0)->Gradient().SetValue(0);
+
+        // Retrieve input and output views for the gradients. Input and output views are tensor views
+        // that define parts of first input and output that we operate on (we copy gradients from output view
+        // to input view).
+        CroppedIOViews ioViews = CreateIOViews(&ComputationNode<ElemType>::GradientPtr);
+
+        // Copy gradients from output to cropped input.
+        ioViews.inputViewCropped.AddCopyOf(ioViews.outputView);
+    }
+}
+
+template <class ElemType>
+void CropNode<ElemType>::Save(File& fstream) const
+{
+    Base::Save(fstream);
+
+    fstream << m_xOffset;
+    fstream << m_yOffset;
+}
+
+template <class ElemType>
+void CropNode<ElemType>::Load(File& fstream, size_t modelVersion)
+{
+    Base::Load(fstream, modelVersion);
+
+    fstream >> m_xOffset;
+    fstream >> m_yOffset;
+}
+
+template <class ElemType>
+void CropNode<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const wstring& newName, const CopyNodeFlags flags) const
+{
+    Base::CopyTo(nodeP, newName, flags);
+    if (flags & CopyNodeFlags::copyNodeValue)
+    {
+        auto node = dynamic_pointer_cast<CropNode<ElemType>>(nodeP);
+        node->m_xOffset = m_xOffset;
+        node->m_yOffset = m_yOffset;
+    }
+}
+
+template <class ElemType>
+typename CropNode<ElemType>::CroppedIOViews CropNode<ElemType>::CreateIOViews(MatrixGetter matrixGetter)
+{
+    // Get the shapes of the inputs.
+    TensorShape inputShape0 = Input(0)->GetTensorShape(Input(0)->GetSampleLayout().GetRank());
+    TensorShape inputShape1 = Input(1)->GetTensorShape(Input(1)->GetSampleLayout().GetRank());
+
+    // Calculate cropped shape of the input.
+    TensorShape inputShapeCropped = inputShape0;
+    inputShapeCropped.NarrowTo(0, (size_t)(m_xOffset), (size_t)(m_xOffset) + inputShape1.GetDim(0));
+    inputShapeCropped.NarrowTo(1, (size_t)(m_yOffset), (size_t)(m_yOffset) + inputShape1.GetDim(1));
+
+    // Get output shape.
+    TensorShape outputShape = GetTensorShape(GetSampleLayout().GetRank());
+    // Cropped input and output dimensions must be same.
+    if (inputShapeCropped.GetDims() != outputShape.GetDims())
+        LogicError("Cropped input and output must have same rank.");
+
+    // Create proper views using calculated shapes.
+    return CroppedIOViews(this, matrixGetter, inputShapeCropped, outputShape);
+}
+
+// ComputeCropOffsets computes offsets to be used for cropping if manual offsets are absent. The offsets are computed
+// by traversing the network graph and finding common ancestor of crop node inputs. Once ancestor is found affine transform
+// is computed along the paths from first and second input to common ancestor. Complete transform from one input to other it
+// finally calculated composing these two transforms. Translate components of final transform define crop offsets.
+template <class ElemType>
+void CropNode<ElemType>::ComputeCropOffsets()
+{
+    // Helper method for traversing the tree and calculating node transforms.
+    auto ProcessInputs = [](ComputationNodeBase* currNode, stack<ComputationNodeBase*>& traversalStack, unordered_map<ComputationNodeBase*, SpaceTransform>& nodeToTransformMap)
+    {
+        if (!currNode->Is<TransformerNode>())
+            RuntimeError("Node does not support affine transform for cropping.");
+
+        auto transformerNode = currNode->As<TransformerNode>();
+        // Go over the nodes inputs.
+        for (size_t i = 0; i < currNode->GetNumInputs(); i++)
+        {
+            // Check if input-output transform is supported on the node.
+            if (transformerNode->SupportsTransformOnInput(i))
+            {
+                // Transform is supported, take the input.
+                ComputationNodeBase* currInput = currNode->GetInputs()[i].get();
+                // Take node transform from input to output.
+                const SpaceTransform& nodeTransform = transformerNode->GetTransformForInput(i);
+                // Calculate composite transform from node input to crop node.
+                SpaceTransform nodeToCropTransform = nodeToTransformMap.find(currNode)->second.Compose(nodeTransform);
+
+                // Check if we already visited this input node.
+                auto it = nodeToTransformMap.find(currInput);
+                if (it == nodeToTransformMap.end())
+                {
+                    // We have not visited this node before. Add it to the transform map and to traversal stack to continue
+                    // traversing its children.
+                    nodeToTransformMap.insert(make_pair(currInput, nodeToCropTransform));
+                    traversalStack.push(currInput);
+                }
+                else
+                {
+                    // We have been here before, check that transforms along two different paths are same.
+                    if (it->second != nodeToCropTransform)
+                    {
+                        // Different transforms along two different paths, should never happen.
+                        RuntimeError("Different transforms along different paths in Crop node.");
+                    }
+                }
+            }
+        }
+    };
+
+    if (m_xOffset != numeric_limits<double>::max() && m_yOffset != numeric_limits<double>::max())
+    {
+        // Offsets are already available, skip compute.
+        return;
+    }
+
+    // Used to keep nodes while traversing the network graph.
+    stack<ComputationNodeBase*> traversalStack;
+    // Maps node to transform between its output and crop node.
+    unordered_map<ComputationNodeBase*, SpaceTransform> nodeToCropInput0TransformMap;
+    unordered_map<ComputationNodeBase*, SpaceTransform> nodeToCropInput1TransformMap;
+    // Take equivalence nodes if provided.
+    ComputationNodeBase* equivalenceNode1 = nullptr;
+    ComputationNodeBase* equivalenceNode2 = nullptr;
+    if (GetInputs().size() == 4)
+    {
+        equivalenceNode1 = GetInputs()[2].get();
+        equivalenceNode2 = GetInputs()[3].get();
+    }
+
+    // Push first input to traversal stack to start exploring paths starting from there.
+    traversalStack.push(GetInputs()[0].get());
+    // Push first input transform as identity to enable composing transforms.
+    nodeToCropInput0TransformMap.insert(make_pair(GetInputs()[0].get(), SpaceTransform::Identity(2)));
+    // Start traversing graph starting from the first input.
+    while (!traversalStack.empty())
+    {
+        ComputationNodeBase* currNode = traversalStack.top();
+        traversalStack.pop();
+        ProcessInputs(currNode, traversalStack, nodeToCropInput0TransformMap);
+    }
+
+    // Now traverse from second input.
+    traversalStack.push(GetInputs()[1].get());
+    // Push second input transform as identity to enable composing transforms.
+    nodeToCropInput1TransformMap.insert(make_pair(GetInputs()[1].get(), SpaceTransform::Identity(2)));
+    // Once we meet node that is in nodeToCropInput0TransformMap or equivalence node we will compute offsets.
+    double xOffset = numeric_limits<double>::max();
+    double yOffset = numeric_limits<double>::max();
+    while (!traversalStack.empty())
+    {
+        ComputationNodeBase* currNode = traversalStack.top();
+        traversalStack.pop();
+        // Check if node is in the map corresponding to the first input (path connected over common ancestor).
+        auto it = nodeToCropInput0TransformMap.find(currNode);
+        const SpaceTransform* firstInputTransform = nullptr;
+        if (it != nodeToCropInput0TransformMap.end())
+        {
+            // We have closed the path between nodes, save the first input transform.
+            firstInputTransform = &it->second;
+        }
+        // Check if node is equivalent to one from the first subtree (path connected over equivalence nodes).
+        else if (currNode == equivalenceNode2)
+        {
+            // We have closed the path between nodes using equivalence nodes, save the first equivalence node transform.
+            firstInputTransform = &nodeToCropInput0TransformMap.find(equivalenceNode1)->second;
+        }
+
+        if (firstInputTransform)
+        {
+            // Calculate final transform.
+            SpaceTransform finalTransform = nodeToCropInput1TransformMap.find(currNode)->second.Compose(firstInputTransform->Inverse());
+            for (size_t ia = 0; ia < finalTransform.m_axisTransforms.size(); ia++)
+            {
+                // In crop node we expect no scaling.
+                if (finalTransform.m_axisTransforms[ia].scale != 1.0f)
+                    RuntimeError("Composite transform has non 1 scale in crop node.");
+                if (finalTransform.m_axisTransforms[ia].translate > 0)
+                    RuntimeError("Composite transform has positive translate (negative offset) in crop node.");
+            }
+            // Crop offsets are defined with transform translations.
+            xOffset = -finalTransform.m_axisTransforms[0].translate;
+            yOffset = -finalTransform.m_axisTransforms[1].translate;
+            // Finished.
+            break;
+        }
+        // No connected path, keep searching.
+        ProcessInputs(currNode, traversalStack, nodeToCropInput0TransformMap);
+    }
+    if (xOffset == numeric_limits<double>::max() || yOffset == numeric_limits<double>::max())
+        LogicError("Connected path between crop inputs not found. Unable to compute crop offsets.");
+
+    // Save computed offsets.
+    m_xOffset = xOffset;
+    m_yOffset = yOffset;
+}
+
+template <class ElemType>
+void CropNode<ElemType>::ComputeTransforms()
+{
+    if (m_transforms[0].m_axisTransforms.empty())
+    {
+        m_transforms[0].m_axisTransforms[0].scale = 1;
+        m_transforms[0].m_axisTransforms[0].translate = -m_xOffset;
+        m_transforms[0].m_axisTransforms[1].scale = 1;
+        m_transforms[0].m_axisTransforms[1].translate = -m_yOffset;
+    }
+    // else: already computed.
+}
+
+template <class ElemType>
+bool CropNode<ElemType>::SupportsTransformOnInput(size_t inputIndex)
+{
+    // We support transform on cropped input.
+    return (inputIndex == 0);
+}
+
+template class CropNode<float>;
+template class CropNode<double>;
 
 }}}
