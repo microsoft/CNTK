@@ -21,7 +21,7 @@ from cntk.ops import input_variable, constant, parameter, combine, times, elemen
 #
 abs_path   = os.path.dirname(os.path.abspath(__file__))
 cntk_path  = os.path.normpath(os.path.join(abs_path, "..", "..", "..", ".."))
-data_path  = os.path.join(cntk_path, "Examples", "Image", "Datasets", "CIFAR-10")
+data_path  = os.path.join(cntk_path, "Examples", "Image", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
 
 #
