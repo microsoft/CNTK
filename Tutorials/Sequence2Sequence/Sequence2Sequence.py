@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, Axis, save_model, load_model #, text_format_minibatch_source, StreamConfiguration
+from cntk import Trainer, Axis, save_model, load_model
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, set_default_device
 from cntk.learner import momentum_sgd, momentum_schedule
@@ -69,10 +69,12 @@ def create_model():
     input_sequence = raw_input
 
     # Drop the sentence start token from the label, for decoder training
-    label_sequence = slice(raw_labels, label_seq_axis, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
-    label_sentence_start = sequence.first(raw_labels)                               # <s>
+    label_sequence = slice(raw_labels, label_seq_axis, 
+                           1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
+    label_sentence_start = sequence.first(raw_labels)   # <s>
 
-    is_first_label = sequence.is_first(label_sequence)       # <s> 0 0 0 ...
+    # Setup primer for decoder
+    is_first_label = sequence.is_first(label_sequence)  # 1 0 0 0 ...
     label_sentence_start_scattered = sequence.scatter(
         label_sentence_start, is_first_label)
 
@@ -82,6 +84,7 @@ def create_model():
         (encoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
             encoder_outputH.output, hidden_dim, hidden_dim, future_value, future_value)
 
+    # Prepare encoder output to be used in decoder
     thought_vectorH = sequence.first(encoder_outputH)
     thought_vectorC = sequence.first(encoder_outputC)
 
@@ -134,11 +137,15 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs):
     ce = cross_entropy_with_softmax(model, label_sequence)
     errs = classification_error(model, label_sequence)
 
-    # network output for decoder history
-    net_output = hardmax(model)
+    def clone_and_hook():
+        # network output for decoder history
+        net_output = hardmax(model)
 
-    # make a clone of the graph where the ground truth is replaced by the network output
-    new_model = model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
+        # make a clone of the graph where the ground truth is replaced by the network output
+        return model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
+
+    # get a new model that uses the past network output as input to the decoder
+    new_model = clone_and_hook()
 
     # Instantiate the trainer object to drive the model training
     lr = 0.007
