@@ -79,19 +79,19 @@ def create_model():
         label_sentence_start, is_first_label)
 
     # Encoder
-    encoder_outputH = stabilize(input_sequence)
+    encoder_output_h = stabilize(input_sequence)
     for i in range(0, num_layers):
-        (encoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
-            encoder_outputH.output, hidden_dim, hidden_dim, future_value, future_value)
+        (encoder_output_h, encoder_output_c) = LSTMP_component_with_self_stabilization(
+            encoder_output_h.output, hidden_dim, hidden_dim, future_value, future_value)
 
     # Prepare encoder output to be used in decoder
-    thought_vectorH = sequence.first(encoder_outputH)
-    thought_vectorC = sequence.first(encoder_outputC)
+    thought_vector_h = sequence.first(encoder_output_h)
+    thought_vector_c = sequence.first(encoder_output_c)
 
-    thought_vector_broadcastH = sequence.broadcast_as(
-        thought_vectorH, label_sequence)
-    thought_vector_broadcastC = sequence.broadcast_as(
-        thought_vectorC, label_sequence)
+    thought_vector_broadcast_h = sequence.broadcast_as(
+        thought_vector_h, label_sequence)
+    thought_vector_broadcast_c = sequence.broadcast_as(
+        thought_vector_c, label_sequence)
 
     # Decoder
     decoder_history_hook = alias(label_sequence, name='decoder_history_hook') # copy label_sequence
@@ -99,21 +99,21 @@ def create_model():
     decoder_input = element_select(is_first_label, label_sentence_start_scattered, past_value(
         decoder_history_hook))
 
-    decoder_outputH = stabilize(decoder_input)
+    decoder_output_h = stabilize(decoder_input)
     for i in range(0, num_layers):
         if (i > 0):
-            recurrence_hookH = past_value
-            recurrence_hookC = past_value
+            recurrence_hook_h = past_value
+            recurrence_hook_c = past_value
         else:
-            recurrence_hookH = lambda operand: element_select(
-                is_first_label, thought_vector_broadcastH, past_value(operand))
-            recurrence_hookC = lambda operand: element_select(
-                is_first_label, thought_vector_broadcastC, past_value(operand))
+            recurrence_hook_h = lambda operand: element_select(
+                is_first_label, thought_vector_broadcast_h, past_value(operand))
+            recurrence_hook_c = lambda operand: element_select(
+                is_first_label, thought_vector_broadcast_c, past_value(operand))
 
-        (decoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
-            decoder_outputH.output, hidden_dim, hidden_dim, recurrence_hookH, recurrence_hookC)
+        (decoder_output_h, encoder_output_c) = LSTMP_component_with_self_stabilization(
+            decoder_output_h.output, hidden_dim, hidden_dim, recurrence_hook_h, recurrence_hook_c)
 
-    decoder_output = decoder_outputH
+    decoder_output = decoder_output_h
 
     # Softmax output layer
     z = linear_layer(stabilize(decoder_output), label_vocab_dim)
