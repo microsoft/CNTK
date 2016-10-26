@@ -125,8 +125,6 @@ def create_model():
 def train(train_reader, valid_reader, vocab, i2w, model, max_epochs):
     
     # do some hooks that we won't need in the future
-    raw_labels = find_arg_by_name('raw_labels', model)    
-    
     label_sequence = find_nodes_by_name(model, 'label_sequence')[0]    
     decoder_history_hook = find_nodes_by_name(model, 'decoder_history_hook')[0]  
         
@@ -193,7 +191,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs):
                 print_sequences(e, i2w)
 
             print_training_progress(trainer, mbs, training_progress_output_freq)
-            i += mb_train[raw_labels].num_samples
+            i += mb_train[find_arg_by_name('raw_labels', model)].num_samples
             mbs += 1
 
         print("--- EPOCH %d DONE: loss = %f, errs = %f ---" % (epoch, loss_numer/denom, 100.0*(metric_numer/denom)))
