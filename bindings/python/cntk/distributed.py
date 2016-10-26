@@ -5,92 +5,84 @@
 
 from . import cntk_py
 from . import trainer
+from .utils import typemap
 
 __doc__= '''\
 Distributed trainers manage trainers in distributed environment.
 '''
 
-class worker_descriptor:
+class WorkerDescriptor(cntk_py.DistributedWorkerDescriptor):
     '''
-    Distributed worker descriptor, returned by :class:`communicator` instance.
+    Distributed worker descriptor, returned by :class:`Communicator` instance.
+    '''
 
-    Args:
-       descriptor (:class:`cntk.cntk_py.DistributedWorkerDescriptor`): internal distributed worker descriptor
-    '''
-    def __init__(self, descriptor):
-        self.data = descriptor
-        return
-    
     @property
     def global_rank(self):
         '''
-        (`int`) The global rank of the worker.
+        The global rank of the worker.
         '''
-        return self.data.m_global_rank
+        return super().m_global_rank
 
     @property
     def host_id(self):
         '''
-        (`str`) The host id of the worker.
+        The host id of the worker.
         '''
-        return self.data.m_host_id
+        return super().m_host_id
 
-class communicator:
+class Communicator(cntk_py.DistributedCommunicator):
     '''
     A communicator interface exposing communication primitives that serve as building blocks 
     for distributed training.
     '''
-    def __init__(self, distributed_communicator):
-        self.data = distributed_communicator
-    
+
+    @typemap
     def workers(self):
         '''
         Returns workers in this communicator.
         
         Returns:
-            (`list`) of :class:`worker_descriptor`: workers in this communicator.
+            (`list`) of :class:`WorkerDescriptor`: workers in this communicator.
         '''
-        return [worker_descriptor(w) for w in self.data.workers()]
+        return super().workers()
 
+    @typemap
     def current_worker(self):
         '''
         Returns worker descriptor of current process.
         
         Returns:
-            :class:`worker_descriptor`: descriptor of current process.
+            :class:`WorkerDescriptor`: descriptor of current process.
         '''
-        raw = self.data.current_worker()
-        return worker_descriptor(raw)
+        return super().current_worker()
 
     def barrier(self):
         '''
         sync point to make sure all workers reach the same state
         '''
-        self.data.barrier()
+        super().barrier()
         
     @staticmethod
     def finalize():
         cntk_py.DistributedCommunicator.finalize();
 
-class distributed_trainer:
+class QuantizedCommunicator(Communicator, cntk_py.QuantizedDistributedCommunicator):
     '''
-    A distributed trainer that can be passed to the :class:`cntk.trainer.Trainer`
+    A communicator interface exposing communication primitives that serve as building blocks 
+    for distributed training.
+    '''
 
-    Args:
-       trainer (:class:`cntk.cntk_py.DistributedTrainer`): internal distributed trainer
-    '''
-    def __init__(self, distributed_trainer):
-        self.data = distributed_trainer
-        
+@typemap
 def mpi_communicator():
     '''
     Creates a mpi communicator
 
     Returns:
-        :class:`cntk.cntk_py.DistributedCommunicator`: a distributed communicator
+        :class:`Communicator`: a distributed communicator
     '''
     return cntk_py.mpicommunicator()
 
+@typemap
 def quantized_mpi_communicator(num_quantization_bits):
     '''
     Creates a quantized mpi communicator
@@ -99,7 +91,7 @@ def quantized_mpi_communicator(num_quantization_bits):
         num_quantization_bits (`int`): num_quantization_bits
 
     Returns:
-        :class:`cntk.cntk_py.QuantizedDistributedCommunicator`: a quantized distributed communicator
+        :class:`QuantizedCommunicator`: a quantized distributed communicator
     '''
     return cntk_py.quantized_mpicommunicator(True, True, num_quantization_bits)
 
@@ -109,13 +101,14 @@ def data_parallel_distributed_trainer(communicator, use_async_buffered_parameter
     option `use_async_buffered_parameter_update`.
 
     Args:
-        communicator (:class:`communicator`): distributed communicator
+        communicator: a communicator or a quantized communicator
         use_async_buffered_parameter_update (`bool`): use async buffered parameter update
 
     Returns:
-        :class:`trainer`: a distributed trainer instance
+        a distributed trainer instance
     '''
-    if (isinstance(communicator.data, cntk_py.QuantizedDistributedCommunicator)):
-        return distributed_trainer(cntk_py.create_quantized_data_parallel_distributed_trainer(communicator.data, use_async_buffered_parameter_update))
+    if (isinstance(communicator, QuantizedCommunicator)):
+        print("Use quantized communicator")
+        return cntk_py.create_quantized_data_parallel_distributed_trainer(communicator, use_async_buffered_parameter_update)
     else:
-        return distributed_trainer(cntk_py.create_data_parallel_distributed_trainer(communicator.data, use_async_buffered_parameter_update))
+        return cntk_py.create_data_parallel_distributed_trainer(communicator, use_async_buffered_parameter_update)

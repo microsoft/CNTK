@@ -130,6 +130,12 @@ def cifar_resnet(data_path, run_test, num_epochs, communicator=None, save_model_
         return 0
 
 if __name__ == '__main__':
+
+    # only run with 1-bit SGD in test environment
+    if "TEST_1BIT_SGD" in os.environ and os.environ["TEST_1BIT_SGD"] != "1":
+        print("1-bit SGD is required for this example")
+        sys.exit()
+        
     # check if we have multiple-GPU, and fallback to 1 GPU if not
     devices = device.all_devices()
     gpu_count = 0
@@ -151,9 +157,9 @@ if __name__ == '__main__':
     quantization_bit = 1
 
     if (quantization_bit == 32):
-        communicator = distributed.communicator(distributed.mpi_communicator())
+        communicator = distributed.mpi_communicator()
     else:
-        communicator = distributed.communicator(distributed.quantized_mpi_communicator(quantization_bit))
+        communicator = distributed.quantized_mpi_communicator(quantization_bit)
 
     workers = communicator.workers()
     current_worker = communicator.current_worker()
@@ -185,4 +191,4 @@ if __name__ == '__main__':
     
     print("Error: %f" % error)
 
-    distributed.communicator.finalize()
+    distributed.Communicator.finalize()

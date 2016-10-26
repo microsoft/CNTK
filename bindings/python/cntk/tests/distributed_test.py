@@ -6,6 +6,7 @@
 
 import math
 import numpy as np
+import pytest
 from .. import Function
 from ..trainer import *
 from ..learner import *
@@ -25,9 +26,9 @@ def run_distributed_trainer(tmpdir, quantized):
     m_schedule = momentum_schedule(1100)
 
     if quantized:
-        communicator = distributed.communicator(distributed.quantized_mpi_communicator(1))
+        communicator = distributed.quantized_mpi_communicator(1)
     else:
-        communicator = distributed.communicator(distributed.mpi_communicator())
+        communicator = distributed.mpi_communicator()
 
     workers = communicator.workers()
     current_worker = communicator.current_worker()
@@ -62,8 +63,8 @@ def run_distributed_trainer(tmpdir, quantized):
     assert isinstance(trainer.model, Function)
     assert trainer.model.__doc__
     assert isinstance(trainer.parameter_learners[0], Learner)
+
+def test_distributed(tmpdir, is_1bit_sgd):
+    run_distributed_trainer(tmpdir, quantized=use_1bit_sgd)
+    distributed.Communicator.finalize()
     
-def test_distributed(tmpdir):
-    run_distributed_trainer(tmpdir, False)
-    run_distributed_trainer(tmpdir, True)
-    distributed.communicator.finalize()
