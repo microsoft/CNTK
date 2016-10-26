@@ -135,13 +135,12 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     ../../../configure --with-mkl=/usr/local/CNTKCustomMKL --with-kaldi=${KALDI_PATH} && \
     make -j"$(nproc)" all
 
-RUN cd Examples/Image/Miscellaneous/CIFAR-10 && \
-    python CifarDownload.py && \
-    python CifarConverter.py cifar-10-batches-py && \
+RUN cd Examples/Image/DataSets/CIFAR-10 && \
+    python install_cifar10.py && \
     cd ../../../..
 
-RUN cd Examples/Image/MNIST/AdditionalFiles && \
-    python mnist_convert.py && \
+RUN cd Examples/Image/DataSets/MNIST && \
+    python install_mnist.py && \
     cd ../../../..
 
 ENV PATH=/cntk/build/cpu/release/bin:$PATH
