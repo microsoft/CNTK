@@ -80,7 +80,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     activation = (x=>x),
                     init = 'glorotUniform',
                     initValueScale = 1,          # TODO: rename to initScale
-					initBias = 0,
+                    initBias = 0,
                     #reductionRank = 1,          # TODO: support this
                     stride = 1, pad = false,
                     lowerPad = 0, upperPad = 0,
