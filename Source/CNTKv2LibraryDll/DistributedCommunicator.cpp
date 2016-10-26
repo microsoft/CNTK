@@ -65,7 +65,7 @@ namespace CNTK
 
     MPICommunicatorImpl::MPICommunicatorImpl()
     {
-        m_mpi = MPIWrapper::s_initialized ? MPIWrapper::GetInstance() : MPIWrapper::GetInstance(true);
+        m_mpi = MPIWrapper::GetInstance();
         m_currentWorker.m_globalRank = m_mpi->CurrentNodeRank();
         m_currentWorker.m_hostId = std::wstring(m_mpi->CurrentNodeName());
         for (size_t i = 0; i < m_mpi->NumNodesInUse(); ++i)
