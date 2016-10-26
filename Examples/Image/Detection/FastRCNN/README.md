@@ -36,6 +36,10 @@ Currently, CNTK only supports `Python 3.4`. We recommend to install anaconda pyt
 conda create --name cntk python=3.4.3 numpy scipy
 activate cntk
 ```
+To run the code in this example, you need to install a few additional packages. Under Python 3.4 (64bit version assumed), go to the FastRCNN folder and run:
+```
+pip install -r requirements.txt
+```
 You will further need Scikit-Image and OpenCV to run these examples. You can download the corresponding wheel packages and install them manually. For Windows users, visit http://www.lfd.uci.edu/~gohlke/pythonlibs/, and download:
 
     scikit_image-0.12.3-cp34-cp34m-win_amd64.whl  
