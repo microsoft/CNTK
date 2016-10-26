@@ -107,15 +107,17 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             // The mapPixel lambda will return the right color channel for the desired pixel
             Func<int, int, int, int> mapPixel = GetPixelMapper(image.PixelFormat, stride);
 
-            Parallel.For(0, imageHeight, (int h) =>
+            // Averaged over a large number of images, these loops here execute fastest 
+            // when doing Parallel.For only over c, but not over h and w.
+            Parallel.For(0, 3, (int c) =>
             {
-                Parallel.For(0, imageWidth, (int w) =>
+                for (int h = 0; h < imageHeight; h++)
                 {
-                    Parallel.For(0, 3, (int c) =>
+                    for (int w = 0; w < imageWidth; w++)
                     {
                         features[channelStride * c + imageWidth * h + w] = rgbValues[mapPixel(h, w, c)];
-                    });
-                });
+                    }
+                }
             });
 
             image.UnlockBits(bitmapData);
