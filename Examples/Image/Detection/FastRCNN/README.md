@@ -52,6 +52,8 @@ Once you download the respective wheel binaries, install them with:
 
 This example code assumes you are using 64bit version of Python 3.4, as the Fast R-CNN DLL files under [utils_win64](./fastRCNN/utils3_win64) are prebuilt for this version. If your task requires the use of a different Python version, please recompile these DLL files yourself in the correct environment. 
 
+The folder where cntk.exe resides needs to be in your PATH environment variable.
+
 Last but not least, in `PARAMETERS.py`: make sure datasetName is set to "grocery".
 
 ### Preprocess data
