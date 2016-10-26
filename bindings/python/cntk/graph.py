@@ -39,7 +39,7 @@ def dfs_walk(node, visitor):
 
 		if visitor(node):
 			accum.append(node)
-
+ 
 		visited.add(node)
 
     return accum
