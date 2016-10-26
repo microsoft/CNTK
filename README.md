@@ -52,7 +52,7 @@ See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
 *2016-08-29.* Two new Tutorials are available:  
-[Image recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (CIFAR-10) and [Language understanding](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (ATIS).
+[Image recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (CIFAR-10) and [Language understanding](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Language-Understanding) (ATIS).
 
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
