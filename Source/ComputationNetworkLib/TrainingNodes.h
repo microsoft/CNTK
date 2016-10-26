@@ -1185,7 +1185,7 @@ protected:
 // Provides random sampling functionality.
 //
 // Parameters:
-// * Input(0) Sampling weight vector: Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0) Sampling weight vector: Matrix of shape [numClasses x 1] providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1221,16 +1221,12 @@ protected:
 
     // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
     // to get the expected number of samples.
-    const std::vector<size_t> RunSampling(long& nTries);
+    const std::vector<size_t> RunSampling(size_t& nTries);
 
 public:
-    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override {
-        // This node does not propagate gradients.
-    }
-
+    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override {} // This node does not propagate gradients.
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false;}
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override{}
     virtual bool GetAllowDuplicates() const { return m_allowDuplicates; }
@@ -1244,14 +1240,17 @@ protected:
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleNode(samplingWeights, sizeOfSampledSet, allowDuplicates):
-// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix of shape [nClasses x sizeOfSampledSet] where nClasses is the number of classes (categories) to choose from.
+// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix 
+// of shape [numClasses x sizeOfSampledSet] where numClasses is the number of classes (categories) to choose from.
 // The output has no dynamic axis.
-// The samples are drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
+// The samples are drawn with a probability proportional to the weights w of the vector 'samplingWeights' : p(w_i) = w_i / sum_k(w_k)
 // We get one set of samples for per minibatch.
+// Multiply a 'numClasses' - dimensional vector with this matrix to randomly sample 'sizeOfSampledSet' values from it.
+// The resulting vector has a dimension of 'sizeOfSampledSet'.Currently, only rank - 1 tensors are supported.
 // Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
 //
 // Parameters:
-// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0): Sampling weight vector. Matrix of shape [numClasses x 1] providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1280,13 +1279,13 @@ public:
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleInclusionFrequencyNode(samplingWeights, sizeOfSampledSet, allowDuplicates): 
-// Intended uses are e.g. sampled softmax, noise contrastive estimation etc where it is used together with RandomSampleNode.
+// Intended uses are e.g. sampled softmax, noise contrastive estimation etc. where it is used together with RandomSampleNode.
 // This node estimates how often each class will occur in a set sampled with RandomSampleNode(...) on the average. 
 // If the sampling mode 'allowDuplicates = true' is choosen this is trivial and exact. 
 // For allowDuplicates = false we get some estimate. The value is updated only when the input weights change.
 //
 // Parameters:
-// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0): Sampling weight vector. Matrix of shape (numClasses x 1) providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
