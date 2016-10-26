@@ -26,21 +26,30 @@ function DisplayStart()
     Write-Host "
 
 This script will setup the CNTK prequisites and the CNTK Python environment onto the machine.
-More help is given by calling get-help .\installer.ps1
+More help is given by calling 'get-help .\install.ps1' in your powershell environment.
 
 The script will analyse your machine and will determine which components are required. 
 The required components will be downloaded in [$localCache]
 Repeated operation of this script will reuse already downloaded components.
 
-- If required VS2012 Runtime and VS2013 Runtime will be installed
-- If required MSMPI will be installed
-- If required the Git-tool will be installed
-- CNTK source will be downloaded in [c:\repos\cntk]
-- Anaconda3 will be installed into [$AnacondaBasePath]
-- A CNTK-PY34 environment will be created in [$AnacondaBasePath\envs]
+ - If required VS2012 Runtime and VS2013 Runtime will be installed
+ - If required MSMPI will be installed
+ - If required the standard Git tool will be installed
+ - CNTK source will be cloned from Git into [$RepoLocation]
+ - Anaconda3 will be installed into [$AnacondaBasePath]
+ - A CNTK-PY34 environment will be created in [$AnacondaBasePath\envs]
+ - CNTK will be installed into the CNTK-PY34 environment
 
+"
+if (-not $Execute) {
+    Write-Host "
+The parameter '-Execute' hasn't be supplied to the script.
+The script will execute withouth making any actual changes to the machine.
+"
+}
+Write-Host "
 
-1 - I agree and want to contiue
+1 - I agree and want to continue
 Q - Quit the installation process
 "
 
@@ -71,4 +80,3 @@ Please checkout examples in the CNTK repository clone here:
 
 "
 }
-
