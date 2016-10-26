@@ -49,7 +49,7 @@ Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/
 
 
 ##*2016-08-29.* Two new Tutorials are available:  
-[Image recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (CIFAR-10) and [Language understanding](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (ATIS).
+[Image recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (CIFAR-10) and [Language understanding](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Language-Understanding) (ATIS).
 
 
 *2016-08-10.* We have significantly simplified handling of **Gated Recurrent Units (GRU)**. Read more in the [corresponding article](https://github.com/Microsoft/CNTK/wiki/GRUs-on-CNTK-with-BrainScript).
