@@ -27,7 +27,7 @@ def test_cifar_resnet_error(device_id):
                                 *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
     except KeyError:
         base_path = os.path.join(
-            *"../../../../Examples/Image/Datasets/CIFAR-10/cifar-10-batches-py".split("/"))
+            *"../../../../Examples/Image/DataSets/CIFAR-10/cifar-10-batches-py".split("/"))
 
     base_path = os.path.normpath(base_path)
     os.chdir(os.path.join(base_path, '..'))
