@@ -188,6 +188,8 @@ if __name__ == '__main__':
     
     # train in parallel
     error = cifar_resnet(data_path, load_model_filename=start_model, communicator=communicator, run_test=True, num_epochs=num_parallel_epochs)
+
+    communicator.barrier()
     
     print("Error: %f" % error)
     
