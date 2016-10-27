@@ -15,9 +15,6 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.ops.functions import CloneMethod
 from cntk.graph import find_nodes_by_name
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", ".."))
-sys.path.append(os.path.join(abs_path, "..", "..", "bindings", "python"))
 from nn import LSTMP_component_with_self_stabilization, stabilize, linear_layer, print_training_progress, create_attention_augment_hook
 
 ########################
