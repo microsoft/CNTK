@@ -10,7 +10,7 @@
 # TODO cut down on logging
 set -x -e -o pipefail
 
-REPO_TAG=v2.alpha4
+REPO_TAG=v2.0.beta1.0
 
 USAGE="Usage: [--force]"
 FORCE=$(! [ "$0" = "--force" ]; echo $?)
@@ -26,7 +26,7 @@ CNTK_DEP_LIB_PATH="$PWD/cntk/dependencies/lib"
 CNTK_EXAMPLES_PATH="$PWD/Examples"
 CNTK_BINARY="$CNTK_BIN_PATH/cntk"
 CNTK_PY34_ENV_FILE="$SCRIPT_DIR/conda-linux-cntk-py34-environment.yml"
-CNTK_WHEEL_PATH="cntk/python/cntk-2.0a4-cp34-cp34m-linux_x86_64.whl"
+CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta1.0-cp34-cp34m-linux_x86_64.whl"
 test -d "$CNTK_BIN_PATH" && test -d "$CNTK_LIB_PATH" && test -d "$CNTK_DEP_LIB_PATH" && 
 test -d "$CNTK_EXAMPLES_PATH" && test -x "$CNTK_BINARY" &&
 test -f "$CNTK_PY34_ENV_FILE" && test -f "$CNTK_WHEEL_PATH" || {
@@ -167,7 +167,7 @@ fi
 
 LD_LIBRARY_PATH_SETTING="$CNTK_LIB_PATH:$CNTK_DEP_LIB_PATH"
 if [ "$BUILD_OPENMPI" = "1" ]; then
-  LD_LIBRARY_PATH_SETTING=":$OPENMPI_PREFIX/lib"
+  LD_LIBRARY_PATH_SETTING+=":$OPENMPI_PREFIX/lib"
 fi
 LD_LIBRARY_PATH_SETTING+=":\$LD_LIBRARY_PATH"
 

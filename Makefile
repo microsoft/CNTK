@@ -1003,6 +1003,7 @@ $(UNITTEST_READER): $(UNITTEST_READER_OBJ) | $(HTKMLFREADER) $(HTKDESERIALIZERS)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) -l$(CNTKMATH) -ldl 
 
 UNITTEST_NETWORK_SRC = \
+	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/CropNodeTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/OperatorEvaluation.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/stdafx.cpp \
 	$(SOURCEDIR)/CNTK/ModelEditLanguage.cpp \

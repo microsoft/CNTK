@@ -1,3 +1,4 @@
+
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -26,17 +27,21 @@ class Trainer(cntk_py.Trainer):
        loss_function (:class:`cntk.ops.functions.Function`): loss function 
        eval_function (:class:`cntk.ops.functions.Function`): evaluation function
        parameter_learners (`list`): list of learners from :mod:`cntk.learner`
+       distributed_trainer (:class:`cntk.distributed.distributed_trainer`): distributed trainer
     '''
-    def __init__(self, model, loss_function, eval_function, parameter_learners):
+    def __init__(self, model, loss_function, eval_function, parameter_learners, distributed_trainer=None):
         # TODO sanitizing should be removed once Swig's typemaps are in place
         model = sanitize_function(model)
         loss_function = sanitize_function(loss_function)
         eval_function = sanitize_function(eval_function)
-
         if not isinstance(parameter_learners, list):
             parameter_learners = [parameter_learners]
 
-        super(Trainer, self).__init__(model, loss_function, eval_function,
+        if distributed_trainer:
+            super(Trainer, self).__init__(model, loss_function, eval_function,
+                parameter_learners, distributed_trainer.data)
+        else:
+            super(Trainer, self).__init__(model, loss_function, eval_function,
                 parameter_learners)
 
     def train_minibatch(self, arguments, outputs=None, device=None):

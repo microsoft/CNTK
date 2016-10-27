@@ -33,9 +33,9 @@ void RandomSampleNodeBase<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const 
     if (flags & CopyNodeFlags::copyNodeValue)
     {
         auto node = dynamic_pointer_cast<RandomSampleNodeBase<ElemType>>(nodeP);
-        node->m_allowDuplicates           = m_allowDuplicates;
-        node->m_sizeOfSampledSet          = m_sizeOfSampledSet;
-        node->m_randomSeed                = m_randomSeed;
+        node->m_allowDuplicates  = m_allowDuplicates;
+        node->m_sizeOfSampledSet = m_sizeOfSampledSet;
+        node->m_randomSeed       = m_randomSeed;
     }
 }
 
@@ -75,14 +75,14 @@ void RandomSampleNodeBase<ElemType>::UpdateWeightsPrefixSum()
 // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
 // to get the expected number of samples.
 template<class ElemType>
-const std::vector<size_t> RandomSampleNodeBase<ElemType>::RunSampling(long& nTries)
+const std::vector<size_t> RandomSampleNodeBase<ElemType>::RunSampling(size_t& nTries)
 {
     std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
     std::unordered_set<int> alreadySampled;
     std::vector<size_t> samples;
-    CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE)); 
-    // find random samples using the specified weight
+    CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));
 
+    // find random samples using the specified weight
     if (m_allowDuplicates)
         nTries = m_sizeOfSampledSet;
     else
@@ -123,10 +123,12 @@ void RandomSampleNode<ElemType>::ForwardPropNonLooping()
 {
     Base::UpdateWeightsPrefixSum();
     Matrix<ElemType>& valueMatrix = ValueAsMatrix();
+    // TODO: Should we prepare the CSC data directly on the CPU and move it in one go?
+    // Currently the reader will place the data onto the GPU. It will then be pulled on-demand to the CPU once (and cached there).
     valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
     valueMatrix.SetDevice(CPUDEVICE);
 
-    //BUGBUG: matrix type should be configured during validation
+    // BUGBUG: matrix type should be configured during validation
     valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
     valueMatrix.Reset();
 
@@ -144,7 +146,7 @@ void RandomSampleNode<ElemType>::ForwardPropNonLooping()
 template<class ElemType>
 const std::vector<size_t> RandomSampleNode<ElemType>::GetWeightedSamples()
 {
-    long dummy;
+    size_t dummy;
     // Here we are not interested in the number of sampling tries needed, which is returned in the parameter.
     return Base::RunSampling(dummy);
 }
@@ -157,19 +159,21 @@ void RandomSampleNode<ElemType>::Validate(bool isFinalValidationPass)
 
     let& shape = Input(0)->GetSampleLayout();
     let dims = shape.GetDims();
-    size_t nClasses = dims[0];
+    size_t numClasses = dims[0];
 
     // Output: a (sparse) matrix containing m_sizeOfSampledSet columns of 1-hot vectors specifiying the sampled classes.
-    SetDims(TensorShape(nClasses, Base::m_sizeOfSampledSet), false);
+    SetDims(TensorShape(numClasses, Base::m_sizeOfSampledSet), false);
 }
 
 template<class ElemType>
 bool RandomSampleNode<ElemType>::IsOutOfDateWrtInputs() const
 {
-    // If we are in the mode to generate random samples (i.e. m_estimateInSampleFrequency == false) 
-    // we need to recompute the result for each mini-batch even if the weight vector didn't change.
+    // We need to recompute the result for each mini-batch even if the weight vector didn't change.
     return true;
 }
+
+template class RandomSampleNode<float>;
+template class RandomSampleNode<double>;
 
 template<class ElemType>
 double RandomSampleInclusionFrequencyNode<ElemType>::EstimateNumberOfTries()
@@ -177,9 +181,9 @@ double RandomSampleInclusionFrequencyNode<ElemType>::EstimateNumberOfTries()
     // We estimate the average numver of tries by repeating a fixed number of experiments
     const size_t numExperiments = 10; // We choose 10 without any deep justification.
     long totalTries = 0;
-    for (int iExperiment = 0; iExperiment < numExperiments; iExperiment++)
+    for (int i = 0; i < numExperiments; i++)
     {
-        long nTries;
+        size_t nTries;
         Base::RunSampling(nTries);
         totalTries += nTries;
     }
@@ -210,7 +214,7 @@ void RandomSampleInclusionFrequencyNode<ElemType>::ForwardPropNonLooping()
     valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
     valueMatrix.SetDevice(CPUDEVICE);
 
-    //BUGBUG: matrix type should be configured during validation
+    // BUGBUG: matrix type should be configured during validation
     valueMatrix.SwitchToMatrixType(DENSE, matrixFormatDense, false);
     double sumOfWeights = Base::m_samplingWeightsPrefixSum.back();
     const Matrix<ElemType>& samplingWeights = Input(0)->ValueAsMatrix();
@@ -240,8 +244,6 @@ void RandomSampleInclusionFrequencyNode<ElemType>::Validate(bool isFinalValidati
     SetDims(TensorShape(nClasses, 1), false);
 }
 
-template class RandomSampleNode<float>;
-template class RandomSampleNode<double>;
 template class RandomSampleInclusionFrequencyNode<float>;
 template class RandomSampleInclusionFrequencyNode<double>;
 }}}
