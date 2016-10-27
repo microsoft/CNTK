@@ -129,6 +129,7 @@ def cifar_resnet(data_path, run_test, num_epochs, communicator=None, save_model_
 
 if __name__ == '__main__':
     data_path = os.path.abspath(os.path.normpath(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
         *"../../../../Examples/Image/DataSets/CIFAR-10/".split("/"))))
 
     os.chdir(data_path)

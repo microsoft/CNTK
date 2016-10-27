@@ -8,13 +8,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN adduser --gecos "Test User" --disabled-password testuser && \
     test -d /home/testuser
 
-COPY visudo-helper.sh prep-testenv.sh /root/
+COPY visudo-helper.sh prep-run-test.sh /root/
 
 RUN VISUAL=/root/visudo-helper.sh visudo
 
 COPY test_wrapper.sh /home/testuser
-COPY BinaryDrops-CPU.tar.gz /home/testuser
+COPY BinaryDrops.tar.gz /home/testuser
 RUN chown -R testuser:testuser /home/testuser
 
 # TODO run repeated
-RUN su - testuser -c "./test_wrapper.sh BinaryDrops-CPU.tar.gz"
+RUN su - testuser -c "./test_wrapper.sh BinaryDrops.tar.gz"
+RUN /root/prep-run-test.sh
+
+# TODO fix otherwise:
+RUN apt-get install -y --no-install-recommends libjasper1 libjpeg8 libpng12-0

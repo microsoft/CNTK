@@ -1,6 +1,3 @@
-Dockerfile-CPU text
-Dockerfile-GPU text
-
 *.ini text
 *.simple text
 *.counts text
@@ -24,11 +21,14 @@ Dockerfile-GPU text
 *.html text
 *.lyx text
 *.bib text
+.gitkeep text
 KaldiReaderReadme text
 Readme text
 
 *.bat text
+*.cmd text
 *.py text
+*.ipynb text
 *.pl text
 *.ps1 text
 *.ps text
@@ -53,6 +53,7 @@ Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/invalid_inputs.txt eol=lf
 
 Makefile text
 *.sln text
+*.pyproj text
 *.vcxproj text
 *.vcxproj.filters text
 *.vssettings text
@@ -65,10 +66,12 @@ Makefile text
 *.cc text
 *.cu text
 *.cuh text
+*.proto text
 
 *.cs text
 
 *.yml text
+*.yml.bak text
 
 *.config text
 *.cntk text
@@ -83,7 +86,7 @@ Makefile text
 
 *.log text
 
-Dockerfile. text
+Dockerfile* text
 
 # Speech data
 mean.363 text
@@ -117,14 +120,21 @@ TIMIT*.tfsa text
 TIMIT*.transitions text
 
 Examples/Text/ATIS/Data/ATIS.* text
+Examples/Text/ATIS/*.wl text
 
 Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
 
 # Binary extensions:
-*.vsdm binary
+*.ark binary
+*.chunk binary
+*.cmf binary
+*.docx binary
+*.jpg binary
 *.pdf binary
 *.png binary
-*.docx binary
-*.chunk binary
 *.pptx binary
 *.snk binary
+*.vsdm binary
+*.zip binary
+*.dnn binary
+Examples/Image/Detection/FastRCNN/fastRCNN/*/*.pyd binary
