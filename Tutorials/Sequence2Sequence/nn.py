@@ -228,7 +228,7 @@ def ones_like(x):
     return plus(zeroes_like(x), one)
 
 # create a past value window that returns two records: a value, shape=(N,dim), and a valid window, shape=(1,dim)
-def past_value_window(N, input, axis=1):
+def past_value_window(N, input, axis=0):
 
     #ones_like_input = ones_like(input)
     ones_like_input = plus(times(input, constant(0, shape=(input.shape[0],1))), constant(1, shape=(1)))
@@ -250,8 +250,8 @@ def past_value_window(N, input, axis=1):
         last_valid.append(sequence.last(valid))
 
     # can't get splice to stack rows 'beside' each other, so stack on top and then reshape...
-    value_a = splice(last_value, axis=0)
-    valid_a = splice(last_valid, axis=0)
+    value_a = splice(last_value, axis=axis)
+    valid_a = splice(last_valid, axis=axis)
 
     # now reshape
     value = reshape(value_a, shape=(N, input.shape[0]))
@@ -272,7 +272,7 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
     encoder_output_dim = encoder_outputH.shape[0]
 
     # create the attention window
-    (aw_value, aw_valid) = past_value_window(attention_span, encoder_outputH, axis=1)
+    (aw_value, aw_valid) = past_value_window(attention_span, encoder_outputH, axis=0)
 
     # setup the projection of the attention window to go into the tanh()
     def projected_attention_window_broadcast():
