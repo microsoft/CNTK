@@ -1,9 +1,7 @@
 dataDir: ../../../Data
 tags:
-     # running for gpu build SKU on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
-     - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
-     # running for gpu build SKU  on every Nightly job in 'S' leg
-     - nightly-s (build_sku == 'gpu')
+     - bvt-p  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
+     - nightly-p (build_sku == 'gpu')
 
 testCases:
   Must train epochs in exactly same order and parameters for each MPI Rank:

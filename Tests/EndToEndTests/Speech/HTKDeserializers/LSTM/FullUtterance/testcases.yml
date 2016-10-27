@@ -1,9 +1,7 @@
 dataDir: ../../../Data
 tags:
-     # running targetting GPU on every BVT job in 'L' leg
-     - bvt-l (build_sku == 'gpu')
-     # running unconditionally on every Nightly job in 'L' leg
-     - nightly-l (build_sku == 'gpu')
+     - bvt-e (build_sku == 'gpu')
+     - nightly-e (build_sku == 'gpu')
 
 testCases:
   CNTK Run must be completed:
