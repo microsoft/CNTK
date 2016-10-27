@@ -104,6 +104,11 @@ public:
                                       const std::wstring nodeName = L"");
     ComputationNodePtr ROIPooling(const ComputationNodePtr inputValues, const ComputationNodePtr inputROIs, const TensorShape& roiOutputShape, const std::wstring nodeName = L"");
     ComputationNodePtr ReconcileDynamicAxis(const ComputationNodePtr dataInput, const ComputationNodePtr layoutInput, const std::wstring nodeName = L"");
+
+    ComputationNodePtr Crop(const ComputationNodePtr input1, const ComputationNodePtr input2, const std::wstring nodeName = L"");
+    ComputationNodePtr Crop(const ComputationNodePtr input1, const ComputationNodePtr input2, size_t offsetX, size_t offsetY, const std::wstring nodeName = L"");
+    ComputationNodePtr Crop(const ComputationNodePtr input1, const ComputationNodePtr input2, const ComputationNodePtr eqNode1, const ComputationNodePtr eqNode2, const std::wstring nodeName = L"");
+
 #ifdef COMING_SOON
     ComputationNodePtr CRF(const ComputationNodePtr label, const ComputationNodePtr postDepScore, const ComputationNodePtr transition_score, const std::wstring nodeName = L"");
 #endif

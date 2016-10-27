@@ -3,55 +3,42 @@ CPU info:
     Hardware threads: 24
     Total Memory: 264172964 kB
 -------------------------------------------------------------------
+
+About to throw exception 'Input is small to be cropped along x dimension in crop node.'
+
+About to throw exception 'Input is small to be cropped along y dimension in crop node.'
+
+About to throw exception 'Input is small to be cropped along x dimension in crop node.'
+
+About to throw exception 'Input is small to be cropped along y dimension in crop node.'
 Current working directory: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/NetworkTests
 Executable path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin
 Test path: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/NetworkTests
 Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/NetworkTests/Data
 Current working directory is now: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/UnitTests/NetworkTests/Data
 NDLBuilder Using CPU
-Node 'v1' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.000000.
-Node 'v1' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 1.000000.
-Node 'v1' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 1.000000.
-Node 'v1' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 1.000000.
-
-Post-processing network...
-
-1 roots:
-	v2 = Plus()
-
-Validating network. 3 nodes to process in pass 1.
-
-Validating --> features = InputValue() :  -> [1 x 1 x *]
-Validating --> v1 = LearnableParameter() :  -> [1 x 1]
-Validating --> v2 = Plus (features, v1) : [1 x 1 x *], [1 x 1] -> [1 x 1 x *]
-
-Validating network. 1 nodes to process in pass 2.
-
-
-Validating network, final pass.
-
-
-
-1 out of 3 nodes do not share the minibatch layout with the input data.
-
-Post-processing network complete.
-
-
-
-Allocating matrices for forward and/or backward propagation.
-
-Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
-
-
 Minibatch[0]: ActualMBSize = 1
 Written to ../Output/out.txt*
 Total Samples Evaluated = 1
 Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/UnitTests/NetworkTests
-Running 1 test case...
+Running 4 test cases...
 
 Test module "NetworkTests" has passed with:
-  1 test case out of 1 passed
-  1 assertion out of 1 passed
+  4 test cases out of 4 passed
+  55 assertions out of 55 passed
+
+  Test suite "CropNodeTestSuite" has passed with:
+    3 test cases out of 3 passed
+    54 assertions out of 54 passed
+
+    Test case "CropNodeTestSuite/CropNodeValidateTest" has passed with:
+      6 assertions out of 6 passed
+
+    Test case "CropNodeTestSuite/CropNodeForwardTest" has passed with:
+      8 assertions out of 8 passed
+
+    Test case "CropNodeTestSuite/CropNodeBackwardTest" has passed with:
+      40 assertions out of 40 passed
 
   Test suite "NetworkTestSuite" has passed with:
     1 test case out of 1 passed
