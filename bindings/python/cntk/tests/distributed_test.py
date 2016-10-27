@@ -32,7 +32,6 @@ def run_distributed_trainer(tmpdir, quantized):
 
     workers = communicator.workers()
     current_worker = communicator.current_worker()
-    print("List all distributed workers")
     found_rank = False
     for wk in workers:
         if current_worker.global_rank == wk.global_rank:
@@ -65,7 +64,8 @@ def run_distributed_trainer(tmpdir, quantized):
     assert isinstance(trainer.parameter_learners[0], Learner)
 
 def test_distributed(tmpdir, is_1bit_sgd):
+    if not is_1bit_sgd:
+        pytest.skip()
     run_distributed_trainer(tmpdir, quantized=is_1bit_sgd)
-	# Don't run this as MPI is not re-enterable in pytest process
-    #distributed.Communicator.finalize()
+    distributed.Communicator.finalize()
     
