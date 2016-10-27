@@ -5,10 +5,9 @@
 # ==============================================================================
 
 import numpy as np
-import sys
 import os
-from cntk import Trainer, Axis
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
+from cntk import Trainer, Axis, save_model
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk.learner import momentum_sgd, momentum_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select, alias, hardmax
 from cntk.ops.functions import CloneMethod
