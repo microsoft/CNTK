@@ -64,8 +64,6 @@ def run_distributed_trainer(tmpdir, quantized):
     assert isinstance(trainer.parameter_learners[0], Learner)
 
 def test_distributed(tmpdir, is_1bit_sgd):
-    if not is_1bit_sgd:
-        pytest.skip()
     run_distributed_trainer(tmpdir, quantized=is_1bit_sgd)
     distributed.Communicator.finalize()
     
