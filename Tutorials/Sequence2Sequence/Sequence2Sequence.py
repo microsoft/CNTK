@@ -156,7 +156,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs):
     i = 0
     mbs = 0
     epoch_size = 908241
-    training_progress_output_freq = 500
+    training_progress_output_freq = 100
 
     # bind inputs to data from readers
     train_bind = {
