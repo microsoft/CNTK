@@ -23,6 +23,11 @@ build/
 .run-*
 lib/
 bin/
+Examples/Image/DataSets/Pascal/VOC*
+Examples/Image/DataSets/Pascal/selective_search_data*
+Examples/Image/Detection/FastRCNN/proc/
+
+
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
 !packages/*/build/
