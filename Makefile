@@ -443,22 +443,25 @@ $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 # CNTKLibrary tests
 ########################################
 
+CNTKLIBRARY_TESTS_SRC_PATH =\
+    Tests/UnitTests/V2LibraryTests
+
 CNTKLIBRARY_TESTS_SRC =\
-	Tests/UnitTests/V2LibraryTests/FeedForwardTests.cpp \
-	Tests/UnitTests/V2LibraryTests/Main.cpp \
-	Tests/UnitTests/V2LibraryTests/Common.cpp \
-	Tests/UnitTests/V2LibraryTests/NDArrayViewTests.cpp \
-	Tests/UnitTests/V2LibraryTests/RecurrentFunctionTests.cpp \
-	Tests/UnitTests/V2LibraryTests/TensorTests.cpp \
-	Tests/UnitTests/V2LibraryTests/TrainerTests.cpp \
-	Tests/UnitTests/V2LibraryTests/CifarResNet.cpp \
-	Tests/UnitTests/V2LibraryTests/SerializationTests.cpp \
-	Tests/UnitTests/V2LibraryTests/LearnerTests.cpp \
-	Tests/UnitTests/V2LibraryTests/FunctionTests.cpp \
-	Tests/UnitTests/V2LibraryTests/SequenceClassification.cpp \
-	Tests/UnitTests/V2LibraryTests/Seq2Seq.cpp \
-	Tests/UnitTests/V2LibraryTests/TruncatedLSTMAcousticModel.cpp \
-	Tests/UnitTests/V2LibraryTests/DeviceSelectionTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/FeedForwardTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/Main.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/Common.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/NDArrayViewTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/RecurrentFunctionTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/TensorTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/TrainerTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/CifarResNet.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/SerializationTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/LearnerTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/FunctionTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/SequenceClassification.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/Seq2Seq.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/TruncatedLSTMAcousticModel.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/DeviceSelectionTests.cpp \
 	Examples/Evaluation/CPPEvalV2Client/EvalMultithreads.cpp \
 
 CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
@@ -478,6 +481,7 @@ $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 ########################################
 
 CNTKLIBRARY_DISTRIBUTION_TESTS_SRC =\
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/Common.cpp \
 	Tests/UnitTests/V2LibraryDistributionTests/Main.cpp \
 
 CNTKLIBRARY_DISTRIBUTION_TESTS:=$(BINDIR)/v2librarydistributiontests
@@ -490,7 +494,7 @@ $(CNTKLIBRARY_DISTRIBUTION_TESTS): $(CNTKLIBRARY_DISTRIBUTION_TESTS_OBJ) | $(CNT
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -I$(CNTKLIBRARY_TESTS_SRC_PATH) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
 
 ########################################
 # LibEval
