@@ -7,9 +7,8 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, Axis, save_model, load_model
+from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.device import cpu, set_default_device
 from cntk.learner import momentum_sgd, momentum_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select, alias, hardmax
 from cntk.ops.functions import CloneMethod
@@ -115,7 +114,7 @@ def create_model():
             recurrence_hook_c = lambda operand: element_select(
                 is_first_label, thought_vector_broadcast_c, past_value(operand))
 
-        (decoder_output_h, encoder_output_c) = LSTMP_component_with_self_stabilization(
+        (decoder_output_h, decoder_output_c) = LSTMP_component_with_self_stabilization(
             decoder_output_h.output, hidden_dim, hidden_dim, recurrence_hook_h, recurrence_hook_c, 
             augment_input_hook, hidden_dim)
 
