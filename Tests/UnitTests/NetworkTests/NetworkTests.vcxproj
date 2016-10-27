@@ -109,6 +109,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp" />
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp" />
+    <ClCompile Include="CropNodeTests.cpp" />
     <ClCompile Include="OperatorEvaluation.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
