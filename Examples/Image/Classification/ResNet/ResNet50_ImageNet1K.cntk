@@ -1,4 +1,5 @@
-# Node: ResNet-50 with ImageNet, with original paper setting
+# Node: ResNet-50 with ImageNet -- 50 layers bottleneck ResNet for image classification
+# Reference: "Deep Residual Learning for Image Recognition" https://arxiv.org/abs/1512.03385
 
 command = TrainNetwork:BNStatistics:Eval
 
@@ -35,26 +36,26 @@ TrainNetwork = {
             MaxPoolingLayer {(3:3), stride = 2, pad = true} :
 
             # conv2_x
-            ResNetBottleneckInc {cMap[2], cMap[0], (1:1), (1:1), (1:1), bnTimeConst} :
+            ResNetBottleneckInc {cMap[2], cMap[0], (1:1), (1:1), bnTimeConst} :
             ResNetBottleneckStack {numLayers[0], cMap[2], cMap[0], bnTimeConst} :
 
             # conv3_x
-            ResNetBottleneckInc {cMap[3], cMap[1], (2:2), stride1x1, stride3x3, bnTimeConst} :
+            ResNetBottleneckInc {cMap[3], cMap[1], stride1x1, stride3x3, bnTimeConst} :
             ResNetBottleneckStack {numLayers[1], cMap[3], cMap[1], bnTimeConst} :
 
             # conv4_x
-            ResNetBottleneckInc {cMap[4], cMap[2], (2:2), stride1x1, stride3x3, bnTimeConst} :
+            ResNetBottleneckInc {cMap[4], cMap[2], stride1x1, stride3x3, bnTimeConst} :
             ResNetBottleneckStack {numLayers[2], cMap[4], cMap[2], bnTimeConst} :
 
             # conv5_x
-            ResNetBottleneckInc {cMap[5], cMap[3], (2:2), stride1x1, stride3x3, bnTimeConst} :
+            ResNetBottleneckInc {cMap[5], cMap[3], stride1x1, stride3x3, bnTimeConst} :
             ResNetBottleneckStack {numLayers[3], cMap[5], cMap[3], bnTimeConst} :
 
             # avg pooling
             AveragePoolingLayer {(7: 7), stride = 1} :
 
             # FC
-            LinearLayer {labelDim, init= 'uniform'}
+            LinearLayer {labelDim, init = 'uniform'}
         )
 
         # inputs
@@ -62,19 +63,19 @@ TrainNetwork = {
         labels      = Input {labelDim}
 
         # apply model to features
-        ol          = model (features)
+        z           = model (features)
 
         # loss and error computation
-        ce          = CrossEntropyWithSoftmax   (labels, ol)
-        errs        = ClassificationError       (labels, ol)
-        top5Errs    = ClassificationError       (labels, ol, topN = 5)
+        ce          = CrossEntropyWithSoftmax   (labels, z)
+        errs        = ClassificationError       (labels, z)
+        top5Errs    = ClassificationError       (labels, z, topN = 5)
 
         # declare special nodes
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
         evaluationNodes = (errs) # top5Errs only used in Eval
-        outputNodes     = (ol)
+        outputNodes     = (z)
     }
 
     SGD = {
@@ -137,7 +138,8 @@ TrainNetwork = {
     }
 }
 
-
+# Re-statistics the mean and variance of batch normalization layers while other parameters frozen after training
+# more details: https://github.com/Microsoft/CNTK/wiki/Post-Batch-Normalization-Statistics#post-batch-normalization-statistics
 BNStatistics = {
     action = "bnstat"
     modelPath = "$modelPath$"
