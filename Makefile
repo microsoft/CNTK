@@ -443,7 +443,7 @@ $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 # CNTKLibrary tests
 ########################################
 
-CNTKLIBRARY_DISTRIBUTION_TESTS_SRC =\
+CNTKLIBRARY_TESTS_SRC =\
 	Tests/UnitTests/V2LibraryTests/FeedForwardTests.cpp \
 	Tests/UnitTests/V2LibraryTests/Main.cpp \
 	Tests/UnitTests/V2LibraryTests/Common.cpp \
@@ -461,38 +461,18 @@ CNTKLIBRARY_DISTRIBUTION_TESTS_SRC =\
 	Tests/UnitTests/V2LibraryTests/DeviceSelectionTests.cpp \
 	Examples/Evaluation/CPPEvalV2Client/EvalMultithreads.cpp \
 
-CNTKLIBRARY_DISTRIBUTION_TESTS:=$(BINDIR)/v2librarytests
-CNTKLIBRARY_DISTRIBUTION_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_DISTRIBUTION_TESTS_SRC)))
+CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
+CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
 
-ALL+=$(CNTKLIBRARY_DISTRIBUTION_TESTS)
-SRC+=$(CNTKLIBRARY_DISTRIBUTION_TESTS_SRC)
+ALL+=$(CNTKLIBRARY_TESTS)
+SRC+=$(CNTKLIBRARY_TESTS_SRC)
 
-$(CNTKLIBRARY_DISTRIBUTION_TESTS): $(CNTKLIBRARY_DISTRIBUTION_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
+$(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
 
-########################################
-# CNTKLibrary distribution tests
-########################################
-
-CNTKLIBRARY_DISTRIBUTION_TESTS_SRC =\
-	Tests/UnitTests/V2LibraryDistributionTests/main.cpp \
-
-CNTKLIBRARY_DISTRIBUTION_TESTS:=$(BINDIR)/v2librarydistributiontests
-CNTKLIBRARY_DISTRIBUTION_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_DISTRIBUTION_TESTS_SRC)))
-
-ALL+=$(CNTKLIBRARY_DISTRIBUTION_TESTS)
-SRC+=$(CNTKLIBRARY_DISTRIBUTION_TESTS_SRC)
-
-$(CNTKLIBRARY_DISTRIBUTION_TESTS): $(CNTKLIBRARY_DISTRIBUTION_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
-	@echo $(SEPARATOR)
-	@mkdir -p $(dir $@)
-	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
-
-    
 ########################################
 # LibEval
 ########################################
