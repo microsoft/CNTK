@@ -16,6 +16,7 @@
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp">
       <Filter>From BrainScript</Filter>
     </ClCompile>
+    <ClCompile Include="CropNodeTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Config">

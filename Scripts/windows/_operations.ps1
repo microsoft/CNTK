@@ -4,6 +4,9 @@
 #
 
 $operations = @(
+    @{Name = "Verifying Installation contents"; ShortName = "INSTCONTENT"; Info = "Verifying Installation contents"; 
+      Verification = @( @{Function = "VerifyInstallationContent"; Path = "$cntkRootDir" } )
+     },
     @{Name = "Installation VS2012 Runtime"; ShortName = "VS2012"; Info = "Install VS2012 Runtime"; 
       Verification = @( @{Function = "VerifyRegistryKeyNameData"; Key = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\11.0\VC\Runtimes\x64"; RegName = "Installed"; RegData  = "1" } );
       Action = @( @{Function = "InstallExe"; Command  = "$cntkRootDir\prerequisites\VS2012\vcredist_x64.exe"; Param = "/install /passive /norestart"; Message="Installing VS2012 Runtime...." } )
@@ -33,15 +36,15 @@ $operations = @(
       Verification  = @( @{Function = "VerifyFile"; Path = "$cntkRootDir\scripts\cntkpy34.bat" } );
       Action = @( @{Function = "CreateBatch"; Filename = "$cntkRootDir\scripts\cntkpy34.bat" } )
      },
-    @{Name = "Git"; ShortName = "GIT"; Info = "Install Git"; Target = "gitrepo";
+    @{Name = "Git"; ShortName = "GIT"; Info = "Install Git"; 
       Verification  = @( @{Function = "VerifyRegistryKeyName"; Key = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\GitForWindows"; RegName = "CurrentVersion"; } );
       Download = @( @{Function = "Download"; Source = "https://github.com/git-for-windows/git/releases/download/v2.10.1.windows.1/Git-2.10.1-64-bit.exe"; Destination = "$localCache\Git-2.10.1-64-bit.exe" } );
       Action = @( @{Function = "InstallExe"; Command  = "$localCache\Git-2.10.1-64-bit.exe"; Param = "/SP- /SILENT /NORESTART"; Message="Installing Git. Please be patient...."},
                   @{Function = "AddToPath"; Dir = "C:\Program Files\Git\cmd"; AtStart  = $true; } )
      },
     @{Name = "Clone CNTK from Github"; ShortName = "CNTKCLONE"; Info = "Clone CNTK from Github repository";
-      Verification = @( @{Function = "VerifyDirectory"; Path = "c:\repos\cntk" } );
-      Action = @( @{Function = "MakeDirectory"; Path = "c:\repos" },
-                  @{Function = "InstallExe"; Command = "C:\Program Files\Git\bin\git.exe"; Param = "clone --branch $RepoTag --recursive https://github.com/Microsoft/CNTK/"; WorkDir = "c:\repos"; Message="Cloning CNTK (branch $RepoTag) repository...." } )
+      Verification = @( @{Function = "VerifyDirectory"; Path = "$RepoLocation" } );
+      Action = @( @{Function = "MakeDirectory"; Path = $repoDirectory },
+                  @{Function = "InstallExe"; Command = "C:\Program Files\Git\bin\git.exe"; Param = "clone --branch $RepoTag --recursive https://github.com/Microsoft/CNTK/ $repoName"; WorkDir = "$repoDirectory"; Message="Cloning CNTK (branch $RepoTag) repository...." } )
      }
 )

@@ -409,6 +409,111 @@ template class SliceNode<float>;
 template class SliceNode<double>;
 
 // -----------------------------------------------------------------------
+// CropNode
+//
+// Extracts portion of inputNode1 (input to be cropped) that corresponds to
+// inputNode2 (input that defines crop dimensions).
+
+// Cropping offsets can be given directly (offsetX, offsetY parameters in BS/NDL).
+// These offsets must be given in absolute values (pixels).
+//
+// Alternatively, offsets can be calculated automatically using network graph
+// and node transforms. The offsets are computed by traversing the network graph
+// and finding common ancestor of crop node inputs. Once ancestor is found affine
+// transform is computed along the paths from first and second input to common
+// ancestor. Complete transform from one input to other it finally calculated
+// composing these two transforms. Translate components of final transform define
+// crop offsets.
+// Automatic crop calculation uses concept of equivalence nodes. Equivalence nodes
+// are sort of virtual common ancestors. For example two inputs to network may be
+// equivalent in spatial sense (for example input and target in case of pixelwise
+// semantic labeling) but they are separate leaf nodes which cannot be common
+// ancestors for inputs to crop node. However, they can be declared as equivalent
+// using equivalence nodes option (when traversing from one crop input and other
+// once we reach two equivalence nodes we will consider that path between two
+// crop inputs is closed over them).
+//
+// Usage (Both NDL and BS):
+//  CropNode(input1, input2, offsetX, offsetY) or
+//  CropNode(input1, input2) or
+//  CropNode(input1, input2, eqNode1, eqNode2) or
+// where:
+//  input1 - computation node to be cropped at given/calculated offsets with width and height taken from input2
+//  input2 - computation node that defines cropping shape (width and height to be used when cropping input1)
+//  offsetX - manually given absolute offset in pixels along x axis (must be used with type="manual")
+//  offsetY - manually given absolute offset in pixels along y axis (must be used with type="manual")
+//  eqNode1 - first equivalence node
+//  eqNode2 - second equivalence node
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class CropNode : public ComputationNode<ElemType>, public TransformerNode
+{
+    typedef ComputationNode<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+
+    static const std::wstring TypeName() { return L"Crop"; }
+
+public:
+    CropNode(DEVICEID_TYPE deviceId, const std::wstring& name);
+
+    CropNode(size_t offsetX, size_t offsetY, DEVICEID_TYPE deviceId, const std::wstring& name);
+
+    CropNode(const ScriptableObjects::IConfigRecordPtr configp);
+
+    void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& /*fr*/) override;
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& /*fr*/) override;
+
+    void Save(File& fstream) const override;
+
+    void Load(File& fstream, size_t modelVersion) override;
+
+    void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
+
+private:
+    using ComputationNodeBase::GetInputs;
+    using TransformerNode::m_transforms;
+
+    // Declaration of matrix getting method to unify accessing values and gradients.
+    typedef MatrixBasePtr(ComputationNode<ElemType>::*MatrixGetter)() const;
+
+    // Helper structure to store input/output views which define parts of input and output we work with.
+    struct CroppedIOViews
+    {
+        CroppedIOViews(CropNode* cropNode, MatrixGetter matrixGetter, TensorShape inputShapeCropped, TensorShape ouputShape) :
+            // Input view is derived from first input.
+            inputViewCropped((cropNode->Input(0).get()->*matrixGetter)(), inputShapeCropped),
+            // Output view corresponds to single output.
+            outputView((cropNode->*matrixGetter)(), ouputShape)
+        {}
+
+        TensorView<ElemType> inputViewCropped;
+        TensorView<ElemType> outputView;
+    };
+
+    // Creates input and output views (TensorViews that define parts of input and output we work with). MatrixGetter is
+    // the pointer to method that returns appropriate matrix (values in forward or gradients in backward). Using
+    // MatrixGetter we can reuse code without copy-pasting.
+    CroppedIOViews CreateIOViews(MatrixGetter matrixGetter);
+
+    // Performs offsets computation if necessary.
+    void ComputeCropOffsets();
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override;
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override;
+
+protected:
+    // Offset along x axis. We need to store offsets as floats for precision if one crop node affects computation of other.
+    double m_xOffset;
+    // Offset along y axis.
+    double m_yOffset;
+};
+
+// -----------------------------------------------------------------------
 // RowStack (input0, input1, ...)
 // stacks multiple inputs on top of each other
 // The inputs will be spliced w.r.t. their first tensor dimension (the "row" dimension).
