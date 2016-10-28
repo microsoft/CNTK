@@ -12,6 +12,24 @@ set -x -e -o pipefail
 
 REPO_TAG=v2.0.beta1.0
 
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --repo-tag)
+      REPO_TAG="$2"
+      [ -z "$REPO_TAG" ] && {
+        echo Missing value for --repo-tag option.
+        exit 1
+      }
+      shift # extra shift
+      ;;
+    *)
+      echo Unknown option $1
+      exit 1
+      ;;
+  esac
+  shift
+done
+
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
 # Go to the drop root
