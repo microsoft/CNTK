@@ -7,7 +7,7 @@ function ActionOperations()
 {
     Write-Host "Performing install operations"
 
-    foreach ($item in $global:operationList) {
+    foreach ($item in $Script:operationList) {
         
         foreach ($actionItem in $item.Action) {
             ActionItem $actionItem
