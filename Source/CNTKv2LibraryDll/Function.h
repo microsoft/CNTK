@@ -185,7 +185,6 @@ namespace CNTK
         static const std::wstring AttributeNameNormalizationTimeConstant;
         static const std::wstring AttributeNameBlendTimeConstant;
         static const std::wstring AttributeNameEpsilon;
-        static const std::wstring AttributeNameSamplesSeen;
         static const std::wstring AttributeNameUseCuDNNEngine;
         static const std::wstring AttributeNameNewDynamicAxes;
         static const std::wstring AttributeNameBeginIndex;

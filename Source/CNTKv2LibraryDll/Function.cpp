@@ -370,32 +370,32 @@ namespace CNTK
                     if (leafVariablesCloneMap.find(cloneeInput) != leafVariablesCloneMap.end())
                         clonedInput = leafVariablesCloneMap.at(cloneeInput);
                     else
-                {
-                        if (cloneeInput.IsParameter() || cloneeInput.IsConstant())
-                {
-                    switch (parameterCloneMethod)
                     {
-                    case ParameterCloningMethod::Clone:
-                        clonedInput = cloneeInput.Clone();
-                        leafVariablesCloneMap[cloneeInput] = clonedInput;
-                        break;
-                    case ParameterCloningMethod::Share:
-                        clonedInput = cloneeInput;
-                        break;
-                    case ParameterCloningMethod::Freeze:
+                        if (cloneeInput.IsParameter() || cloneeInput.IsConstant())
+                        {
+                            switch (parameterCloneMethod)
+                            {
+                            case ParameterCloningMethod::Clone:
+                                clonedInput = cloneeInput.Clone();
+                                leafVariablesCloneMap[cloneeInput] = clonedInput;
+                                break;
+                            case ParameterCloningMethod::Share:
+                                clonedInput = cloneeInput;
+                                break;
+                            case ParameterCloningMethod::Freeze:
                                 if (cloneeInput.IsParameter())
-                        clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
+                                    clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
                                 else
                                     clonedInput = Constant(Constant(cloneeInput).Value(), cloneeInput.Name());
 
-                        leafVariablesCloneMap[cloneeInput] = clonedInput;
-                        break;
-                    default:
-                        LogicError("Unknown ParameterCloningMethod");
-            }
-        }
-                else
-                {
+                                leafVariablesCloneMap[cloneeInput] = clonedInput;
+                                break;
+                            default:
+                                LogicError("Unknown ParameterCloningMethod");
+                            }
+                        }
+                        else
+                        {
                             clonedInput = cloneeInput.Clone();
                             leafVariablesCloneMap[cloneeInput] = clonedInput;
                         }
@@ -578,7 +578,6 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNormalizationTimeConstant = L"normalizationTimeConstant";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlendTimeConstant = L"blendTimeConstant";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameEpsilon = L"epsilon";
-    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSamplesSeen = L"samplesSeen";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUseCuDNNEngine = L"useCuDNNEngine";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewDynamicAxes = L"newDynamicAxes";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBeginIndex = L"beginIndex";
@@ -1613,11 +1612,8 @@ namespace CNTK
             auto blendTimeConstant = functionConfig[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>();
             auto epsilon = functionConfig[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
             auto useCuDNNEngine = functionConfig[PrimitiveFunction::AttributeNameUseCuDNNEngine].Value<bool>();
-            size_t samplesSeen = 0;
-            if (functionConfig.Contains(PrimitiveFunction::AttributeNameSamplesSeen))
-                samplesSeen = functionConfig[PrimitiveFunction::AttributeNameSamplesSeen].Value<size_t>();
 
-            computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW, samplesSeen);
+            computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW);
             break;
         }
         case PrimitiveOpType::Combine:
@@ -2108,7 +2104,7 @@ namespace CNTK
             NDMaskPtr mask;
             if (maskNeeded)
             {
-                mask = MakeSharedObject<NDMask>(NDShape({ maxNumTimeSteps, numSequences }), device);
+                mask = MakeSharedObject<NDMask>(NDShape({ maxNumTimeSteps, numSequences }), DeviceDescriptor::CPUDevice());
                 for (size_t i = 0; i < numSequences; ++i)
                     if (sequenceBeginFlags[i])
                         mask->MarkSequenceBegin({0, i});
@@ -2322,7 +2318,7 @@ namespace CNTK
         {
             auto& matrix = getGradient ? computationNode->As<ComputationNode<float>>()->Gradient() : computationNode->As<ComputationNode<float>>()->Value();
             if (varValue == nullptr)
-                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<float>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<float>>(matrix.AsReference()), layout, /*readOnly =*/ !getGradient);
             else
                 nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(var, matrix, layout);
             break;
@@ -2331,7 +2327,7 @@ namespace CNTK
         {
             auto& matrix = getGradient ? computationNode->As<ComputationNode<double>>()->Gradient() : computationNode->As<ComputationNode<double>>()->Value();
             if (varValue == nullptr)
-                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<double>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<double>>(matrix.AsReference()), layout, /*readOnly =*/ !getGradient);
             else
                 nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(var, matrix, layout);
             break;
@@ -2342,7 +2338,7 @@ namespace CNTK
         }
 
         if (varValue == nullptr)
-            varValue = nodeValue->DeepClone();
+            varValue = nodeValue;
         else
             varValue->CopyFrom(*nodeValue);
     }
