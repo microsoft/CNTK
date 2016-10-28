@@ -212,8 +212,9 @@ namespace CNTK
             auto restoredFunction = Function::Deserialize(model, computeDevice);
             if (restoredFunction->Outputs()[0].GetDataType() != dataType)
             {
-                InvalidArgument("The loaded model's data type (%u) is different form the requested data type(%u).",
-                                restoredFunction->Outputs()[0].GetDataType(), dataType);
+                InvalidArgument("The loaded model's data type (%s) is different form the requested data type(%s).",
+                                DataTypeName(restoredFunction->Outputs()[0].GetDataType()),
+                                DataTypeName(dataType));
             }
             return restoredFunction;
         }
@@ -1049,8 +1050,10 @@ namespace CNTK
         // This also applies to other enums (DataType, VariableKind, etc.)
         if (op > PrimitiveOpType::Combine)
         {
-            LogicError("Unexpected variable '%ls':'%d' "
-                        "(%s).", opKey.c_str(), op, GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
+            LogicError("Unexpected variable '%ls':'%u' (%s).", 
+                        opKey.c_str(), 
+                        static_cast<std::underlying_type<CNTK::PrimitiveOpType>::type>(op),
+                        GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
         }
 
         const auto& uid = dict[uidKey].Value<std::wstring>();

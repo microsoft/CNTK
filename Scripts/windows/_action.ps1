@@ -7,7 +7,7 @@ function ActionOperations()
 {
     Write-Host "Performing install operations"
 
-    foreach ($item in $global:operationList) {
+    foreach ($item in $Script:operationList) {
         
         foreach ($actionItem in $item.Action) {
             ActionItem $actionItem
@@ -105,6 +105,9 @@ function InstallWheel(
     $whlFile = Get-ChildItem $cntkRootDir\cntk\Python\cntk*.whl
     if ($whlFile -eq $null) {
         throw "No WHL file found at $cntkRootDir\cntk\Python"
+    }
+    if ($whlFile.Count -gt 1) {
+        Throw "Multiple WHL files found in $cntkRootDir\cntk\Python. Please make sure it contains only the WHL file matching your CNTK download"
     }
     $whl = $whlFile.FullName
 
@@ -223,7 +226,7 @@ function CreateBatch(
 
     Remove-Item -Path $filename -ErrorAction SilentlyContinue | Out-Null
 
-    add-content -Path $filename -Value "set PATH=%PATH%;$cntkRootDir\cntk" -Encoding Ascii
+    add-content -Path $filename -Value "set PATH=$cntkRootDir\cntk;%PATH%" -Encoding Ascii
     add-content -Path $filename -Value "$AnacondaBasePath\Scripts\activate $AnacondaBasePath\envs\cntk-py34" -Encoding Ascii 
 }
 

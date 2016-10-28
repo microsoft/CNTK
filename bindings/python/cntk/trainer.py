@@ -39,7 +39,7 @@ class Trainer(cntk_py.Trainer):
 
         if distributed_trainer:
             super(Trainer, self).__init__(model, loss_function, eval_function,
-                parameter_learners, distributed_trainer.data)
+                parameter_learners, distributed_trainer)
         else:
             super(Trainer, self).__init__(model, loss_function, eval_function,
                 parameter_learners)

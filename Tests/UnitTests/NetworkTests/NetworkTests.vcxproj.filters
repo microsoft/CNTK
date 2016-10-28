@@ -6,6 +6,7 @@
     <ClInclude Include="Common\NetworkTestHelper.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="TestHelpers.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
@@ -16,6 +17,9 @@
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp">
       <Filter>From BrainScript</Filter>
     </ClCompile>
+    <ClCompile Include="AccumulatorNodeTests.cpp" />
+    <ClCompile Include="CropNodeTests.cpp" />
+    <ClCompile Include="TestHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Config">

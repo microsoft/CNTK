@@ -2,24 +2,18 @@
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
-
 function VerifyOperations()
 {
-    Write-Host "Determining Operations to perform"
+    Write-Host "Determining Operations to perform. This will take a moment..."
 
     foreach ($item in $operations) {
-        if ($item.Ignore | ?{$global:installTarget -contains $_}) {
-            continue
-        }
         $needsInstall = $false
 
         foreach ($verificationItem in $item.Verification) {
-            if ($item.Ignore | ?{$global:installTarget -contains $_}) {
-                continue
-            }
+            
             $needsInstall = VerifyItem $verificationItem
             if (-not $needsInstall) {
-                $global:operationList += $item
+                $Script:operationList += $item
                 break
             }
         }
@@ -27,10 +21,10 @@ function VerifyOperations()
 
     Write-Host 
 
-    if ($global:operationList.Count -gt 0) {
+    if ($Script:operationList.Count -gt 0) {
         Write-Host "The following operations will be performed:"
 
-        foreach ($item in $global:operationList) {
+        foreach ($item in $Script:operationList) {
             $info = $item.Info
             Write-Host " * $info"
         }
@@ -51,8 +45,8 @@ function VerifyOperations()
 }
 
 function VerifyItem(
-    [hashtable] $item
-){
+    [hashtable] $item)
+{
     $func = $item["Function"]
     $name = $item["Name"]
 
@@ -62,6 +56,76 @@ function VerifyItem(
     $result = Invoke-Expression $expr 
 
     return $result
+}
+
+function VerifyWin32ProductExists(
+    [Parameter(Mandatory = $true)][hashtable] $table)
+{
+    FunctionIntro $table
+    $func = $table["Function"]
+    $match = $table["Match"]
+    $noInstallRequired = $true
+
+    $allProducts = LoadWin32Product
+    $productList = @($allProducts | Where-Object { $_.Name -match $match } )
+    
+    if ($productList.Count -eq 0) {
+        $noInstallRequired = $false
+    }
+
+    Write-Verbose "[$func]: Product [$match] returned [$noInstallRequired]"
+
+    return $noInstallRequired
+}
+
+function VerifyWin32ProductVersion(
+    [Parameter(Mandatory = $true)][hashtable] $table)
+{
+    FunctionIntro $table
+    $func = $table["Function"]
+    $match = $table["Match"]
+    $version = $table["Version"]
+    $noInstallRequired = $true
+
+    $allProducts = LoadWin32Product
+    $productList = @($allProducts | Where-Object { $_.Name -match $match } )
+
+    if ($productList.Count -eq 0) {
+        Write-Verbose "No product found with Name matching [$match]"
+        $noInstallRequired = $false
+    }
+    else {
+        $productList = @($productList | Where-Object { $_.Version -lt $version })
+        if ($productList.Count -gt 0) {
+            Write-Verbose "Products with earlier versions found`n$productList"
+            $noInstallRequired = $false
+        }
+    }
+
+    Write-Verbose "[$func]: Product [$match] Version {$version] returned [$noInstallRequired]"
+    return $noInstallRequired
+}
+
+function VerifyInstallationContent(
+    [Parameter(Mandatory = $true)][hashtable] $table
+)
+{
+    FunctionIntro $table
+
+    $func = $table["Function"]
+    $path = $table["Path"]
+
+    $result = (join-path $path cntk\cntk.exe | test-path -PathType Leaf) 
+    $result = (join-path $path prerequisites\VS2012\vcredist_x64.exe | test-path -PathType Leaf) -and $result
+    $result = (join-path $path prerequisites\VS2013\vcredist_x64.exe | test-path -PathType Leaf) -and $result
+    $result = (join-path $path prerequisites\MSMpiSetup.exe | test-path -PathType Leaf) -and $result
+
+    if ($result) {
+        Write-Verbose "[$func]: [$path] returned [$result]"
+        return $result
+    }
+    
+    throw "`nFatal Error: Files from CNTK binary download package are missing!`nThe install script must be run out of the unpacked binary CNTK package, not from a CNTK source clone."
 }
 
 function VerifyDirectory(
@@ -191,4 +255,13 @@ function Test-ItemProperty (
         }
     }
     return $false
+}
+
+function LoadWin32Product
+{
+    if ($Script:Win32Product -eq $Null) {
+        $Script:Win32Product = Get-WmiObject Win32_Product 
+    }
+
+    return $Script:Win32Product
 }

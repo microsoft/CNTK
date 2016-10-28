@@ -187,6 +187,26 @@ protected:
         FixVectorShape(filterRank, inputShape.size(), m_sharing,     true);
     }
 
+    // Derived classes implement transforms calculation. Since all derived classes are filter based we consolidate common
+    // filter transform calculation here to be reused by derived classes. For example convolution and de-convolution
+    // have same transform but inversed, hence both of them may reuse this method and one will call inverse in addition
+    // (similar holds for pooling nodes).
+    SpaceTransform ComputeFilterTransform()
+    {
+        std::shared_ptr<const ConvolveGeometry> geometry = m_convEng->Geometry();
+
+        SpaceTransform result;
+        result.m_axisTransforms.resize(2);
+
+        result.m_axisTransforms[0].scale = (float)(geometry->GetStride(0));
+        result.m_axisTransforms[0].translate = (float)((geometry->KernelShape()[0] - 1) / 2 - geometry->GetLowerPad(0));
+
+        result.m_axisTransforms[1].scale = (float)(geometry->GetStride(1));
+        result.m_axisTransforms[1].translate = (float)((geometry->KernelShape()[1] - 1) / 2 - geometry->GetLowerPad(1));
+
+        return result;
+    }
+
 protected:
     TensorShape m_kernelShape;
     TensorShape m_mapCount;
@@ -229,7 +249,7 @@ public:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
+class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
     static const std::wstring TypeName() { return L"Convolution"; }
@@ -489,6 +509,31 @@ public:
 
     bool IsConvolution2D() const { return m_convolution2D; }
 
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms[1].m_axisTransforms.empty())
+        {
+            m_transforms[1] = ComputeFilterTransform();
+            if (!m_transpose)
+            {
+                // Convolution, need to inverse transform.
+                m_transforms[1] = m_transforms[1].Inverse();
+            }
+            // else: Deconvolution, nothing to do.
+        }
+        // else: transform already computed, no need to do computation again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override
+    {
+        // We support transforms just on convolution input.
+        return (inputIndex == 1);
+    }
+
 protected:
     // Flag that indicates whether the node is created using 2D-syntax.
     bool m_convolution2D;
@@ -674,7 +719,7 @@ protected:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class PoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<1>
+class PoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<1>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
     static const std::wstring TypeName() { return L"Pooling"; }
@@ -756,6 +801,26 @@ public:
             }
         }
     }
+
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms[0].m_axisTransforms.empty())
+        {
+            m_transforms[0] = ComputeFilterTransform();
+            m_transforms[0] = m_transforms[0].Inverse();
+        }
+        // else: transform already computed, no need to do it again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t /*inputIndex*/) override
+    {
+        // We support transforms on all inputs (one here).
+        return true;
+    }
 };
 
 // -----------------------------------------------------------------------
@@ -774,7 +839,7 @@ public:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class MaxUnpoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
+class MaxUnpoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base;
     UsingConvolutionNodeBaseMembers;
@@ -857,6 +922,25 @@ public:
                                                                 NodeName());
             }
         }
+    }
+
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms.empty())
+        {
+            m_transforms[0] = ComputeFilterTransform();
+        }
+        // else: transform already computed, no need to do it again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override
+    {
+        // We support transform for just unpool input.
+        return (inputIndex == 0);
     }
 };
 

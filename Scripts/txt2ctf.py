@@ -15,13 +15,19 @@
 # of the token in the output CNTK text format file.
 
 # Example usage (i.e. for PennTreebank files):
+# 1)
 #    sed -e 's/^<\/s> //' -e 's/ <\/s>$//' < en.txt > en.txt1
 #    sed -e 's/^<\/s> //' -e 's/ <\/s>$//' < fr.txt > fr.txt1
 #    paste en.txt1 fr.txt1 | txt2ctf.py --map en.dict fr.dict > en-fr.ctf
 #
+# 2) (assuming that the current dir is [cntk root]/Examples/SequenceToSequence/CMUDict/Data/)
+# sed -e 's/<s\/>/<\/s>\t<s>/' < cmudict-0.7b.train-dev-1-21.txt `#this will replace every '<s/>' with '</s>[tab]<s>'` |\
+# python ../../../../Scripts/txt2ctf.py --map cmudict-0.7b.mapping cmudict-0.7b.mapping > cmudict-0.7b.train-dev-1-21.ctf
+#
 
 import sys
 import argparse
+import re
 
 def convert(dictionaryStreams, inputs, output, unk, annotated):
     # create in memory dictionaries
@@ -58,7 +64,7 @@ def _convertSequence(dictionaries, streams, sequenceId, output, unk, annotated):
             value = dictionaries[streamIndex][token]
             output.write("\t|S" + str(streamIndex) + " "+ str(value) + ":1")
             if annotated:
-                output.write(" |# " + token)
+                output.write(" |# " + re.sub(r'(\|(?!#))|(\|$)', r'|#', token))
         output.write("\n")
 
 if __name__ == "__main__":
@@ -115,6 +121,23 @@ def test_simpleSanityCheck():
     expectedOutput.write("1\t\t|S1 3:1\n")
 
     assert expectedOutput.getvalue() == output.getvalue()
+
+def test_thatPipeSymbolIsEscaped():
+    dictionary1 = stringio("|hello\nm|y\nworl|d\nof\nnothing|\n")
+    dictionary2 = stringio("let|\nm|e\nb|#e\nclear\n||about\ni||#t\n")
+    input = stringio("|hello m|y\tclear ||about\nworl|d of\ti||#t let| clear\n")
+    output = stringio()
+
+    convert([dictionary1, dictionary2], [input], output, None, True)
+
+    expectedOutput = stringio()
+    expectedOutput.write("0\t|S0 0:1 |# |#hello\t|S1 3:1 |# clear\n")
+    expectedOutput.write("0\t|S0 1:1 |# m|#y\t|S1 4:1 |# |#|#about\n")
+    expectedOutput.write("1\t|S0 2:1 |# worl|#d\t|S1 5:1 |# i|#|#t\n")
+    expectedOutput.write("1\t|S0 3:1 |# of\t|S1 0:1 |# let|#\n")
+    expectedOutput.write("1\t\t|S1 3:1 |# clear\n")
+    for x in zip(output.getvalue().split('\n'), expectedOutput.getvalue().split('\n')):
+        assert x[0] == x[1]
 
 def test_nonExistingWord():
     dictionary1 = stringio("hello\nmy\nworld\nof\nnothing\n")
