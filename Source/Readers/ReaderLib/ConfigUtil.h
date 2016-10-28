@@ -40,15 +40,15 @@ inline std::vector<std::string> GetSectionsWithParameter(const std::string& read
 template<class T>
 struct DirectoryExpansion
 {
-    static T*  Delimiters() { return "/\\"; }
-    static T*  Pattern() { return "..."; }
+    static const T*  Delimiters() { return "/\\"; }
+    static const T*  Pattern() { return "..."; }
 };
 
 template<>
 struct DirectoryExpansion<wchar_t>
 {
-    static wchar_t*  Delimiters() { return L"/\\"; }
-    static wchar_t*  Pattern() { return L"..."; }
+    static const wchar_t*  Delimiters() { return L"/\\"; }
+    static const wchar_t*  Pattern() { return L"..."; }
 };
 
 // Extracts the directory from the absolute path.
