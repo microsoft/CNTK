@@ -4,6 +4,9 @@
 #
 
 $operations = @(
+    @{Name = "Verifying Installation contents"; ShortName = "INSTCONTENT"; Info = "Verifying Installation contents"; 
+      Verification = @( @{Function = "VerifyInstallationContent"; Path = "$cntkRootDir" } )
+     },
     @{Name = "Installation VS2012 Runtime"; ShortName = "VS2012"; Info = "Install VS2012 Runtime"; 
       Verification = @( @{Function = "VerifyRegistryKeyNameData"; Key = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\11.0\VC\Runtimes\x64"; RegName = "Installed"; RegData  = "1" } );
       Action = @( @{Function = "InstallExe"; Command  = "$cntkRootDir\prerequisites\VS2012\vcredist_x64.exe"; Param = "/install /passive /norestart"; Message="Installing VS2012 Runtime...." } )

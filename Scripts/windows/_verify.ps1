@@ -8,15 +8,10 @@ function VerifyOperations()
     Write-Host "Determining Operations to perform"
 
     foreach ($item in $operations) {
-        if ($item.Ignore | ?{$global:installTarget -contains $_}) {
-            continue
-        }
         $needsInstall = $false
 
         foreach ($verificationItem in $item.Verification) {
-            if ($item.Ignore | ?{$global:installTarget -contains $_}) {
-                continue
-            }
+            
             $needsInstall = VerifyItem $verificationItem
             if (-not $needsInstall) {
                 $global:operationList += $item
@@ -62,6 +57,28 @@ function VerifyItem(
     $result = Invoke-Expression $expr 
 
     return $result
+}
+
+function VerifyInstallationContent(
+    [Parameter(Mandatory = $true)][hashtable] $table
+)
+{
+    FunctionIntro $table
+
+    $func = $table["Function"]
+    $path = $table["Path"]
+
+    $result = (join-path $path cntk\cntk.exe | test-path -PathType Leaf) 
+    $result = (join-path $path prerequisites\VS2012\vcredist_x64.exe | test-path -PathType Leaf) -and $result
+    $result = (join-path $path prerequisites\VS2013\vcredist_x64.exe | test-path -PathType Leaf) -and $result
+    $result = (join-path $path prerequisites\MSMpiSetup.exe | test-path -PathType Leaf) -and $result
+
+    if ($result) {
+        Write-Verbose "[$func]: [$path] returned [$result]"
+        return $result
+    }
+    
+    throw "`nFatal Error: Files from CNTK binary download package are missing!`nThe install script must be run out of the unpacked binary CNTK package, not from a CNTK source clone."
 }
 
 function VerifyDirectory(
