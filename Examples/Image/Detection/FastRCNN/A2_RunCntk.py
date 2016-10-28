@@ -42,11 +42,11 @@ pid = subprocess.Popen(cmdStr, cwd = cntkFilesDir)
 pid.wait()
 print ("Time running cntk [s]: " + str((datetime.datetime.now() - tstart).total_seconds()))
 
-# delete model files written during cntk training
+# delete intermediate model files written during cntk training
 modelDir = cntkFilesDir + "Output/"
 filenames = getFilesInDirectory(modelDir, postfix = None)
 for filename in filenames:
-    if not filename.endswith('Fast-RCNN'):
+    if filename.contains('Fast-RCNN.model.'):
         os.remove(modelDir + filename)
 assert pid.returncode == 0, "ERROR: cntk ended with exit code {}".format(pid.returncode)
 

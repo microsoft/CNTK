@@ -31,7 +31,7 @@ ImageC = 3
 
 NumLabels = 22
 NumTrainROIs = 200
-NumTestROIs = 1000
+NumTestROIs = 2000
 
 TrainROIDim = 800               # $NumTrainROIs$ * 4 
 TrainROILabelDim = 4400         # $NumTrainROIs$ * $NumLabels$
@@ -51,8 +51,8 @@ Train = {
     
     BrainScriptNetworkBuilder = {
         imageShape = $ImageH$:$ImageW$:$ImageC$         # 1000:1000:3
-        labelShape = $NumLabels$:$NumTrainROIs$         # 21:64
-        ROIShape   = 4:$NumTrainROIs$                   # 4:64
+        labelShape = $NumLabels$:$NumTrainROIs$         # 21:200
+        ROIShape   = 4:$NumTrainROIs$                   # 4:200
 
         network     = BS.Network.Load ("../../../../../PretrainedModels/AlexNet.model")
         convLayers  = BS.Network.CloneFunction(network.features, network.conv5_y, parameters = "constant")
@@ -89,7 +89,6 @@ Train = {
         minibatchSize = 1
         maxEpochs = 17
         
-        #momentumAsTimeConstant = 0*5:10
         learningRatesPerSample=0.00001*10:0.000001*5:0.0000001
         momentumPerMB=0.9
         gradUpdateType=None
@@ -170,17 +169,14 @@ WriteTrain = {
         verbosity = 2
         deserializers = ({
             type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            #file = "$dataDir$/test2007pad_all.rois.txt"
             file = train.rois.txt
             input = { rois = { dim = $TestROIDim$ ; format = "dense" } }
         }:{
             type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            #file = "$dataDir$/test2007pad_all.roilabels.txt"
             file = train.roilabels.txt
             input = { roiLabels = { dim = $TestROILabelDim$ ; format = "dense" } }
         }:{
             type = "ImageDeserializer" ; module = "ImageReader"
-            #file = "$dataDir$/test2007pad_all.txt"
             file = train.txt
             input = {
                 features = { transforms = (
@@ -194,8 +190,8 @@ WriteTrain = {
 }
 
 # For testing you can optionally load the trained Fast-RCNN model and modify the input size,
-# such that the network accepts a different number of ROIs per image, e.g. 200. To this end we load and 
-# clone the network and define new inputs with the desired size corresponding to 200 ROIs. 
+# such that the network accepts a different number of ROIs per image, e.g. 2000. To this end we load and 
+# clone the network and define new inputs with the desired size corresponding to 2000 ROIs. 
 WriteTestModify = {
     action = "write"
     minibatchSize = 1
@@ -205,8 +201,8 @@ WriteTestModify = {
     
     BrainScriptNetworkBuilder = {
         imageShape = $ImageH$:$ImageW$:$ImageC$        # 1000:1000:3
-        labelShape = $NumLabels$:$NumTestROIs$         # 21:200
-        ROIShape   = 4:$NumTestROIs$                   # 4:200
+        labelShape = $NumLabels$:$NumTestROIs$         # 21:2000
+        ROIShape   = 4:$NumTestROIs$                   # 4:2000
 
         # load network
         network = BS.Network.Load ("$modelPath$")
