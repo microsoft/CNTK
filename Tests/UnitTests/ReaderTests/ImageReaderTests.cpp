@@ -324,4 +324,41 @@ BOOST_AUTO_TEST_CASE(ImageReaderMissingScaleTransforms)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-} } } }
+
+namespace
+{
+    // Test with not set data directory.
+    struct EmptyDataDirFixture : ReaderFixture
+    {
+        EmptyDataDirFixture() : ReaderFixture("/.") { }
+    };
+
+    BOOST_FIXTURE_TEST_SUITE(ReaderTestSuite, EmptyDataDirFixture)
+
+    BOOST_AUTO_TEST_CASE(ImageReader3DotsSyntaxInMapFile)
+    {
+        auto testDir = testDataPath();
+        std::wstring mapFileLocaton = std::wstring(testDir.begin(), testDir.end()) + L"/Data/ImageReader3Dots_map.txt";
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/ImageDeserializers.cntk",
+            testDataPath() + "/Control/ImageReader3DotsSyntaxInMapFile_Control.txt",
+            testDataPath() + "/Control/ImageReader3DotsSyntaxInMapFile_Output.txt",
+            "3DotsExpansionTest",
+            "reader",
+            1,
+            2,
+            1,
+            1,
+            1,
+            0,
+            1,
+            false,
+            true,
+            true,
+            { L"MapFile=\"" + mapFileLocaton + L"\"" });
+    }
+
+    BOOST_AUTO_TEST_SUITE_END()
+}
+
+}}}}

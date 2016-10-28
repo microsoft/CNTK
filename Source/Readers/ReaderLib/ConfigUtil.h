@@ -37,4 +37,50 @@ inline std::vector<std::string> GetSectionsWithParameter(const std::string& read
     return result;
 }
 
+template<class T>
+struct DirectoryExpansion
+{
+    static T*  Delimiters() { return "/\\"; }
+    static T*  Pattern() { return "..."; }
+};
+
+template<>
+struct DirectoryExpansion<wchar_t>
+{
+    static wchar_t*  Delimiters() { return L"/\\"; }
+    static wchar_t*  Pattern() { return L"..."; }
+};
+
+// Extracts the directory from the absolute path.
+template<class TString>
+TString ExtractDirectory(const TString& absoluteFilePath)
+{
+    static_assert(std::is_same<TString, std::string>::value || std::is_same<TString, std::wstring>::value, "Only string types are supported");
+    using Char = typename TString::value_type;
+
+    const auto delim = DirectoryExpansion<Char>::Delimiters();
+    auto result = absoluteFilePath;
+    auto pos = result.find_last_of(delim);
+    if (pos != result.npos)
+        result.resize(pos);
+    return result;
+}
+
+// Expands the filePath using the directory if the filePath starts with ...
+template<class TString>
+TString Expand3Dots(const TString& filePath, const TString& directoryExpansion)
+{
+    static_assert(std::is_same<TString, std::string>::value || std::is_same<TString, std::wstring>::value, "Only string types are supported");
+    using Char = typename TString::value_type;
+
+    const auto extensionPattern = DirectoryExpansion<Char>::Pattern();
+    size_t pos = filePath.find(extensionPattern);
+    if (pos == filePath.npos)
+        return filePath;
+
+    if (pos != 0)
+        RuntimeError("Invalid path containing '...'");
+    return directoryExpansion + filePath.substr(pos + 3);
+}
+
 }}}
