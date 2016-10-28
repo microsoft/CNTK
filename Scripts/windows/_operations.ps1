@@ -8,15 +8,17 @@ $operations = @(
       Verification = @( @{Function = "VerifyInstallationContent"; Path = "$cntkRootDir" } )
      },
     @{Name = "Installation VS2012 Runtime"; ShortName = "VS2012"; Info = "Install VS2012 Runtime"; 
-      Verification = @( @{Function = "VerifyRegistryKeyNameData"; Key = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\11.0\VC\Runtimes\x64"; RegName = "Installed"; RegData  = "1" } );
+      Verification = @( @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 2012 x64 Additional Runtime" },
+                        @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 2012 x64 Minimum Runtime" } );
       Action = @( @{Function = "InstallExe"; Command  = "$cntkRootDir\prerequisites\VS2012\vcredist_x64.exe"; Param = "/install /passive /norestart"; Message="Installing VS2012 Runtime...." } )
      },
     @{Name = "Installation VS2013 Runtime"; ShortName = "VS2013"; Info = "Install VS2013 Runtime";
-      Verification = @( @{Function = "VerifyRegistryKeyNameData"; Key = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\VisualStudio\12.0\VC\Runtimes\x64"; RegName = "Installed"; RegData  = "1" } );
+      Verification = @( @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 2013 x64 Additional Runtime" },
+                        @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 2013 x64 Minimum Runtime" } );
       Action = @( @{Function = "InstallExe"; Command  = "$cntkRootDir\prerequisites\VS2013\vcredist_x64.EXE"; Param = "/install /passive /norestart"; Message="Installing VS2013 Runtime...." } )
      },
     @{Name = "MSMPI Installation"; ShortName = "CNTK"; Info = "Install MSMPI";
-      Verification = @( @{Function = "VerifyRegistryKeyName"; Key = "Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\MPI"; RegName = "Version" } );
+      Verification = @( @{Function = "VerifyWin32ProductVersion"; Match = "^Microsoft MPI \(\d+\."; Version = "7.0.12437.6" } );
       Action = @( @{Function = "InstallExe"; Command = "$cntkRootDir\prerequisites\msmpisetup.EXE"; Param = "/unattend"; Message="Installing MSMPI ...." } )
      },
     @{Name = "Anaconda3-4.1.1"; ShortName = "ANA3-411"; Info = "Install Anaconda3-4.1.10";

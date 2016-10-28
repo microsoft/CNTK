@@ -105,7 +105,7 @@ Function main
             new-item -Path $localcache -ItemType Container | Out-Null
         }
 
-        $global:operationList  = @()
+        $Script:operationList  = @()
         if (VerifyOperations) {
 
             DownloadOperations
