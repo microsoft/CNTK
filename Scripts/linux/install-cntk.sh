@@ -12,9 +12,6 @@ set -x -e -o pipefail
 
 REPO_TAG=v2.0.beta1.0
 
-USAGE="Usage: [--force]"
-FORCE=$(! [ "$0" = "--force" ]; echo $?)
-
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
 # Go to the drop root
@@ -62,8 +59,8 @@ else
   PACKAGES+=" openmpi-bin"
 fi
 
-# TODO for Pillow
-#PACKAGES+=" build-essential libjpeg8 libjpeg62-dev libfreetype6 libfreetype6-dev"
+# Additional packages for ImageReader
+PACKAGES+=" libjasper1 libjpeg8 libpng12-0"
 
 if dpkg -s $PACKAGES 1>/dev/null 2>/dev/null; then
   printf "Packages already installed, skipping.\n"
@@ -137,20 +134,7 @@ set +x
 source "$PY_ACTIVATE" "$CNTK_PY34_ENV_PREFIX"
 set -x
 
-CNTK_MODULE_DIR="$CNTK_PY34_ENV_PREFIX/lib/python3.4/site-packages/cntk"
-
-if [ -e "$CNTK_MODULE_DIR" ]; then
-  if [ $FORCE = 1 ]; then
-    printf "Removing previously installed CNTK module\n"
-    pip uninstall --yes cntk
-
-    pip install "$CNTK_WHEEL_PATH"
-  else
-    printf "There is already a CNTK module installed, and --force was not specified, skipping Pip installation.\n"
-  fi
-else
-  pip install "$CNTK_WHEEL_PATH"
-fi
+pip install "$CNTK_WHEEL_PATH"
 
 ###########################################
 # Clone CNTK repository

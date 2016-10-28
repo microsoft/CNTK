@@ -19,6 +19,3 @@ RUN chown -R testuser:testuser /home/testuser
 # TODO run repeated
 RUN su - testuser -c "./test_wrapper.sh BinaryDrop.tar.gz"
 RUN /root/prep-run-test.sh
-
-# TODO fix otherwise:
-RUN apt-get install -y --no-install-recommends libjasper1 libjpeg8 libpng12-0
