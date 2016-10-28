@@ -5,7 +5,7 @@
 # ==============================================================================
 
 """
-Unit tests for kernel operations, tested for the forward and the backward pass
+Unit tests for reduction operations, tested for the forward and the backward pass
 """
 
 import numpy as np
