@@ -14,7 +14,7 @@ The recipes above are in BrainScript. [For Python click here](https://github.com
 ## Running the example
 
 ### Getting the data
-We use the CIFAR-10 and ILSVRC2012 datasets to demonstrate how to train a deep convolutional residual network (ResNet). ResNet was invented by Researchers at [Microsoft Research](https://www.microsoft.com/en-us/research/), and it won first place in both [ILSVRC](http://www.image-net.org/challenges/LSVRC/) and [MS COCO](http://mscoco.org/) competitions in the year of 2015.
+We use the CIFAR-10 and ILSVRC2012 datasets to demonstrate how to train a deep convolutional residual network (ResNet). ResNet was invented by Researchers at [Microsoft Research](https://www.microsoft.com/en-us/research/), and it won first place in both [ILSVRC](http://www.image-net.org/challenges/LSVRC/) and [MS COCO](http://mscoco.org/) competitions in the year of 2015. The original implementation of ResNet was on Caffe (https://github.com/KaimingHe/deep-residual-networks).
 
 CIFAR-10 and ILSVRC2012 datasets are not included in the CNTK distribution. The CIFAR-10 datasets can be downloaded and converted by following the instructions in [DataSets/CIFAR-10](../../DataSets/CIFAR-10). We recommend you to keep the downloaded data in the respective folder while downloading, as the configuration files in this folder assumes that by default. For ILSVRC2012 datasets, you may obtain it through http://image-net.org.
 
@@ -41,16 +41,22 @@ In this example we increase the depth of the ResNet to 110 layers. That is, we s
 
 The network achieves an error rate of about `6.2-6.5%`.
 
-### ImageNet
+### ResNet50_ImageNet1K.cntk
 
-The BrainScript configuration files for ImageNet will be available soon. For now only a few deprecated ndl files are available here. The following table contains results as well as links to pre-trained models that can be used in various applications.
+This is an example using a 50-layer ResNet to train on ILSVRC2012 datasets. Compared with the CIFAR-10 examples, we introduced bottleneck blocks to reduce the amount of computation by replacing the two `3x3` convolutions by a `1x1` convolution, bottlenecked to 1/4 of feature maps, followed by a `3x3` convolution, and then a `1x1` convolution again, with the same number feature maps as input.
 
-| Network       | Top-1 error | Top-5 error | Model
-| ------------- | ----------- | ----------- | ----------
-| ResNet-18     | 29.57       | 10.41       | [Download](https://www.cntk.ai/resnet/ResNet_18.model)
-| ResNet-34     | 27.31       | 8.97        | [Download](https://www.cntk.ai/resnet/ResNet_34.model)
-| ResNet-50     | 24.56       | 7.47        |
-| ResNet-152    | 22.57       | 6.44        | [Download](https://www.cntk.ai/resnet/ResNet_152.model)
+Run the example from the current folder using:
 
-## Notes
-This work is an implementation of ResNets in CNTK. If you are interested in the original implementation of ResNet, follow [this link](https://github.com/KaimingHe/deep-residual-networks).
+`cntk configFile=ResNet50_ImageNet1K.cntk`
+
+### ResNet101_ImageNet1K.cntk
+
+Increase the depth of the ResNet to 101 layers:
+
+`cntk configFile=ResNet101_ImageNet1K.cntk`
+
+### ResNet152_ImageNet1K.cntk
+
+Further increase the depth of the ResNet to 152 layers:
+
+`cntk configFile=ResNet152_ImageNet1K.cntk`
