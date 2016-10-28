@@ -13,11 +13,11 @@ COPY visudo-helper.sh prep-run-test.sh /root/
 RUN VISUAL=/root/visudo-helper.sh visudo
 
 COPY test_wrapper.sh /home/testuser
-COPY BinaryDrops.tar.gz /home/testuser
+COPY BinaryDrop.tar.gz /home/testuser
 RUN chown -R testuser:testuser /home/testuser
 
 # TODO run repeated
-RUN su - testuser -c "./test_wrapper.sh BinaryDrops.tar.gz"
+RUN su - testuser -c "./test_wrapper.sh BinaryDrop.tar.gz"
 RUN /root/prep-run-test.sh
 
 # TODO fix otherwise:

@@ -15,6 +15,9 @@ source ~/cntk/activate-cntk
 # Just for informational purposes:
 [ "\$TEST_DEVICE" = "gpu" ] && nvidia-smi
 
+TEST_DEVICE_ID=-1
+[ "\$TEST_DEVICE" = "gpu" ] && TEST_DEVICE_ID=0
+
 which cntk
 MODULE_DIR="\$(python -c "import cntk, os, sys; sys.stdout.write(os.path.dirname(os.path.abspath(cntk.__file__)))")"
 [ \$? -eq 0 ]
@@ -24,7 +27,7 @@ pytest "\$MODULE_DIR" --deviceid \$TEST_DEVICE --doctest-modules
 cd "$CNTK_REPO/bindings/python/examples"
 
 # TODO
-git checkout mahilleb/PathFix
+git checkout master
 
 python NumpyInterop/FeedForwardNet.py
 cd NumpyInterop
@@ -37,7 +40,7 @@ cd "$CNTK_REPO/Examples/Image/DataSets/CIFAR-10"
 python install_cifar10.py
 
 cd "$CNTK_REPO/bindings/python/examples"
-pytest --deviceid gpu
+pytest --deviceid \$TEST_DEVICE
 
 # TODO CifarResNet/CifarResNet.py
 # TODO LanguageUnderstanding/LanguageUnderstanding.py
@@ -49,15 +52,17 @@ pytest --deviceid gpu
 # TODO untested elsewhere: Distributed/CifarResNet_Distributed.py
 # TODO untested elsewhere: Distributed/run.py
 
+# TODO actually do different device and syntax.
+
 # CNTK.wiki example:
 cd $CNTK_DROP/Examples/Other/Simple2d/Data
-cntk configFile=../Config/Simple.cntk deviceId=0
+cntk configFile=../Config/Simple.cntk deviceId=\$TEST_DEVICE_ID
 
 cd $CNTK_DROP/Examples/Image/DataSets/MNIST
 python install_mnist.py
 
 cd $CNTK_DROP/Examples/Image/GettingStarted
-cntk configFile=01_OneHidden.cntk deviceId=0
+cntk configFile=01_OneHidden.cntk deviceId=\$TEST_DEVICE_ID
 
 RUNTEST
 
