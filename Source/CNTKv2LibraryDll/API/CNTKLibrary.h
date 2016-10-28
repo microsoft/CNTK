@@ -2727,10 +2727,19 @@ namespace CNTK
     ///
     /// Todo: move into PastValue() after upgrade to VS2015.
     /// static const auto defaultPastValueInitialState = Constant::Scalar(0.0f);
-    static const Constant defaultPastValueInitialState = {{}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice()};
+    /// It should be constant, but it cannot be done when moved outside PastValue(), becasue it has to be initialzed later during runtime.
+    static Constant s_defaultPastValueInitialState({}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice());
+    static std::atomic<bool> s_isIntializedDefaultPastValueInitialState(false);
     inline FunctionPtr PastValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
     {
-        return PastValue(operand, defaultPastValueInitialState, offset, name);
+        bool alreadyInitialized = s_isIntializedDefaultPastValueInitialState.exchange(true);
+        if (!alreadyInitialized)
+        {
+            s_defaultPastValueInitialState = Constant::Scalar(0.0f);
+        }
+
+        /// static const auto defaultPastValueInitialState = Constant::Scalar(0.0f);
+        return PastValue(operand, s_defaultPastValueInitialState, offset, name);
     }
 
     ///
@@ -2746,10 +2755,17 @@ namespace CNTK
     ///
     /// Todo: move into FutureValue() after upgrade to VS2015
     /// static const auto defaultFutureValueInitialState = Constant::Scalar(0.0f);
-    static const Constant defaultFutureValueInitialState = {{}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice()};
+    static Constant s_defaultFutureValueInitialState({}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice());
+    static std::atomic<bool> s_isIntializedDefaultFutureValueInitialState(false);
     inline FunctionPtr FutureValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
     {
-        return FutureValue(operand, defaultFutureValueInitialState, offset, name);
+        bool alreadyInitialized = s_isIntializedDefaultFutureValueInitialState.exchange(true);
+        if (!alreadyInitialized)
+        {
+            s_defaultFutureValueInitialState = Constant::Scalar(0.0f);
+        }
+
+        return FutureValue(operand, s_defaultFutureValueInitialState, offset, name);
     }
 
     ///
