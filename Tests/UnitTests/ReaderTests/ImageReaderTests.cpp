@@ -56,10 +56,10 @@ BOOST_AUTO_TEST_CASE(ImageAndTextReaderSimple)
 BOOST_AUTO_TEST_CASE(ImageAndImageReaderSimple)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/ImageAndImageReaderSimple_Config.cntk",
+        testDataPath() + "/Config/ImageDeserializers.cntk",
         testDataPath() + "/Control/ImageAndImageReaderSimple_Control.txt",
         testDataPath() + "/Control/ImageAndImageReaderSimple_Output.txt",
-        "Simple_Test",
+        "ImageAndImageReaderSimple_Test",
         "reader",
         4,
         4,
@@ -67,7 +67,11 @@ BOOST_AUTO_TEST_CASE(ImageAndImageReaderSimple)
         2,
         2,
         0,
-        1);
+        1,
+        false,
+        false,
+        true,
+        { L"MapFile=\"$RootDir$/ImageReaderSimple_map.txt\"" });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
