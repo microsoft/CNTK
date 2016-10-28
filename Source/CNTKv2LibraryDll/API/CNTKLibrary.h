@@ -2730,15 +2730,13 @@ namespace CNTK
     /// Adding back const when it is moved into PastValue() after upgrade to VS2015.
     static Constant s_defaultPastValueInitialState = Constant({}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice());
     /// s_isIntializedDefaultPastValueInitialState is to guard that s_defaultPastValueInitialState is initialized only once. 
-    static std::atomic<bool> s_isIntializedDefaultPastValueInitialState = {false};
+    static std::once_flag s_isIntializedDefaultPastValueInitialStateFlag;
     inline FunctionPtr PastValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
     {
         /// static const auto defaultPastValueInitialState = Constant::Scalar(0.0f);
-        bool alreadyInitialized = s_isIntializedDefaultPastValueInitialState.exchange(true);
-        if (!alreadyInitialized)
-        {
+        std::call_once(s_isIntializedDefaultPastValueInitialStateFlag, [=] {
             s_defaultPastValueInitialState = Constant::Scalar(0.0f);
-        }
+        });
 
         return PastValue(operand, s_defaultPastValueInitialState, offset, name);
     }
@@ -2759,14 +2757,13 @@ namespace CNTK
     /// Indeed, s_deafultFutureValueInitialState should be constant, but it has to be initialzed now when it is used first time, so const is not feasible.
     /// Adding back const when it is moved into FutureValue() after upgrade to VS2015.
     static Constant s_defaultFutureValueInitialState = Constant({}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice());
-    static std::atomic<bool> s_isIntializedDefaultFutureValueInitialState = {false};
+    static std::once_flag s_isIntializedDefaultFutureValueInitialStateFlag;
     inline FunctionPtr FutureValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
     {
-        bool alreadyInitialized = s_isIntializedDefaultFutureValueInitialState.exchange(true);
-        if (!alreadyInitialized)
-        {
+        /// static const auto defaultPastValueInitialState = Constant::Scalar(0.0f);
+        std::call_once(s_isIntializedDefaultFutureValueInitialStateFlag, [=] {
             s_defaultFutureValueInitialState = Constant::Scalar(0.0f);
-        }
+        });
 
         return FutureValue(operand, s_defaultFutureValueInitialState, offset, name);
     }
