@@ -108,7 +108,6 @@ def data_parallel_distributed_trainer(communicator, use_async_buffered_parameter
         a distributed trainer instance
     '''
     if (isinstance(communicator, QuantizedCommunicator)):
-        print("Use quantized communicator")
         return cntk_py.create_quantized_data_parallel_distributed_trainer(communicator, use_async_buffered_parameter_update)
     else:
         return cntk_py.create_data_parallel_distributed_trainer(communicator, use_async_buffered_parameter_update)

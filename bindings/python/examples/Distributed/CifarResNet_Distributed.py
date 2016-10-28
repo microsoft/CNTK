@@ -13,6 +13,7 @@ import numpy as np
 import sys
 import os
 from cntk import Trainer, distributed, device, persist
+from cntk.cntk_py import DeviceKind_GPU
 from cntk.learner import momentum_sgd, learning_rate_schedule
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, element_times, pooling, AVG_POOLING, relu
 from cntk.io import ReaderConfig, ImageDeserializer
@@ -28,7 +29,7 @@ MEAN_FILENAME = 'CIFAR-10_mean.xml'
 TEST_MAP_FILENAME = 'test_map.txt'
 
 # Trains a residual network model on the Cifar image dataset
-def cifar_resnet(data_path, run_test, num_epochs, communicator=None, save_model_filename=None, load_model_filename=None, debug_output=False):
+def cifar_resnet_distributed(data_path, run_test, num_epochs, communicator=None, save_model_filename=None, load_model_filename=None, debug_output=False):
     image_height = 32
     image_width = 32
     num_channels = 3
@@ -129,29 +130,8 @@ def cifar_resnet(data_path, run_test, num_epochs, communicator=None, save_model_
     else:
         return 0
 
-if __name__ == '__main__':
-
-    # only run with 1-bit SGD in test environment
-    if "TEST_1BIT_SGD" in os.environ and os.environ["TEST_1BIT_SGD"] != "1":
-        print("1-bit SGD is required for this example")
-        sys.exit()
         
-    # check if we have multiple-GPU, and fallback to 1 GPU if not
-    devices = device.all_devices()
-    gpu_count = 0
-    for dev in devices:
-        gpu_count += dev.type()
-    print("Found {} GPUs".format(gpu_count))
-    
-    if gpu_count == 0:
-        print("No GPU found, exiting")
-        quit()
-
-    data_path = os.path.abspath(os.path.normpath(os.path.join(
-        *"../../../../Examples/Image/DataSets/CIFAR-10/".split("/"))))
-
-    os.chdir(data_path)
-
+def train_and_evaluate(data_path, total_epochs, gpu_count=1):
     # Create distributed communicator for 1-bit SGD for better scaling to multiple GPUs
     # If you'd like to avoid quantization loss, use simple one instead
     quantization_bit = 1
@@ -178,21 +158,39 @@ if __name__ == '__main__':
 
     start_model = "start_model.bin"
     num_start_epochs = 1
-    num_parallel_epochs = 10
+    num_parallel_epochs = total_epochs - num_start_epochs
 
     # training the start model only in one worker
     if communicator.current_worker().global_rank == 0:
-        cifar_resnet(data_path, save_model_filename=start_model, communicator=None, run_test=False, num_epochs=num_start_epochs)
+        cifar_resnet_distributed(data_path, save_model_filename=start_model, communicator=None, run_test=False, num_epochs=num_start_epochs)
     
     communicator.barrier()
     
     # train in parallel
-    error = cifar_resnet(data_path, load_model_filename=start_model, communicator=communicator, run_test=True, num_epochs=num_parallel_epochs)
+    error = cifar_resnet_distributed(data_path, load_model_filename=start_model, communicator=communicator, run_test=True, num_epochs=num_parallel_epochs)
 
-    communicator.barrier()
+    distributed.Communicator.finalize()
+    return error
+
+    
+if __name__ == '__main__':
+    # check if we have multiple-GPU, and fallback to 1 GPU if not
+    devices = device.all_devices()
+    gpu_count = 0
+    for dev in devices:
+        gpu_count += (1 if dev.type() == DeviceKind_GPU else 0)
+    print("Found {} GPUs".format(gpu_count))
+    
+    if gpu_count == 0:
+        print("No GPU found, exiting")
+        quit()
+
+    data_path = os.path.abspath(os.path.normpath(os.path.join(
+        *"../../../../Examples/Image/DataSets/CIFAR-10/".split("/"))))
+
+    os.chdir(data_path)
+    
+    total_epochs = 11
+    error = train_and_evaluate(data_path, total_epochs, gpu_count)
     
     print("Error: %f" % error)
-    
-    # finalize MPI if there's more than 1 worker
-    if (len(workers)>1):
-        distributed.Communicator.finalize()
