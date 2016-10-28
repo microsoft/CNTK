@@ -131,6 +131,9 @@ int main(int /*argc*/, char* /*argv*/[])
             TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), distributedTrainer, communicator->CurrentWorker().m_globalRank);
     }
 
+    fprintf(stderr, "\nCNTKv2LibraryDistribution tests: Passed\n");
+    fflush(stderr);
+
 #if defined(_MSC_VER)
     _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);
 #endif
