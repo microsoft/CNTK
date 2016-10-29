@@ -2837,11 +2837,44 @@ namespace CNTK
         }
     }
 
+    /// Todo: move into PastValue() after upgrade to VS2015.
+    /// static const auto defaultPastValueInitialState = Constant::Scalar(0.0f);
+    /// Indeed, s_deafultPastValueInitialState should be constant, but it has to be initialzed now when it is used first time, so const is not feasible.
+    /// Adding back const when it is moved into PastValue() after upgrade to VS2015.
+    static Constant s_defaultPastValueInitialState = Constant({}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice());
+    /// s_isIntializedDefaultPastValueInitialState is to guard that s_defaultPastValueInitialState is initialized only once. 
+    static std::once_flag s_isIntializedDefaultPastValueInitialStateFlag;
+    inline FunctionPtr PastValue(const Variable& operand, size_t offset, const std::wstring& name)
+    {
+        // static const auto s_defaultPastValueInitialState = Constant::Scalar(0.0f);
+        std::call_once(s_isIntializedDefaultPastValueInitialStateFlag, [=] {
+            s_defaultPastValueInitialState = Constant::Scalar(0.0f);
+        });
+
+        return PastValue(operand, s_defaultPastValueInitialState, offset, name);
+    }
+
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOffset] = DictionaryValue(offset);
         return BinaryOp(PrimitiveOpType::PastValue, operand, initialState, std::move(additionalProperties), name);
+    }
+
+    /// Todo: move into FutureValue() after upgrade to VS2015
+    /// static const auto defaultFutureValueInitialState = Constant::Scalar(0.0f);
+    /// Indeed, s_deafultFutureValueInitialState should be constant, but it has to be initialzed now when it is used first time, so const is not feasible.
+    /// Adding back const when it is moved into FutureValue() after upgrade to VS2015.
+    static Constant s_defaultFutureValueInitialState = Constant({}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice());
+    static std::once_flag s_isIntializedDefaultFutureValueInitialStateFlag;
+    inline FunctionPtr FutureValue(const Variable& operand, size_t offset, const std::wstring& name)
+    {
+        //static const auto s_defaultFutureValueInitialState = Constant::Scalar(0.0f);
+        std::call_once(s_isIntializedDefaultFutureValueInitialStateFlag, [=] {
+            s_defaultFutureValueInitialState = Constant::Scalar(0.0f);
+        });
+
+        return FutureValue(operand, s_defaultFutureValueInitialState, offset, name);
     }
 
     FunctionPtr FutureValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
