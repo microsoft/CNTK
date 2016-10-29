@@ -5,6 +5,10 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
@@ -25,7 +29,7 @@
     <ProjectName>NetworkTests</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <Import Project="$(SolutionDir)\CNTK.Cpp.props" />  
+  <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>v120</PlatformToolset>
@@ -58,7 +62,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>math.lib;common.lib;actionslib.lib;computationnetworklib.lib;sequencetraininglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>CNTKLibrary-2.0.lib;math.lib;common.lib;actionslib.lib;computationnetworklib.lib;sequencetraininglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir);$(BOOST_LIB_PATH);$(NvmlLibPath)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>math.dll;msmpi.dll</DelayLoadDLLs>
@@ -101,14 +105,18 @@
     <ClInclude Include="Common\NetworkTestHelper.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="TestHelpers.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp" />
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp" />
+    <ClCompile Include="AccumulatorNodeTests.cpp" />
+    <ClCompile Include="CropNodeTests.cpp" />
     <ClCompile Include="OperatorEvaluation.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="TestHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Config\Network_Operator_Plus.cntk" />

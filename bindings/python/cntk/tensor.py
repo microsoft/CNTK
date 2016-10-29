@@ -6,6 +6,10 @@
 
 
 class TensorOpsMixin(object):
+    '''
+    This class defines math overloads so that CNTK nodes can be written in math
+    expressions.
+    '''
 
     # operator overload for (+) where self is the left operand
     def __add__(self, other):
@@ -76,7 +80,7 @@ class TensorOpsMixin(object):
     # TODO __xor__, __rxor__, __pow__, __rpow__,  __invert__
 
     # Comparison operators are not exposed yet, because of __eq__ being
-    # required to allow comparison of Variables on C++ so that we can say 
+    # required to allow comparison of Variables on C++ so that we can say
     # 'for var in variables'.
     # __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__,
 
@@ -158,47 +162,36 @@ def _add_tensor_ops(klass):
         setattr(klass, overload_name, getattr(TensorOpsMixin, overload_name))
 
 
-class EvalMixin(object):
+class ArrayMixin(object):
+    @property
+    def __array_interface__(self):
+        try:
+            np_array = self.to_numpy()
+        except AttributeError:
+            try:
+                np_array = self.data().to_numpy()
+            except AttributeError:
+                try:
+                    np_array = self.value
+                except AttributeError:
+                    # Ideally an exception would be raised here, but getattr would swallow it
+                    # so we return None
+                    return None
 
-    def eval(self, arguments=None, precision='float', device=None):
-        '''
-        Evaluate the node using the specified `arguments` as input.
+        interface_copy = np_array.__array_interface__
 
-        Args:
-            arguments (`dict` or `list`): 
-              * map from input variables to the data
-              * list of inputs in the order that the function expects or 
-              Data should be either NumPy arrays or a `:class:cntk.io.MinibatchData` instance
-            precision (`str` or `np.float32` or `np.float64`): precision, if string
-             it can be one of 'float' 'float32, 'double', 'float64', or `None`
-            device (:class:`cntk.DeviceDescriptor`): the device descriptor that
-             contains the type and id of the device on which the computation is
-             to be performed.
+        # for np arrays (other than 0-d arrays) data entry in __array_interface__ dict
+        # must be replaced with data member of array
+        if len(np_array.shape):
+            interface_copy["data"] = np_array.data
 
-        Returns:
-            `bool`: `True` if updates have been performed
-        '''
-        from .utils import eval as utils_eval
-        if device is None:
-            from . import DeviceDescriptor
-            device = DeviceDescriptor.use_default_device()
+        return interface_copy
 
-        if len(self.outputs()) != 1:
-            raise ValueError(
-                'only operators with exactly one output can be evaluated')
+def _add_array_interface(klass):
+    array_interface_name = '__array_interface__'
 
-        if arguments is None:
-            arguments = {}
+    if getattr(klass, array_interface_name, None):
+        raise ValueError('class "%s" has already an attribute "%s"' %
+                         (klass, array_interface_name))
 
-        result, _ = utils_eval(self, precision, device, arguments, False)
-        return result.popitem()[1]
-
-
-def _add_eval(klass):
-    overload_name = 'eval'
-
-    if getattr(klass, overload_name, None):
-        raise ValueError('class "%s" already has operator overload "%s"' %
-                         (klass, overload_name))
-
-    setattr(klass, overload_name, getattr(EvalMixin, overload_name))
+    setattr(klass, array_interface_name, getattr(ArrayMixin, array_interface_name))

@@ -141,6 +141,7 @@ public:
     }
 
     TensorShape KernelShape() const { return m_kernelShape; }
+    TensorShape MapCount() const { return m_mapCount; }
     TensorShape Strides() const { return m_stride; }
     std::vector<bool> Sharing() const { return m_sharing; }
     std::vector<bool> AutoPad() const { return m_autoPad; }
@@ -150,7 +151,6 @@ public:
     size_t MaxTempMemSizeInSamples() const { return m_maxTempMemSizeInSamples; }
     PoolKind PoolingKind() const { return m_poolKind; }
 
-private:
     // bottomlessly expand shape to filterRank, then expand to inputRank using defaults or given 'from' values
     template<class V, typename T>
     static void FixVectorShape(size_t filterRank, size_t inputRank, V& shape, T deflt, const V& from = V())
@@ -165,6 +165,8 @@ private:
         while (shape.size() < inputRank)
             shape.push_back(shape.size() < from.size() ? from[shape.size()] : deflt);
     }
+
+private:
     static void FixTensorShape(size_t filterRank, size_t inputRank, TensorShape& shape, size_t deflt, const TensorShape& from = TensorShape())
     {
         auto dims = shape.GetDims();
@@ -183,6 +185,26 @@ protected:
         FixTensorShape(filterRank, inputShape.size(), m_lowerPad,    0);
         FixTensorShape(filterRank, inputShape.size(), m_upperPad,    0);
         FixVectorShape(filterRank, inputShape.size(), m_sharing,     true);
+    }
+
+    // Derived classes implement transforms calculation. Since all derived classes are filter based we consolidate common
+    // filter transform calculation here to be reused by derived classes. For example convolution and de-convolution
+    // have same transform but inversed, hence both of them may reuse this method and one will call inverse in addition
+    // (similar holds for pooling nodes).
+    SpaceTransform ComputeFilterTransform()
+    {
+        std::shared_ptr<const ConvolveGeometry> geometry = m_convEng->Geometry();
+
+        SpaceTransform result;
+        result.m_axisTransforms.resize(2);
+
+        result.m_axisTransforms[0].scale = (float)(geometry->GetStride(0));
+        result.m_axisTransforms[0].translate = (float)((geometry->KernelShape()[0] - 1) / 2 - geometry->GetLowerPad(0));
+
+        result.m_axisTransforms[1].scale = (float)(geometry->GetStride(1));
+        result.m_axisTransforms[1].translate = (float)((geometry->KernelShape()[1] - 1) / 2 - geometry->GetLowerPad(1));
+
+        return result;
     }
 
 protected:
@@ -227,7 +249,7 @@ public:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
+class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
     static const std::wstring TypeName() { return L"Convolution"; }
@@ -485,6 +507,33 @@ public:
             m_convEng->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
     }
 
+    bool IsConvolution2D() const { return m_convolution2D; }
+
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms[1].m_axisTransforms.empty())
+        {
+            m_transforms[1] = ComputeFilterTransform();
+            if (!m_transpose)
+            {
+                // Convolution, need to inverse transform.
+                m_transforms[1] = m_transforms[1].Inverse();
+            }
+            // else: Deconvolution, nothing to do.
+        }
+        // else: transform already computed, no need to do computation again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override
+    {
+        // We support transforms just on convolution input.
+        return (inputIndex == 1);
+    }
+
 protected:
     // Flag that indicates whether the node is created using 2D-syntax.
     bool m_convolution2D;
@@ -517,12 +566,12 @@ class ROIPoolingNode : public ComputationNode<ElemType>, public NumInputs<2>
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"ROIPooling"; }
 public:
-    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& outputShape = TensorShape())
-        : Base(deviceId, name), m_outputShape(outputShape), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
+    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& roiOutputShape = TensorShape())
+        : Base(deviceId, name), m_roiOutputShape(roiOutputShape), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
     {
     }
     ROIPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputShape"))
+        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"roiOutputShape"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -575,8 +624,8 @@ public:
         size_t inputW = (size_t)inputShape[0];
         size_t inputH = (size_t)inputShape[1];
         size_t numChannels = (size_t)inputShape[2];
-        size_t outW = m_outputShape[0];
-        size_t outH = m_outputShape[1];
+        size_t outW = m_roiOutputShape[0];
+        size_t outH = m_roiOutputShape[1];
 
         m_tempMatrix->Resize(outW * outH * numChannels * roisPerImage, inputSlice.GetNumCols());
         inputSlice.ROIPoolingForward(roisPerImage, inputSlice.GetNumCols(), 
@@ -586,13 +635,13 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        m_outputShape.Save(fstream);
+        m_roiOutputShape.Save(fstream);
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        m_outputShape.Load(fstream);
+        m_roiOutputShape.Load(fstream);
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -603,10 +652,10 @@ public:
         auto inShape = GetInputSampleLayout(0);   // layout of input shape is width x height x numChannels
         auto roiShape = GetInputSampleLayout(1); // layout of ROI shape is 4 x roisPerImage
 
-        if (isFinalValidationPass && (m_outputShape.size() != 2))
-            InvalidArgument("ROIPoolingNode: output shape must have two dimensions ([W x H]).");
+        if (isFinalValidationPass && (m_roiOutputShape.size() != 2))
+            InvalidArgument("ROIPoolingNode: roi output shape must have two dimensions ([W x H]).");
 
-        if (isFinalValidationPass && (inShape[0] < m_outputShape[0] || inShape[1] < m_outputShape[1]))
+        if (isFinalValidationPass && (inShape[0] < m_roiOutputShape[0] || inShape[1] < m_roiOutputShape[1]))
             InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
         if (isFinalValidationPass && (inShape[2] < 1))
@@ -619,7 +668,7 @@ public:
             InvalidArgument("ROIPoolingNode: ROI input must contain at least one ROI ([4 x roisPerImage]).");
 
         // set output dimensions to [W x H x C x roisPerImage]
-        SetDims(TensorShape(m_outputShape[0], m_outputShape[1], inShape[2], roiShape[1]), HasMBLayout());
+        SetDims(TensorShape(m_roiOutputShape[0], m_roiOutputShape[1], inShape[2], roiShape[1]), HasMBLayout());
     }
 
     // similar to usual MaxPooling backpropagation. Send gradients
@@ -643,7 +692,7 @@ public:
         auto roiData = Input(1)->ValueFor(fr);
 
         pooledGrad.ROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), numChannels, 
-            inputW, inputH, m_outputShape[0], m_outputShape[1], roiData, inputGrad, *m_tempMatrix);
+            inputW, inputH, m_roiOutputShape[0], m_roiOutputShape[1], roiData, inputGrad, *m_tempMatrix);
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -652,12 +701,14 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<ROIPoolingNode<ElemType>>(nodeP);
-            node->m_outputShape = m_outputShape;
+            node->m_roiOutputShape = m_roiOutputShape;
         }
     }
 
+    TensorShape ROIOutputShape() const { return m_roiOutputShape; }
+
 protected:
-    TensorShape m_outputShape;
+    TensorShape m_roiOutputShape;
     shared_ptr<Matrix<ElemType>> m_tempMatrix;
     Matrix<ElemType> m_argmaxData;
 };
@@ -668,7 +719,7 @@ protected:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class PoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<1>
+class PoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<1>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
     static const std::wstring TypeName() { return L"Pooling"; }
@@ -750,6 +801,26 @@ public:
             }
         }
     }
+
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms[0].m_axisTransforms.empty())
+        {
+            m_transforms[0] = ComputeFilterTransform();
+            m_transforms[0] = m_transforms[0].Inverse();
+        }
+        // else: transform already computed, no need to do it again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t /*inputIndex*/) override
+    {
+        // We support transforms on all inputs (one here).
+        return true;
+    }
 };
 
 // -----------------------------------------------------------------------
@@ -768,7 +839,7 @@ public:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class MaxUnpoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
+class MaxUnpoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base;
     UsingConvolutionNodeBaseMembers;
@@ -851,6 +922,25 @@ public:
                                                                 NodeName());
             }
         }
+    }
+
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms.empty())
+        {
+            m_transforms[0] = ComputeFilterTransform();
+        }
+        // else: transform already computed, no need to do it again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override
+    {
+        // We support transform for just unpool input.
+        return (inputIndex == 0);
     }
 };
 

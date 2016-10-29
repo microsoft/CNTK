@@ -68,7 +68,7 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
     auto features = InputVariable({ baseFeaturesDim }, DataType::Float, L"features");
     auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels");
 
-    const size_t numSamplesForFeatureStatistics = 0;
+    const size_t numSamplesForFeatureStatistics = MinibatchSource::FullDataSweep;
     Dictionary frameModeConfig;
     frameModeConfig[L"frameMode"] = true;
     auto minibatchSource = CreateMinibatchSource(baseFeaturesDim, numOutputClasses, frameModeConfig, numSamplesForFeatureStatistics, false);
@@ -102,8 +102,9 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
     truncatedModeConfig[L"truncationLength"] = truncationLength;
     minibatchSource = CreateMinibatchSource(baseFeaturesDim, numOutputClasses, truncatedModeConfig, numTrainingSamples);
 
-    const size_t numberParallelSequencesPerMB = 32;
-    const size_t minibatchSize = truncationLength * numberParallelSequencesPerMB;
+    const size_t numberParallelSequencesPerMB1 = 16;
+    const size_t numberParallelSequencesPerMB2 = 32;
+    const size_t numMinibatchesToChangeMBSizeAfter = 5;
 
     featureStreamInfo = minibatchSource->StreamInfo(features);
     auto labelStreamInfo = minibatchSource->StreamInfo(labels);
@@ -117,9 +118,17 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
     size_t outputFrequencyInMinibatches = 1;
     for (size_t i = 0; true; i++)
     {
+        const size_t numberParallelSequencesPerMB = (i >= numMinibatchesToChangeMBSizeAfter) ? numberParallelSequencesPerMB2 : numberParallelSequencesPerMB1;
+        const size_t minibatchSize = truncationLength * numberParallelSequencesPerMB;
+
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         if (minibatchData.empty())
             break;
+
+        // Make sure our truncation length setting was honored
+        auto actualMaxSequenceLength = minibatchData[featureStreamInfo].m_data->Shape()[featureStreamInfo.m_sampleLayout.Rank()];
+        if (actualMaxSequenceLength != truncationLength)
+            ReportFailure("Actual max sequence length (%d) in minibatch data does not equal specified truncation length (%d)", (int)actualMaxSequenceLength, (int)truncationLength);
 
         trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
@@ -128,9 +137,10 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
 
 void TrainTruncatedLSTMAcousticModelClassifer()
 {
+    fprintf(stderr, "\nTrainTruncatedLSTMAcousticModelClassifer..\n");
+
     if (IsGPUAvailable())
-    {
         TrainTruncatedLSTMAcousticModelClassifer(DeviceDescriptor::GPUDevice(0), true);
-    }
+
     TrainTruncatedLSTMAcousticModelClassifer(DeviceDescriptor::CPUDevice(), false);
 }

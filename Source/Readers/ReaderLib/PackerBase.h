@@ -87,7 +87,7 @@ protected:
 
 public:
     // Sets current epoch configuration.
-    virtual void StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) override;
+    virtual void SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) override;
 };
 
 inline void PackerBase::PackSparseSampleAsDense(char* destination, SparseSequenceDataPtr sequence,

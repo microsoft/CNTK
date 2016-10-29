@@ -8,7 +8,7 @@ command = TrainConvNet:Write:Test
 
 makeMode = false ; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = ".." ; dataDir  = "$rootDir$/DataSets/CIFAR10" ;
+rootDir = ".." ; dataDir  = "$rootDir$/DataSets/CIFAR-10" ;
 outputDir = "Output" ; modelDir = "$outputDir$/Models"
 
 modelPath = "$ModelDir$/RegrSimple_CIFAR10.cmf"

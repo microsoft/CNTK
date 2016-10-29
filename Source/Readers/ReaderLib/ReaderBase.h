@@ -30,6 +30,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Returns current position in the global timeline. The returned value is in samples.
         size_t GetCurrentSamplePosition() override;
 
+        void SetCurrentSamplePosition(size_t currentSamplePosition) override;
+
+        void SetConfiguration(const ReaderConfiguration& config, const std::map<std::wstring, int>& inputDescriptions) override;
+
         virtual ~ReaderBase() = 0;
 
     protected:

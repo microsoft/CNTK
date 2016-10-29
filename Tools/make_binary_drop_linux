@@ -113,7 +113,7 @@ declare -a mklFiles=("libmkl_cntk_p.so" "libiomp5.so")
 declare -a opencvFiles=("libopencv_core.so.3.1" "libopencv_imgproc.so.3.1" "libopencv_imgproc.so.3.1" "libopencv_imgcodecs.so.3.1")
 
 # libzip
-declare -a libzipFiles=("libzip.so")
+declare -a libzipFiles=("libzip.so.4")
 
 # CUDA
 declare -a cudaFiles=("libcudart.so.7.5" "libcublas.so.7.5" "libcurand.so.7.5" "libcusparse.so.7.5")
@@ -121,15 +121,34 @@ declare -a cudaFiles=("libcudart.so.7.5" "libcublas.so.7.5" "libcurand.so.7.5" "
 # cuDNN
 declare -a cudnnFiles=("libcudnn.so.5")
 
+# OpenBLAS (Needed by Kaldi)
+declare -a openblasFiles=("libopenblas.so.0")
+
+# Kaldi
+declare -a kaldiFiles=("libkaldi-util.so" "libkaldi-matrix.so" "libkaldi-base.so" "libkaldi-hmm.so" "libkaldi-cudamatrix.so" "libkaldi-nnet.so" "libkaldi-lat.so" "libkaldi-tree.so")
+
+# OpenFst (from Kaldi)
+declare -a openfstFiles=("libfst.so.3")
+
 # Include files
 declare -a includeFiles=("Eval.h")
 
+# Include files 2.0
+declare -a includeFiles20=("CNTKLibrary.h" "CNTKLibraryInternals.h")
+
 # Set dependency sources paths
-mklPath="/usr/local/CNTKCustomMKL/2/x64/parallel"
-opencvPath="/usr/local/opencv-3.1.0/lib"
+mklVersion="2"
+mklPath="/usr/local/CNTKCustomMKL/$mklVersion/x64/parallel"
+opencvVersion="3.1.0"
+opencvPath="/usr/local/opencv-$opencvVersion/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
-cudnnPath="/usr/local/cudnn-5.1/cuda/lib64"
+cudnnVersion="5.1"
+cudnnPath="/usr/local/cudnn-$cudnnVersion/cuda/lib64"
+openblasPath="/usr/local/openblas/lib"
+kaldiVersion="c024e8aa"
+kaldiPath="/usr/local/kaldi-$kaldiVersion/src/lib"
+openfstPath="/usr/local/kaldi-$kaldiVersion/tools/openfst/lib"
 
 # Set build paths
 buildPath="build/$targetConfig/release"
@@ -139,6 +158,7 @@ baseBinariesPath="$baseDropPath/cntk"
 baseDependenciesPath="$baseBinariesPath/dependencies/lib"
 baseIncludePath="$baseDropPath/Include"
 includePath="Source/Common/Include"
+includePath20="Source/CNTKv2LibraryDll/API"
 extrasPath="Tools/cntk-binary-drop/linux/$targetConfig"
 gzipFile="BinaryDrops.tar.gz"
 
@@ -149,7 +169,8 @@ mkdir -p $baseBinariesPath
 echo "Copying build binaries..." >&3
 cp -r $buildPath/* $baseBinariesPath
 # Remove unnessesary file(s) if exist(s)
-rm -rf $baseBinariesPath/python
+# Add Python artefacts to 2.0 Beta Drop
+# rm -rf $baseBinariesPath/python
 rm -f $baseBinariesPath/bin/brainscripttests
 rm -f $baseBinariesPath/bin/cppevalclient
 rm -f $baseBinariesPath/bin/evaltests
@@ -157,7 +178,8 @@ rm -f $baseBinariesPath/bin/mathtests
 rm -f $baseBinariesPath/bin/networktests
 rm -f $baseBinariesPath/bin/readertests
 rm -f $baseBinariesPath/bin/v2librarytests
-rm -f $baseBinariesPath/lib/libcntklibrary-2.0.so
+# libcntklibrary-2.0.so added to drop for 2.0 Beta
+# rm -f $baseBinariesPath/lib/libcntklibrary-2.0.so
 
 # Make Include directory
 mkdir -p $baseIncludePath
@@ -165,12 +187,14 @@ mkdir -p $baseIncludePath
 # Copy Include
 echo "Copying Include files..." >&3
 CopyFilesFromList $includePath includeFiles[@] $baseIncludePath 
+echo "Copying Include files for Version 2..." >&3
+CopyFilesFromList $includePath20 includeFiles20[@] $baseIncludePath 
 
 # Copy Examples
 echo "Copying Examples..." >&3
 cp -r Examples $baseDropPath
-# Remove CPPEvalV2Client examples until V2 binaries are included in the binary drop
-rm -rf $baseDropPath/Examples/Evaluation/CPPEvalV2Client
+# Include CPPEvalV2Client examples in 2.0 Beta drop
+# rm -rf $baseDropPath/Examples/Evaluation/CPPEvalV2Client
 
 # Copy Scripts (Scripts folder from the root of the Repo)
 echo "Copying Scripts..." >&3
@@ -199,6 +223,18 @@ CopyFilesFromList $opencvPath opencvFiles[@] $baseDependenciesPath
 # Copy libzip
 echo "Copying libzip..." >&3
 CopyFilesFromList $libzipPath libzipFiles[@] $baseDependenciesPath
+
+# Copy OpenBLAS (for Kaldi)
+echo "Copying OpenBLAS (for Kaldi)..." >&3
+CopyFilesFromList $openblasPath openblasFiles[@] $baseDependenciesPath
+
+# Copy Kaldi
+echo "Copying Kaldi..." >&3
+CopyFilesFromList $kaldiPath kaldiFiles[@] $baseDependenciesPath
+
+# Copy OpenFst (from Kaldi)
+echo "Copying OpenFst (Kaldi)..." >&3
+CopyFilesFromList $openfstPath openfstFiles[@] $baseDependenciesPath
 
 # GPU Drops only
 if [[ $targetConfig != "cpu" ]]; then

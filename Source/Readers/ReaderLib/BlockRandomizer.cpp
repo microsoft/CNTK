@@ -72,16 +72,7 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
         m_epochSize = config.m_totalEpochSizeInSamples;
     }
 
-    // Calculates starts of the epoch, prepares a new sweep if needed.
-    m_epochStartPosition = m_epochSize * config.m_epochIndex;
-    PrepareNewSweepIfNeeded(m_epochStartPosition);
-
-    // Sets sequence cursor to the sequence that corresponds to the epoch start position.
-    // If last epoch ended in the middle of a sequence, the cursor is moved to the next sequence in the sweep.
-    size_t offsetInSweep = m_epochStartPosition % m_sweepTotalNumberOfSamples;
-    size_t newOffset = m_sequenceRandomizer->Seek(offsetInSweep, m_sweep);
-    m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
-
+    SetCurrentSamplePosition(m_epochSize * config.m_epochIndex);
     if (m_verbosity >= Notification)
     {
         size_t epochStartFrame = config.m_epochIndex * m_epochSize;
@@ -380,6 +371,23 @@ void BlockRandomizer::Prefetch(ChunkIdType chunkId)
         if (m_verbosity >= Debug)
             fprintf(stderr, "BlockRandomizer::Prefetch: prefetching original chunk: %u\n", chunkId);
     }
+}
+
+void BlockRandomizer::SetCurrentSamplePosition(size_t currentSamplePosition)
+{
+    m_epochStartPosition = currentSamplePosition;
+    PrepareNewSweepIfNeeded(m_epochStartPosition);
+
+    // Sets sequence cursor to the sequence that corresponds to the epoch start position.
+    // If last epoch ended in the middle of a sequence, the cursor is moved to the next sequence in the sweep.
+    size_t offsetInSweep = m_epochStartPosition % m_sweepTotalNumberOfSamples;
+    size_t newOffset = m_sequenceRandomizer->Seek(offsetInSweep, m_sweep);
+    m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
+}
+
+void BlockRandomizer::SetConfiguration(const ReaderConfiguration& config)
+{
+    *((ReaderConfiguration*)&m_config) = config;
 }
 
 }}}

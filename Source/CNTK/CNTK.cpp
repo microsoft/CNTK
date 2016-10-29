@@ -165,7 +165,7 @@ static void DisableLegacyUsage(const ConfigParameters& TopLevelConfig, const Con
 
 // When running in parallel with MPI, only commands in 'commandstoRunOnAllRanks' should
 // be run in parallel across multiple ranks. Others should only run on rank 0
-const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "adapt", "test", "eval", "cv", "devtest", "pbn" };
+const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "adapt", "test", "eval", "cv", "devtest", "bnstat" };
 
 // process the command
 template <typename ElemType>
@@ -273,10 +273,9 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                     }
                     fullEpochsOffset += GetMaxEpochs(commandParams);
                 }
-                // TODO: Choose a clearer name.
-                else if (thisAction == "pbn")
+                else if (thisAction == "bnstat")
                 {
-                    DoEvalBN<ElemType>(commandParams);
+                    DoBatchNormalizationStat<ElemType>(commandParams);
                 }
                 else if (thisAction == "adapt")
                 {
@@ -521,6 +520,8 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     if (config(L"forceDeterministicAlgorithms", false))
         Globals::ForceDeterministicAlgorithms();
+    if (config(L"forceConstantRandomSeed", false))
+        Globals::ForceConstantRandomSeed();
 
 #ifndef CPUONLY
     auto valpp = config.Find(L"deviceId");
@@ -640,7 +641,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 1.7.2+ (");
+    fprintf(stderr, "CNTK 2.0.beta1.0 (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
@@ -678,6 +679,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     if (config(L"forceDeterministicAlgorithms", false))
         Globals::ForceDeterministicAlgorithms();
+    if (config(L"forceConstantRandomSeed", false))
+        Globals::ForceConstantRandomSeed();
 
     // get the command param set they want
     wstring logpath = config(L"stderr", L"");

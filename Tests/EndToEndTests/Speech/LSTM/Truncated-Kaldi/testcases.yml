@@ -1,7 +1,6 @@
 dataDir: ../../Data
 tags:
      # TODO run on more SKUs and/or BVT
-     # running unconditionally on every Nightly job in 'L' leg
      - nightly-l (build_sku == 'gpu') and (os=='linux')
 
 testCases:

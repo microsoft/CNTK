@@ -17,14 +17,14 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     const size_t hiddenLayerDim = 50;
     const size_t numHiddenLayers = 2;
 
-    const size_t minibatchSize = 25;
+    const size_t minibatchSize = 50;
     const size_t numSamplesPerSweep = 10000;
     const size_t numSweepsToTrainWith = 2;
     const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
 
     auto featureStreamName = L"features";
     auto labelsStreamName = L"labels";
-    auto minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } }, 0, false);
+    auto minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } }, MinibatchSource::FullDataSweep, false);
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
@@ -101,9 +101,9 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
         prediction = predictionVar;
     }
 
-    const size_t minibatchSize = 32;
+    const size_t minibatchSize = 64;
     const size_t numSamplesPerSweep = 60000;
-    const size_t numSweepsToTrainWith = 3;
+    const size_t numSweepsToTrainWith = 2;
     const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
 
     auto featureStreamName = L"features";
@@ -127,6 +127,8 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
 
 void TrainerTests()
 {
+    fprintf(stderr, "\nTrainerTests..\n");
+
     TrainSimpleFeedForwardClassifer(DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())
     {

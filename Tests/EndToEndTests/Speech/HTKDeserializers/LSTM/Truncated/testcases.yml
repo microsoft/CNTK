@@ -1,6 +1,5 @@
 dataDir: ../../../Data
 tags:
-     # running unconditionally on every Nightly job in 'L' leg
      - nightly-l (build_sku == 'gpu') and (device=='gpu')
 
 testCases:

@@ -1,4 +1,5 @@
 %module(directors="1") cntk_py
+//%feature("autodoc", "1");
 
 %include "stl.i"
 %include "std_wstring.i" 
@@ -10,12 +11,15 @@
 %include <attribute.i>
 %include <std_shared_ptr.i>
 
-%rename(output_internal) CNTK::Function::Output;
-%rename(replace_placeholders_internal) CNTK::Function::ReplacePlaceholders;
+%rename(_output) CNTK::Function::Output;
+%rename(_forward) CNTK::Function::Forward;
+%rename(_backward) CNTK::Function::Backward;
 %rename(sgd_learner) CNTK::SGDLearner;
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
+%rename(momentums_as_time_constants) CNTK::MomentumValuesAsTimeConstants;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
 %rename(cpu_device) CNTK::DeviceDescriptor::CPUDevice;
+%rename(times_transpose) CNTK::TransposeTimes;
 
 // if we don't except RandomUniform the corresponding template functions will not be generated
 %rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";
@@ -36,6 +40,9 @@
 %template() std::vector<CNTK::StreamConfiguration>;
 //%template() std::vector<CNTK::DictionaryValue>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
+%template() std::vector<std::shared_ptr<CNTK::Learner>>;
+%template() std::pair<size_t, double>;
+%template() std::vector<std::pair<size_t, double>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
 %ignore CNTK::Internal::Combine;
@@ -43,11 +50,13 @@
 %ignore CNTK::Internal::Gather;
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
+%ignore CNTK::DistributedCommunicator::AggregateAsync;
 
 // These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
 %ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed;
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
+%ignore CNTK::Internal::GetComputationNetworkTraceLevel;
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -85,7 +94,9 @@ def dynamic_axes(self):
     }
 }
 
-%extend CNTK::TrainingParameterSchedule<double> {
+// MomentumValuesAsTimeConstants is a descendent of TrainingParameterSchedule,
+// but it does not inherit automatically functions added via %extend.
+%extend CNTK::MomentumValuesAsTimeConstants {
     const double& __getitem__(size_t sampleCount) {
         return (*($self))[sampleCount];
     }
@@ -234,12 +245,12 @@ def dynamic_axes(self):
             CNTK::ValuePtr* value;
             if (raw_value) {
                 value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+                args_map.insert(std::make_pair(*var, *value));
             } else {
                 // We got an empty ValuePtr, which carries a nullptr.
-                value = new CNTK::ValuePtr();
+                args_map.insert(std::make_pair(*var, CNTK::ValuePtr()));
             }
 
-            args_map.insert(std::make_pair(*var, *value));
         }
 
         $1 = &args_map;
@@ -278,12 +289,11 @@ def dynamic_axes(self):
             CNTK::ValuePtr* value;
             if (raw_value) {
                 value = reinterpret_cast<CNTK::ValuePtr*>(raw_value);
+                args_map.insert(std::make_pair(*var, *value));
             } else {
                 // We got an empty ValuePtr, which carries a nullptr.
-                value = new CNTK::ValuePtr();
+                args_map.insert(std::make_pair(*var, CNTK::ValuePtr()));
             }
-
-            args_map.insert(std::make_pair(*var, *value));
         }
 
         $1 = &args_map;
@@ -346,6 +356,7 @@ def dynamic_axes(self):
                 PyDict_SetItem($input, py_key, returned_val);
             }
         }
+        Py_DECREF(returned_val);
     }
 }
 
@@ -516,7 +527,61 @@ def dynamic_axes(self):
                 PyDict_SetItem($input, py_key, PyTuple_Pack(2, returned_val1, returned_val2));
             }
         }
+        Py_DECREF(returned_val1);
+        Py_DECREF(returned_val2);
     }
+}
+
+//
+// Converting Python dictionary {Parameter: NDArrayViewPtr} to std::unordered_map
+//
+%typecheck(1000) const std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& {
+    // '1000' is the typecheck precedence code. It means: check after basic
+    // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+    $1 = PyDict_Check($input) ? 1 : 0;
+}
+
+%typemap(in) const std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr>& (
+        std::unordered_map<CNTK::Parameter, CNTK::NDArrayViewPtr> args_map
+) {
+     if (PyDict_Check($input)) {
+
+        PyObject *key, *value;
+        Py_ssize_t pos = 0;
+
+        while (PyDict_Next($input, &pos, &key, &value)) {
+            void *raw_var = 0 ;
+            int res1 = SWIG_ConvertPtr(key, &raw_var, SWIGTYPE_p_CNTK__Parameter,  0);
+            if (!SWIG_IsOK(res1)) {
+                SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary to CNTK::Parameter"); 
+            }
+            if (!raw_var) {
+                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Parameter");
+            }
+
+            CNTK::Parameter* var = reinterpret_cast<CNTK::Parameter*>(raw_var);
+
+            void *raw_value = 0;
+            int res2 = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t,  0);
+            if (!SWIG_IsOK(res2)) {
+                SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary to CNTK::NDArrayViewPtr"); 
+            }
+
+            CNTK::NDArrayViewPtr* value;
+            if (raw_value) {
+                value = reinterpret_cast<CNTK::NDArrayViewPtr*>(raw_value);
+            } else {
+                // We got an empty NDArrayViewPtr, which carries a nullptr.
+                value = new CNTK::NDArrayViewPtr();
+            }
+
+            args_map.insert(std::make_pair(*var, *value));
+        }
+
+        $1 = &args_map;
+     } else {
+         SWIG_exception(SWIG_TypeError, "dictionary expected");
+     }
 }
 
 //
@@ -559,7 +624,7 @@ def dynamic_axes(self):
         Py_DECREF(iterator);
 
         if (PyErr_Occurred()) {
-            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::LearnerPtr"); 
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to CNTK::DictionaryValue"); 
         }
 
         $1 = vec;
@@ -853,6 +918,7 @@ def dynamic_axes(self):
         PyObject *item = SWIG_NewPointerObj(new CNTK::DATA_TYPE(var), _SWIG_TYPE, SWIG_POINTER_OWN );
         // No error handling here, because the error will be passed directly to Python
         PyList_Append(container, item);
+        Py_DECREF(item);
     }
 
     $result = container;
@@ -862,6 +928,7 @@ def dynamic_axes(self):
 %unordered_set_conversion(Variable, SWIGTYPE_p_CNTK__Variable)
 %unordered_set_conversion(Constant, SWIGTYPE_p_CNTK__Constant)
 %unordered_set_conversion(Parameter, SWIGTYPE_p_CNTK__Parameter)
+%unordered_set_conversion(DistributedWorkerDescriptor, SWIGTYPE_p_CNTK__DistributedWorkerDescriptor)
 
 %define %unordered_set_ref_conversion(DATA_TYPE, _SWIG_TYPE)
 
@@ -877,6 +944,7 @@ def dynamic_axes(self):
         PyObject *item = SWIG_NewPointerObj(new CNTK::DATA_TYPE(var), _SWIG_TYPE, SWIG_POINTER_OWN );
         // No error handling here, because the error will be passed directly to Python
         PyList_Append(container, item);
+        Py_DECREF(item);
     }
 
     $result = container;
@@ -886,6 +954,7 @@ def dynamic_axes(self):
 %unordered_set_ref_conversion(StreamInformation, SWIGTYPE_p_CNTK__StreamInformation)
 %unordered_set_ref_conversion(LearnerPtr, SWIGTYPE_p_std__shared_ptrT_CNTK__Learner_t)
 %unordered_set_ref_conversion(Parameter, SWIGTYPE_p_CNTK__Parameter)
+%unordered_set_ref_conversion(DistributedWorkerDescriptor, SWIGTYPE_p_CNTK__DistributedWorkerDescriptor)
 
 // Unordered map conversion
 
@@ -907,6 +976,9 @@ def dynamic_axes(self):
         PyObject *returned_val = SWIG_NewPointerObj(SWIG_as_voidptr(new CNTK::DATA_TYPE2(it.second)), _SWIG_TYPE2, SWIG_POINTER_OWN);
         
         PyDict_SetItem(container, returned_var, returned_val);        
+
+        Py_DECREF(returned_var);
+        Py_DECREF(returned_val);
     }
 
     $result = container;
@@ -914,7 +986,7 @@ def dynamic_axes(self):
 %enddef
 
 %unordered_map_ref_conversion(StreamInformation, SWIGTYPE_p_CNTK__StreamInformation, MinibatchData, SWIGTYPE_p_CNTK__MinibatchData);
-
+%unordered_map_ref_conversion(Parameter, SWIGTYPE_p_CNTK__Parameter, NDArrayViewPtr, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView);
 
 %shared_ptr(CNTK::Function)
 %shared_ptr(CNTK::NDArrayView)
@@ -923,6 +995,9 @@ def dynamic_axes(self):
 %shared_ptr(CNTK::BackPropState)
 %shared_ptr(CNTK::Learner)
 %shared_ptr(CNTK::MinibatchSource)
+%shared_ptr(CNTK::DistributedCommunicator)
+%shared_ptr(CNTK::QuantizedDistributedCommunicator)
+%shared_ptr(CNTK::DistributedTrainer)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
@@ -1100,14 +1175,20 @@ def dynamic_axes(self):
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
 
-%template(training_param_schedule_double) CNTK::TrainingParameterSchedule<double>;
+// end of NDArrayView
+
+%extend CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample> {
+    const double& __getitem__(size_t sampleCount) {
+        return (*($self))[sampleCount];
+    }
+}
+
+%template(training_parameter_schedule_double) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
 
 %pythoncode %{
-learning_rates_per_sample = training_param_schedule_double
-momentums_per_sample = training_param_schedule_double
+learning_rates_per_sample = training_parameter_schedule_double
+momentums_per_sample = training_parameter_schedule_double
 %}
-        
-// end of NDArrayView
 
 //
 // The following callback code is only for testing. Will have to be merged with
@@ -1121,22 +1202,6 @@ public:
     virtual void backward() { std::cout << "Callback::backward()" << std::endl; }
 };
 
-class FunctionInCNTK {
-private:
-    Callback *_callback;
-public:
-    FunctionInCNTK(): _callback(0) {}
-    ~FunctionInCNTK() { delCallback(); }
-    void delCallback() { delete _callback; _callback = 0; }
-    void setCallback(Callback *cb) { delCallback(); _callback = cb; }
-    void forward() { 
-        if (_callback) 
-            _callback->forward(); 
-        else
-            throw "Forward callback not defined!";
-    }
-    void backward() { if (_callback) _callback->backward(); }
-};
 %}
 
 //
@@ -1191,17 +1256,17 @@ StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and
 %pythoncode %{
 # in case of multiple outputs return the function, not the variable
 def get_output_and_keep_reference(self):
-    variable = self.output_internal()    
-    variable.owner = self
+    variable = self._output()    
+    variable.__owner = self
     return variable
 Function.output = lambda self:get_output_and_keep_reference(self)
-Function.replace_placeholders = lambda self, ph_map: self.replace_placeholders_internal(ph_map)
 
-from .tensor import _add_tensor_ops, _add_eval
+from .tensor import _add_tensor_ops, _add_array_interface
 for klass in [Function, Variable]:
     _add_tensor_ops(klass)
 
-_add_eval(Function)
+for klass in [Variable, Value, NDArrayView, NDMask]:
+    _add_array_interface(klass)
 
 enable_reversing_tensor_shapes_in_error_messages()
 %}

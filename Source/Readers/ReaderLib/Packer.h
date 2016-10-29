@@ -7,7 +7,6 @@
 
 #include "Reader.h"
 #include "MemoryProvider.h"
-#include "Transformer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -16,7 +15,7 @@ class Packer
 {
 public:
     // Sets current epoch configuration.
-    virtual void StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) = 0;
+    virtual void SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) = 0;
 
     virtual Minibatch ReadMinibatch() = 0;
     virtual ~Packer() {}

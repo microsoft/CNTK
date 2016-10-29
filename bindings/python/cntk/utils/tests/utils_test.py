@@ -7,7 +7,7 @@
 import numpy
 import pytest
 
-from cntk import DeviceDescriptor
+from cntk.device import default
 from cntk.tests.test_utils import precision, PRECISION_TO_TYPE
 from cntk.ops import *
 from cntk.utils import *
@@ -74,19 +74,43 @@ def test_is_tensor(data, expected):
 def test_is_tensor_list(data, expected):
     assert is_tensor_list(data) == expected
 
+def test_sanitize_dtype_numpy():
+    for dtype in ['float', 'float32', np.float32, int]:
+        assert sanitize_dtype_numpy(dtype) == np.float32, dtype
+    for dtype in [float, 'float64', np.float64]:
+        assert sanitize_dtype_numpy(dtype) == np.float64, dtype
+
+def test_sanitize_dtype_cntk():
+    for dtype in ['float', 'float32', np.float32, int]:
+        assert sanitize_dtype_cntk(dtype) == cntk_py.DataType_Float, dtype
+    for dtype in [float, 'float64', np.float64]:
+        assert sanitize_dtype_cntk(dtype) == cntk_py.DataType_Double, dtype
+
+@pytest.mark.parametrize("data, dtype", [
+    ([1], np.float32),
+    ([[1, 2]], np.float64),
+    (2, np.float64),
+    (np.asarray([1,2], dtype=np.float32), np.float64),
+])
+def test_sanitize_input(data, dtype):
+    inp = sanitize_input(data, dtype)
+    assert np.allclose(inp.value, data)
+    assert inp.dtype == dtype
+
 def test_get_data_type():
-    assert get_data_type(constant(value=2), constant(value=1)) == np.float32
-    assert get_data_type(input_variable(shape=(2,3)), constant(value=1)) == np.float32
+    pa = parameter(init=2)
+    pl = placeholder_variable(shape=(2))
+    c = constant(value=3.0)
+    n32 = np.asarray(1, dtype=np.float32)
+    n64 = np.asarray(1, dtype=np.float64)
 
-    ndav32 = create_NDArrayView_from_NumPy(np.asarray([[1,2]], dtype=np.float32))
-    assert get_data_type(input_variable(shape=(2,3), data_type=np.float64),
-            ndav32) == np.float64
-
-    ndav64 = create_NDArrayView_from_NumPy(np.asarray([[1,2]],
-        dtype=np.float64))
-    assert get_data_type(input_variable(shape=(2,3), data_type=np.float64),
-            ndav64) == np.float64
-
-    val32 = create_Value_from_NumPy(np.asarray([[1,2]], dtype=np.float32),
-            dev=DeviceDescriptor.default_device())
-    assert get_data_type(val32, ndav64) == np.float64
+    assert get_data_type(pa) == np.float32
+    assert get_data_type(pa, n32) == np.float32
+    assert get_data_type(pa, n64) == np.float64
+    assert get_data_type(pa, pl, n64) == np.float64
+    assert get_data_type(n32, n32) == np.float32
+    assert get_data_type(n32, n64) == np.float64
+    assert get_data_type(pl, n64) == np.float64
+    assert get_data_type(pl, n32) == np.float32
+    assert get_data_type(pl, pl) == None
+    

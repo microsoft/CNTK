@@ -55,9 +55,13 @@ If ($targetConfig -eq "CPU")
 {
 	$buildPath = "x64\Release_CpuOnly"
 }
+# Include Files
 $includePath = "Source\Common\Include"
-# TBD To be redone either via white-list or via array
-$includeFile = Join-Path $includePath -ChildPath Eval.h
+$includePath20 = "Source\CNTKv2LibraryDll\API"
+$includeFiles = New-Object string[] 3
+$includeFiles[0] = Join-Path $includePath -ChildPath Eval.h
+$includeFiles[1] = Join-Path $includePath20 -ChildPath CNTKLibrary.h
+$includeFiles[2] = Join-Path $includePath20 -ChildPath CNTKLibraryInternals.h
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
 
@@ -72,18 +76,20 @@ Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
 Remove-Item $baseDropPath\cntk\*test*.exe
 Remove-Item $baseDropPath\cntk\*.pdb
 # Keep EvalDll.lib
-Remove-Item $baseDropPath\cntk\*.lib  -exclude EvalDll.lib
+Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
-If (Test-Path $baseDropPath\cntk\Python)
-{
-	Remove-Item $baseDropPath\cntk\Python -Recurse
-}
-If (Test-Path $baseDropPath\cntk\CNTKLibrary-2.0.dll)
-{
-	Remove-Item $baseDropPath\cntk\CNTKLibrary-2.0.dll
-}
+# Add Python artefacts to 2.0 Beta Drop
+# If (Test-Path $baseDropPath\cntk\Python)
+# {
+# 	Remove-Item $baseDropPath\cntk\Python -Recurse
+# }
+# Add CNTKLibrary-2.0.dll to 2.0 Beta Drop
+# If (Test-Path $baseDropPath\cntk\CNTKLibrary-2.0.dll)
+# {
+# 	Remove-Item $baseDropPath\cntk\CNTKLibrary-2.0.dll
+# }
 If (Test-Path $baseDropPath\cntk\CPPEvalClientTest.exe)
 {
 	Remove-Item $baseDropPath\cntk\CPPEvalClientTest.exe
@@ -106,16 +112,19 @@ New-Item -Path $baseIncludePath -ItemType directory
 
 # Copy Include
 Write-Verbose "Copying Include files ..."
-Copy-Item $includeFile -Destination $baseIncludePath
+Foreach ($includeFile in $includeFiles)
+{
+	Copy-Item $includeFile -Destination $baseIncludePath
+}
 
 # Copy Examples
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
-# Remove CPPEvalV2Client examples, until V2 is included in the binary drop
-If (Test-Path $baseDropPath\Examples\Evaluation\CPPEvalV2Client)
-{
-	Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalV2Client -Recurse
-}
+# Include CPPEvalV2Client examples in 2.0 Beta drop
+# If (Test-Path $baseDropPath\Examples\Evaluation\CPPEvalV2Client)
+# {
+# 	Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalV2Client -Recurse
+# }
 
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."

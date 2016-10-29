@@ -2221,35 +2221,12 @@ void GranularGPUDataTransferer::WaitForSyncPointOnAssignStreamAsync() {}
 
 PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int /*deviceId*/) : GranularGPUDataTransferer() {}
 
-template <class ElemType>
-GPUDataTransferer<ElemType>::GPUDataTransferer(int, bool)
-{
-}
-
-template <class ElemType>
-GPUDataTransferer<ElemType>::~GPUDataTransferer()
-{
-}
-
-template <class ElemType>
-void GPUDataTransferer<ElemType>::CopyGPUToCPUAsync(ElemType*, size_t, ElemType*)
-{
-}
-
-template <class ElemType>
-void GPUDataTransferer<ElemType>::WaitForCopyGPUToCPUAsync()
-{
-}
-
-template <class ElemType>
-void GPUDataTransferer<ElemType>::CopyCPUToGPUAsync(ElemType*, size_t, ElemType*)
-{
-}
-
-template <class ElemType>
-void GPUDataTransferer<ElemType>::WaitForCopyCPUToGPUAsync()
-{
-}
+GPUDataTransferer::GPUDataTransferer(int, bool){}
+GPUDataTransferer::~GPUDataTransferer(){}
+void GPUDataTransferer::CopyGPUToCPUAsync(void*, size_t, void*){}
+void GPUDataTransferer::WaitForCopyGPUToCPUAsync(){}
+void GPUDataTransferer::CopyCPUToGPUAsync(void*, size_t, void*){}
+void GPUDataTransferer::WaitForCopyCPUToGPUAsync(){}
 
 #pragma endregion GPUDataTransferer functions
 
@@ -2277,9 +2254,6 @@ template MatrixQuantizerGPU<float>::~MatrixQuantizerGPU();
 template MatrixQuantizerGPU<double>::~MatrixQuantizerGPU();
 template void MatrixQuantizerGPU<float>::QuantizeAsync(const Matrix<float>&, const Matrix<float>&, QuantizedMatrix<float>&, Matrix<float>&, bool);
 template void MatrixQuantizerGPU<double>::QuantizeAsync(const Matrix<double>&, const Matrix<double>&, QuantizedMatrix<double>&, Matrix<double>&, bool);
-
-template class GPUDataTransferer<float>;
-template class GPUDataTransferer<double>;
 
 template <class ElemType>
 cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = {0};
