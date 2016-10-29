@@ -2844,7 +2844,7 @@ namespace CNTK
     static Constant s_defaultPastValueInitialState = Constant({}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice());
     /// s_isIntializedDefaultPastValueInitialState is to guard that s_defaultPastValueInitialState is initialized only once. 
     static std::once_flag s_isIntializedDefaultPastValueInitialStateFlag;
-    inline FunctionPtr PastValue(const Variable& operand, size_t offset, const std::wstring& name)
+    FunctionPtr PastValue(const Variable& operand, size_t offset, const std::wstring& name)
     {
         // static const auto s_defaultPastValueInitialState = Constant::Scalar(0.0f);
         std::call_once(s_isIntializedDefaultPastValueInitialStateFlag, [=] {
@@ -2867,7 +2867,7 @@ namespace CNTK
     /// Adding back const when it is moved into FutureValue() after upgrade to VS2015.
     static Constant s_defaultFutureValueInitialState = Constant({}, 0.0f, ::CNTK::DeviceDescriptor::CPUDevice());
     static std::once_flag s_isIntializedDefaultFutureValueInitialStateFlag;
-    inline FunctionPtr FutureValue(const Variable& operand, size_t offset, const std::wstring& name)
+    FunctionPtr FutureValue(const Variable& operand, size_t offset, const std::wstring& name)
     {
         //static const auto s_defaultFutureValueInitialState = Constant::Scalar(0.0f);
         std::call_once(s_isIntializedDefaultFutureValueInitialStateFlag, [=] {
