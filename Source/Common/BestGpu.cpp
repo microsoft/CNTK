@@ -270,8 +270,6 @@ void BestGpu::GetCudaProperties()
     if (m_cudaData)
         return;
 
-    int currentDevice, rc;
-    rc = cudaGetDevice(&currentDevice);
     int dev = 0;
 
     for (ProcessorData* pd : m_procData)
@@ -289,13 +287,13 @@ void BestGpu::GetCudaProperties()
         // cudaDeviceReset() explicitly destroys and cleans up all resources associated with the 
         // current device in the current process.
         // Will result in a segmentation fault is called, for instance, after cudnnCreate, but before cudnnDestroy.
-        // cudaDeviceReset();
+        cudaDeviceReset();
     }
     m_cudaData = m_procData.size() > 0;
-    if (rc == CUDA_SUCCESS)
+    /*if (rc == CUDA_SUCCESS)
     {
         cudaSetDevice(currentDevice);
-    }
+    }*/
 }
 
 void BestGpu::Init()
