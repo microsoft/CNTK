@@ -37,18 +37,17 @@
 #include <algorithm>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
-#define MULTIVERSO_DEBUG
-
+// #define MULTIVERSO_DEBUG
 #ifndef CPUONLY
 #define CudaErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true)
-{
-    if (code != cudaSuccess)
+    inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort = true)
     {
-        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-        if (abort) exit(code);
+        if (code != cudaSuccess)
+        {
+            fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+            if (abort) exit(code);
+        }
     }
-}
 #endif
 
 template<class ElemType = float>
@@ -59,22 +58,22 @@ public:
 MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
                  int nodeNumRanks,
                  bool useAsyncBuffered = true,
-                 bool isSimModelAveragingSGD = false,
-                 AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
-                 double adjustcoef = 0.2,
-                 size_t adjustnbmb = 600,
+                 bool isSimulatedModelAveragingSGD = false,
+                 AdjustLearningRateAtBeginning adjusttype = AdjustLearningRateAtBeginning::None,
+                 double adjustCoef = 0.2,
+                 size_t adjustPerMinibatches = 600,
                  int traceLevel = 0,
                  int syncPerfStats = 0,
                  const MPIWrapperPtr& pMPI = nullptr)
     : m_parameterSyncCounter(0), m_adjustLearningRateAtBeginningType(adjusttype),
-    m_adjustCoefficient(adjustcoef), m_adjustMBNumber(adjustnbmb),
+    m_adjustCoefficient(adjustCoef), m_adjustMBNumber(adjustPerMinibatches),
     m_totalClientNumber(nodeNumRanks), m_useAsyncBuffered(useAsyncBuffered),
-    m_traceLevel(traceLevel), m_useSimModelAveragingSGD(isSimModelAveragingSGD), m_isSycned(false),
+    m_traceLevel(traceLevel), m_ModelAveragingSGDSimulating(isSimulatedModelAveragingSGD), m_doesEveryNodesShouldSynced(false),
     m_pMPI(pMPI), m_syncPerfStats(syncPerfStats)
 {
-    if (m_useSimModelAveragingSGD)
+    if (m_ModelAveragingSGDSimulating)
     {
-        m_isSycned = true;
+        m_doesEveryNodesShouldSynced = true;
         m_useAsyncBuffered = false;
     }
     // Pipeline releated variables
@@ -105,7 +104,7 @@ MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
     else if (m_traceLevel > 4)
         multiverso::Log::ResetLogLevel(multiverso::LogLevel::Error);
 
-    if (m_isSycned)
+    if (m_doesEveryNodesShouldSynced)
         multiverso::SetCMDFlag("sync", true);
 
     MultiversoInit(learnableNodes);
@@ -136,7 +135,8 @@ MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
     multiverso::MV_ShutDown(false);
 }
 
-// upoload preCompute model to the parameter servers
+// upoload initilized model(, which was pre-computed by CNTK logic) to the parameter servers, so that 
+// every node could start training at a same model.
 void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
 {
     float factor = 1.0f / m_totalClientNumber;
@@ -163,6 +163,8 @@ void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
     // because the parameter server will minus the delta on the server, so that we should send the minus initial model to the server.
     std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), -factor));
 
+// Using matrix_table on multiverso could make CNTK sync with parameter server layer by layer possable,
+// but it will also slower about 10% than array_table.
 #ifdef MULTIVERSO_USE_MATRIXTABLE
     for (int widx = 0; widx < m_tableCount; widx++)
     {
@@ -197,15 +199,15 @@ void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes)
     m_reportTimer.Start();
 }
 
-// pushing parameters of learnableNodes to parameter servers, then get the latests model back.
+// Push parameters of learnableNodes to parameter servers, then get the latests model back.
 bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, size_t sampleSinceLastSynced = 0)
 {
     m_parameterSyncCounter++;
 
-    double CPUToGPUTime;
-    double GPUToCPUTime;
+    double fromCPUToGPUTime;
+    double fromGPUToCPUTime;
     double networkTime;
-    double GPUSwapTime;
+    double swapTimeOnGPU;
     m_reportTimer.Restart();
     WaitAsyncBuffer();
     m_reportTimer.Stop();
@@ -213,10 +215,10 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
     // reset statics for profiling
     if (m_traceLevel > 2 && m_syncPerfStats > 0 && m_parameterSyncCounter % m_syncPerfStats == 0)
     {
-        CPUToGPUTime = 0;
-        GPUToCPUTime = 0;
+        fromCPUToGPUTime = 0;
+        fromGPUToCPUTime = 0;
         networkTime = 0;
-        GPUSwapTime = 0;
+        swapTimeOnGPU = 0;
     }
 
     m_bufferIndexInUse = m_bufferSwapIndex[m_bufferIndexInUse];
@@ -252,10 +254,11 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
         m_reportTimer.Stop();
         if (m_traceLevel > 2)
         {
-            GPUSwapTime = m_reportTimer.ElapsedSeconds();
+            swapTimeOnGPU = m_reportTimer.ElapsedSeconds();
         }
 #ifndef CPUONLY
-        m_aysncBufferThread = new thread([&](){
+        m_aysncBufferThread = new thread([&]()
+        {
             float factor = DecayCoefficient();
             int deviceId = m_gpuAsyncBuffer[m_bufferIndexInUse][0].GetDeviceId();
 
@@ -323,35 +326,36 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
            m_workerArray->Get(py, m_totalModelSize);
 
 #endif
-            threadTimer.Stop();
-            if (m_traceLevel > 3)
-            {
-                double time = threadTimer.ElapsedSeconds();
-                fprintf(stderr, "\t\t -- pullAndRequest, Worker <--> Multiverso time %lf \n", time);
-            }
+           threadTimer.Stop();
+           if (m_traceLevel > 3)
+           {
+               double time = threadTimer.ElapsedSeconds();
+               fprintf(stderr, "\t\t -- pullAndRequest, Worker <--> Multiverso time %lf \n", time);
+           }
 
-            threadTimer.Restart();
-            // copy parameters from CPU buffer to GPU buffer
-            for (int widx = 0; widx < m_tableCount; widx++)
-            {
-                ElemType * py = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[widx];
+           threadTimer.Restart();
+           // copy parameters from CPU buffer to GPU buffer
+           for (int widx = 0; widx < m_tableCount; widx++)
+           {
+               ElemType * py = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[widx];
 
-                CudaErrorCheck(cudaMemcpyAsync(m_gpuAsyncBuffer[m_bufferIndexInUse][widx].Data(),
-                                               py,
-                                               m_gpuAsyncBuffer[m_bufferIndexInUse][widx].GetNumElements() * sizeof(ElemType),
-                                               cudaMemcpyHostToDevice,
-                                               _commStream));
-            }
-            CudaErrorCheck(cudaStreamSynchronize(_commStream));
-            threadTimer.Stop();
-            if (m_traceLevel > 3)
-            {
-                double time = threadTimer.ElapsedSeconds();
-                fprintf(stderr, "\t\t -- pullAndRequest, CPU -> GPU time %lf \n", time);
-            }
+               CudaErrorCheck(cudaMemcpyAsync(m_gpuAsyncBuffer[m_bufferIndexInUse][widx].Data(),
+                   py,
+                   m_gpuAsyncBuffer[m_bufferIndexInUse][widx].GetNumElements() * sizeof(ElemType),
+                   cudaMemcpyHostToDevice,
+                   _commStream));
+           }
+           CudaErrorCheck(cudaStreamSynchronize(_commStream));
+           threadTimer.Stop();
+           if (m_traceLevel > 3)
+           {
+               double time = threadTimer.ElapsedSeconds();
+               fprintf(stderr, "\t\t -- pullAndRequest, CPU -> GPU time %lf \n", time);
+           }
         });
 #else
-        m_aysncBufferThread = new thread([&](){
+        m_aysncBufferThread = new thread([&]()
+        {
             float factor = DecayCoefficient();
             int t_cacheIdx = m_bufferIndexInUse;
 
@@ -399,7 +403,7 @@ bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, 
         std::transform(m_cpuAsyncBuffer[0], m_cpuAsyncBuffer[0] + m_totalModelSize, m_deltaArray, m_deltaArray, std::minus<ElemType>());
 
         // lr decay
-        if (m_useSimModelAveragingSGD)
+        if (m_ModelAveragingSGDSimulating)
         {
             factor = ModelAggregationCoefficient(sampleSinceLastSynced);
             std::transform(m_deltaArray, m_deltaArray + m_totalModelSize, m_deltaArray, std::bind1st(std::multiplies<ElemType>(), factor));
@@ -591,12 +595,12 @@ private:
         float f = 1.f;
         switch (m_adjustLearningRateAtBeginningType)
         {
-        case AdjustLearningRateatBeginning::None:
+        case AdjustLearningRateAtBeginning::None:
             break;
-        case AdjustLearningRateatBeginning::Linearly:
+        case AdjustLearningRateAtBeginning::Linearly:
             f = min(f, max(0.f, (float)(m_adjustCoefficient + (1 - m_adjustCoefficient) / m_adjustMBNumber * m_parameterSyncCounter)));
             break;
-        case AdjustLearningRateatBeginning::Staircase:
+        case AdjustLearningRateAtBeginning::Staircase:
             f = min(f, max(0.f, (float)(m_adjustCoefficient * (m_parameterSyncCounter / m_adjustMBNumber + 1))));
             break;
         default:
@@ -664,8 +668,8 @@ private:
 
     thread * m_aysncBufferThread;
     bool m_isInitialized;
-    bool m_isSycned;
-    bool m_useSimModelAveragingSGD;
+    bool m_doesEveryNodesShouldSynced;
+    bool m_ModelAveragingSGDSimulating;
 
     int m_totalClientNumber;
     int m_traceLevel;
@@ -682,7 +686,7 @@ private:
     std::vector< multiverso::AddOption*> m_addOptions; // used by sparse table
 
 
-    AdjustLearningRateatBeginning m_adjustLearningRateAtBeginningType;
+    AdjustLearningRateAtBeginning m_adjustLearningRateAtBeginningType;
     double m_adjustCoefficient;
     size_t m_adjustMBNumber;
 
@@ -702,6 +706,4 @@ private:
     cudaStream_t _commStream;
 #endif
 };
-}  // namespace CNTK
-}  // namespace MSR
-}  // namespace Microsoft
+}}}
