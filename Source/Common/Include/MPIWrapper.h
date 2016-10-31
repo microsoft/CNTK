@@ -61,6 +61,7 @@ extern int operator||(int rc, const MpiFail &what);
 class MPIWrapper;
 typedef std::shared_ptr<MPIWrapper> MPIWrapperPtr;
 
+extern "C" void GetMpiWrapper(MPIWrapper **mpi);
 
 class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
 {

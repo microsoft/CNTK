@@ -190,6 +190,26 @@ class MPIWrapperEmpty : public MPIWrapper
         virtual void Wait(MPI_Request* request);
     };
 
+
+// -----------------------------------------------------------------------
+// Factory pattern.
+// Note: the following code would go into a specific mpi wrapper implementation
+//       dll and would be called by the loader to retrieve the mpi wrapper
+//       instance.
+//       The code below would be split into two independent dlls. One
+//       referencing the platform mpi libraries, the other providing only
+//       empty stubs.
+// -----------------------------------------------------------------------
+
+extern "C" void GetMpiWrapper(MPIWrapper **mpi)
+{
+#if HAS_MPI
+    *mpi = new MPIWrapperMpi();
+#else
+    *mpi = new MPIWrapperEmpty();
+#endif
+}
+
     // -----------------------------------------------------------------------
     // Generic MPIWrapper functions (not related to a specific implementation)
     // -----------------------------------------------------------------------
@@ -236,14 +256,17 @@ MPIWrapperPtr MPIWrapper::GetInstance(bool create)
         if (s_mpi != nullptr)
             LogicError("Creating MPIWrapper instance after a GetInstance call has been already made!");
         else
-#if HAS_MPI
-            // TODO: at this point, we should load the correct plugin instead of
-            //       hardcoding the instanciation here (and thus assuming that
-            //       mpi libs are available during build time)
-            s_mpi = std::make_shared<MPIWrapperMpi>();
-#else
-            s_mpi = std::make_shared<MPIWrapperEmpty>();
-#endif
+        {
+            MPIWrapper *mpi = nullptr;
+
+            // retrieves the raw pointer
+            GetMpiWrapper(&mpi);
+            if (mpi == nullptr)
+                LogicError("Creating MPIWrapper failed to retrieve instance!");
+
+            // makes it a shared pointer
+            s_mpi = shared_ptr<MPIWrapper>(mpi);
+        }
     }
 
     return s_mpi;
