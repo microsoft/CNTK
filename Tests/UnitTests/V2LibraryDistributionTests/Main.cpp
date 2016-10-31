@@ -123,12 +123,23 @@ int main(int /*argc*/, char* /*argv*/[])
 
     if (Is1bitSGDAvailable())
     {
-        auto communicator = QuantizedMPICommunicator(true, true, 32);
-        auto distributedTrainer = CreateQuantizedDataParallelDistributedTrainer(communicator, false);
-        TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice(), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+        {
+            auto communicator = QuantizedMPICommunicator(true, true, 32);
+            auto distributedTrainer = CreateQuantizedDataParallelDistributedTrainer(communicator, false);
+            TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice(), distributedTrainer, communicator->CurrentWorker().m_globalRank);
 
-        if (IsGPUAvailable())
-            TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+            if (IsGPUAvailable())
+                TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+        }
+
+        {
+            auto communicator = MPICommunicator();
+            auto distributedTrainer = CreateBlockMomentumDistributedTrainer(communicator, 1024);
+            TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice(), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+
+            if (IsGPUAvailable())
+                TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+        }
     }
 
     fprintf(stderr, "\nCNTKv2LibraryDistribution tests: Passed\n");
