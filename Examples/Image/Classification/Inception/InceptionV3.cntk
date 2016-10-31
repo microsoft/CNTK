@@ -41,7 +41,7 @@ Train = {
         # apply model to features
         model = InceptionV3(features, labelDim, bnTimeConst)
         z     = model.z
-		    aux   = model.aux
+        aux   = model.aux
 
         # connect to system
         ceAux    = CrossEntropyWithSoftmax     (labels, aux)
@@ -80,7 +80,7 @@ Train = {
             parallelizationMethod = "dataParallelSGD"
             parallelizationStartEpoch = 1
             distributedMBReading = true
-            dataParallelSGD = { gradientBits = 2 }
+            dataParallelSGD = { gradientBits = 32 }
         }
     }
 

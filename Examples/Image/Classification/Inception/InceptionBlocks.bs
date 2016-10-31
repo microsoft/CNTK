@@ -2,6 +2,9 @@
 # This file contains the basic build block of Inception Network as defined in:
 #   https://arxiv.org/pdf/1512.00567.pdf
 #
+# The number associated with each block is based on when this block was first
+# called inside the Inception V3 model.
+#
 
 #
 # Convolution layer with Batch Normalization and Rectifier Linear activation.
