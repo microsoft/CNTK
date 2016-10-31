@@ -1,19 +1,9 @@
 RootDir = .
-ModelDir = "models"
-command = "Simple_Test"
-
 precision = "float"
 
-modelPath = "$ModelDir$/ImageReaderSimple_Model.dnn"
+MapFile="testMustSubstituteThis"
 
-# deviceId = -1 for CPU, >= 0 for GPU devices
-deviceId = -1
-
-outputNodeNames = "Dummy"
-traceLevel = 1
-frameMode = false
-
-Simple_Test = [
+ImageAndImageReaderSimple_Test = [
 
 # Parameter values for the reader
 reader = [
@@ -24,7 +14,7 @@ reader = [
             [
                 type = "ImageDeserializer"
                 module = "ImageReader"
-                file = "$RootDir$/ImageReaderSimple_map.txt"
+                file = "$MapFile$"
 
                 input = [
                     features1 = [
@@ -82,3 +72,18 @@ reader = [
         )
     ]
 ]
+
+3DotsExpansionTest = {
+    reader = {
+        deserializers = ({
+            type = "ImageDeserializer"
+            module = "ImageReader"
+            file = "$MapFile$"
+
+            input = {
+                features = { transforms = () }
+                labels = { labelDim = 4 }               
+            }
+        })
+    }
+}
