@@ -37,18 +37,20 @@ inline std::vector<std::string> GetSectionsWithParameter(const std::string& read
     return result;
 }
 
+// This class allows specifying delimiters and 3 dot patterns
+// both for char and wchar_t strings.
 template<class T>
 struct DirectoryExpansion
 {
-    static const T*  Delimiters() { return "/\\"; }
-    static const T*  Pattern() { return "..."; }
+    static const T* Delimiters() { return "/\\"; }
+    static const T* Pattern() { return "..."; }
 };
 
 template<>
 struct DirectoryExpansion<wchar_t>
 {
-    static const wchar_t*  Delimiters() { return L"/\\"; }
-    static const wchar_t*  Pattern() { return L"..."; }
+    static const wchar_t* Delimiters() { return L"/\\"; }
+    static const wchar_t* Pattern() { return L"..."; }
 };
 
 // Extracts the directory from the absolute path.
@@ -75,12 +77,7 @@ TString Expand3Dots(const TString& filePath, const TString& directoryExpansion)
 
     const auto extensionPattern = DirectoryExpansion<Char>::Pattern();
     size_t pos = filePath.find(extensionPattern);
-    if (pos == filePath.npos)
-        return filePath;
-
-    if (pos != 0)
-        RuntimeError("Invalid path containing '...'");
-    return directoryExpansion + filePath.substr(pos + 3);
+    return pos == 0 ? directoryExpansion + filePath.substr(pos + 3) : filePath;
 }
 
 }}}
