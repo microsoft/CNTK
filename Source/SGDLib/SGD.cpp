@@ -15,6 +15,7 @@
 // ^^ workaround until this line in AggregateGradientsImpl() gets updated: assert(headerCPU->evalErrors[i] == 0);
 #include "AllReduceDistGradAggregator.h"
 #include "BlockMomentumSGD.h"
+#include "V2BlockMomentumSGD.h"
 #include "V2AllReduceDistGradAggregator.h"
 #endif
 
@@ -1118,7 +1119,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             // distributed gradient aggregation
             if (learnParamsGradients.size() == 0)
             {
-                // lazily form the list of gradients to exchange
+                // lazily form the list of smoothedGradients to exchange
                 learnParamsGradients.reserve(learnableNodes.size());
                 for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                 {
@@ -2004,7 +2005,22 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
 #ifndef CNTK_PARALLEL_TRAINING_SUPPORT
         RuntimeError("Block Momentum is not supported in the main CNTK repo. You need to enable 1bit submodule.");
 #else
-        m_pMASGDHelper = make_shared<BlockMomentumSGD<ElemType>>(m_mpi, traceLevel, devID, 
+        if (Globals::UseV2Aggregator())
+        {
+            auto communicator = ::CNTK::MPICommunicator();
+            m_pMASGDHelper = make_shared<V2BlockMomentumSGD<ElemType>>(
+                m_mpi,
+                communicator,
+                traceLevel,
+                devID,
+                m_useNesterovBlockMomentum,
+                m_resetSGDMomentum,
+                m_blockLearningRate,
+                m_blockMomentumAsTimeConstant,
+                m_modelAggregationBlockSize);
+        }
+        else
+            m_pMASGDHelper = make_shared<BlockMomentumSGD<ElemType>>(m_mpi, traceLevel, devID, 
                                                                  m_useNesterovBlockMomentum, m_resetSGDMomentum, 
                                                                  m_blockLearningRate, m_blockMomentumAsTimeConstant, 
                                                                  m_modelAggregationBlockSize);
