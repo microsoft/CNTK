@@ -12,7 +12,7 @@ from .utils import typemap
 # If other OS has similar OpenMPI MPI_Init failure, add dll load to global here
 import platform
 import ctypes
-if platform.system() != 'Windows':
+if platform.system() == 'Linux':
     ctypes.CDLL("libmpi.so", mode=ctypes.RTLD_GLOBAL)
 
 __doc__= '''\
