@@ -9,9 +9,10 @@
 # Log steps, stop on error
 set -x -e -o pipefail
 
-USAGE="Usage: $0 <url-or-file-of-cntk-drop>"
+USAGE="Usage: $0 <url-or-file-of-cntk-drop> <repo-tag>"
 
 DROP_LOCATION=${1?$USAGE}
+REPO_TAG=${2?$USAGE}
 
 if [ -f "$DROP_LOCATION" ]; then
   DROP_FILE="$DROP_LOCATION"
@@ -26,6 +27,6 @@ fi
 tar -xzf "$DROP_FILE"
 test -d cntk
 
-exec cntk/Scripts/linux/install-cntk.sh
+exec cntk/Scripts/linux/install-cntk.sh --repo-tag $REPO_TAG
 
 # vim:set expandtab shiftwidth=2 tabstop=2:
