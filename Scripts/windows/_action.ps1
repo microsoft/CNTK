@@ -226,8 +226,14 @@ function CreateBatch(
 
     Remove-Item -Path $filename -ErrorAction SilentlyContinue | Out-Null
 
-    add-content -Path $filename -Value "set PATH=$cntkRootDir\cntk;%PATH%" -Encoding Ascii
-    add-content -Path $filename -Value "$AnacondaBasePath\Scripts\activate $AnacondaBasePath\envs\cntk-py34" -Encoding Ascii 
+    add-content -Path $filename -Encoding Ascii -Value '@IF /I "%CMDCMDLINE%" EQU ""%COMSPEC%" " GOTO doActivate'
+    add-content -Path $filename -Encoding Ascii -Value "  @echo."
+    add-content -Path $filename -Encoding Ascii -Value "  @echo Please execute this script from inside a regular Windows command prompt."
+    add-content -Path $filename -Encoding Ascii -Value "  @echo."
+    add-content -Path $filename -Encoding Ascii -Value "@goto :EOF"
+    add-content -Path $filename -Encoding Ascii -Value ":doActivate"
+    add-content -Path $filename -Encoding Ascii -Value "  @set PATH=$cntkRootDir\cntk;%PATH%"
+    add-content -Path $filename -Encoding Ascii -Value "  @$AnacondaBasePath\Scripts\activate $AnacondaBasePath\envs\cntk-py34"
 }
 
 
