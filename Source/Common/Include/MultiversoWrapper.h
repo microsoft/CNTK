@@ -56,7 +56,7 @@ class MultiversoHelper
 typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 public:
 MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
-                 int nodeNumRanks,
+                 size_t nodeNumRanks,
                  bool useAsyncBuffered = true,
                  bool isSimulatedModelAveragingSGD = false,
                  AdjustLearningRateAtBeginning adjusttype = AdjustLearningRateAtBeginning::None,
