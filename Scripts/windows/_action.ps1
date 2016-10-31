@@ -114,9 +114,6 @@ function InstallWheel(
 
     $oldPath = $env:PATH
     $env:PATH = $newPaths + ';' + $env:PATH
-    if (test-path $whlDirectory -PathType Container) {
-        Invoke-DosCommand pip (Write-Output uninstall cntk --yes)
-    }
 
     Invoke-DosCommand pip (Write-Output install $whl)
     $env:PATH = $oldPath 
