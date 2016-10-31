@@ -251,6 +251,10 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
         RuntimeError("Could not open %s for reading.", mapPath.c_str());
     }
 
+    // Creating the default reader with expanded directory to the map file.
+    auto mapFileDirectory = ExtractDirectory(mapPath);
+    m_defaultReader = make_unique<FileByteReader>(mapFileDirectory);
+
     size_t itemsPerLine = isMultiCrop ? 10 : 1;
     size_t curId = 0;
     std::string line;
@@ -315,7 +319,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
 
             m_keyToSequence[description.m_key.m_sequence] = m_imageSequences.size();
             m_imageSequences.push_back(description);
-            RegisterByteReader(description.m_id, description.m_path, knownReaders, readerSequences);
+            RegisterByteReader(description.m_id, description.m_path, knownReaders, readerSequences, mapFileDirectory);
         }
     }
 
@@ -337,9 +341,11 @@ ChunkPtr ImageDataDeserializer::GetChunk(ChunkIdType chunkId)
     return std::make_shared<ImageChunk>(sequenceDescription, *this);
 }
 
-void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences)
+void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& seqPath, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences, const std::string& expandDirectory)
 {
-    assert(!path.empty());
+    assert(!seqPath.empty());
+
+    auto path = Expand3Dots(seqPath, expandDirectory);
 
     auto atPos = path.find_first_of('@');
     // Is it container or plain image file?
@@ -383,13 +389,14 @@ cv::Mat ImageDataDeserializer::ReadImage(size_t seqId, const std::string& path, 
 
     ImageDataDeserializer::SeqReaderMap::const_iterator r;
     if (m_readers.empty() || (r = m_readers.find(seqId)) == m_readers.end())
-        return m_defaultReader.Read(seqId, path, grayscale);
+        return m_defaultReader->Read(seqId, path, grayscale);
     return (*r).second->Read(seqId, path, grayscale);
 }
 
-cv::Mat FileByteReader::Read(size_t, const std::string& path, bool grayscale)
+cv::Mat FileByteReader::Read(size_t, const std::string& seqPath, bool grayscale)
 {
-    assert(!path.empty());
+    assert(!seqPath.empty());
+    auto path = Expand3Dots(seqPath, m_expandDirectory);
 
     return cv::imread(path, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
 }

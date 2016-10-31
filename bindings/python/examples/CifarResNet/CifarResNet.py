@@ -98,7 +98,7 @@ def create_resnet_model(input, num_classes):
 
     input_norm = element_times(feat_scale, input)
 
-    conv = conv_bn_relu_layer(input, c_map1, [3, 3], [1, 1], bn_time_const)
+    conv = conv_bn_relu_layer(input_norm, c_map1, [3, 3], [1, 1], bn_time_const)
     r1_1 = resnet_basic_stack3(conv, c_map1, bn_time_const)
 
     c_map2 = 32
