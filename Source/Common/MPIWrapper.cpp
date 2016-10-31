@@ -32,7 +32,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // MPI communicator that reflects the current subset selection
         MPI_Comm m_currentComm;
 
-        // MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
+        // MPI_Init() is loading the msmpi.dll. Failing to load the dll will terminate the
+        // application.
         int MPI_Init_DL();
 
         // Workaround for the issue with MPI hanging when we have non-0 exit codes from CNTK processes
@@ -210,9 +211,9 @@ extern "C" void GetMpiWrapper(MPIWrapper **mpi)
 #endif
 }
 
-    // -----------------------------------------------------------------------
-    // Generic MPIWrapper functions (not related to a specific implementation)
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// Generic MPIWrapper functions (not related to a specific implementation)
+// -----------------------------------------------------------------------
 
 std::shared_ptr<MPIWrapper> MPIWrapper::s_mpi = nullptr;
 
@@ -318,20 +319,16 @@ int MPIWrapper::GetTotalNumberOfMPINodes()
     const char* p = std::getenv("OMPI_COMM_WORLD_SIZE");
 #endif
     if (!p)
-    {
         return 0;
-    }
     else
-    {
         return std::stoi(string(p));
-    }
 #endif
 }
 
 #if HAS_MPI
-    // -----------------------------------------------------------------------
-    // MPIWrapper that actually calls into msmpi.dll
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// MPIWrapper that actually calls into msmpi.dll
+// -----------------------------------------------------------------------
 
 int MPIWrapperMpi::s_myRank = -1;
 
@@ -340,9 +337,7 @@ MPIWrapperMpi::MPIWrapperMpi()
 {
     static bool initialized = false;
     if (initialized)
-    {
         LogicError("MPIWrapperMpi: this is a singleton class that can only be instantiated once per process");
-    }
 
     initialized = true;
 
@@ -401,9 +396,7 @@ MPIWrapperMpi::MPIWrapperMpi()
 MPIWrapperMpi::~MPIWrapperMpi()
 {
     if (GetMathLibTraceLevel() > 0)
-    {
         fprintf(stderr, "~MPIWrapperMpi\n");
-    }
 
     // Do not finalize in event of an exception since calling MPI_Finalize without
     // all pending communications being finished results in a hang
@@ -423,36 +416,25 @@ MPIWrapperMpi::~MPIWrapperMpi()
     }
 }
 
-// MPI_Init() with delay-loading the msmpi.dll (possibly causing a failure if missing; we want to catch that)
+// MPI_Init() is loading the msmpi.dll. Failing to load the dll will terminate the
+// application.
 int MPIWrapperMpi::MPI_Init_DL()
 {
-#ifdef WIN32
-    __try
-#endif
-    {
-        // don't initialize if that has been done already
-        int flag = 0;
-        MPI_Initialized(&flag);
-        if (flag)
-            return MPI_SUCCESS;
+    // don't initialize if that has been done already
+    int flag = 0;
+    MPI_Initialized(&flag);
+    if (flag)
+        return MPI_SUCCESS;
 
-        int argc = 0;
-        char **argv = NULL;
-        int requiredThreadLevelSupport = MPI_THREAD_SERIALIZED;
-        int provided;
-        int ret = MPI_Init_thread(&argc, &argv, requiredThreadLevelSupport, &provided);
-        if (provided != requiredThreadLevelSupport)
-            LogicError("Failed to initialize MPI with the desired level of thread support");
+    int argc = 0;
+    char **argv = NULL;
+    int requiredThreadLevelSupport = MPI_THREAD_SERIALIZED;
+    int provided;
+    int ret = MPI_Init_thread(&argc, &argv, requiredThreadLevelSupport, &provided);
+    if (provided != requiredThreadLevelSupport)
+        LogicError("Failed to initialize MPI with the desired level of thread support");
 
-        return ret;
-    }
-#ifdef WIN32
-    __except (EXCEPTION_EXECUTE_HANDLER)
-    {
-        fprintf(stderr, "mpihelper: msmpi.dll missing\n");
-        return MPI_ERR_INTERN;
-    }
-#endif
+    return ret;
 }
 
 // Workaround for the issue with MPI hanging when we have non-0 exit codes from CNTK processes
@@ -817,9 +799,10 @@ void MPIWrapperMpi::WaitAny(MPI_Request* requests, int numRequests, int* index)
 #endif
 
 
-    // -----------------------------------------------------------------------
-    // MPIWrapperEmpty that does nothing
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// MPIWrapperEmpty that does nothing
+// -----------------------------------------------------------------------
+
 #pragma warning(push)
 #pragma warning(disable: 4100) // unreferenced formal parameter
 
