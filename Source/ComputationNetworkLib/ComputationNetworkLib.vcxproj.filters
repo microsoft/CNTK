@@ -40,6 +40,9 @@
     <ClCompile Include="InputAndParamNodes.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
+    <ClCompile Include="LinearAlgebraNodes.cpp">
+      <Filter>Nodes</Filter>
+    </ClCompile>
     <ClCompile Include="RNNNodes.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>

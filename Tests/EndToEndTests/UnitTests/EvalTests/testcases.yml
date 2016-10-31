@@ -1,9 +1,8 @@
 dataDir: .
 
 tags:  
-  # TODO move from l to separate leg, requires infra changes
-  - bvt-l (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu'))
-  - nightly-l (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu'))
+  - bvt-i (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu'))
+  - nightly-i (build_sku != '1bitsgd') and ((build_sku == 'cpu') or (device == 'gpu'))
 
 testCases:
   Test cases pass:

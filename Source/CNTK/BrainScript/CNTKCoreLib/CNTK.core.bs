@@ -30,7 +30,7 @@
 
 # LinearLayer -- create a fully-connected linear projection layer
 # Note: outDim may describe a tensor as well.
-LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None} =
+LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} =
 {
     # inputRank given: number of zeroes to add to W (mapRank must not be given)
     # mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
@@ -40,7 +40,7 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
         else if !BS.Constants.IsNone (mapRank)   then Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
         else Repeat (inputRank, Inferred)
     W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale}
-    b = ParameterTensor {outDim, initValue=0}
+    b = ParameterTensor {outDim, initValue=initBias}
     outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
     inferInputRankToMap =
         if      !BS.Constants.IsNone (inputRank) then -1  # means not specified
@@ -53,7 +53,7 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
 }.apply
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
-DenseLayer{outDim, bias = true, activation=(x=>x), init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank} : activation )
+DenseLayer{outDim, bias = true, activation=(x=>x), init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank, initBias=initBias} : activation )
 
 # EmbeddingLayer -- create a linear embedding layer
 EmbeddingLayer {outDim,                                   # dimension of embedding
@@ -73,12 +73,14 @@ EmbeddingLayer {outDim,                                   # dimension of embeddi
 #    in     : [ (shifting dims)  |  (reduction dim)  |                |  (sample dims) ]
 #    kernel : [ (filter dims)    |  (reduction dim)  |  (output dim)  |                ]
 #    out    : [ (shifting dims)] |                   |  (output dim)  |  (sample dims) ]
+# BUGBUG: filterShape should be first, so that numOutputChannels can default to 1 (to denote a normal filter), and remaining parameters consistent with Times()
 ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     filterShape,         # e.g. (3:3)
                     bias = true,
                     activation = (x=>x),
                     init = 'glorotUniform',
                     initValueScale = 1,          # TODO: rename to initScale
+                    initBias = 0,
                     #reductionRank = 1,          # TODO: support this
                     stride = 1, pad = false,
                     lowerPad = 0, upperPad = 0,
@@ -91,7 +93,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     filterRank = Length (filterShape)
     kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, Inferred)) # kernel := filter plus reductionDims
     W = ParameterTensor{_ConcatArrays (kernelShape, outputChannelsShape), init = init, initValueScale = initValueScale, initFilterRank = filterRank, initOutputRank = -1}  # [ W x H x C x K ]
-    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = 0)                                 # [ 1 x 1 x     K ]
+    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)                                                       # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     transpose = false # TODO: support this
     apply (x) = {
@@ -566,6 +568,8 @@ FlattenDimensions(x, axis, num) = NewReshape(x, 0, beginAxis=axis, endAxis=axis 
 SplitDimension(x, axis, N) = ReshapeDimension(x, axis, 0:N) 
 # TODO: make input the last arg!
 Transpose(x) = TransposeDimensions(x, 1, 2)
+LambdaRank(gain, prediction, queryId, tag='') = new ComputationNode [ operation = 'LambdaRank' ; inputs = _AsNodes (gain : prediction : queryId) /*plus the function args*/ ]
+NDCG1Eval(gain, prediction, queryId, tag='') = new ComputationNode [ operation = 'NDCG1Eval' ; inputs = _AsNodes (gain : prediction : queryId) /*plus the function args*/ ]
 Logistic(label, probability, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = _AsNodes (label : probability) /*plus the function args*/ ]
 WeightedLogistic(label, probability, instanceWeight, tag='') = new ComputationNode [ operation = 'Logistic' ; inputs = _AsNodes (label : probability : instanceWeight) /*plus the function args*/ ]
 ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ operation = 'ReconcileDynamicAxis' ; inputs = _AsNodes (dataInput : layoutInput) /*plus the function args*/ ]
@@ -578,7 +582,7 @@ MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, l
 # 2D pooling
 MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
-ROIPooling (input, ROIs, shape) = new ComputationNode { operation = 'ROIPooling' ; inputs = _AsNodes (input : ROIs) ; outputShape = new TensorShape [ dims = shape ] ; tag='' /*plus the function args*/ } 
+ROIPooling (input, ROIs, shape) = new ComputationNode { operation = 'ROIPooling' ; inputs = _AsNodes (input : ROIs) ; roiOutputShape = new TensorShape [ dims = shape ] ; tag='' /*plus the function args*/ } 
 ColumnwiseCrossProduct = KhatriRaoProduct // deprecated 
 ErrorPrediction = ClassificationError   # legacy name
 Delay = PastValue 

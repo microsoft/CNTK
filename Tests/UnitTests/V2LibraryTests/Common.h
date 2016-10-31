@@ -13,6 +13,13 @@
 #define NDEBUG
 #endif
 
+#ifdef _MSC_VER
+// In case of asserts in debug mode, print the message into stderr and throw exception
+int HandleDebugAssert(int /* reportType */,
+                      char *message, // fully assembled debug user message
+                      int *returnValue); // returnValue - retVal value of zero continues execution
+#endif
+
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
@@ -101,11 +108,11 @@ static inline FILE *_wfopen(const wchar_t *path, const wchar_t *mode)
 #endif
 
 template <typename ElementType>
-inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector<CNTK::Variable*>& variables, const CNTK::DeviceDescriptor& device)
+inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector<CNTK::Variable*>& variables, const CNTK::DeviceDescriptor& device, size_t rank = 0)
 {
-    static std::wstring s_tempModelPath = L"feedForward.net";
+    const std::wstring tempModelPath = L"feedForward.net" + std::to_wstring((int)rank);
 
-    if ((_wunlink(s_tempModelPath.c_str()) != 0) && (errno != ENOENT))
+    if ((_wunlink(tempModelPath.c_str()) != 0) && (errno != ENOENT))
         std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
     std::unordered_map<std::wstring, CNTK::Variable*> inputVarUids;
@@ -118,10 +125,10 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
             std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
 
-    CNTK::SaveAsLegacyModel(functionPtr, s_tempModelPath);
-    functionPtr = CNTK::LoadLegacyModel(functionPtr->Outputs()[0].GetDataType(), s_tempModelPath, device);
+    functionPtr->SaveModel(tempModelPath);
+    functionPtr = CNTK::Function::LoadModel(functionPtr->Outputs()[0].GetDataType(), tempModelPath, device);
 
-    if (_wunlink(s_tempModelPath.c_str()) != 0)
+    if (_wunlink(tempModelPath.c_str()) != 0)
          std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
     auto inputs = functionPtr->Inputs();
@@ -160,6 +167,23 @@ inline CNTK::FunctionPtr FullyConnectedLinearLayer(CNTK::Variable input, size_t 
 inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t outputDim, const CNTK::DeviceDescriptor& device, const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity)
 {
     return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device));
+}
+
+inline CNTK::FunctionPtr FullyConnectedFeedForwardClassifierNet(CNTK::Variable input,
+                                                   size_t numOutputClasses,
+                                                   size_t hiddenLayerDim,
+                                                   size_t numHiddenLayers,
+                                                   const CNTK::DeviceDescriptor& device,
+                                                   const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity,
+                                                   const std::wstring& outputName)
+{
+    assert(numHiddenLayers >= 1);
+    auto classifierRoot = FullyConnectedDNNLayer(input, hiddenLayerDim, device, nonLinearity);
+    for (size_t i = 1; i < numHiddenLayers; ++i)
+        classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
+
+    auto outputTimesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, CNTK::SentinelValueForAutoSelectRandomSeed, device));
+    return Times(outputTimesParam, classifierRoot, 1, outputName);
 }
 
 template <typename ElementType>
@@ -355,7 +379,7 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
     #else
     stream.open(wtocharpath(filename.c_str()).c_str(), mode);
     #endif
-    stream.exceptions(std::ios_base::failbit | std::ios_base::badbit);  
+    stream.exceptions(std::ios_base::badbit);  
 }
 
 inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
@@ -367,7 +391,6 @@ inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatch
         printf("Minibatch %d: CrossEntropy loss = %.8g, Evaluation criterion = %.8g\n", (int)minibatchIdx, trainLossValue, evaluationValue);
     }
 }
-
 inline std::vector<size_t> GetStrides(const CNTK::NDShape& shape)
 {
     if (shape.Rank() == 0)
@@ -414,7 +437,6 @@ inline CNTK::FunctionPtr Embedding(const CNTK::Variable& input, size_t embedding
 {
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
-
     auto embeddingParameters = CNTK::Parameter({ embeddingDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(), device);
     return Times(embeddingParameters, input);
 }
@@ -429,3 +451,163 @@ inline CNTK::FunctionPtr LSTMSequenceClassiferNet(const CNTK::Variable& input, s
     return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
 }
 
+template <typename ElementType> 
+inline bool AreEqual(const CNTK::NDArrayViewPtr& view1, const CNTK::NDArrayViewPtr& view2)
+{
+    return AreEqual<ElementType>(*view1, *view2);
+}
+
+inline bool AreEqual(const CNTK::Variable& var1, const CNTK::Variable& var2)
+{
+
+    if (!CNTK::Internal::AreEquivalent(var1, var2))
+    {
+        return false;
+    }
+
+    if (!(var1.IsParameter() || var1.IsConstant()))
+    {
+        return true;
+    }
+
+    CNTK::NDArrayViewPtr ptr1, ptr2;
+       
+    if (var1.IsParameter()) 
+    {
+        ptr1 = reinterpret_cast<const CNTK::Parameter&>(var1).Value();
+        ptr2 = reinterpret_cast<const CNTK::Parameter&>(var2).Value();
+    }
+
+
+    if (var1.IsConstant()) 
+    {
+        ptr1 = reinterpret_cast<const CNTK::Constant&>(var1).Value();
+        ptr2 = reinterpret_cast<const CNTK::Constant&>(var2).Value();
+    }
+
+    if (!CNTK::Internal::AreEqual(*ptr1, *ptr2))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+inline bool AreEqual(const CNTK::FunctionPtr& f1, const CNTK::FunctionPtr& f2)
+{
+    if (f1 == f2)
+    { 
+        return true;
+    }
+
+    if (!CNTK::Internal::AreEquivalent(f1, f2))
+    {
+        return false;
+    }
+
+    auto inputs1 = f1->Inputs();
+    auto inputs2 = f2->Inputs();
+
+    if (inputs1.size() != inputs2.size())
+    {
+        return false;
+    }
+
+    for (int i = 0; i < inputs1.size(); i++)
+    {
+        if (!AreEqual(inputs1[i], inputs2[i]))
+        { 
+            return false;
+        }
+    }
+
+    return true;
+}
+
+using namespace CNTK;
+
+inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second, ParameterCloningMethod parameterCloningMethod, const std::unordered_map<Variable, Variable>& replacements, std::unordered_set<FunctionPtr>& visitedFunctions)
+{
+    // TODO: try to refactor this some more, using AreEqual functions above.
+    if ((first->RootFunction() == nullptr) != (second->RootFunction() == nullptr))
+        throw std::runtime_error("CompareFunctions: Both functions should be primitives or both should be composites");
+
+    if (first->Name() != second->Name())
+        throw std::runtime_error("CompareFunctions: Both functions' names should match");
+
+    if (first->Attributes() != second->Attributes())
+        throw std::runtime_error("CompareFunctions: Both functions' attributes should match");
+
+    auto firstPrimitive = (first->RootFunction() == nullptr) ? first : first->RootFunction();
+    auto secondPrimitive = (second->RootFunction() == nullptr) ? second : second->RootFunction();
+
+    if (firstPrimitive->Name() != secondPrimitive->Name())
+        throw std::runtime_error("CompareFunctions: Both functions' names should match");
+
+    // All the outputs must be equivalent
+    if (firstPrimitive->Outputs().size() != secondPrimitive->Outputs().size())
+        throw std::runtime_error("CompareFunctions: Both functions' should have same number of outputs");
+
+    visitedFunctions.insert(firstPrimitive);
+
+    for (size_t i = 0; i < firstPrimitive->Outputs().size(); ++i)
+    {
+        auto firstFunctionOutput = firstPrimitive->Outputs()[i];
+        auto secondFunctionOutput = secondPrimitive->Outputs()[i];
+
+        if (!AreEqual(firstFunctionOutput, secondFunctionOutput))
+        {
+            throw std::runtime_error("CompareFunctions: Both functions' outputs should match");
+        }
+    }
+
+    // All of the inputs must be identical
+    if (firstPrimitive->Inputs().size() != secondPrimitive->Inputs().size())
+        throw std::runtime_error("CompareFunctions: Both functions' should have same number of inputs");
+
+    for (size_t i = 0; i < firstPrimitive->Inputs().size(); ++i)
+    {
+        auto firstFunctionInput = firstPrimitive->Inputs()[i];
+        auto secondFunctionInput = secondPrimitive->Inputs()[i];
+
+        if (replacements.find(firstFunctionInput) != replacements.end())
+        {
+            if (replacements.at(firstFunctionInput) != secondFunctionInput)
+                throw std::runtime_error("CompareFunctions: The 2nd function does not have the expected replacement");
+        }
+       else
+        {
+            if (!Internal::AreEquivalent(firstFunctionInput, secondFunctionInput, true))
+            {
+                throw std::runtime_error("CompareFunctions: The leaves of the functions are not equivalent");
+            }
+
+            if ((firstFunctionInput.Kind() != VariableKind::Parameter) && ((firstFunctionInput.Kind() != secondFunctionInput.Kind()) || (firstFunctionInput.NeedsGradient() != secondFunctionInput.NeedsGradient())))
+                throw std::runtime_error("CompareFunctions: The leaves of the functions are not equivalent");
+
+            switch (firstFunctionInput.Kind())
+            {
+            case VariableKind::Parameter:
+            case VariableKind::Constant:
+                if ((parameterCloningMethod == ParameterCloningMethod::Share) && (firstFunctionInput != secondFunctionInput))
+                    throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+
+                NDArrayViewPtr firstFunctionInputValue = firstFunctionInput.IsConstant() ? Constant(firstFunctionInput).Value() : Parameter(firstFunctionInput).Value();
+                NDArrayViewPtr secondFunctionInputValue = secondFunctionInput.IsConstant() ? Constant(secondFunctionInput).Value() : Parameter(secondFunctionInput).Value();
+                if ((parameterCloningMethod == ParameterCloningMethod::Clone) &&
+                    ((firstFunctionInput == secondFunctionInput) || (!CNTK::Internal::AreEqual(*firstFunctionInputValue, *secondFunctionInputValue))))
+                {
+                    throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+                }
+
+                if ((parameterCloningMethod == ParameterCloningMethod::Freeze) &&
+                    ((firstFunctionInput == secondFunctionInput) || !secondFunctionInput.IsConstant() || (!CNTK::Internal::AreEqual(*firstFunctionInputValue, *secondFunctionInputValue))))
+                {
+                    throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+                }
+
+                break;
+            }
+        }
+    }
+}

@@ -93,3 +93,11 @@ def test_op_round(operand, expected, device_id, precision):
     from .. import round
     _test_unary_op(precision, device_id, round, operand,
                    expected_forward, expected_backward)
+
+def test_input_variable():
+    from .. import input_variable
+    i = input_variable(shape=(2,3), name='i')
+    assert i.shape == (2,3)
+    assert i.name == 'i'
+    assert len(i.dynamic_axes)==2
+

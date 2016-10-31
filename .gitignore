@@ -23,6 +23,11 @@ build/
 .run-*
 lib/
 bin/
+Examples/Image/DataSets/Pascal/VOC*
+Examples/Image/DataSets/Pascal/selective_search_data*
+Examples/Image/Detection/FastRCNN/proc/
+
+
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
 !packages/*/build/
@@ -196,6 +201,8 @@ Tests/EndToEndTests/UnitTests/MathTests/MCPU.txt
 Tests/EndToEndTests/UnitTests/MathTests/MGPU.txt
 Tests/EndToEndTests/UnitTests/MathTests/MS.txt
 
+Tests/Install/linux/BinaryDrops.tar.gz
+
 Dependencies/CNTKCustomMKL/Publish
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Linux-*.tgz
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Windows-*.zip
@@ -208,3 +215,11 @@ bindings/python/cntk/libs/
 bindings/python/cntk/cntk_py_wrap.cpp
 bindings/python/cntk/cntk_py_wrap.h
 bindings/python/dist/
+
+# Auto-generated sources from CNTK.proto
+Source/CNTKv2LibraryDll/proto/CNTK.pb.cc
+Source/CNTKv2LibraryDll/proto/CNTK.pb.h
+
+bindings/python/cntk/c_plus_c.mod
+bindings/python/cntk/i_plus_c_0.mod
+bindings/python/cntk/i_plus_i_0.mod

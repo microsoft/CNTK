@@ -25,6 +25,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class MPIWrapperMpi : public MPIWrapper
     {
         int m_myRank;
+        std::wstring m_myName;
         int m_numMPINodes;
         size_t m_numNodesInUse;
 
@@ -62,6 +63,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t NumNodesInUse() const;
         size_t CurrentNodeRank() const;
         bool IsMainNode() const;
+        std::wstring CurrentNodeName() const;
         bool IsIdle() const;
         bool UsingAllNodes() const;
         size_t MainNodeRank() const;
@@ -88,18 +90,35 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         virtual void AllReduce(std::vector<float>& accumulator) const;
 
         // for raw pointer
-        virtual void AllReduce(size_t* pData, size_t nData);
-        virtual void AllReduce(int* pData, size_t nData);
-        virtual void AllReduce(double* pData, size_t nData);
-        virtual void AllReduce(float* pData, size_t nData);
+        virtual void AllReduce(size_t* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(int* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(double* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(float* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
 
-        virtual void Bcast(size_t* pData, size_t nData, size_t srcRank);
-        virtual void Bcast(double* pData, size_t nData, size_t srcRank);
-        virtual void Bcast(float* pData, size_t nData, size_t srcRank);
+        virtual void AllReduce(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(int* sendData, int* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(double* sendData, double* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(float* sendData, float* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+
+        virtual void AllReduceAsync(size_t* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(int* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(double* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(float* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+
+        virtual void AllReduceAsync(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(int* sendData, int* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(double* sendData, double* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(float* sendData, float* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+
+        virtual void Bcast(size_t* sendData, size_t numElements, size_t srcRank);
+        virtual void Bcast(double* sendData, size_t numElements, size_t srcRank);
+        virtual void Bcast(float* sendData, size_t numElements, size_t srcRank);
 
         // wait for all ranks to reach here
-        int WaitAll();
-};
+        virtual int WaitAll();
+        virtual void WaitAny(MPI_Request* requests, int numRequests, int* index);
+        virtual void Wait(MPI_Request* request);
+    };
 #endif
 
 class MPIWrapperEmpty : public MPIWrapper
@@ -114,6 +133,7 @@ class MPIWrapperEmpty : public MPIWrapper
         size_t NumNodesInUse() const;
         size_t CurrentNodeRank() const;
         bool IsMainNode() const;
+        std::wstring CurrentNodeName() const;
         bool IsIdle() const;
         bool UsingAllNodes() const;
         size_t MainNodeRank() const;
@@ -140,17 +160,34 @@ class MPIWrapperEmpty : public MPIWrapper
         virtual void AllReduce(std::vector<float>& accumulator) const;
 
         // for raw pointer
-        virtual void AllReduce(size_t* pData, size_t nData);
-        virtual void AllReduce(int* pData, size_t nData);
-        virtual void AllReduce(double* pData, size_t nData);
-        virtual void AllReduce(float* pData, size_t nData);
+        virtual void AllReduce(size_t* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(int* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(double* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(float* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
 
-        virtual void Bcast(size_t* pData, size_t nData, size_t srcRank);
-        virtual void Bcast(double* pData, size_t nData, size_t srcRank);
-        virtual void Bcast(float* pData, size_t nData, size_t srcRank);
+        virtual void AllReduce(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(int* sendData, int* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(double* sendData, double* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduce(float* sendData, float* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+
+        virtual void AllReduceAsync(size_t* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(int* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(double* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(float* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+
+        virtual void AllReduceAsync(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(int* sendData, int* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(double* sendData, double* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+        virtual void AllReduceAsync(float* sendData, float* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+
+        virtual void Bcast(size_t* sendData, size_t numElements, size_t srcRank);
+        virtual void Bcast(double* sendData, size_t numElements, size_t srcRank);
+        virtual void Bcast(float* sendData, size_t numElements, size_t srcRank);
 
         // wait for all ranks to reach here
-        int WaitAll();
+        virtual int WaitAll();
+        virtual void WaitAny(MPI_Request* requests, int numRequests, int* index);
+        virtual void Wait(MPI_Request* request);
     };
 
     // -----------------------------------------------------------------------
@@ -194,10 +231,9 @@ int operator||(int rc, const MpiFail &what)
 
 MPIWrapperPtr MPIWrapper::GetInstance(bool create)
 {
-    static bool initialized = false;
     if (create)
     {
-        if (initialized)
+        if (s_mpi != nullptr)
             LogicError("Creating MPIWrapper instance after a GetInstance call has been already made!");
         else
 #if HAS_MPI
@@ -210,7 +246,6 @@ MPIWrapperPtr MPIWrapper::GetInstance(bool create)
 #endif
     }
 
-    initialized = true;
     return s_mpi;
 }
 
@@ -287,8 +322,12 @@ MPIWrapperMpi::MPIWrapperMpi()
     }
 
     initialized = true;
-    fprintf(stderr, "MPIWrapperMpi: initializing MPI\n");
-    fflush(stderr);
+
+    if (GetMathLibTraceLevel() > 0)
+    {
+        fprintf(stderr, "MPIWrapperMpi: initializing MPI\n");
+        fflush(stderr);
+    }
 
     MPI_Init_DL() || MpiFail("mpiaggregator: MPI_Init");
     MPI_Comm_rank(MPI_COMM_WORLD, &m_myRank);
@@ -304,6 +343,11 @@ MPIWrapperMpi::MPIWrapperMpi()
     assert((GetTotalNumberOfMPINodes() == 0 && m_numNodesInUse == 1) ||
         (GetTotalNumberOfMPINodes() == m_numNodesInUse));
 
+    char name[BUFSIZ];
+    int length;
+    MPI_Get_processor_name(name, &length);
+    m_myName = std::wstring(name, name + length);
+
     // Applying MPI workaround
     s_myRank = m_myRank;
     atexit(&MPIWrapperMpi::MPIWorkaroundAtExit);
@@ -311,12 +355,15 @@ MPIWrapperMpi::MPIWrapperMpi()
     // by default we use all of them
     RequestNodes("MPIWrapperMpi");
 
-    if (m_numMPINodes > 1)
-        fprintf(stderr, "mpihelper: we are cog %d in a gearbox of %d\n", (int)m_myRank, (int)m_numMPINodes);
-    else
-        fprintf(stderr, "mpihelper: only one MPI process: MPI operation will be boring\n");
+    if (GetMathLibTraceLevel() > 0)
+    {
+        if (m_numMPINodes > 1)
+            fprintf(stderr, "mpihelper: we are cog %d in a gearbox of %d\n", (int)m_myRank, (int)m_numMPINodes);
+        else
+            fprintf(stderr, "mpihelper: only one MPI process: MPI operation will be boring\n");
 
-    fflush(stderr);
+        fflush(stderr);
+    }
 
     // do an initial handshake
     Ping("mpihelper");
@@ -330,7 +377,10 @@ MPIWrapperMpi::MPIWrapperMpi()
 // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
 MPIWrapperMpi::~MPIWrapperMpi()
 {
-    fprintf(stderr, "~MPIWrapperMpi\n");
+    if (GetMathLibTraceLevel() > 0)
+    {
+        fprintf(stderr, "~MPIWrapperMpi\n");
+    }
 
     // Do not finalize in event of an exception since calling MPI_Finalize without
     // all pending communications being finished results in a hang
@@ -400,8 +450,11 @@ void MPIWrapperMpi::Ping(const char *msg) const
 #ifndef USE2NDCOMM
     if (NumNodesInUse() != m_numMPINodes)
     {
-        fprintf(stderr, "ping [%s]: cannot be applied to subset (%d) of nodes, skipping\n", msg, (int)NumNodesInUse());
-        fflush(stderr);
+        if (GetMathLibTraceLevel() > 0)
+        {
+            fprintf(stderr, "ping [%s]: cannot be applied to subset (%d) of nodes, skipping\n", msg, (int)NumNodesInUse());
+            fflush(stderr);
+        }
         return;
     }
 #endif
@@ -412,8 +465,12 @@ void MPIWrapperMpi::Ping(const char *msg) const
     fflush(stderr);
 
     AllReduce(handshake);
-    fprintf(stderr, "ping [%s]: all %d nodes responded\n", msg, handshake[0]);
-    fflush(stderr);
+
+    if (GetMathLibTraceLevel() > 0)
+    {
+        fprintf(stderr, "ping [%s]: all %d nodes responded\n", msg, handshake[0]);
+        fflush(stderr);
+    }
 }
 
 void MPIWrapperMpi::RequestNodes(const char *msg, size_t requestednodes /*default: all*/)
@@ -450,10 +507,14 @@ void MPIWrapperMpi::RequestNodes(const char *msg, size_t requestednodes /*defaul
     }
 
     m_numNodesInUse = requestednodes;
-    fprintf(stderr, "requestnodes [%s]: using %d out of %d MPI nodes (%d requested); we (%d) are %s\n",
-        msg, (int)m_numNodesInUse, (int)m_numMPINodes, (int)requestednodes,
-        (int)CurrentNodeRank(), IsIdle() ? "out (idle)" : "in (participating)");
-    fflush(stderr);
+
+    if (GetMathLibTraceLevel() > 0)
+    {
+        fprintf(stderr, "requestnodes [%s]: using %d out of %d MPI nodes (%d requested); we (%d) are %s\n",
+            msg, (int)m_numNodesInUse, (int)m_numMPINodes, (int)requestednodes,
+            (int)CurrentNodeRank(), IsIdle() ? "out (idle)" : "in (participating)");
+        fflush(stderr);
+    }
     Ping("requestnodes (after change)");
 }
 
@@ -529,6 +590,11 @@ size_t MPIWrapperMpi::CurrentNodeRank() const
     return m_myRank;
 }
 
+std::wstring MPIWrapperMpi::CurrentNodeName() const
+{
+    return m_myName;
+}
+
 bool MPIWrapperMpi::IsMainNode() const
 {
     return m_myRank == 0;
@@ -556,10 +622,7 @@ void MPIWrapperMpi::AllReduce(std::vector<size_t>& accumulator) const
     size_t totalnumelements = accumulator.size();
 
     // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
-    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
-    {
-        MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
-    }
+    AllReduce(dataptr, totalnumelements);
 }
 
 void MPIWrapperMpi::AllReduce(std::vector<int>& accumulator) const
@@ -568,10 +631,7 @@ void MPIWrapperMpi::AllReduce(std::vector<int>& accumulator) const
     size_t totalnumelements = accumulator.size();
 
     // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
-    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
-    {
-        MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
-    }
+    AllReduce(dataptr, totalnumelements);
 }
 
 void MPIWrapperMpi::AllReduce(std::vector<double>& accumulator) const
@@ -580,10 +640,7 @@ void MPIWrapperMpi::AllReduce(std::vector<double>& accumulator) const
     size_t totalnumelements = accumulator.size();
 
     // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
-    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
-    {
-        MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
-    }
+    AllReduce(dataptr, totalnumelements);
 }
 
 void MPIWrapperMpi::AllReduce(std::vector<float>& accumulator) const
@@ -592,67 +649,146 @@ void MPIWrapperMpi::AllReduce(std::vector<float>& accumulator) const
     size_t totalnumelements = accumulator.size();
 
     // use MPI to compute the sum over all elements in (dataptr, totalnumelements) and redistribute to all nodes
-    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
-    {
-        MPI_Allreduce(MPI_IN_PLACE, dataptr, (int)totalnumelements, GetDataType(dataptr), MPI_SUM, Communicator()) || MpiFail("allreduce: MPI_Allreduce");
-    }
+    AllReduce(dataptr, totalnumelements);
 }
 
 // for raw pointer
-void MPIWrapperMpi::AllReduce(size_t* pData, size_t nData)
+void MPIWrapperMpi::AllReduce(size_t* sendData, size_t numElements, MPI_Op op) const
+{
+    AllReduce(static_cast<size_t*>(MPI_IN_PLACE), sendData, numElements, op);
+}
+
+void MPIWrapperMpi::AllReduce(int* sendData, size_t numElements, MPI_Op op) const
+{
+    AllReduce(static_cast<int*>(MPI_IN_PLACE), sendData, numElements, op);
+}
+
+void MPIWrapperMpi::AllReduce(double* sendData, size_t numElements, MPI_Op op) const
+{
+    AllReduce(static_cast<double*>(MPI_IN_PLACE), sendData, numElements, op);
+}
+
+void MPIWrapperMpi::AllReduce(float* sendData, size_t numElements, MPI_Op op) const
+{
+    AllReduce(static_cast<float*>(MPI_IN_PLACE), sendData, numElements, op);
+}
+
+void MPIWrapperMpi::AllReduce(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Op op) const
 {
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
-        MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
+        MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
     }
 }
 
-void MPIWrapperMpi::AllReduce(int* pData, size_t nData)
+void MPIWrapperMpi::AllReduce(int* sendData, int* receiveData, size_t numElements, MPI_Op op) const
 {
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
-        MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
+        MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
     }
 }
 
-void MPIWrapperMpi::AllReduce(double* pData, size_t nData)
+void MPIWrapperMpi::AllReduce(double* sendData, double* receiveData, size_t numElements, MPI_Op op) const
 {
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
-        MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
+        MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
     }
 }
 
-void MPIWrapperMpi::AllReduce(float* pData, size_t nData)
+void MPIWrapperMpi::AllReduce(float* sendData, float* receiveData, size_t numElements, MPI_Op op) const
 {
     if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
-        MPI_Allreduce(MPI_IN_PLACE, pData, (int)nData, GetDataType(pData), MPI_SUM, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
+        MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
     }
 }
 
-void MPIWrapperMpi::Bcast(size_t* pData, size_t nData, size_t srcRank)
+void MPIWrapperMpi::Bcast(size_t* sendData, size_t numElements, size_t srcRank)
 {
     if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
     {
-        MPI_Bcast(pData, (int)nData, GetDataType(pData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
+        MPI_Bcast(sendData, (int)numElements, GetDataType(sendData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
     }
 }
 
-void MPIWrapperMpi::Bcast(double* pData, size_t nData, size_t srcRank)
+void MPIWrapperMpi::AllReduceAsync(size_t* sendData, size_t numElements, MPI_Request* request, MPI_Op op) const
 {
-    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
+    AllReduceAsync(static_cast<size_t*>(MPI_IN_PLACE), sendData, numElements, request, op);
+}
+
+void MPIWrapperMpi::AllReduceAsync(int* sendData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+    AllReduceAsync(static_cast<int*>(MPI_IN_PLACE), sendData, numElements, request, op);
+}
+
+void MPIWrapperMpi::AllReduceAsync(double* sendData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+    AllReduceAsync(static_cast<double*>(MPI_IN_PLACE), sendData, numElements, request, op);
+}
+
+void MPIWrapperMpi::AllReduceAsync(float* sendData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+    AllReduceAsync(static_cast<float*>(MPI_IN_PLACE), sendData, numElements, request, op);
+}
+
+void MPIWrapperMpi::AllReduceAsync(size_t *sendData, size_t *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
     {
-        MPI_Bcast(pData, (int)nData, GetDataType(pData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
+        MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
     }
 }
 
-void MPIWrapperMpi::Bcast(float* pData, size_t nData, size_t srcRank)
+void MPIWrapperMpi::AllReduceAsync(int *sendData, int *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
+    {
+        MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
+    }
+}
+void MPIWrapperMpi::AllReduceAsync(double *sendData, double *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
+    {
+        MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
+    }
+}
+void MPIWrapperMpi::AllReduceAsync(float *sendData, float *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
+    {
+        MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
+    }
+}
+
+
+void MPIWrapperMpi::Bcast(double* sendData, size_t numElements, size_t srcRank)
 {
     if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
     {
-        MPI_Bcast(pData, (int)nData, GetDataType(pData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
+        MPI_Bcast(sendData, (int)numElements, GetDataType(sendData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
     }
+}
+
+void MPIWrapperMpi::Bcast(float* sendData, size_t numElements, size_t srcRank)
+{
+    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
+    {
+        MPI_Bcast(sendData, (int)numElements, GetDataType(sendData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
+    }
+}
+
+// wait for an async request to finish
+void MPIWrapperMpi::Wait(MPI_Request* request)
+{
+    MPI_Wait(request, MPI_STATUSES_IGNORE) || MpiFail("Wait: MPI_Wait");
+}
+
+void MPIWrapperMpi::WaitAny(MPI_Request* requests, int numRequests, int* index)
+{
+    MPI_Waitany(numRequests, requests, index, MPI_STATUSES_IGNORE) || MpiFail("WaitAny: MPI_Waitany");
 }
 
 #endif
@@ -777,6 +913,11 @@ size_t MPIWrapperEmpty::CurrentNodeRank() const
     return 0;
 }
 
+std::wstring MPIWrapperEmpty::CurrentNodeName() const
+{
+    return L"localhost";
+}
+
 bool MPIWrapperEmpty::IsMainNode() const
 {
     return true;
@@ -815,31 +956,85 @@ void MPIWrapperEmpty::AllReduce(std::vector<float>& accumulator) const
 }
 
 // for raw pointer
-void MPIWrapperEmpty::AllReduce(size_t* pData, size_t nData)
+void MPIWrapperEmpty::AllReduce(size_t* sendData, size_t numElements, MPI_Op op) const
 {
 }
 
-void MPIWrapperEmpty::AllReduce(int* pData, size_t nData)
+void MPIWrapperEmpty::AllReduce(int* sendData, size_t numElements, MPI_Op op) const
 {
 }
 
-void MPIWrapperEmpty::AllReduce(double* pData, size_t nData)
+void MPIWrapperEmpty::AllReduce(double* sendData, size_t numElements, MPI_Op op) const
 {
 }
 
-void MPIWrapperEmpty::AllReduce(float* pData, size_t nData)
+void MPIWrapperEmpty::AllReduce(float* sendData, size_t numElements, MPI_Op op) const
 {
 }
 
-void MPIWrapperEmpty::Bcast(size_t* pData, size_t nData, size_t srcRank)
+void MPIWrapperEmpty::AllReduce(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Op op) const
 {
 }
 
-void MPIWrapperEmpty::Bcast(double* pData, size_t nData, size_t srcRank)
+void MPIWrapperEmpty::AllReduce(int* sendData, int* receiveData, size_t numElements, MPI_Op op) const
 {
 }
 
-void MPIWrapperEmpty::Bcast(float* pData, size_t nData, size_t srcRank)
+void MPIWrapperEmpty::AllReduce(double* sendData, double* receiveData, size_t numElements, MPI_Op op) const
+{
+}
+
+void MPIWrapperEmpty::AllReduce(float* sendData, float* receiveData, size_t numElements, MPI_Op op) const
+{
+}
+
+void MPIWrapperEmpty::AllReduceAsync(size_t* sendData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+}
+
+void MPIWrapperEmpty::AllReduceAsync(int* sendData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+}
+
+void MPIWrapperEmpty::AllReduceAsync(double* sendData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+}
+
+void MPIWrapperEmpty::AllReduceAsync(float* sendData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+}
+
+void MPIWrapperEmpty::AllReduceAsync(size_t *sendData, size_t *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+}
+
+void MPIWrapperEmpty::AllReduceAsync(int *sendData, int *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+}
+void MPIWrapperEmpty::AllReduceAsync(double *sendData, double *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+}
+void MPIWrapperEmpty::AllReduceAsync(float *sendData, float *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
+{
+}
+
+void MPIWrapperEmpty::Bcast(size_t* sendData, size_t numElements, size_t srcRank)
+{
+}
+
+void MPIWrapperEmpty::Bcast(double* sendData, size_t numElements, size_t srcRank)
+{
+}
+
+void MPIWrapperEmpty::Bcast(float* sendData, size_t numElements, size_t srcRank)
+{
+}
+
+void MPIWrapperEmpty::Wait(MPI_Request* request)
+{
+}
+
+void MPIWrapperEmpty::WaitAny(MPI_Request* requests, int numRequests, int* index)
 {
 }
 

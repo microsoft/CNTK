@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // For more information please see its header file.
 // This method composes together packers + randomizer + a set of transformers and deserializers.
 CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
-    m_corpus(std::make_shared<CorpusDescriptor>())
+    m_corpus(std::make_shared<CorpusDescriptor>()), m_truncationLength(0)
 {
     wstring action = config(L"action", L"");
     bool isActionWrite = AreEqualIgnoreCase(action, L"write");

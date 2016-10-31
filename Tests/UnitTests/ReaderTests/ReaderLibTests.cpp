@@ -225,6 +225,15 @@ BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
         auto secondEpoch = ReadFullEpoch(expected, epochSize, 1);
         auto thirdEpoch = ReadFullEpoch(expected, epochSize, 2);
 
+        // First setup the enumerator to ead unbounded amount of data
+        EpochConfiguration config;
+        config.m_numberOfWorkers = 1;
+        config.m_workerRank = 0;
+        config.m_minibatchSizeInSamples = 1;
+        config.m_totalEpochSizeInSamples = std::numeric_limits<size_t>().max() / 2;
+        config.m_epochIndex = 0;
+        underTest->StartEpoch(config);
+
         // Rereading second epoch
         underTest->SetCurrentSamplePosition(firstEpoch.size());
         auto anotherSecond = ReadNextSamples(underTest, secondEpoch.size());

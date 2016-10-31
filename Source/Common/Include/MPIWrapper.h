@@ -44,6 +44,8 @@ typedef void *MPI_Status;
 #include <vector>
 #include <memory>
 
+#include "CommonMatrix.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 struct MpiFail : public std::string
@@ -79,6 +81,7 @@ public:
     virtual size_t NumNodesInUse() const = 0;
     virtual size_t CurrentNodeRank() const = 0;
     virtual bool IsMainNode() const = 0;
+    virtual std::wstring CurrentNodeName() const = 0;
     virtual bool IsIdle() const = 0;
     virtual bool UsingAllNodes() const = 0;
     virtual size_t MainNodeRank() const = 0;
@@ -113,17 +116,34 @@ public:
     virtual void AllReduce(std::vector<float>& accumulator) const = 0;
 
     // for raw pointer
-    virtual void AllReduce(size_t* pData, size_t nData) = 0;
-    virtual void AllReduce(int* pData, size_t nData) = 0;
-    virtual void AllReduce(double* pData, size_t nData) = 0;
-    virtual void AllReduce(float* pData, size_t nData) = 0;
+    virtual void AllReduce(size_t* sendData, size_t numElements, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduce(int* sendData, size_t numElements, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduce(double* sendData, size_t numElements, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduce(float* sendData, size_t numElements, MPI_Op op = MPI_SUM) const = 0;
 
-    virtual void Bcast(size_t* pData, size_t nData, size_t srcRank) = 0;
-    virtual void Bcast(double* pData, size_t nData, size_t srcRank) = 0;
-    virtual void Bcast(float* pData, size_t nData, size_t srcRank) = 0;
+    virtual void AllReduce(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduce(int* sendData, int* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduce(double* sendData, double* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduce(float* sendData, float* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const = 0;
+
+    virtual void AllReduceAsync(size_t* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduceAsync(int* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduceAsync(double* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduceAsync(float* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const = 0;
+
+    virtual void AllReduceAsync(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduceAsync(int* sendData, int* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduceAsync(double* sendData, double* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const = 0;
+    virtual void AllReduceAsync(float* sendData, float* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const = 0;
+
+    virtual void Bcast(size_t* sendData, size_t numElements, size_t srcRank) = 0;
+    virtual void Bcast(double* sendData, size_t numElements, size_t srcRank) = 0;
+    virtual void Bcast(float* sendData, size_t numElements, size_t srcRank) = 0;
 
     // wait for all ranks to reach here
     virtual int WaitAll() = 0;
+    virtual void WaitAny(MPI_Request* requests, int numRequests, int* index) = 0;
+    virtual void Wait(MPI_Request* request) = 0;
 };
 
 }}}

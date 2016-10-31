@@ -5,7 +5,7 @@
 # ==============================================================================
 
 import numpy as np
-from cntk import DeviceDescriptor
+from cntk.device import set_default_device
 
 from examples.NumpyInterop.FeedForwardNet import ffnet
 
@@ -13,8 +13,8 @@ TOLERANCE_ABSOLUTE = 1E-03
 
 def test_ffnet_error(device_id):
     from cntk.utils import cntk_device
-    DeviceDescriptor.set_default_device(cntk_device(device_id))
+    set_default_device(cntk_device(device_id))
 
-    avg_error = ffnet(debug_output=False)
-    expected_avg_error = 0.12
+    avg_error = ffnet()
+    expected_avg_error = 0.04
     assert np.allclose(avg_error, expected_avg_error, atol=TOLERANCE_ABSOLUTE)
