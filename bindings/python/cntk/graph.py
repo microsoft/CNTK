@@ -1,4 +1,5 @@
 # Copyright (c) Microsoft. All rights reserved.
+
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -23,8 +24,8 @@ def dfs_walk(node, visitor):
 
     while stack:
         node = stack.pop()
-		if node in visited:
-			continue
+        if node in visited:
+            continue
 
         try:
             # Function node
@@ -37,9 +38,9 @@ def dfs_walk(node, visitor):
             except AttributeError:
                 pass
 
-		if visitor(node):
-			accum.append(node)
- 
+    if visitor(node):
+        accum.append(node)
+
 		visited.add(node)
 
     return accum
@@ -62,7 +63,7 @@ def find_nodes_by_name(node, node_name):
 
 def build_graph(node,visitor,path):
     import pydot_ng as pydot
-
+    
     # initialize a dot object to store vertices and edges
     dot_object = pydot.Dot(graph_name="network_graph",rankdir='TB')
     dot_object.set_node_defaults(shape='rectangle', fixedsize='false',
@@ -103,8 +104,8 @@ def build_graph(node,visitor,path):
             except AttributeError:
                 pass
 
-    if visitor(node):
-        accum.append(node)
+        if visitor(node):
+            accum.append(node)
 
     # save to png
     dot_object.write_png(path + '\\network_graph.png', prog='dot')
