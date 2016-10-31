@@ -19,8 +19,8 @@ function ActionOperations()
 }
 
 function ActionItem(
-    [hashtable] $item
-){
+    [hashtable] $item)
+{
     $func = $item["Function"]
 
     $expr = $func +' $item' 
@@ -35,8 +35,7 @@ function ActionItem(
 
 
 function InstallExe(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
     
@@ -86,8 +85,7 @@ function InstallExe(
 }
 
 function InstallWheel(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
@@ -126,8 +124,7 @@ function InstallWheel(
 }
 
 function MakeDirectory(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
     
@@ -144,8 +141,7 @@ function MakeDirectory(
 }
 
 function AddToPath(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
@@ -184,8 +180,7 @@ function AddToPath(
 }
 
 function ExtractAllFromZip(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
@@ -211,8 +206,7 @@ function ExtractAllFromZip(
 }
 
 function CreateBatch(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
@@ -226,14 +220,19 @@ function CreateBatch(
 
     Remove-Item -Path $filename -ErrorAction SilentlyContinue | Out-Null
 
-    add-content -Path $filename -Encoding Ascii -Value '@IF /I "%CMDCMDLINE%" EQU ""%COMSPEC%" " GOTO doActivate'
-    add-content -Path $filename -Encoding Ascii -Value "  @echo."
-    add-content -Path $filename -Encoding Ascii -Value "  @echo Please execute this script from inside a regular Windows command prompt."
-    add-content -Path $filename -Encoding Ascii -Value "  @echo."
-    add-content -Path $filename -Encoding Ascii -Value "@goto :EOF"
-    add-content -Path $filename -Encoding Ascii -Value ":doActivate"
-    add-content -Path $filename -Encoding Ascii -Value "  @set PATH=$cntkRootDir\cntk;%PATH%"
-    add-content -Path $filename -Encoding Ascii -Value "  @$AnacondaBasePath\Scripts\activate $AnacondaBasePath\envs\cntk-py34"
+    $batchScript = @"
+@echo off
+if /I "%CMDCMDLINE%" neq ""%COMSPEC%" " (
+    echo.
+    echo Please execute this script from inside a regular Windows command prompt.
+    echo.
+    exit /b 0
+)
+set PATH=$cntkRootDir\cntk;%PATH%
+"$AnacondaBasePath\Scripts\activate" "$AnacondaBasePath\envs\cntk-py34"
+"@
+
+    add-content -Path $filename -Encoding Ascii -Value $batchScript
 }
 
 
