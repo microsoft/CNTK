@@ -2252,11 +2252,8 @@ public:
                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         //AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
-        // To support legacy models, runCount is optional. Hence, we cannot use NumInputs<>, and must check ourselves here.
+        // To support legacy models, runCount is optional. Hence, we cannot use NumInputs<>, and must check ourselves in Validation.
         AttachInputsFromConfig(configp);
-        if (GetNumInputs() != RUN_COUNT && GetNumInputs() != RUN_COUNT + 1)
-            InvalidArgument("%ls %ls operation accepts %d inputs.", NodeName().c_str(), OperationName().c_str(), RUN_COUNT + 1);
-        // (we won't report that it also accepts RUN_COUNT inputs, as this is the deprecated legacy case)
     }
 
     void Save(File& fstream) const override
@@ -2379,12 +2376,12 @@ private: // time-constant conversions
     // old models did not tie this correctly. For those, they are stored in the node.
     ElemType& RunCount()
     {
-        return (GetNumInputs() >= RUN_COUNT) ? Input(RUN_COUNT)->Value()(0, 0) : m_runCountLegacy;
+        return (GetNumInputs() > RUN_COUNT) ? Input(RUN_COUNT)->Value()(0, 0) : m_runCountLegacy;
     }
 
     ElemType RunCount() const // const version of above; keep identical
     {
-        return (GetNumInputs() >= RUN_COUNT) ? Input(RUN_COUNT)->Value()(0, 0) : m_runCountLegacy;
+        return (GetNumInputs() > RUN_COUNT) ? Input(RUN_COUNT)->Value()(0, 0) : m_runCountLegacy;
     }
 
     // map time constants to exp avg factor
@@ -2561,6 +2558,11 @@ public:
     void Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
+
+        if (GetNumInputs() != RUN_COUNT && GetNumInputs() != RUN_COUNT + 1)
+            InvalidArgument("%ls %ls operation accepts %d inputs.", NodeName().c_str(), OperationName().c_str(), RUN_COUNT + 1);
+        // (we won't report that it also accepts RUN_COUNT inputs, as this is the deprecated legacy case)
+
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         SetDims(Input(DATA));
@@ -2626,7 +2628,7 @@ public:
                         InvalidArgument("%ls: Data input cannot broadcast.", NodeDescription().c_str());
 #endif
             }
-            if (GetNumInputs() >= RUN_COUNT) // 0-th order statistics (count) (optional for backcompat with old code which didn't correctly share it)
+            if (GetNumInputs() > RUN_COUNT) // 0-th order statistics (count) (optional for backcompat with old code which didn't correctly share it)
             {
                 // since this must always be a [1] tensor, we don't support inference for it
                 size_t i = RUN_COUNT;
