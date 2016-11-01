@@ -485,7 +485,7 @@ inline bool AreEqual(const CNTK::Variable& var1, const CNTK::Variable& var2)
         ptr2 = reinterpret_cast<const CNTK::Constant&>(var2).Value();
     }
 
-    if (!CNTK::Internal::AreEqual(*ptr1, *ptr2))
+    if (!CNTK::Internal::AreEqual(*ptr1, *ptr2, relativeTolerance, absoluteTolerance))
     {
         return false;
     }

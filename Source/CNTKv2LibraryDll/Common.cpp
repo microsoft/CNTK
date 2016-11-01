@@ -166,7 +166,7 @@ namespace CNTK
         }
 
         template <typename ElementType> 
-        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2)
+        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
         {
             if (std::addressof(view1) == std::addressof(view2))
             {
@@ -208,23 +208,25 @@ namespace CNTK
 
             for (size_t i = 0; i < numElements; ++i)
             {
-                if (data1[i] != data2[i])
-                {
+                auto firstValue = data1[i];
+                auto secondValue = data2[i];
+                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, std::abs(((ElementType)relativeTolerance) * firstValue));
+                if (std::abs(firstValue - secondValue) > allowedTolerance)
                     return false;
-                }
             }
+
             return true;
         }
 
-        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2)
+        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
         {
             if (view1.GetDataType() == DataType::Float)
             {
-                return AreEqual<float>(view1, view2);
+                return AreEqual<float>(view1, view2, relativeTolerance, absoluteTolerance);
             } 
             if (view1.GetDataType() == DataType::Double)
             {
-                return AreEqual<double>(view1, view2);
+                return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
             }
 
             LogicError("Unknown DataType");

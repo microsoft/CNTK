@@ -393,7 +393,16 @@ namespace CNTK
 
             ComputationNetworkPtr computationNetwork;
             DataType dataType = rootFunction->Outputs()[0].GetDataType();
-            auto device = (compositeFunction->m_computationNetwork == nullptr) ? DeviceDescriptor::CPUDevice() : AsDeviceDescriptor(compositeFunction->m_computationNetwork->GetDeviceId());
+            DeviceDescriptor device = DeviceDescriptor::CPUDevice();
+            if (compositeFunction->m_computationNetwork == nullptr)
+            {
+                auto parameters = compositeFunction->Parameters();
+                if (!parameters.empty())
+                    device = parameters.front().Value()->Device();
+            }
+            else
+                device = AsDeviceDescriptor(compositeFunction->m_computationNetwork->GetDeviceId());
+
             switch (dataType)
             {
             case DataType::Float:

@@ -61,7 +61,7 @@ namespace CNTK
             return Value::Mask();
         }
 
-        ValuePtr DeepClone(bool /*readOnly = false*/) const override
+        ValuePtr DeepClone(bool readOnly) const override
         {
             if (m_isPacked)
             {
@@ -71,10 +71,10 @@ namespace CNTK
                     packedLayoutCopy = std::make_shared<Microsoft::MSR::CNTK::MBLayout>();
                     packedLayoutCopy->CopyFrom(m_packedDataLayout);
                 }
-                return MakeSharedObject<PackedValue>(m_sampleShape, m_packedData->DeepClone(), packedLayoutCopy, m_isReadOnly);
+                return MakeSharedObject<PackedValue>(m_sampleShape, m_packedData->DeepClone(readOnly), packedLayoutCopy, readOnly);
             }
             else
-                return Value::DeepClone();
+                return Value::DeepClone(readOnly);
         }
 
         ValuePtr Alias(bool /*readOnly = false*/) const override
