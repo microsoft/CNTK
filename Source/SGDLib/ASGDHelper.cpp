@@ -620,11 +620,9 @@ ASGDHelper<ElemType>* NewASGDHelper(
     return MultiversoHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffered, isSimulatedModelAveragingSGD, 
                                       adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats, pMPI);
 #elif
-    return NoASGDHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffered, isSimulatedModelAveragingSGD, 
+    return NoneASGDHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffered, isSimulatedModelAveragingSGD, 
                                       adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats, pMPI); 
 #endif
 }
 
-}  // namespace CNTK
-}  // namespace MSR
-}  // namespace Microsoft
+}}} 
