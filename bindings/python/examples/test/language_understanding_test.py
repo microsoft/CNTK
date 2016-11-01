@@ -67,6 +67,7 @@ def test_seq_classification_error(device_id):
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed
     #set_computation_network_trace_level(1)
     set_fixed_random_seed(1) # to become invariant to initialization order, which is a valid change
+    # BUGBUG: This ^^ currently seems to have no impact; the two BN models below should be identical in training
 
     if device_id >= 0: # BatchNormalization currently does not run on CPU
         # change to intent classifier   --moved up here since this fails, as repro

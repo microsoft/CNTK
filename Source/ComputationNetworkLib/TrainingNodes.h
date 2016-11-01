@@ -2225,14 +2225,14 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name), m_spatial(false), m_normTimeConst(0), m_blendTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
-        m_samplesSeen(0), m_imageLayoutKind(ImageLayoutKind::CHW),
+        m_numSamplesSeen(0), m_imageLayoutKind(ImageLayoutKind::CHW),
         m_convertRunningVariancePending(false)
     {
     }
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
                            double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind, size_t samplesSeen = 0) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(samplesSeen),
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_numSamplesSeen((ElemType)samplesSeen),
         m_convertRunningVariancePending(false)
     {
     }
@@ -2253,7 +2253,7 @@ public:
         fstream << m_normTimeConst;
         fstream << m_blendTimeConst;
         fstream << (int32_t)m_imageLayoutKind;
-        fstream << m_samplesSeen;
+        fstream << (size_t)m_numSamplesSeen;
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
     }
@@ -2270,7 +2270,11 @@ public:
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
             if (modelVersion >= CNTK_MODEL_VERSION_13)
-                fstream >> m_samplesSeen;
+            {
+                size_t samplesSeen;
+                fstream >> samplesSeen;
+                m_numSamplesSeen = (ElemType)samplesSeen;
+            }
             else
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;
@@ -2321,11 +2325,11 @@ public:
         {
             // Prior to version 12, minibatch count was stored instead of samples seen.
             // Approximate by assuming minibatch size 16, inform about that.
-            m_samplesSeen = 16 * mbCount;
+            m_numSamplesSeen = (ElemType)(16 * mbCount);
             fprintf(stderr,
-                    "INFO: %ls: loading pre-CuDNNv5 model: approximated mini-batch count of %" PRIu64 " as %" PRIu64 " trained samples.\n"
+                    "INFO: %ls: loading pre-CuDNNv5 model: approximated mini-batch count of %" PRIu64 " as %.0f trained samples.\n"
                     "      Statistics in further training may be biased; consider re-training instead.\n",
-                    NodeName().c_str(), mbCount, m_samplesSeen);
+                    NodeName().c_str(), mbCount, m_numSamplesSeen);
 
             // Prior to version 12, running inverse standard deviation was
             // stored in Input 4. Now variance is used. We (approximately)
@@ -2346,15 +2350,27 @@ public:
             node->m_normTimeConst   = m_normTimeConst;
             node->m_blendTimeConst  = m_blendTimeConst;
             node->m_imageLayoutKind = m_imageLayoutKind;
-            node->m_samplesSeen     = m_samplesSeen;
+            node->m_numSamplesSeen  = m_numSamplesSeen;
             node->m_epsilon         = m_epsilon;
             node->m_useCntkEngine   = m_useCntkEngine;
         }
     }
 
-    size_t GetSamplesSeen() const { return m_samplesSeen; } // for V2 API interop
+    size_t GetSamplesSeen() const { return (size_t)SamplesSeen(); } // for V2 API interop
 
 private: // time-constant conversions
+
+    ElemType& SamplesSeen()
+    {
+        // TODO: will later know about external node to hold this, for parameter sharing
+        return m_numSamplesSeen;
+    }
+
+    ElemType SamplesSeen() const
+    {
+        // TODO: will later know about external node to hold this, for parameter sharing
+        return m_numSamplesSeen;
+    }
 
     // map time constants to exp avg factor
     // This is the factor for the current MB's estimate (1-factor is used for the previous value of the running stats).
@@ -2364,21 +2380,21 @@ private: // time-constant conversions
         if (!Environment().IsTraining())
         {
 #if 0 // this triggers in V2 currently, so let's see if we can get it to test without it to have a baseline for changes
-            if (m_samplesSeen == 0)
+            if (SamplesSeen() == 0)
                 RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
 #endif
             return 0;                                        // (m_normTimeConst == infinity) no new contribution from current minibatch
         }
 
         // Initialization case: only use current minibatch.
-        if (m_samplesSeen == 0)
+        if (SamplesSeen() == 0)
             return 1.0;
 
         double numSamples = (double)GetMBLayout()->GetActualNumSamples();
 
         // REVIEW alexeyk: hack, m_normTimeConst < 0 is used to denote corpus-level statistics (without forgetting factor).
         if (m_normTimeConst < 0)
-            return numSamples / (numSamples + m_samplesSeen); // (this is the hack case)
+            return numSamples / (numSamples + SamplesSeen()); // (this is the hack case)
 
         // Convert to per-minibatch factor. The limit, positive infinity, means that running mean/var parameters are "frozen"
         // that is, do not require updates.
@@ -2399,14 +2415,14 @@ private: // time-constant conversions
         if (!Environment().IsTraining())
         {
 #if 0 // this triggers in V2 currently, so let's see if we can get it to test without it to have a baseline for changes
-            if (m_samplesSeen == 0)
+            if (SamplesSeen() == 0)
                 RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
 #endif
             return 1.0;                 // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
         }
 
         // Initialization case: only use current minibatch.
-        if (m_samplesSeen == 0)
+        if (SamplesSeen() == 0)
             return 0;
 
         // convert to blend factor (= weight for running stats)
@@ -2518,7 +2534,7 @@ public:
         double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
         double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
         if (expAvgFactor != 0 || blendFactor != 1)
-            m_samplesSeen += GetMBLayout()->GetActualNumSamples();
+            SamplesSeen() += GetMBLayout()->GetActualNumSamples();
 
         Base::EndBackprop();
     }
@@ -2658,7 +2674,7 @@ public:
     // any other use is undefined behavior
     void ResetStatisticsState()
     {
-        m_samplesSeen = 0;
+        SamplesSeen() = 0;
         m_normTimeConst = 0;
         m_blendTimeConst = 0;
     }
@@ -2727,7 +2743,7 @@ private:
     // --- working variables
 
     // Samples seen count, used to compute cumulative moving average.
-    size_t m_samplesSeen;
+    ElemType m_numSamplesSeen;
 
     // Interpolated actual mean/inverse stddev values. Pre-computed on forward pass, also used in gradient computation.
     shared_ptr<Matrix<ElemType>> m_savedMean;
