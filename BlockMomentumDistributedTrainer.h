@@ -100,7 +100,7 @@ namespace CNTK
             NOT_IMPLEMENTED;
         }
 
-        DistributedCommunicatorPtr GetDistributedCommunicator() override
+        DistributedCommunicatorPtr GetCommunicator() override
         {
             return m_communicator;
         }
