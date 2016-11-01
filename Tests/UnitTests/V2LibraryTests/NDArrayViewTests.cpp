@@ -107,8 +107,6 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     if (aliasViewBuffer != clonedDataBuffer)
         throw std::runtime_error("The buffers underlying the alias view and the view it is an alias of are different!");
 
-    // disable for now as load checkpoint requires constant() to be writeable
-    /*
     // Test readonliness
     auto errorMsg = "Was incorrectly able to get a writable buffer pointer from a readonly view";
     // Should not be able to get the WritableDataBuffer for a read-only view
@@ -121,7 +119,6 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
     VerifyException([&aliasView, &dataView]() {
         aliasView->CopyFrom(*dataView);
     }, errorMsg);
-    */
 }
 
 template <typename ElementType>
