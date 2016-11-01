@@ -459,11 +459,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MNIST", "MNIST", "{FA33A61E
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Miscellaneous", "Miscellaneous", "{F99E1E80-50D8-421C-AD94-8ED0DF08C355}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AdditionalFiles", "AdditionalFiles", "{ED57E827-B28F-4BEE-BFB7-398EF8D83357}"
-	ProjectSection(SolutionItems) = preProject
-		Examples\Image\MNIST\AdditionalFiles\mnist_convert.py = Examples\Image\MNIST\AdditionalFiles\mnist_convert.py
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Config", "Config", "{6E5A252C-ACCE-42E0-9819-FF4DEF6D739E}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Image\MNIST\Config\01_OneHidden.ndl = Examples\Image\MNIST\Config\01_OneHidden.ndl
@@ -490,10 +485,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CIFAR-10", "CIFAR-10", "{77
 		Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56_ndl_deprecated.cntk = Examples\Image\Miscellaneous\CIFAR-10\04_ResNet_56_ndl_deprecated.cntk
 		Examples\Image\Miscellaneous\CIFAR-10\16to32.txt = Examples\Image\Miscellaneous\CIFAR-10\16to32.txt
 		Examples\Image\Miscellaneous\CIFAR-10\32to64.txt = Examples\Image\Miscellaneous\CIFAR-10\32to64.txt
-		Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py = Examples\Image\Miscellaneous\CIFAR-10\CifarConverter.py
-		Examples\Image\Miscellaneous\CIFAR-10\CifarConverter_py3.py = Examples\Image\Miscellaneous\CIFAR-10\CifarConverter_py3.py
-		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload.py
-		Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py = Examples\Image\Miscellaneous\CIFAR-10\CifarDownload_py3.py
 		Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt = Examples\Image\Miscellaneous\CIFAR-10\labelsmap.txt
 		Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl = Examples\Image\Miscellaneous\CIFAR-10\Macros.ndl
 		Examples\Image\Miscellaneous\CIFAR-10\readme.txt = Examples\Image\Miscellaneous\CIFAR-10\readme.txt
@@ -1127,7 +1118,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKv2LibraryDll", "Source\
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
 		{EAD17188-072C-4726-B840-A769C36DAD1B} = {EAD17188-072C-4726-B840-A769C36DAD1B}
-		{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937} = {DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "V2LibraryTests", "Tests\UnitTests\V2LibraryTests\V2LibraryTests.vcxproj", "{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6E}"
@@ -2314,7 +2304,6 @@ Global
 		{2A1F0FB0-2304-4F35-87B3-66230C6E58F0} = {811924DE-2F12-4EA0-BE58-E57BEF3B74D1}
 		{FA33A61E-95C7-4049-8111-22058CE361A3} = {9BDFA4BE-790E-408F-915B-5979BB5078C6}
 		{F99E1E80-50D8-421C-AD94-8ED0DF08C355} = {9BDFA4BE-790E-408F-915B-5979BB5078C6}
-		{ED57E827-B28F-4BEE-BFB7-398EF8D83357} = {FA33A61E-95C7-4049-8111-22058CE361A3}
 		{6E5A252C-ACCE-42E0-9819-FF4DEF6D739E} = {FA33A61E-95C7-4049-8111-22058CE361A3}
 		{77125562-3BF2-45D2-9B73-72CA8E03C78C} = {F99E1E80-50D8-421C-AD94-8ED0DF08C355}
 		{EF710C5A-E616-442A-889D-C997D39AF2E1} = {F99E1E80-50D8-421C-AD94-8ED0DF08C355}

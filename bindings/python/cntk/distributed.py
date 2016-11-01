@@ -1,109 +1,96 @@
-# Copyright (c) Microsoft. All rights reserved.
+﻿# Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
 
 from . import cntk_py
 from . import trainer
+from .utils import typemap
+
+# Preload libmpi.so for non-Windows platform to work around MPI_Init failure bug
+# https://xrunhprof.wordpress.com/2014/11/04/an-openmpi-python-and-dlopen-issue/
+# If other OS has similar OpenMPI MPI_Init failure, add dll load to global here
+import platform
+import ctypes
+if platform.system() == 'Linux':
+    ctypes.CDLL("libmpi.so", mode=ctypes.RTLD_GLOBAL)
 
 __doc__= '''\
-Distributed trainers manages trainers in distributed environment.
+Distributed trainers manage trainers in distributed environment.
 '''
 
-class worker_descriptor:
+class WorkerDescriptor(cntk_py.DistributedWorkerDescriptor):
     '''
-    Distributed worker descriptor, returned by :class:`cntk.distributed.communicator` instance.
+    Distributed worker descriptor, returned by :class:`Communicator` instance.
+    '''
 
-    Args:
-       descriptor (:class:`cntk.cntk_py.DistributedWorkerDescriptor`): internal distributed worker descriptor
-    '''
-    def __init__(self, descriptor):
-        self.data = descriptor
-        return
-    
     @property
     def global_rank(self):
         '''
-        Returns the global rank of the worker.
-
-        Returns:
-            `int`: the global rank of the worker.
+        The global rank of the worker.
         '''
-        return self.data.m_global_rank
+        return super().m_global_rank
 
     @property
     def host_id(self):
         '''
-        Returns the host id of the worker.
-
-        Returns:
-            `str`: the host id of the worker.
+        The host id of the worker.
         '''
-        return self.data.m_host_id
+        return super().m_host_id
 
-class communicator:
+class Communicator(cntk_py.DistributedCommunicator):
     '''
     A communicator interface exposing communication primitives that serve as building blocks 
     for distributed training.
     '''
-    def __init__(self, distributed_communicator):
-        self.data = distributed_communicator
-        return
-    
+
+    @typemap
     def workers(self):
         '''
         Returns workers in this communicator.
         
         Returns:
-            (`list`) of :class:`cntk.distributed.worker_descriptor`: workers in this communicator.
+            (`list`) of :class:`WorkerDescriptor`: workers in this communicator.
         '''
-        raw_list = self.data.workers()
-        ret = []
-        for w in raw_list:
-            ret.append(worker_descriptor(w))
-        return ret
+        return super().workers()
 
+    @typemap
     def current_worker(self):
         '''
         Returns worker descriptor of current process.
         
         Returns:
-            :class:`cntk.distributed.worker_descriptor`: descriptor of current process.
+            :class:`WorkerDescriptor`: descriptor of current process.
         '''
-        raw = self.data.current_worker()
-        return worker_descriptor(raw)
+        return super().current_worker()
 
     def barrier(self):
         '''
         sync point to make sure all workers reach the same state
         '''
-        self.data.barrier()
-        return
+        super().barrier()
         
     @staticmethod
     def finalize():
         cntk_py.DistributedCommunicator.finalize();
-        return
 
-class distributed_trainer:
+class QuantizedCommunicator(Communicator, cntk_py.QuantizedDistributedCommunicator):
     '''
-    A distributed trainer that can be passed to the :class:`cntk.trainer.Trainer`
+    A communicator interface exposing communication primitives that serve as building blocks 
+    for distributed training.
+    '''
 
-    Args:
-       trainer (:class:`cntk.cntk_py.DistributedTrainer`): internal distributed trainer
-    '''
-    def __init__(self, distributed_trainer):
-        self.data = distributed_trainer
-        
+@typemap
 def mpi_communicator():
     '''
     Creates a mpi communicator
 
     Returns:
-        :class:`cntk.cntk_py.DistributedCommunicator`: a distributed communicator
+        :class:`Communicator`: a distributed communicator
     '''
     return cntk_py.mpicommunicator()
 
+@typemap
 def quantized_mpi_communicator(num_quantization_bits):
     '''
     Creates a quantized mpi communicator
@@ -112,7 +99,7 @@ def quantized_mpi_communicator(num_quantization_bits):
         num_quantization_bits (`int`): num_quantization_bits
 
     Returns:
-        :class:`cntk.cntk_py.QuantizedDistributedCommunicator`: a quantized distributed communicator
+        :class:`QuantizedCommunicator`: a quantized distributed communicator
     '''
     return cntk_py.quantized_mpicommunicator(True, True, num_quantization_bits)
 
@@ -122,10 +109,13 @@ def data_parallel_distributed_trainer(communicator, use_async_buffered_parameter
     option `use_async_buffered_parameter_update`.
 
     Args:
-        communicator (:class:`cntk.distributed.communicator`): distributed communicator
+        communicator: a communicator or a quantized communicator
         use_async_buffered_parameter_update (`bool`): use async buffered parameter update
 
     Returns:
-        :class:`cntk.distributed.trainer`: a distributed trainer instance
+        a distributed trainer instance
     '''
-    return distributed_trainer(cntk_py.create_data_parallel_distributed_trainer(communicator.data, use_async_buffered_parameter_update))
+    if (isinstance(communicator, QuantizedCommunicator)):
+        return cntk_py.create_quantized_data_parallel_distributed_trainer(communicator, use_async_buffered_parameter_update)
+    else:
+        return cntk_py.create_data_parallel_distributed_trainer(communicator, use_async_buffered_parameter_update)

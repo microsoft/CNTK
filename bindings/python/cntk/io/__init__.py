@@ -209,7 +209,7 @@ def minibatch_source(config, distributed_communicator):
     Instantiate the CNTK built-in composite minibatch source which is used to stream data into the network.
     Args:
         config (`dict`): a dictionary containing all the key-value configuration entries.
-        distributed_communicator (:class:`cntk.distributed.communicator`): optional distributed communicator
+        distributed_communicator: optional distributed communicator
     Returns:
         :class:`MinibatchSource`
     '''
@@ -217,7 +217,7 @@ def minibatch_source(config, distributed_communicator):
     if (distributed_communicator == None):
         return cntk_py.create_composite_minibatch_source(cntk_dict)
     else:
-        return cntk_py.create_composite_minibatch_source(cntk_dict, distributed_communicator.data)
+        return cntk_py.create_composite_minibatch_source(cntk_dict, distributed_communicator)
 
 # TODO: This should be a private class.
 class ReaderConfig(dict):
@@ -488,7 +488,7 @@ def text_format_minibatch_source(path, stream_configs, epoch_size=INFINITELY_REP
     if distributed_communicator == None:
         return cntk_py.text_format_minibatch_source(path, stream_configs, epoch_size, randomize)
     else:
-        return cntk_py.text_format_minibatch_source(path, stream_configs, epoch_size, randomize, distributed_communicator.data)
+        return cntk_py.text_format_minibatch_source(path, stream_configs, epoch_size, randomize, distributed_communicator)
 
 
 # TODO: this should be a private class; use StreamDef instead

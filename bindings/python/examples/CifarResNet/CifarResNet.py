@@ -21,7 +21,7 @@ from cntk.ops import input_variable, constant, parameter, combine, times, elemen
 #
 abs_path   = os.path.dirname(os.path.abspath(__file__))
 cntk_path  = os.path.normpath(os.path.join(abs_path, "..", "..", "..", ".."))
-data_path  = os.path.join(cntk_path, "Examples", "Image", "Datasets", "CIFAR-10")
+data_path  = os.path.join(cntk_path, "Examples", "Image", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
 
 #
@@ -41,9 +41,8 @@ num_classes  = 10
 #
 def create_reader(map_file, mean_file, train, distributed_communicator=None):
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
-        cifar_py3 = "" if sys.version_info.major < 3 else "_py3"
-        raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
-                           (map_file, mean_file, cifar_py3, cifar_py3))
+        raise RuntimeError("File '%s' or '%s' does not exist. Please run install_cifar10.py from Examples/Image/DataSets/CIFAR-10 to fetch them" %
+                           (map_file, mean_file))
 
     # transformation pipeline for the features has jitter/crop only when training
     transforms = []
@@ -99,7 +98,7 @@ def create_resnet_model(input, num_classes):
 
     input_norm = element_times(feat_scale, input)
 
-    conv = conv_bn_relu_layer(input, c_map1, [3, 3], [1, 1], bn_time_const)
+    conv = conv_bn_relu_layer(input_norm, c_map1, [3, 3], [1, 1], bn_time_const)
     r1_1 = resnet_basic_stack3(conv, c_map1, bn_time_const)
 
     c_map2 = 32

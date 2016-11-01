@@ -77,22 +77,27 @@ struct EpochCriterion : public std::pair<double, size_t>
 template <class ElemType>
 struct CriterionAccumulator
 {
-    // constructor
-    CriterionAccumulator(size_t numCriteria, DEVICEID_TYPE deviceId) :
-        m_aggregateCriterionValues(make_shared<Matrix<ElemType>> (1, numCriteria, deviceId))
+    // constructor params:
+    //  criterionNodes                  - list of criterion nodes
+    //  accumulatorCriterionNodesNodes  - list of criterion nodes that already accumulate results
+    CriterionAccumulator(const std::vector<ComputationNodeBasePtr>& criterionNodes, DEVICEID_TYPE deviceId,
+                         const std::vector<ComputationNodeBasePtr>& accumulatorCriterionNodesNodes = {})
+        : m_aggregateCriterionValues(make_shared<Matrix<ElemType>>(1, criterionNodes.size(), deviceId)),
+          m_criterionNodes(criterionNodes),
+          m_accumulatorCriterionNodes(accumulatorCriterionNodesNodes)
     {
         m_aggregateCriterionValues->SetValue(0);
-        m_aggregateSampleCounts.assign(numCriteria, 0);
+        m_aggregateSampleCounts.assign(criterionNodes.size(), 0);
     }
     // 'i' is the index of the element we add into (multiple eval criteria share the same matrix object)
     // Use 'reset=true' to not accumulate but overwrite.
-    const CriterionAccumulator& Add(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t numSamplesInMinibatch)
+    const CriterionAccumulator& Add(size_t i, size_t numSamplesInMinibatch)
     {
-        return Accumulate</*reset=*/false>(nodes, i, numSamplesInMinibatch);
+        return Accumulate(i, numSamplesInMinibatch, /*reset=*/false);
     }
-    const CriterionAccumulator& Assign(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t numSamplesInMinibatch)
+    const CriterionAccumulator& Assign(size_t i, size_t numSamplesInMinibatch)
     {
-        return Accumulate</*reset=*/true>(nodes, i, numSamplesInMinibatch);
+        return Accumulate(i, numSamplesInMinibatch, /*reset=*/true);
     }
     // retrieve an accumulated result as a pair (numerator, denominator)
     EpochCriterion GetCriterion(size_t i) const
@@ -108,12 +113,17 @@ struct CriterionAccumulator
 private:
     // shared part of Add() and Assign()
     // This code assumes that if number of samples is 0, the criterion value is invalid and must not be fetched from the GPU or otherwise looked at.
-    template<bool reset>
-    const CriterionAccumulator& Accumulate(const std::vector<ComputationNodeBasePtr>& nodes, size_t i, size_t numSamplesInMinibatch)
+    const CriterionAccumulator& Accumulate(size_t i, size_t numSamplesInMinibatch, bool reset)
     {
-        const auto& node = nodes[i]; // multiple nodes are managed by this struct
-        size_t beta = reset ? 0 : 1;
-        size_t numSamples = GetNumSamples(nodes[i], numSamplesInMinibatch);
+        const auto& node = m_criterionNodes[i]; // multiple nodes are managed by this struct
+
+        // Accumulator nodes already accumulate error for all samples that passed through network in forward pass.
+        // For them we use 1 as number of samples to avoid averaging again.
+        // Also, we always perform reset for those nodes to avoid accumulating again.
+        bool nodeContainsAccumulatedResult = ContainsAccumulatedResult(node);
+
+        size_t beta = (nodeContainsAccumulatedResult || reset) ? 0 : 1;
+        size_t numSamples = GetNumSamples(m_criterionNodes[i], numSamplesInMinibatch, nodeContainsAccumulatedResult);
         // Note: numSamples == 0 if numSamplesInMinibatch == 0 meaning empty minibatch.
 
         // For criterion nodes that emit criteria per frame, we will at this point
@@ -140,24 +150,48 @@ private:
         return *this;
     }
 
+    bool ContainsAccumulatedResult(const ComputationNodeBasePtr& node) const
+    {
+        // Node contains accumulated result if it can be found in the list of accumulation nodes specified in
+        // CriterionAccumulator constructor.
+        return std::find(m_accumulatorCriterionNodes.begin(), m_accumulatorCriterionNodes.end(), node) !=
+               m_accumulatorCriterionNodes.end();
+    }
+
 public:
     // get the number of samples
     // 'numSamplesInMinibatch' is the "generic" number of samples in the minibatch, which
     // we will use if the node has no MBLayout.
     // If 'numSamplesInMinibatch' is 0, then this means that the 'node' is invalid and should not be looked at.
-    static size_t GetNumSamples(const ComputationNodeBasePtr& node, size_t numSamplesInMinibatch)
+    static size_t GetNumSamples(const ComputationNodeBasePtr& node, size_t numSamplesInMinibatch,
+                                bool nodeContainsAccumulatedCriterion = false)
     {
         if (numSamplesInMinibatch == 0) // empty MB: node is invalid, MBLayout must not be looked at
             return 0;
+        else if (nodeContainsAccumulatedCriterion)
+        {
+            // For nodes that already contain accumulated error we use 1 as number of samples to avoid averaging again.
+            // These nodes contain error for all samples that passed through network in forward pass instead of per
+            // sample error (as such they don't have minibatch layout).
+            if (node->HasMBLayout())
+                LogicError("Node %ls is marked as aggregation, but has minibatch layout.", node->GetName().c_str());
+            return 1;
+        }
         else if (node->HasMBLayout())
             return node->GetMBLayout()->GetActualNumSamples();
         else
             return numSamplesInMinibatch;
     }
 
+    CriterionAccumulator& operator=(const CriterionAccumulator&) = delete;
+
 private:
     shared_ptr<Matrix<ElemType>> m_aggregateCriterionValues; // [1 x N]
     vector<size_t> m_aggregateSampleCounts;                  // [N]
+
+    const std::vector<ComputationNodeBasePtr> m_criterionNodes;
+    // Criterion nodes that accumulate result themselves.
+    const std::vector<ComputationNodeBasePtr> m_accumulatorCriterionNodes;
 };
 
 }}}

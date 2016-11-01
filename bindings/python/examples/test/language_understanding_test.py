@@ -17,21 +17,23 @@ from cntk.ops import splice
 from examples.LanguageUnderstanding.LanguageUnderstanding import data_dir, create_reader, create_model_function, train, evaluate, emb_dim, hidden_dim, num_labels
 from cntk.persist import load_model, save_model
 
-def test_a_model(what, model, expected_avg):
+def test_a_model(what, model, expected_train, expected_test=None):
     print("--- {} ---".format(what))
     # train
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
-    loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
-    print("-->", evaluation_avg, loss_avg)
-    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+    loss, metric = train(reader, model, max_epochs=1)
+    print("-->", metric, loss)
+    assert np.allclose([metric, loss], expected_train, atol=TOLERANCE_ABSOLUTE)
     # save and load--test this for as many configs as possible
     path = data_dir + "/model.cmf"
     #save_model(model, path)
     #model = load_model(path)
     # test
-    #reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
-    #evaluate(reader, model)
-    # BUGBUG: fails eval with "RuntimeError: __v2libuid__BatchNormalization456__v2libname__BatchNormalization11: inference mode is used, but nothing has been trained."
+    reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
+    loss, metric = evaluate(reader, model)
+    print("-->", metric, loss)
+    if expected_test is not None:
+        assert np.allclose(metric, expected_test, atol=TOLERANCE_ABSOLUTE)
 
 def create_test_model():
     # this selects additional nodes and alternative paths
@@ -81,6 +83,16 @@ def test_seq_classification_error(device_id):
         #        select_last,  # fails here with an axis problem
         #        Dense(num_labels)
         #    ]), [0.084, 0.407364])
+
+        # BatchNorm test case for global-corpus aggregation
+        with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
+            test_a_model('BatchNorm global-corpus aggregation', Sequential([
+                Embedding(emb_dim),
+                BatchNormalization(normalization_time_constant=-1),
+                Recurrence(LSTM(hidden_dim), go_backwards=False),
+                BatchNormalization(normalization_time_constant=-1),
+                Dense(num_labels)
+            ]), [0.05662627214996811, 0.2968516879905391], 0.035050983248361256)
 
         # plus BatchNorm
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day

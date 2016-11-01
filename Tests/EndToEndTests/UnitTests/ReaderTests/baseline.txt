@@ -269,7 +269,7 @@ Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNTB1E3.tmp'
+biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT104F.tmp'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -278,7 +278,7 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNTB1E3.tmp'
+biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT104F.tmp'
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
@@ -427,7 +427,7 @@ Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT2F13.tmp'
+biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT9743.tmp'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -436,7 +436,7 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT2F13.tmp'
+biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT9743.tmp'
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
@@ -1107,6 +1107,12 @@ Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/Read
 Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github/CNTK/x64/release
 Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests/.
+Current working directory is now: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
+Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Current working directory: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
+Executable path: C:/repo/cntk_github/CNTK/x64/release
+Test path: C:/repo/cntk_github/CNTK/Tests/UnitTests/ReaderTests
 Retrieving environment variable: CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 Set current path to: d:\TestPreparation/iVector
 Current working directory is now: d:/TestPreparation/iVector
@@ -1194,7 +1200,7 @@ htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
 ....................................................................................................feature set 0: 1669414 frames in 4963 out of 4963 utterances
 label set 0: 9000 classes
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
-....................................................................................................Running 103 test cases...
+....................................................................................................Running 104 test cases...
 feature set 1: 1669414 frames in 4963 out of 4963 utterances
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
 minibatchiterator: epoch 0: frames [0..400] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
@@ -1213,12 +1219,12 @@ Legacy configuration is used for truncated BPTT mode, please adapt the config to
 Set current path to: C:/repo/cntk_github/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 
 Test module "ReaderTests" has passed with:
-  103 test cases out of 103 passed
-  16973570 assertions out of 16973570 passed
+  104 test cases out of 104 passed
+  16973571 assertions out of 16973571 passed
 
   Test suite "ReaderTestSuite" has passed with:
-    84 test cases out of 84 passed
-    16971326 assertions out of 16971326 passed
+    85 test cases out of 85 passed
+    16971327 assertions out of 16971327 passed
 
     Test case "ReaderTestSuite/CNTKTextFormatReader_Simple_dense" has passed with:
       1 assertion out of 1 passed
@@ -1470,6 +1476,9 @@ Test module "ReaderTests" has passed with:
       1 assertion out of 1 passed
 
     Test case "ReaderTestSuite/ImageReaderMissingScaleTransforms" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "ReaderTestSuite/ImageReader3DotsSyntaxInMapFile" has passed with:
       1 assertion out of 1 passed
 
   Test suite "ReaderIVectorTestSuite" has passed with:

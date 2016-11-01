@@ -73,6 +73,19 @@ namespace CNTK
         }
     }
 
+    void LearnerBase::ResetSmoothedGradients()
+    {
+        for(auto v : m_smoothedGradientValues)
+        {
+            if (v.second->GetDataType() == DataType::Float)
+                v.second->SetValue(0.0f);
+            else if (v.second->GetDataType() == DataType::Double)
+                v.second->SetValue(0.0);
+            else
+                LogicError("Unsupported DataType %s", DataTypeName(v.second->GetDataType()));
+        }
+    }
+
     // Clipping gradients to prevent outliers,
     template <typename ElementType>
     void LearnerBase::ClipGradient(Matrix<ElementType>& gradient, size_t actualMBSize) const

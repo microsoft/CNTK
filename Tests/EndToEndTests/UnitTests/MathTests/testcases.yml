@@ -2,9 +2,8 @@ dataDir: .
 
 tags:
   # GPU only, at this stage.
-  # TODO move from l to separate leg, requires infra changes
-  - bvt-l (build_sku == 'gpu') and (device == 'gpu')
-  - nightly-l (build_sku == 'gpu') and (device == 'gpu')
+  - bvt-i (build_sku == 'gpu') and (device == 'gpu')
+  - nightly-i (build_sku == 'gpu') and (device == 'gpu')
 
 testCases:
   Test cases pass:
