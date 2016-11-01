@@ -5,6 +5,8 @@
 // ASGDHelper.cpp : Implements ASGDHelper interface. The implementation is based on Multiverso.
 //
 
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+
 #include "ASGDHelper.h"
 #include "MPIWrapper.h"
 #include "ComputationNetwork.h"
@@ -66,13 +68,12 @@ public:
         double adjustCoef = 0.2,                                                        // see in DecayCoefficient()
         size_t adjustPerMinibatches = 600,                                              //
         int traceLevel = 0,                                                             // log level
-        int syncPerfStats = 0,                                                          // shown perf data every syncPerfStats
-        const MPIWrapperPtr& pMPI = nullptr) :
+        int syncPerfStats = 0) :                                                        // shown perf data every syncPerfStats
         m_parameterSyncCounter(0), m_adjustLearningRateAtBeginningType(adjusttype),
         m_adjustCoefficient(adjustCoef), m_adjustMBNumber(adjustPerMinibatches),
         m_totalClientNumber(nodeNumRanks), m_useAsyncBuffered(useAsyncBuffered),
         m_traceLevel(traceLevel), m_ModelAveragingSGDSimulating(isSimulatedModelAveragingSGD), m_doesEveryNodesShouldSynced(false),
-        m_pMPI(pMPI), m_syncPerfStats(syncPerfStats)
+        m_syncPerfStats(syncPerfStats)
     {
         if (m_ModelAveragingSGDSimulating)
         {
@@ -484,7 +485,6 @@ private:
     {
         float factor = 0;
         int   nTotalSamples = samplesSinceLastSync;
-        // TODO[qiwye] will conflict with multiverso
         // m_pMPI->AllReduce(&nTotalSamples, 1);
 
         if (nTotalSamples <= 0)
@@ -613,15 +613,14 @@ ASGDHelper<ElemType>* NewASGDHelper(
     double adjustCoef,
     size_t adjustPerMinibatches,
     int traceLevel,
-    int syncPerfStats,
-    const MPIWrapperPtr& pMPI) 
+    int syncPerfStats) 
 {
 #ifdef ASGD_PARALLEL_SUPPORT
     return MultiversoHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffered, isSimulatedModelAveragingSGD, 
-                                      adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats, pMPI);
+                                      adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats);
 #elif
     return NoneASGDHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffered, isSimulatedModelAveragingSGD, 
-                                      adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats, pMPI); 
+                                      adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats); 
 #endif
 }
 

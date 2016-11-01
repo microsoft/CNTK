@@ -409,8 +409,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                          m_adjustCoefficient,
                                          m_adjustPerMinibatches,
                                          m_traceLevel,
-                                         m_syncStatsTrace,
-                                         m_mpi));
+                                         m_syncStatsTrace));
         m_pASGDHelper->InitModel(learnableNodes);
         m_pASGDHelperBarrier = false;
         m_pASGDHelper->WaitAll();

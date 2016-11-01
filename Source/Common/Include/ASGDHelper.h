@@ -7,7 +7,6 @@
 #pragma once
 
 #include <list>
-#include "MPIWrapper.h"
 #include "ComputationNetwork.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -63,7 +62,6 @@ ASGDHelper<ElemType>* NewASGDHelper(
     double adjustCoef = 0.2,                                                 // see in DecayCoefficient()
     size_t adjustPerMinibatches = 600,                                       //
     int traceLevel = 0,                                                      // log level
-    int syncPerfStats = 0,                                                   // shown perf data every syncPerfStats
-    const MPIWrapperPtr& pMPI = nullptr);
+    int syncPerfStats = 0);                                                  // shown perf data every syncPerfStats
 
 }}}
