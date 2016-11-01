@@ -2175,7 +2175,7 @@ template class DropoutNode<float>;
 template class DropoutNode<double>;
 
 // -----------------------------------------------------------------------
-// BatchNormalizationNode (input, scale, bias, runMean, runVariance,
+// BatchNormalizationNode (input, scale, bias, runMean, runVariance, runCount,
 //                         spatial, normalizationTimeConstant = 0, blendTimeConstant = 0,
 //                         epsilon = 0.00001,
 //                         useCntkEngine = true, imageLayout = 'cudnn')
@@ -2203,6 +2203,7 @@ template class DropoutNode<double>;
 //      It is represented as a LearnableParameter with the same dimensions as scale and bias.
 // * runVariance is the running variance which is used during evaluation phase and might be used during training as well.
 //      It is represented as a LearnableParameter with the same dimensions as scale and bias.
+// * runCount is the sample count needed for estimating runMean and runVariance. Pass a [1] tensor here.
 // * spatial is a flag that specifies whether to compute mean / var for each feature in a minibatch independently or, in case of convolutional layers, per feature map.
 //      TODO: This must be configured in a generic fashion where tensor axes are chosen along which parameters are tied.
 // * normalizationTimeConstant is the time constant which is used to compute running average of mean and variance.
@@ -2216,7 +2217,8 @@ template class DropoutNode<double>;
 // * imageLayout is the image layout. Only cudnn is supported at present.
 // -----------------------------------------------------------------------
 template <class ElemType>
-class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<5>, public IFreezable,
+class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public IFreezable,
+    //public NumInputs<6>, // the run_count can be omitted in unshared settings, for backcompat
     public IdentityTransformerNodeOnOneInput<0>
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
@@ -2249,7 +2251,12 @@ public:
                                configp->Get(L"epsilon"), configp->Get(L"useCntkEngine"),
                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
-        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        //AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        // To support legacy models, runCount is optional. Hence, we cannot use NumInputs<>, and must check ourselves here.
+        AttachInputsFromConfig(configp);
+        if (GetNumInputs() != RUN_COUNT && GetNumInputs() != RUN_COUNT + 1)
+            InvalidArgument("%ls %ls operation accepts %d inputs.", NodeName().c_str(), OperationName().c_str(), RUN_COUNT + 1);
+        // (we won't report that it also accepts RUN_COUNT inputs, as this is the deprecated legacy case)
     }
 
     void Save(File& fstream) const override
@@ -2372,14 +2379,12 @@ private: // time-constant conversions
     // old models did not tie this correctly. For those, they are stored in the node.
     ElemType& RunCount()
     {
-        // TODO: will later know about external node to hold this, for parameter sharing
-        return m_runCountLegacy;
+        return (GetNumInputs() >= RUN_COUNT) ? Input(RUN_COUNT)->Value()(0, 0) : m_runCountLegacy;
     }
 
-    ElemType RunCount() const
+    ElemType RunCount() const // const version of above; keep identical
     {
-        // TODO: will later know about external node to hold this, for parameter sharing
-        return m_runCountLegacy;
+        return (GetNumInputs() >= RUN_COUNT) ? Input(RUN_COUNT)->Value()(0, 0) : m_runCountLegacy;
     }
 
     // map time constants to exp avg factor
@@ -2562,12 +2567,17 @@ public:
 
         const auto& inputLayout = Input(DATA)->GetSampleLayout();
 
+        // running statistics inputs mus the learnable parameters
+        for (size_t i = RUN_MEAN; i < GetNumInputs(); i++)
+            if (!Input(i)->Is<LearnableParameter<ElemType>>())
+                InvalidArgument("%ls: Inputs [%d..%d] must be learnable parameters.", NodeDescription().c_str(), RUN_MEAN, (int)GetNumInputs());
+
         // infer dimensions of learnable parameters
         // BUGBUG: Parameter dimensions are totally wrong. E.g. a valid spatial bias for [15 x 15 x 32] is currently [32 x 1].
         //         The correct bias shape should be [1 x 1 x 32]. That can be specified but leads to different results for unknown reasons.
         //         Until this has been corrected, we need a workaround that infers the wrong dimensions.
 #if 1   // Workaround for today's definition: Trigger on [0 x 1] and infer that 0 as the total # elements needed.
-        for (size_t i = 1; i < GetNumInputs(); i++)
+        for (size_t i = SCALE; i < RUN_COUNT; i++) // scale, bias, run_mean, and run_variance
         {
             auto paramLayout = Input(i)->GetSampleLayout();
             if (paramLayout.GetRank() == 2 && paramLayout[0] == 0 && paramLayout[1] == 1 && inputLayout.GetNumElements() > 0) // [0 x 1]
@@ -2601,7 +2611,7 @@ public:
             }
 
             // check inputs
-            for (size_t i = 1; i < GetNumInputs(); i++)
+            for (size_t i = SCALE; i < RUN_COUNT; i++) // scale, bias, run_mean, and run_variance
             {
                 if (Input(i)->HasMBLayout())
                     InvalidArgument("%ls: Input[%d] has a dynamic axis. BatchNormalization parameters cannot have that.", NodeDescription().c_str(), (int)i);
@@ -2615,6 +2625,13 @@ public:
                     if (paramLayout[k] > inputLayout[k])
                         InvalidArgument("%ls: Data input cannot broadcast.", NodeDescription().c_str());
 #endif
+            }
+            if (GetNumInputs() >= RUN_COUNT) // 0-th order statistics (count) (optional for backcompat with old code which didn't correctly share it)
+            {
+                // since this must always be a [1] tensor, we don't support inference for it
+                size_t i = RUN_COUNT;
+                if (Input(i)->HasMBLayout() || Input(i)->GetSampleLayout() != TensorShape(1))
+                    InvalidArgument("%ls: Input[%d] must be a vector of 1 element without dynamic axis.", NodeDescription().c_str(), (int)i);
             }
             if (m_spatial && m_imageLayoutKind != CHW)
             {
