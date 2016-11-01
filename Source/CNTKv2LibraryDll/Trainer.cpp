@@ -227,7 +227,7 @@ namespace CNTK
         if (m_distributedTrainer != nullptr)
         {
             // all workers need to sync up before saving model
-            m_distributedTrainer->GetCommunicator()->Barrier();
+            DistributedBarrier();
 
             // for distributed training, only save checkpoint at worker 0
             shouldSave = m_distributedTrainer->GetCommunicator()->CurrentWorker().IsMain();
@@ -253,20 +253,14 @@ namespace CNTK
             ckpStream->flush();
         }
 
-        if (m_distributedTrainer != nullptr)
-        {
-            // all workers need to sync up after saving model
-            m_distributedTrainer->GetCommunicator()->Barrier();
-        }
+        // all workers need to sync up after saving model
+        DistributedBarrier();
     }
 
     void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
     {
-        if (m_distributedTrainer != nullptr)
-        {
-            // all workers need to sync up before loading model
-            m_distributedTrainer->GetCommunicator()->Barrier();
-        }
+        // all workers need to sync up before loading model
+        DistributedBarrier();
 
         // Restore the model's parameters
          m_combinedTrainingFunction->RestoreModel(modelFilePath);
@@ -290,11 +284,8 @@ namespace CNTK
             m_parameterLearners[i]->RestoreFromCheckpoint(learnerStates[i].Value<Dictionary>());
         }
 
-        if (m_distributedTrainer != nullptr)
-        {
-            // all workers need to sync up after loading model
-            m_distributedTrainer->GetCommunicator()->Barrier();
-        }
+        // all workers need to sync up after loading model
+        DistributedBarrier();
     }
 
     double Trainer::PreviousMinibatchLossAverage() const
