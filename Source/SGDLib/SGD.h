@@ -5,7 +5,6 @@
 #pragma once
 
 #include "Basics.h"
-#include "ASGDCommon.h"
 #include "ComputationNetwork.h"
 #include "SimpleEvaluator.h"
 #include "DataReader.h"
@@ -20,6 +19,7 @@
 #include <random>
 #include "Profiler.h"
 #include "MASGD.h"
+#include "ASGDCommon.h"
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 #define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
@@ -288,16 +288,16 @@ protected:
     double m_L1RegWeight;
 
     // Parallel training related with ASGD 
-    intargvector m_numMBsToASGDPushAndPull;  // decide how many minibatchs should ASGD to a pull&push to parameter server.
+    intargvector m_numMiniBatchesToPushAndPullforASGD;  // decide how many minibatchs should ASGD to a pull&push to parameter server.
                                              //      note that, this will override m_nFramesBetweenASGDSync when set.
     intargvector m_nFramesBetweenASGDSync;
     bool m_isPipeline;
     bool m_isSimulateMA;
-    AdjustLearningRateatBeginning m_adjustlearningrateatbeginning;
-    double m_adjustcoefficient;
-    size_t m_adjustnbminibatch;
+    AdjustLearningRateAtBeginning m_adjustLearningRateAtBeginning;
+    double m_adjustCoefficient;
+    size_t m_adjustPerMinibatches;
 
-    //sequence training
+    // sequence training
     double m_hSmoothingWeight;
     double m_frameDropThresh;
     bool m_doReferenceAlign;
@@ -316,6 +316,7 @@ protected:
 template <class ElemType>
 class IDistGradAggregator;
 
+// MultiversoHelper is used for parallel training using DataParallelASGD
 template <class ElemType>
 class MultiversoHelper;
 
@@ -578,7 +579,7 @@ protected:
 
 private:
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
-    MultiversoHelper<ElemType>* m_pMultiversoHelper;
+    shared_ptr<MultiversoHelper<ElemType>> m_pMultiversoHelper;
     bool m_pMultiversoHelperBarrier;
 
     bool UsingGradientAggregation(size_t epochNumber) const

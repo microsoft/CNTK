@@ -394,7 +394,7 @@ do
             fi
             ;;
 
-		--asgd*)
+        --asgd*)
             if test x$optarg = xyes || test x$optarg = xno
             then
                 enable_asgd=$optarg
