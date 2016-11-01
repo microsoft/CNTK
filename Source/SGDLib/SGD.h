@@ -19,7 +19,7 @@
 #include <random>
 #include "Profiler.h"
 #include "MASGD.h"
-#include "ASGDCommon.h"
+#include "ASGDHelper.h"
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 #define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
@@ -316,10 +316,6 @@ protected:
 template <class ElemType>
 class IDistGradAggregator;
 
-// MultiversoHelper is used for parallel training using DataParallelASGD
-template <class ElemType>
-class MultiversoHelper;
-
 // -----------------------------------------------------------------------
 // class SGD
 // -----------------------------------------------------------------------
@@ -579,8 +575,8 @@ protected:
 
 private:
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
-    shared_ptr<MultiversoHelper<ElemType>> m_pMultiversoHelper;
-    bool m_pMultiversoHelperBarrier;
+    std::shared_ptr<ASGDHelper<ElemType>> m_pASGDHelper;
+    bool m_pASGDHelperBarrier;
 
     bool UsingGradientAggregation(size_t epochNumber) const
     {
