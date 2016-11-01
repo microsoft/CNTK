@@ -28,26 +28,26 @@ enum class AdjustLearningRateAtBeginning : int
 template<class ElemType = float>
 class ASGDHelper
 {
-typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 public:
-virtual ~ASGDHelper() { }
-// -----------------------------------------------------------------------
-// InitModel() -- Upload initilized model (, which was pre-computed by CNTK logic) .
-// to the parameter servers, so that every node could start training from same model
-// -----------------------------------------------------------------------
-virtual void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes) = 0;
+    virtual ~ASGDHelper() { }
+    // -----------------------------------------------------------------------
+    // InitModel() -- Upload initilized model (, which was pre-computed by CNTK logic) .
+    // to the parameter servers, so that every node could start training from same model
+    // -----------------------------------------------------------------------
+    virtual void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes) = 0;
 
-// -----------------------------------------------------------------------
-// PushAndPullModel() -- Push parameters of learnableNodes to parameter servers, then get the latests model back.
-// -----------------------------------------------------------------------
-virtual bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, size_t sampleSinceLastSynced = 0) = 0;
+    // -----------------------------------------------------------------------
+    // PushAndPullModel() -- Push parameters of learnableNodes to parameter servers, then get the latests model back.
+    // -----------------------------------------------------------------------
+    virtual bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, size_t sampleSinceLastSynced = 0) = 0;
 
-// -----------------------------------------------------------------------
-// WaitAll() -- Wait(Barrier) all the other nodes to process
-// -----------------------------------------------------------------------
-virtual void WaitAll() = 0;
+    // -----------------------------------------------------------------------
+    // WaitAll() -- Wait(Barrier) all the other nodes to process
+    // -----------------------------------------------------------------------
+    virtual void WaitAll() = 0;
 
-virtual void WaitAsyncBuffer() = 0;
+    virtual void WaitAsyncBuffer() = 0;
 
 };  // Class ASGDHelper
 
@@ -66,6 +66,4 @@ ASGDHelper<ElemType>* NewASGDHelper(
     int syncPerfStats = 0,                                                   // shown perf data every syncPerfStats
     const MPIWrapperPtr& pMPI = nullptr);
 
-}
-}
-}
+}}}
