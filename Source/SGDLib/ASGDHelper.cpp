@@ -9,7 +9,6 @@
 #include "MPIWrapper.h"
 #include "ComputationNetwork.h"
 #include "TimerUtility.h"
-#include "ASGDCommon.h"
 
 #include <functional>
 #include <thread>
