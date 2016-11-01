@@ -19,7 +19,7 @@
 #include <random>
 #include "Profiler.h"
 #include "MASGD.h"
-
+#include "ASGDHelper.h"
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 #define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
@@ -60,6 +60,7 @@ enum class ParallelizationMethod : int
     dataParallelSGD = 1,
     modelAveragingSGD = 2,
     blockMomentumSGD = 3,
+    dataParallelASGD = 4,
     modelParallelSGD = (1 << 8) // Currently unsupported
 };
 
@@ -286,6 +287,16 @@ protected:
     double m_L2RegWeight;
     double m_L1RegWeight;
 
+    // Parallel training related with ASGD 
+    intargvector m_numMiniBatchesToPushAndPullforASGD;  // decide how many minibatchs should ASGD to a pull&push to parameter server.
+                                             //      note that, this will override m_nFramesBetweenASGDSync when set.
+    intargvector m_nFramesBetweenASGDSync;
+    bool m_isPipeline;
+    bool m_isSimulateMA;
+    AdjustLearningRateAtBeginning m_adjustLearningRateAtBeginning;
+    double m_adjustCoefficient;
+    size_t m_adjustPerMinibatches;
+
     // sequence training
     double m_hSmoothingWeight;
     double m_frameDropThresh;
@@ -352,7 +363,7 @@ public:
 
         if (m_mpi == nullptr)
             m_parallelizationMethod = ParallelizationMethod::none;
-    }
+        }
 
     void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
@@ -564,6 +575,8 @@ protected:
 
 private:
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
+    std::shared_ptr<ASGDHelper<ElemType>> m_pASGDHelper;
+    bool m_pASGDHelperBarrier;
 
     bool UsingGradientAggregation(size_t epochNumber) const
     {
@@ -575,9 +588,14 @@ private:
                  GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
                 (epochNumber >= m_parallelizationStartEpochNum));
     }
-    bool UsingParallelTrain(size_t epochNumber) const
+
+    bool UsingAsyncGradientAggregation(size_t epochNumber)
     {
-        return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber);
+        return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD) && (epochNumber >= m_parallelizationStartEpochNum));
+    }
+    bool UsingParallelTrain(size_t epochNumber)
+    {
+        return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber) || UsingAsyncGradientAggregation(epochNumber);
     }
 };
 
