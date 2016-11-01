@@ -81,11 +81,6 @@ namespace CNTK
         {
         }
 
-        DistributedCommunicatorPtr GetDistributedCommunicator() override
-        {
-            return m_communicator;
-        }
-
     private:
         QuantizedDistributedCommunicatorPtr m_communicator;
         bool m_useAsyncBufferedParameterUpdate;

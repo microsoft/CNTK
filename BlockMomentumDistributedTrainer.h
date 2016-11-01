@@ -100,11 +100,6 @@ namespace CNTK
             NOT_IMPLEMENTED;
         }
 
-        DistributedCommunicatorPtr GetDistributedCommunicator() override
-        {
-            return m_communicator;
-        }
-
     private:
         bool IsResetRequired(std::vector<std::pair<Parameter, NDArrayViewPtr>>& parameters) const
         {
