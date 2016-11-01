@@ -18,11 +18,7 @@
 #include "V2AllReduceDistGradAggregator.h"
 #endif
 
-#ifdef ASGD_PARALLEL_SUPPORT
-#include "MultiversoWrapper.h"
-#else
-#include "NoMultiversoWrapper.h"
-#endif
+#include "ASGDHelper.h"
 
 #include "SimpleDistGradAggregator.h"
 #include "V2SimpleDistGradAggregator.h"
@@ -405,8 +401,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // Multiverso Warpper for ASGD logic init
     if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
     {
-        m_pMultiversoHelper =
-            std::make_shared<MultiversoHelper<ElemType>>(learnableNodes,
+        m_pASGDHelper.reset(NewASGDHelper<ElemType>(learnableNodes,
                                          m_mpi->NumNodesInUse(),
                                          m_isPipeline,
                                          m_isSimulateMA,
@@ -415,10 +410,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                          m_adjustPerMinibatches,
                                          m_traceLevel,
                                          m_syncStatsTrace,
-                                         m_mpi);
-        m_pMultiversoHelper->InitModel(learnableNodes);
-        m_pMultiversoHelperBarrier = false;
-        m_pMultiversoHelper->WaitAll();
+                                         m_mpi));
+        m_pASGDHelper->InitModel(learnableNodes);
+        m_pASGDHelperBarrier = false;
+        m_pASGDHelper->WaitAll();
     }
 
     // --- MAIN EPOCH LOOP
@@ -825,7 +820,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
     delete inputMatrices;
     if (m_parallelizationMethod == ParallelizationMethod::dataParallelASGD)
-        m_pMultiversoHelper.reset();
+        m_pASGDHelper.reset();
 }
 
 // -----------------------------------------------------------------------
@@ -1282,7 +1277,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
             {
-                m_pMultiversoHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
+                m_pASGDHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
                 nSamplesSinceLastModelSync = 0;
             } 
         }
@@ -1411,7 +1406,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     if (useAsyncGradientAggregation && (m_mpi->NumNodesInUse() > 1))
     {
-        m_pMultiversoHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
+        m_pASGDHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
         nSamplesSinceLastModelSync = 0;
     }
 
