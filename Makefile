@@ -511,7 +511,7 @@ EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL_LIBS+=$(EVAL_LIB)
 SRC+=$(EVAL_SRC)
 
-$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB) $(MULTIVERSO_LIB)
+$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB) 
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
@@ -530,7 +530,7 @@ EVAL_SAMPLE_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SAMPLE_CLIENT_SR
 ALL+=$(EVAL_SAMPLE_CLIENT)
 SRC+=$(EVAL_SAMPLE_CLIENT_SRC)
 
-$(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) $(MULTIVERSO_LIB)
+$(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) 
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_SAMPLE_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
@@ -863,21 +863,43 @@ MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
 
 ALL+=$(MULTIVERSO_LIB)
 
+ifeq ("$(BUILDTYPE)","release")
 $(MULTIVERSO_LIB): 
-	@echo "Build Multiverso lib"
-	@mkdir -p $(LIBDIR)
-	@mkdir -p $(BINDIR)
-	@mkdir -p $(SOURCEDIR)/Multiverso/build
-	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
-	    -DINSTALL_MULTIVERSO=FALSE \
-	    -DBoost_NO_BOOST_CMAKE=TRUE \
+    @echo "Build Multiverso lib"
+    @mkdir -p $(LIBDIR)
+    @mkdir -p $(BINDIR)
+    @mkdir -p $(SOURCEDIR)/Multiverso/build
+    @cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
+        -DINSTALL_MULTIVERSO=FALSE \
+        -DBoost_NO_BOOST_CMAKE=TRUE \
             -DBoost_NO_SYSTEM_PATHS=TRUE \
             -DBOOST_ROOT:PATHNAME=$(BOOST_PATH) \
             -DBOOST_LIBRARY_DIRS:FILEPATH=$(BOOST_PATH) \
             -DLIBRARY_OUTPUT_PATH=$(shell readlink -f $(LIBDIR)) \
             -DEXECUTABLE_OUTPUT_PATH=$(shell readlink -f $(BINDIR)) \
             -B./Source/Multiverso/build -H./Source/Multiverso
-	@make VERBOSE=1 -C ./Source/Multiverso/build/ -j multiverso
+    @make VERBOSE=1 -C ./Source/Multiverso/build/ -j multiverso
+endif
+
+ifeq ("$(BUILDTYPE)","debug")
+$(MULTIVERSO_LIB): 
+    @echo "Build Multiverso lib"
+    @mkdir -p $(LIBDIR)
+    @mkdir -p $(BINDIR)
+    @mkdir -p $(SOURCEDIR)/Multiverso/build
+    @cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
+        -DINSTALL_MULTIVERSO=FALSE \
+        -DBoost_NO_BOOST_CMAKE=TRUE \
+            -DBoost_NO_SYSTEM_PATHS=TRUE \
+            -DBOOST_ROOT:PATHNAME=$(BOOST_PATH) \
+            -DBOOST_LIBRARY_DIRS:FILEPATH=$(BOOST_PATH) \
+            -DLIBRARY_OUTPUT_PATH=$(shell readlink -f $(LIBDIR)) \
+            -DEXECUTABLE_OUTPUT_PATH=$(shell readlink -f $(BINDIR)) \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -B./Source/Multiverso/build -H./Source/Multiverso
+    @make VERBOSE=1 -C ./Source/Multiverso/build/ -j multiverso
+endif
+
 
 UNITTEST_MULTIVERSO_SRC = \
 	$(SOURCEDIR)/Multiverso/Test/unittests/test_array.cpp \
