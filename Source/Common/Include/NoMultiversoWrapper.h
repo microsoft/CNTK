@@ -20,7 +20,7 @@ public:
         int nodeNumRanks,
         bool useAsyncBuffered = true,
         bool isSimModelAveragingSGD = false,
-        AdjustLearningRateatBeginning adjusttype = AdjustLearningRateatBeginning::None,
+        AdjustLearningRateAtBeginning adjusttype = AdjustLearningRateAtBeginning::None,
         double adjustcoef = 0.2,
         size_t adjustnbmb = 600,
         int traceLevel = 0,
