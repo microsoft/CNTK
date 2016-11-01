@@ -8,12 +8,15 @@ import os
 import math
 import numpy as np
 
+from cntk.blocks import default_options
+from cntk.layers import Convolution, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense
+from cntk.models import Sequential, LayerStack
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 from cntk.initializer import glorot_uniform
 from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule
-from cntk.ops import cross_entropy_with_softmax, classification_error, relu, convolution, pooling, AVG_POOLING
+from cntk.ops import cross_entropy_with_softmax, classification_error, relu
 from cntk.ops import input_variable, constant, parameter, combine, times, element_times
 
 #
@@ -23,12 +26,6 @@ abs_path   = os.path.dirname(os.path.abspath(__file__))
 cntk_path  = os.path.normpath(os.path.join(abs_path, "..", "..", "..", ".."))
 data_path  = os.path.join(cntk_path, "Examples", "Image", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
-
-#
-# Layer wrappers
-#
-sys.path.append(os.path.join(abs_path, "..", ".."))
-from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, linear_layer
 
 # model dimensions
 image_height = 32
@@ -63,61 +60,89 @@ def create_reader(map_file, mean_file, train, distributed_communicator=None):
 #
 # Resnet building blocks
 #
-def resnet_basic(input, out_feature_map_count, bn_time_const):
-    c1 = conv_bn_relu_layer(input, out_feature_map_count, [3, 3], [1, 1], bn_time_const)
-    c2 = conv_bn_layer(c1, out_feature_map_count, [3, 3], [1, 1], bn_time_const)
-    p = c2 + input
+#           ResNetNode                   ResNetNodeInc
+#               |                              |
+#        +------+------+             +---------+----------+
+#        |             |             |                    |
+#        V             |             V                    V
+#   +----------+       |      +--------------+   +----------------+
+#   | Conv, BN |       |      | Conv x 2, BN |   | SubSample, BN  |
+#   +----------+       |      +--------------+   +----------------+
+#        |             |             |                    |
+#        V             |             V                    |
+#    +-------+         |         +-------+                |
+#    | ReLU  |         |         | ReLU  |                |
+#    +-------+         |         +-------+                |
+#        |             |             |                    |
+#        V             |             V                    |
+#   +----------+       |        +----------+              |
+#   | Conv, BN |       |        | Conv, BN |              |
+#   +----------+       |        +----------+              |
+#        |             |             |                    |
+#        |    +---+    |             |       +---+        |
+#        +--->| + |<---+             +------>+ + +<-------+
+#             +---+                          +---+
+#               |                              |
+#               V                              V
+#           +-------+                      +-------+
+#           | ReLU  |                      | ReLU  |
+#           +-------+                      +-------+
+#               |                              |
+#               V                              V
+#
+def convolution_bn(input, filter_size, num_filters, strides=(1,1), init=glorot_uniform(), activation=relu):
+    if activation is None:
+        activation = lambda x: x
+        
+    r = Convolution(filter_size, num_filters, strides=strides, init=init, activation=None, pad=True, bias=False)(input)
+    r = BatchNormalization(map_rank=1)(r)
+    r = activation(r)
+    
+    return r
+
+def resnet_basic(input, num_filters):
+    c1 = convolution_bn(input, (3,3), num_filters)
+    c2 = convolution_bn(c1, (3,3), num_filters, activation=None)
+    p  = c2 + input
     return relu(p)
 
-def resnet_basic_inc(input, out_feature_map_count, strides, bn_time_const):
-    c1 = conv_bn_relu_layer(input, out_feature_map_count, [3, 3], strides, bn_time_const)
-    c2 = conv_bn_layer(c1, out_feature_map_count, [3, 3], [1, 1], bn_time_const)
-    s  = conv_bn_layer(input, out_feature_map_count, [1, 1], strides, bn_time_const)
+def resnet_basic_inc(input, num_filters):
+    c1 = convolution_bn(input, (3,3), num_filters, strides=(2,2))
+    c2 = convolution_bn(c1, (3,3), num_filters, activation=None)
+
+    s = convolution_bn(input, (1,1), num_filters, strides=(2,2), activation=None)
+    
     p = c2 + s
     return relu(p)
 
-def resnet_basic_stack2(input, out_feature_map_count, bn_time_const):
-    r1 = resnet_basic(input, out_feature_map_count, bn_time_const)
-    r2 = resnet_basic(r1, out_feature_map_count, bn_time_const)
+def resnet_basic_stack2(input, num_filters):
+    r1 = resnet_basic(input, num_filters)
+    r2 = resnet_basic(r1, num_filters)
     return r2
 
-def resnet_basic_stack3(input, out_feature_map_count, bn_time_const):
-    r12 = resnet_basic_stack2(input, out_feature_map_count, bn_time_const)
-    r3 = resnet_basic(r12, out_feature_map_count, bn_time_const)
+def resnet_basic_stack3(input, num_filters):
+    r12 = resnet_basic_stack2(input, num_filters)
+    r3 = resnet_basic(r12, num_filters)
     return r3
 
 #   
 # Defines the residual network model for classifying images
 #
 def create_resnet_model(input, num_classes):
-    bn_time_const = 4096
+    conv = convolution_bn(input, (3,3), 16, activation=None)
+    r1_1 = resnet_basic_stack3(conv, 16)
 
-    c_map1 = 16
-    
-    feat_scale = 0.00390625
+    r2_1 = resnet_basic_inc(r1_1, 32)
+    r2_2 = resnet_basic_stack2(r2_1, 32)
 
-    input_norm = element_times(feat_scale, input)
-
-    conv = conv_bn_relu_layer(input_norm, c_map1, [3, 3], [1, 1], bn_time_const)
-    r1_1 = resnet_basic_stack3(conv, c_map1, bn_time_const)
-
-    c_map2 = 32
-
-    r2_1 = resnet_basic_inc(r1_1, c_map2, [2, 2], bn_time_const)
-    r2_2 = resnet_basic_stack2(r2_1, c_map2, bn_time_const)
-
-    c_map3 = 64
-    r3_1 = resnet_basic_inc(r2_2, c_map3, [2, 2], bn_time_const)
-    r3_2 = resnet_basic_stack2(r3_1, c_map3, bn_time_const)
+    r3_1 = resnet_basic_inc(r2_2, 64)
+    r3_2 = resnet_basic_stack2(r3_1, 64)
 
     # Global average pooling
-    poolw = 8
-    poolh = 8
-    poolh_stride = 1
-    poolv_stride = 1
-
-    pool = pooling(r3_2, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
-    return linear_layer(pool, num_classes)
+    pool = AveragePooling(filter_shape=(8,8), strides=(1,1))(r3_2)    
+    net = Dense(num_classes, init=glorot_uniform(), activation=None)(pool)
+    
+    return net
 
 #
 # Train and evaluate the network.
@@ -128,8 +153,12 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     input_var = input_variable((num_channels, image_height, image_width))
     label_var = input_variable((num_classes))
 
+    # Normalize the input
+    feature_scale = 1.0 / 256.0
+    input_var_norm = element_times(feature_scale, input_var)
+
     # apply model to input
-    z = create_resnet_model(input_var, 10)
+    z = create_resnet_model(input_var_norm, 10)
 
     #
     # Training action
@@ -206,6 +235,7 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
     print("")
 
+    # return evaluation error.
     return metric_numer/metric_denom
 
 if __name__=='__main__':
