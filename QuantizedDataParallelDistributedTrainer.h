@@ -81,7 +81,7 @@ namespace CNTK
         {
         }
 
-        DistributedCommunicatorPtr GetDistributedCommunicator() override
+        DistributedCommunicatorPtr GetCommunicator() override
         {
             return m_communicator;
         }
