@@ -233,8 +233,8 @@
     <None Include="Config\HTKDeserializersSimpleDataLoop5_Config.cntk" />
     <None Include="Config\HTKDeserializersSimpleDataLoop8_Config.cntk" />
     <None Include="Config\HTKDeserializersSimpleDataLoop9_Config.cntk" />
-    <None Include="Config\ImageAndImageReaderSimple_Config.cntk" />
     <None Include="Config\ImageAndTextReaderSimple_Config.cntk" />
+    <None Include="Config\ImageDeserializers.cntk" />
     <None Include="Config\ImageTransforms_Config.cntk" />
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
