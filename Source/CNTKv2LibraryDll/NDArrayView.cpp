@@ -206,11 +206,9 @@ namespace CNTK
     template <typename ElementType>
     TensorView<ElementType>* NDArrayView::GetWritableTensorView()
     {
-        // This blocks loading constant from checkpoint
-        /*
         if (IsReadOnly())
             InvalidArgument("NDArrayView::GetWritableTensorView: Cannot get writable TensorView from a read-only NDArrayView");
-        */
+
         return const_cast<TensorView<ElementType>*>(GetTensorView<ElementType>());
     }
 
@@ -247,11 +245,8 @@ namespace CNTK
         if ((source.Shape() != Shape()) && (AsTensorShape(source.Shape()) != AsTensorShape(Shape())))
             InvalidArgument("NDArrayView::CopyFrom: The 'source' view's shape must be same as the shape of this NDArrayView");
 
-        // This blocks loading constant from checkpoint
-        /*
         if (IsReadOnly())
             RuntimeError("NDArrayView::CopyFrom: Cannot modify contents of a readonly NDArrayView");
-        */
 
         switch (m_dataType)
         {

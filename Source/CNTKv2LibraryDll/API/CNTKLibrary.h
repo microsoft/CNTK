@@ -3624,7 +3624,7 @@ namespace CNTK
         CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) = 0;
 
         // Return the distributed communicator used in the distributed trainer
-        CNTK_API virtual DistributedCommunicatorPtr GetDistributedCommunicator() = 0;
+        CNTK_API virtual DistributedCommunicatorPtr GetCommunicator() = 0;
 
         virtual ~DistributedTrainer() {}
     };

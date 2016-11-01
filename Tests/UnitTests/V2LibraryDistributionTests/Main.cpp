@@ -89,19 +89,11 @@ void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, 
     minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { L"features", inputDim }, { L"labels", numOutputClasses } });
     Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) }, distributedTrainer);
     size_t outputFrequencyInMinibatches = 20;
-    size_t checkpointInMinibatches = 100;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         trainer.TrainMinibatch({ { input, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
-
-        // Test save/load checkpoint half way in the training
-        if (i == checkpointInMinibatches)
-        {
-            trainer.SaveCheckpoint(L"feedForwardClassifier.0");
-            trainer.RestoreFromCheckpoint(L"feedForwardClassifier.0");
-        }
     }
 }
 
