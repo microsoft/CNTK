@@ -226,7 +226,8 @@ namespace CNTK
         bool shouldSave = true;
         if (m_distributedTrainer != nullptr)
         {
-            // all workers need to sync up before saving model
+            // all workers need to sync up before saving model to avoid write-after-read hazard
+            // i.e. one worker is in the middle of reading a checkpoint while another overwrites
             DistributedBarrier();
 
             // for distributed training, only save checkpoint at worker 0
@@ -253,15 +254,13 @@ namespace CNTK
             ckpStream->flush();
         }
 
-        // all workers need to sync up after saving model
+        // all workers need to sync up after saving model to avoid read-after-write hazard
+        // i.e. one worker is in the middle of write while another tries to read
         DistributedBarrier();
     }
 
     void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
     {
-        // all workers need to sync up before loading model
-        DistributedBarrier();
-
         // Restore the model's parameters
          m_combinedTrainingFunction->RestoreModel(modelFilePath);
 
@@ -283,9 +282,6 @@ namespace CNTK
         {
             m_parameterLearners[i]->RestoreFromCheckpoint(learnerStates[i].Value<Dictionary>());
         }
-
-        // all workers need to sync up after loading model
-        DistributedBarrier();
     }
 
     double Trainer::PreviousMinibatchLossAverage() const
