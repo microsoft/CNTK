@@ -280,6 +280,7 @@ def BatchNormalization(map_rank=None,  # if given then normalize only over this 
     return Block(apply_x, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
 # LayerNormalization -- create a layer-normalization layer
+# TODO: add an epsilon
 def LayerNormalization(initial_scale=1, initial_bias=0):
     UntestedBranchError("LayerNormalization")
 

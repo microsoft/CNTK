@@ -89,17 +89,17 @@ def create_reader(map_file, mean_file, train):
 def create_vgg9_model(input, num_classes):
     with default_options(activation=relu):
         model = Sequential([
-                LayerStack(3, lambda i: [
+            For(range(3), lambda i: [
                 Convolution((3,3), [64,96,128][i], pad=True),
                 Convolution((3,3), [64,96,128][i], pad=True),
                 MaxPooling((3,3), strides=(2,2))
             ]),
-            LayerStack(2, lambda : [
+            For(range(2), lambda : [
                 Dense(1024),
                 Dropout(0.5)
-                ]),
+            ]),
             Dense(num_classes, activation=None)
-            ])
+        ])
 
     return model(input)
 
