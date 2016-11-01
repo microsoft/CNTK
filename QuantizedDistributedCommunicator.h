@@ -129,10 +129,10 @@ namespace CNTK
             Base::Aggregate(values, outputValues, sendToWorkers);
         }
 
-	void Barrier() override
-	{
-	    MPICommunicatorImpl::Barrier();
-	}
+        void Barrier() override
+        {
+            MPICommunicatorImpl::Barrier();
+        }
 
     private:
         struct Stripe
