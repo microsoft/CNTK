@@ -2724,7 +2724,7 @@ namespace CNTK
     /// This overload uses an initial state value of 0.
     /// Throws an exception of the operand has more than one dynamic axis.
     ///
-    inline CNTK_API FunctionPtr PastValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"");
+    CNTK_API FunctionPtr PastValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation for getting the future value along the lone dynamic axis of the specified operand.
@@ -2737,7 +2737,7 @@ namespace CNTK
     /// This overload uses an initial state value of 0.
     /// Throws an exception of the operand has more than one dynamic axis.
     ///
-    inline CNTK_API FunctionPtr FutureValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"");
+    CNTK_API FunctionPtr FutureValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along all the axes
