@@ -223,6 +223,13 @@ namespace CNTK
 
     void Trainer::SaveCheckpoint(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
     {
+        // for distributed training, only save checkpoint at worker 0
+        bool shouldSave = true;
+        if (m_distributedTrainer != nullptr)
+        {
+            shouldSave = m_distributedTrainer->GetDistributedCommunicator()->CurrentWorker().IsMain();
+        }
+
         m_combinedTrainingFunction->SaveModel(modelFilePath, usinglegacyModelFormat);
 
         vector<DictionaryValue> learnerStates;
@@ -243,6 +250,12 @@ namespace CNTK
 
     void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
     {
+        if (m_distributedTrainer != nullptr)
+        {
+            // all workers need to sync up before loading model
+            m_distributedTrainer->GetDistributedCommunicator()->Barrier();
+        }
+
         // Restore the model's parameters
          m_combinedTrainingFunction->RestoreModel(modelFilePath);
 

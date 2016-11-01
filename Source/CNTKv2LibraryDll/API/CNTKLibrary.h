@@ -3623,6 +3623,9 @@ namespace CNTK
         // Optionally overridable method to restore state pertaining this distributed training method from a previous checkpoint
         CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) = 0;
 
+        // Return the distributed communicator used in the distributed trainer
+        CNTK_API virtual DistributedCommunicatorPtr GetDistributedCommunicator() = 0;
+
         virtual ~DistributedTrainer() {}
     };
 
