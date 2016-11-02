@@ -53,10 +53,7 @@ Train = [
         minibatchSize = $minibatch$
         # Note that learning rates are 10x more than in the paper due to a different
         # momentum update rule in CNTK: v{t + 1} = lr*(1 - momentum)*g{t + 1} + momentum*v{t}
-        #learningRatesPerMB = 1.0*80:0.1*40:0.01
-        #learningRatesPerSample = 0.004*80:0.0004*40:0.00004
-        learningRatesPerSample = 0.016*80:0.0016*40:0.00016
-        #momentumPerMB = 0.9
+        learningRatesPerSample = 0.004*80:0.0004*40:0.00004
         momentumPerMB = 0
         maxEpochs = $epochsize$
         L2RegWeight = 0.0001
