@@ -882,7 +882,7 @@ public:
     minibatchutterancesourcemulti(bool useMersenneTwister, const std::vector<std::vector<wstring>> &infiles, const std::vector<map<wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
                                   const latticesource &lattices, const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode, std::vector<bool> expandToUtt)
-                                  : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), m_generatePhoneBoundaries(!lattices.empty()), m_frameRandomizer(randomizedchunks, useMersenneTwister), expandToUtt(expandToUtt),
+                                  : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2), m_generatePhoneBoundaries(true), m_frameRandomizer(randomizedchunks, useMersenneTwister), expandToUtt(expandToUtt),
                                     m_useMersenneTwister(useMersenneTwister)
     // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
     // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
@@ -1106,10 +1106,21 @@ public:
                                             classids[j]->push_back(e.classid);
                                             if (m_generatePhoneBoundaries)
                                             {
-                                                if (e.phonestart != 0 && t == e.firstframe)
-                                                    phoneboundaries[j]->push_back((HMMIDTYPE)e.phonestart);
+                                                if (e.phonestart == 65535) // for CTC
+                                                {
+                                                    if (t == e.firstframe)
+                                                        phoneboundaries[j]->push_back((CLASSIDTYPE)e.classid);
+                                                    else
+                                                        phoneboundaries[j]->push_back((CLASSIDTYPE)65535);
+                                                }
                                                 else
-                                                    phoneboundaries[j]->push_back((HMMIDTYPE)0);
+                                                {
+                                                    if (e.phonestart != 0 && t == e.firstframe)
+                                                        phoneboundaries[j]->push_back((HMMIDTYPE) e.phonestart);
+                                                    else
+                                                        phoneboundaries[j]->push_back((HMMIDTYPE) 0);
+
+                                                }
                                             }
                                         }
                                         numclasses[j] = max(numclasses[j], (size_t)(1u + e.classid));

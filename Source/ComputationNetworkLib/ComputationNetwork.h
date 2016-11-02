@@ -463,6 +463,12 @@ public:
                             const double& wp = 0.0f,
                             const double& bMMIfactor = 0.0f,
                             const bool& sMBR = false);
+    template<class ElemType>
+    static void SetCTCParam(ComputationNetworkPtr net, 
+                            const ComputationNodeBasePtr criterionNode, 
+                            const ComputationNodeBasePtr evaluationNode, 
+                            const size_t& blanknum = 1, const int &delayConstraint=-1);
+
     static void SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples);
 
     // -----------------------------------------------------------------------

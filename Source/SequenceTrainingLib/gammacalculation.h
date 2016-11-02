@@ -249,7 +249,295 @@ public:
         }
         functionValues.SetValue(objectValue);
     }
+    void doCTC(Microsoft::MSR::CNTK::Matrix<ElemType>& functionvalue, const Microsoft::MSR::CNTK::Matrix<ElemType>& prob, Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues, std::vector<size_t> &uids, size_t samplesInRecurrentStep,
+        std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, std::vector<size_t> &extrauttmap, size_t blanknum)
+        //UMATRIX & Pugv, UMATRIX & uids, const UIDSVECTOR & phoneboundary)
+    {
+        std::vector<size_t> validframes;
+        validframes.assign(samplesInRecurrentStep, 0);
+        //convert from Microsoft::MSR::CNTK::Matrix to  msra::math::ssematrixbase
+        size_t numrows = prob.GetNumRows();
+        size_t numcols = prob.GetNumCols();
 
+        m_deviceid = prob.GetDeviceId();
+        //tempmatrix.TransferFromDeviceToDevice(tempmatrix.GetDeviceId(), m_deviceid);
+        //oneUttCTCScore.TransferFromDeviceToDevice(oneUttCTCScore.GetDeviceId(), m_deviceid);
+        Microsoft::MSR::CNTK::Matrix<ElemType> tempmatrix(m_deviceid);
+        Microsoft::MSR::CNTK::Matrix<ElemType> oneUttCTCScore(m_deviceid);
+        Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
+        Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
+
+        Microsoft::MSR::CNTK::Matrix<ElemType> rowsum(m_deviceid);
+        ElemType finalscore = 0;
+        std::vector<size_t> phoneseq;
+        std::vector<size_t> phonebound;
+        size_t blankid;
+        size_t mbsize = numcols / samplesInRecurrentStep;
+        size_t mapi = 0;
+
+        //cal gamma for each utterance
+        size_t ts = 0;
+        size_t numframes = 0;
+        //size_t ts_uid = 0;                
+        for (size_t i = 0; i < extrauttmap.size(); i++)
+        {
+            {
+                //get frame number for each utterance
+                mapi = extrauttmap[i];
+
+                for (size_t j = validframes[mapi]; j < mbsize; j++)
+                {
+                    if (pMBLayout->IsEnd(mapi, j))
+                    {
+                        numframes = j - validframes[mapi] + 1;
+                        break;
+                        //validframes.push_back(j + 1);
+                    }
+                }
+
+                //if (numframes > tempmatrix.GetNumCols())
+                    {
+                        tempmatrix.Resize(numrows, numframes);
+
+                    }
+
+                    Microsoft::MSR::CNTK::Matrix<ElemType> loglikelihoodForCurrentParallelUtterance = prob.ColumnSlice(mapi + (validframes[mapi] * samplesInRecurrentStep), ((numframes - 1) * samplesInRecurrentStep) + 1);
+                    tempmatrix.CopyColumnsStrided(loglikelihoodForCurrentParallelUtterance, numframes, samplesInRecurrentStep, 1);
+
+                    /*for (size_t nframe = 0; nframe < numframes; nframe++)
+                    {
+                    Microsoft::MSR::CNTK::Matrix<ElemType> columndata = prob.ColumnSlice((nframe + validframes[mapi])*samplesInRecurrentStep + mapi, 1);
+                    tempmatrix.SetColumn(columndata, nframe);
+                    }*/
+            }
+
+            array_ref<size_t> uidsstripe(&uids[ts], numframes);
+
+            //make phone sequence 
+            phoneseq.clear();
+            phonebound.clear();
+            phoneseq.push_back(65535);
+            phonebound.push_back(0);
+            for (size_t i = 0; i < uidsstripe.size(); i++)
+            {
+                if (uidsstripe[i] != 65535 /*&& uids[i] != 0 && uids[i] != 1 && uids[i] != 2 && uids[i] != 34*/)
+                {
+                    for (blankid = numrows - blanknum; blankid < numrows; blankid++)
+                    {
+                        phoneseq.push_back(blankid);
+                        phonebound.push_back(i);
+                    }
+                    phoneseq.push_back(uidsstripe[i]);
+                    phonebound.push_back(i);
+                }
+
+            }
+            //phoneseq.push_back(blankid);
+            for (blankid = numrows - blanknum; blankid < numrows; blankid++)
+            {
+                phoneseq.push_back(blankid);
+                phonebound.push_back(numframes);
+            }
+            phoneseq.push_back(65535);
+            phonebound.push_back(numframes);
+
+            oneUttCTCScore.Resize(numrows, numframes);
+
+            oneUttCTCScore.AssignCTCScore(tempmatrix, alpha, beta, phoneseq, phonebound, finalscore, numframes, blanknum, true);
+            rowsum.Resize(1, numframes);
+
+
+            finalscore += -1 * beta.Get00Element();
+            ElemType ftemp = -1 * beta.Get00Element() / numframes;
+            if (ftemp > 100)
+            {
+                tempmatrix.Print("prob");
+                alpha.Print("alpha");
+                beta.Print("beta");
+                oneUttCTCScore.Print("gamma");
+            }
+            fprintf(stderr, "totalscore: %f\n", ftemp);
+
+            oneUttCTCScore.VectorSum(oneUttCTCScore, rowsum, true);
+            //rowsum.Print("row sum");
+            oneUttCTCScore.RowElementDivideBy(rowsum);
+
+            //oneUttCTCScore.Print("gamma_after");
+            if (samplesInRecurrentStep == 1)
+            {
+                tempmatrix = functionValues.ColumnSlice(ts, numframes);
+                tempmatrix.SetValue(oneUttCTCScore);
+            }
+
+            // set gamma for multi channel
+            if (samplesInRecurrentStep > 1)
+            {
+                Microsoft::MSR::CNTK::Matrix<ElemType> gammaFromLatticeForCurrentParallelUtterance = functionValues.ColumnSlice(mapi + (validframes[mapi] * samplesInRecurrentStep), ((numframes - 1) * samplesInRecurrentStep) + 1);
+                gammaFromLatticeForCurrentParallelUtterance.CopyColumnsStrided(oneUttCTCScore, numframes, 1, samplesInRecurrentStep);
+                /*for (size_t nframe = 0; nframe < numframes; nframe++)
+                {
+                Microsoft::MSR::CNTK::Matrix<ElemType> columndata = oneUttCTCScore.ColumnSlice(nframe, 1);
+                functionValues.SetColumn(columndata, (nframe + validframes[mapi])*samplesInRecurrentStep + mapi);
+                }*/
+            }
+
+            if (samplesInRecurrentStep > 1)
+                validframes[mapi] += numframes;
+
+            /*if (samplesInRecurrentStep == 1)
+            ts += numframes;
+            else
+            ts = (i+1) * mbsize;*/
+            ts += numframes;
+        }
+        functionvalue(0, 0) = finalscore;
+
+    }
+    void doCTC_m(Microsoft::MSR::CNTK::Matrix<ElemType>& functionvalue, const Microsoft::MSR::CNTK::Matrix<ElemType>& prob, Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues, std::vector<size_t> &uids, size_t samplesInRecurrentStep,
+        std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, std::vector<size_t> &extrauttmap, int delayConstraint = -1)
+        //UMATRIX & Pugv, UMATRIX & uids, const UIDSVECTOR & phoneboundary)
+    {
+        std::vector<size_t> validframes;
+        validframes.assign(samplesInRecurrentStep, 0);
+        //convert from Microsoft::MSR::CNTK::Matrix to  msra::math::ssematrixbase
+        size_t numrows = prob.GetNumRows();
+        size_t numcols = prob.GetNumCols();
+        m_deviceid = prob.GetDeviceId();
+        Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
+        Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
+        Microsoft::MSR::CNTK::Matrix<ElemType> rowsum(m_deviceid);
+        Microsoft::MSR::CNTK::Matrix<ElemType> matrixphoneseqs(CPUDEVICE);
+        Microsoft::MSR::CNTK::Matrix<ElemType> matrixphonebounds(CPUDEVICE);
+
+        ElemType finalscore = 0;
+
+        std::vector<size_t> phoneseq;
+        std::vector<size_t> phonebound;
+        size_t blankid = numrows - 1;
+
+        size_t mbsize = numcols / samplesInRecurrentStep;
+        if (samplesInRecurrentStep > 1)
+        {
+            //assert(mbsize == pMBLayout->GetNumCols());
+        }
+
+        size_t mapi = 0;
+
+        //cal gamma for each utterance
+        size_t ts = 0;
+        size_t numframes = 0;
+        std::vector<size_t> uttBeginFrame;
+        std::vector<size_t> uttFrameNum;
+        std::vector<size_t> uttPhoneNum;
+
+        std::vector<std::vector<size_t>> alluttphoneseqs;
+        std::vector<std::vector<size_t>> alluttphonebounds;
+        int maxPhoneNum = 0;
+
+        //size_t ts_uid = 0;                
+        for (size_t i = 0; i < extrauttmap.size(); i++)
+        {
+
+            //get frame number for each utterance
+            mapi = extrauttmap[i];
+
+            for (size_t j = validframes[mapi]; j < mbsize; j++)
+            {
+                if (pMBLayout->IsEnd(mapi, j))
+                {
+                    numframes = j - validframes[mapi] + 1;
+                    break;
+                    //validframes.push_back(j + 1);
+                }
+            }
+
+            uttBeginFrame.push_back(validframes[mapi]);
+            uttFrameNum.push_back(numframes);
+
+            array_ref<size_t> uidsstripe(&uids[ts], numframes);
+
+            //make phone sequence 
+            phoneseq.clear();
+            phoneseq.push_back(65535);
+
+            phonebound.clear();
+            phonebound.push_back(0);
+            for (size_t i = 0; i < uidsstripe.size(); i++)
+            {
+                if (uidsstripe[i] != 65535 && uidsstripe[i] != blankid )
+                {
+                    phoneseq.push_back(blankid);
+                    phonebound.push_back(i);
+                    phoneseq.push_back(uidsstripe[i]);
+                    phonebound.push_back(i);
+                }
+            }
+            phoneseq.push_back(blankid);
+            phonebound.push_back(numframes);
+            phoneseq.push_back(65535);
+            phonebound.push_back(numframes);
+
+            alluttphoneseqs.push_back(phoneseq);
+            alluttphonebounds.push_back(phonebound);
+            uttPhoneNum.push_back(phoneseq.size());
+            if (phoneseq.size() > maxPhoneNum)
+                maxPhoneNum = phoneseq.size();
+
+            if (samplesInRecurrentStep > 1)
+                validframes[mapi] += numframes;
+
+            ts += numframes;
+        }
+        matrixphoneseqs.Resize(maxPhoneNum, extrauttmap.size());
+        for (size_t i = 0; i < extrauttmap.size(); i++)
+        {
+            for (size_t j = 0; j < alluttphoneseqs[i].size(); j++)
+            {
+                matrixphoneseqs(j, i) = (ElemType)alluttphoneseqs[i][j];
+            }
+        }
+        //matrixphoneseqs.Print("phoneseq");
+        matrixphoneseqs.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
+
+        matrixphonebounds.Resize(maxPhoneNum, extrauttmap.size());
+        for (size_t i = 0; i < extrauttmap.size(); i++)
+        {
+            for (size_t j = 0; j < alluttphoneseqs[i].size(); j++)
+            {
+                matrixphonebounds(j, i) = (ElemType)alluttphonebounds[i][j];
+            }
+        }
+        //matrixphoneseqs.Print("phoneseq");
+        matrixphonebounds.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
+
+        functionValues.AssignCTCScore_m(prob, alpha, beta, matrixphoneseqs, matrixphonebounds, finalscore, extrauttmap, uttBeginFrame,
+            uttFrameNum, uttPhoneNum, samplesInRecurrentStep, mbsize, delayConstraint, true);
+        rowsum.Resize(1, samplesInRecurrentStep*mbsize);
+        //finalscore += -1 * beta.Get00Element();
+        //alpha.Print("alpha");
+        //ElemType ftemp = -1 * beta.Get00Element() / uttFrameNum[0];
+        if (finalscore > 100)
+        {
+            //prob.Print("prob", 0, 44, 0, 8);
+            //alpha.Print("alpha", 0, 44, 0, 8);
+            //beta.Print("beta",0, 44,0,8);
+            //functionValues.Print("gamma", 0, 44, 0, 8);
+
+            prob.Print("prob");
+            alpha.Print("alpha");
+            beta.Print("beta");
+            functionValues.Print("gamma");
+        }
+        fprintf(stderr, "totalscore: %f\n", finalscore);
+
+
+        functionValues.VectorSum(functionValues, rowsum, true);
+        //rowsum.Print("row sum");
+        functionValues.RowElementDivideBy(rowsum);
+
+        //finalscore += -1 * beta.Get00Element();
+        functionvalue(0, 0) = -finalscore*uids.size();
+    }
 private:
     // Helper methods for copying between ssematrix objects and CNTK matrices
     void CopyFromCNTKMatrixToSSEMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& src, size_t numCols, msra::math::ssematrixbase& dest)

@@ -337,6 +337,11 @@ public:
     GPUMatrix<ElemType>& DropFrame(const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& gamma, const ElemType& threshhold);
     GPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const GPUMatrix<ElemType>& label, const GPUMatrix<ElemType>& dnnoutput, const GPUMatrix<ElemType>& gamma, ElemType alpha);
 
+    GPUMatrix<ElemType>& AssignCTCScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta, const std::vector<size_t> phoneseq,
+            const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise);
+    GPUMatrix<ElemType>& AssignCTCScore_m(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+        GPUMatrix<ElemType> phoneseq, GPUMatrix<ElemType> phonebound, ElemType &totalscore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
+             std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxframenum, int delayConstraint, const bool isColWise);
     GPUMatrix<ElemType>& InplaceSqrt();
     GPUMatrix<ElemType>& AssignSqrtOf(const GPUMatrix<ElemType>& a);
 

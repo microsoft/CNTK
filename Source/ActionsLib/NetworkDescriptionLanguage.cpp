@@ -207,6 +207,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(PastValueNode), L"Delay")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarDeNormalizationNode), L"PerDimMVDeNorm")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarNormalizationNode), L"PerDimMVNorm")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(PhoneErrorNode), L"PhoneError")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PlusNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ReciprocalNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ReconcileDynamicAxisNode))) ret = true;
@@ -219,6 +220,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceDecoderNode), L"SEWithSM")) ret = true;
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(SequenceWithSoftmaxNode), L"SEWithSM")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(CTCwithSoftmaxNode), L"CTCWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SigmoidNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SinNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(SoftmaxNode))) ret = true;

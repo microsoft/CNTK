@@ -851,6 +851,7 @@ public:
             RuntimeError("htkmlfentry: state %s not found in statelist", toks[2]);
         const size_t uid = iter->second; // get state index
         setdata(ts, te, uid);
+        phonestart = 65535;
         // phone boundary
         if (hmmnamehash.size() > 0)
         {

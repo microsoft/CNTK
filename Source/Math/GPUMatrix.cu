@@ -4216,6 +4216,162 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemTyp
     return *this;
 }
 
+template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+        const std::vector<size_t> phoneseq, const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
+    {
+        //Resize(a.GetNumRows(), a.GetNumCols());  do resize outside
+        if (isColWise)
+        {
+            PrepareDevice();
+            long N = (long)framenum;
+            long M = (long)phoneseq.size();
+            
+
+            long phonenum = prob.GetNumRows();
+
+            
+            int blocksPerGrid = (int)ceil(1.0 * M / GridDim::maxThreadsPerBlock);
+            size_t *gpuphoneseq;
+            size_t *gpuphonebound;
+            
+            CUDA_CALL(cudaMalloc((void **)&gpuphoneseq, phoneseq.size()*sizeof(size_t)));
+            CUDA_CALL(cudaMemcpy(gpuphoneseq, phoneseq.data(), phoneseq.size()*sizeof(size_t), cudaMemcpyHostToDevice));
+
+            CUDA_CALL(cudaMalloc((void **)&gpuphonebound, phonebound.size()*sizeof(size_t)));
+            CUDA_CALL(cudaMemcpy(gpuphonebound, phonebound.data(), phonebound.size()*sizeof(size_t), cudaMemcpyHostToDevice));
+
+            cudaEvent_t done = nullptr;
+            CUDA_CALL(cudaEventCreate(&done));
+            for (long t = 0; t < N; t++)
+            {
+                _assignAlphaScore << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(prob.Data(), alpha.Data(), gpuphoneseq, gpuphonebound, t, M, phonenum, blanknum);
+                //_assignSigmoidOf << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(prob.Data(), alpha.Data(), N);
+            }
+            for (long t = N - 1; t >= 0; t--)
+            {
+                _assignBetaScore << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(prob.Data(), beta.Data(), gpuphoneseq, gpuphonebound, t, N, M, phonenum, blanknum);
+            }
+            totalscore = 0.0;
+            _assigntotalscore << <1, 1, 0, t_stream >> > (beta.Data(), blanknum);
+            
+            //printf("end of beta\n");
+            blocksPerGrid = (int)ceil(1.0*N / GridDim::maxThreadsPerBlock);
+            _assignCTCScore << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), gpuphoneseq, N, M, phonenum);
+            
+            CUDA_CALL(cudaFree(gpuphoneseq));
+            CUDA_CALL(cudaFree(gpuphonebound));
+            
+            CUDA_CALL(cudaEventRecord(done));
+            CUDA_CALL(cudaEventSynchronize(done));
+            CUDA_CALL(cudaEventDestroy(done));
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+
+
+        return *this;
+    }
+
+    
+    template<class ElemType>
+    GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
+        const GPUMatrix<ElemType> phoneseq, const GPUMatrix<ElemType> phonebound, ElemType &totalscore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
+        std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxframenum, int delayConstraint, const bool isColWise)
+    {
+        //Resize(a.GetNumRows(), a.GetNumCols());  do resize outside
+        if (isColWise)
+        {
+            PrepareDevice();
+            long totalphonenum = prob.GetNumRows();
+            size_t uttnum = uttFrameNum.size();
+            size_t maxphonenum = phoneseq.GetNumRows();
+            
+
+            size_t *gpuframenum;
+            CUDA_CALL(cudaMalloc((void **)&gpuframenum, uttnum*sizeof(size_t)));
+            CUDA_CALL(cudaMemcpy(gpuframenum, uttFrameNum.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
+
+            size_t *gpuphonenum;
+            CUDA_CALL(cudaMalloc((void **)&gpuphonenum, uttnum*sizeof(size_t)));
+            CUDA_CALL(cudaMemcpy(gpuphonenum, uttPhoneNum.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
+
+            size_t *gpubeginframe;
+            CUDA_CALL(cudaMalloc((void **)&gpubeginframe, uttnum*sizeof(size_t)));
+            CUDA_CALL(cudaMemcpy(gpubeginframe, uttBeginFrame.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
+
+            size_t *gpuuttmap;
+            CUDA_CALL(cudaMalloc((void **)&gpuuttmap, uttnum*sizeof(size_t)));
+            CUDA_CALL(cudaMemcpy(gpuuttmap, uttMap.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
+
+            ElemType *gpuscores;
+            CUDA_CALL(cudaMalloc((void **)&gpuscores, uttnum*sizeof(ElemType)));
+
+            cudaEvent_t done = nullptr;
+            CUDA_CALL(cudaEventCreate(&done));
+            dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+            dim3 block_tail((uttnum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxphonenum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+            //printf("delay: %d\n", delayConstraint);
+            
+            for (long t = 0; t < maxframenum; t++)
+            {
+                
+                _assignAlphaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneseq.Data(), phonebound.Data(), gpuuttmap,
+                    gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t, maxphonenum, totalphonenum, delayConstraint);
+                //_assignSigmoidOf << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(prob.Data(), alpha.Data(), N);
+            }
+            for (long t = maxframenum - 1; t >= 0; t--)
+            {
+                _assignBetaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneseq.Data(), phonebound.Data(), gpuuttmap,
+                    gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t, maxphonenum, totalphonenum, delayConstraint);
+            }
+
+            _assigntotalscore_m << <uttnum, 1, 0, t_stream >> > (beta.Data(), gpuscores, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);
+            
+            dim3 block_tail_2((uttnum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxframenum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
+            
+            _assignCTCScore_m << < block_tail_2, thread_tail, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneseq.Data(), uttnum, gpuuttmap,
+                gpubeginframe, gpuphonenum, gpuframenum, samplesInRecurrentStep, maxframenum*samplesInRecurrentStep, maxphonenum, totalphonenum);
+            _assigntotaluttscore_m << <1, 1, 0, t_stream >> > (beta.Data(), totalscore, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);
+
+            ElemType *scores;
+            scores = (ElemType*) malloc(sizeof(ElemType)*uttnum);
+            CUDA_CALL(cudaMemcpyAsync(scores, gpuscores, sizeof(ElemType) * uttnum,  cudaMemcpyDeviceToHost, t_stream));
+            
+
+            size_t totalframenum = 0;
+            
+
+            for (size_t utt = 0; utt < uttFrameNum.size(); utt++)
+            {
+                totalframenum += uttFrameNum[utt];
+                totalscore += scores[utt];
+            }
+
+            totalscore /= totalframenum;
+            free(scores);
+            CUDA_CALL(cudaFree(gpuframenum));
+            CUDA_CALL(cudaFree(gpuphonenum));
+            CUDA_CALL(cudaFree(gpubeginframe));
+            CUDA_CALL(cudaFree(gpuuttmap));
+            CUDA_CALL(cudaFree(gpuscores));
+
+            CUDA_CALL(cudaEventRecord(done));
+            CUDA_CALL(cudaEventSynchronize(done));
+            CUDA_CALL(cudaEventDestroy(done));
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+
+
+        return *this;
+    }
+
+
 template <class ElemType>
 void GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const bool isafixed)
 {
