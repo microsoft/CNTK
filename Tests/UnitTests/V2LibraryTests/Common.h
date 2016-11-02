@@ -157,16 +157,16 @@ inline CNTK::FunctionPtr FullyConnectedLinearLayer(CNTK::Variable input, size_t 
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
 
-    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(), device);
-    auto timesFunction = CNTK::Times(timesParam, input);
+    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(), device, L"timesParam");
+    auto timesFunction = CNTK::Times(timesParam, input, L"times");
 
-    auto plusParam = CNTK::Parameter({ outputDim }, 0.0f, device);
+    auto plusParam = CNTK::Parameter({ outputDim }, 0.0f, device, L"plusParam");
     return CNTK::Plus(plusParam, timesFunction, outputName);
 }
 
-inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t outputDim, const CNTK::DeviceDescriptor& device, const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity)
+inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t outputDim, const CNTK::DeviceDescriptor& device, const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity, const std::wstring& outputName = L"")
 {
-    return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device));
+    return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device, outputName));
 }
 
 inline CNTK::FunctionPtr FullyConnectedFeedForwardClassifierNet(CNTK::Variable input,
