@@ -14,7 +14,7 @@ from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 from cntk.initializer import glorot_uniform
 from cntk import Trainer
-from cntk.learner import momentum_sgd, learning_rate_schedule
+from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, UnitType
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu, convolution, pooling, PoolingType_Max
 
 #
@@ -122,13 +122,13 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     minibatch_size = 64
 
     # For basic model
-    lr_per_sample       = [0.00015625]*10+[0.000046875]*10+[0.0000156]
-    momentum_per_sample = 0.9 ** (1.0 / minibatch_size)  # BUGBUG: why does this work? Should be as time const, no?
-    l2_reg_weight       = 0.03
+    lr_per_minibatch       = learning_rate_schedule([0.01]*10 + [0.003]*10 + [0.001], epoch_size, UnitType.minibatch)
+    momentum_per_minibatch = momentum_schedule(0.9, UnitType.minibatch)  # BUGBUG: why does this work? Should be as time const, no?
+    l2_reg_weight          = 0.03
 
     # trainer object
-    lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner     = momentum_sgd(z.parameters, lr_schedule, momentum_per_sample, 
+    learner     = momentum_sgd(z.parameters, lr = lr_per_minibatch, 
+                               momentum = momentum_per_minibatch, 
                                l2_regularization_weight = l2_reg_weight)
     trainer     = Trainer(z, ce, pe, learner)
 
