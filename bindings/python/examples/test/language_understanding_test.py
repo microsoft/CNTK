@@ -60,6 +60,14 @@ def BiRecurrence(fwd, bwd):
     apply_x = splice ([F(x), G(x)])
     return apply_x
 
+def BNBiRecurrence(fwd, bwd): # special version that calls one shared BN instance at two places, for testing BN param tying
+    F = Recurrence(fwd)
+    G = Recurrence(fwd, go_backwards=True)
+    BN = BatchNormalization()
+    x = Placeholder()
+    apply_x = splice ([F(BN(x)), G(BN(x))])
+    return apply_x
+
 # TODO: the name is wrong
 def test_seq_classification_error(device_id):
     DeviceDescriptor.set_default_device(cntk_device(device_id))
@@ -84,6 +92,28 @@ def test_seq_classification_error(device_id):
         #        select_last,  # fails here with an axis problem
         #        Dense(num_labels)
         #    ]), [0.084, 0.407364])
+
+
+
+        # replace lookahead by bidirectional model
+        with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
+            test_a_model('replace lookahead by bidirectional model, with shared BN', Sequential([
+                Embedding(emb_dim),
+                #BatchNormalization(),
+                BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
+                BatchNormalization(),
+                Dense(num_labels)
+            ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
+
+        # replace lookahead by bidirectional model
+        with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
+            test_a_model('replace lookahead by bidirectional model', Sequential([
+                Embedding(emb_dim),
+                BatchNormalization(),
+                BiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
+                BatchNormalization(),
+                Dense(num_labels)
+            ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
 
         # BatchNorm test case for global-corpus aggregation
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day

@@ -2241,7 +2241,7 @@ public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
                            double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind, size_t samplesSeen = 0) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_runCountLegacy((ElemType)samplesSeen),
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_runCountLegacy(samplesSeen),
         m_convertRunningVariancePending(false)
     {
     }
@@ -2264,7 +2264,7 @@ public:
         fstream << m_normTimeConst;
         fstream << m_blendTimeConst;
         fstream << (int32_t)m_imageLayoutKind;
-        fstream << (size_t)m_runCountLegacy;  // legacy models only, unused otherwise  --TODO: bump file version to not save this anymore
+        fstream << m_runCountLegacy;  // legacy models only, unused otherwise  --TODO: bump file version to not save this anymore
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
     }
@@ -2281,11 +2281,7 @@ public:
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
             if (modelVersion >= CNTK_MODEL_VERSION_13)
-            {
-                size_t runCountLegacy;
-                fstream >> runCountLegacy;
-                m_runCountLegacy = (ElemType)runCountLegacy;  // legacy models only, unused otherwise  --TODO: bump file version to not save this anymore
-            }
+                fstream >> m_runCountLegacy;  // legacy models only, unused otherwise  --TODO: bump file version to not save this anymore
             else
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;
@@ -2336,9 +2332,9 @@ public:
         {
             // Prior to version 12, minibatch count was stored instead of samples seen.
             // Approximate by assuming minibatch size 16, inform about that.
-            m_runCountLegacy = (ElemType)(16 * mbCount);
+            m_runCountLegacy = (16 * mbCount);
             fprintf(stderr,
-                    "INFO: %ls: loading pre-CuDNNv5 model: approximated mini-batch count of %" PRIu64 " as %.0f trained samples.\n"
+                    "INFO: %ls: loading pre-CuDNNv5 model: approximated mini-batch count of %" PRIu64 " as %" PRIu64 " trained samples.\n"
                     "      Statistics in further training may be biased; consider re-training instead.\n",
                     NodeName().c_str(), mbCount, m_runCountLegacy);
 
@@ -2367,24 +2363,27 @@ public:
         }
     }
 
-    size_t GetSamplesSeen() const { return (size_t)RunCount(); } // for V2 API interop
+    size_t GetSamplesSeen() const { return RunCount(); } // for V2 API interop
 
 private: // time-constant conversions
 
-    // RunCount() returns a reference to the accumulator for the 0-th order stats.
+    // RunCount() and SetRunCount() abstract accessing the accumulator for the 0-th order stats.
     // These are stored in one of the Inputs (where they can be tied). However,
     // old models did not tie this correctly. For those, they are stored in the node.
-    void SetRunCount(ElemType val)
+    void SetRunCount(size_t val)
     {
         if (GetNumInputs() > RUN_COUNT)
-            Input(RUN_COUNT)->Value().SetColumn(&val, 0); // (maps to cudaMemcpy() as opposed SetValue() which runs a custom kernel)
+        {
+            auto eval = (ElemType)val;
+            Input(RUN_COUNT)->Value().SetColumn(&eval, 0); // (maps to cudaMemcpy() as opposed SetValue() which runs a custom kernel)
+        }
         else
             m_runCountLegacy = val;
     }
 
-    ElemType RunCount() const // const version of above; keep identical
+    size_t RunCount() const // const version of above; keep identical
     {
-        return (GetNumInputs() > RUN_COUNT) ? Input(RUN_COUNT)->Value().Get00Element() : m_runCountLegacy;
+        return (GetNumInputs() > RUN_COUNT) ? (size_t)Input(RUN_COUNT)->Value().Get00Element() : m_runCountLegacy;
     }
 
     // map time constants to exp avg factor
@@ -2393,21 +2392,18 @@ private: // time-constant conversions
     {
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
-        {
-            if (RunCount() == 0)
-                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
             return 0;                                        // (m_normTimeConst == infinity) no new contribution from current minibatch
-        }
 
         // Initialization case: only use current minibatch.
-        if (RunCount() == 0)
+        size_t runCount = RunCount();
+        if (runCount == 0)
             return 1.0;
 
         double numSamples = (double)GetMBLayout()->GetActualNumSamples();
 
-        // REVIEW alexeyk: hack, m_normTimeConst < 0 is used to denote corpus-level statistics (without forgetting factor).
+        // m_normTimeConst < 0 is used to denote corpus-level statistics (without forgetting factor).
         if (m_normTimeConst < 0)
-            return numSamples / (numSamples + RunCount()); // (this is the hack case)
+            return numSamples / (numSamples + runCount); // (this is the hack case)
 
         // Convert to per-minibatch factor. The limit, positive infinity, means that running mean/var parameters are "frozen"
         // that is, do not require updates.
@@ -2426,11 +2422,7 @@ private: // time-constant conversions
     {
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
-        {
-            if (RunCount() == 0)
-                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
             return 1.0;                 // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
-        }
 
         // Initialization case: only use current minibatch.
         if (RunCount() == 0)
@@ -2487,6 +2479,7 @@ public:
     // Note: This function assumes that inputIndex=0 is called before the others.
     // BUGBUG: The node should not make assumptions in which order the inputs' derivates are computed. It currently assumes to start with 0.
     // BUGBUG: If the input has no learnables (e.g. using BN instead of corpus mean/var norm), this will not be called for inputIndex=0 at all.
+    //         And we can't just call it since we cannot overwrite the gradient. Needs some reorganization of the code, and/or a temp buffer.
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // Must be in training mode.
@@ -2503,10 +2496,10 @@ public:
 
         if (inputIndex == DATA) // derivative with respect to the input.
         {
-            auto sliceOutputGrad                = MaskedGradientFor(fr);
-            auto sliceInputValue                = Input(DATA)->ValueFor(fr);
-            const Matrix<ElemType>& scale       = Input(SCALE)->Value();
-            const Matrix<ElemType>& bias        = Input(BIAS)->Value();
+            auto sliceOutputGrad          = MaskedGradientFor(fr);
+            auto sliceInputValue          = Input(DATA)->ValueFor(fr);
+            const Matrix<ElemType>& scale = Input(SCALE)->Value();
+            const Matrix<ElemType>& bias  = Input(BIAS)->Value();
 
             auto sliceInputGrad = Input(DATA)->GradientFor(fr);
             m_dScale->Resize(scale); // gradients for scale and bias get stored here
@@ -2515,28 +2508,21 @@ public:
             double blendFactor = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
 
             // Compute all derivatives in one step. Save derivatives with respect to scale and bias in temp matrices.
-            // TODO: Move this out. Follow the same pattern as the RNN node.
+            // TODO: Move this out. Follow the same pattern as the RNN node. But can't without requiring another buffer.
             m_bnEng->Backward(sliceInputValue, sliceOutputGrad, // (in)  input from below, gradient from above
-                              sliceInputGrad,                   // (out) gradient for data input goes here
+                              sliceInputGrad,                   // (out) gradient for data input goes here  --TODO: Check if cudnn engine adds the gradient, or just overwrites (BUGBUG). CNTK engine is OK.
                               scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
                               blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
-                              *m_savedMean, *m_savedInvStdDev,   // (in)  saved mean/invstddev values used in ForwardProp()
+                              *m_savedMean, *m_savedInvStdDev,  // (in)  saved mean/invstddev values used in ForwardProp()
                               *m_dScale, *m_dBias);             // (out) gradients for scale and bias
         }
-        else if (inputIndex == SCALE) // derivative with respect to the scale
+        else if (inputIndex == SCALE) // derivative with respect to the scale, precomputed during input derivative computation
         {
-            // Derivative with respect to the scale was precomputed during input derivative computation.
-            Matrix<ElemType>& grad = Input(SCALE)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dScale->Data());
-            // BUGBUG: ^^ This should add the gradient, not overwrite it.
-            // BUGBUG: m_dScale is a perfectly cromulent Matrix, we can use ScaleAndAdd() as we should.
+            Input(SCALE)->Gradient() += *m_dScale;
         }
-        else if (inputIndex == BIAS) // derivative with respect to the bias
+        else if (inputIndex == BIAS) // derivative with respect to the bias, precomputed during input derivative computation
         {
-            // Derivative with respect to the bias was precomputed during input derivative computation.
-            Matrix<ElemType>& grad = Input(BIAS)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->Data());
-            // BUGBUG: ^^ Also here, this should add the gradient, not overwrite it.
+            Input(BIAS)->Gradient() += *m_dBias;
         }
         // No derivatives with respect to running mean and variance.
     }
@@ -2547,7 +2533,7 @@ public:
         double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
         double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
         if (expAvgFactor != 0 || blendFactor != 1)
-            SetRunCount(RunCount() + (ElemType)GetMBLayout()->GetActualNumSamples());
+            SetRunCount(RunCount() + GetMBLayout()->GetActualNumSamples());
 
         Base::EndBackprop();
     }
@@ -2775,7 +2761,7 @@ private:
     // Samples seen count in untied back-compat mode, used to compute cumulative corpus average.
     // This field is used for old models only. New models store the 0-th order stats in yet another Input,
     // in order to do the correct accumulator tying.
-    ElemType m_runCountLegacy; // legacy models only
+    size_t m_runCountLegacy; // legacy models only
 
     // Interpolated actual mean/inverse stddev values. Pre-computed on forward pass, also used in gradient computation.
     shared_ptr<Matrix<ElemType>> m_savedMean;
