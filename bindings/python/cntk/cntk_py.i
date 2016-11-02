@@ -74,7 +74,7 @@
 //
 %feature("shadow") CNTK::Variable::DynamicAxes %{
 def dynamic_axes(self):
-    return tuple(reversed($action(self)))
+    return ($action(self))[::-1]
 %}
 
 %fragment("NDShapeToTuple", "header")
@@ -296,6 +296,12 @@ fail:
 
     void __setitem__(const wchar_t* key, CNTK::DictionaryValue value) {
         (*($self))[key] = value;
+    }
+}
+
+%extend CNTK::Axis {
+    bool __eq__(const CNTK::Axis& other) const {
+        return *$self == other;
     }
 }
 

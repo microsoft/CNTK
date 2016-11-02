@@ -333,7 +333,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
         normalization_time_constant(`float`, default 5000): time constant for computing running average of
-         mean and variance as a low-pass filtered version of the batch statistics.
+         mean and variance as a low-pass filtered version of the batch statistics. 
         blend_time_constant(`float`, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
@@ -1702,32 +1702,32 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
 
 @typemap
 def random_sample_inclusion_frequency(
-    weights,
-    num_samples,
-    allow_duplicates,
+    weights, 
+    num_samples, 
+    allow_duplicates, 
     name=''):
     '''
     For weighted sampling with the specifed sample size (`num_samples`)
     this node computes the expected number of occurences of each class
-    in the the sampled set. In case of sampling without replacement
+    in the the sampled set. In case of sampling without replacement 
     the result is only an estimate which might be quite rough in the
     case of small sample sizes.
-    Intended uses are e.g. sampled softmax, noise contrastive
+    Intended uses are e.g. sampled softmax, noise contrastive 
     estimation etc.
-    This operation will be typically used together
+    This operation will be typically used together 
     with :func:`random_sample`.
 
     Args:
-        weights: input vector of sampling weights which should be
-            non-negative numbers.
+        weights: input vector of sampling weights which should be 
+            non-negative numbers. 
         num_samples (`int`): number of expected samples
-        allow_duplicates (`bool`): If sampling is done
+        allow_duplicates (`bool`): If sampling is done 
             with replacement (`True`) or without (`False`).
 
     Examples:
         >>> import numpy as np
         >>> from cntk import *
-        >>> # weight vector with 100 '1000'-values followed
+        >>> # weight vector with 100 '1000'-values followed 
         >>> # by 100 '1' values
         >>> w1 = np.full((100),1000, dtype = np.float)
         >>> w2 = np.full((100),1, dtype = np.float)
@@ -1752,9 +1752,9 @@ def random_sample_inclusion_frequency(
     weights = sanitize_input(weights)
 
     return random_sample_inclusion_frequency(
-        weights,
-        num_samples,
-        allow_duplicates,
+        weights, 
+        num_samples, 
+        allow_duplicates, 
         name)
 
 
@@ -1811,7 +1811,7 @@ from cntk.axis import Axis
 
 @typemap
 def input_variable(shape, dtype=np.float32, needs_gradient=True, is_sparse=False,
-                   dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
+                   dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
     '''
     It creates an input node.
 
@@ -1863,7 +1863,7 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
         shape = sanitize_shape(shape)
 
     if dynamic_axes is None:
-        dynamic_axes = Axis.unknown_dynamic_axes
+        dynamic_axes = Axis.unknown_dynamic_axes()
 
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
