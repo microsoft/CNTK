@@ -915,7 +915,7 @@ namespace CNTK
             }
             case PrimitiveOpType::BatchNormalization:
             {
-                assert(inputs.size() == 5);
+                assert(inputs.size() == 6);
                 auto spatial = functionConfig[PrimitiveFunction::AttributeNameSpatial].Value<bool>();
                 outputShape = BatchNormalizationOutputShape(inputs, spatial, inferDimensions);
                 break;
@@ -2950,6 +2950,7 @@ namespace CNTK
                                    const Variable& bias,
                                    const Variable& runningMean,
                                    const Variable& runningInvStd,
+                                   const Variable& runningCount,
                                    bool spatial,
                                    double normalizationTimeConstant,
                                    double blendTimeConstant,
@@ -2964,7 +2965,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
         additionalProperties[PrimitiveFunction::AttributeNameUseCuDNNEngine] = useCuDNNEngine;
 
-        std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd };
+        std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd, runningCount };
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization,
                                                                              operands,
                                                                              std::move(additionalProperties),

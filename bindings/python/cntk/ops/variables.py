@@ -201,7 +201,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
                 dtype = np.float32
 
         if np.isscalar(value):
-            super().__init__(utils.sanitize_shape(shape), sanitize_dtype_cntk(dtype), value)
+            super().__init__(utils.sanitize_shape(shape), sanitize_dtype_cntk(dtype), value, device)
         else:
             ndav = sanitize_value(shape, value, dtype, device)
             super().__init__(ndav, name) 

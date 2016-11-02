@@ -578,26 +578,33 @@ namespace CNTK
         static NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions)
         {
             NDShape mainOperandShape = operands[0].Shape();
-            for (size_t i = 1; i < operands.size(); i++)
+            for (size_t i = 1; i < operands.size(); i++) // all but first and last arguments must match the first; last one must be a [1]
             {
                 if (!operands[i].DynamicAxes().empty())
                     InvalidArgument("BatchNormalization: Input[%d] has a dynamic axis that is not allowed!", (int)i);
 
                 // Infer dimensions of learnable parameters
                 auto paramShape = operands[i].Shape();
-                if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasInferredDimension())
+                if (i < operands.size() - 1)
                 {
-                    size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
-                    paramShape[0] = total;
-                    std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
-                    UpdateOperandShapes(newParamShape);
-                }
+                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasInferredDimension())
+                    {
+                        size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
+                        paramShape[0] = total;
+                        std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
+                        UpdateOperandShapes(newParamShape);
+                    }
 
-                if (!paramShape.HasInferredDimension() && !operands[1].Shape().HasInferredDimension() && (paramShape != operands[1].Shape()))
-                    InvalidArgument("BatchNormalization: Input[%d] has a shape (%S) different from Input[1] (%S), but they must be identical.", 
-                                    (int)i,
-                                    AsStringForErrorReporting(paramShape).c_str(),
-                                    AsStringForErrorReporting(operands[1].Shape()).c_str());
+                    if (!paramShape.HasInferredDimension() && !operands[1].Shape().HasInferredDimension() && (paramShape != operands[1].Shape()))
+                        InvalidArgument("BatchNormalization: Input[%d] has a shape (%S) different from Input[1] (%S), but they must be identical.", 
+                                        (int)i,
+                                        AsStringForErrorReporting(paramShape).c_str(),
+                                        AsStringForErrorReporting(operands[1].Shape()).c_str());
+                }
+                else if (paramShape != NDShape(std::vector<size_t>{ 1 })) // last arguments is count, must be a 1-dim vector
+                {
+                    InvalidArgument("BatchNormalization: Input[%d] must be a 1-dimensional vector.", (int)i);
+                }
             }
 
             return UnaryElementwiseOpOutputShape(mainOperandShape);
