@@ -356,14 +356,8 @@ fail:
 %ignore CNTK::NDShape::AppendShape;
 %ignore CNTK::NDShape::Dimensions;
 
-%typemap(out) CNTK::NDShape {
-    size_t rank = $1.Rank();
-    $result = PyTuple_New(rank);
-    for (size_t i=0; i<rank; i++)
-    {
-        size_t dim = (&$1)->operator[](i);
-        PyTuple_SET_ITEM($result, i, PyInt_FromLong(dim));
-    }
+%typemap(out, fragment="NDShapeToTuple") CNTK::NDShape {
+    $result = NDShapeToTuple($1);
 }
 
 %extend CNTK::NDShape {
@@ -1298,68 +1292,8 @@ fail:
     }
 
     PyObject* to_numpy() {
-        if ((*self).GetStorageFormat() != StorageFormat::Dense)
-            throw std::invalid_argument("only dense supported at the moment");
-
-        // FIXME use not yet existing NDShape function that returns the dimensions at once
-        std::vector<size_t> dimensions_cntk = (*self).Shape().Dimensions();
-        std::vector<size_t> dimensions;
-
-        // We have at least one element. In case the shape is empty (e.g.
-        // '()'), we have a scalar, which we need to copy (e.g. a constant).
-        size_t num_elements = 1;
-
-        // CNTK uses column major, thus we reverse the shape
-        for (int i=dimensions_cntk.size()-1; i>=0; i--)
-        {
-            dimensions.push_back(dimensions_cntk[i]);
-            num_elements *= dimensions_cntk[i];
-        }
-
-        npy_intp* shape = reinterpret_cast<npy_intp*>(&dimensions[0]);
-
-        CNTK::DataType cntk_type = (*self).GetDataType();
-
-        NDArrayView* cpuView;
-        if ((*self).Device() != DeviceDescriptor::CPUDevice())
-        {
-            cpuView = new NDArrayView(cntk_type, (*self).Shape(), DeviceDescriptor::CPUDevice());
-            cpuView->CopyFrom((*self));
-        }
-        else
-        {
-            cpuView = &(*self);
-        }
-
-        NPY_TYPES numpy_type;
-        void* buffer;
-
-        if (cntk_type == CNTK::DataType::Float)
-        {
-            numpy_type = NPY_FLOAT;
-            buffer = (void*)cpuView->DataBuffer<float>();
-        }
-        else if (cntk_type == CNTK::DataType::Double)
-        {
-            numpy_type = NPY_DOUBLE;
-            buffer = (void*)cpuView->DataBuffer<double>();
-        }
-        else
-        {
-            throw std::invalid_argument("unknown CNTK data type");
-        }
-
-        PyObject* ndarray = PyArray_SimpleNew(dimensions.size(), shape, numpy_type);
-        void *arr_data = PyArray_DATA((PyArrayObject*)ndarray);
-
-        memcpy(arr_data, buffer, PyArray_ITEMSIZE((PyArrayObject*) ndarray) * num_elements);
-
-        if ((*self).Device() != DeviceDescriptor::CPUDevice())
-        {
-            delete cpuView;
-        }
-
-        return ndarray;
+        PyObject *NDArrayViewToNumPy(const CNTK::NDArrayView*);
+        return NDArrayViewToNumPy(self);
     }
 }
 
