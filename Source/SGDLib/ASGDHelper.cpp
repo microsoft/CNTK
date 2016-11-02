@@ -21,7 +21,6 @@
 #ifdef ASGD_PARALLEL_SUPPORT
 
 #include <multiverso/multiverso.h>
-#include <multiverso/util/log.h>
 #include <multiverso/util/configure.h>
 #include <multiverso/table/array_table.h>
 #include <multiverso/updater/updater.h>
@@ -84,6 +83,8 @@ template<class ElemType = float>
 class MultiversoHelper : public ASGDHelper<ElemType>
 {
 public:
+    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
+
     MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,          // Parameters that needs to be train
         size_t nodeNumRanks,                                                            // Number of working nodes
         bool useAsyncBuffered = true,                                                   // Using asynchonous buffer to hide communication cost
@@ -128,10 +129,7 @@ public:
 
         m_aysncBufferThread = nullptr;
 
-        if (m_traceLevel > 5)
-            multiverso::Log::ResetLogLevel(multiverso::LogLevel::Debug);
-        else if (m_traceLevel > 4)
-            multiverso::Log::ResetLogLevel(multiverso::LogLevel::Error);
+        multiverso::SetCMDFlag("logtostderr", true);
 
         if (m_doesEveryNodesShouldSynced)
             multiverso::SetCMDFlag("sync", true);
@@ -196,7 +194,7 @@ public:
         m_workerArray->Get(m_deltaArray, m_totalModelSize);
 
         if (std::equal(m_deltaArray, m_deltaArray + m_totalModelSize, m_cpuAsyncBuffer[0]))
-            multiverso::Log::Info("multiverso initial model loaded.\n");
+            fprintf(stderr, "multiverso initial model loaded.\n");
         m_reportTimer.Start();
     }
 

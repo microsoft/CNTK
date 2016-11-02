@@ -27,7 +27,6 @@ enum class AdjustLearningRateAtBeginning : int
 template<class ElemType = float>
 class ASGDHelper
 {
-    typedef shared_ptr<ComputationNode<ElemType>> ComputationNodePtr;
 public:
     virtual ~ASGDHelper() { }
     // -----------------------------------------------------------------------
