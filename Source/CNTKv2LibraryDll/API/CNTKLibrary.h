@@ -3312,15 +3312,6 @@ namespace CNTK
         size_t m_prevMinibatchNumSamples;
         ValuePtr m_prevMinibatchAggregateTrainingLossValue;
         ValuePtr m_prevMinibatchAggregateEvalCriterionValue;
-
-        // barrier for distributed training to sync between workers
-        inline void DistributedBarrier()
-        {
-            if (m_distributedTrainer != nullptr)
-            {
-                m_distributedTrainer->GetCommunicator()->Barrier();
-            }
-        }
     };
 
     ///

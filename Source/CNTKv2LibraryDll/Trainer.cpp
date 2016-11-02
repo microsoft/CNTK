@@ -228,7 +228,7 @@ namespace CNTK
         {
             // all workers need to sync up before saving model to avoid write-after-read hazard
             // i.e. one worker is in the middle of reading a checkpoint while another overwrites
-            DistributedBarrier();
+            m_distributedTrainer->GetCommunicator()->Barrier();
 
             // for distributed training, only save checkpoint at worker 0
             shouldSave = m_distributedTrainer->GetCommunicator()->CurrentWorker().IsMain();
@@ -258,7 +258,7 @@ namespace CNTK
         {
             // all workers need to sync up after saving model to avoid read-after-write hazard
             // i.e. one worker is in the middle of write while another tries to read
-            DistributedBarrier();
+            m_distributedTrainer->GetCommunicator()->Barrier();
         }
     }
 
