@@ -13,7 +13,7 @@ from cntk.layers import Convolution, MaxPooling, AveragePooling, Dropout, BatchN
 from cntk.models import Sequential, LayerStack
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-from cntk.initializer import glorot_uniform
+from cntk.initializer import glorot_uniform, he_normal
 from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu
@@ -90,7 +90,7 @@ def create_reader(map_file, mean_file, train, distributed_communicator=None):
 #               |                              |
 #               V                              V
 #
-def convolution_bn(input, filter_size, num_filters, strides=(1,1), init=glorot_uniform(), activation=relu):
+def convolution_bn(input, filter_size, num_filters, strides=(1,1), init=he_normal(), activation=relu):
     if activation is None:
         activation = lambda x: x
         
@@ -115,33 +115,31 @@ def resnet_basic_inc(input, num_filters):
     p = c2 + s
     return relu(p)
 
-def resnet_basic_stack2(input, num_filters):
-    r1 = resnet_basic(input, num_filters)
-    r2 = resnet_basic(r1, num_filters)
-    return r2
+def resnet_basic_stack(input, num_filters, num_stack):
+    assert (num_stack > 0)
 
-def resnet_basic_stack3(input, num_filters):
-    r12 = resnet_basic_stack2(input, num_filters)
-    r3 = resnet_basic(r12, num_filters)
-    return r3
+    r = input
+    for _ in range(num_stack):
+        r = resnet_basic(r, num_filters)
+    return r
 
 #   
 # Defines the residual network model for classifying images
 #
 def create_resnet_model(input, num_classes):
-    conv = convolution_bn(input, (3,3), 16, activation=None)
-    r1_1 = resnet_basic_stack3(conv, 16)
+    conv = convolution_bn(input, (3,3), 16)
+    r1_1 = resnet_basic_stack(conv, 16, 2)
 
     r2_1 = resnet_basic_inc(r1_1, 32)
-    r2_2 = resnet_basic_stack2(r2_1, 32)
+    r2_2 = resnet_basic_stack(r2_1, 32, 2)
 
     r3_1 = resnet_basic_inc(r2_2, 64)
-    r3_2 = resnet_basic_stack2(r3_1, 64)
+    r3_2 = resnet_basic_stack(r3_1, 64, 2)
 
     # Global average pooling
     pool = AveragePooling(filter_shape=(8,8), strides=(1,1))(r3_2)    
-    net = Dense(num_classes, init=glorot_uniform(), activation=None)(pool)
-    
+    net = Dense(num_classes, init=he_normal(), activation=None)(pool)
+
     return net
 
 #
