@@ -59,7 +59,7 @@ def _test_unary_op(precision, device_id, op_func,
 
 
 def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
-                    expected_forward, expected_backward_all, wrap_batch_seq=True):
+                    expected_forward, expected_backward_all, wrap_batch_seq=True, op_param_dict=None):
 
     left_value = AA(left_operand, dtype=PRECISION_TO_TYPE[precision])
     right_value = AA(right_operand, dtype=PRECISION_TO_TYPE[precision])
@@ -79,9 +79,14 @@ def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
         constant_op_input = eval('left_operand %s b' % op_func)
         input_op_input = eval('a %s b' % op_func)
     else:
-        input_op_constant = op_func(a, right_value)
-        constant_op_input = op_func(left_value, b)
-        input_op_input = op_func(a, b)
+        if op_param_dict:
+            input_op_constant = op_func(a, right_value, **op_param_dict)
+            constant_op_input = op_func(left_value, b, **op_param_dict)
+            input_op_input = op_func(a, b, **op_param_dict)
+        else:
+            input_op_constant = op_func(a, right_value)
+            constant_op_input = op_func(left_value, b)
+            input_op_input = op_func(a, b)
 
     # create batch by wrapping the data point into a sequence of length one and
     # putting it into a batch of one sample
