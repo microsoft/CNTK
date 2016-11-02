@@ -46,8 +46,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <typename ERRTYPE>
-const char* CudaErrString(ERRTYPE x); // actual error function is defined inside .cu files
-template <typename ERRTYPE>
 static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libName, ERRTYPE successCode)
 {
     if (retCode != successCode)
@@ -63,7 +61,7 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 #endif
             int currentCudaDevice;
             cudaGetDevice(&currentCudaDevice);
-            Microsoft::MSR::CNTK::RuntimeError("%s failure %d: %s ; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, CudaErrString(retCode), currentCudaDevice, hostname ? hostname : "?", exprString);
+            Microsoft::MSR::CNTK::RuntimeError("%s failure %d; GPU=%d ; hostname=%s ; expr=%s", libName, (int)retCode, currentCudaDevice, hostname ? hostname : "?", exprString);
         }
         catch (const std::exception& e) // catch, log, and rethrow since CUDA code sometimes hangs in destruction, so we'd never get to see the error
         {
