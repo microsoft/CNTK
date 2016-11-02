@@ -64,7 +64,7 @@ Train = [
         perfTraceLevel = 0
         
         firstMBsToShowResult = 1
-        numMBsToShowResult = 0
+        numMBsToShowResult = 10
 
         ParallelTrain = [
             parallelizationMethod = $parallelizationMethod$
