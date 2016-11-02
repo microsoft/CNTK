@@ -49,13 +49,12 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(CropNode))                             return New<CropNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CrossEntropyNode))                     return New<CrossEntropyNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))          return New<CrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(ForwardBackwardNode))                  return New<ForwardBackwardNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(CTCwithSoftmaxNode))                    return New<CTCwithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DiagonalNode))                         return New<DiagonalNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DiagTimesNode))                        return New<DiagTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DropoutNode))                          return New<DropoutNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DummyCriterionNode))                   return New<DummyCriterionNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DynamicAxisNode))                      return New<DynamicAxisNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(EditDistanceErrorNode))                return New<EditDistanceErrorNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ElementTimesNode))                     return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(EnvironmentInputNode))                 return New<EnvironmentInputNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(EpochAccumulatorNode))                 return New<EpochAccumulatorNode<ElemType>>(forward<_Types>(_Args)...);
@@ -94,7 +93,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(PerDimMeanVarNormalizationNode))       return New<PerDimMeanVarNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PerDimMeanVarDeNormalizationNode))     return New<PerDimMeanVarDeNormalizationNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PassNode))                             return New<PassNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(LabelsToGraphNode))                    return New<LabelsToGraphNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(PhoneErrorNode))                       return New<PhoneErrorNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(PlusNode))                             return New<PlusNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RandomSampleNode))                     return New<RandomSampleNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RandomSampleInclusionFrequencyNode))   return New<RandomSampleInclusionFrequencyNode<ElemType>>(forward<_Types>(_Args)...);
@@ -432,9 +431,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Class
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::EditDistanceError(const ComputationNodePtr a, const ComputationNodePtr b, float subPen, float delPen, float insPen, bool squashInputs, vector<size_t> tokensToIgnore, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PhoneError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<EditDistanceErrorNode<ElemType>>(net.GetDeviceId(), nodeName, subPen, delPen, insPen, squashInputs, tokensToIgnore), { a, b });
+    return net.AddNodeToNetAndAttachInputs(New<PhoneErrorNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
 }
 
 template <class ElemType>
@@ -501,10 +500,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Seque
     return net.AddNodeToNetAndAttachInputs(New<SequenceWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction, loglikelihood });
 }
 
-template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ForwardBackward(const ComputationNodePtr graph, const ComputationNodePtr features, int blankTokenId, int delayConstraint, const std::wstring nodeName)
+template<class ElemType> 
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CTCwithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<ForwardBackwardNode<ElemType>>(net.GetDeviceId(), nodeName, blankTokenId, delayConstraint), { graph, features });
+    return net.AddNodeToNetAndAttachInputs(New<CTCwithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction });
 }
 
 template <class ElemType>

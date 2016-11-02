@@ -318,6 +318,9 @@ protected:
     // true: disable Regularization
     // false: enable Regularization (default)
     bool m_disableRegInBatchNormalization;
+    size_t m_blankNum;
+    int m_delayConstraint;
+    
 };
 
 template <class ElemType>

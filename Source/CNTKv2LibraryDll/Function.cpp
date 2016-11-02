@@ -1239,32 +1239,6 @@ namespace CNTK
         }
     }
 
-    FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& tokensToIgnore, const std::wstring& name)
-    {
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameSubstitutionPenalty] = subPen;
-        additionalProperties[PrimitiveFunction::AttributeNameDeletionPenalty] = delPen;
-        additionalProperties[PrimitiveFunction::AttributeNameInsertionPenalty] = insPen;
-        additionalProperties[PrimitiveFunction::AttributeNameSquashInputs] = squashInputs;
-        additionalProperties[PrimitiveFunction::AttributeNameTokensToIgnore] = AsDictionaryValueVector(tokensToIgnore);
-
-        return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
-    }
-
-    FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name)
-    {
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameBlankTokenId] = blankTokenId;
-        additionalProperties[PrimitiveFunction::AttributeNameDelayConstraint] = delayConstraint;
-
-        return BinaryOp(PrimitiveOpType::ForwardBackward, graph, features, std::move(additionalProperties), name);
-    }
-
-    FunctionPtr LabelsToGraph(const Variable& labels, const std::wstring& name)
-    {
-        return UnaryOp(PrimitiveOpType::LabelsToGraph, labels, Dictionary(), name);
-    }
-
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();

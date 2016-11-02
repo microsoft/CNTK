@@ -232,7 +232,8 @@ public:
     // sequence training
     CPUMatrix<ElemType>& DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType& threshhold);
     CPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha);
-    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
+    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const std::vector<size_t> phoneseq,
+                                        const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise);
     CPUMatrix<ElemType>& InplaceSqrt();
     CPUMatrix<ElemType>& AssignSqrtOf(const CPUMatrix<ElemType>& a);
 

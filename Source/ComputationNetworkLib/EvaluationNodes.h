@@ -458,39 +458,16 @@ protected:
 template class NDCG1EvalNode<float>;
 template class NDCG1EvalNode<double>;
 
-// Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
-// Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
-// 
-// The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and tokensToIgnore contains label '-' then
-// given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
-//
-// The returned error is computed as: EditDistance(s1,s2) * length(s1') / length(s1)
-//
-// Just like ClassificationError and other evaluation nodes, when used as an evaluation criterion, the SGD process will aggregate all values over an epoch and report the average, i.e. the error rate.
-// Primary objective of this node is for error evaluation of CTC training, see formula (1) in "Connectionist Temporal Classification: Labelling Unsegmented
-// Sequence Data with Recurrent Neural Networks", http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
 template<class ElemType>
-class EditDistanceErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
+class PhoneErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"EditDistanceError"; }
-
+    static const std::wstring TypeName() { return L"PhoneError"; }
 public:
-    // subPen - substitution penalty
-    // delPen - deletion penalty
-    // insPen - insertion penalty
-    // squashInputs - whether to merge sequences of identical samples.
-    // tokensToIgnore - list of samples to ignore during edit distance evaluation
-    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 1.0f, float delPen = 1.0f, float insPen = 1.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
-        : Base(deviceId, name), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen), m_squashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
+    DeclareConstructorFromConfig(PhoneErrorNode);
+    PhoneErrorNode(DEVICEID_TYPE deviceId, const wstring & name)
+        : Base(deviceId, name)
     {
-    }
-
-    EditDistanceErrorNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : EditDistanceErrorNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"subPen"), configp->Get(L"delPen"), configp->Get(L"insPen"), configp->Get(L"squashInputs"), {})
-    {
-        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
-        m_tokensToIgnore = ScriptableObjects::ConfigArray::FlattenedVectorFrom<size_t>(configp->Get(L"tokensToIgnore"));
     }
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
@@ -500,23 +477,45 @@ public:
 
     virtual void ForwardPropNonLooping() override
     {
-        bool isInput0Sparse = Input(0)->template Is<SparseInputValue<ElemType>>();
-        bool isInput1Sparse = Input(1)->template Is<SparseInputValue<ElemType>>();
-        if (isInput0Sparse || isInput1Sparse)
-            LogicError("EditDistanceError node was not tested for sparse inputs.");
-
+        size_t sequenceNum = Input(1)->GetNumParallelSequences();
         FrameRange frameRange(Input(0)->GetMBLayout());
         Input(0)->ValueFor(frameRange).VectorMax(*m_maxIndexes0, *m_maxValues, true);
         Input(1)->ValueFor(frameRange).VectorMax(*m_maxIndexes1, *m_maxValues, true);
 
         MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
-        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_subPen, m_delPen, m_insPen, m_squashInputs, m_tokensToIgnore);
+        CalErrorphoneWER(Value(), *m_maxIndexes0, *m_maxIndexes1, sequenceNum, Input(0)->GetMBLayout(), Input(0)->Value().GetNumRows(), m_blanknum);
+#if NANCHECK
+        FunctionValues().HasNan("ErrorPrediction");
+#endif
+#if DUMPOUTPUT
+        FunctionValues().Print("ErrorPredictionNode");
+#endif
+
+
+        /*EvaluateThisNodeS(FunctionValues(), Inputs(0)->FunctionValues(), Inputs(1)->FunctionValues(), m_maxIndexes0, m_maxIndexes1, m_maxValues, shared_from_this(),
+        Inputs(0)->GetMBLayout(), sequenceNum, m_blanknum);*/
     }
+
+
+
+
 
     virtual void Validate(bool isFinalValidationPass) override
     {
         ValidateBinaryReduce(isFinalValidationPass);
+
+        ValidateBinaryReduce(isFinalValidationPass);
+
+        m_topK = 1;
+        // TODO: Make topK a constructor parameter
+        if (m_inputs.size() == 3)
+        {
+            if (Input(2)->GetSampleLayout().GetNumElements() != 1)
+                InvalidArgument("%ls %ls operation requires TopK to be a scalar value.", NodeName().c_str(), OperationName().c_str());
+            m_topK = static_cast<int>(Input(2)->Get00Element());
+        }
+        
     }
 
     virtual void UpdateFunctionMBSize() override
@@ -525,26 +524,26 @@ public:
 
         // resize the temporaries to their proper size
         size_t cols = Input(0)->Value().GetNumCols();
-        m_maxIndexes0->Resize(1, cols);
-        m_maxIndexes1->Resize(1, cols);
-        m_maxValues->Resize(1, cols);
+        m_maxIndexes0->Resize(m_topK, cols);
+        m_maxIndexes1->Resize(m_topK, cols);
+        m_maxValues->Resize(m_topK, cols);
     }
+
+    
+
 
     virtual void CopyTo(ComputationNodeBasePtr  nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
         Base::CopyTo(nodeP, newName, flags);
 
+
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<EditDistanceErrorNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<PhoneErrorNode<ElemType>>(nodeP);
             node->m_maxIndexes0 = m_maxIndexes0;
             node->m_maxIndexes1 = m_maxIndexes1;
             node->m_maxValues = m_maxValues;
-            node->m_squashInputs = m_squashInputs;
-            node->m_subPen = m_subPen;
-            node->m_delPen = m_delPen;
-            node->m_insPen = m_insPen;
-            node->m_tokensToIgnore = m_tokensToIgnore;
+            node->m_blanknum = m_blanknum;
         }
     }
 
@@ -567,199 +566,184 @@ public:
         ReleaseMatrixToPool(m_maxValues, matrixPool);
     }
 
-    // firstSeq - first sequence of samples
-    // secondSeq - second sequence of samples
-    // numParallelSequences - number of parallel sequences in the minibatch
-    // subPen - substitution penalty
-    // delPen - deletion penalty
-    // insPen - insertion penalty
-    // squashInputs - whether to merge sequences of identical samples.
-    // tokensToIgnore - list of samples to ignore during edit distance evaluation
-    static ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
-        float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& tokensToIgnore)
+
+    void SetBlankNum(const size_t blanknum)
     {
-        std::vector<int> firstSeqVec, secondSeqVec;
+        m_blanknum = blanknum;
+    }
+protected:
+    virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
 
-        // Edit distance between subsequences
+private:
+    static void CalErrorphoneWER(Matrix<ElemType>& functionvalue, Matrix<ElemType>& refframeseq, Matrix<ElemType> & outputframeseq, size_t samplesInRecurrentStep, MBLayoutPtr pMBLayout,
+        size_t allphonenum, size_t blanknum)
+    {
+        std::vector<size_t> labelseq, outputseq;
+        static const int subPen = 10;     /* error penalties */
+        static const int delPen = 7;
+        static const int insPen = 7;
+
         Matrix<float> grid(CPUDEVICE);
-        
-        // Number of insertions between subsequences
-        Matrix<float> insMatrix(CPUDEVICE);
-        
-        //Number of deletions between subsequences
-        Matrix<float> delMatrix(CPUDEVICE);
+        Matrix<float> insmatrix(CPUDEVICE);
+        Matrix<float> delmatrix(CPUDEVICE);
+        Matrix<float> submatrix(CPUDEVICE);
 
-        // Number of substitutions between subsequences
-        Matrix<float> subMatrix(CPUDEVICE);
-
-        float del, ins, sub;
-        ElemType wrongSampleNum = 0.0;
-        size_t totalSampleNum = 0, totalframeNum = 0;
-        size_t sequenceStartFrame = 0;
-
-        for (const auto& sequence : pMBLayout->GetAllSequences())
+        float d, h, v;
+        //size_t fullcolsize = refframeseq.GetNumCols() / samplesInRecurrentStep;
+        ElemType wrongPhoneNum = 0.0;
+        size_t totalphonenum = 0, totalframenum = 0;
+        size_t mbsize = refframeseq.GetNumCols() / samplesInRecurrentStep;
+        size_t lastsentend = 0;
+        size_t FrameNum = 0;
+        size_t j = 0;
+        for (size_t nchannel = 0; nchannel < samplesInRecurrentStep; nchannel++)
         {
-            if (sequence.seqId == GAP_SEQUENCE_ID)
-                continue;
-
-            auto numFrames = pMBLayout->GetNumSequenceFramesInCurrentMB(sequence);
-
-            if (numFrames > 0)
+            //zhaorui for CTC merge
+            lastsentend = 0;
+            j = 0;
+            while (j < mbsize)
             {
-                totalframeNum += numFrames;
-
-                auto columnIndices = pMBLayout->GetColumnIndices(sequence);
-
-                ExtractSampleSequence(firstSeq, columnIndices, squashInputs, tokensToIgnore, firstSeqVec);
-                ExtractSampleSequence(secondSeq, columnIndices, squashInputs, tokensToIgnore, secondSeqVec);
-
-                //calculate edit distance
-                size_t firstSize = firstSeqVec.size();
-                totalSampleNum += firstSize;
-                size_t secondSize = secondSeqVec.size();
-                grid.Resize(firstSize + 1, secondSize + 1);
-                insMatrix.Resize(firstSize + 1, secondSize + 1);
-                delMatrix.Resize(firstSize + 1, secondSize + 1);
-                subMatrix.Resize(firstSize + 1, secondSize + 1);
-                insMatrix.SetValue(0.0f);
-                delMatrix.SetValue(0.0f);
-                subMatrix.SetValue(0.0f);
-
-                for (size_t i = 0; i < firstSize + 1; i++)
+                FrameNum = 0;
+                for (j = lastsentend; j < mbsize; j++)
                 {
-                    grid(i, 0) = (float)(i * delPen);
-                    delMatrix(i, 0) = (float)i;
-                }
-
-                for (size_t j = 0; j < secondSize + 1; j++)
-                {
-                    grid(0, j) = (float)(j * insPen);
-                    insMatrix(0, j) = (float)j;
-                }
-                for (size_t i = 1; i < firstSize + 1; i++)
-                {
-                    for (size_t j = 1; j < secondSize + 1; j++)
+                    if (pMBLayout->IsEnd(nchannel, j))
                     {
-                        if (firstSeqVec[i - 1] == secondSeqVec[j - 1])
+                        FrameNum = j - lastsentend + 1;
+                        break;
+                        //validframes.push_back(j + 1);
+                    }
+                }
+                if (FrameNum > 0)
+                {
+                    totalframenum += FrameNum;
+                    size_t lastid = 65535;
+                    labelseq.clear();
+                    //merge same phone id
+                    for (size_t i = lastsentend; i < FrameNum + lastsentend; i++)
+                    {
+                        if (lastid != refframeseq(0, i * samplesInRecurrentStep + nchannel))
                         {
-                            grid(i, j) = grid(i - 1, j - 1);
-                            insMatrix(i, j) = insMatrix(i - 1, j - 1);
-                            delMatrix(i, j) = delMatrix(i - 1, j - 1);
-                            subMatrix(i, j) = subMatrix(i - 1, j - 1);
+                            lastid = (size_t)refframeseq(0, i * samplesInRecurrentStep + nchannel);
+                            if (lastid < allphonenum - blanknum)  //hard code
+                                labelseq.push_back(lastid);
                         }
-                        else
+                        /*lastid = (size_t)refframeseq(0, i * samplesInRecurrentStep + nchannel);
+
+                        if (lastid != 65535)
+                        labelseq.push_back(lastid);*/
+                    }
+                    outputseq.clear();
+                    lastid = 65535;
+                    for (size_t i = lastsentend; i < FrameNum + lastsentend; i++)
+                    {
+                        if (lastid != outputframeseq(0, i * samplesInRecurrentStep + nchannel))
                         {
-                            del = grid(i - 1, j) + delPen; //deletion 
-                            ins = grid(i, j - 1) + insPen;  //insertion
-                            sub = grid(i - 1, j - 1) + subPen; //substitution 
-                            if (sub <= del && sub <= ins)
+                            lastid = (size_t)outputframeseq(0, i * samplesInRecurrentStep + nchannel);
+                            if (lastid < allphonenum - blanknum)  //hard code
+                                outputseq.push_back(lastid);
+                        }
+                    }
+
+                    //calcualate phone error rate
+                    size_t labelsize = labelseq.size();
+                    totalphonenum += labelsize;
+                    size_t outputsize = outputseq.size();
+                    grid.Resize(labelsize + 1, outputsize + 1);
+                    insmatrix.Resize(labelsize + 1, outputsize + 1);
+                    delmatrix.Resize(labelsize + 1, outputsize + 1);
+                    submatrix.Resize(labelsize + 1, outputsize + 1);
+                    insmatrix.SetValue(0.0f);
+                    delmatrix.SetValue(0.0f);
+                    submatrix.SetValue(0.0f);
+
+
+                    for (size_t i = 0; i < labelsize + 1; i++){
+                        grid(i, 0) = (float)(i * delPen);
+                        delmatrix(i, 0) = (float)i;
+                    }
+                    fprintf(stderr, "label: ");
+                    for (size_t i = 0; i < labelsize; i++){
+                        fprintf(stderr, "%d\t", (int)labelseq[i]);
+                    }
+                    fprintf(stderr, "\n");
+
+                    fprintf(stderr, "output: ");
+                    for (size_t i = 0; i < outputsize; i++){
+                        fprintf(stderr, "%d\t", (int)outputseq[i]);
+                    }
+                    fprintf(stderr, "\n");
+
+                    for (size_t i = 0; i < outputsize + 1; i++) {
+                        grid(0, i) = (float)(i * insPen);
+                        insmatrix(0, i) = (float)i;
+                    }
+                    for (size_t i = 1; i < labelsize + 1; i++){
+                        for (size_t k = 1; k < outputsize + 1; k++) {
+
+                            if (labelseq[i - 1] == outputseq[k - 1])
                             {
-                                insMatrix(i, j) = insMatrix(i - 1, j - 1);
-                                delMatrix(i, j) = delMatrix(i - 1, j - 1);
-                                subMatrix(i, j) = subMatrix(i - 1, j - 1) + 1.0f;
-                                grid(i, j) = sub;
-                            }
-                            else if (del < ins)
-                            {
-                                insMatrix(i, j) = insMatrix(i - 1, j);
-                                subMatrix(i, j) = subMatrix(i - 1, j);
-                                delMatrix(i, j) = delMatrix(i - 1, j) + 1.0f;
-                                grid(i, j) = del;
+                                grid(i, k) = grid(i - 1,k - 1);
+                                insmatrix(i, k) = insmatrix(i - 1, k - 1);
+                                delmatrix(i, k) = delmatrix(i - 1, k - 1);
+                                submatrix(i, k) = submatrix(i - 1, k - 1);
+
                             }
                             else
                             {
-                                delMatrix(i, j) = delMatrix(i, j - 1);
-                                subMatrix(i, j) = subMatrix(i, j - 1);
-                                insMatrix(i, j) = insMatrix(i, j - 1) + 1.0f;
-                                grid(i, j) = ins;
+                                d = grid(i - 1, k) + (float)delPen; //deletion 
+                                h = grid(i, k - 1) + (float)insPen;  //insertion
+                                v = grid(i - 1, k - 1) + (float)subPen; //substitution 
+                                if (v <= d && v <= h)
+                                {
+                                    insmatrix(i, k) = insmatrix(i - 1, k - 1);
+                                    delmatrix(i, k) = delmatrix(i - 1, k - 1);
+
+                                    submatrix(i, k) = submatrix(i - 1, k - 1) + 1.0f;
+                                    grid(i, k) = v;
+
+                                }
+                                else if (d < h)
+                                {
+                                    insmatrix(i, k) = insmatrix(i - 1, k);
+                                    submatrix(i, k) = submatrix(i - 1, k);
+                                    delmatrix(i, k) = delmatrix(i - 1, k) + 1.0f;
+                                    grid(i, k) = d;
+                                }
+                                else
+                                {
+                                    delmatrix(i, k) = delmatrix(i, k - 1);
+                                    submatrix(i, k) = submatrix(i, k - 1);
+                                    insmatrix(i, k) = insmatrix(i, k - 1) + 1.0f;
+                                    grid(i, k) = h;
+                                }
                             }
                         }
                     }
+                    wrongPhoneNum += insmatrix(labelsize, outputsize) + delmatrix(labelsize, outputsize) + submatrix(labelsize, outputsize);
+                    }
+                lastsentend += FrameNum;
+                if (lastsentend < mbsize)
+                {
+                    FrameRange fr(pMBLayout, lastsentend);
+                    if (pMBLayout->IsGap(fr.Sequence(nchannel)))
+                        break;
                 }
-
-                wrongSampleNum += insMatrix(firstSize, secondSize) + delMatrix(firstSize, secondSize) + subMatrix(firstSize, secondSize);
+                }
             }
 
-            sequenceStartFrame += numFrames;
+        functionvalue(0, 0) = (ElemType)(wrongPhoneNum * totalframenum / totalphonenum);
+
         }
 
-        return (ElemType)(wrongSampleNum * totalframeNum / totalSampleNum);
-    }
-
-    virtual void Save(File& fstream) const override
-    {
-        Base::Save(fstream);
-        fstream << m_subPen;
-        fstream << m_delPen;
-        fstream << m_insPen;
-        fstream << m_squashInputs;
-        fstream << m_tokensToIgnore;
-    }
-
-    virtual void Load(File& fstream, size_t modelVersion) override
-    {
-        Base::Load(fstream, modelVersion);
-        fstream >> m_subPen;
-        fstream >> m_delPen;
-        fstream >> m_insPen;
-        fstream >> m_squashInputs;
-        fstream >> m_tokensToIgnore;
-    }
-
-    float SubstitutionPenalty() const { return m_subPen; }
-    float DeletionPenalty() const { return m_delPen; }
-    float InsertionPenalty() const { return m_insPen; }
-    bool SquashInputs() const { return m_squashInputs; }
-    std::vector<size_t> TokensToIgnore() const { return m_tokensToIgnore; }
-
-private:
     shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
     shared_ptr<Matrix<ElemType>> m_maxValues;
-    bool m_squashInputs;
-    float m_subPen;
-    float m_delPen;
-    float m_insPen;
-    std::vector<size_t> m_tokensToIgnore;
+    size_t m_blanknum=1;
+    int m_topK;
+    };
 
-    // Clear out_SampleSeqVec and extract a vector of samples from the matrix into out_SampleSeqVec.
-    static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, vector<size_t>& columnIndices, bool squashInputs, const vector<size_t>& tokensToIgnore, std::vector<int>& out_SampleSeqVec)
-    {
-        out_SampleSeqVec.clear();
+template class PhoneErrorNode<float>;
+template class PhoneErrorNode<double>;
 
-        // Get the first element in the sequence
-        size_t lastId = (int)firstSeq(0, columnIndices[0]);
-        if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), lastId) == tokensToIgnore.end())
-            out_SampleSeqVec.push_back(lastId);
-
-        // Remaining elements
-        if (squashInputs)
-        {
-            //squash sequences of identical samples
-            for (size_t i = 1; i < columnIndices.size(); i++)
-            {
-                size_t refId = (int)firstSeq(0, columnIndices[i]);
-                if (lastId != refId)
-                {
-                    lastId = refId;
-                    if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), refId) == tokensToIgnore.end())
-                        out_SampleSeqVec.push_back(refId);
-                }
-            }
-        }
-        else
-        {
-            for (size_t i = 1; i < columnIndices.size(); i++)
-            {
-                auto refId = (int)firstSeq(0, columnIndices[i]);
-                if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), refId) == tokensToIgnore.end())
-                    out_SampleSeqVec.push_back(refId);
-            }
-        }
-    }
-};
-
-template class EditDistanceErrorNode<float>;
-template class EditDistanceErrorNode<double>;
 
 #ifdef COMING_SOON
 

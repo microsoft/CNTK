@@ -738,23 +738,6 @@ namespace CNTK
             case PrimitiveOpType::ClassificationError:
                 computationNodePtr = New<ClassificationErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
-            case PrimitiveOpType::EditDistanceError:
-            {
-                auto subPen = functionConfig[PrimitiveFunction::AttributeNameSubstitutionPenalty].Value<float>();
-                auto delPen = functionConfig[PrimitiveFunction::AttributeNameDeletionPenalty].Value<float>();
-                auto insPen = functionConfig[PrimitiveFunction::AttributeNameInsertionPenalty].Value<float>();
-                auto squashInputs = functionConfig[PrimitiveFunction::AttributeNameSquashInputs].Value<bool>();
-                auto tokensToIgnore = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNameTokensToIgnore].Value<std::vector<DictionaryValue>>());
-                computationNodePtr = New<EditDistanceErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName, subPen, delPen, insPen, squashInputs, tokensToIgnore);
-                break;
-            }
-            case PrimitiveOpType::ForwardBackward:
-            {
-                auto delayContraint = functionConfig[PrimitiveFunction::AttributeNameDelayConstraint].Value<int>();
-                auto blankTokenId = functionConfig[PrimitiveFunction::AttributeNameBlankTokenId].Value<size_t>();
-                computationNodePtr = New<ForwardBackwardNode<ElementType>>(network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
-                break;
-            }
             case PrimitiveOpType::LambdaRank:
                 computationNodePtr = New<LambdaRankNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;

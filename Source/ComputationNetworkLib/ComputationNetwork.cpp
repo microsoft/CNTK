@@ -463,7 +463,8 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
         nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassificationErrorNode) ||
-        nodePtr->OperationName() == OperationNameOf(ForwardBackwardNode) ||
+        nodePtr->OperationName() == OperationNameOf(PhoneErrorNode) ||
+        nodePtr->OperationName() == OperationNameOf(CTCwithSoftmaxNode) ||
 #ifdef COMING_SOON
         nodePtr->OperationName() == OperationNameOf(CRFNode) ||
 #endif
@@ -648,6 +649,47 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
         }
     }
 }
+
+
+template<class ElemType>
+void ComputationNetwork::SetCTCParam(ComputationNetworkPtr net,
+                                     const ComputationNodeBasePtr criterionNode, 
+                                     const ComputationNodeBasePtr evaluationNode, 
+                                     const size_t& blanknum /*= 1*/,
+                                     const int &delayConstraint/*=-1*/)
+{
+
+    fprintf(stderr, "set blank phone num %d\n", (int)blanknum);
+    std::list<ComputationNodeBasePtr> ctcNodes = net->GetNodesWithType(OperationNameOf(CTCwithSoftmaxNode), criterionNode);
+    if (ctcNodes.size() == 0)
+    {
+        fprintf(stderr, "WARNING: there is no CTC creterion node.\n");
+    }
+    else
+    {
+        for (auto nodeIter = ctcNodes.begin(); nodeIter != ctcNodes.end(); nodeIter++)
+        {
+            auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(*nodeIter);
+            node->SetBlankNum(blanknum);
+            node->SetDelayConstraint(delayConstraint);
+        }
+    }
+
+    ctcNodes = net->GetNodesWithType(OperationNameOf(PhoneErrorNode), evaluationNode);
+    if (ctcNodes.size() == 0)
+    {
+        fprintf(stderr, "WARNING: there is no CTC evaluation node.\n");
+    }
+    else
+    {
+        for (auto nodeIter = ctcNodes.begin(); nodeIter != ctcNodes.end(); nodeIter++)
+        {
+            auto node = dynamic_pointer_cast<PhoneErrorNode<ElemType>>(*nodeIter);
+            node->SetBlankNum(blanknum);
+        }
+    }
+}
+
 
 /*static*/ void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples)
 {
@@ -1529,6 +1571,7 @@ template /*static*/ void ComputationNetwork::SetIRngUserSeed<float>(ComputationN
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
+template void ComputationNetwork::SetCTCParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t& blanknum, const int& delayConstraint);
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
 template void ComputationNetwork::InitLearnableParametersWithBilinearFill<double>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
@@ -1540,6 +1583,7 @@ template /*static*/ void ComputationNetwork::SetIRngUserSeed<double>(Computation
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
+template void ComputationNetwork::SetCTCParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const ComputationNodeBasePtr evaluationNode, const size_t& blanknum, const int& delayConstraint);
 template void ComputationNetwork::SaveToDbnFile<double>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
 // register ComputationNetwork with the ScriptableObject system

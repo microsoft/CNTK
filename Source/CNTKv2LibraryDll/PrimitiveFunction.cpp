@@ -154,7 +154,6 @@ namespace CNTK
             (op == PrimitiveOpType::ReduceElements && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>() == Axis::AllAxes()) ||
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
-            (op == PrimitiveOpType::EditDistanceError) ||
             (op == PrimitiveOpType::ClassificationError) ||
             (op == PrimitiveOpType::Logistic) ||
             (op == PrimitiveOpType::LambdaRank) ||
@@ -598,7 +597,6 @@ namespace CNTK
                         case PrimitiveOpType::LambdaRank:
                         case PrimitiveOpType::CosDistance:
                         case PrimitiveOpType::SquaredError:
-                        case PrimitiveOpType::EditDistanceError:
                         case PrimitiveOpType::ClassificationError:
                         case PrimitiveOpType::NDCG:
                         {
@@ -622,15 +620,6 @@ namespace CNTK
                                 if (m_inputs.size() == 3)
                                     BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[2], true, true);
                             }
-
-                            outputShape = {};
-                            break;
-                        }
-                        case PrimitiveOpType::ForwardBackward:
-                        {
-                            assert(m_inputs.size() == 2);
-                            if (m_inputs[0].Shape().TotalSize() != m_inputs[1].Shape().TotalSize())
-                                InvalidArgument("ForwardBackward: The shapes of operands '%S' and '%S' must have the same total size.", m_inputs[0].AsString().c_str(), m_inputs[1].AsString().c_str());
 
                             outputShape = {};
                             break;

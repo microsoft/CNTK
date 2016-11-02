@@ -75,6 +75,16 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             trainSetDataReader.GetMinibatch4SE(*latticeinput, *uids, *boundaries, *extrauttmap);
         }
 
+        if ((criterionNode != nullptr) && (criterionNode->OperationName() == L"CTCwithSoftmax"))
+        {
+            auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(criterionNode);
+
+            auto boundaries = node->getboundaryprt();
+            auto extrauttmap = node->getextrauttmap();
+
+            trainSetDataReader.GetMinibatch4CTC(*boundaries, *extrauttmap);
+        }
+
         // TODO: move this into shim for the old readers.
         // decimate if needed. Decimation happens in-place.
         // This is only allowed for old readers, which support a single layout for all inputs.

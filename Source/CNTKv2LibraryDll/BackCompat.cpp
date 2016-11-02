@@ -450,25 +450,6 @@ namespace CNTK
                 {
                     opType = PrimitiveOpType::LogSoftmax;
                 }
-                else if (node->OperationName() == OperationNameOf(EditDistanceErrorNode)) 
-                {
-                    auto edNode = node->As<EditDistanceErrorNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInsertionPenalty] = edNode->InsertionPenalty();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDeletionPenalty] = edNode->DeletionPenalty();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSubstitutionPenalty] = edNode->SubstitutionPenalty();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSquashInputs] = edNode->SquashInputs();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameTokensToIgnore] = AsDictionaryValueVector(edNode->TokensToIgnore());
-
-                    opType = PrimitiveOpType::EditDistanceError;
-                }
-                else if (node->OperationName() == OperationNameOf(ForwardBackwardNode))
-                {
-                    auto edNode = node->As<ForwardBackwardNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDelayConstraint] = edNode->DelayConstraint();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlankTokenId] = edNode->BlankTokenId();
-
-                    opType = PrimitiveOpType::ForwardBackward;
-                }
                 else if (node->OperationName() == OperationNameOf(CosDistanceWithNegativeSamplesNode))
                 {
                     opType = PrimitiveOpType::CosDistanceWithNegativeSamples;
