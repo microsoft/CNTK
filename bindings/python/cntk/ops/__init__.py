@@ -327,10 +327,10 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, run
          dimensions which must be equal to the input dimensions in case of ``spatial`` = False or
          number of output convolution feature maps in case of ``spatial`` = True
         running_mean: running mean which is used during evaluation phase and might be used during
-         training as well. You must pass a parameter tensor with initial value 0 and the same dimensions
+         training as well. You must pass a constant tensor with initial value 0 and the same dimensions
          as ``scale`` and ``bias``
         running_inv_std: running variance. Represented as ``running_mean``
-        running_count: You must pass a parameter tensor with initial value 0 and dimension (1,) with device=cpu()
+        running_count: You must pass a constant tensor with initial value 0 and dimension (1,) with device=cpu()
         spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
         normalization_time_constant(`float`, default 5000): time constant for computing running average of

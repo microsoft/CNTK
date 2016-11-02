@@ -277,7 +277,6 @@ def BatchNormalization(map_rank=None,  # if given then normalize only over this 
     # expression
     x = Placeholder(name='batch_normalization_arg')
     apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, run_count, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
-                                  #use_cntk_engine=use_cntk_engine)
                                   use_cudnn_engine=not use_cntk_engine)
     return Block(apply_x, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
