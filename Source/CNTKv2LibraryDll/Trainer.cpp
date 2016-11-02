@@ -254,9 +254,12 @@ namespace CNTK
             ckpStream->flush();
         }
 
-        // all workers need to sync up after saving model to avoid read-after-write hazard
-        // i.e. one worker is in the middle of write while another tries to read
-        DistributedBarrier();
+        if (m_distributedTrainer != nullptr)
+        {
+            // all workers need to sync up after saving model to avoid read-after-write hazard
+            // i.e. one worker is in the middle of write while another tries to read
+            DistributedBarrier();
+        }
     }
 
     void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
