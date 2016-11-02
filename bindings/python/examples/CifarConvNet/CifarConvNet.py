@@ -123,15 +123,14 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     epoch_size     = 50000
     minibatch_size = 64
 
-    # learning parameters
-    lr_per_sample             = [0.00015625]*10+[0.000046875]*10+[0.0000156]
-    momentum_as_time_constant = minibatch_size / -math.log(0.9)
-    l2_reg_weight             = 0.03
+    # For basic model
+    lr_per_minibatch       = learning_rate_schedule([0.01]*10 + [0.003]*10 + [0.001], epoch_size, UnitType.minibatch)
+    momentum_per_minibatch = momentum_schedule(0.9, UnitType.minibatch)  # BUGBUG: why does this work? Should be as time const, no?
+    l2_reg_weight          = 0.03
 
     # trainer object
-    lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner     = momentum_sgd(z.parameters, 
-                               lr_schedule, momentum_as_time_constant, 
+    learner     = momentum_sgd(z.parameters, lr = lr_per_minibatch, 
+                               momentum = momentum_per_minibatch, 
                                l2_regularization_weight = l2_reg_weight)
     trainer     = Trainer(z, ce, pe, learner)
 

@@ -13,7 +13,7 @@ from ..learner import *
 from .. import distributed
 from .. import cross_entropy_with_softmax, classification_error, parameter, \
         input_variable, times, plus, reduce_sum
-        
+
 def run_distributed_trainer(tmpdir, quantized):
 
     in1 = input_variable(shape=1)
@@ -22,8 +22,6 @@ def run_distributed_trainer(tmpdir, quantized):
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
     errs = classification_error(z, labels)
-
-    m_schedule = momentum_schedule(1100)
 
     if quantized:
         communicator = distributed.quantized_mpi_communicator(1)
@@ -38,11 +36,13 @@ def run_distributed_trainer(tmpdir, quantized):
             found_rank = True
     
     assert found_rank
-            
+
     dist_trainer = distributed.data_parallel_distributed_trainer(communicator, False)
 
+    momentum_time_constant = momentum_as_time_constant_schedule(1100)
+
     trainer = Trainer(z, ce, errs, \
-            sgd(z.parameters, 0.007, m_schedule, 0.5, True),
+            sgd(z.parameters, 0.007, momentum_time_constant, 0.5, True),
             distributed_trainer=dist_trainer)
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
