@@ -9,7 +9,7 @@ def dfs_walk(node, visitor):
     Generic function that walks through the graph starting at ``node`` and
     uses function ``visitor`` on each node to check whether it should be
     returned.
-
+    
     Args:
         node (graph node): the node to start the journey from
         visitor (Python function or lambda): function that takes a node as
@@ -38,8 +38,8 @@ def dfs_walk(node, visitor):
             except AttributeError:
                 pass
 
-    if visitor(node):
-        accum.append(node)
+		if visitor(node):
+			accum.append(node)
 
 		visited.add(node)
 
