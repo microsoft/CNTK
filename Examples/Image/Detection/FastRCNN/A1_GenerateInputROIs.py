@@ -17,7 +17,6 @@ image_sets = ["train", "test"]
 boAddSelectiveSearchROIs = True
 boAddRoisOnGrid = True
 
-
 ####################################
 # Main
 ####################################
