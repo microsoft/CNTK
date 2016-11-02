@@ -621,7 +621,9 @@ public:
 
     void InitModel(const std::list<ComputationNodeBasePtr> & learnableNode) override { }
 
-    void PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, size_t sampleSinceLastSynced) override { }
+    bool PushAndPullModel(const std::list<ComputationNodeBasePtr> & learnableNodes, size_t sampleSinceLastSynced) override { 
+        return true;
+    }
 
     void WaitAll() override { }
 
@@ -641,12 +643,34 @@ ASGDHelper<ElemType>* NewASGDHelper(
     int syncPerfStats) 
 {
 #ifdef ASGD_PARALLEL_SUPPORT
-    return MultiversoHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffered, isSimulatedModelAveragingSGD, 
+    return new MultiversoHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffered, isSimulatedModelAveragingSGD, 
                                       adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats);
-#elif
-    return NoneASGDHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffered, isSimulatedModelAveragingSGD, 
+#else
+    return new NoneASGDHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffered, isSimulatedModelAveragingSGD, 
                                       adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats); 
 #endif
 }
+
+template ASGDHelper<float>* NewASGDHelper<float>(
+    const std::list<ComputationNodeBasePtr> & learnableNodes,
+    size_t nodeNumRanks,
+    bool useAsyncBuffered,
+    bool isSimulatedModelAveragingSGD,
+    AdjustLearningRateAtBeginning adjusttype,
+    double adjustCoef,
+    size_t adjustPerMinibatches,
+    int traceLevel,
+    int syncPerfStats); 
+
+template ASGDHelper<double>* NewASGDHelper<double>(
+    const std::list<ComputationNodeBasePtr> & learnableNodes,
+    size_t nodeNumRanks,
+    bool useAsyncBuffered,
+    bool isSimulatedModelAveragingSGD,
+    AdjustLearningRateAtBeginning adjusttype,
+    double adjustCoef,
+    size_t adjustPerMinibatches,
+    int traceLevel,
+    int syncPerfStats); 
 
 }}} 
