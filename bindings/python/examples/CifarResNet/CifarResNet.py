@@ -15,7 +15,7 @@ from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 from cntk.initializer import glorot_uniform, he_normal
 from cntk import Trainer
-from cntk.learner import momentum_sgd, learning_rate_schedule
+from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu
 from cntk.ops import input_variable, constant, parameter, combine, times, element_times
 
@@ -128,7 +128,7 @@ def resnet_basic_stack(input, num_filters, num_stack):
 #
 def create_resnet_model(input, num_classes):
     conv = convolution_bn(input, (3,3), 16)
-    r1_1 = resnet_basic_stack(conv, 16, 2)
+    r1_1 = resnet_basic_stack(conv, 16, 3)
 
     r2_1 = resnet_basic_inc(r1_1, 32)
     r2_2 = resnet_basic_stack(r2_1, 32, 2)
@@ -176,8 +176,8 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     l2_reg_weight          = 0.0001
     
     # trainer object
-    learner     = momentum_sgd(z.parameters, lr = lr_per_minibatch, 
-                               momentum = momentum_time_constant,
+    learner     = momentum_sgd(z.parameters, 
+                               lr = lr_per_minibatch, momentum = momentum_time_constant,
                                l2_regularization_weight = l2_reg_weight)
     trainer     = Trainer(z, ce, pe, learner)
 
