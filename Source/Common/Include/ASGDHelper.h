@@ -46,6 +46,9 @@ public:
     // -----------------------------------------------------------------------
     virtual void WaitAll() = 0;
 
+    // -----------------------------------------------------------------------
+    // WaitAsyncBuffer() -- Wait pipeline thread to finish job when useAsyncBufferd = true
+    // -----------------------------------------------------------------------
     virtual void WaitAsyncBuffer() = 0;
 
 };  // Class ASGDHelper
