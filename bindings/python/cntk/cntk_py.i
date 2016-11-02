@@ -16,10 +16,11 @@
 %rename(_backward) CNTK::Function::Backward;
 %rename(sgd_learner) CNTK::SGDLearner;
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
-%rename(momentums_as_time_constants) CNTK::MomentumValuesAsTimeConstants;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
 %rename(cpu_device) CNTK::DeviceDescriptor::CPUDevice;
 %rename(times_transpose) CNTK::TransposeTimes;
+
+%rename(momentum_as_time_constant_schedule) CNTK::MomentumAsTimeConstantSchedule;
 
 // if we don't except RandomUniform the corresponding template functions will not be generated
 %rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";
@@ -94,15 +95,6 @@ def dynamic_axes(self):
     }
 }
 
-// MomentumValuesAsTimeConstants is a descendent of TrainingParameterSchedule,
-// but it does not inherit automatically functions added via %extend.
-%extend CNTK::MomentumValuesAsTimeConstants {
-    const double& __getitem__(size_t sampleCount) {
-        return (*($self))[sampleCount];
-    }
-}
-
-
 %{
     #include "CNTKLibrary.h"
     #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
@@ -110,7 +102,6 @@ def dynamic_axes(self):
     #include "numpy/arrayobject.h"
     using namespace CNTK;
 %}
-
 
 // Callback support
 %feature("director") Callback;
@@ -1177,18 +1168,8 @@ def dynamic_axes(self):
 
 // end of NDArrayView
 
-%extend CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample> {
-    const double& __getitem__(size_t sampleCount) {
-        return (*($self))[sampleCount];
-    }
-}
-
-%template(training_parameter_schedule_double) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
-
-%pythoncode %{
-learning_rates_per_sample = training_parameter_schedule_double
-momentums_per_sample = training_parameter_schedule_double
-%}
+%template(training_parameter_per_sample_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
+%template(training_parameter_per_minibatch_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Minibatch>;
 
 //
 // The following callback code is only for testing. Will have to be merged with
