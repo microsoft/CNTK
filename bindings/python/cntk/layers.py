@@ -267,12 +267,11 @@ def BatchNormalization(map_rank=None,  # if given then normalize only over this 
     norm_shape  = _INFERRED
     if map_rank is not None and map_rank != 1:
         UntestedBranchError("BatchNormalization map_rank can only be 1 or None for now")
-    from cntk import cpu
     scale        = Parameter(norm_shape, init=init_scale)
     bias         = Parameter(norm_shape, init=0)
     run_mean     = Constant(0, shape=norm_shape)  # note: these are not really constants; they are updated differently
     run_variance = Constant(0, shape=norm_shape)
-    run_count    = Constant(0, shape=(1,), device=cpu()) # count must live on the CPU
+    run_count    = Constant(0, shape=(1,))
 
     # expression
     x = Placeholder(name='batch_normalization_arg')

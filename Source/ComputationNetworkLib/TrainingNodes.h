@@ -2374,14 +2374,17 @@ private: // time-constant conversions
     // RunCount() returns a reference to the accumulator for the 0-th order stats.
     // These are stored in one of the Inputs (where they can be tied). However,
     // old models did not tie this correctly. For those, they are stored in the node.
-    ElemType& RunCount()
+    void SetRunCount(ElemType val)
     {
-        return (GetNumInputs() > RUN_COUNT) ? Input(RUN_COUNT)->Value()(0, 0) : m_runCountLegacy;
+        if (GetNumInputs() > RUN_COUNT)
+            Input(RUN_COUNT)->Value().SetColumn(&val, 0); // (maps to cudaMemcpy() as opposed SetValue() which runs a custom kernel)
+        else
+            m_runCountLegacy = val;
     }
 
     ElemType RunCount() const // const version of above; keep identical
     {
-        return (GetNumInputs() > RUN_COUNT) ? Input(RUN_COUNT)->Value()(0, 0) : m_runCountLegacy;
+        return (GetNumInputs() > RUN_COUNT) ? Input(RUN_COUNT)->Value().Get00Element() : m_runCountLegacy;
     }
 
     // map time constants to exp avg factor
@@ -2544,7 +2547,7 @@ public:
         double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
         double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
         if (expAvgFactor != 0 || blendFactor != 1)
-            RunCount() += GetMBLayout()->GetActualNumSamples();
+            SetRunCount(RunCount() + (ElemType)GetMBLayout()->GetActualNumSamples());
 
         Base::EndBackprop();
     }
@@ -2701,7 +2704,7 @@ public:
     // any other use is undefined behavior
     void ResetStatisticsState()
     {
-        RunCount() = 0;
+        SetRunCount(0);
         m_normTimeConst = 0;
         m_blendTimeConst = 0;
     }

@@ -1332,33 +1332,18 @@ namespace CNTK
         if (variable.IsParameter() || variable.IsConstant())
         {
             auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name());
-            auto deviceId = network->GetDeviceId();
-
-#if 1 // HACK to show that this in principle works; need to plumb this through to the Python level
-            // Special workaround for statistics accumulators of BatchNormalization.
-            // These are not constants, but also not parameters that get updated by SGD.
-            // So we hold them in constants. However, they must be shared, never copied.
-            // ...Can we just create it in the network device, and simply overwrite the Value()?
-            if (variable.IsConstant() && Constant(variable).Value()->GetMatrix<ElementType>()->GetDeviceId() == -1 &&
-                variable.Shape().Rank() == 1) // TODO: how to funnel this info through?
-            {
-                fopen("xx", "r"); // have some breakpoint
-                deviceId = Constant(variable).Value()->GetMatrix<ElementType>()->GetDeviceId();
-            }
-#endif
-
-            computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(variable.Shape()), deviceId);
+            computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(variable.Shape()));
             network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
             if (!variable.NeedsGradient())
                 computationNodePtr->SetLearningRateMultiplier(0.0);
 
             NDArrayViewPtr value = variable.IsConstant() ? Constant(variable).Value() : Parameter(variable).Value();
             std::shared_ptr<const Matrix<ElementType>> valueMatrix = variable.IsConstant() ? value->GetMatrix<ElementType>() : value->GetWritableMatrix<ElementType>();
-            if (variable.IsParameter() || (valueMatrix->GetDeviceId() == deviceId))
+            if (variable.IsParameter() || (valueMatrix->GetDeviceId() == network->GetDeviceId()))
                 computationNodePtr->Value() = valueMatrix->AsReference();
             else // Constant: if initialized data lives on wrong device, make a copy to the right one (copy is OK since it's constant)
             {
-                Matrix<ElementType> clonedMatrix(valueMatrix->GetNumRows(), valueMatrix->GetNumCols(), deviceId, valueMatrix->GetMatrixType(), valueMatrix->GetFormat());
+                Matrix<ElementType> clonedMatrix(valueMatrix->GetNumRows(), valueMatrix->GetNumCols(), network->GetDeviceId(), valueMatrix->GetMatrixType(), valueMatrix->GetFormat());
                 clonedMatrix.AssignValuesOf(*valueMatrix);
                 computationNodePtr->Value() = std::move(clonedMatrix);
             }
