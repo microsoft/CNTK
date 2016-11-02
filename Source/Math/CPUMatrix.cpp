@@ -5826,6 +5826,197 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
     }
 };
 
+template<class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
+    const std::vector<size_t> phoneseq, const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise)
+{
+    if (isColWise)
+    {
+        alpha.SetValue(LZERO);
+        beta.SetValue(LZERO);
+        auto &us = *this;
+        int s, s2;
+        size_t senoneid, t;
+        int senonenum = (int)phoneseq.size();
+        ElemType ascore;
+        double x, y;
+        blanknum;
+        //begin FB
+        if (framenum > 1)
+        {
+            //initialize alpha
+            for (s = 1; s< 3; s++)
+            {
+                senoneid = phoneseq[s];
+                alpha(s, 0) = prob(senoneid, 0);
+            }
+            alpha(senonenum - 1, 0) = LZERO;
+            //initialize beta
+            for (s = senonenum - 3; s< senonenum - 1; s++)
+            {
+                senoneid = phoneseq[s];
+                beta(s, framenum - 1) = prob(senoneid, framenum - 1);
+            }
+            beta(senonenum - 1, framenum - 1) = LZERO;
+
+
+
+
+            //cal alpha
+            for (t = 1; t< framenum; t++)
+            {
+                for (s = 1; s< senonenum - 1; s++)
+                {
+                    senoneid = phoneseq[s];
+                    x = LZERO;
+                    for (s2 = s - 1; s2 <= s; s2++)
+                    {
+                        if (s2 > 0)
+                        {
+                            y = alpha(s2, t - 1);
+                            x = LogAddD(x, y);
+                        }
+                    }
+
+                    if (senoneid != prob.GetNumRows() - 1 && s - 2 > 0 && senoneid != phoneseq[s - 2])
+                    {
+                        y = alpha(s - 2, t - 1);
+                        x = LogAddD(x, y);
+                    }
+                    if (senoneid != 65535)
+                        ascore = prob(senoneid, t);
+                    else
+                        ascore = 0;
+                    alpha(s, t) = (float)x + ascore;
+                }
+
+            }
+            //exit senone
+            x = LZERO;
+            for (s2 = senonenum - 3; s2< senonenum - 1; s2++)
+            {
+                y = alpha(s2, framenum - 1);
+                x = LogAddD(x, y);
+            }
+            alpha(senonenum - 1, framenum - 1) = (float)x;
+
+            totalscore = -alpha(senonenum - 1, framenum - 1);
+
+
+            //fprintf(stderr, "framenum: %d objection value %f\n", framenum, totalscore / framenum);
+            //alpha.dump("alpha");
+            //lasts.dump("lasts");
+            //cal beta
+            for (t = framenum - 2; t >= 0; t--)
+            {
+
+                for (s = 1; s< senonenum - 1; s++)
+                {
+                    senoneid = phoneseq[s];
+                    x = LZERO;
+                    for (s2 = s; s2 <= s + 1; s2++)
+                    {
+                        if (s2 < senonenum - 1)
+                        {
+                            y = beta(s2, t + 1);
+                            x = LogAddD(x, y);
+                        }
+                    }
+                    if (senoneid != prob.GetNumRows() - 1 && s + 2 < senonenum - 1 && senoneid != phoneseq[s + 2])
+                    {
+                        y = beta(s + 2, t + 1);
+                        x = LogAddD(x, y);
+                    }
+
+                    if (senoneid != 65535)
+                        ascore = prob(senoneid, t);
+                    else
+                        ascore = 0;
+                    beta(s, t) = (float)x + ascore;
+
+                }
+                if (t == 0)
+                    break;
+            }
+            //entry senone
+            x = LZERO;
+            for (s2 = 1; s2<3; s2++)
+            {
+                y = beta(s2, 0);
+                x = LogAddD(x, y);
+            }
+            beta(0, 0) = (float)x;
+            //beta.dump("beta");
+            /*if(fabs(totalscore - x) > 0.0001)
+            fprintf(stderr, "alpha != beta %f %f\n",totalscore,x);*/
+
+            //occupation
+            //fprintf(stderr,"best senone id ");
+            for (t = 0; t< framenum; t++)
+            {
+                //cal zt
+                double Zt = LZERO;
+                /*double Ct = LOGZERO;
+                double Dt = LOGZERO;
+                int alphaT = senonenum - 2 * framenum +  2 * t - 1;
+                int betaT = 2 * t + 2;
+                for (int is = 1; is < senonenum - 1; is++)
+                {
+                alpha(is, t) = LOGZERO;
+                if (is > betaT)
+                beta(is, t) = LOGZERO;
+                Ct = LAdd(Ct, alpha(is, t));
+                Dt = LAdd(Dt, beta(is, t));
+                }*/
+                for (s = 1; s < senonenum - 1; s++)
+                {
+                    senoneid = phoneseq[s];
+                    Zt = LogAddD(Zt, (alpha(s, t) + beta(s, t) - prob(senoneid, t)));
+
+                    //- (float)Ct - (float)Dt
+
+                }
+                if (fabs(Zt + totalscore) > 0.01)
+                    printf("bad score %d %f %f", (int)t, Zt, totalscore);
+                for (s = 1; s< senonenum - 1; s++)
+                {
+                    senoneid = phoneseq[s];
+                    if (senoneid != 65535)
+                    {
+                        ElemType logoccu = alpha(s, t) + beta(s, t) - prob(senoneid, t) - (float)Zt;
+                        if (logoccu < cnminLogExp)
+                            us(senoneid, t) += 0.0f;
+                        else
+                            us(senoneid, t) += exp(logoccu);
+
+                    }
+
+                }
+
+
+            }
+            //fprintf(stderr, "\n");
+        }
+        /*else
+        {
+        senoneid = hmm.getsenoneid(0);
+        edgeoccup(senoneid,0) = 1.0f;
+        }*/
+        //alpha.dump("alpha");
+        //beta.dump("beta");
+        //edgeoccup.dump("edgeoccup");
+        return *this;
+
+    }
+    prob.Get00Element();
+    alpha.Get00Element();
+    beta.Get00Element();
+    phoneseq.size();
+    totalscore = 0.0;
+    framenum;
+    return *this;
+}
+
 /// the kernel function for RCRF backward computation
 template <class ElemType>
 void CPUMatrix<ElemType>::_rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,

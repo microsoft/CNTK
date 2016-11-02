@@ -125,6 +125,7 @@ public:
     ComputationNodePtr CosDistance(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr CrossEntropy(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
     ComputationNodePtr CrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
+    ComputationNodePtr CTCwithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction,  const std::wstring nodeName = L"");
     ComputationNodePtr DiagTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Diagonal(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Dropout(const ComputationNodePtr a, const std::wstring nodeName = L"");
@@ -160,6 +161,7 @@ public:
     ComputationNodePtr PastValue(const ComputationNodePtr a, const float initHiddenActivity, const size_t row_size, size_t timeStep, const std::wstring nodeName = L"");
     ComputationNodePtr PerDimMeanVarDeNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"");
     ComputationNodePtr PerDimMeanVarNormalization(const ComputationNodePtr feature, const ComputationNodePtr mean, const ComputationNodePtr InvStdDev, const std::wstring nodeName = L"");
+    ComputationNodePtr PhoneError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Plus(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Reciprocal(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr RandomSample(const ComputationNodePtr a, const std::wstring nodeName = L"");

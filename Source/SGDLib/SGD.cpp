@@ -229,6 +229,15 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         trainSetDataReader->GetHmmData(hmm);
     }
 
+    bool isCTCTrainingCriterion = (criterionNodes[0]->OperationName() == L"CTCwithSoftmax");
+    if (isCTCTrainingCriterion)
+    {
+        //SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
+        auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(criterionNodes[0]);
+        auto  hmm = node->gethmm();
+        trainSetDataReader->GetHmmData(hmm);
+    }
+
     // used for KLD regularized adaptation. For all other adaptation techniques
     // use MEL to edit the model and using normal training algorithm
     // TODO: Should this be done in SGD::Adapt()?
@@ -396,6 +405,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                                   m_seqGammarCalcAMF, m_seqGammarCalcLMF, m_seqGammarCalcWP, m_seqGammarCalcbMMIFactor, m_seqGammarCalcUsesMBR);
     }
 
+    if (isCTCTrainingCriterion)
+    {
+        ComputationNetwork::SetCTCParam<ElemType>(net, criterionNodes[0], evaluationNodes[0], m_blankNum, m_delayConstraint);
+    }
     // --- MAIN EPOCH LOOP
     for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
     {
@@ -2598,6 +2611,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_seqGammarCalcWP = configSGD(L"seqGammarWordPen", 0.0);
     m_disableRegInBatchNormalization = configSGD(L"disableRegInBatchNormalization", false);
 
+    //CTC parameter
+    m_blankNum = configSGD(L"blankNum", (size_t)1);
+    m_delayConstraint = configSGD(L"delayConstraint", (int)(-1));
     m_dropoutRates = configSGD(L"dropoutRate", ConfigRecordType::Array(doubleargvector(vector<double>{0.0})));
     m_batchNormalizationTimeConstant = configSGD(L"batchNormalizationTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{0})));
     m_batchNormalizationBlendTimeConstant = configSGD(L"batchNormalizationBlendTimeConstant", ConfigRecordType::Array(doubleargvector(vector<double>{0})));

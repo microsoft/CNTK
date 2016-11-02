@@ -43,6 +43,7 @@ private:
     size_t m_mbMaxNumTimeSteps; // max time steps we take in a MB layout; any sentence longer than this max will be discarded (and a warning will be issued )
                                 // this is used to prevent CUDA out-of memory errors
 
+    size_t m_maxUtteranceLength;
     vector<size_t> m_numFramesToProcess; // [seq index] number of frames available (left to return) in each parallel sequence
     vector<size_t> m_switchFrame;        // TODO: something like the position where a new sequence starts; still supported?
     vector<size_t> m_numValidFrames;     // [seq index] valid #frames in each parallel sequence. Frames (s, t) with t >= m_numValidFrames[s] are NoInput.
@@ -109,6 +110,7 @@ private:
 
     bool GetMinibatchToTrainOrTest(StreamMinibatchInputs& matrices);
     bool GetMinibatch4SEToTrainOrTest(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, std::vector<size_t>& extrauttmap);
+    bool GetMinibatch4CTCToTrainOrTest(vector<size_t> &boundaries, vector<size_t> &extrauttmap);
     void fillOneUttDataforParallelmode(StreamMinibatchInputs& matrices, size_t startFr, size_t framenum, size_t channelIndex, size_t sourceChannelIndex); // TODO: PascalCase()
     bool GetMinibatchToWrite(StreamMinibatchInputs& matrices);
 
@@ -189,6 +191,7 @@ public:
     virtual void SetLabelMapping(const std::wstring& sectionName, const std::map<LabelIdType, LabelType>& labelMapping);
     virtual bool GetData(const std::wstring& sectionName, size_t numRecords, void* data, size_t& dataBufferSize, size_t recordStart = 0);
     virtual bool GetMinibatch4SE(std::vector<shared_ptr<const msra::dbn::latticepair>>& latticeinput, vector<size_t>& uids, vector<size_t>& boundaries, vector<size_t>& extrauttmap);
+    virtual bool GetMinibatch4CTC(vector<size_t> &boundaries, vector<size_t> &extrauttmap);
     virtual bool GetHmmData(msra::asr::simplesenonehmm* hmm);
 
     virtual bool DataEnd();
