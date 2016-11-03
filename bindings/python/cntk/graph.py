@@ -4,41 +4,36 @@
 # for full license information.
 # ==============================================================================
 
-def dfs_walk(node, visitor, accum, visited):
+def dfs_walk(node, visitor):
     '''
-    Generic function to walk the graph.
+    Generic function that walks through the graph starting at `node` and
+    applies function `visitor` on each of those.
 
     Args:
         node (graph node): the node to start the journey from
         visitor (Python function or lambda): function that takes a node as
          argument and returns `True` if that node should be returned.
-        accum (`list`): accumulator of nodes while traversing the graph
-        visited (`set`): set of nodes that have already been visited.
-         Initialize with empty set.
+
+    Returns:
+        List of nodes, for which `visitor` was `True`
     '''
-    if node in visited:
-        return
-    visited.add(node)
-    if hasattr(node, 'root_function'):
-        node = node.root_function
-        for child in node.inputs:
-            dfs_walk(child, visitor, accum, visited)
-    elif hasattr(node, 'is_output') and node.is_output:
-        dfs_walk(node.owner, visitor, accum, visited)
+    nodes = []
+    dfs_walk(node, visitor, nodes, set())
+    return nodes
 
     if visitor(node):
         accum.append(node)
 
 
 
- 
+
 
 
 def find_nodes_by_name(node, node_name):
     '''
     Finds nodes in the graph starting from `node` and doing a depth-first
     search.
-
+ 
     Args:
         node (graph node): the node to start the journey from
         node_name (`str`): name for which we are search nodes
@@ -73,16 +68,16 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
     if (dot or png):
 
         try:
-            import pydot_ng as pydot
+    import pydot_ng as pydot
         except ImportError:
             raise ImportError("PNG and DOT format requires pydot_ng package. Unable to import pydot_ng.")
 
-        # initialize a dot object to store vertices and edges
-        dot_object = pydot.Dot(graph_name="network_graph",rankdir='TB')
-        dot_object.set_node_defaults(shape='rectangle', fixedsize='false',
-                                 height=.85, width=.85, fontsize=12)
-        dot_object.set_edge_defaults(fontsize=10)
-    
+    # initialize a dot object to store vertices and edges
+    dot_object = pydot.Dot(graph_name="network_graph",rankdir='TB')
+    dot_object.set_node_defaults(shape='rectangle', fixedsize='false',
+                             height=.85, width=.85, fontsize=12)
+    dot_object.set_edge_defaults(fontsize=10)
+
     # string to store model 
     model = ''
 
@@ -107,8 +102,8 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
             model += node.op_name + '('
             if (dot or png):
                 cur_node = pydot.Node(node.op_name+' '+node.uid,label=node.op_name,shape='circle',
-                                        fixedsize='true', height=1, width=1)
-                dot_object.add_node(cur_node)
+                                    fixedsize='true', height=1, width=1)
+            dot_object.add_node(cur_node)
 
             # add node's inputs
             for i in range(len(node.inputs)):
@@ -128,8 +123,8 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
 
             if (dot or png):
                 out_node = pydot.Node(node.outputs[0].uid)
-                dot_object.add_node(out_node)
-                dot_object.add_edge(pydot.Edge(cur_node,out_node,label=str(node.outputs[0].shape)))
+            dot_object.add_node(out_node)
+            dot_object.add_edge(pydot.Edge(cur_node,out_node,label=str(node.outputs[0].shape)))
 
         except AttributeError:
             # OutputVariable node
