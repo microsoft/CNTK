@@ -2234,14 +2234,14 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name), m_spatial(false), m_normTimeConst(0), m_blendTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
-        m_runCountLegacy(0), m_imageLayoutKind(ImageLayoutKind::CHW),
+        m_runCountUntied(0), m_imageLayoutKind(ImageLayoutKind::CHW),
         m_convertRunningVariancePending(false)
     {
     }
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
                            double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind, size_t samplesSeen = 0) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_runCountLegacy(samplesSeen),
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_runCountUntied(samplesSeen),
         m_convertRunningVariancePending(false)
     {
     }
@@ -2264,7 +2264,7 @@ public:
         fstream << m_normTimeConst;
         fstream << m_blendTimeConst;
         fstream << (int32_t)m_imageLayoutKind;
-        fstream << m_runCountLegacy;  // legacy models only, unused otherwise  --TODO: bump file version to not save this anymore
+        fstream << m_runCountUntied;  // legacy models only, unused otherwise  --TODO: bump file version to not save this anymore
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
     }
@@ -2281,7 +2281,7 @@ public:
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
             if (modelVersion >= CNTK_MODEL_VERSION_13)
-                fstream >> m_runCountLegacy;  // legacy models only, unused otherwise  --TODO: bump file version to not save this anymore
+                fstream >> m_runCountUntied;  // legacy models only, unused otherwise  --TODO: bump file version to not save this anymore
             else
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;
@@ -2332,11 +2332,11 @@ public:
         {
             // Prior to version 12, minibatch count was stored instead of samples seen.
             // Approximate by assuming minibatch size 16, inform about that.
-            m_runCountLegacy = (16 * mbCount);
+            m_runCountUntied = (16 * mbCount);
             fprintf(stderr,
                     "INFO: %ls: loading pre-CuDNNv5 model: approximated mini-batch count of %" PRIu64 " as %" PRIu64 " trained samples.\n"
                     "      Statistics in further training may be biased; consider re-training instead.\n",
-                    NodeName().c_str(), mbCount, m_runCountLegacy);
+                    NodeName().c_str(), mbCount, m_runCountUntied);
 
             // Prior to version 12, running inverse standard deviation was
             // stored in Input 4. Now variance is used. We (approximately)
@@ -2357,34 +2357,48 @@ public:
             node->m_normTimeConst   = m_normTimeConst;
             node->m_blendTimeConst  = m_blendTimeConst;
             node->m_imageLayoutKind = m_imageLayoutKind;
-            node->m_runCountLegacy  = m_runCountLegacy;
+            node->m_runCountUntied  = m_runCountUntied;
             node->m_epsilon         = m_epsilon;
             node->m_useCntkEngine   = m_useCntkEngine;
         }
     }
 
-    size_t GetSamplesSeen() const { return RunCount(); } // for V2 API interop
+    size_t GetSamplesSeen() const { return m_runCountUntied; } // for V2 API interop
 
 private: // time-constant conversions
 
-    // RunCount() and SetRunCount() abstract accessing the accumulator for the 0-th order stats.
-    // These are stored in one of the Inputs (where they can be tied). However,
-    // old models did not tie this correctly. For those, they are stored in the node.
-    void SetRunCount(size_t val)
+    // The case of parameter tying is tricky. The same set of BN parameters can be shared
+    // across multiple instances in a network. This happens if the same BN object is applied
+    // in multiple parts of the network. For example, a DSSM network that compares images,
+    // where the same image-to-vec stack is applied to both a query image and a test image.
+    // In this case, 0th (count), 1st (mean), and 2nd (variance) order statistics are shared
+    // across these instances.
+    // We still keep a non-tied version of the count, for the special purposes of
+    //  - knowing how many nodes share the same accumulator (needed to adjust the time constant)
+    //  - knowing whether the shared accumulator can never be 0, to avoid a GPU sync point
+    //  - replicating the behavior of an old version that did not tie the count at all (incorrect).
+    bool HasTiedRunCount() const { return GetNumInputs() > RUN_COUNT; }
+    void ResetRunCount()
     {
-        if (GetNumInputs() > RUN_COUNT)
-        {
-            auto eval = (ElemType)val;
-            Input(RUN_COUNT)->Value().SetColumn(&eval, 0); // (maps to cudaMemcpy() as opposed SetValue() which runs a custom kernel)
-        }
-        else
-            m_runCountLegacy = val;
+        m_runCountUntied = 0;
+        if (HasTiedRunCount())
+            Input(RUN_COUNT)->Value().SetValue(0);
     }
-
+    void AggregateRunCount(size_t countToAdd)
+    {
+        m_runCountUntied += countToAdd;
+        if (HasTiedRunCount())
+        {
+            auto sum = (size_t)Input(RUN_COUNT)->Value().Get00Element() + (ElemType)countToAdd; // TODO: more GPU-efficient version uses a temp [1] matrix to memcpy into, then add (avoids sync point)
+            Input(RUN_COUNT)->Value().SetColumn(&sum, 0); // (maps to cudaMemcpy() as opposed SetValue() which runs a custom kernel)
+            // ScaleAndAdd(/*alpha=*/sum, /*add what*/C::One, /*to*/Input(RUN_COUNT)->Value()); // efficient version that avoids a GPU sync
+        }
+    }
     size_t RunCount() const // const version of above; keep identical
     {
-        return (GetNumInputs() > RUN_COUNT) ? (size_t)Input(RUN_COUNT)->Value().Get00Element() : m_runCountLegacy;
+        return (HasTiedRunCount()) ? (size_t)Input(RUN_COUNT)->Value().Get00Element() : m_runCountUntied;
     }
+    bool IsRunCount0() const { return m_runCountUntied == 0 && RunCount() == 0; } // tied count >= untied one, so we can ask the untied one first to avoid GPU sync
 
     // map time constants to exp avg factor
     // This is the factor for the current MB's estimate (1-factor is used for the previous value of the running stats).
@@ -2392,10 +2406,13 @@ private: // time-constant conversions
     {
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
+        {
+            if (IsRunCount0())
+                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
             return 0;                                        // (m_normTimeConst == infinity) no new contribution from current minibatch
+        }
 
         double numSamples = (double)GetMBLayout()->GetActualNumSamples();
-        size_t runCount = RunCount();
 
         // m_normTimeConst < 0 is used to denote corpus-level statistics (without forgetting factor).
         // BUGBUG: Corpus aggregation in float is numerically instable. E.g. over a corpus of 36000 samples,
@@ -2403,7 +2420,7 @@ private: // time-constant conversions
         //         applying it rigth before the split. However, at the end, averages differ notably.
         //         Errs increase from 2.9% to 3.2%. For 36000 samples (~500 MBs), the last summation has 13 bits.
         if (m_normTimeConst < 0)
-            return numSamples / (numSamples + runCount);
+            return numSamples / (numSamples + RunCount());
 
         // Initialization case: only use current minibatch.
         // BUGBUG: This gives the first MB an unduely high contribution.
@@ -2411,7 +2428,7 @@ private: // time-constant conversions
         //         ...AAAAAAAAAABCDEFG... where A is the first MB, which is infinitely repeated.
         //         The error will taper off; the first MB will have reduced to 37% of the average after
         //         #samples = batchNormTimeConstant. So for our default of 5000, it likely won't matter.
-        if (runCount == 0)
+        if (IsRunCount0())
             return 1.0;
 
         // Convert to per-minibatch factor. The limit, positive infinity, means that running mean/var parameters are "frozen"
@@ -2431,10 +2448,14 @@ private: // time-constant conversions
     {
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
+        {
+            if (IsRunCount0())
+                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
             return 1.0;                 // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
+        }
 
         // Initialization case: only use current minibatch.
-        if (RunCount() == 0)
+        if (IsRunCount0())
             return 0;
 
         // convert to blend factor (= weight for running stats)
@@ -2486,7 +2507,7 @@ public:
 
         // and update the denominator
         if (expAvgFactor != 0 || blendFactor != 1)
-            SetRunCount(RunCount() + GetMBLayout()->GetActualNumSamples());
+            AggregateRunCount(GetMBLayout()->GetActualNumSamples());
 
         //fprintf(stderr, "### BN ###: %d\n", (int)RunCount());
         //runMean.Print("runMean", -5, -5, -1, -1);
@@ -2619,7 +2640,7 @@ public:
                         InvalidArgument("%ls: Data input cannot broadcast.", NodeDescription().c_str());
 #endif
             }
-            if (GetNumInputs() > RUN_COUNT) // 0-th order statistics (count) (optional for backcompat with old code which didn't correctly share it)
+            if (HasTiedRunCount()) // 0-th order statistics (count) (optional for backcompat with old code which didn't correctly share it)
             {
                 // since this must always be a [1] tensor, we don't support inference for it
                 size_t i = RUN_COUNT;
@@ -2696,7 +2717,7 @@ public:
     // any other use is undefined behavior
     void ResetStatisticsState()
     {
-        SetRunCount(0);
+        ResetRunCount();
         m_normTimeConst = 0;
         m_blendTimeConst = 0;
     }
@@ -2767,7 +2788,7 @@ private:
     // Samples seen count in untied back-compat mode, used to compute cumulative corpus average.
     // This field is used for old models only. New models store the 0-th order stats in yet another Input,
     // in order to do the correct accumulator tying.
-    size_t m_runCountLegacy; // legacy models only
+    size_t m_runCountUntied; // legacy models only
 
     // Interpolated actual mean/inverse stddev values. Pre-computed on forward pass, also used in gradient computation.
     shared_ptr<Matrix<ElemType>> m_savedMean;

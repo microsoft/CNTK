@@ -63,7 +63,7 @@ def BiRecurrence(fwd, bwd):
 def BNBiRecurrence(fwd, bwd): # special version that calls one shared BN instance at two places, for testing BN param tying
     F = Recurrence(fwd)
     G = Recurrence(fwd, go_backwards=True)
-    BN = BatchNormalization()
+    BN = BatchNormalization(normalization_time_constant=-1)
     x = Placeholder()
     apply_x = splice ([F(BN(x)), G(BN(x))])
     return apply_x
@@ -100,9 +100,40 @@ def test_seq_classification_error(device_id):
                 Embedding(emb_dim),
                 #BatchNormalization(),
                 BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
-                BatchNormalization(),
+                BatchNormalization(normalization_time_constant=-1),
                 Dense(num_labels)
             ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
+            """
+             Minibatch[   1-   1]: loss = 5.945220 * 67, metric = 100.0% * 67
+             Minibatch[   2-   2]: loss = 4.850601 * 63, metric = 79.4% * 63
+             Minibatch[   3-   3]: loss = 3.816031 * 68, metric = 57.4% * 68
+             Minibatch[   4-   4]: loss = 2.213172 * 70, metric = 41.4% * 70
+             Minibatch[   5-   5]: loss = 2.615342 * 65, metric = 40.0% * 65
+             Minibatch[   6-   6]: loss = 2.360896 * 62, metric = 25.8% * 62
+             Minibatch[   7-   7]: loss = 1.452822 * 58, metric = 27.6% * 58
+             Minibatch[   8-   8]: loss = 0.947210 * 70, metric = 10.0% * 70
+             Minibatch[   9-   9]: loss = 0.595654 * 59, metric = 10.2% * 59
+             Minibatch[  10-  10]: loss = 1.515479 * 64, metric = 23.4% * 64
+             Minibatch[  11- 100]: loss = 0.686744 * 5654, metric = 10.4% * 5654
+             Minibatch[ 101- 200]: loss = 0.289059 * 6329, metric = 5.8% * 6329
+             Minibatch[ 201- 300]: loss = 0.218765 * 6259, metric = 4.7% * 6259
+             Minibatch[ 301- 400]: loss = 0.182855 * 6229, metric = 3.5% * 6229
+             Minibatch[ 401- 500]: loss = 0.156745 * 6289, metric = 3.4% * 6289
+            Finished Epoch [1]: [Training] loss = 0.321413 * 36061, metric = 5.8% * 36061
+            --> 0.057818696098277916 0.3214128415043278
+             Minibatch[   1-   1]: loss = 0.000000 * 991, metric = 2.5% * 991
+             Minibatch[   2-   2]: loss = 0.000000 * 1000, metric = 2.8% * 1000
+             Minibatch[   3-   3]: loss = 0.000000 * 992, metric = 4.0% * 992
+             Minibatch[   4-   4]: loss = 0.000000 * 989, metric = 3.0% * 989
+             Minibatch[   5-   5]: loss = 0.000000 * 998, metric = 3.8% * 998
+             Minibatch[   6-   6]: loss = 0.000000 * 995, metric = 1.5% * 995
+             Minibatch[   7-   7]: loss = 0.000000 * 998, metric = 2.5% * 998
+             Minibatch[   8-   8]: loss = 0.000000 * 992, metric = 1.6% * 992
+             Minibatch[   9-   9]: loss = 0.000000 * 1000, metric = 1.6% * 1000
+             Minibatch[  10-  10]: loss = 0.000000 * 996, metric = 7.9% * 996
+            Finished Epoch [1]: [Evaluation] loss = 0.000000 * 10984, metric = 3.2% * 10984
+            --> 0.03159140568099053 0.0
+            """
 
         # replace lookahead by bidirectional model
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
@@ -123,6 +154,37 @@ def test_seq_classification_error(device_id):
                 BatchNormalization(normalization_time_constant=-1),
                 Dense(num_labels)
             ]), [0.05662627214996811, 0.2968516879905391], 0.035050983248361256)
+            """
+             Minibatch[   1-   1]: loss = 5.745576 * 67, metric = 100.0% * 67
+             Minibatch[   2-   2]: loss = 4.684151 * 63, metric = 90.5% * 63
+             Minibatch[   3-   3]: loss = 3.957423 * 68, metric = 63.2% * 68
+             Minibatch[   4-   4]: loss = 2.286908 * 70, metric = 41.4% * 70
+             Minibatch[   5-   5]: loss = 2.733978 * 65, metric = 38.5% * 65
+             Minibatch[   6-   6]: loss = 2.189765 * 62, metric = 30.6% * 62
+             Minibatch[   7-   7]: loss = 1.427890 * 58, metric = 25.9% * 58
+             Minibatch[   8-   8]: loss = 1.501557 * 70, metric = 18.6% * 70
+             Minibatch[   9-   9]: loss = 0.632599 * 59, metric = 13.6% * 59
+             Minibatch[  10-  10]: loss = 1.516047 * 64, metric = 23.4% * 64
+             Minibatch[  11- 100]: loss = 0.580329 * 5654, metric = 9.8% * 5654
+             Minibatch[ 101- 200]: loss = 0.280317 * 6329, metric = 5.6% * 6329
+             Minibatch[ 201- 300]: loss = 0.188372 * 6259, metric = 4.1% * 6259
+             Minibatch[ 301- 400]: loss = 0.170403 * 6229, metric = 3.9% * 6229
+             Minibatch[ 401- 500]: loss = 0.159605 * 6289, metric = 3.4% * 6289
+            Finished Epoch [1]: [Training] loss = 0.296852 * 36061, metric = 5.7% * 36061
+            --> 0.05662627214996811 0.2968516879905391
+             Minibatch[   1-   1]: loss = 0.000000 * 991, metric = 1.8% * 991
+             Minibatch[   2-   2]: loss = 0.000000 * 1000, metric = 3.4% * 1000
+             Minibatch[   3-   3]: loss = 0.000000 * 992, metric = 3.9% * 992
+             Minibatch[   4-   4]: loss = 0.000000 * 989, metric = 4.1% * 989
+             Minibatch[   5-   5]: loss = 0.000000 * 998, metric = 4.0% * 998
+             Minibatch[   6-   6]: loss = 0.000000 * 995, metric = 1.2% * 995
+             Minibatch[   7-   7]: loss = 0.000000 * 998, metric = 2.8% * 998
+             Minibatch[   8-   8]: loss = 0.000000 * 992, metric = 2.9% * 992
+             Minibatch[   9-   9]: loss = 0.000000 * 1000, metric = 2.0% * 1000
+             Minibatch[  10-  10]: loss = 0.000000 * 996, metric = 8.2% * 996
+            Finished Epoch [1]: [Evaluation] loss = 0.000000 * 10984, metric = 3.5% * 10984
+            --> 0.035050983248361256 0.0
+            """
 
 
         # plus BatchNorm
