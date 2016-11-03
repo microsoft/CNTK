@@ -101,7 +101,7 @@ public:
                 i,
                 m_sequenceLength,
                 (ChunkIdType) (i / m_numSequencesPerChunk),
-                { 0, i }
+                KeyType(0, i)
             });
         }
 
