@@ -7,7 +7,7 @@
 import numpy as np
 from cntk import DeviceDescriptor
 
-TOLERANCE_ABSOLUTE = 1E-1
+TOLERANCE_ABSOLUTE = 1E-1  # TODO: Once set_fixed_random_seed(1) is honored, this must be tightened a lot.
 
 from cntk.blocks import *
 from cntk.layers import *
@@ -63,7 +63,7 @@ def BiRecurrence(fwd, bwd):
 def BNBiRecurrence(fwd, bwd): # special version that calls one shared BN instance at two places, for testing BN param tying
     F = Recurrence(fwd)
     G = Recurrence(fwd, go_backwards=True)
-    BN = BatchNormalization(normalization_time_constant=-1)
+    BN = BatchNormalization(normalization_time_constant=10000) # we feed twice the #samples, must reflect in time constant
     x = Placeholder()
     apply_x = splice ([F(BN(x)), G(BN(x))])
     return apply_x
@@ -100,10 +100,10 @@ def test_seq_classification_error(device_id):
                 Embedding(emb_dim),
                 #BatchNormalization(),
                 BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
-                BatchNormalization(normalization_time_constant=-1),
+                BatchNormalization(),
                 Dense(num_labels)
             ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
-            """
+            """ with normalization_time_constant=-1:
              Minibatch[   1-   1]: loss = 5.945220 * 67, metric = 100.0% * 67
              Minibatch[   2-   2]: loss = 4.850601 * 63, metric = 79.4% * 63
              Minibatch[   3-   3]: loss = 3.816031 * 68, metric = 57.4% * 68

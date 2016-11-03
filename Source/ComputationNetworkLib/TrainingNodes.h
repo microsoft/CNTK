@@ -2371,10 +2371,9 @@ private: // time-constant conversions
     // across multiple instances in a network. This happens if the same BN object is applied
     // in multiple parts of the network. For example, a DSSM network that compares images,
     // where the same image-to-vec stack is applied to both a query image and a test image.
-    // In this case, 0th (count), 1st (mean), and 2nd (variance) order statistics are shared
+    // In this case, 0-th (count), 1-st (mean), and 2-nd (variance) order statistics are shared
     // across these instances.
     // We still keep a non-tied version of the count, for the special purposes of
-    //  - knowing how many nodes share the same accumulator (needed to adjust the time constant)
     //  - knowing whether the shared accumulator can never be 0, to avoid a GPU sync point
     //  - replicating the behavior of an old version that did not tie the count at all (incorrect).
     bool HasTiedRunCount() const { return GetNumInputs() > RUN_COUNT; }
@@ -2389,7 +2388,8 @@ private: // time-constant conversions
         m_runCountUntied += countToAdd;
         if (HasTiedRunCount())
         {
-            auto sum = (size_t)Input(RUN_COUNT)->Value().Get00Element() + (ElemType)countToAdd; // TODO: more GPU-efficient version uses a temp [1] matrix to memcpy into, then add (avoids sync point)
+            // TODO: more GPU-efficient version uses a temp [1] matrix to memcpy into, then add (avoids sync point)
+            auto sum = (size_t)Input(RUN_COUNT)->Value().Get00Element() + (ElemType)countToAdd;
             Input(RUN_COUNT)->Value().SetColumn(&sum, 0); // (maps to cudaMemcpy() as opposed SetValue() which runs a custom kernel)
             // ScaleAndAdd(/*alpha=*/sum, /*add what*/C::One, /*to*/Input(RUN_COUNT)->Value()); // efficient version that avoids a GPU sync
         }
@@ -2417,8 +2417,9 @@ private: // time-constant conversions
         // m_normTimeConst < 0 is used to denote corpus-level statistics (without forgetting factor).
         // BUGBUG: Corpus aggregation in float is numerically instable. E.g. over a corpus of 36000 samples,
         //         the first few MBs are the same when sharing the same node twice at a split point vs.
-        //         applying it rigth before the split. However, at the end, averages differ notably.
+        //         applying it right before the split. However, at the end, averages differ notably.
         //         Errs increase from 2.9% to 3.2%. For 36000 samples (~500 MBs), the last summation has 13 bits.
+        //         In contrast, after 1000 samples, accuracy is identical; and marginally different after 5000.
         if (m_normTimeConst < 0)
             return numSamples / (numSamples + RunCount());
 
@@ -2427,7 +2428,7 @@ private: // time-constant conversions
         //         This now implements a low-pass filter over a sequence
         //         ...AAAAAAAAAABCDEFG... where A is the first MB, which is infinitely repeated.
         //         The error will taper off; the first MB will have reduced to 37% of the average after
-        //         #samples = batchNormTimeConstant. So for our default of 5000, it likely won't matter.
+        //         #samples = batchNormTimeConstant. So for our default of 5000, it likely matter little.
         if (IsRunCount0())
             return 1.0;
 
@@ -2508,10 +2509,6 @@ public:
         // and update the denominator
         if (expAvgFactor != 0 || blendFactor != 1)
             AggregateRunCount(GetMBLayout()->GetActualNumSamples());
-
-        //fprintf(stderr, "### BN ###: %d\n", (int)RunCount());
-        //runMean.Print("runMean", -5, -5, -1, -1);
-        //runVariance.Print("runVariance", -5, -5, -1, -1);
     }
 
     // Note: This function assumes that inputIndex=0 is called before the others.
@@ -2642,7 +2639,7 @@ public:
             }
             if (HasTiedRunCount()) // 0-th order statistics (count) (optional for backcompat with old code which didn't correctly share it)
             {
-                // since this must always be a [1] tensor, we don't support inference for it
+                // This must always be a [1] tensor. No inference allowed.
                 size_t i = RUN_COUNT;
                 if (Input(i)->HasMBLayout() || Input(i)->GetSampleLayout() != TensorShape(1))
                     InvalidArgument("%ls: Input[%d] must be a vector of 1 element without dynamic axis.", NodeDescription().c_str(), (int)i);
@@ -2712,9 +2709,10 @@ public:
         m_blendTimeConst = std::numeric_limits<double>::infinity();
     }
 
-    // ResetStatisticsState will set the batch normal statistics into initial state
-    // used for re-statistics the mean and variance of BN
-    // any other use is undefined behavior
+    // ResetStatisticsState() will set the batch normal statistics into initial state
+    // used for re-statistics the mean and variance of BN.
+    // In case of multiple BN nodes sharing statistics, this must be called on all.
+    // Any other use is undefined behavior.
     void ResetStatisticsState()
     {
         ResetRunCount();
@@ -2786,9 +2784,9 @@ private:
     // --- working variables
 
     // Samples seen count in untied back-compat mode, used to compute cumulative corpus average.
-    // This field is used for old models only. New models store the 0-th order stats in yet another Input,
-    // in order to do the correct accumulator tying.
-    size_t m_runCountUntied; // legacy models only
+    // This field is the main stats for old models only. New models store the 0-th order stats in yet another Input,
+    // in order to do the correct accumulator tying. For those, this is only used for optimizing GPU sync points.
+    size_t m_runCountUntied; // running sample count for this node instance
 
     // Interpolated actual mean/inverse stddev values. Pre-computed on forward pass, also used in gradient computation.
     shared_ptr<Matrix<ElemType>> m_savedMean;
