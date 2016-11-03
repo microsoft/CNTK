@@ -1,3 +1,4 @@
+# Just a test for Git
 # Latest news
 *2016-10-25.* New CNTK Name, new Web Site and V 2.0 Beta 1 Release  
 
