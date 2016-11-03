@@ -174,7 +174,6 @@ WORKDIR /cntk
 # Build CNTK
 RUN git clone --depth=1 -b master https://github.com/fiskio/CNTK.git . && \
     CONFIGURE_OPTS="\
-      --with-boost=/usr/local/boost-1.60.0 \
       --with-cuda=/usr/local/cuda \
       --with-gdk-include=/usr/local/cuda/include \
       --with-gdk-nvml-lib=/usr/local/cuda/lib64/stubs \
