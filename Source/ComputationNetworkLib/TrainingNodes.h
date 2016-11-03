@@ -2232,18 +2232,15 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
     static const size_t RUN_VAR   = 4;
     static const size_t RUN_COUNT = 5; // optional, coming soon
 public:
-    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name) :
-        Base(deviceId, name), m_spatial(false), m_normTimeConst(0), m_blendTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
-        m_runCountUntied(0), m_imageLayoutKind(ImageLayoutKind::CHW),
-        m_convertRunningVariancePending(false)
-    {
-    }
-    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
-                           double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind, size_t samplesSeen = 0) :
+    BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial = false,
+                           double normalizationTimeConstant=0, double blendTimeConstant=0,
+                           double epsilon = 0, bool useCntkEngine = true, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW, size_t samplesSeen = 0) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
         m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_runCountUntied(samplesSeen),
-        m_convertRunningVariancePending(false)
+        m_convertRunningVariancePending(false),
+        m_one(1, 1, deviceId)
     {
+        m_one.SetValue((ElemType)1); // (constant value used for GPU-side update of runCount)
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
         BatchNormalizationNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"spatial"),
@@ -2364,6 +2361,9 @@ public:
     }
 
     size_t GetSamplesSeen() const { return m_runCountUntied; } // for V2 API interop
+    // BUGBUG: There is no SetSamplesSeen(), and indeed the V2 API does not reinstall the #samples.
+    //         For now, this causes a minor inefficiency in decoding, since it has to sync to GPU
+    //         for every MB to check the shared count.
 
 private: // time-constant conversions
 
@@ -2387,12 +2387,7 @@ private: // time-constant conversions
     {
         m_runCountUntied += countToAdd;
         if (HasTiedRunCount())
-        {
-            // TODO: more GPU-efficient version uses a temp [1] matrix to memcpy into, then add (avoids sync point)
-            auto sum = (size_t)Input(RUN_COUNT)->Value().Get00Element() + (ElemType)countToAdd;
-            Input(RUN_COUNT)->Value().SetColumn(&sum, 0); // (maps to cudaMemcpy() as opposed SetValue() which runs a custom kernel)
-            // ScaleAndAdd(/*alpha=*/sum, /*add what*/C::One, /*to*/Input(RUN_COUNT)->Value()); // efficient version that avoids a GPU sync
-        }
+            Input(RUN_COUNT)->Value().AddWithScaleOf(/*alpha=*/(ElemType)countToAdd, m_one); // this += countToAdd * (1)
     }
     size_t RunCount() const // const version of above; keep identical
     {
@@ -2513,8 +2508,10 @@ public:
 
     // Note: This function assumes that inputIndex=0 is called before the others.
     // BUGBUG: The node should not make assumptions in which order the inputs' derivates are computed. It currently assumes to start with 0.
-    // BUGBUG: If the input has no learnables (e.g. using BN instead of corpus mean/var norm), this will not be called for inputIndex=0 at all.
+    //         Further, if the input has no learnables (e.g. using BN instead of corpus mean/var norm), this will not be called for inputIndex=0 at all.
     //         And we can't just call it since we cannot overwrite the gradient. Needs some reorganization of the code, and/or a temp buffer.
+    //         A simple solution could be to simply update the gradients for scale and bias outside if inputIndex=0 was not computed.
+    //         I think the gradient is the same as ElementTimesNode() and PlusNode(), a few lines long.
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // Must be in training mode.
@@ -2787,6 +2784,7 @@ private:
     // This field is the main stats for old models only. New models store the 0-th order stats in yet another Input,
     // in order to do the correct accumulator tying. For those, this is only used for optimizing GPU sync points.
     size_t m_runCountUntied; // running sample count for this node instance
+    Matrix<ElemType> m_one;  // constant [1x1] matrix that contains a 1 (used for updating the shared count)
 
     // Interpolated actual mean/inverse stddev values. Pre-computed on forward pass, also used in gradient computation.
     shared_ptr<Matrix<ElemType>> m_savedMean;
