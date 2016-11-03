@@ -63,7 +63,7 @@ def BiRecurrence(fwd, bwd):
 def BNBiRecurrence(fwd, bwd): # special version that calls one shared BN instance at two places, for testing BN param tying
     F = Recurrence(fwd)
     G = Recurrence(fwd, go_backwards=True)
-    BN = BatchNormalization(normalization_time_constant=-1)
+    BN = BatchNormalization()
     x = Placeholder()
     apply_x = splice ([F(BN(x)), G(BN(x))])
     return apply_x
@@ -100,7 +100,7 @@ def test_seq_classification_error(device_id):
                 Embedding(emb_dim),
                 #BatchNormalization(),
                 BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
-                BatchNormalization(normalization_time_constant=-1),
+                BatchNormalization(),
                 Dense(num_labels)
             ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
 
@@ -108,9 +108,9 @@ def test_seq_classification_error(device_id):
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
             test_a_model('replace lookahead by bidirectional model', Sequential([
                 Embedding(emb_dim),
-                BatchNormalization(normalization_time_constant=-1),
+                BatchNormalization(),
                 BiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
-                BatchNormalization(normalization_time_constant=-1),
+                BatchNormalization(),
                 Dense(num_labels)
             ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
 

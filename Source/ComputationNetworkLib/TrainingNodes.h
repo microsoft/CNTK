@@ -2398,10 +2398,19 @@ private: // time-constant conversions
         size_t runCount = RunCount();
 
         // m_normTimeConst < 0 is used to denote corpus-level statistics (without forgetting factor).
+        // BUGBUG: Corpus aggregation in float is numerically instable. E.g. over a corpus of 36000 samples,
+        //         the first few MBs are the same when sharing the same node twice at a split point vs.
+        //         applying it rigth before the split. However, at the end, averages differ notably.
+        //         Errs increase from 2.9% to 3.2%. For 36000 samples (~500 MBs), the last summation has 13 bits.
         if (m_normTimeConst < 0)
-            return numSamples / (numSamples + runCount); // (this is the hack case)
+            return numSamples / (numSamples + runCount);
 
         // Initialization case: only use current minibatch.
+        // BUGBUG: This gives the first MB an unduely high contribution.
+        //         This now implements a low-pass filter over a sequence
+        //         ...AAAAAAAAAABCDEFG... where A is the first MB, which is infinitely repeated.
+        //         The error will taper off; the first MB will have reduced to 37% of the average after
+        //         #samples = batchNormTimeConstant. So for our default of 5000, it likely won't matter.
         if (runCount == 0)
             return 1.0;
 
@@ -2478,6 +2487,10 @@ public:
         // and update the denominator
         if (expAvgFactor != 0 || blendFactor != 1)
             SetRunCount(RunCount() + GetMBLayout()->GetActualNumSamples());
+
+        //fprintf(stderr, "### BN ###: %d\n", (int)RunCount());
+        //runMean.Print("runMean", -5, -5, -1, -1);
+        //runVariance.Print("runVariance", -5, -5, -1, -1);
     }
 
     // Note: This function assumes that inputIndex=0 is called before the others.
