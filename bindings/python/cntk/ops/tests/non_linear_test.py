@@ -137,7 +137,7 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
         value = np.ones(shape=shape, dtype=PRECISION_TO_TYPE[precision])
 
         a = I(shape=value.shape,
-              data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+              dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
 
@@ -168,7 +168,7 @@ def test_op_dropout_bad_input(dropout_rate):
     from cntk import dropout
     from cntk.utils import eval, sanitize_dtype_cntk, cntk_device
 
-    a = I(shape=(1, 2), data_type='float', needs_gradient=True, name='a')
+    a = I(shape=(1, 2), dtype='float', needs_gradient=True, name='a')
 
     with pytest.raises(ValueError):
         dropout_node = dropout(a, dropout_rate=dropout_rate)
