@@ -42,7 +42,7 @@ def run_distributed_trainer(tmpdir, quantized):
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
 
     trainer = Trainer(z, ce, errs, \
-            sgd(z.parameters, 0.007, momentum_time_constant, 0.5, True),
+            momentum_sgd(z.parameters, 0.007, momentum_time_constant),
             distributed_trainer=dist_trainer)
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
