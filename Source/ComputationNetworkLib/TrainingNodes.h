@@ -2394,16 +2394,16 @@ private: // time-constant conversions
         if (!Environment().IsTraining())
             return 0;                                        // (m_normTimeConst == infinity) no new contribution from current minibatch
 
-        // Initialization case: only use current minibatch.
-        size_t runCount = RunCount();
-        if (runCount == 0)
-            return 1.0;
-
         double numSamples = (double)GetMBLayout()->GetActualNumSamples();
+        size_t runCount = RunCount();
 
         // m_normTimeConst < 0 is used to denote corpus-level statistics (without forgetting factor).
         if (m_normTimeConst < 0)
             return numSamples / (numSamples + runCount); // (this is the hack case)
+
+        // Initialization case: only use current minibatch.
+        if (runCount == 0)
+            return 1.0;
 
         // Convert to per-minibatch factor. The limit, positive infinity, means that running mean/var parameters are "frozen"
         // that is, do not require updates.
@@ -2474,6 +2474,10 @@ public:
                          /*out=*/ sliceOutputValue,              // (out) batch-normalized output value
                          m_epsilon,
                          *m_savedMean, *m_savedInvStdDev);       // (out) actual interpolated mean/stddev values. Note: unused/empty for blendFactor==1 for CNTK engine
+
+        // and update the denominator
+        if (expAvgFactor != 0 || blendFactor != 1)
+            SetRunCount(RunCount() + GetMBLayout()->GetActualNumSamples());
     }
 
     // Note: This function assumes that inputIndex=0 is called before the others.
@@ -2525,17 +2529,6 @@ public:
             Input(BIAS)->Gradient() += *m_dBias;
         }
         // No derivatives with respect to running mean and variance.
-    }
-
-    virtual void EndForwardProp() override
-    {
-        // Update samples if not locked.
-        double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
-        double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
-        if (expAvgFactor != 0 || blendFactor != 1)
-            SetRunCount(RunCount() + GetMBLayout()->GetActualNumSamples());
-
-        Base::EndBackprop();
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
