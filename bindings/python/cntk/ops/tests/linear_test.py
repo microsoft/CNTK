@@ -19,8 +19,8 @@ TENSOR_PAIRS = [
     ([30.], [10.]),
     ([[10.]], [[30.]]),
     ([[1.5, 2.1]], [[10., 20.]]),
-    #([[100., 200.], [300., 400.], [10., 20.]],
-    #  [[10., 20.], [30., 40.], [1., 2.]]),
+    ([[100., 200.], [300., 400.], [10., 20.]],
+      [[10., 20.], [30., 40.], [1., 2.]]),
 
     # Adding two 3x2 inputs of sequence length 1
     ([[30., 40.], [1., 2.], [0.1, 0.2]], [[10, 20], [3, 4], [-0.5, -0.4]]),
@@ -230,4 +230,35 @@ def test_op_times(left_operand, right_operand, device_id, precision,
     from cntk import times
 
     _test_binary_op(precision, device_id, times,
+                    left_operand, right_operand, expected_forward, expected_backward)
+
+@pytest.mark.parametrize("left_operand, right_operand", TIMES_PAIRS)
+def test_op_transpose_times(left_operand, right_operand, device_id, precision,
+                  left_matrix_type, right_matrix_type):
+    dt_precision = PRECISION_TO_TYPE[precision]
+
+    # tranpose right_operand to make product possible
+    right_operand = np.transpose(right_operand).tolist()
+
+    a = AA(left_operand, dtype=dt_precision)
+    b = AA(right_operand, dtype=dt_precision)
+
+    expected_forward = [[np.dot(a, np.transpose(b))]]
+
+    assert len(a.shape) == len(b.shape) == 2
+
+    left_backward = np.zeros_like(a)
+    left_backward[:, :] = b.sum(axis=0)
+
+    right_backward = np.zeros_like(b)
+    right_backward[:, :] = a.sum(axis=0)
+
+    expected_backward = {
+        'left_arg':  [[left_backward]],
+        'right_arg': [[right_backward]]
+    }
+
+    from cntk import times_transpose
+
+    _test_binary_op(precision, device_id, times_transpose,
                     left_operand, right_operand, expected_forward, expected_backward)
