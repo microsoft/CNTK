@@ -19,7 +19,7 @@ ModelDir = "$OutputDir$/Models"
 ndlMacros = "$ConfigDir$/Macros.ndl"
 
 precision = "float"
-deviceId = 0
+DeviceId = "auto"
 imageLayout = "cudnn"
 
 
