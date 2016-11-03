@@ -30,6 +30,11 @@ namespace CNTK
         void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
 
     private:
+        DistributedCommunicatorPtr GetCommunicator() override
+        {
+            return m_communicator;
+        }
+
         DistributedCommunicatorPtr m_communicator;
         bool m_useAsyncBufferedParameterUpdate;
     };

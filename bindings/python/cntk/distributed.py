@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+﻿# Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -6,6 +6,14 @@
 from . import cntk_py
 from . import trainer
 from .utils import typemap
+
+# Preload libmpi.so for non-Windows platform to work around MPI_Init failure bug
+# https://xrunhprof.wordpress.com/2014/11/04/an-openmpi-python-and-dlopen-issue/
+# If other OS has similar OpenMPI MPI_Init failure, add dll load to global here
+import platform
+import ctypes
+if platform.system() == 'Linux':
+    ctypes.CDLL("libmpi.so", mode=ctypes.RTLD_GLOBAL)
 
 __doc__= '''\
 Distributed trainers manage trainers in distributed environment.

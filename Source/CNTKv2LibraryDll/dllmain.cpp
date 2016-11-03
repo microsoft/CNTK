@@ -49,7 +49,8 @@ BOOL APIENTRY DllMain(HMODULE /*hModule*/,
         }
         break;
     case DLL_PROCESS_DETACH:
-        _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);
+        // DLL_PROCESS_DETACH may have race condition with code page unload
+        //_CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);
         break;
 #else
     case DLL_PROCESS_ATTACH:

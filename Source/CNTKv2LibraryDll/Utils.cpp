@@ -259,6 +259,12 @@ namespace CNTK
     template <typename T>
     void TrainingParameterSchedule<T>::ConstructSchedule(const std::vector<std::pair<size_t, T>>& schedule)
     {
+        if (m_epochSize == EntireSweep)
+        {
+            //Sweep based schedules are currently not functional (learners don't have sweep info).
+            NOT_IMPLEMENTED;
+        }
+
         const auto epochSize = (m_epochSize == EntireSweep) ? 1 : m_epochSize;
 
         if (schedule.size() == 0)

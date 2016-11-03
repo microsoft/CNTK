@@ -59,7 +59,8 @@ enum MELProperty
     melPropFinalCriterion,
     melPropEvaluation,
     melPropOutput,
-    melPropRecurrent
+    melPropRecurrent,
+    melPropFreezeParameters
 };
 
 // SetGroupTag - Set the group tag on a node
@@ -412,6 +413,7 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
         else if (EqualInsensitive(propName, "learningRateMultiplier")) prop = melPropLearningRateMultiplier;
         else if (EqualInsensitive(propName, "output"))                 prop = melPropOutput;
         else if (EqualInsensitive(propName, "recurrent"))              prop = melPropRecurrent;
+        else if (EqualInsensitive(propName, "freezeParameters"))       prop = melPropFreezeParameters;
         else InvalidArgument("Invalid property, %s, is not supported", propName.c_str());
 
         // get the nodes
@@ -469,6 +471,18 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             case melPropRecurrent:
             {
                 // what to do here?
+                break;
+            }
+            case melPropFreezeParameters:
+            {
+                bool freeze = params[2];
+                auto freezableNode = dynamic_pointer_cast<IFreezable>(node);
+                if (freezableNode == nullptr)
+                    InvalidArgument("%ls (%ls) is not freezable.", node->GetName().c_str(), node->OperationName().c_str());
+                if (freeze)
+                {
+                    freezableNode->FreezeParameters();
+                }
                 break;
             }
             default:
