@@ -23,7 +23,7 @@ def test_trainer(tmpdir):
     m_schedule = momentum_schedule(1100)
 
     trainer = Trainer(z, ce, errs, \
-            [sgd(z.parameters, 0.007, m_schedule, 0.5, True)])
+            [momentum_sgd(z.parameters, 0.007, m_schedule)])
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
@@ -52,7 +52,7 @@ def test_output_to_retain():
     m_schedule = momentum_schedule(1100)
 
     trainer = Trainer(z, ce, errs, \
-            [sgd(z.parameters, 0.007, m_schedule, 0.5, True)])
+            [momentum_sgd(z.parameters, 0.007, m_schedule)])
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}

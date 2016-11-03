@@ -22,6 +22,9 @@
 
 %rename(momentum_as_time_constant_schedule) CNTK::MomentumAsTimeConstantSchedule;
 
+%rename(l1_regularization_weight) CNTK::AdditionalLearningOptions::l1RegularizationWeight;
+%rename(l2_regularization_weight) CNTK::AdditionalLearningOptions::l2RegularizationWeight;
+
 // if we don't except RandomUniform the corresponding template functions will not be generated
 %rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";
 %rename("%(utitle)s", %$isvariable) "";
