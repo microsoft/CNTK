@@ -2,10 +2,10 @@ dataDir: .
 #../../Data
 
 tags:
-     # running on every BVT job in 'P' (Parallel) leg in Debug-GPU and Release-CPU configurations:
-     - bvt-p  ((build_sku == 'gpu') or (build_sku == '1bitsgd')) and (flavor=='debug')
+     # running on every BVT job in 'P' (Parallel) leg in Debug-GPU on Linux configurations:
+     - bvt-p  ((build_sku == 'gpu') or (build_sku == '1bitsgd')) and (flavor=='debug') and (os == 'linux') 
      # running unconditionally on every Nightly job in 'P' leg
-     - nightly-p ((build_sku == 'gpu') or (build_sku == '1bitsgd'))
+     - nightly-p ((build_sku == 'gpu') or (build_sku == '1bitsgd')) and (os == 'linux') 
 
 testCases:
   Must train epochs in exactly same order and parameters for each MPI Rank:

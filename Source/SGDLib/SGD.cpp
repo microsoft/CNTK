@@ -2937,6 +2937,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
         if (configParallelTrain.Exists(L"DataParallelASGD"))
         {
+#ifndef ASGD_PARALLEL_SUPPORT
+            InvalidArgument("DataParallelASGD is not enabled in this version.\n");
+#else
             const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
             m_nFramesBetweenASGDSync = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
             m_isPipeline = configDataParallelASGD(L"UsePipeline", false);
@@ -2950,6 +2953,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                 m_adjustPerMinibatches = configAdjustLearningRateAtBeginning(L"adjustPerMinibatches", (size_t)256);
             }
         }
+#endif
         } // if (!pMPI)
     } // if (configSGD.Exists(L"ParallelTrain"))
 }
