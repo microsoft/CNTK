@@ -2952,8 +2952,8 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                 m_adjustCoefficient = configAdjustLearningRateAtBeginning(L"adjustCoefficient", (double)0.1);
                 m_adjustPerMinibatches = configAdjustLearningRateAtBeginning(L"adjustPerMinibatches", (size_t)256);
             }
-        }
 #endif
+        }
         } // if (!pMPI)
     } // if (configSGD.Exists(L"ParallelTrain"))
 }
