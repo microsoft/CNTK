@@ -31,7 +31,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         autoconf \
         subversion \
         # For Kaldi's dependencies
-        libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 && \
+        libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 \
+        # For SWIG
+        libpcre++-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN OPENMPI_VERSION=1.10.3 && \
@@ -139,14 +141,46 @@ RUN mv /bin/sh /bin/sh.orig && \
    for dir in $KALDI_PATH/src/*bin; do make -C $dir clean; done && \
    mv -f /bin/sh.orig /bin/sh
 
+## PYTHON
+
+# Swig
+RUN cd /root && \
+    wget -q http://prdownloads.sourceforge.net/swig/swig-3.0.10.tar.gz -O - | tar xvfz - && \
+    cd swig-3.0.10 && \
+    ./configure --without-java --without-perl5 --prefix=$(readlink -m ./root) && \
+    make -j 4 && \
+    make install
+
+# UTF-8
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8        \
+    LANGUAGE=en_US:en       \
+    LC_ALL=en_US.UTF-8      \
+    PYTHONIOENCODING=utf-8
+
+# Anaconda
+RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh && \
+    bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
+    rm Anaconda3-4.2.0-Linux-x86_64.sh
+
+ENV PATH /root/anaconda3/bin:$PATH
+
+RUN conda create --name cntk-py34 python=3.4.3 numpy scipy jupyter matplotlib pillow
+
+ENV PATH /root/anaconda3/envs/cntk-py34/bin/:$PATH
+
 WORKDIR /cntk
 
-RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
+# Build CNTK
+RUN git clone --depth=1 -b master https://github.com/fiskio/CNTK.git . && \
     CONFIGURE_OPTS="\
+      --with-boost=/usr/local/boost-1.60.0 \
       --with-cuda=/usr/local/cuda \
       --with-gdk-include=/usr/local/cuda/include \
       --with-gdk-nvml-lib=/usr/local/cuda/lib64/stubs \
       --with-kaldi=${KALDI_PATH} \
+      --with-swig=/root/swig-3.0.10/root \
+      --with-py34-path=/root/anaconda3/envs/cntk-py34 \
       --with-cudnn=/usr/local/cudnn" && \
     mkdir -p build/gpu/release && \
     cd build/gpu/release && \
@@ -167,3 +201,6 @@ RUN cd Examples/Image/DataSets/MNIST && \
     cd ../../../..
 
 ENV PATH=/cntk/build/gpu/release/bin:/usr/local/mpi/bin:$PATH
+
+ENV PYTHONPATH /cntk/bindings/python:$PYTHONPATH
+ENV LD_LIBRARY_PATH /cntk/bindings/cntk/libs:$LD_LIBRARY_PATH
