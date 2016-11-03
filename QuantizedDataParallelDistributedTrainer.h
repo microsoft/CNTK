@@ -19,8 +19,10 @@ namespace CNTK
     class QuantizedDataParallelDistributedTrainer : public DistributedTrainer
     {
     public:
-        QuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate)
-            : m_communicator(communicator), m_useAsyncBufferedParameterUpdate(useAsyncBufferedParameterUpdate)
+        QuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t parallelizationStartAfterSampleCount)
+            : DistributedTrainer(parallelizationStartAfterSampleCount),
+            m_communicator(communicator),
+            m_useAsyncBufferedParameterUpdate(useAsyncBufferedParameterUpdate)
         {
             if (m_useAsyncBufferedParameterUpdate)
                 LogicError("Asynchronous parameter update is not yet supported.");
