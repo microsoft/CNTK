@@ -1,7 +1,13 @@
-This directory contains different script helping using different components of CNTK.
+This directory contains different scripts for using CNTK.
+
+### CNTK Binary Installers
+
+* `windows/install.ps1`: installation script for installing a Windows CNTK *binary* drop, cf. [here](https://github.com/Microsoft/CNTK/wiki/Automated-binary-install#installation-steps-for-windows).
+* `linux/install-cntk.sh`: installation script for installing a Linux CNTK *binary* drop, cf. [here](https://github.com/Microsoft/CNTK/wiki/Automated-binary-install#installation-steps-for-linux).
+
 
 ### CNTK Text format Converters
-Two Python Scripts for converting Data to CNTK Text format for using as an input for CNTK Text Format Reader (see https://github.com/microsoft/cnTK/wiki/CNTKTextFormat-Reader).
+Two Python Scripts for converting Data to CNTK Text format for using as an input for CNTK Text Format Reader (see https://github.com/microsoft/CNTK/wiki/CNTKTextFormat-Reader).
 ```
 txt2ctf.py 
 ```
