@@ -194,7 +194,10 @@ def dynamic_axes(self):
                 {
                     SWIG_exception(SWIG_RuntimeError, "error creating tuple for axis");
                 }
-                PyTuple_SetItem(val, 0, PyUnicode_FromWideChar(L"axis", 4));
+                if (dictVal.Value<CNTK::Axis>().IsOrdered())
+                    PyTuple_SetItem(val, 0, PyUnicode_FromWideChar(L"ordered", 7));
+                else
+                    PyTuple_SetItem(val, 0, PyUnicode_FromWideChar(L"unordered", 9));
                 if (dictVal.Value<CNTK::Axis>().IsDynamicAxis())
                 {
                     PyTuple_SetItem(val, 1, PyUnicode_FromWideChar(L"dynamic", 7));
