@@ -8,7 +8,7 @@ rootDir = "../../.." ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
 outputDir = "./Output" ;
 
 modelPath = "$outputDir$/Models/ConvNet_CIFAR10_DataAug"
-stderr = "$outputDir$/ConvNet_CIFAR10_DataAug_bs_out"
+#stderr = "$outputDir$/ConvNet_CIFAR10_DataAug_bs_out"
 
 TrainConvNet = {
     action = "train"
