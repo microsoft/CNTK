@@ -14,7 +14,7 @@ The network achieves an error rate around `0.5%`, which is very good considering
 
 ### ConvNet_CIFAR10.py
 
-The second exmaple applies CNN on the CIFAR-10 dataset. The network contains four convolution layers and three dense layers. Max pooling is conducted for every two convolution layers. Dropout is applied after the first two dense layers. No data augmentation is used.
+The second example applies CNN on the CIFAR-10 dataset. The network contains four convolution layers and three dense layers. Max pooling is conducted for every two convolution layers. Dropout is applied after the first two dense layers. No data augmentation is used.
 
 Run the example from the current folder using:
 
@@ -31,4 +31,4 @@ Run the example from the current folder using:
 
 `python ConvNet_CIFAR10_DataAug.py`
 
-We use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perfrom translation transform without scaling. The accuracy of the network on test data is around `14%`, which is a lot better than the previous model.
+We use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perform translation transform without scaling. The accuracy of the network on test data is around `14%`, which is a lot better than the previous model.

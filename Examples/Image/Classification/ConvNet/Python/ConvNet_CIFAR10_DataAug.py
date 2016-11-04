@@ -51,7 +51,7 @@ def create_reader(map_file, mean_file, train, distributed_communicator=None):
 
 
 # Train and evaluate the network.
-def convnet_cifar10_dataaug():
+def convnet_cifar10_dataaug(reader_train, reader_test):
     set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
@@ -125,7 +125,6 @@ def convnet_cifar10_dataaug():
     sample_count    = 0
     minibatch_index = 0
 
-    #progress_printer = ProgressPrinter(freq=100, first=10, tag='Eval')
     while sample_count < epoch_size:
         current_minibatch = min(minibatch_size, epoch_size - sample_count)
         # Fetch next test min batch.
@@ -144,12 +143,8 @@ def convnet_cifar10_dataaug():
     return metric_numer/metric_denom
 
 if __name__=='__main__':
-    # Specify the target device to be used for computing, if you do not want to
-    # use the best available one, e.g.
-    # set_default_device(cpu())
-
     reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 
-    convnet_cifar10_dataaug()
+    convnet_cifar10_dataaug(reader_train, reader_test)
 

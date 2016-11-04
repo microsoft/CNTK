@@ -4,7 +4,7 @@
 
 |Data:     |The CIFAR-10 dataset (http://www.cs.toronto.edu/~kriz/cifar.html) and the ILSVRC2012 dataset (http://www.image-net.org/challenges/LSVRC/2012/) for image classification.
 |:---------|:---
-|Purpose   |This folder contains a number of examples that demonstrate the usage of BrainScript to define residual network (http://arxiv.org/abs/1512.03385) for image classification.
+|Purpose   |This folder contains a number of examples that demonstrate how to use CNTK to define residual network (http://arxiv.org/abs/1512.03385) for image classification.
 |Network   |Deep convolutional residual networks (ResNet).
 |Training  |Stochastic gradient descent with momentum.
 |Comments  |See below.

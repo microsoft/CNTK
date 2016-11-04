@@ -8,6 +8,7 @@ precision = "float"; traceLevel = 1 ; deviceId = "auto"
 rootDir = "." ; configDir = "$RootDir$" ; dataDir = "$RootDir$" ;
 outputDir = "$rootDir$/Output" ;
 
+meanDir = "$rootDir$/../../../DataSets/ImageNet"
 modelPath = "$outputDir$/Models/ResNet_101"
 stderr = "$outputDir$/ResNet_101_BS_out"
 
@@ -113,7 +114,7 @@ TrainNetwork = {
             jitterType = "UniRatio"
             cropRatio = 0.46666:0.875
             hflip = true
-            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+            meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {
             labelDim = 1000
@@ -130,7 +131,7 @@ TrainNetwork = {
             channels = 3
             cropType = "Center"
             cropRatio = 0.875
-            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+            meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {
             labelDim = 1000
@@ -158,7 +159,7 @@ BNStatistics = {
             hflip = true
             cropRatio = 0.46666:0.875
             jitterType = "UniRatio"
-            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+            meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {
             labelDim = 1000
@@ -182,7 +183,7 @@ Eval = {
             channels = 3
             cropType = "Center"
             cropRatio = 0.875
-            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+            meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {
             labelDim = 1000

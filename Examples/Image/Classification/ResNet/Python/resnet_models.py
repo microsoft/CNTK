@@ -33,62 +33,29 @@ def resnet_basic_inc(input, num_filters, strides=(2,2)):
     p  = c2 + s
     return relu(p)
 
-def resnet_basic_stack(num, input, num_filters): 
-    assert (num >= 0)
+def resnet_basic_stack(input, num_stack_layers, num_filters): 
+    assert (num_stack_layers >= 0)
     l = input 
-    for _ in range(num): 
+    for _ in range(num_stack_layers): 
         l = resnet_basic(l, num_filters)
     return l 
 
 #   
 # Defines the residual network model for classifying images
 #
-def create_resnet20_cifar10_model(input, num_classes):
+def create_cifar10_model(input, num_stack_layers, num_classes):
     c_map = [16, 32, 64]
-    numLayers = 3
 
     conv = conv_bn_relu(input, (3,3), c_map[0])
-    r1 = resnet_basic_stack(numLayers, conv, c_map[0])
+    r1 = resnet_basic_stack(conv, num_stack_layers, c_map[0])
 
     r2_1 = resnet_basic_inc(r1, c_map[1])
-    r2_2 = resnet_basic_stack(numLayers-1, r2_1, c_map[1])
+    r2_2 = resnet_basic_stack(r2_1, num_stack_layers-1, c_map[1])
 
     r3_1 = resnet_basic_inc(r2_2, c_map[2])
-    r3_2 = resnet_basic_stack(numLayers-1, r3_1, c_map[2])
+    r3_2 = resnet_basic_stack(r3_1, num_stack_layers-1, c_map[2])
 
     # Global average pooling and output
     pool = AveragePooling(filter_shape=(8,8))(r3_2) 
     z = Dense(num_classes)(pool)
-
-    # learning parameters 
-    max_epochs = 160
-    lr_per_mb = [1.0]*80+[0.1]*40+[0.01]
-    momentum = 0.9 
-    l2_reg_weight = 0.0001
-
-    return z, max_epochs, lr_per_mb, momentum, l2_reg_weight
-
-def create_resnet110_cifar10_model(input, num_classes):
-    c_map = [16, 32, 64]
-    numLayers = 18
-    
-    conv = conv_bn_relu(input, (3,3), c_map[0])
-    r1 = resnet_basic_stack(numLayers, conv, c_map[0])
-
-    r2_1 = resnet_basic_inc(r1, c_map[1])
-    r2_2 = resnet_basic_stack(numLayers-1, r2_1, c_map[1])
-
-    r3_1 = resnet_basic_inc(r2_2, c_map[2])
-    r3_2 = resnet_basic_stack(numLayers-1, r3_1, c_map[2])
-
-    # Global average pooling and output
-    pool = AveragePooling(filter_shape=(8,8))(r3_2) 
-    z = Dense(num_classes)(pool)
-
-    # learning parameters 
-    max_epochs = 160
-    lr_per_mb = [0.1]*1+[1.0]*80+[0.1]*40+[0.01]
-    momentum = 0.9 
-    l2_reg_weight = 0.0001
-
-    return z, max_epochs, lr_per_mb, momentum, l2_reg_weight
+    return z

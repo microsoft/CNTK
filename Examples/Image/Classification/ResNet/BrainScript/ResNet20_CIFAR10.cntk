@@ -4,7 +4,7 @@ command = TrainConvNet:Eval
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = "../.." ; configDir = "./" ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
+rootDir = "../../.." ; configDir = "./" ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
 outputDir = "./Output" ;
 
 modelPath = "$outputDir$/Models/ResNet20_CIFAR10_DataAug"

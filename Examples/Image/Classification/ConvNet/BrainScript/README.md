@@ -4,7 +4,7 @@
 
 ### ConvNet_MNIST.cntk
 
-Our first example applies CNN on the MNIST dataset. The network we use contains three convolution layers and two dense layers. Dropout is applied after the first dense layer. No data augmentation is used in this example. We start the training with no momentum, and add momentum after training for 5 epochs. Please refer to the cntk configuration file [ConvNet_MNIST.cntk](./ConvNet_MNIST.cntk) for more details.
+Our first example applies CNN on the MNIST dataset. The network we use contains three convolution layers and two dense layers. Dropout is applied after the first dense layer. No data augmentation is used in this example. We start the training with no momentum, and add momentum after training for 5 epochs. Please refer to the CNTK configuration file [ConvNet_MNIST.cntk](./ConvNet_MNIST.cntk) for more details.
 
 Run the example from the current folder using:
 
@@ -14,7 +14,7 @@ The network achieves an error rate of `0.5%`, which is very good considering no 
 
 ### ConvNet_CIFAR10.cntk
 
-The second exmaple applies CNN on the CIFAR-10 dataset. The network contains four convolution layers and three dense layers. Max pooling is conducted for every two convolution layers. Dropout is applied after the first two dense layers. No data augmentation is used. Please refer to the cntk configuration file [ConvNet_CIFAR10.cntk](./ConvNet_CIFAR10.cntk) for more details.
+The second example applies CNN on the CIFAR-10 dataset. The network contains four convolution layers and three dense layers. Max pooling is conducted for every two convolution layers. Dropout is applied after the first two dense layers. No data augmentation is used. Please refer to the CTNK configuration file [ConvNet_CIFAR10.cntk](./ConvNet_CIFAR10.cntk) for more details.
 
 Run the example from the current folder using:
 
@@ -31,4 +31,4 @@ Run the example from the current folder using:
 
 `cntk configFile=ConvNet_CIFAR10_DataAug.cntk`
 
-As seen in the cntk configuration file [ConvNet_CIFAR10_DataAug.cntk](./ConvNet_CIFAR10_DataAug.cntk), we use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perfrom translation transform without scaling. The accuracy of the network on test data is around `14%`, which is a lot better than the previous model.
+As seen in the CNTK configuration file [ConvNet_CIFAR10_DataAug.cntk](./ConvNet_CIFAR10_DataAug.cntk), we use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perform translation transform without scaling. The accuracy of the network on test data is around `14%`, which is a lot better than the previous model.

@@ -12,7 +12,7 @@ from cntk.utils import *
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 from cntk import Trainer, persist, cntk_py
-from cntk.learner import momentum_sgd, learning_rate_schedule
+from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
 from _cntk_py import set_computation_network_trace_level
 
 from resnet_models import *
@@ -29,7 +29,7 @@ num_channels = 3  # RGB
 num_classes  = 10
 
 # Define the reader for both training and evaluation action.
-def create_reader(map_file, mean_file, train, distributed_communicator=None):
+def create_reader(map_file, mean_file, train):
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         raise RuntimeError("File '%s' or '%s' does not exist. Please run install_cifar10.py from DataSets/CIFAR-10 to fetch them" %
                            (map_file, mean_file))
@@ -47,44 +47,43 @@ def create_reader(map_file, mean_file, train, distributed_communicator=None):
     # deserializer
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
         features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-        labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
-        distributed_communicator=distributed_communicator)
+        labels   = StreamDef(field='label', shape=num_classes))))   # and second as 'label'
 
 
 # Train and evaluate the network.
 def train_and_evaluate(reader_train, reader_test, network_name):
 
-    set_computation_network_trace_level(1)
+    set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
     input_var = input_variable((num_channels, image_height, image_width))
     label_var = input_variable((num_classes))
 
-    # apply model to input
+    # create model, and configure learning parameters 
     if network_name == 'resnet20': 
-        z, max_epochs, lr_per_mb, momentum, l2_reg_weight = create_resnet20_cifar10_model(input_var, num_classes)
+        z = create_cifar10_model(input_var, 3, num_classes)
+        lr_per_mb = [1.0]*80+[0.1]*40+[0.01]
     elif network_name == 'resnet110': 
-        z, max_epochs, lr_per_mb, momentum, l2_reg_weight = create_resent110_cifar10_model(input_var, num_classes)
+        z = create_cifar10_model(input_var, 18, num_classes)
+        lr_per_mb = [0.1]*1+[1.0]*80+[0.1]*40+[0.01]
     else: 
         return RuntimeError("Unknown model name!")
-
-    ### Training action
 
     # loss and metric
     ce = cross_entropy_with_softmax(z, label_var)
     pe = classification_error(z, label_var)
 
-    # training config
+    # shared training parameters 
     epoch_size = 50000                    # for now we manually specify epoch size
     minibatch_size = 128
+    max_epochs = 160
+    momentum_time_constant = -minibatch_size/np.log(0.9)
+    l2_reg_weight = 0.0001
 
     # Set learning parameters
-    lr_per_sample          = [lr/minibatch_size for lr in lr_per_mb]
-    lr_schedule            = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size)
-    momentum_time_constant = 0.0 
-    if (momentum > 0.0): 
-        momentum_time_constant = -minibatch_size/np.log(momentum)
-    mm_schedule = momentum_schedule(momentum_time_constant)
+    lr_per_sample = [lr/minibatch_size for lr in lr_per_mb]
+    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size)
+    mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
     
     # trainer object
     learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
@@ -111,7 +110,7 @@ def train_and_evaluate(reader_train, reader_test, network_name):
         progress_printer.epoch_summary(with_metric=True)
         persist.save_model(z, os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
     
-    ### Evaluation action
+    # Evaluation parameters
     epoch_size     = 10000
     minibatch_size = 16
 
@@ -121,7 +120,6 @@ def train_and_evaluate(reader_train, reader_test, network_name):
     sample_count    = 0
     minibatch_index = 0
 
-    #progress_printer = ProgressPrinter(freq=100, first=10, tag='Eval')
     while sample_count < epoch_size:
         current_minibatch = min(minibatch_size, epoch_size - sample_count)
         # Fetch next test min batch.
