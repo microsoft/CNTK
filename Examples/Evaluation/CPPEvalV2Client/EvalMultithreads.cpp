@@ -396,6 +396,8 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
 }
 
 #include <graphid.pb.h>
+#include <google/protobuf/util/json_util.h>
+graphIR::Graph graph;
 
 template <typename FunctionType>
 void Traverse(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor)
@@ -412,25 +414,37 @@ void Traverse(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& 
             Traverse(function, visitedFunctions, functor);
         }
     }
-
-    graphIR::Graph graph;
-
-    graphIR::GraphInfo graphInfo;
-    graphInfo.set_description("my description");
-
-    graph.set_allocated_graph_info(&graphInfo);
-
-    auto serialized = graph.SerializeAsString();
 }
 
 void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device)
 {
+    graphIR::GraphInfo graphInfo;
+    graphInfo.set_description("my description");
+    graphInfo.set_framework_name("cntk-2.0beta1.0");
+    graphInfo.set_framework_version("2.0beta1.0");
+    graphInfo.set_graph_version("1.0");
+    graphInfo.set_model_name("my-sluhandson.cntk");
+
+    graph.set_allocated_graph_info(&graphInfo);
+
     std::unordered_set<FunctionPtr> functions;
     Traverse(evalFunc->RootFunction(), functions, [](const FunctionPtr& f){
         fprintf(stderr, "now at %S opcode %S\n", f->Uid().c_str(), f->OpName().c_str());
         
+        graphIR::Node *node = graph.add_nodes();
+
+        auto name = f->Name();
+        node->set_name(std::string(name.begin(), name.end()));
+
+        name = f->OpName();
+        node->set_op(std::string(name.begin(), name.end()));
+
         for (auto out : f->Inputs())
         {
+            name = out.Name();
+            graphIR::IOArg ioArg;
+            (*node->mutable_inputs())[std::string(name.begin(), name.end())] = ioArg;
+
             fprintf(stderr, "    <= %S type %d [", out.Name().c_str(), out.GetDataType());
 
             bool first = true;
@@ -453,6 +467,10 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
 
         for (auto out : f->Outputs())
         {
+            name = out.Name();
+            graphIR::IOArg ioArg;
+            (*node->mutable_outputs())[std::string(name.begin(), name.end())] = ioArg;
+
             fprintf(stderr, "    => %S type %d [", out.Name().c_str(), out.GetDataType());
 
             bool first = true;
@@ -468,6 +486,9 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
         }
     });
 
+    std::string str;
+    auto serialized = google::protobuf::util::MessageToJsonString(graph, &str);
+    fprintf(stderr, "%s\n\n", str.c_str());
 
     fprintf(stderr, "\n\n");
     for (auto func : functions)

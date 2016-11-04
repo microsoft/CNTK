@@ -44,26 +44,26 @@ int main()
     // which will have a silent performance degradation otherwise
     Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
 
-    // Note: Run the device selection tests first since later tests
-    // may interfere with device selection by freezing default device
-    DeviceSelectionTests();
+    ////// Note: Run the device selection tests first since later tests
+    ////// may interfere with device selection by freezing default device
+    ////DeviceSelectionTests();
 
-    NDArrayViewTests();
-    TensorTests();
-    FunctionTests();
+    ////NDArrayViewTests();
+    ////TensorTests();
+    ////FunctionTests();
 
-    FeedForwardTests();
-    RecurrentFunctionTests();
+    ////FeedForwardTests();
+    ////RecurrentFunctionTests();
 
-    SerializationTests();
-    LearnerTests();
+    ////SerializationTests();
+    ////LearnerTests();
 
-    TrainerTests();
-    TrainCifarResnet();
-    TrainLSTMSequenceClassifer();
+    ////TrainerTests();
+    ////TrainCifarResnet();
+    ////TrainLSTMSequenceClassifer();
 
-    TrainSequenceToSequenceTranslator();
-    TrainTruncatedLSTMAcousticModelClassifer();
+    ////TrainSequenceToSequenceTranslator();
+    ////TrainTruncatedLSTMAcousticModelClassifer();
 
     MultiThreadsEvaluation(IsGPUAvailable());
 
