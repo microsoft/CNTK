@@ -2236,7 +2236,8 @@ public:
                            double normalizationTimeConstant=0, double blendTimeConstant=0,
                            double epsilon = 0, bool useCntkEngine = true, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW, size_t samplesSeen = 0) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_runCountUntied(samplesSeen),
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind),
+        m_runCountUntied(samplesSeen),  // TODO: remove this (Validate() will get it)
         m_convertRunningVariancePending(false),
         m_one(1, 1, deviceId)
     {
@@ -2261,7 +2262,8 @@ public:
         fstream << m_normTimeConst;
         fstream << m_blendTimeConst;
         fstream << (int32_t)m_imageLayoutKind;
-        fstream << m_runCountUntied;  // legacy models only, unused otherwise  --TODO: bump file version to not save this anymore
+        RunCount();                   // cache m_runCountUntied, so that someone who inspects the file sees something meaningful (as an FYI)
+        fstream << m_runCountUntied;  // this is really saved as a FYI and for optimizing 0-checks; the primaty storage for this value is in the shared Parameter
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
     }
@@ -2278,7 +2280,7 @@ public:
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
             if (modelVersion >= CNTK_MODEL_VERSION_13)
-                fstream >> m_runCountUntied;  // legacy models only, unused otherwise  --TODO: bump file version to not save this anymore
+                fstream >> m_runCountUntied;
             else
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;
@@ -2327,7 +2329,7 @@ public:
 
         if (modelVersion < CNTK_MODEL_VERSION_13)
         {
-            // Prior to version 12, minibatch count was stored instead of samples seen.
+            // Prior to version 12, and prior to storing counts in a shared Parameter, minibatch count was stored instead of samples seen.
             // Approximate by assuming minibatch size 16, inform about that.
             m_runCountUntied = (16 * mbCount);
             fprintf(stderr,
@@ -2360,10 +2362,11 @@ public:
         }
     }
 
-    size_t GetSamplesSeen() const { return m_runCountUntied; } // for V2 API interop
+    size_t GetSamplesSeen() const { return RunCount(); } // for V2 API interop
     // BUGBUG: There is no SetSamplesSeen(), and indeed the V2 API does not reinstall the #samples.
     //         For now, this causes a minor inefficiency in decoding, since it has to sync to GPU
     //         for every MB to check the shared count.
+    // TODO: remove this altogether, now that we cache it internally from the shared node
 
 private: // time-constant conversions
 
@@ -2379,19 +2382,26 @@ private: // time-constant conversions
     bool HasTiedRunCount() const { return GetNumInputs() > RUN_COUNT; }
     void ResetRunCount()
     {
-        m_runCountUntied = 0;
         if (HasTiedRunCount())
             Input(RUN_COUNT)->Value().SetValue(0);
+        m_runCountUntied = 0;
     }
     void AggregateRunCount(size_t countToAdd)
     {
-        m_runCountUntied += countToAdd;
         if (HasTiedRunCount())
+        {
             Input(RUN_COUNT)->Value().AddWithScaleOf(/*alpha=*/(ElemType)countToAdd, m_one); // this += countToAdd * (1)
+            if (countToAdd != 0)
+                m_runCountUntied = SIZE_MAX; // we only need this for 0 checks, this value says we don only know it's not 0
+        }
+        else
+            m_runCountUntied += countToAdd;  // legacy case (non-shared): this is the count accumulator
     }
     size_t RunCount() const // const version of above; keep identical
     {
-        return (HasTiedRunCount()) ? (size_t)Input(RUN_COUNT)->Value().Get00Element() : m_runCountUntied;
+        if (HasTiedRunCount())
+            m_runCountUntied = (size_t)Input(RUN_COUNT)->Value().Get00Element(); // if needed then cache it over
+        return m_runCountUntied;
     }
     bool IsRunCount0() const { return m_runCountUntied == 0 && RunCount() == 0; } // tied count >= untied one, so we can ask the untied one first to avoid GPU sync
 
@@ -2640,6 +2650,7 @@ public:
                 size_t i = RUN_COUNT;
                 if (Input(i)->HasMBLayout() || Input(i)->GetSampleLayout() != TensorShape(1))
                     InvalidArgument("%ls: Input[%d] must be a vector of 1 element without dynamic axis.", NodeDescription().c_str(), (int)i);
+                RunCount(); // cache the shared value into the local cache, for 0 checks
             }
             if (m_spatial && m_imageLayoutKind != CHW)
             {
@@ -2780,10 +2791,18 @@ private:
 
     // --- working variables
 
-    // Samples seen count in untied back-compat mode, used to compute cumulative corpus average.
-    // This field is the main stats for old models only. New models store the 0-th order stats in yet another Input,
-    // in order to do the correct accumulator tying. For those, this is only used for optimizing GPU sync points.
-    size_t m_runCountUntied; // running sample count for this node instance
+    // Cached samples seen count, and legacy cuont.
+    // Models store the 0-th order stats in an Input like running mean and variance,
+    // in order to do the correct accumulator tying.
+    // We keep a local copy for two reasons:
+    //  - legacy models use this instead of a shared parameter (which is incorrect w.r.t. tying)
+    //  - 0 checks test this first, to avoid unnecessary GPU syncs
+    //    We implement this rule: If this value is > 0 then the shared value cannot be 0;
+    //                            and if the shared value is 0, then this value must be 0.
+    //    This leverages that the count can only increase except when explicitly reset.
+    // This value is not updated unless needed, so it may be out of date during most operation.
+    // It will be updated at start (Validate()) and saving models, and any time the true value is needed.
+    mutable size_t m_runCountUntied; // cached running sample count (mutable since it is a cache)
     Matrix<ElemType> m_one;  // constant [1x1] matrix that contains a 1 (used for updating the shared count)
 
     // Interpolated actual mean/inverse stddev values. Pre-computed on forward pass, also used in gradient computation.
