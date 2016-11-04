@@ -366,7 +366,7 @@ namespace CNTK
                         recvGradStripesQuantizedRequests.push_back(MPI_Request());
                         int recvRequestIdx = (int)recvGradStripesQuantizedRequests.size() - 1;
 
-                        MPI_Irecv(GetQuantizedMatrix<ElemType>(*m_recvGradientStripesQuantized[i][j]).Buffer(), (int)GetQuantizedMatrix<ElemType>(*m_recvGradientStripesQuantized[i][j]).GetSize(), MPI_CHAR, source, i, m_mpi->Communicator(), &(recvGradStripesQuantizedRequests[recvRequestIdx])) || MpiFail("MPI_Irecv");
+                        m_mpi->Irecv(GetQuantizedMatrix<ElemType>(*m_recvGradientStripesQuantized[i][j]).Buffer(), (int)GetQuantizedMatrix<ElemType>(*m_recvGradientStripesQuantized[i][j]).GetSize(), MPI_CHAR, source, i, &(recvGradStripesQuantizedRequests[recvRequestIdx])) || MpiFail("MPI_Irecv");
                     }
                 }
             }
@@ -389,7 +389,7 @@ namespace CNTK
                             sendGradStripesQuantizedRequests[i].push_back(MPI_Request());
                             QuantizedMatrix<ElemType> quantizedStripe = GetQuantizedMatrix<ElemType>(*m_quantizedGradients[i]).ColumnSlice(stripe.m_startCol, stripe.m_numCols);
 
-                            MPI_Isend(quantizedStripe.Buffer(), (int)quantizedStripe.GetSize(), MPI_CHAR, j, i, m_mpi->Communicator(), &(sendGradStripesQuantizedRequests[i][sendRequestIdx])) || MpiFail("MPI_Isend");
+                            m_mpi->Isend(quantizedStripe.Buffer(), (int)quantizedStripe.GetSize(), MPI_CHAR, j, i, &(sendGradStripesQuantizedRequests[i][sendRequestIdx])) || MpiFail("MPI_Isend");
                             sendRequestIdx++;
                         }
                         else
@@ -413,7 +413,7 @@ namespace CNTK
             while (numActualReceives < numReceivesExpected)
             {
                 int idx = MPI_UNDEFINED;
-                MPI_Waitany((int)recvGradStripesQuantizedRequests.size(), recvGradStripesQuantizedRequests.data(), &idx, MPI_STATUS_IGNORE) || MpiFail("MPI_Waitany");
+                m_mpi->Waitany((int)recvGradStripesQuantizedRequests.size(), recvGradStripesQuantizedRequests.data(), &idx, MPI_STATUS_IGNORE) || MpiFail("MPI_Waitany");
                 if (idx == MPI_UNDEFINED)
                 {
                     break;
@@ -473,7 +473,7 @@ namespace CNTK
                         {
                             recvAggGradStripesQuantizedRequests[i].push_back(MPI_Request());
                             QuantizedMatrix<ElemType> quantizedStripe = GetQuantizedMatrix<ElemType>(*m_quantizedGradients[i]).ColumnSlice(stripe.m_startCol, stripe.m_numCols);
-                            MPI_Irecv(quantizedStripe.Buffer(), (int)quantizedStripe.GetSize(), MPI_CHAR, j, (int)inValues.size() + 1 + i, m_mpi->Communicator(), &(recvAggGradStripesQuantizedRequests[i][recvRequestIdx])) || MpiFail("MPI_Irecv");
+                            m_mpi->Irecv(quantizedStripe.Buffer(), (int)quantizedStripe.GetSize(), MPI_CHAR, j, (int)inValues.size() + 1 + i, &(recvAggGradStripesQuantizedRequests[i][recvRequestIdx])) || MpiFail("MPI_Irecv");
                             recvRequestIdx++;
                         }
                     }
@@ -494,7 +494,7 @@ namespace CNTK
                         int dest = (j >= rank) ? (j + 1) : j;
 
                         // TODO: Should we use MPI_Bcast instead for better performance
-                        MPI_Isend(aggGradStripesQuantized[i]->Buffer(), (int)aggGradStripesQuantized[i]->GetSize(), MPI_CHAR, dest, (int)inValues.size() + 1 + i, m_mpi->Communicator(), &(sendAggGradStripeQuantizedRequests[i][j])) || MpiFail("MPI_Irecv");
+                        m_mpi->Isend(aggGradStripesQuantized[i]->Buffer(), (int)aggGradStripesQuantized[i]->GetSize(), MPI_CHAR, dest, (int)inValues.size() + 1 + i, &(sendAggGradStripeQuantizedRequests[i][j])) || MpiFail("MPI_Irecv");
                     }
                 }
             }
@@ -502,7 +502,7 @@ namespace CNTK
             // Wait to receive all aggregated stripes and unquantize
             for (size_t i = 0; i < inValues.size(); ++i)
             {
-                MPI_Waitall((int)recvAggGradStripesQuantizedRequests[i].size(), recvAggGradStripesQuantizedRequests[i].data(), MPI_STATUSES_IGNORE) || MpiFail("MPI_Waitall");
+                m_mpi->Waitall((int)recvAggGradStripesQuantizedRequests[i].size(), recvAggGradStripesQuantizedRequests[i].data(), MPI_STATUSES_IGNORE) || MpiFail("MPI_Waitall");
                 GetQuantizer<ElemType>(m_preAggregatedGradientQuantizers[i]).UnquantizeAsync(GetQuantizedMatrix<ElemType>(*m_quantizedGradients[i]), *(outputValues[i]), false);
             }
 
@@ -514,13 +514,13 @@ namespace CNTK
             for (int i = 0; i < sendGradStripesQuantizedRequests.size(); ++i)
             {
                 if (sendGradStripesQuantizedRequests[i].size() > 0)
-                    MPI_Waitall((int)sendGradStripesQuantizedRequests[i].size(), sendGradStripesQuantizedRequests[i].data(), MPI_STATUSES_IGNORE) || MpiFail("MPI_Waitall");
+                    m_mpi->Waitall((int)sendGradStripesQuantizedRequests[i].size(), sendGradStripesQuantizedRequests[i].data(), MPI_STATUSES_IGNORE) || MpiFail("MPI_Waitall");
             }
 
             for (int i = 0; i < sendAggGradStripeQuantizedRequests.size(); ++i)
             {
                 if (sendAggGradStripeQuantizedRequests[i].size() > 0)
-                    MPI_Waitall((int)sendAggGradStripeQuantizedRequests[i].size(), sendAggGradStripeQuantizedRequests[i].data(), MPI_STATUSES_IGNORE) || MpiFail("MPI_Waitall");
+                    m_mpi->Waitall((int)sendAggGradStripeQuantizedRequests[i].size(), sendAggGradStripeQuantizedRequests[i].data(), MPI_STATUSES_IGNORE) || MpiFail("MPI_Waitall");
             }
         }
 
