@@ -458,6 +458,8 @@ private:
         // cacluate total of learnable node's size
         m_totalModelSize = accumulate(m_tableLength.begin(), m_tableLength.end(), 0);
 
+        m_serverArray = new multiverso::ArrayServer<ElemType>(m_totalModelSize);
+        m_workerArray = new multiverso::ArrayWorker<ElemType>(m_totalModelSize);
 
         multiverso::MV_Barrier();
 
