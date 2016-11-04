@@ -592,9 +592,9 @@ BatchNormalization(input, scale, bias, runMean, runVariance, runCount=None, spat
 {
     operation = 'BatchNormalization'
     inputs =
-        if IsNone(runCount)
+        if BS.Constants.IsNone(runCount)
         then _AsNodes (input : scale : bias : runMean : runVariance)            # legacy
-        else _AsNodes (input : scale : bias : runMean : runVariance : RunCount)
+        else _AsNodes (input : scale : bias : runMean : runVariance : runCount)
     /*plus the function args*/
 }
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = _AsNodes (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
