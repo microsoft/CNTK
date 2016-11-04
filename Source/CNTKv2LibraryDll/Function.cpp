@@ -2202,10 +2202,15 @@ namespace CNTK
 
         MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
 
+#if 0
         auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
 
         // Switch the node matrix to the right matrix type
         nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
+#else
+        // Switch the node matrix to the right matrix type
+        computationNode->ValuePtr()->CastAssignValuesOf(*CNTKMatrixAndMBLayout.first);
+#endif
         computationNode->GetMBLayout()->CopyFrom(layout);
     }
 

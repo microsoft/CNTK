@@ -1227,7 +1227,8 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
 {
     if (this == &deepCopyFrom)
         return;
-    
+
+    // TODO: do we need all these 'this->'?
     DISPATCH_MATRIX_ON_FLAG(this, this,
         { 
             // Set CPUMatrix from:
@@ -1265,7 +1266,26 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_CPUSparseMatrix); },
                 { m_GPUSparseMatrix->SetValue(*deepCopyFrom.m_GPUSparseMatrix); });
         });
+}
 
+static void DoCastAssignValuesOf(Matrix<float>&  target, const Matrix<float>&  other) { target.AssignValuesOf(other); }
+static void DoCastAssignValuesOf(Matrix<double>& target, const Matrix<double>& other) { target.AssignValuesOf(other); }
+// TODO: finish
+//static void DoCastAssignValuesOf(Matrix<float>&  target, const Matrix<double>& other) { target;other; }
+//static void DoCastAssignValuesOf(Matrix<double>& target, const Matrix<float>&  other) { target;other; }
+template<class ElemType, class ElemTypeOther>
+static void DoCastAssignValuesOf(Matrix<ElemType>&, const Matrix<ElemTypeOther>&) { LogicError("CastAssignValuesOf: unsupported combination of element types."); }
+
+template <class ElemType>
+void Matrix<ElemType>::CastAssignValuesOf(const MatrixBase& other) /*override*/ // allows for mixed assignment with conversion
+{
+    const Matrix<float> * otherf = dynamic_cast<const Matrix<float>*>(&other);
+    if (otherf)
+        return DoCastAssignValuesOf(*this, *otherf);
+    const Matrix<double> * otherd = dynamic_cast<const Matrix<double>*>(&other);
+    if (otherd)
+        return DoCastAssignValuesOf(*this, *otherd);
+    LogicError("CastAssignValuesOf: Only accepts float and double matrices.");
 }
 
 template <class ElemType>
@@ -5553,7 +5573,8 @@ template void Matrix<char>::SetValue(const char);
 template void Matrix<char>::SetValue(size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags, DataTransferer* transferer);
 //template void Matrix<char>::SetValue(const Matrix<char>&, MatrixFormat);
 template void Matrix<char>::SetValue(const Matrix<char>&);
-template void Matrix<char>::AssignValuesOf   (const Matrix<char>&);
+template void Matrix<char>::AssignValuesOf(const Matrix<char>&);
+template void Matrix<char>::CastAssignValuesOf(const MatrixBase& other);
 template bool Matrix<char>::IsEmpty() const;
 template void Matrix<char>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
 template void Matrix<char>::Reshape(const size_t, const size_t);
@@ -5579,6 +5600,7 @@ template void Matrix<short>::SetValue(size_t numRows, const size_t numCols, int 
 //template void Matrix<short>::SetValue(const Matrix<short>&, MatrixFormat);
 template void Matrix<short>::SetValue(const Matrix<short>&);
 template void Matrix<short>::AssignValuesOf(const Matrix<short>&);
+template void Matrix<short>::CastAssignValuesOf(const MatrixBase& other);
 template bool Matrix<short>::IsEmpty() const;
 template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
 template void Matrix<short>::Reshape(const size_t, const size_t);

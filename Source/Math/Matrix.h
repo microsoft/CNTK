@@ -51,6 +51,7 @@ struct /*interface*/ MATH_API MatrixBase
     virtual int GetDeviceId() const = 0;
     virtual MatrixType GetMatrixType() const = 0;
     virtual MatrixFormat GetFormat() const = 0;
+    virtual void CastAssignValuesOf(const MatrixBase& other) = 0; // allows for mixed assignment with conversion
     // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
     virtual ~MatrixBase();
 };
@@ -256,6 +257,7 @@ public:
         assert(vals.size() == numRows * numCols);
         SetValue(numRows, numCols, GetDeviceId(), vals.data(), matrixFormatRowMajor);
     }
+    void CastAssignValuesOf(const MatrixBase& other) override; // allows for mixed assignment with conversion
     static ElemType MakeNan(size_t payload);
     void Invalidate()
     {
