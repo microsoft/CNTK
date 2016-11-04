@@ -393,9 +393,22 @@ public:
         {
             // currently we only support one combination when the input is sparse
             // If input data is sparse, then gradient is block sparse.
-            // BUGBUG: This does not accumulate into the InputRef(0).Gradient, which might cause problems elsewhere.
             if (InputRef(1).Value().GetMatrixType() == SPARSE && InputRef(0).Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
-                InputRef(0).Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+            {
+                // We need a sparse matrix for the gradient. However, we should allocate a new one instead of switching the type in place
+                // since switching in place may affect other nodes who share this matrix due to memory sharing
+                auto& currentInput0GradientMatrixRef = InputRef(0).Gradient();
+                auto newInput0SparseGradientMatrix = std::make_shared<Matrix<ElemType>>(currentInput0GradientMatrixRef.GetNumRows(),
+                                                                                        currentInput0GradientMatrixRef.GetNumCols(),
+                                                                                        currentInput0GradientMatrixRef.GetPreferredDeviceId(),
+                                                                                        SPARSE,
+                                                                                        MatrixFormat::matrixFormatSparseBlockCol);
+
+                // BUGBUG: Copy over the current contents since we accumulate into the gradient matrix instead of overwriting the content
+                // newInput0SparseGradientMatrix.AssignValuesOf(currentInput0GradientMatrixRef);
+                InputRef(0).GradientPtrRef() = newInput0SparseGradientMatrix;
+            }
+
             auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true,  fr.AllowBroadcast());
             auto input1         = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true,  fr);
@@ -542,7 +555,22 @@ public:
         if (Input(0)->NeedsGradient() && Input(1)->Value().GetMatrixType() == SPARSE)
         {
             Input(0)->CreateGradientMatrixIfNull();
-            Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+
+            // We need a sparse matrix for the gradient. However, we should allocate a new one instead of switching the type in place
+            // since switching in place may affect other nodes who share this matrix due to memory sharing
+            auto& currentInput0GradientMatrixRef = InputRef(0).Gradient();
+            if (currentInput0GradientMatrixRef.GetMatrixType() != SPARSE)
+            {
+                auto newInput0SparseGradientMatrix = std::make_shared<Matrix<ElemType>>(currentInput0GradientMatrixRef.GetNumRows(),
+                                                                                        currentInput0GradientMatrixRef.GetNumCols(),
+                                                                                        currentInput0GradientMatrixRef.GetPreferredDeviceId(),
+                                                                                        SPARSE,
+                                                                                        MatrixFormat::matrixFormatSparseBlockCol);
+
+                // BUGBUG: Copy over the current contents since we accumulate into the gradient matrix instead of overwriting the content
+                // newInput0SparseGradientMatrix.AssignValuesOf(currentInput0GradientMatrixRef);
+                InputRef(0).GradientPtrRef() = newInput0SparseGradientMatrix;
+            }
         }
 
         // we need to call base allocation at end since we will need to allocate special ones first

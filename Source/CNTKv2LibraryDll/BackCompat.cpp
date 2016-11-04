@@ -350,6 +350,7 @@ namespace CNTK
         FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
         {
             ComputationNetworkPtr net = make_shared<ComputationNetwork>(AsCNTKImplDeviceId(computeDevice));
+            net->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
             net->Load<ElementType>(modelFile);
 
             // Now traverse the model and construct the Function graph

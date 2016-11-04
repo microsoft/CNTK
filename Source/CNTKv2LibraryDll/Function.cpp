@@ -786,7 +786,7 @@ namespace CNTK
             }
             case PrimitiveOpType::SumAll:
                 assert(inputs.size() == 1);
-                outputShape = {};
+                outputShape = {1};
                 break;
             case PrimitiveOpType::Plus:
             case PrimitiveOpType::Minus:
@@ -2308,7 +2308,7 @@ namespace CNTK
         if (varValue != nullptr)
         {
             // TODO: The shape of the specified output Value object must match the actual output shape
-            if (varValue->Shape() != valueShape)
+            if ((varValue->Shape() != valueShape) && (AsTensorShape(varValue->Shape()) != AsTensorShape(valueShape)))
                 InvalidArgument("The shape %S of the specified Value object for %s does not match the actual shape %S", AsStringForErrorReporting(varValue->Shape()).c_str(), getGradient ? "gradient" : "output", AsStringForErrorReporting(valueShape).c_str());
         }
 
