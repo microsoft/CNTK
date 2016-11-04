@@ -1,6 +1,6 @@
 # CNTK Examples: Image/Classification/ResNet
 
-The recipes above are in BrainScript. [For Python click here](https://github.com/Microsoft/CNTK/blob/v2.0.beta1.0/bindings/python/tutorials/CNTK_201A_CIFAR-10_DataLoader.ipynb).
+The recipes above are in BrainScript. [For Python click here](https://github.com/Microsoft/CNTK/blob/master/bindings/python/tutorials/CNTK_201A_CIFAR-10_DataLoader.ipynb).
 
 ## Overview
 
