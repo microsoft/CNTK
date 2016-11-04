@@ -172,8 +172,9 @@ ENV PATH /root/anaconda3/envs/cntk-py34/bin/:$PATH
 WORKDIR /cntk
 
 # Build CNTK
-RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
+RUN git clone --depth=1 --recursive -b master https://github.com/Microsoft/CNTK.git . && \
     CONFIGURE_OPTS="\
+      --1bitsgd=yes \
       --with-cuda=/usr/local/cuda \
       --with-gdk-include=/usr/local/cuda/include \
       --with-gdk-nvml-lib=/usr/local/cuda/lib64/stubs \
