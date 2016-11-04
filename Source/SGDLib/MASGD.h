@@ -318,7 +318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t                      m_numWorkers; 
         size_t                      m_myRank;
         MASGDPerfStats              m_perfReporter;
-        MPIWrapperPtr m_pMPI;
+        MPIWrapperPtr               m_pMPI;
         DEVICEID_TYPE               m_deviceId;
  };
 

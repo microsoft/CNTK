@@ -22,104 +22,104 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // -----------------------------------------------------------------------
 
 #if HAS_MPI
-    class MPIWrapperMpi : public MPIWrapper
-    {
-        int m_myRank;
-        std::wstring m_myName;
-        int m_numMPINodes;
-        size_t m_numNodesInUse;
+class MPIWrapperMpi : public MPIWrapper
+{
+    int m_myRank;
+    std::wstring m_myName;
+    int m_numMPINodes;
+    size_t m_numNodesInUse;
 
-        // MPI communicator that reflects the current subset selection
-        MPI_Comm m_currentComm;
+    // MPI communicator that reflects the current subset selection
+    MPI_Comm m_currentComm;
 
-        // MPI_Init() is loading the msmpi.dll. Failing to load the dll will terminate the
-        // application.
-        int MPI_Init_DL();
+    // MPI_Init() is loading the msmpi.dll. Failing to load the dll will terminate the
+    // application.
+    int MPI_Init_DL();
 
-        // Workaround for the issue with MPI hanging when we have non-0 exit codes from CNTK processes
-        // OpenMPI has a confirmed race condition on killing child process vs. handling their non-zero exit statuses, resulting
-        // in a deadlock, where all processes killed but MPI is still waiting.
-        // This happens when several perfectly synchronized processes (for example on MPI barrier)
-        // simulatenously exit with non-0 exit code.
-        // As a workaround, we simply sleep 50*rank miliseconds, effectively "de-synchronizing processes" at exit,
-        // allowing MPI to sequentially handle terminations
-        static int s_myRank;
-        static void MPIWorkaroundAtExit();
+    // Workaround for the issue with MPI hanging when we have non-0 exit codes from CNTK processes
+    // OpenMPI has a confirmed race condition on killing child process vs. handling their non-zero exit statuses, resulting
+    // in a deadlock, where all processes killed but MPI is still waiting.
+    // This happens when several perfectly synchronized processes (for example on MPI barrier)
+    // simulatenously exit with non-0 exit code.
+    // As a workaround, we simply sleep 50*rank miliseconds, effectively "de-synchronizing processes" at exit,
+    // allowing MPI to sequentially handle terminations
+    static int s_myRank;
+    static void MPIWorkaroundAtExit();
 
-    public:
-        MPIWrapperMpi();
+public:
+    MPIWrapperMpi();
 
-        // Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
-        // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
-        ~MPIWrapperMpi();
+    // Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
+    // It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
+    ~MPIWrapperMpi();
 
-    private:
-        void Ping(const char *msg) const;
-        MPI_Comm Communicator() const;
+private:
+    void Ping(const char *msg) const;
+    MPI_Comm Communicator() const;
 
-        void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/);
+    void RequestNodes(const char *msg, size_t requestednodes = SIZE_MAX /*default: all*/);
 
-    public:
+public:
 
-        size_t NumNodesInUse() const;
-        size_t CurrentNodeRank() const;
-        bool IsMainNode() const;
-        std::wstring CurrentNodeName() const;
-        bool IsIdle() const;
-        bool UsingAllNodes() const;
-        size_t MainNodeRank() const;
+    size_t NumNodesInUse() const;
+    size_t CurrentNodeRank() const;
+    bool IsMainNode() const;
+    std::wstring CurrentNodeName() const;
+    bool IsIdle() const;
+    bool UsingAllNodes() const;
+    size_t MainNodeRank() const;
 
-        // -----------------------------------------------------------------------
-        // data-exchange functions (wrappers around MPI functions)
-        // -----------------------------------------------------------------------
+    // -----------------------------------------------------------------------
+    // data-exchange functions (wrappers around MPI functions)
+    // -----------------------------------------------------------------------
 
-        virtual int Finalize(void);
-        virtual int Wait(MPI_Request* request, MPI_Status* status);
-        virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
-        virtual int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
-        virtual int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
-        virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
-        virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
-        virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
-        virtual int Abort(int errorcode);
-        virtual int Error_string(int errorcode, char* string, int* resultlen);
+    virtual int Finalize(void);
+    virtual int Wait(MPI_Request* request, MPI_Status* status);
+    virtual int Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status);
+    virtual int Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
+    virtual int Isend(const void* buf, int count, MPI_Datatype datatype, int dest, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual int Recv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Status* status);
+    virtual int Irecv(void* buf, int count, MPI_Datatype datatype, int source, int tag, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual int Iallreduce(const void* sendbuf, void* recvbuf, int count, MPI_Datatype datatype, MPI_Op op, /*MPI_Comm comm,*/ MPI_Request* request);
+    virtual int Abort(int errorcode);
+    virtual int Error_string(int errorcode, char* string, int* resultlen);
 
-        // allreduce of a vector
-        virtual void AllReduce(std::vector<size_t>& accumulator) const;
-        virtual void AllReduce(std::vector<int>& accumulator) const;
-        virtual void AllReduce(std::vector<double>& accumulator) const;
-        virtual void AllReduce(std::vector<float>& accumulator) const;
+    // allreduce of a vector
+    virtual void AllReduce(std::vector<size_t>& accumulator) const;
+    virtual void AllReduce(std::vector<int>& accumulator) const;
+    virtual void AllReduce(std::vector<double>& accumulator) const;
+    virtual void AllReduce(std::vector<float>& accumulator) const;
 
-        // for raw pointer
-        virtual void AllReduce(size_t* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduce(int* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduce(double* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduce(float* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
+    // for raw pointer
+    virtual void AllReduce(size_t* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduce(int* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduce(double* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduce(float* sendData, size_t numElements, MPI_Op op = MPI_SUM) const;
 
-        virtual void AllReduce(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduce(int* sendData, int* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduce(double* sendData, double* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduce(float* sendData, float* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduce(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduce(int* sendData, int* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduce(double* sendData, double* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduce(float* sendData, float* receiveData, size_t numElements, MPI_Op op = MPI_SUM) const;
 
-        virtual void AllReduceAsync(size_t* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduceAsync(int* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduceAsync(double* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduceAsync(float* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduceAsync(size_t* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduceAsync(int* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduceAsync(double* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduceAsync(float* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
 
-        virtual void AllReduceAsync(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduceAsync(int* sendData, int* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduceAsync(double* sendData, double* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
-        virtual void AllReduceAsync(float* sendData, float* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduceAsync(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduceAsync(int* sendData, int* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduceAsync(double* sendData, double* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
+    virtual void AllReduceAsync(float* sendData, float* receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const;
 
-        virtual void Bcast(size_t* sendData, size_t numElements, size_t srcRank);
-        virtual void Bcast(double* sendData, size_t numElements, size_t srcRank);
-        virtual void Bcast(float* sendData, size_t numElements, size_t srcRank);
+    virtual void Bcast(size_t* sendData, size_t numElements, size_t srcRank);
+    virtual void Bcast(double* sendData, size_t numElements, size_t srcRank);
+    virtual void Bcast(float* sendData, size_t numElements, size_t srcRank);
 
-        // wait for all ranks to reach here
-        virtual int WaitAll();
-        virtual void WaitAny(MPI_Request* requests, int numRequests, int* index);
-        virtual void Wait(MPI_Request* request);
-    };
+    // wait for all ranks to reach here
+    virtual int WaitAll();
+    virtual void WaitAny(MPI_Request* requests, int numRequests, int* index);
+    virtual void Wait(MPI_Request* request);
+};
 #endif
 
 class MPIWrapperEmpty : public MPIWrapper
@@ -307,7 +307,8 @@ MPI_Datatype MPIWrapper::GetDataType(size_t *)
 // Note that specifically, this function is such that it does not require
 // MPI initialization. Moreover, it can be used without actually loading any
 // MPI libs.
-// TODO: Once we move to dynamic loading for MPI libs on Linux, move it to utilities.
+// TODO: Once we move to dynamic loading for MPI libs on Linux, move it to the implementation
+//       and forward the call to the implementation instead of handling it globally here.
 int MPIWrapper::GetTotalNumberOfMPINodes()
 {
 #if !HAS_MPI
@@ -818,19 +819,13 @@ MPIWrapperEmpty::MPIWrapperEmpty()
     fprintf(stderr, "MPIWrapperEmpty: initializing\n");
     fflush(stderr);
 
-    // stagger the jobs just a little to get a sort-of deterministic order e.g. in GPU allocation when running on one machine
-    // continue 0.5 seconds apart
     ::Sleep((DWORD)(500 * CurrentNodeRank()));
 }
 
-// Note: we don't clear the sub-communication here although we should, because in case of a crash, this prevents the EXE from terminating.
-// It's OK since this class is a singleton anyway that gets instantiated exactly once at program startup.
 MPIWrapperEmpty::~MPIWrapperEmpty()
 {
     fprintf(stderr, "~MPIWrapperEmpty\n");
 
-    // Do not finalize in event of an exception since calling MPI_Finalize without
-    // all pending communications being finished results in a hang
     int rc = fflush(stderr);
     if (!std::uncaught_exception())
     {
@@ -852,7 +847,6 @@ int MPIWrapperEmpty::Finalize(void)
     return MPI_UNDEFINED;
 }
 
-// wait for all ranks to reach here
 int MPIWrapperEmpty::WaitAll()
 {
     return MPI_UNDEFINED;
@@ -927,17 +921,17 @@ std::wstring MPIWrapperEmpty::CurrentNodeName() const
 bool MPIWrapperEmpty::IsMainNode() const
 {
     return true;
-} // we are the chosen one--do extra stuff like saving the model to disk
+}
 
 bool MPIWrapperEmpty::IsIdle() const
 {
     return CurrentNodeRank() >= NumNodesInUse();
-} // user had requested to not use this many nodes
+}
 
 bool MPIWrapperEmpty::UsingAllNodes() const
 {
     return true;
-} // all nodes participate (used to check whether we can use MPI_Allreduce directly)
+}
 
 size_t MPIWrapperEmpty::MainNodeRank() const
 {
