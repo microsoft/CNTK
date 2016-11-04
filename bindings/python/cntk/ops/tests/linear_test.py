@@ -20,7 +20,7 @@ TENSOR_PAIRS = [
     ([[10.]], [[30.]]),
     ([[1.5, 2.1]], [[10., 20.]]),
     ([[100., 200.], [300., 400.], [10., 20.]],
-      [[10., 20.], [30., 40.], [1., 2.]]),
+     [[10., 20.], [30., 40.], [1., 2.]]),
 
     # Adding two 3x2 inputs of sequence length 1
     ([[30., 40.], [1., 2.], [0.1, 0.2]], [[10, 20], [3, 4], [-0.5, -0.4]]),
@@ -175,6 +175,8 @@ NEGATE_TENSORS = [
     ([[100., 200.], [300., 400.], [10., 20.]]),
     ([[30, 40], [1, 2], [0.1, 0.2]])
 ]
+
+
 @pytest.mark.parametrize("operand", NEGATE_TENSORS)
 def test_op_negate(operand, device_id, precision):
     t = -1 * AA(operand, dtype=PRECISION_TO_TYPE[precision])
@@ -193,34 +195,41 @@ def test_op_negate(operand, device_id, precision):
     _test_unary_op(precision, device_id, '-', operand,
                    expected_forward, expected_backward)
 
-TIMES_PAIRS = [
+# transpose_times currently only supports right operands of rank 1 or 2
+TRANSPOSE_TIMES_PAIRS = [
     ([[30.]], [[10.]]),
     ([[1.5, 2.1]], [[10.], [20.]]),
-    ([[100., 200.]], [[10.], [20.]]),
+    ([[100., 200.]], [[-10.], [20.]]),
     ([[100., 200.], [300., 400.]], [[10.], [20.]]),
-    ([[100., 200.], [300., 400.]], [[10., 20.], [20., 30.]])
+    ([[100., 200.], [-300., 400.]], [[10., 20.], [20., 30.]]),
+    (np.reshape(np.arange(24), (4, 3, 2)),
+     np.array([[1, 3], [2, 4]])),
 ]
 
-# TODO: Handle sparse matrices
+# TODO: Handle sparse matrices (left_matrix_type, right_matrix_type)
+
+# adding a rank 3 operand for times operation
+TIMES_PAIRS = TRANSPOSE_TIMES_PAIRS + \
+    list((np.reshape(np.arange(8), (2, 2, 2)), np.reshape(np.arange(8), (2, 2, 2))))
 
 
 @pytest.mark.parametrize("left_operand, right_operand", TIMES_PAIRS)
-def test_op_times(left_operand, right_operand, device_id, precision,
-                  left_matrix_type, right_matrix_type):
+def test_op_times(left_operand, right_operand, device_id, precision):
     dt_precision = PRECISION_TO_TYPE[precision]
 
     a = AA(left_operand, dtype=dt_precision)
     b = AA(right_operand, dtype=dt_precision)
 
-    expected_forward = [[np.dot(a, b)]]
-
-    assert len(a.shape) == len(b.shape) == 2
+    expected_forward = [[np.tensordot(a, b, axes=len(b.shape) - 1)]]
 
     left_backward = np.zeros_like(a)
-    left_backward[:, :] = b.sum(axis=1)
+    left_backward[...] = b.sum(axis=-1)
 
     right_backward = np.zeros_like(b)
-    right_backward[:, :] = np.transpose([a.sum(axis=0)])
+    transpose_axes = list(np.roll(np.arange(len(b.shape)), -1))
+    sum_axes = tuple(np.arange(0, len(a.shape) - len(b.shape) + 1))
+    right_backward[...] = np.transpose(
+        AA([a.sum(axis=sum_axes)]), axes=transpose_axes)
 
     expected_backward = {
         'left_arg':  [[left_backward]],
@@ -232,9 +241,9 @@ def test_op_times(left_operand, right_operand, device_id, precision,
     _test_binary_op(precision, device_id, times,
                     left_operand, right_operand, expected_forward, expected_backward)
 
-@pytest.mark.parametrize("left_operand, right_operand", TIMES_PAIRS)
-def test_op_transpose_times(left_operand, right_operand, device_id, precision,
-                  left_matrix_type, right_matrix_type):
+
+@pytest.mark.parametrize("left_operand, right_operand", TRANSPOSE_TIMES_PAIRS)
+def test_op_transpose_times(left_operand, right_operand, device_id, precision):
     dt_precision = PRECISION_TO_TYPE[precision]
 
     # tranpose right_operand to make product possible
@@ -245,13 +254,11 @@ def test_op_transpose_times(left_operand, right_operand, device_id, precision,
 
     expected_forward = [[np.dot(a, np.transpose(b))]]
 
-    assert len(a.shape) == len(b.shape) == 2
-
     left_backward = np.zeros_like(a)
-    left_backward[:, :] = b.sum(axis=0)
+    left_backward[...] = b.sum(axis=tuple(range(len(b.shape) - 1)))
 
     right_backward = np.zeros_like(b)
-    right_backward[:, :] = a.sum(axis=0)
+    right_backward[...] = a.sum(axis=tuple(range(len(a.shape) - 1)))
 
     expected_backward = {
         'left_arg':  [[left_backward]],
