@@ -50,6 +50,8 @@ Tests/EndToEndTests/Examples/Speech/TIMIT/WriteScaledLogLike/expected_output_md5
 
 # Used by reader unit test, needs to keep LF line endings.
 Tests/UnitTests/ReaderTests/Data/CNTKTextFormatReader/invalid_inputs.txt eol=lf
+# Used by reader unit test, binary data
+Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/* binary
 
 Makefile text
 *.sln text
