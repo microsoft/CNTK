@@ -73,14 +73,14 @@ private:
     // Not using nocase_compare here as it's not correct on Linux.
     using PathReaderMap = std::unordered_map<std::string, std::shared_ptr<ByteReader>>;
     using ReaderSequenceMap = std::map<std::string, std::map<std::string, size_t>>;
-    void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences);
+    void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences, const std::string& expandDirectory);
     cv::Mat ReadImage(size_t seqId, const std::string& path, bool grayscale);
 
     // REVIEW alexeyk: can potentially use vector instead of map. Need to handle default reader and resizing though.
     using SeqReaderMap = std::unordered_map<size_t, std::shared_ptr<ByteReader>>;
     SeqReaderMap m_readers;
 
-    FileByteReader m_defaultReader;
+    std::unique_ptr<FileByteReader> m_defaultReader;
     int m_verbosity;
 };
 

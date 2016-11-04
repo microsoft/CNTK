@@ -29,9 +29,6 @@
  This is an optional parameter and can be used to specify an already installed Anaconda3 installation.
  By default a version of Anaconda3 will be installed into [C:\local\Anaconda3-4.1.1-Windows-x86_64]
 
- .PARAMETER ForceWheelUpdate
- Will uninstall an existing CNTK wheel and install a new wheel
-
  .PARAMETER RepoTag
  Optional parameter to specify a specific tag to clone
 
@@ -61,16 +58,10 @@
 
 [CmdletBinding()]
 Param(
-    [parameter(Mandatory=$false)]
-    [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64",
-    [parameter(Mandatory=$false)]
-    [switch] $Execute,
-    [parameter(Mandatory=$false)]
-    [switch] $ForceWheelUpdate,
-    [parameter(Mandatory=$false)]
-    [string] $RepoTag="v2.0.beta1.0",
-    [parameter(Mandatory=$false)]
-    [string] $RepoLocation="c:\repos\CNTK"
+    [parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64",
+    [parameter(Mandatory=$false)] [switch] $Execute,
+    [parameter(Mandatory=$false)] [string] $RepoTag="v2.0.beta1.0",
+    [parameter(Mandatory=$false)] [string] $RepoLocation="c:\repos\CNTK"
 )
 
 $MyDir = Split-Path $MyInvocation.MyCommand.Definition

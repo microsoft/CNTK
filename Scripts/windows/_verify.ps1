@@ -53,9 +53,9 @@ function VerifyItem(
     $expr = $func +' $item' 
         
     Write-Verbose "Calling Operation: [$func]: [$name]"
-    $result = Invoke-Expression $expr 
+    $noInstallRequired = Invoke-Expression $expr 
 
-    return $result
+    return $noInstallRequired
 }
 
 function VerifyWin32ProductExists(
@@ -74,7 +74,6 @@ function VerifyWin32ProductExists(
     }
 
     Write-Verbose "[$func]: Product [$match] returned [$noInstallRequired]"
-
     return $noInstallRequired
 }
 
@@ -107,46 +106,43 @@ function VerifyWin32ProductVersion(
 }
 
 function VerifyInstallationContent(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
     $func = $table["Function"]
     $path = $table["Path"]
 
-    $result = (join-path $path cntk\cntk.exe | test-path -PathType Leaf) 
-    $result = (join-path $path prerequisites\VS2012\vcredist_x64.exe | test-path -PathType Leaf) -and $result
-    $result = (join-path $path prerequisites\VS2013\vcredist_x64.exe | test-path -PathType Leaf) -and $result
-    $result = (join-path $path prerequisites\MSMpiSetup.exe | test-path -PathType Leaf) -and $result
+    $noInstallRequired = (join-path $path cntk\cntk.exe | test-path -PathType Leaf) 
+    $noInstallRequired = (join-path $path prerequisites\VS2012\vcredist_x64.exe | test-path -PathType Leaf) -and $noInstallRequired
+    $noInstallRequired = (join-path $path prerequisites\VS2013\vcredist_x64.exe | test-path -PathType Leaf) -and $noInstallRequired
+    $noInstallRequired = (join-path $path prerequisites\MSMpiSetup.exe | test-path -PathType Leaf) -and $noInstallRequired
 
-    if ($result) {
-        Write-Verbose "[$func]: [$path] returned [$result]"
-        return $result
+    if ($noInstallRequired) {
+        Write-Verbose "[$func]: [$path] returned [$noInstallRequired]"
+        return $noInstallRequired
     }
     
     throw "`nFatal Error: Files from CNTK binary download package are missing!`nThe install script must be run out of the unpacked binary CNTK package, not from a CNTK source clone."
 }
 
 function VerifyDirectory(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
     $func = $table["Function"]
     $path = $table["Path"]
 
-    $result = (test-path -path $path -PathType Container)
+    $noInstallRequired = (test-path -path $path -PathType Container)
 
-    Write-Verbose "[$func]: [$path] returned [$result]"
+    Write-Verbose "[$func]: [$path] returned [$noInstallRequired]"
     
-    return $result
+    return $noInstallRequired
 }
 
 function VerifyWheelDirectory(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
@@ -154,53 +150,44 @@ function VerifyWheelDirectory(
     $path = $table["WheelDirectory"]
     $forceUpdate = $table["ForceUpdate"]
 
-    if ($forceUpdate) {
-        $result = $false
-    }
-    else {
-        $result = (test-path -path $path -PathType Container)
-    }
+    $noInstallRequired = $false
 
-    Write-Verbose "[$func]: [$path] returned [$result]"
-    
-    return $result
+    Write-Verbose "[$func]: [$path] returned [$noInstallRequired]"
+    return $noInstallRequired
 }
 
 function VerifyFile(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
     $func = $table["Function"]
     $path = $table["Path"]
 
-    $result = (test-path -path $path -PathType Leaf)
+    $noInstallRequired = (test-path -path $path -PathType Leaf)
 
-    Write-Verbose "[$func]: [$path] returned [$result]"
+    Write-Verbose "[$func]: [$path] returned [$noInstallRequired]"
     
-    return $result
+    return $noInstallRequired
 }
 
 function VerifyRegistryKey(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
     $func = $table["Function"]
     $key = $table["Key"]
 
-    $result = (test-path -path $key)
+    $noInstallRequired = (test-path -path $key)
 
-    Write-Verbose "[$func]: [$key] returned [$result]"
+    Write-Verbose "[$func]: [$key] returned [$noInstallRequired]"
     
-    return $result
+    return $noInstallRequired
 }
 
 function VerifyRegistryKeyName(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
@@ -208,16 +195,15 @@ function VerifyRegistryKeyName(
     $key      = $table["Key"]
     $regName  = $table["RegName"]
 
-    $result = Test-ItemProperty -Path $key -Name $regName
+    $noInstallRequired = Test-ItemProperty -Path $key -Name $regName
 
-    Write-Verbose "[$func]: [$key]:[$regname] returned [$result]"
+    Write-Verbose "[$func]: [$key]:[$regname] returned [$noInstallRequired]"
     
-    return $result
+    return $noInstallRequired
 }
 
 function VerifyRegistryKeyNameData(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
@@ -226,22 +212,20 @@ function VerifyRegistryKeyNameData(
     $regName  = $table["RegName"]
     $regData  = $table["RegData"]
 
-    $result = (test-path -path $key)
+    $noInstallRequired = (test-path -path $key)
 
-    if ($result) {
+    if ($noInstallRequired) {
         $theKeyObj = get-item $key
-        $result = ($theKeyObj.GetValue("$regName") -eq $regData)
+        $noInstallRequired = ($theKeyObj.GetValue("$regName") -eq $regData)
     }
 
-    Write-Verbose "[$func]: [$key]:[$regname] == [$regData] returned [$result]"
-    
-    return $result
+    Write-Verbose "[$func]: [$key]:[$regname] == [$regData] returned [$noInstallRequired]"
+    return $noInstallRequired
 }
 
 function Test-ItemProperty (
     [string] $Path, 
-    [string] $Name
-)
+    [string] $Name)
 {
     if (Test-Path $Path) {
         try {

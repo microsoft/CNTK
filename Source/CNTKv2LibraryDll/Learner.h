@@ -25,6 +25,8 @@ namespace CNTK
 
         virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override final;
 
+        virtual void ResetSmoothedGradients() override final;
+
     protected:
         // allocateSmoothGradients flag specifies whether NDArrayViews for smoothed gradients can be allocated 
         // in the base class constructor (in which case they are allocated with the shapes identical to the shapes of

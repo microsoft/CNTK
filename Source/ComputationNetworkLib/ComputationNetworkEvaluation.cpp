@@ -10,6 +10,7 @@
 #include "ComputationNetwork.h"
 #include "RecurrentNodes.h"
 #include "InputAndParamNodes.h"
+#include "LinearAlgebraNodes.h"
 #include <string>
 #include <vector>
 #include <list>
@@ -858,6 +859,67 @@ void ComputationNetwork::MarkValueNonSharableNodes()
                 node->MarkValueNonSharable();
         }
     }
+}
+
+// From the set of nodes extract all nodes which are used as accumulator nodes.
+set<ComputationNodeBasePtr> ComputationNetwork::ExtractNodesWhichAccumulateResult(set<ComputationNodeBasePtr> candidates)
+{
+    const auto& nodes = GetEvalOrder(nullptr);
+
+    // Set of nodes which leaf descendants are learnable parameters only. Initially, we add learnable parameter nodes to
+    // the set. Later, we add all nodes which have all children nodes from this list.
+    auto allLearnableParameters = GetNodesWithType(OperationNameOf(LearnableParameter));
+    set<ComputationNodeBasePtr> allLeafDescendantsAreLearnableParameters(allLearnableParameters.begin(),
+                                                                         allLearnableParameters.end());
+
+    // Set of nodes that accumulate samples from the input.
+    // We initially add all epoch accumulator nodes to this list. Later, we add all nodes that have at least one child
+    // node from this list and all other child nodes from the list above (whose leaf descendants are learnable
+    // parameters only). Combination of accumulator node with another accumulator node, or with nodes whose leaf
+    // descendants are learnable parameter is also accumulator node.
+    auto allEpochAccumulatorNodes = GetNodesWithType(OperationNameOf(EpochAccumulatorNode));
+    set<ComputationNodeBasePtr> accumulatorNodes(allEpochAccumulatorNodes.begin(), allEpochAccumulatorNodes.end());
+
+    if (!accumulatorNodes.empty())
+    {
+        for (auto& node : nodes)
+        {
+            auto inputs = node->GetInputs();
+            bool hasAccumulatorInput = false;
+            bool areAllLeafDescendantsLearnableNodes = true;
+            // Indicates that node shouldn't be added to set of nodes with learnable parameter descendants, nor to the
+            // set of accumulator nodes.
+            bool skipNode = false;
+            for (auto input : inputs)
+            {
+                bool hasAllLearnableParameterDescendents = allLeafDescendantsAreLearnableParameters.find(input) !=
+                                                           allLeafDescendantsAreLearnableParameters.end();
+                bool isAccumulatorNode = accumulatorNodes.find(input) != accumulatorNodes.end();
+                if (!hasAllLearnableParameterDescendents)
+                    areAllLeafDescendantsLearnableNodes = false;
+                if (isAccumulatorNode)
+                    hasAccumulatorInput = true;
+                if (!isAccumulatorNode && !hasAllLearnableParameterDescendents)
+                {
+                    skipNode = true;
+                    break;
+                }
+            }
+            if (skipNode) continue;
+            if (areAllLeafDescendantsLearnableNodes)
+                allLeafDescendantsAreLearnableParameters.insert(node);
+            if (hasAccumulatorInput)
+                accumulatorNodes.insert(node);
+        }
+    }
+
+    // Extract all candidate nodes that appear in set of accumulator nodes.
+    set<ComputationNodeBasePtr> intersection;
+    set_intersection(accumulatorNodes.begin(), accumulatorNodes.end(),
+                     candidates.begin(), candidates.end(),
+                     inserter(intersection, intersection.begin()));
+
+    return intersection;
 }
 
 // print memory-sharing information to log

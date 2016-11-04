@@ -110,7 +110,7 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
 
     Args:
        shape (`tuple`): the shape of this variable.
-       data_type (`np.float32 or np.float64`): data type of the values that will be bound to this variable.
+       dtype (`np.float32 or np.float64`): data type of the values that will be bound to this variable.
         Default is np.float32
        needs_gradient (`bool`): if set to True any expression that contains this variable
         will also be differentiated with respect to this variable.
@@ -119,16 +119,16 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
         express dimensions that can vary across examples or minibatches.
        name(`str`): an optional name for this parameter.
     '''
-    def __init__(self, shape=None, data_type=None, needs_gradient=False, is_sparse=False,
+    def __init__(self, shape=None, dtype=None, needs_gradient=False, is_sparse=False,
                  dynamic_axes=[cntk_py.Axis.default_dynamic_axis(), cntk_py.Axis.default_batch_axis()], name=''):
         shape = utils.sanitize_shape(shape)
 
-        if data_type is None:
-            data_type = np.float32
-        dtype = utils.sanitize_dtype_cntk(data_type)
+        if dtype is None:
+            dtype = np.float32
+        dtype = utils.sanitize_dtype_cntk(dtype)
 
         super().__init__(shape, is_sparse, dtype, needs_gradient, name,
-                         dynamic_axes) 
+                         dynamic_axes)
 
 
 class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
@@ -176,7 +176,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
         '''
         NumPy array of the value
         '''
-        return super().value().to_numpy()  
+        return super().value().to_numpy()
 
 class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     '''
@@ -188,7 +188,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
         BUGBUG: Document initializers
-       data_type (`np.float32` or `np.float64`): data type to store the values as.
+       dtype (`np.float32` or `np.float64`): data type to store the values as.
        device (:class:`cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
     '''
@@ -204,7 +204,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
             super().__init__(utils.sanitize_shape(shape), sanitize_dtype_cntk(dtype), value)
         else:
             ndav = sanitize_value(shape, value, dtype, device)
-            super().__init__(ndav, name) 
+            super().__init__(ndav, name)
 
 
     @property
@@ -212,5 +212,5 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         '''
         NumPy array of the value
         '''
-        return super().value().to_numpy()  
+        return super().value().to_numpy()
 

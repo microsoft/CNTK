@@ -19,8 +19,8 @@ function ActionOperations()
 }
 
 function ActionItem(
-    [hashtable] $item
-){
+    [hashtable] $item)
+{
     $func = $item["Function"]
 
     $expr = $func +' $item' 
@@ -35,8 +35,7 @@ function ActionItem(
 
 
 function InstallExe(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
     
@@ -86,8 +85,7 @@ function InstallExe(
 }
 
 function InstallWheel(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
@@ -116,9 +114,6 @@ function InstallWheel(
 
     $oldPath = $env:PATH
     $env:PATH = $newPaths + ';' + $env:PATH
-    if (test-path $whlDirectory -PathType Container) {
-        Invoke-DosCommand pip (Write-Output uninstall cntk --yes)
-    }
 
     Invoke-DosCommand pip (Write-Output install $whl)
     $env:PATH = $oldPath 
@@ -126,8 +121,7 @@ function InstallWheel(
 }
 
 function MakeDirectory(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
     
@@ -144,8 +138,7 @@ function MakeDirectory(
 }
 
 function AddToPath(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
@@ -184,8 +177,7 @@ function AddToPath(
 }
 
 function ExtractAllFromZip(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
@@ -211,8 +203,7 @@ function ExtractAllFromZip(
 }
 
 function CreateBatch(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
+    [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
 
@@ -226,8 +217,19 @@ function CreateBatch(
 
     Remove-Item -Path $filename -ErrorAction SilentlyContinue | Out-Null
 
-    add-content -Path $filename -Value "set PATH=$cntkRootDir\cntk;%PATH%" -Encoding Ascii
-    add-content -Path $filename -Value "$AnacondaBasePath\Scripts\activate $AnacondaBasePath\envs\cntk-py34" -Encoding Ascii 
+    $batchScript = @"
+@echo off
+if /I "%CMDCMDLINE%" neq ""%COMSPEC%" " (
+    echo.
+    echo Please execute this script from inside a regular Windows command prompt.
+    echo.
+    exit /b 0
+)
+set PATH=$cntkRootDir\cntk;%PATH%
+"$AnacondaBasePath\Scripts\activate" "$AnacondaBasePath\envs\cntk-py34"
+"@
+
+    add-content -Path $filename -Encoding Ascii -Value $batchScript
 }
 
 

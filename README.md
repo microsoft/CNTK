@@ -1,4 +1,13 @@
 # Latest news
+*2016-11-03.* V 2.0 Beta 2 Release  
+Highlights of this Release:
+* Feature tuning and bug fixing based on the feedback on Beta 1
+* Changes in the Examples and Tutorials based on the same feedback
+* New [Tutorial on Reinforcement Learning](https://github.com/Microsoft/CNTK/blob/master/bindings/python/tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb)
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_2_Release_Notes)  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
+
 *2016-10-25.* New CNTK Name, new Web Site and V 2.0 Beta 1 Release  
 
 CNTK becomes **The Microsoft Cognitive Toolkit**. See more at our [new Web Site](https://www.microsoft.com/en-us/research/product/cognitive-toolkit/).
@@ -50,10 +59,6 @@ Highlights of this Release:
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_Release_Notes)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
-
-*2016-08-29.* Two new Tutorials are available:  
-[Image recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (CIFAR-10) and [Language understanding](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Language-Understanding) (ATIS).
-
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 

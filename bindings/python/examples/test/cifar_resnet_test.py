@@ -44,7 +44,7 @@ def test_cifar_resnet_error(device_id):
     reader_test  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
 
     test_error = train_and_evaluate(reader_train, reader_test, max_epochs=5)
-    expected_test_error = 0.384
+    expected_test_error = 0.282
 
     assert np.allclose(test_error, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)

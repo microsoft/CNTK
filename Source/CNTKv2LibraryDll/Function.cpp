@@ -92,7 +92,7 @@ namespace CNTK
                     if (var.Shape().IsUnknown() && !placeholder.Shape().IsUnknown())
                         var.m_dataFields->m_shape = placeholder.Shape();
 
-                    if ((var.DynamicAxes() == Axis::UnknownDynamicAxes) && (placeholder.DynamicAxes() != Axis::UnknownDynamicAxes))
+                    if ((var.DynamicAxes() == Axis::UnknownDynamicAxes()) && (placeholder.DynamicAxes() != Axis::UnknownDynamicAxes()))
                         var.m_dataFields->m_dynamicAxes = placeholder.DynamicAxes();
                 }
             }
@@ -164,7 +164,7 @@ namespace CNTK
                     currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
                 }
 
-                if ((currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
+                if ((currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
                 {
                     recurrentNodeOutputModified = true;
                     currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
@@ -172,7 +172,7 @@ namespace CNTK
 
                 if ((!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape())) ||
                     ((newOutputVar.GetDataType() != DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType())) ||
-                    ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())))
+                    ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())))
                 {
                     InvalidArgument("Inconsistency in output variable shape, DataType or Dynamic axes computed after replaced placeholders vs. existing output properties, for the Recurrent Function");
                 }
@@ -642,13 +642,13 @@ namespace CNTK
             auto allInputDynamicAxesEmpty = std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.DynamicAxes().empty(); }) == inputs.end();
             if (!allInputDynamicAxesEmpty)
             {
-                outputDynamicAxes = Axis::UnknownDynamicAxes;
+                outputDynamicAxes = Axis::UnknownDynamicAxes();
                 for (auto inputVar : inputs)
                 {
                     auto currentInputDynamicAxes = inputVar.DynamicAxes();
-                    if (!currentInputDynamicAxes.empty() && (currentInputDynamicAxes != Axis::UnknownDynamicAxes))
+                    if (!currentInputDynamicAxes.empty() && (currentInputDynamicAxes != Axis::UnknownDynamicAxes()))
                     {
-                        if (outputDynamicAxes == Axis::UnknownDynamicAxes)
+                        if (outputDynamicAxes == Axis::UnknownDynamicAxes())
                             outputDynamicAxes = currentInputDynamicAxes;
                         else
                         {
@@ -808,7 +808,7 @@ namespace CNTK
                     Variable initialStateVar = inputs[1];
 
                     // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
-                    if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes) && (inputOperandVar.DynamicAxes().size() != 2))
+                    if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))
                         LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
 
                     if (!initialStateVar.DynamicAxes().empty())
@@ -1322,7 +1322,7 @@ namespace CNTK
         if (variable.Shape().HasInferredDimension())
             InvalidArgument("Variable%S with InferredDimension for at least one axis in its shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
-        if (variable.DynamicAxes() == Axis::UnknownDynamicAxes)
+        if (variable.DynamicAxes() == Axis::UnknownDynamicAxes())
             InvalidArgument("Variable%S with unknown dynamic axes detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         // Lets add a null entry in the map for this variable, to break infinite recursion when processing recurrent graphs
