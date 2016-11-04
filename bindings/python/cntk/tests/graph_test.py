@@ -57,3 +57,35 @@ def test_find_nodes():
 
     none = find_nodes_by_name(d['root'], 'none')
     assert none == []
+
+d_string = "\nPlus(Input97, Input98) -> Plus100_Output_0" \
+                "\nTimes(Parameter99, Plus100_Output_0) -> Times102_Output_0" \
+                "\nPlus(Times102_Output_0, Parameter104) -> Plus105_Output_0" \
+                "\nPlus(Plus105_Output_0, Parameter104) -> Plus107_Output_0"\
+                "\nPlus(Input97, Input98) -> Plus100_Output_0"\
+                "\nTimes(Parameter99, Plus100_Output_0) -> Times102_Output_0"\
+                "\nPlus(Times102_Output_0, Parameter104) -> Plus105_Output_0"\
+                "\nPlus(Plus105_Output_0, Parameter104) -> Plus107_Output_0"\
+                "\nPlus(Input97, Input98) -> Plus100_Output_0"\
+                "\nTimes(Parameter99, Plus100_Output_0) -> Times102_Output_0"\
+                "\nPlus(Times102_Output_0, Parameter104) -> Plus105_Output_0"\
+                "\nPlus(Plus105_Output_0, Parameter104) -> Plus107_Output_0"\
+                "\nReduceElements(Plus107_Output_0) -> ReduceElements109_Output_0"\
+                "\nPlus(Input97, Input98) -> Plus100_Output_0"\
+                "\nTimes(Parameter99, Plus100_Output_0) -> Times102_Output_0"\
+                "\nPlus(Times102_Output_0, Parameter104) -> Plus105_Output_0"\
+                "\nPlus(Plus105_Output_0, Parameter104) -> Plus107_Output_0"\
+                "\nReduceElements(Plus107_Output_0) -> ReduceElements109_Output_0"\
+                "\nMinus(ReduceElements109_Output_0, ReduceElements109_Output_0) -> Minus111_Output_0"\
+                "\nPastValue(Minus111_Output_0, Parameter113) -> PastValue114_Output_0"\
+                "\nWhere(PastValue114_Output_0) -> Where116_Output_0"\
+                "\nPackedIndex(Plus107_Output_0, Where116_Output_0) -> PackedIndex118_Output_0"\
+                "\nGatherPacked(Plus107_Output_0, PackedIndex118_Output_0) -> GatherPacked120_Output_0"
+
+def test_output_funtion_graph():
+    d = _graph_dict()
+
+    m = output_function_graph(d['root'])
+    
+    assert len(m) != 0
+    assert m==d_string
