@@ -69,7 +69,7 @@ def convnet_cifar10_dataaug(reader_train, reader_test):
             ]), 
             LayerStack(2, lambda i: [
                 Dense([256,128][i]), 
-                Dropout(0.5)            # dropout scheduling is not supported in Python yet 
+                Dropout(0.5)
             ]), 
             Dense(num_classes, activation=None)
         ])(scaled_input)

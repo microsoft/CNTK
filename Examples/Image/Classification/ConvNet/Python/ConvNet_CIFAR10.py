@@ -24,13 +24,12 @@ model_path = os.path.join(abs_path, "Models")
 # Define the reader for both training and evaluation action.
 def create_reader(path, is_training, input_dim, label_dim):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
-        features  = StreamDef(field='features', shape=input_dim, is_sparse=False),
-        labels    = StreamDef(field='labels',   shape=label_dim, is_sparse=False)
+        features  = StreamDef(field='features', shape=input_dim),
+        labels    = StreamDef(field='labels',   shape=label_dim)
     )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
 
 
 # Creates and trains a feedforward classification model for MNIST images
-
 def convnet_cifar10(debug_output=False):
     set_computation_network_trace_level(0)
 
@@ -56,7 +55,7 @@ def convnet_cifar10(debug_output=False):
             ]), 
             LayerStack(2, lambda i: [
                 Dense([256,128][i]), 
-                Dropout(0.5)            # dropout scheduling is not supported in Python yet 
+                Dropout(0.5)
             ]), 
             Dense(num_output_classes, activation=None)
         ])(scaled_input)
