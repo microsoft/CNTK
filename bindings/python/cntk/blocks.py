@@ -11,6 +11,7 @@
 # TODO: further clean up the dependencies
 import numpy as np
 from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias
+from cntk.axis import Axis
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
@@ -46,7 +47,8 @@ _current_default_options = Record(
     init_bias=0,
     enable_self_stabilization=False,  # Stabilizer() and LSTM()
     initial_state=None,               # Recurrence()
-    use_peepholes=False               # LSTM()
+    use_peepholes=False,              # LSTM()
+    data_type=np.float32              # Constant(), Parameter(), Input()
 )
 
 _default_sentinel           = '(default)'           # This is a singleton sentinel value we recognize and replace in _initializer_for()
@@ -61,6 +63,7 @@ pad_default_or_False                       = _default_sentinel
 enable_self_stabilization_default_or_False = _default_sentinel
 initial_state_default_or_None              = _default_sentinel
 use_peepholes_default_or_False             = _default_sentinel
+data_type_default_or_float32               = _default_sentinel_init
 
 # check whether a parameter is a default
 # This is meant to be used by implementations of layers that take default values that may default to default-defaults.
@@ -167,18 +170,23 @@ def Block(f, op_name, members={}):
     return f
 
 # some mappings--these currently exist only so that I can name the nodes for debugging
-def Parameter(shape, init, name=''):
+def Parameter(shape, init, data_type=data_type_default_or_float32, name=''):
+    data_type = data_type if _is_given(data_type) else _current_default_options.data_type
     init = _initializer_for(init)
-    p = parameter(shape, init=init, name=name) # TODO: use (*args, **kwargs)
+    p = parameter(shape, init=init, data_type=data_type, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'parameter')   # these are factory methods for things with state
 
-def Constant(init, shape=None, name=''):
-    p = constant(init, shape=shape, name=name) # TODO: use (*args, **kwargs)
+def Constant(init, shape=None, data_type=data_type_default_or_float32, name=''):
+    data_type = data_type if _is_given(data_type) else _current_default_options.data_type
+    p = constant(init, shape=shape, data_type=data_type, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'constant')   # these are factory methods for things with state
 
 # TODO: this function should not be necessary anymore
-def Input(*args, **kwargs):
-    return _name_node(input_variable(*args, **kwargs), 'input')
+def Input(shape, data_type=data_type_default_or_float32, needs_gradient=True, is_sparse=False,
+          dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
+    data_type = data_type if _is_given(data_type) else _current_default_options.data_type
+    return _name_node(input_variable(shape=shape, data_type=data_type, needs_gradient=needs_gradient, is_sparse=is_sparse,
+                                     dynamic_axes=dynamic_axes, name=name), 'input')
 
 # use this for set_signature()
 variable_of_type = Input

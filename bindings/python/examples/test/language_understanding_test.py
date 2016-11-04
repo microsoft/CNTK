@@ -96,6 +96,7 @@ def test_seq_classification_error(device_id):
 
         # replace lookahead by bidirectional model
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
+          #with default_options(data_type=np.float64):  # inject an option to mimic the BS version identically; remove some day
             test_a_model('replace lookahead by bidirectional model, with shared BN', Sequential([
                 Embedding(emb_dim),
                 #BatchNormalization(),
