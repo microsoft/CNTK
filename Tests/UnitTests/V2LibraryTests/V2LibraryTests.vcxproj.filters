@@ -63,12 +63,18 @@
     <ClCompile Include="CifarResNet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GraphIrWrapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GraphIr\cpp\graphid.pb.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
