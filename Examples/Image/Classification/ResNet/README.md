@@ -20,6 +20,6 @@ CIFAR-10 and ILSVRC2012 datasets are not included in the CNTK distribution. The 
 
 We offer multiple ResNet examples, including ResNet20 and ResNet110 for CIFAR-10 dataset, and ResNet50, ResNet101 and ResNet152 for the ILSVRC2012 dataset (BrainScript only at this moment). For details, please click the respective links below.
 
-### [Python](.\Python)
+### [Python](./Python)
 
-### [BrainScript](.\BrainScript)
+### [BrainScript](./BrainScript)
