@@ -233,9 +233,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     if (isCTCTrainingCriterion)
     {
         //SequenceWithSoftmaxNode<ElemType>* node = static_cast<SequenceWithSoftmaxNode<ElemType>*>(criterionNodes[0]);
-        auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(criterionNodes[0]);
-        auto  hmm = node->gethmm();
-        trainSetDataReader->GetHmmData(hmm);
+        // auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(criterionNodes[0]);
+        // auto  hmm = node->gethmm();
+        // trainSetDataReader->GetHmmData(hmm);
     }
 
     // used for KLD regularized adaptation. For all other adaptation techniques
