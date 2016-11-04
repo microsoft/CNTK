@@ -250,6 +250,10 @@ int operator||(int rc, const MpiFail &what)
     RuntimeError("%s", what.c_str());
 }
 
+// TODO: this is not threadsafe.
+//       to make this threadsafe, remove the "create" parameter,
+//       replace the s_mpi init with a run-once statement (or guard it with a mutex),
+//       and remove the DeleteInstance() function.
 MPIWrapperPtr MPIWrapper::GetInstance(bool create)
 {
     if (create)
