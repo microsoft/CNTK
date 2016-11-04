@@ -215,11 +215,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 
 // this is used in V2
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape, DEVICEID_TYPE deviceId /*= DEVICEID_NOTYETDETERMINED*/)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape)
 {
-    if (deviceId == DEVICEID_NOTYETDETERMINED) // this allows caller to create node on a different device, for BatchNorm denominator
-        deviceId = net.GetDeviceId();
-    return net.AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(deviceId, paramName, tensorShape));
+    return net.AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(net.GetDeviceId(), paramName, tensorShape));
 }
 
 // TODO: change these to take an actual object instead of a name for dynamicAxis

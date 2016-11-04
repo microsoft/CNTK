@@ -44,12 +44,11 @@ def conv_bn_layer(input, out_feature_map_count, kernel_shape, strides, bn_time_c
     conv_func = convolution(conv_params, input, (num_in_channels, v_stride, h_stride))
 
     #TODO: initialize using b_value and sc_value, needs to be exposed in the python api
-    from cntk import cpu
     bias_params = parameter(shape=(out_feature_map_count), init=b_value)
     scale_params = parameter(shape=(out_feature_map_count), init=sc_value)
     running_mean = constant(0., (out_feature_map_count))
     running_invstd = constant(0., (out_feature_map_count))
-    running_count = constant(0., (1), device=cpu()) # count must live on the CPU
+    running_count = constant(0., (1))
     return batch_normalization(conv_func, scale_params, bias_params, running_mean, running_invstd, running_count, True, bn_time_const, use_cudnn_engine=True)
 
 

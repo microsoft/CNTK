@@ -2230,14 +2230,15 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
     static const size_t BIAS      = 2;
     static const size_t RUN_MEAN  = 3;
     static const size_t RUN_VAR   = 4;
-    static const size_t RUN_COUNT = 5; // optional, coming soon
+    static const size_t RUN_COUNT = 5; // note: no such parameter for legacy V1 models that do not share the count correctly
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial = false,
                            double normalizationTimeConstant=0, double blendTimeConstant=0,
-                           double epsilon = 0, bool useCntkEngine = true, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW, size_t samplesSeen = 0) :
+                           double epsilon = 0, bool useCntkEngine = true, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
+                           //, size_t samplesSeen = 0) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
         m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind),
-        m_runCountUntied(samplesSeen),  // TODO: remove this (Validate() will get it)
+        m_runCountUntied(0), //samplesSeen),  // TODO: remove this (Validate() will get it)
         m_convertRunningVariancePending(false),
         m_one(1, 1, deviceId)
     {
@@ -2331,7 +2332,7 @@ public:
         {
             // Prior to version 12, and prior to storing counts in a shared Parameter, minibatch count was stored instead of samples seen.
             // Approximate by assuming minibatch size 16, inform about that.
-            m_runCountUntied = (16 * mbCount);
+            m_runCountUntied = 16 * mbCount;
             fprintf(stderr,
                     "INFO: %ls: loading pre-CuDNNv5 model: approximated mini-batch count of %" PRIu64 " as %" PRIu64 " trained samples.\n"
                     "      Statistics in further training may be biased; consider re-training instead.\n",
@@ -2362,7 +2363,7 @@ public:
         }
     }
 
-    size_t GetSamplesSeen() const { return RunCount(); } // for V2 API interop
+    //size_t GetSamplesSeen() const { return RunCount(); } // for V2 API interop
     // BUGBUG: There is no SetSamplesSeen(), and indeed the V2 API does not reinstall the #samples.
     //         For now, this causes a minor inefficiency in decoding, since it has to sync to GPU
     //         for every MB to check the shared count.
