@@ -63,9 +63,13 @@ def BiRecurrence(fwd, bwd):
 def BNBiRecurrence(fwd, bwd): # special version that calls one shared BN instance at two places, for testing BN param tying
     F = Recurrence(fwd)
     G = Recurrence(fwd, go_backwards=True)
-    BN = BatchNormalization(normalization_time_constant=10000) # we feed twice the #samples, must reflect in time constant
+    BN = BatchNormalization(normalization_time_constant=-1) # we feed twice the #samples, must reflect in time constant
     x = Placeholder()
-    apply_x = splice ([F(BN(x)), G(BN(x))])
+    x1 = BN(x)
+    x2 = BN(x) # dual invocation
+    #x2 = x1   # single invocation
+    # In double precision with corpus aggregation, these lead to the same result.
+    apply_x = splice ([F(x1), G(x2)])
     return apply_x
 
 # TODO: the name is wrong
@@ -96,12 +100,12 @@ def test_seq_classification_error(device_id):
 
         # replace lookahead by bidirectional model
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
-          #with default_options(data_type=np.float64):  # inject an option to mimic the BS version identically; remove some day
+          with default_options(data_type=np.float64):  # this works but only
             test_a_model('replace lookahead by bidirectional model, with shared BN', Sequential([
                 Embedding(emb_dim),
                 #BatchNormalization(),
                 BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
-                BatchNormalization(),
+                BatchNormalization(normalization_time_constant=-1),
                 Dense(num_labels)
             ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
             """ with normalization_time_constant=-1:

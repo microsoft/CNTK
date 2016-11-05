@@ -1268,13 +1268,54 @@ void Matrix<ElemType>::AssignValuesOf(const Matrix<ElemType>& deepCopyFrom)
         });
 }
 
+// CastAssignValuesOf() -- assign a matrix with type conversion, needed for feeding 'float' data to 'double' inputs in V2
+// This version is a stop-gap for debugging and testing. If any conversion is done, it will be slow.
+// If this is ever used for something that needs performance, it should not be too hard (but labor) to implement this efficiently.
 static void DoCastAssignValuesOf(Matrix<float>&  target, const Matrix<float>&  other) { target.AssignValuesOf(other); }
 static void DoCastAssignValuesOf(Matrix<double>& target, const Matrix<double>& other) { target.AssignValuesOf(other); }
-// TODO: finish
-//static void DoCastAssignValuesOf(Matrix<float>&  target, const Matrix<double>& other) { target;other; }
-//static void DoCastAssignValuesOf(Matrix<double>& target, const Matrix<float>&  other) { target;other; }
+template<class ElemType>
+static void CopyToVector(const Matrix<ElemType>& source, vector<ElemType>& sourceData)
+{
+    sourceData.resize(source.GetNumElements());
+    ElemType* datap = sourceData.data();
+    size_t datasz = sourceData.size();
+    source.CopyToArray(datap, datasz);
+    assert(datap == sourceData.data() && datasz = sourceData.size()); // (make sure it used my buffer; a somewhat awkward API)
+}
+void Matrix<int>::AssignValuesOf(const Matrix<int>&) { NOT_IMPLEMENTED; }
 template<class ElemType, class ElemTypeOther>
-static void DoCastAssignValuesOf(Matrix<ElemType>&, const Matrix<ElemTypeOther>&) { LogicError("CastAssignValuesOf: unsupported combination of element types."); }
+static void DoCastAssignValuesOf(Matrix<ElemType>& target, const Matrix<ElemTypeOther>& source)
+{
+    target; source;
+    // this is implemented in a rather tedious way:
+    //  - copy to a CPU-side STL vector
+    //  - type-cast
+    //  - copy to target
+    vector<ElemTypeOther> sourceData;
+    if (source.GetMatrixType() == MatrixType::SPARSE) // if sparse then convert it over (V2 cannot read sparse data into dense input_variables)
+    {
+        Matrix<ElemTypeOther> temp(source.GetNumRows(), source.GetNumCols(), CPUDEVICE, DENSE);
+        temp.AssignValuesOf(source);
+        CopyToVector(temp, sourceData);
+    }
+    else
+    {
+        CopyToVector(source, sourceData);
+    }
+    // cast all values
+    vector<ElemType> targetData(sourceData.size());
+    transform(sourceData.begin(), sourceData.end(), targetData.begin(), [](ElemTypeOther v){ return (ElemType)v; });
+    // set the target
+    if (target.GetMatrixType() == MatrixType::SPARSE) // if target is sparse then we cannot assign from a vector directly, but we can from a matrix object
+    {
+        Matrix<ElemType> temp(source.GetNumRows(), source.GetNumCols(), targetData.data(), CPUDEVICE);
+        target.AssignValuesOf(temp);
+    }
+    else
+    {
+        target.SetValue(source.GetNumRows(), source.GetNumCols(), target.GetDeviceId(), targetData.data());
+    }
+}
 
 template <class ElemType>
 void Matrix<ElemType>::CastAssignValuesOf(const MatrixBase& other) /*override*/ // allows for mixed assignment with conversion

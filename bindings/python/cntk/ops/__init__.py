@@ -1905,13 +1905,13 @@ def parameter(shape=None, init=None, data_type=None, device=None, name=''):
         device = use_default_device()
 
     if data_type is not None:
-        if isinstance(init, np.ndarray) and data_type != init.data_type:
+        if isinstance(init, np.ndarray) and data_type != init.dtype:
             raise ValueError('value and data_type must have the same type')
     else:
         if np.isscalar(init) and not shape:
             shape = ()
             if isinstance(init, np.ndarray):
-                data_type = init.data_type
+                data_type = init.dtype
             else:
                 data_type = np.float32
         else:
@@ -1952,11 +1952,11 @@ def constant(value=None, shape=None, data_type=None, device=None, name=''):
     if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
         shape = ()
     if data_type is not None:
-        if isinstance(value, np.ndarray) and data_type != value.data_type:
+        if isinstance(value, np.ndarray) and data_type != value.dtype:
             raise ValueError('value and data_type must have the same type')
     else:
         if isinstance(value, np.ndarray):
-            data_type = value.data_type
+            data_type = value.dtype
         else:
             data_type = np.float32
 
