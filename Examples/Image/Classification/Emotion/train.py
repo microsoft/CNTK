@@ -47,7 +47,7 @@ def cost_func(training_mode, prediction, target):
 def main(base_folder, training_mode='majority', model_name='vgg13', max_epochs = 100):
     # create needed folders.
     output_model_path   = os.path.join(base_folder, R'models')
-    output_model_folder = os.path.join(output_model_path, model_name)
+    output_model_folder = os.path.join(output_model_path, model_name + '_' + training_mode)
     if not os.path.exists(output_model_folder):
         os.makedirs(output_model_folder)
 
