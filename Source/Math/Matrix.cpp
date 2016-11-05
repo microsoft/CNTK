@@ -1280,7 +1280,7 @@ static void CopyToVector(const Matrix<ElemType>& source, vector<ElemType>& sourc
     ElemType* datap = sourceData.data();
     size_t datasz = sourceData.size();
     source.CopyToArray(datap, datasz);
-    assert(datap == sourceData.data() && datasz = sourceData.size()); // (make sure it used my buffer; a somewhat awkward API)
+    assert(datap == sourceData.data() && datasz == sourceData.size()); // (make sure it used my buffer; a somewhat awkward API)
 }
 void Matrix<int>::AssignValuesOf(const Matrix<int>&) { NOT_IMPLEMENTED; }
 template<class ElemType, class ElemTypeOther>
