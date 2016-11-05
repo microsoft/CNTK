@@ -202,4 +202,4 @@ RUN cd Examples/Image/DataSets/MNIST && \
 ENV PATH=/cntk/build/gpu/release/bin:/usr/local/mpi/bin:$PATH
 
 ENV PYTHONPATH /cntk/bindings/python:$PYTHONPATH
-ENV LD_LIBRARY_PATH /cntk/bindings/cntk/libs:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH /cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH

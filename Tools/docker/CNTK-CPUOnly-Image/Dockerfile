@@ -193,3 +193,6 @@ RUN cd Examples/Image/DataSets/MNIST && \
     cd ../../../..
 
 ENV PATH=/cntk/build/cpu/release/bin:$PATH
+
+ENV PYTHONPATH /cntk/bindings/python:$PYTHONPATH
+ENV LD_LIBRARY_PATH /cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
