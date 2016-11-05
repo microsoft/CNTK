@@ -13,11 +13,11 @@ from cntk.device import set_default_device
 from cntk.io import ReaderConfig, ImageDeserializer
 import pytest
 
-from examples.CifarResNet.CifarResNet import train_and_evaluate, create_reader
+from examples.CifarConvNet.CifarConvNet import train_and_evaluate, create_reader
 
 TOLERANCE_ABSOLUTE = 2E-1
 
-def test_cifar_resnet_error(device_id):
+def test_cifar_convnet_error(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU')
     set_default_device(cntk_device(device_id))
@@ -44,7 +44,7 @@ def test_cifar_resnet_error(device_id):
     reader_test  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
 
     test_error = train_and_evaluate(reader_train, reader_test, max_epochs=5)
-    expected_test_error = 0.282
+    expected_test_error = 0.463
 
     assert np.allclose(test_error, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)

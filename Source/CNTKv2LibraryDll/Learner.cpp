@@ -169,34 +169,34 @@ namespace CNTK
         return arrayView->GetWritableTensorView<ElementType>();
     }
 
-    LearnerBase::LearnerBase(const vector<Parameter>& parameters, 
+    LearnerBase::LearnerBase(const vector<Parameter>& parameters,
                              const LearningRateSchedule& learningRateSchedule,
                              AdditionalLearningOptions additionalOptions,
                              bool allocateSmoothGradients /* = true */)
-        : Learner(parameters, learningRateSchedule),
-        m_minibatchCount(0),
-        m_additionalOptions(additionalOptions)
+                             : Learner(parameters, learningRateSchedule),
+                             m_minibatchCount(0),
+                             m_additionalOptions(additionalOptions)
     {
         std::unordered_set<Parameter> uniqueParameters(parameters.begin(), parameters.end());
 
-        if (uniqueParameters.size() != parameters.size()) 
+        if (uniqueParameters.size() != parameters.size())
         {
             LogicError("Learner parameters contain duplicates.");
         }
-        
+
         for (const auto& parameter : parameters)
         {
             if (!allocateSmoothGradients)
             {
                 continue;
             }
-                
+
             NDArrayViewPtr view = AllocateNDArrayView(parameter, parameter.Shape());
             m_smoothedGradientValues.insert(make_pair(parameter, view));
         }
     }
 
-    /*static*/ NDArrayViewPtr LearnerBase::AllocateNDArrayView(const Parameter& parameter, const NDShape& shape) 
+    /*static*/ NDArrayViewPtr LearnerBase::AllocateNDArrayView(const Parameter& parameter, const NDShape& shape)
     {
         if (parameter.GetDataType() == DataType::Float)
         {
@@ -212,13 +212,13 @@ namespace CNTK
     {
         if (parameter.GetDataType() == DataType::Float)
         {
-           auto matrix = GetMatrix<float>(parameter.Value());
-           return { matrix->GetNumRows(), matrix->GetNumCols() };
+            auto matrix = GetMatrix<float>(parameter.Value());
+            return{ matrix->GetNumRows(), matrix->GetNumCols() };
         }
         else
         {
-           auto matrix = GetMatrix<double>(parameter.Value());
-           return { matrix->GetNumRows(), matrix->GetNumCols() };
+            auto matrix = GetMatrix<double>(parameter.Value());
+            return{ matrix->GetNumRows(), matrix->GetNumCols() };
         }
     }
 
@@ -236,7 +236,7 @@ namespace CNTK
         {
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
             const auto& gradientValue = gradientValues.at(parameter);
-// TODO: make this a runtime parameter.
+            // TODO: make this a runtime parameter.
 #if DUMPOUTPUT
             LOGPRINTF(stderr, "Update_%ls\n", parameter.Uid().c_str());
 #endif
@@ -250,7 +250,7 @@ namespace CNTK
             const auto learningRate = LearningRate(trainingSampleCount);
             const auto momentum = MomentumValueForMB(trainingSampleCount);
             LOGPRINTF(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
-                        learningRate, momentum, trainingSampleCount);
+                      learningRate, momentum, trainingSampleCount);
             LOGPRINTF(stderr, "GradUpdateType()=%s, GradientUpdateNoiseStd()=%0.8f\n",
                       LearnerType().c_str(), m_additionalOptions.gaussianNoiseInjectionStdDev);
             Print(gradientValue, "Gradient Update");
@@ -289,7 +289,7 @@ namespace CNTK
     string LearnerBase::LearnerType() const
     {
         return Typename(this);
-    } 
+    }
 
     static const std::wstring s_learnerTypeValue = L"Learner";
 
@@ -326,7 +326,7 @@ namespace CNTK
     /*virtual*/ void LearnerBase::RestoreFromCheckpoint(const Dictionary& checkpoint) /*override*/
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, sampleCountKey, minibatchCountKey, learningRateScheduleKey };
-        
+
         ValidateDictionary<LearnerBase>(checkpoint, s_requiredDictionaryKeys, s_learnerTypeValue, CurrentVersion());
 
         m_sampleCount = checkpoint[sampleCountKey].Value<size_t>();
@@ -347,7 +347,7 @@ namespace CNTK
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
 
             const NDArrayView& checkpointedValue = checkpoint[parameter.Uid()].Value<NDArrayView>();
-            
+
             if (smoothedGradientValue->GetDataType() != checkpointedValue.GetDataType())
             {
                 LogicError("A value restored from a checkpoint for the smoothed gradient data type for parameter %ls does not match the expected value",
@@ -391,7 +391,7 @@ namespace CNTK
     {
         double currentMomentum = GetCurrentTrainingParameterValue(schedule);
         if (schedule.Unit() == MomentumSchedule::UnitType::Minibatch)
-    {
+        {
             return currentMomentum;
         }
         return std::pow(currentMomentum, minibatchSize);
@@ -421,17 +421,17 @@ namespace CNTK
     /*static*/ const double LearnerFSAdaGrad::s_targetAdagradAvDenom = 1.0;
 
     LearnerFSAdaGrad::LearnerFSAdaGrad(const vector<Parameter>& parameters,
-                                       const LearningRateSchedule& learningRateSchedule, 
+                                       const LearningRateSchedule& learningRateSchedule,
                                        const MomentumSchedule& momentumSchedule,
                                        const MomentumSchedule& varianceMomentumSchedule,
                                        AdditionalLearningOptions additionalOptions)
-        : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, additionalOptions, /*allocateSmoothGradients*/ false),
-        m_varianceMomentumSchedule(varianceMomentumSchedule)
+                                       : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, additionalOptions, /*allocateSmoothGradients*/ false),
+                                       m_varianceMomentumSchedule(varianceMomentumSchedule)
     {
         for (const auto& parameter : parameters)
-        {  
+        {
             const auto shape = GetMatrixShape(parameter);
-            NDArrayViewPtr view = AllocateNDArrayView(parameter, {shape[0], 2 * shape[1]});
+            NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], 2 * shape[1] });
             m_smoothedGradientValues.insert(make_pair(parameter, view));
             m_smoothedCounts.insert(make_pair(parameter, 0.0));
         }
@@ -449,27 +449,27 @@ namespace CNTK
         const auto& smoothedGradientMatrix = GetWritableMatrix<ElementType>(smoothedGradientValue);
         const auto& gradientMatrix = GetWritableMatrix<ElementType>(gradientValue);
         const auto& parameterMatrix = GetWritableMatrix<ElementType>(parameterValue);
-        
+
         const auto learningRate = LearningRate(trainingSampleCount);
         const auto momentum = MomentumValueForMB(trainingSampleCount);
 
         const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
 
-        double& smoothedCount = m_smoothedCounts.at(parameter); 
+        double& smoothedCount = m_smoothedCounts.at(parameter);
 
         smoothedGradientMatrix->FSAdagradUpdate(trainingSampleCount, *gradientMatrix, *parameterMatrix, smoothedCount, learningRate, s_targetAdagradAvDenom, momentum, varMomentum);
     }
 
-    LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters, 
+    LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
                                    const LearningRateSchedule& learningRateSchedule,
                                    double gamma, double inc, double dec, double max, double min,
                                    bool needAveMultiplier,
                                    AdditionalLearningOptions additionalOptions)
-    : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ false),
-    m_gamma(gamma), m_inc(inc), m_dec(dec), m_max(max), m_min(min), m_needAveMultiplier(needAveMultiplier)
+                                   : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ false),
+                                   m_gamma(gamma), m_inc(inc), m_dec(dec), m_max(max), m_min(min), m_needAveMultiplier(needAveMultiplier)
     {
         for (const auto& parameter : parameters)
-        {  
+        {
             // When needAveMultiplier == true, CPU and GPU implementations of RMSProp require different number of columns.
             size_t factor = 3;
             if (needAveMultiplier && parameter.Value()->Device().Type() == DeviceKind::GPU)
@@ -478,7 +478,7 @@ namespace CNTK
             }
 
             const auto shape = GetMatrixShape(parameter);
-            NDArrayViewPtr view = AllocateNDArrayView(parameter, {shape[0], factor * shape[1]});
+            NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], factor * shape[1] });
 
             m_smoothedGradientValues.insert(make_pair(parameter, view));
         }
@@ -502,19 +502,19 @@ namespace CNTK
         const auto learningRate = LearningRate(trainingSampleCount);
 
         const auto aveMultiplier = smoothedGradientMatrix->RmsProp(*gradientMatrix,
-                                                             ElementType(m_gamma), 
-                                                             ElementType(m_inc),
-                                                             ElementType(m_max), 
-                                                             ElementType(m_dec),
-                                                             ElementType(m_min), 
-                                                             m_needAveMultiplier);
+                                                                   ElementType(m_gamma),
+                                                                   ElementType(m_inc),
+                                                                   ElementType(m_max),
+                                                                   ElementType(m_dec),
+                                                                   ElementType(m_min),
+                                                                   m_needAveMultiplier);
         Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
     }
 
     // Explicit template instantiations
     template shared_ptr<Matrix<float>> LearnerBase::GetWritableMatrix<float>(const NDArrayViewPtr& arrayView);
     template shared_ptr<Matrix<double>> LearnerBase::GetWritableMatrix<double>(const NDArrayViewPtr& arrayView);
-    
+
     LearnerPtr SGDLearner(const vector<Parameter>& parameters,
                           const LearningRateSchedule& learningRateSchedule,
                           AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
@@ -538,12 +538,17 @@ namespace CNTK
         return MakeSharedObject<LearnerNesterov>(parameters, learningRateSchedule, momentumSchedule, additionalOptions);
     }
 
-    LearnerPtr FSAdaGradLearner(const vector<Parameter>& parameters,
-                                const LearningRateSchedule& learningRateSchedule,
-                                const MomentumSchedule& momentumSchedule,
-                                const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
-                                AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
+    LearnerPtr AdamLearner(const vector<Parameter>& parameters,
+                           const LearningRateSchedule& learningRateSchedule,
+                           const MomentumSchedule& momentumSchedule,
+                           const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
+                           bool lowMemory, /*= true*/
+                           AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
+        if (!lowMemory)
+        {
+            LogicError("AdamLearner: only the low-memory variant is supported at the moment.");
+        }
         return MakeSharedObject<LearnerFSAdaGrad>(parameters, learningRateSchedule, momentumSchedule, varianceMomentumSchedule, additionalOptions);
     }
 
@@ -557,7 +562,7 @@ namespace CNTK
 
     LearnerPtr RMSPropLearner(const vector<Parameter>& parameters,
                               const LearningRateSchedule& learningRateSchedule,
-                              double gamma, double inc, double dec, double max, double min, 
+                              double gamma, double inc, double dec, double max, double min,
                               bool needAveMultiplier /*= true*/,
                               AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {

@@ -10,7 +10,7 @@
 # TODO cut down on logging
 set -x -e -o pipefail
 
-REPO_TAG=v2.0.beta1.0
+REPO_TAG=v2.0.beta2.0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -41,7 +41,7 @@ CNTK_DEP_LIB_PATH="$PWD/cntk/dependencies/lib"
 CNTK_EXAMPLES_PATH="$PWD/Examples"
 CNTK_BINARY="$CNTK_BIN_PATH/cntk"
 CNTK_PY34_ENV_FILE="$SCRIPT_DIR/conda-linux-cntk-py34-environment.yml"
-CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta1.0-cp34-cp34m-linux_x86_64.whl"
+CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta2.0-cp34-cp34m-linux_x86_64.whl"
 test -d "$CNTK_BIN_PATH" && test -d "$CNTK_LIB_PATH" && test -d "$CNTK_DEP_LIB_PATH" && 
 test -d "$CNTK_EXAMPLES_PATH" && test -x "$CNTK_BINARY" &&
 test -f "$CNTK_PY34_ENV_FILE" && test -f "$CNTK_WHEEL_PATH" || {

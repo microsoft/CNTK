@@ -51,7 +51,7 @@ def test_op_convolution_without_padding(convolution_map, convolution_input, devi
     backward = AA([[conv_map]])
 
     a = I(shape=conv_input.shape,
-        data_type=sanitize_dtype_cntk(precision),
+        dtype=sanitize_dtype_cntk(precision),
         needs_gradient=True,
         name='a')
 
@@ -93,7 +93,7 @@ def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, 
     input_operand = x.reshape(input_size)
 
     a = I(shape=input_operand.shape,
-        data_type=sanitize_dtype_cntk(precision),
+        dtype=sanitize_dtype_cntk(precision),
         needs_gradient=True,
         name='a')
 
@@ -137,7 +137,7 @@ def test_op_max_pooling(input_size, pooling_window, strides, result, device_id, 
     input_operand = x.reshape(input_size)
 
     a = I(shape=input_operand.shape,
-        data_type=sanitize_dtype_cntk(precision),
+        dtype=sanitize_dtype_cntk(precision),
         needs_gradient=True,
         name='a')
 

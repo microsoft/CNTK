@@ -60,11 +60,11 @@ void TestMomentumSGDLearner(size_t numParameters, size_t numMinibatches, const D
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    LearningRatePerMinibatchSchedule learnigRateSchedule = { { 3.0, 2.0, 1.0 }, LearningRateSchedule::EntireSweep };
+    LearningRatePerMinibatchSchedule learnigRateSchedule = { { 3.0, 2.0, 1.0 }, numMinibatches };
     MomentumSchedule momentumValues = { { { 1, 1.0 }, { 3, 0.1 }, { 10, 0.01 } }, 2 };
     auto learner = MomentumSGDLearner(parameters, learnigRateSchedule, momentumValues);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
-    FloatingPointCompare(learner->LearningRate(100), 0.03, "Learner::LearningRate does not match expectation");
+    FloatingPointCompare(learner->LearningRate(100), 0.02, "Learner::LearningRate does not match expectation");
 }
 
 template <typename ElementType>
@@ -91,7 +91,7 @@ void TestFSAdaGradLearner(size_t numParameters, size_t numMinibatches, const Dev
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = FSAdaGradLearner(parameters, { { 0.5 } }, MomentumAsTimeConstantSchedule({ 10, 100, 1000 }));
+    auto learner = AdamLearner(parameters, { { 0.5 } }, MomentumAsTimeConstantSchedule({ 10, 100, 1000 }));
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -106,6 +106,10 @@ void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const Devic
 
 void TestTrainingParametersSchedule()
 {
+    VerifyException([]() {
+        LearningRatePerMinibatchSchedule({ 3.0, 2.0, 1.0 }, LearningRateSchedule::EntireSweep);
+    }, "Was able to create not-yet-implemented sweep-based schedule.");
+
     LearningRateSchedule schedule1 = 0.5;
     assert(schedule1.Unit() == LearningRateSchedule::UnitType::Sample);
     assert(schedule1[0] == 0.5);
