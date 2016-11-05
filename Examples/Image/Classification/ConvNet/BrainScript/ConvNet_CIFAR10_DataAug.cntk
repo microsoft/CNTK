@@ -4,7 +4,7 @@ command = TrainConvNet:Eval
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = "../.." ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
+rootDir = "../../.." ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
 outputDir = "./Output" ;
 
 modelPath = "$outputDir$/Models/ConvNet_CIFAR10_DataAug"
@@ -57,10 +57,10 @@ TrainConvNet = {
         minibatchSize = 64
 
         learningRatesPerSample = 0.0015625*20:0.00046875*20:0.00015625*20:0.000046875*10:0.000015625
-        momentumAsTimeConstant = 0*20:600*20:6400
+        momentumAsTimeConstant = 0*20:600*20:1200
         maxEpochs = 80
         L2RegWeight = 0.002
-        dropoutRate = 0*5:0.5
+        dropoutRate = 0.5
 
         numMBsToShowResult = 100
     }
