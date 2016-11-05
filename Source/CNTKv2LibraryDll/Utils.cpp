@@ -4,10 +4,17 @@
 //
 
 #include "stdafx.h"
+#if defined(_MSC_VER) || defined(_CODECVT_H)
+#include <codecvt>
+#else
+#include <cstdlib>
+#include <clocale>
+#endif
 #include "CNTKLibrary.h"
 #include "Utils.h"
 #include "Serialization.h"
 #include "Function.h"
+#include <fcntl.h>
 
 using namespace std;
 
@@ -378,11 +385,62 @@ namespace CNTK
 
     std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
     {
+        std::shared_ptr<std::fstream> stream;
         std::ios_base::openmode mode = std::ios_base::binary | (readOnly ? std::ios_base::in : std::ios_base::out);
 #ifdef _MSC_VER
-        return std::make_shared<std::fstream>(filePath, mode);
+        stream = std::make_shared<std::fstream>(filePath, mode);
 #else
-        return std::make_shared<std::fstream>(wtocharpath(filePath.c_str()).c_str(), mode);
+        stream = std::make_shared<std::fstream>(wtocharpath(filePath.c_str()).c_str(), mode);
+#endif
+        stream->exceptions(std::ios_base::badbit);
+        if (stream->fail())
+        {
+            RuntimeError("Cannot open file '%S' for %s.", filePath.c_str(), (readOnly ? "reading" : "writing"));
+        }
+        return stream;
+    }
+
+    int GetFileDescriptor(const std::wstring& filePath, bool readOnly)
+    {
+        auto mode = (readOnly ? O_RDONLY : ( O_CREAT | O_WRONLY));
+        int fd;
+#ifdef _MSC_VER
+        mode = mode | O_BINARY;
+        fd = _wopen(filePath.c_str(), mode, 0644);
+#else
+        fd = open(ToString(filePath).c_str(), mode, 0644);
+#endif
+        if (fd < 0)
+        {
+            RuntimeError("Cannot open file '%S' for %s.", filePath.c_str(), (readOnly ? "reading" : "writing"));
+        }
+        return fd;
+    }
+
+
+    std::string ToString(const std::wstring& wstring)
+    {
+#ifdef _MSC_VER
+        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+        return converter.to_bytes(wstring);
+#else
+        const auto length = wstring.length() * sizeof(std::wstring::value_type) + 1;
+        char buf[length];
+        const auto res = std::wcstombs(buf, wstring.c_str(), sizeof(buf));
+        return (res >= 0) ? buf : "";
+#endif
+    }
+
+    std::wstring ToWString(const std::string& string)
+    {
+#ifdef _MSC_VER
+        std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+        return converter.from_bytes(string);
+#else
+        const auto length = string.length() + 1;
+        wchar_t buf[length];
+        const auto res = std::mbstowcs(buf, string.c_str(),  sizeof(buf));
+        return (res >= 0) ? buf : L"";
 #endif
     }
 
