@@ -2588,7 +2588,7 @@ public:
 
         // running statistics inputs mus the learnable parameters
         for (size_t i = RUN_MEAN; i < GetNumInputs(); i++)
-            if (!Input(i)->Is<LearnableParameter<ElemType>>())
+            if (!Base::Input(i)->Is<LearnableParameter<ElemType>>())
                 InvalidArgument("%ls: Inputs [%d..%d] must be learnable parameters.", NodeDescription().c_str(), RUN_MEAN, (int)GetNumInputs());
 
         // infer dimensions of learnable parameters
