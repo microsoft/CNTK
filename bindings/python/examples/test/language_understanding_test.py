@@ -60,14 +60,17 @@ def BiRecurrence(fwd, bwd):
     apply_x = splice ([F(x), G(x)])
     return apply_x
 
-def BNBiRecurrence(fwd, bwd): # special version that calls one shared BN instance at two places, for testing BN param tying
+def BNBiRecurrence(fwd, bwd, test_dual=True): # special version that calls one shared BN instance at two places, for testing BN param tying
     F = Recurrence(fwd)
     G = Recurrence(fwd, go_backwards=True)
-    BN = BatchNormalization(normalization_time_constant=-1) # we feed twice the #samples, must reflect in time constant
+    BN = BatchNormalization(normalization_time_constant=-1)
     x = Placeholder()
+    # The following code applies the same BN function object twice.
+    # When running whole-corpus estimation of means/vars, this must lead to the same estimate
+    # although it is estimated on twice the amount of data (each sample is used twice).
+    # Hence, this is the test that proves that the parameter sharing works.
     x1 = BN(x)
-    x2 = BN(x) # dual invocation
-    #x2 = x1   # single invocation
+    x2 = BN(x) if test_dual else x1
     # In double precision with corpus aggregation, these lead to the same result.
     apply_x = splice ([F(x1), G(x2)])
     return apply_x
@@ -100,14 +103,16 @@ def test_seq_classification_error(device_id):
 
         # replace lookahead by bidirectional model
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
-          with default_options(data_type=np.float64):  # this works but only
+          with default_options(dtype=np.float64):  # test this with double precision since single precision is too little for reproducable aggregation
             test_a_model('replace lookahead by bidirectional model, with shared BN', Sequential([
                 Embedding(emb_dim),
-                #BatchNormalization(),
-                BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
+                BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim), test_dual=True),
+                #BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim), test_dual=False),
                 BatchNormalization(normalization_time_constant=-1),
                 Dense(num_labels)
             ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
+            # values with normalization_time_constant=-1 and double precision:
+            # [0.0583178503091983, 0.3199431143304898], 0.03168244719592134
             """ with normalization_time_constant=-1:
              Minibatch[   1-   1]: loss = 5.945220 * 67, metric = 100.0% * 67
              Minibatch[   2-   2]: loss = 4.850601 * 63, metric = 79.4% * 63

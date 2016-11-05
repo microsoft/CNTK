@@ -1871,7 +1871,7 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
 
 
 @typemap
-def parameter(shape=None, init=None, data_type=None, device=None, name=''):
+def parameter(shape=None, init=None, dtype=None, device=None, name=''):
     '''
     It creates a parameter tensor.
 
@@ -1880,7 +1880,7 @@ def parameter(shape=None, init=None, data_type=None, device=None, name=''):
         >>> np.asarray(init_parameter) # doctest: +SKIP
         array([[ 2.,  2.,  2.,  2.],
                [ 2.,  2.,  2.,  2.],
-               [ 2.,  2.,  2.,  2.]], data_type=float32)
+               [ 2.,  2.,  2.,  2.]], dtype=float32)
 
     Args:
         shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it
@@ -1891,7 +1891,7 @@ def parameter(shape=None, init=None, data_type=None, device=None, name=''):
          :mod:`cntk.initializer` it will be used to initialize the tensor at
          the first forward pass. If `None`, the tensor will be initialized
          with 0.
-        data_type (optional): data type of the constant. If both a NumPy array and ``data_type``,
+        dtype (optional): data type of the constant. If both a NumPy array and ``dtype``,
          are given, then their types must match. If none given, it will default to ``np.float32``.
         device (:class:`cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the Parameter instance in the network
@@ -1904,24 +1904,24 @@ def parameter(shape=None, init=None, data_type=None, device=None, name=''):
     if not device:
         device = use_default_device()
 
-    if data_type is not None:
-        if isinstance(init, np.ndarray) and data_type != init.dtype:
-            raise ValueError('value and data_type must have the same type')
+    if dtype is not None:
+        if isinstance(init, np.ndarray) and dtype != init.dtype:
+            raise ValueError('value and dtype must have the same type')
     else:
         if np.isscalar(init) and not shape:
             shape = ()
             if isinstance(init, np.ndarray):
-                data_type = init.dtype
+                dtype = init.dtype
             else:
-                data_type = np.float32
+                dtype = np.float32
         else:
-            data_type = None
+            dtype = None
 
-    return Parameter(shape, init, data_type, device, name)
+    return Parameter(shape, init, dtype, device, name)
 
 
 @typemap
-def constant(value=None, shape=None, data_type=None, device=None, name=''):
+def constant(value=None, shape=None, dtype=None, device=None, name=''):
     '''
     It creates a constant tensor initialized from a numpy array
 
@@ -1930,7 +1930,7 @@ def constant(value=None, shape=None, data_type=None, device=None, name=''):
         >>> constant_data.value
         array([[ 1.,  2.],
                [ 3.,  4.],
-               [ 5.,  6.]], data_type=float32)
+               [ 5.,  6.]], dtype=float32)
 
     Args:
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated for
@@ -1938,7 +1938,7 @@ def constant(value=None, shape=None, data_type=None, device=None, name=''):
          If ``None``, the tensor will be initialized uniformly random.
         shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
          be inferred from ``value``.
-        data_type (optional): data type of the constant. If both a NumPy array and ``data_type``,
+        dtype (optional): data type of the constant. If both a NumPy array and ``dtype``,
          are given, then their types must match. If none given, it will default to ``np.float32``.
         device (:class:`cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
         name (`str`, optional): the name of the Function instance in the network
@@ -1951,16 +1951,16 @@ def constant(value=None, shape=None, data_type=None, device=None, name=''):
     #if np.isscalar(value) and not shape:
     if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
         shape = ()
-    if data_type is not None:
-        if isinstance(value, np.ndarray) and data_type != value.dtype:
-            raise ValueError('value and data_type must have the same type')
+    if dtype is not None:
+        if isinstance(value, np.ndarray) and dtype != value.dtype:
+            raise ValueError('value and dtype must have the same type')
     else:
         if isinstance(value, np.ndarray):
-            data_type = value.dtype
+            dtype = value.dtype
         else:
-            data_type = np.float32
+            dtype = np.float32
 
-    return Constant(value, shape, data_type, device, name)
+    return Constant(value, shape, dtype, device, name)
 
 ##########################################################################
 # normalization ops
