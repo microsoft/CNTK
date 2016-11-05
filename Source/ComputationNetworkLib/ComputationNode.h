@@ -2231,6 +2231,7 @@ protected:                                                                      
     using Base::InputUsedInComputingInputNodesGradients;                                                                                                 \
     using Base::InvalidateMissingGradientColumns;                                                                                                        \
     using Base::InvalidateMissingValueColumns;                                                                                                           \
+    using Base::Is;                                                                                                                                      \
     using Base::IsLeaf;                                                                                                                                  \
     using Base::IsOutOfDateWrtInputs;                                                                                                                    \
     using Base::IsPartOfLoop;                                                                                                                            \

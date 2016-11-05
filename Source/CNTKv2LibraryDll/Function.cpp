@@ -2202,8 +2202,14 @@ namespace CNTK
 
         MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
 
+#if 1
+        auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
+
         // Switch the node matrix to the right matrix type
+        nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
+#else   // Use this for debugging if you need to test in double precision with readers that only produce floats.
         computationNode->ValuePtr()->CastAssignValuesOf(*CNTKMatrixAndMBLayout.first);
+#endif
         computationNode->GetMBLayout()->CopyFrom(layout);
     }
 
