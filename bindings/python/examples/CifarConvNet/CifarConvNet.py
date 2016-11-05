@@ -7,15 +7,17 @@
 import os
 import math
 import numpy as np
-from cntk.blocks import *  # non-layer like building blocks such as LSTM()
-from cntk.layers import *  # layer-like stuff
-from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
+
+from cntk.blocks import default_options
+from cntk.layers import Convolution, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense
+from cntk.models import Sequential, LayerStack
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 from cntk.initializer import glorot_uniform
 from cntk import Trainer
-from cntk.ops import cross_entropy_with_softmax, classification_error, relu, convolution, pooling, PoolingType_Max
-from cntk.learner import momentum_sgd, learning_rate_schedule
+from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+from cntk.ops import cross_entropy_with_softmax, classification_error, relu
+from cntk.ops import input_variable, constant, parameter, element_times
 from cntk.persist import load_model, save_model
 
 
@@ -77,27 +79,22 @@ def create_reader(map_file, mean_file, train):
 #       | max3          |
 #       |               |
 #       | FC-1024       |
-#       | dropout0.5    |
-#       |               |
 #       | FC-1024       |
-#       | dropout0.5    |
 #       |               |
 #       | FC-10         |
 #
-# TODO: remove 'input'
 def create_vgg9_model(input, num_classes):
     with default_options(activation=relu):
         model = Sequential([
-            For(range(3), lambda i: [
-                Convolution((3,3), [64,96,128][i], pad=True),
-                Convolution((3,3), [64,96,128][i], pad=True),
+            LayerStack(3, lambda i: [
+                Convolution((3,3), [64,96,128][i], init=glorot_uniform(), pad=True),
+                Convolution((3,3), [64,96,128][i], init=glorot_uniform(), pad=True),
                 MaxPooling((3,3), strides=(2,2))
             ]),
-            For(range(2), lambda : [
-                Dense(1024),
-                Dropout(0.5)
+            LayerStack(2, lambda : [
+                Dense(1024, init=glorot_uniform())
             ]),
-            Dense(num_classes, activation=None)
+            Dense(num_classes, init=glorot_uniform(), activation=None)
         ])
 
     return model(input)
@@ -111,8 +108,12 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     input_var = input_variable((num_channels, image_height, image_width))
     label_var = input_variable((num_classes))
 
+    # Normalize the input
+    feature_scale = 1.0 / 256.0
+    input_var_norm = element_times(feature_scale, input_var)
+   
     # apply model to input
-    z = create_vgg9_model(input_var, 10)
+    z = create_vgg9_model(input_var_norm, 10)
 
     #
     # Training action
@@ -127,14 +128,14 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     minibatch_size = 64
     #epoch_size = 1000 ; max_epochs = 1 # for faster testing
 
-    # For basic model
-    lr_per_sample       = [0.00015625]*10+[0.000046875]*10+[0.0000156]
-    momentum_per_sample = 0.9 ** (1.0 / minibatch_size)  # BUGBUG: why does this work? Should be as time const, no?
-    l2_reg_weight       = 0.03
+    # Set learning parameters
+    lr_per_minibatch       = learning_rate_schedule([0.01]*10 + [0.003]*10 + [0.001], epoch_size, UnitType.minibatch)
+    momentum_time_constant = momentum_as_time_constant_schedule(-minibatch_size/np.log(0.9))
+    l2_reg_weight          = 0.0001
 
     # trainer object
-    lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner     = momentum_sgd(z.parameters, lr_schedule, momentum_per_sample, 
+    learner     = momentum_sgd(z.parameters, 
+                               lr = lr_per_minibatch, momentum = momentum_time_constant,
                                l2_regularization_weight = l2_reg_weight)
     trainer     = Trainer(z, ce, pe, learner)
 
@@ -157,7 +158,7 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
             sample_count += data[label_var].num_samples                     # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
-
+    
     #
     # Evaluation action
     #
@@ -204,7 +205,6 @@ def evaluate(reader, model):
     #z = model(input_var)
     input_var = model.arguments[0]  # workaround
     z = model
-    # BUGBUG: still fails eval with "RuntimeError: __v2libuid__BatchNormalization456__v2libname__BatchNormalization11: inference mode is used, but nothing has been trained."
 
     # loss and metric
     ce = cross_entropy_with_softmax(z, label_var)
@@ -238,23 +238,14 @@ def evaluate(reader, model):
 #############################
 
 if __name__=='__main__':
-    # TODO: leave these in for now as debugging aids; remove for beta
-    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
-    set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
-    #force_deterministic_algorithms()
-    # TODO: do the above; they lead to slightly different results, so not doing it for now
-
     reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
     # create model
-
-    #model = create_basic_model_layer()   # TODO: clean this up more
+    model = create_basic_model_layer()   # TODO: clean this up more
+    # TODO: move out the model creation from anove
 
     # train
-    #reader_train = create_reader(data_path, 'train_map.txt', 'CIFAR-10_mean.xml', is_training=True)
-    #reader_test  = create_reader(data_path, 'test_map.txt',  'CIFAR-10_mean.xml', is_training=False)
-    #train_and_evaluate(reader_train, reader_test, model, max_epochs=10)
+    train_and_evaluate(reader_train, reader_test, model, max_epochs=5)
 
     # save and load (as an illustration)
     #path = data_path + "/model.cmf"
@@ -263,5 +254,4 @@ if __name__=='__main__':
 
     # test
     reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', is_training=False)
-    # BUGBUG: fails with "RuntimeError: __v2libuid__BatchNormalization430__v2libname__BatchNormalization19: inference mode is used, but nothing has been trained."
-    #evaluate(reader_test, model)
+    evaluate(reader_test, model)

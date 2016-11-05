@@ -142,7 +142,7 @@ DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t maxSize
 void TestDictionarySerialization(size_t dictSize) 
 {
     if ((_wunlink(tempFilePath.c_str()) != 0) && (errno != ENOENT))
-        std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
+       throw std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
 
     Dictionary originalDict = CreateDictionary(dictSize, dictSize);
     
@@ -153,15 +153,21 @@ void TestDictionarySerialization(size_t dictSize)
         stream.flush();
     }
 
-    Dictionary deserializedDict;
+    Dictionary deserializedDict1;
 
     {
         fstream stream;
         OpenStream(stream, tempFilePath, true);
-        stream >> deserializedDict;
+        stream >> deserializedDict1;
     }
     
-    if (originalDict != deserializedDict)
+    if (originalDict != deserializedDict1)
+        throw std::runtime_error("TestDictionarySerialization: original and deserialized dictionaries are not identical.");
+
+    originalDict.Save(tempFilePath);
+    Dictionary deserializedDict2 = Dictionary::Load(tempFilePath);
+
+     if (originalDict != deserializedDict2)
         throw std::runtime_error("TestDictionarySerialization: original and deserialized dictionaries are not identical.");
 }
 
@@ -169,25 +175,13 @@ template <typename ElementType>
 void TestLargeValueSerialization(size_t numElements) 
 {
     if ((_wunlink(tempFilePath.c_str()) != 0) && (errno != ENOENT))
-        std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
+      throw std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
 
     DictionaryValue originalValue(*NDArrayView::RandomUniform<ElementType>({ numElements }, -0.5, 0.5, CNTK::SentinelValueForAutoSelectRandomSeed, DeviceDescriptor::CPUDevice()));
+    originalValue.Save(tempFilePath);
 
-    {
-        fstream stream;
-        OpenStream(stream, tempFilePath, false);
-        stream << originalValue;
-        stream.flush();
-    }
+    DictionaryValue deserializedValue = DictionaryValue::Load(tempFilePath);
 
-    DictionaryValue deserializedValue;
-
-    {
-        fstream stream;
-        OpenStream(stream, tempFilePath, true);
-        stream >> deserializedValue;
-    }
-    
     if (originalValue != deserializedValue)
         throw std::runtime_error("TestLargeValueSerialization: original and deserialized values are not identical.");
 }
@@ -196,7 +190,7 @@ template <typename ElementType>
 void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device) 
 {
     if ((_wunlink(tempFilePath.c_str()) != 0) && (errno != ENOENT))
-        std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
+       throw std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
 
     NDShape shape = CreateShape(5, maxDimSize);
 
@@ -671,9 +665,59 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 }
 
+void TestThatExceptionsAreRaisedForNonExistentPaths()
+{
+    VerifyException([]() {
+        Function::LoadModel(DataType::Float, L"This.File.Does.Not.Exist");
+    }, "Was able to open file 'This.File.Does.Not.Exist' for reading.");
+
+    VerifyException([]() {
+        auto f = FullyConnectedLinearLayer(InputVariable({ 1 }, false, DataType::Float, L"i"), 1, DeviceDescriptor::CPUDevice());
+        f->SaveModel(L"This/Path/Does/Not/Exist", false);
+    }, "Was able to open file 'This/Path/Does/Not/Exist' for writing.");
+
+    VerifyException([]() {
+        Dictionary::Load(L"This.File.Does.Not.Exist");
+    }, "Was able to open file 'This.File.Does.Not.Exist' for reading.");
+
+    VerifyException([]() {
+        Dictionary dict;
+        dict.Save(L"This/Path/Does/Not/Exist");
+    }, "Was able to open file 'This/Path/Does/Not/Exist' for writing.");
+}
+
+void TestLoadingDictionariesGeneratedFromPresentPastAndFutureProtos() 
+{
+    Dictionary presentDict, pastDict, futureDict;
+    // load dictionaries from binary protobuf format and make sure we don't barf.
+    {
+        auto stream = GetFstream(L"v2.0.beta1.0.dictionary.proto.bin", true); 
+        *stream >> presentDict;
+    }
+    {
+        // this file was generated with a proto that does not define NDArrayView message
+        // and for Axis message only defines static axis index (no name and dynamic flag)
+        auto stream = GetFstream(L"past.dictionary.proto.bin", true); 
+        *stream >> pastDict;
+
+    }
+    {
+        // this file was generated with a proto that defines a new message,
+        // adds a corresponding type to DictinaryValue, as well as a value to the oneof.
+        // Additionally, the proto extends NDShape message with an additional string field.
+        *GetFstream(L"future.dictionary.proto.bin", true) >> futureDict;
+    }
+    assert(presentDict.Size() > 0);
+    assert(pastDict.Size() > 0);
+    assert(futureDict.Size() > 0);
+}
+
 void SerializationTests()
 {
     fprintf(stderr, "\nSerializationTests..\n");
+
+    TestThatExceptionsAreRaisedForNonExistentPaths();
+    TestLoadingDictionariesGeneratedFromPresentPastAndFutureProtos();
 
     TestDictionarySerialization(1);
     TestDictionarySerialization(2);

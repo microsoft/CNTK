@@ -138,3 +138,4 @@ Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
 *.zip binary
 *.dnn binary
 Examples/Image/Detection/FastRCNN/fastRCNN/*/*.pyd binary
+Tests/UnitTests/V2LibraryTests/data/*.bin binary

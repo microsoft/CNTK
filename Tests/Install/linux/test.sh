@@ -3,7 +3,7 @@ set -x -e -o pipefail
 
 USAGE="Usage: $0 <drops-to-test>"
 
-REPO_TAG=v2.0.beta1.0
+REPO_TAG=v2.0.beta2.0
 
 while [ $# -gt 0 ]; do
   case "$1" in

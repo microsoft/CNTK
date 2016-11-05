@@ -5,7 +5,7 @@
 # ==============================================================================
 
 """
-Unit tests for reshaping operations. 
+Unit tests for reshaping operations.
 """
 
 from __future__ import division
@@ -52,7 +52,7 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
     input_reshaped = input_tensor.reshape(expected_output_shape)
 
     a = I(shape=input_tensor.shape,
-          data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           name='a')
 
@@ -94,7 +94,7 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
 
     input_data = AA(input_data, dtype=PRECISION_TO_TYPE[precision])
     a = I(shape=input_data.shape,
-          data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           name='a')
 
@@ -161,7 +161,7 @@ def test_op_slice_sequence(input_data, slice_params, expected_result, device_id,
     t = Axis.new_unique_dynamic_axis('t')
     sample_shape = input_data.shape[1:]
     a = I(shape=sample_shape,
-          data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           dynamic_axes=[Axis.default_batch_axis(), t],
           name='a')
@@ -215,11 +215,11 @@ def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, p
     input_data1 = AA(input_data1, dtype=PRECISION_TO_TYPE[precision])
     input_data2 = AA(input_data2, dtype=PRECISION_TO_TYPE[precision])
     a = I(shape=input_data1.shape,
-          data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           name='a')
     b = I(shape=input_data2.shape,
-          data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           name='b')
 

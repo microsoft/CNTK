@@ -2225,6 +2225,7 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
     static const std::wstring TypeName() { return L"BatchNormalization"; }
 
     // inputs
+    // TODO: Change all of these throughout the codebase to 'class enum'. Also change all places where we still use integer constants.
     static const size_t DATA      = 0;
     static const size_t SCALE     = 1;
     static const size_t BIAS      = 2;
@@ -2235,10 +2236,9 @@ public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial = false,
                            double normalizationTimeConstant=0, double blendTimeConstant=0,
                            double epsilon = 0, bool useCntkEngine = true, ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW) :
-                           //, size_t samplesSeen = 0) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
         m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind),
-        m_runCountUntied(0), //samplesSeen),  // TODO: remove this (Validate() will get it)
+        m_runCountUntied(0),
         m_convertRunningVariancePending(false),
         m_one(1, 1, deviceId)
     {
@@ -2264,7 +2264,7 @@ public:
         fstream << m_blendTimeConst;
         fstream << (int32_t)m_imageLayoutKind;
         RunCount();                   // cache m_runCountUntied, so that someone who inspects the file sees something meaningful (as an FYI)
-        fstream << m_runCountUntied;  // this is really saved as a FYI and for optimizing 0-checks; the primaty storage for this value is in the shared Parameter
+        fstream << m_runCountUntied;  // this is really saved as a FYI and for optimizing 0-checks; the primary storage for this value is in the shared Parameter
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
     }
@@ -2363,12 +2363,6 @@ public:
         }
     }
 
-    //size_t GetSamplesSeen() const { return RunCount(); } // for V2 API interop
-    // BUGBUG: There is no SetSamplesSeen(), and indeed the V2 API does not reinstall the #samples.
-    //         For now, this causes a minor inefficiency in decoding, since it has to sync to GPU
-    //         for every MB to check the shared count.
-    // TODO: remove this altogether, now that we cache it internally from the shared node
-
 private: // time-constant conversions
 
     // The case of parameter tying is tricky. The same set of BN parameters can be shared
@@ -2393,7 +2387,7 @@ private: // time-constant conversions
         {
             Input(RUN_COUNT)->Value().AddWithScaleOf(/*alpha=*/(ElemType)countToAdd, m_one); // this += countToAdd * (1)
             if (countToAdd != 0)
-                m_runCountUntied = SIZE_MAX; // we only need this for 0 checks, this value says we don only know it's not 0
+                m_runCountUntied = SIZE_MAX; // we only need this for 0 checks, this value says we only know it's not 0
         }
         else
             m_runCountUntied += countToAdd;  // legacy case (non-shared): this is the count accumulator
@@ -2586,10 +2580,11 @@ public:
 
         const auto& inputLayout = Input(DATA)->GetSampleLayout();
 
-        // running statistics inputs mus the learnable parameters
+        // running statistics inputs must be learnable parameters, since we update them directly here
         for (size_t i = RUN_MEAN; i < GetNumInputs(); i++)
-            if (!Base::Input(i)->Is<LearnableParameter<ElemType>>())
-                InvalidArgument("%ls: Inputs [%d..%d] must be learnable parameters.", NodeDescription().c_str(), RUN_MEAN, (int)GetNumInputs());
+            //if (!Input(i)->Is<LearnableParameter<ElemType>>()) // somehow this does not compile on gcc (works on VS)
+            if (!dynamic_cast<LearnableParameter<ElemType>*>(Input(i).get()))
+                InvalidArgument("%ls: Inputs [%d..%d] must be learnable parameters.", NodeDescription().c_str(), (int)RUN_MEAN, (int)GetNumInputs());
 
         // infer dimensions of learnable parameters
         // BUGBUG: Parameter dimensions are totally wrong. E.g. a valid spatial bias for [15 x 15 x 32] is currently [32 x 1].
@@ -2792,7 +2787,7 @@ private:
 
     // --- working variables
 
-    // Cached samples seen count, and legacy cuont.
+    // Cached samples seen count, and legacy count.
     // Models store the 0-th order stats in an Input like running mean and variance,
     // in order to do the correct accumulator tying.
     // We keep a local copy for two reasons:

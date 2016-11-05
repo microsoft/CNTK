@@ -488,5 +488,9 @@ namespace CNTK
             InvalidArgument("The specified axis index (%d) exceeds the static #axes (%d) of the corresponding operand", (int)axis.StaticAxisIndex(), (int)operandShape.Rank());
     }
 
-     std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly);
+    std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly);
+    int GetFileDescriptor(const std::wstring& filePath, bool readOnly);
+
+    std::string ToString(const std::wstring& wstring);
+    std::wstring ToWString(const std::string& string);
 }

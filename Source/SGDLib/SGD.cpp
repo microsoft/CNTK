@@ -1178,7 +1178,12 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 {
                     // We don't accumulate error in epoch criterion as this node has already accumulated error for
                     // all samples that passed through network in forward pass.
-                    epochEvalErrors[i] = m_gradHeader->evalErrors[i];
+                    if (samplesProcessed)
+                    {
+                        epochEvalErrors[i] = m_gradHeader->evalErrors[i];
+                    }
+                    // else: no samples processed, no aggregation happened -> we do not want to override current value
+                    // with 0.
                 }
                 else
                     epochEvalErrors[i] += m_gradHeader->evalErrors[i];

@@ -12,8 +12,8 @@ from cntk.models import *  # higher abstraction level, e.g. entire standard mode
 from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer
+from cntk.learner import adam_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, splice
-from cntk.learner import adam_sgd, learning_rate_schedule, momentum_schedule
 from cntk.trainer import create_trainer
 from cntk.persist import load_model, save_model
 
@@ -86,12 +86,14 @@ def train(reader, model, max_epochs):
     minibatch_size = 70
     #epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
 
-    # learner config
-    momentum_as_time_constant = 70 / -math.log(0.9)  # TODO: Change to round number. This is 664.39. 700?
-    lr_per_sample = [0.003]*2+[0.0015]*12+[0.0003] # LR schedule over epochs (we don't run that mayn epochs, but if we did, these are good values)
-    lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)  # epoch_size should not be here, breaks separation of concerns
-    learner = adam_sgd(criterion.parameters,
-                       lr_per_sample=lr_schedule, momentum_time_constant=momentum_as_time_constant,
+    momentum_time_constant = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9))  # TODO: Change to round number. This is 664.39. 700?
+
+    lr_schedule = [0.003]*2+[0.0015]*12+[0.0003] # LR schedule over epochs (we don't run that mayn epochs, but if we did, these are good values)
+
+    # trainer object
+    lr_per_sample = learning_rate_schedule(lr_schedule, epoch_size)
+    learner = adam_sgd(z.parameters,
+                       lr=lr_per_sample, momentum=momentum_time_constant,
                        low_memory=True,
                        gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
@@ -138,7 +140,7 @@ def evaluate(reader, model):
             break
         metric = evaluator.test_minibatch_from_data(criterion, data[reader.streams.query], data[reader.streams.slot_labels])
         progress_printer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
-    loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
+        loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric
 
