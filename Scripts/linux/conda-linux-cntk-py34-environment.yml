@@ -19,3 +19,5 @@ dependencies:
   - sphinx-rtd-theme==0.1.9
   - twine==1.8.1
   - gym
+  - pandas
+  - seaborn
