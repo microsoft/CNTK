@@ -20,7 +20,7 @@ from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-from cntk.blocks import _current_default_options, _is_given, _initializer_for, _resolve_activation, _INFERRED
+from cntk.blocks import _get_current_default_options, _is_given, _initializer_for, _resolve_activation, _INFERRED
 
 # Dense -- create a fully-connected linear projection layer with optional non-linear activation
 # Note: shape may describe a tensor as well.
@@ -31,7 +31,7 @@ def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_defa
           input_rank=None, map_rank=None,
           bias=bias_default_or_True, init_bias=init_bias_default_or_0):
     activation = _resolve_activation(activation)
-    bias       = bias if _is_given(bias) else _current_default_options.bias
+    bias       = bias if _is_given(bias) else _get_current_default_options().bias
     output_shape = _as_tuple(shape)
 
     if input_rank is not None and map_rank is not None:
@@ -135,8 +135,8 @@ def Convolution(rf_shape,        # e.g. (3,3)
                 max_temp_mem_size_in_samples=0):
     #UntestedBranchError("Convolution")
     activation = _resolve_activation(activation)
-    pad  = pad  if _is_given(pad ) else _current_default_options.pad
-    bias = bias if _is_given(bias) else _current_default_options.bias
+    pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
+    bias = bias if _is_given(bias) else _get_current_default_options().bias
     # TODO: there must be a Python trick to do this as a function call on locals or so
     if reduction_rank != 1:
         NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
@@ -203,14 +203,22 @@ def AveragePooling(rf_shape,  # e.g. (3,3)
                    pad=False):
     return Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad)
 
+# helper to get the initial_state or the default
+def _get_initial_state_or_default(initial_state):
+    initial_state = initial_state if _is_given(initial_state) else _get_current_default_options().initial_state
+    # if initial state is given and a numeric constant, then turn it into a Constant() object
+    if initial_state is None:
+        return Constant(0) # note: don't pass None to past_value, because that would default to float32
+    elif np.isscalar(initial_state):
+        return Constant(initial_state, shape=(1))
+    else:
+        return initial_state # already in good shape: return as is
+
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
-    initial_state = initial_state if _is_given(initial_state) else _current_default_options.initial_state
-    # if initial state is given and a numeric constant, then turn it into a Constant() object
-    if np.isscalar(initial_state):
-        initial_state = Constant(initial_state, shape=(1)) # TODO: This should be automatically done inside the API.
+    initial_state = _get_initial_state_or_default(initial_state)
     def previous_hook(state):
         if isinstance (state, tuple):  # if multiple then apply to each element
             return tuple([previous_hook(s) for s in state])
@@ -236,6 +244,7 @@ def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_
 # Delay -- delay input
 # TODO: This does not really have bound parameters. Should it still be a layer?
 def Delay(T=1, initial_state=None):
+    initial_state = _get_initial_state_or_default(initial_state)
     UntestedBranchError("Delay")
 
     # expression
