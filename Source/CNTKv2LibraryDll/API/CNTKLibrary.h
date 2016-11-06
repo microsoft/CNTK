@@ -586,9 +586,17 @@ namespace CNTK
         ///
         /// Creates a new NDArrayView with newly allocated storage on the same device as 'this' view and copies 'this' view's contents into the newly allocated view.
         ///
-        inline NDArrayViewPtr DeepClone(bool readOnly = false) const
+        inline NDArrayViewPtr DeepClone(bool readOnly) const
         {
             return DeepClone(this->Device(), readOnly);
+        }
+
+        ///
+        /// Creates a new NDArrayView with newly allocated storage on the same device as 'this' view and copies 'this' view's contents into the newly allocated view.
+        ///
+        inline NDArrayViewPtr DeepClone() const
+        {
+            return DeepClone(this->IsReadOnly());
         }
 
         ///
@@ -601,6 +609,11 @@ namespace CNTK
         /// The shapes of the 'source' view and 'this' view must be identical.
         ///
         CNTK_API void CopyFrom(const NDArrayView& source);
+
+        ///
+        /// Change the device of 'this' NDArrayView to the specified device
+        ///
+        CNTK_API void ChangeDevice(const DeviceDescriptor& device);
 
         ///
         /// Static method to construct a new NDArrayView object whose contents are drawn from a normal distribution with the specified mean and standard deviation..
@@ -672,7 +685,7 @@ namespace CNTK
         ///
         /// Construct a new Mask object of specified shape
         /// 
-        CNTK_API explicit NDMask(const NDShape& shape, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API explicit NDMask(const NDShape& shape, const DeviceDescriptor& device = DeviceDescriptor::CPUDevice());
 
         ///
         /// Destruct 'this' NDMask object
@@ -862,7 +875,15 @@ namespace CNTK
         ///
         /// Creates a new Value with newly allocated storage on the same device as 'this' Value and copies 'this' Value's contents into the newly allocated Value.
         ///
-        virtual ValuePtr DeepClone(bool readOnly = false) const;
+        virtual ValuePtr DeepClone(bool readOnly) const;
+
+        ///
+        /// Creates a new Value with newly allocated storage on the same device as 'this' Value and copies 'this' Value's contents into the newly allocated Value.
+        ///
+        ValuePtr DeepClone() const
+        {
+            return DeepClone(IsReadOnly());
+        }
 
         ///
         /// Creates a new Value which is an alias of 'this' Value.
@@ -1360,9 +1381,11 @@ namespace CNTK
         CNTK_API bool operator==(const DictionaryValue& other) const;
         CNTK_API bool operator!=(const DictionaryValue& other) const;
 
-
         friend CNTK_API std::istream& operator>>(std::istream& stream, DictionaryValue& us);
         friend CNTK_API std::ostream& operator<<(std::ostream& stream, const DictionaryValue& us);
+
+        CNTK_API void Save(const std::wstring& filename);
+        CNTK_API static DictionaryValue Load(const std::wstring& filename);
 
     private:
         template <typename T>
@@ -1488,8 +1511,13 @@ namespace CNTK
         ConstDictionaryIterator end() const { return m_dictionaryData->end(); }
         ConstDictionaryIterator cend() const { return m_dictionaryData->cend(); }
 
+        size_t Size() { return m_dictionaryData->size();  }
+
         friend CNTK_API std::istream& operator>>(std::istream& stream, Dictionary& us);
         friend CNTK_API std::ostream& operator<<(std::ostream& stream, const Dictionary& us);
+
+        CNTK_API void Save(const std::wstring& filename);
+        CNTK_API static Dictionary Load(const std::wstring& filename);
 
     private:
         std::shared_ptr<std::unordered_map<std::wstring, DictionaryValue>> m_dictionaryData;
@@ -1989,7 +2017,7 @@ private:
 
     private:
         explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
-            : Variable(value->Shape(), VariableKind::Parameter, value->GetDataType(), value->DeepClone(), true, {}, name, uid)
+            : Variable(value->Shape(), VariableKind::Parameter, value->GetDataType(), value->DeepClone(false), true, {}, name, uid)
         {}
     };
 
@@ -2041,7 +2069,7 @@ private:
         ///
         /// Create a scalar constant. The specified value is cast to the specified DataType
         ///
-        static inline ::CNTK::Constant Scalar(::CNTK::DataType dataType, double value, const ::CNTK::DeviceDescriptor& device = ::CNTK::DeviceDescriptor::CPUDevice())
+        static inline ::CNTK::Constant Scalar(::CNTK::DataType dataType, double value, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
         {
             return Constant({}, dataType, value, device);
         }
@@ -2050,7 +2078,7 @@ private:
         /// Create a scalar constant. The specified value is cast to the specified DataType
         ///
         template<typename ElementType>
-        static inline ::CNTK::Constant Scalar(ElementType value, const ::CNTK::DeviceDescriptor& device = ::CNTK::DeviceDescriptor::CPUDevice())
+        static inline ::CNTK::Constant Scalar(ElementType value, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
         {
             return Constant({}, value, device);
         }
@@ -2075,7 +2103,7 @@ private:
 
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
-            : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value->DeepClone(true), false, {}, name, uid)
+            : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value->DeepClone(), false, {}, name, uid)
         {}
 
         ///
@@ -2086,7 +2114,6 @@ private:
         {
             m_dataFields->SetValueInitialization(initializer, device);
         }
-
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 

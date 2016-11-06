@@ -40,10 +40,10 @@ def combine(operands, name=''):
 def alias(x, name=''):
     '''
      Create a new Function instance which just aliases the specified 'x' Function/Variable
-     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified
+     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified 
      'x' Function/Variable, and has the newly specified name.
      The purpose of this operator is to create a new distinct reference to a symbolic
-     computation which is different from the original Function/Variable that it aliases and can
+     computation which is different from the original Function/Variable that it aliases and can 
      be used for e.g. to substitute a specific instance of the aliased Function/Variable in the
      computation graph instead of substituting all usages of the aliased Function/Variable.
 
@@ -199,15 +199,15 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
 
     Example:
-	>>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
-	>>> x = C.input_variable(img.shape)
-	>>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
-	>>> kernel = C.constant(value = filter)
-	>>> C.convolution(kernel , x, auto_padding = [False]).eval({x: img})
-	array([[[[[  6.,   8.,  10.,  12.],
-		  [ 16.,  18.,  20.,  22.],
-		  [ 26.,  28.,  30.,  32.],
-		  [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
+    >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
+    >>> x = C.input_variable(img.shape)
+    >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
+    >>> kernel = C.constant(value = filter)
+    >>> C.convolution(kernel , x, auto_padding = [False]).eval({x: img})
+    array([[[[[  6.,   8.,  10.,  12.],
+              [ 16.,  18.,  20.,  22.],
+              [ 26.,  28.,  30.,  32.],
+              [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
 
     Args:
         convolution_map: convolution filter weights, stored as a tensor of dimensions [outChannels x M1 x M2 x ... x Mn],
@@ -281,14 +281,14 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
 
     Example:
-	>>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-	>>> x = C.input_variable(img.shape)
-	>>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : img})
-	array([[[[[  2.5,   4.5],
-		  [ 10.5,  12.5]]]]], dtype=float32)
-	>>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : img})
-	array([[[[[  5.,   7.],
-		  [ 13.,  15.]]]]], dtype=float32)
+    >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+    >>> x = C.input_variable(img.shape)
+    >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : img})
+    array([[[[[  2.5,   4.5],
+              [ 10.5,  12.5]]]]], dtype=float32)
+    >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : img})
+    array([[[[[  5.,   7.],
+              [ 13.,  15.]]]]], dtype=float32)
 
     Args:
         operand: pooling input
@@ -571,7 +571,7 @@ def minus(left, right, name=''):
 def element_times(left, right, name=''):
     '''
     The output of this operation is the element-wise product of the two input
-    tensors. It supports broadcasting.
+    tensors. It supports broadcasting. 
 
     Example:
         >>> C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
@@ -598,7 +598,7 @@ def element_times(left, right, name=''):
 def element_divide(left, right, name=''):
     '''
     The output of this operation is the element-wise division of the two input
-    tensors. It supports broadcasting.
+    tensors. It supports broadcasting. 
 
     Example:
         >>> C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()

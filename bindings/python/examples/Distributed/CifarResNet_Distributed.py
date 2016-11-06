@@ -18,10 +18,10 @@ from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentu
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, element_times, pooling, AVG_POOLING, relu
 from cntk.io import ReaderConfig, ImageDeserializer
 from cntk.initializer import he_normal, glorot_uniform
-from examples.CifarResNet.CifarResNet import create_reader, create_resnet_model
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
+from examples.CifarResNet.CifarResNet import create_reader, create_resnet_model
 from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, linear_layer, print_training_progress
 
 TRAIN_MAP_FILENAME = 'train_map.txt'

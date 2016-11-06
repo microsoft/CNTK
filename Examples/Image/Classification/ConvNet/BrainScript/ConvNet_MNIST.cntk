@@ -4,7 +4,7 @@ command = trainNetwork:testNetwork
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
-rootDir = "../.." ; dataDir = "$rootDir$/DataSets/MNIST" ;
+rootDir = "../../.." ; dataDir = "$rootDir$/DataSets/MNIST" ;
 outputDir = "./Output" ;
 
 modelPath = "$outputDir$/Models/ConvNet_MNIST"
