@@ -158,7 +158,7 @@
     </Link>
   </ItemDefinitionGroup>
 
-  <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'StaticLibrary' And $(ReleaseBuild) And !$(NoOptBuild)">
+  <ItemDefinitionGroup Condition="$(ReleaseBuild) And !$(NoOptBuild)">
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -180,7 +180,9 @@
       <IntrinsicFunctions>false</IntrinsicFunctions>
     </ClCompile>
     <Link>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
+      <Profile>false</Profile>
     </Link>
   </ItemDefinitionGroup>
 
