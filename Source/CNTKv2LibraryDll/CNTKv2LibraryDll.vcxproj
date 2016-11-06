@@ -102,7 +102,6 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; Common.lib; ReaderLib.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
