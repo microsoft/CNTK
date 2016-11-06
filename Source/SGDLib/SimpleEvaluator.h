@@ -198,7 +198,12 @@ public:
                     {
                         // We don't accumulate error in epoch criterion as this node has already accumulated error for
                         // all samples that passed through network in forward pass.
-                        evalResults[i] = m_gradHeader->evalErrors[i];
+                        if (samplesProcessed)
+                        {
+                            evalResults[i] = m_gradHeader->evalErrors[i];
+                        }
+                        // else: no samples processed, no aggregation happened -> we do not want to override current value
+                        // with 0.
                     }
                     else
                         evalResults[i] += m_gradHeader->evalErrors[i];

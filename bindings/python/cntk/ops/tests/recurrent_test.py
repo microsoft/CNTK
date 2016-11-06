@@ -41,7 +41,7 @@ def test_op_future_value(tensor_number_of_values, input_size, time_step, initial
     np.put(backward, range(total_elements - elements_to_roll), 0.0)
 
     a = I(shape=x.shape[1:],
-      data_type=sanitize_dtype_cntk(precision),
+      dtype=sanitize_dtype_cntk(precision),
       needs_gradient=True,
       name='a')
 
@@ -71,7 +71,7 @@ def test_op_past_value(tensor_number_of_values, input_size, time_step, initial_s
     expected_forward = AA([x_rolled])
 
     a = I(shape=x.shape[1:],
-      data_type=sanitize_dtype_cntk(precision),
+      dtype=sanitize_dtype_cntk(precision),
       needs_gradient=True,
       name='a')
 

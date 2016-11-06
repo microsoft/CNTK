@@ -185,7 +185,6 @@ namespace CNTK
         static const std::wstring AttributeNameNormalizationTimeConstant;
         static const std::wstring AttributeNameBlendTimeConstant;
         static const std::wstring AttributeNameEpsilon;
-        static const std::wstring AttributeNameSamplesSeen;
         static const std::wstring AttributeNameUseCuDNNEngine;
         static const std::wstring AttributeNameNewDynamicAxes;
         static const std::wstring AttributeNameBeginIndex;
@@ -461,7 +460,9 @@ namespace CNTK
             //  [I x Inferred] * [W x H x C],                inferInputRankToMap=0   --> Inferred  := W x H x C, result is [I] (desired)
             //  [I x Inferred] * [W x H x C x R],            inferInputRankToMap=1   --> Inferred  := W x H x C, result is [I x R] (desired)
             // If W's shape is too short, it will be padded with 0 (i.e. inferred in a subsequent step).
-            if (inferInputRankToMap >= 0) // if given, we pad if needed
+            // (the second check below (dimsA.back() == 0) is required to infer dimensions correctly for fixed input tensors where a new dimension is added,
+            // e.g. when adding an ROI dimension to a pretrained weights tensor of a dense layer after ROI pooling)
+            if ((inferInputRankToMap >= 0) && (leftOperandShape[leftOperandShape.Rank() - 1] == NDShape::InferredDimension)) // if given, we pad if needed
             {
                 while ((numReductionAxes + (size_t)inferInputRankToMap) < rightOperand.Shape().Rank())
                 {

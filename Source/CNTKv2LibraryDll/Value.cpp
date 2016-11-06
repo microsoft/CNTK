@@ -74,7 +74,7 @@ namespace CNTK
     template <typename ElementType>
     /*static*/ ValuePtr Value::Create(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly/* = false*/)
     {
-        NDMaskPtr deviceValueMask = CreateMask(1, oneHotSequences, device);
+        NDMaskPtr deviceValueMask = CreateMask(1, oneHotSequences, DeviceDescriptor::CPUDevice());
         size_t maxSequenceLength = (deviceValueMask == nullptr) ? oneHotSequences[0].size() : deviceValueMask->Shape()[0];
 
         size_t numSequences = oneHotSequences.size();
@@ -108,7 +108,7 @@ namespace CNTK
     /*static*/ ValuePtr Value::Create(const NDShape& sampleShape, const std::vector<std::vector<ElementType>>& sequences, const DeviceDescriptor& device, bool readOnly/* = false*/)
     {
         size_t numElementsPerSample = sampleShape.TotalSize();
-        NDMaskPtr deviceValueMask = CreateMask(numElementsPerSample, sequences, device);
+        NDMaskPtr deviceValueMask = CreateMask(numElementsPerSample, sequences, DeviceDescriptor::CPUDevice());
         size_t maxSequenceLength = (deviceValueMask == nullptr) ? sequences[0].size() : deviceValueMask->Shape()[0];
 
         size_t numSequences = sequences.size();

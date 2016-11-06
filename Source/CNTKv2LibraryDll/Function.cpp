@@ -92,7 +92,7 @@ namespace CNTK
                     if (var.Shape().IsUnknown() && !placeholder.Shape().IsUnknown())
                         var.m_dataFields->m_shape = placeholder.Shape();
 
-                    if ((var.DynamicAxes() == Axis::UnknownDynamicAxes) && (placeholder.DynamicAxes() != Axis::UnknownDynamicAxes))
+                    if ((var.DynamicAxes() == Axis::UnknownDynamicAxes()) && (placeholder.DynamicAxes() != Axis::UnknownDynamicAxes()))
                         var.m_dataFields->m_dynamicAxes = placeholder.DynamicAxes();
                 }
             }
@@ -164,7 +164,7 @@ namespace CNTK
                     currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
                 }
 
-                if ((currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
+                if ((currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
                 {
                     recurrentNodeOutputModified = true;
                     currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
@@ -172,7 +172,7 @@ namespace CNTK
 
                 if ((!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape())) ||
                     ((newOutputVar.GetDataType() != DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType())) ||
-                    ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())))
+                    ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())))
                 {
                     InvalidArgument("Inconsistency in output variable shape, DataType or Dynamic axes computed after replaced placeholders vs. existing output properties, for the Recurrent Function");
                 }
@@ -287,7 +287,7 @@ namespace CNTK
             if (!areVariablesEquivalent(correspondingLoadedModelVar, trainerModelLeafVar))
                 InvalidArgument("The loaded model's leaf variables do not match the trainer model's leaf variables");
 
-            if (trainerModelLeafVar.IsConstant() || trainerModelLeafVar.IsParameter())
+            if ((trainerModelLeafVar.IsConstant() && !Constant(trainerModelLeafVar).Value()->IsReadOnly()) || trainerModelLeafVar.IsParameter())
             {
                 auto trainerModelVarValue = trainerModelLeafVar.IsConstant() ? Constant(trainerModelLeafVar).Value() : Parameter(trainerModelLeafVar).Value();
                 auto loadedModelVarValue = correspondingLoadedModelVar.IsConstant() ? Constant(correspondingLoadedModelVar).Value() : Parameter(correspondingLoadedModelVar).Value();
@@ -370,32 +370,32 @@ namespace CNTK
                     if (leafVariablesCloneMap.find(cloneeInput) != leafVariablesCloneMap.end())
                         clonedInput = leafVariablesCloneMap.at(cloneeInput);
                     else
-                {
-                        if (cloneeInput.IsParameter() || cloneeInput.IsConstant())
-                {
-                    switch (parameterCloneMethod)
                     {
-                    case ParameterCloningMethod::Clone:
-                        clonedInput = cloneeInput.Clone();
-                        leafVariablesCloneMap[cloneeInput] = clonedInput;
-                        break;
-                    case ParameterCloningMethod::Share:
-                        clonedInput = cloneeInput;
-                        break;
-                    case ParameterCloningMethod::Freeze:
+                        if (cloneeInput.IsParameter() || cloneeInput.IsConstant())
+                        {
+                            switch (parameterCloneMethod)
+                            {
+                            case ParameterCloningMethod::Clone:
+                                clonedInput = cloneeInput.Clone();
+                                leafVariablesCloneMap[cloneeInput] = clonedInput;
+                                break;
+                            case ParameterCloningMethod::Share:
+                                clonedInput = cloneeInput;
+                                break;
+                            case ParameterCloningMethod::Freeze:
                                 if (cloneeInput.IsParameter())
-                        clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
+                                    clonedInput = Constant(Parameter(cloneeInput).Value(), cloneeInput.Name());
                                 else
                                     clonedInput = Constant(Constant(cloneeInput).Value(), cloneeInput.Name());
 
-                        leafVariablesCloneMap[cloneeInput] = clonedInput;
-                        break;
-                    default:
-                        LogicError("Unknown ParameterCloningMethod");
-            }
-        }
-                else
-                {
+                                leafVariablesCloneMap[cloneeInput] = clonedInput;
+                                break;
+                            default:
+                                LogicError("Unknown ParameterCloningMethod");
+                            }
+                        }
+                        else
+                        {
                             clonedInput = cloneeInput.Clone();
                             leafVariablesCloneMap[cloneeInput] = clonedInput;
                         }
@@ -578,7 +578,6 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNormalizationTimeConstant = L"normalizationTimeConstant";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlendTimeConstant = L"blendTimeConstant";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameEpsilon = L"epsilon";
-    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSamplesSeen = L"samplesSeen";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUseCuDNNEngine = L"useCuDNNEngine";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewDynamicAxes = L"newDynamicAxes";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBeginIndex = L"beginIndex";
@@ -642,13 +641,13 @@ namespace CNTK
             auto allInputDynamicAxesEmpty = std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.DynamicAxes().empty(); }) == inputs.end();
             if (!allInputDynamicAxesEmpty)
             {
-                outputDynamicAxes = Axis::UnknownDynamicAxes;
+                outputDynamicAxes = Axis::UnknownDynamicAxes();
                 for (auto inputVar : inputs)
                 {
                     auto currentInputDynamicAxes = inputVar.DynamicAxes();
-                    if (!currentInputDynamicAxes.empty() && (currentInputDynamicAxes != Axis::UnknownDynamicAxes))
+                    if (!currentInputDynamicAxes.empty() && (currentInputDynamicAxes != Axis::UnknownDynamicAxes()))
                     {
-                        if (outputDynamicAxes == Axis::UnknownDynamicAxes)
+                        if (outputDynamicAxes == Axis::UnknownDynamicAxes())
                             outputDynamicAxes = currentInputDynamicAxes;
                         else
                         {
@@ -787,7 +786,7 @@ namespace CNTK
             }
             case PrimitiveOpType::SumAll:
                 assert(inputs.size() == 1);
-                outputShape = {};
+                outputShape = {1};
                 break;
             case PrimitiveOpType::Plus:
             case PrimitiveOpType::Minus:
@@ -808,7 +807,7 @@ namespace CNTK
                     Variable initialStateVar = inputs[1];
 
                     // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
-                    if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes) && (inputOperandVar.DynamicAxes().size() != 2))
+                    if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))
                         LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
 
                     if (!initialStateVar.DynamicAxes().empty())
@@ -1322,7 +1321,7 @@ namespace CNTK
         if (variable.Shape().HasInferredDimension())
             InvalidArgument("Variable%S with InferredDimension for at least one axis in its shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
-        if (variable.DynamicAxes() == Axis::UnknownDynamicAxes)
+        if (variable.DynamicAxes() == Axis::UnknownDynamicAxes())
             InvalidArgument("Variable%S with unknown dynamic axes detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         // Lets add a null entry in the map for this variable, to break infinite recursion when processing recurrent graphs
@@ -1339,6 +1338,7 @@ namespace CNTK
 
             NDArrayViewPtr value = variable.IsConstant() ? Constant(variable).Value() : Parameter(variable).Value();
             std::shared_ptr<const Matrix<ElementType>> valueMatrix = variable.IsConstant() ? value->GetMatrix<ElementType>() : value->GetWritableMatrix<ElementType>();
+
             if (variable.IsParameter() || (valueMatrix->GetDeviceId() == network->GetDeviceId()))
                 computationNodePtr->Value() = valueMatrix->AsReference();
             else
@@ -1613,11 +1613,8 @@ namespace CNTK
             auto blendTimeConstant = functionConfig[PrimitiveFunction::AttributeNameBlendTimeConstant].Value<double>();
             auto epsilon = functionConfig[PrimitiveFunction::AttributeNameEpsilon].Value<double>();
             auto useCuDNNEngine = functionConfig[PrimitiveFunction::AttributeNameUseCuDNNEngine].Value<bool>();
-            size_t samplesSeen = 0;
-            if (functionConfig.Contains(PrimitiveFunction::AttributeNameSamplesSeen))
-                samplesSeen = functionConfig[PrimitiveFunction::AttributeNameSamplesSeen].Value<size_t>();
 
-            computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW, samplesSeen);
+            computationNodePtr = New<BatchNormalizationNode<ElementType>>(network->GetDeviceId(), internalNodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, !useCuDNNEngine, ImageLayoutKind::CHW);
             break;
         }
         case PrimitiveOpType::Combine:
@@ -1706,9 +1703,10 @@ namespace CNTK
                 // If the inputVar is a constant and not the right DataType let's coerce it to the right type
                 if (inputVar.IsConstant() && (nonConstInputDataType != DataType::Unknown) && (inputVar.GetDataType() != nonConstInputDataType))
                 {
-                    auto constantValueCPU = Constant(inputVar).Value()->DeepClone(DeviceDescriptor::CPUDevice(), true);
+                    auto originalConstantValue = Constant(inputVar).Value();
+                    auto constantValueCPU = originalConstantValue->DeepClone(DeviceDescriptor::CPUDevice(), true);
                     NDArrayViewPtr newConstantValue = CloneAsDataType(constantValueCPU, nonConstInputDataType, true);
-                    inputVar = Constant(newConstantValue);
+                    inputVar = Constant(newConstantValue->DeepClone(originalConstantValue->Device(), originalConstantValue->IsReadOnly()), inputVar.Name());
                 }
 
                 auto baseNodePtr = GetNode(inputVar, network, builder, variableToNodeMap, isVariableRootMap);
@@ -2108,7 +2106,7 @@ namespace CNTK
             NDMaskPtr mask;
             if (maskNeeded)
             {
-                mask = MakeSharedObject<NDMask>(NDShape({ maxNumTimeSteps, numSequences }), device);
+                mask = MakeSharedObject<NDMask>(NDShape({ maxNumTimeSteps, numSequences }), DeviceDescriptor::CPUDevice());
                 for (size_t i = 0; i < numSequences; ++i)
                     if (sequenceBeginFlags[i])
                         mask->MarkSequenceBegin({0, i});
@@ -2310,7 +2308,7 @@ namespace CNTK
         if (varValue != nullptr)
         {
             // TODO: The shape of the specified output Value object must match the actual output shape
-            if (varValue->Shape() != valueShape)
+            if ((varValue->Shape() != valueShape) && (AsTensorShape(varValue->Shape()) != AsTensorShape(valueShape)))
                 InvalidArgument("The shape %S of the specified Value object for %s does not match the actual shape %S", AsStringForErrorReporting(varValue->Shape()).c_str(), getGradient ? "gradient" : "output", AsStringForErrorReporting(valueShape).c_str());
         }
 
@@ -2322,7 +2320,7 @@ namespace CNTK
         {
             auto& matrix = getGradient ? computationNode->As<ComputationNode<float>>()->Gradient() : computationNode->As<ComputationNode<float>>()->Value();
             if (varValue == nullptr)
-                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<float>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<float>>(matrix.AsReference()), layout, /*readOnly =*/ !getGradient);
             else
                 nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(var, matrix, layout);
             break;
@@ -2331,7 +2329,7 @@ namespace CNTK
         {
             auto& matrix = getGradient ? computationNode->As<ComputationNode<double>>()->Gradient() : computationNode->As<ComputationNode<double>>()->Value();
             if (varValue == nullptr)
-                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<double>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<double>>(matrix.AsReference()), layout, /*readOnly =*/ !getGradient);
             else
                 nodeValue = GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(var, matrix, layout);
             break;
@@ -2342,7 +2340,7 @@ namespace CNTK
         }
 
         if (varValue == nullptr)
-            varValue = nodeValue->DeepClone();
+            varValue = nodeValue;
         else
             varValue->CopyFrom(*nodeValue);
     }

@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+﻿# Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -157,7 +157,10 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
-    learner = momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, clipping_threshold_per_sample, gradient_clipping_with_truncation)
+    learner = momentum_sgd(z.parameters, 
+                           lr_per_sample, momentum_time_constant, 
+                           gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
+                           gradient_clipping_with_truncation=gradient_clipping_with_truncation)
     trainer = Trainer(z, ce, errs, learner)
 
     # setup data

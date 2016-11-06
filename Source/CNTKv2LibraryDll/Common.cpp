@@ -166,7 +166,7 @@ namespace CNTK
         }
 
         template <typename ElementType> 
-        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2)
+        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
         {
             if (std::addressof(view1) == std::addressof(view2))
             {
@@ -208,23 +208,25 @@ namespace CNTK
 
             for (size_t i = 0; i < numElements; ++i)
             {
-                if (data1[i] != data2[i])
-                {
+                auto firstValue = data1[i];
+                auto secondValue = data2[i];
+                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, std::abs(((ElementType)relativeTolerance) * firstValue));
+                if (std::abs(firstValue - secondValue) > allowedTolerance)
                     return false;
-                }
             }
+
             return true;
         }
 
-        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2)
+        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
         {
             if (view1.GetDataType() == DataType::Float)
             {
-                return AreEqual<float>(view1, view2);
+                return AreEqual<float>(view1, view2, relativeTolerance, absoluteTolerance);
             } 
             if (view1.GetDataType() == DataType::Double)
             {
-                return AreEqual<double>(view1, view2);
+                return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
             }
 
             LogicError("Unknown DataType");
@@ -267,7 +269,8 @@ namespace CNTK
 
     /*static*/ DeviceDescriptor DeviceDescriptor::DefaultDevice()
     {
-        std::call_once(s_initDefaultDeviceFlag, [=]{
+        std::call_once(s_initDefaultDeviceFlag, []
+        {
             s_defaultDevice.reset(new DeviceDescriptor(DeviceDescriptor::BestDevice()));
         });
         return *s_defaultDevice;
@@ -293,7 +296,8 @@ namespace CNTK
         if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
             RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
 
-        std::call_once(s_initDefaultDeviceFlag, []{
+        std::call_once(s_initDefaultDeviceFlag, []
+        {
             // do nothing. This will set the flag above, in case when DefaultDevice() was never called before.
         });
 
@@ -313,7 +317,8 @@ namespace CNTK
     {
         using namespace Microsoft::MSR::CNTK;
 
-        std::call_once(s_initAllDevicesFlag, [=]{
+        std::call_once(s_initAllDevicesFlag, []
+        {
            s_allDevices.reset(new std::vector<DeviceDescriptor>());
 #ifndef CPUONLY
            auto allGpusData = GetAllGpusData();
@@ -352,8 +357,26 @@ namespace CNTK
 
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
-    /*static*/ const std::vector<Axis> Axis::DefaultInputVariableDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
-    /*static*/ const std::vector<Axis> Axis::UnknownDynamicAxes = { Axis(SentinelStaticAxisIndexValueForUnknownAxes) };
+    static std::shared_ptr<std::vector<Axis>> s_defaultInputVariableDynamicAxes, s_unknownDynamicAxes;
+    static std::once_flag s_initDefaultInputVariableDynamicAxesFlag, s_initUnknownDynamicAxesFlag;
+
+    /*static*/ const std::vector<Axis>& Axis::DefaultInputVariableDynamicAxes() 
+    {
+      std::call_once(s_initDefaultInputVariableDynamicAxesFlag, []
+      {
+        s_defaultInputVariableDynamicAxes.reset(new std::vector<Axis>({ Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() }));
+      });
+      return *s_defaultInputVariableDynamicAxes;
+    }
+
+    /*static*/ const std::vector<Axis>& Axis::UnknownDynamicAxes()
+    {
+      std::call_once(s_initUnknownDynamicAxesFlag, []
+      {
+        s_unknownDynamicAxes.reset(new std::vector<Axis>({ Axis(SentinelStaticAxisIndexValueForUnknownAxes) }));
+      });
+      return *s_unknownDynamicAxes;
+    }
 
     /*static*/ const Axis& Axis::DefaultDynamicAxis()
     {

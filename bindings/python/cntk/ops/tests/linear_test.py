@@ -86,12 +86,12 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
     right_shape = right_value[0][0].shape
 
     a = I(shape=left_shape,
-          data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           name='a')
 
     b = I(shape=right_shape,
-          data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           name='b')
 

@@ -40,10 +40,10 @@ def combine(operands, name=''):
 def alias(x, name=''):
     '''
      Create a new Function instance which just aliases the specified 'x' Function/Variable
-     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified
+     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified 
      'x' Function/Variable, and has the newly specified name.
      The purpose of this operator is to create a new distinct reference to a symbolic
-     computation which is different from the original Function/Variable that it aliases and can
+     computation which is different from the original Function/Variable that it aliases and can 
      be used for e.g. to substitute a specific instance of the aliased Function/Variable in the
      computation graph instead of substituting all usages of the aliased Function/Variable.
 
@@ -203,15 +203,15 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
 
     Example:
-	>>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
-	>>> x = C.input_variable(img.shape)
-	>>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
-	>>> kernel = C.constant(value = filter)
-	>>> C.convolution(kernel , x, auto_padding = [False]).eval({x: img})
-	array([[[[[  6.,   8.,  10.,  12.],
-		  [ 16.,  18.,  20.,  22.],
-		  [ 26.,  28.,  30.,  32.],
-		  [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
+    >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
+    >>> x = C.input_variable(img.shape)
+    >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
+    >>> kernel = C.constant(value = filter)
+    >>> C.convolution(kernel , x, auto_padding = [False]).eval({x: img})
+    array([[[[[  6.,   8.,  10.,  12.],
+              [ 16.,  18.,  20.,  22.],
+              [ 26.,  28.,  30.,  32.],
+              [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
 
     Args:
         convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
@@ -285,14 +285,14 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
 
     Example:
-	>>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-	>>> x = C.input_variable(img.shape)
-	>>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : img})
-	array([[[[[  2.5,   4.5],
-		  [ 10.5,  12.5]]]]], dtype=float32)
-	>>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : img})
-	array([[[[[  5.,   7.],
-		  [ 13.,  15.]]]]], dtype=float32)
+    >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+    >>> x = C.input_variable(img.shape)
+    >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : img})
+    array([[[[[  2.5,   4.5],
+              [ 10.5,  12.5]]]]], dtype=float32)
+    >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : img})
+    array([[[[[  5.,   7.],
+              [ 13.,  15.]]]]], dtype=float32)
 
     Args:
         operand: pooling input
@@ -575,7 +575,7 @@ def minus(left, right, name=''):
 def element_times(left, right, name=''):
     '''
     The output of this operation is the element-wise product of the two input
-    tensors. It supports broadcasting.
+    tensors. It supports broadcasting. 
 
     Example:
         >>> C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
@@ -602,7 +602,7 @@ def element_times(left, right, name=''):
 def element_divide(left, right, name=''):
     '''
     The output of this operation is the element-wise division of the two input
-    tensors. It supports broadcasting.
+    tensors. It supports broadcasting. 
 
     Example:
         >>> C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
@@ -1814,14 +1814,14 @@ from cntk.axis import Axis
 
 
 @typemap
-def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=False,
-                   dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
+def input_variable(shape, dtype=np.float32, needs_gradient=True, is_sparse=False,
+                   dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
     '''
     It creates an input node.
 
     Args:
         shape (`tuple` or `int`): the shape of the input tensor
-        data_type (`type`, optional): np.float32 (default) or np.float64
+        dtype (`type`, optional): np.float32 (default) or np.float64
         needs_gradients (`bool`, optional): whether to back-propagates to it or not. True by default.
         is_sparse (`bool`, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (`list` or `tuple`, default): a list of dynamic axis (e.g., batch axis, time axis)
@@ -1835,9 +1835,9 @@ def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=F
 
     shape = sanitize_shape(shape)
 
-    if data_type is None:
-        data_type = np.float32
-    dtype = sanitize_dtype_cntk(data_type)
+    if dtype is None:
+        dtype = np.float32
+    dtype = sanitize_dtype_cntk(dtype)
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
 
     # TODO dynamic axis for numpy arrays
@@ -1867,7 +1867,7 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
         shape = sanitize_shape(shape)
 
     if dynamic_axes is None:
-        dynamic_axes = Axis.unknown_dynamic_axes
+        dynamic_axes = Axis.unknown_dynamic_axes()
 
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)

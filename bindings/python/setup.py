@@ -154,7 +154,7 @@ cntk_module = Extension(
 # Do not include examples
 packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
 
-package_data = { 'cntk': ['pytest.ini'] }
+package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt'] }
 
 if IS_WINDOWS:
     # On Windows copy all runtime libs to the base folder of Python
@@ -166,7 +166,7 @@ else:
     kwargs = dict(package_data = package_data)
 
 setup(name="cntk",
-      version="2.0.beta1.0",
+      version="2.0.beta2.0",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

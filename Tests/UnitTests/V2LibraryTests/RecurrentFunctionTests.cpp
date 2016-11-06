@@ -223,7 +223,7 @@ void TestSimpleRecurrence(size_t inputDim,
                 inputValueData = sparseInputValueData->Alias(true);
             }
 
-            NDMaskPtr inputMask = MakeSharedObject<NDMask>(NDShape({ maxActualSequenceLength, numSequences }), DeviceDescriptor::CPUDevice());
+            NDMaskPtr inputMask = MakeSharedObject<NDMask>(NDShape({ maxActualSequenceLength, numSequences }));
             for (size_t i = 0; i < numSequences; ++i)
             {
                 inputMask->MarkSequenceBegin({0, i});
@@ -239,7 +239,7 @@ void TestSimpleRecurrence(size_t inputDim,
 
         NDShape plusOutputShape = plusOutput->Output().Shape().AppendShape({ maxActualSequenceLength, numSequences });
         std::vector<ElementType> plusOutputData(plusOutputShape.TotalSize(), 0);
-        ValuePtr plusOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), MakeSharedObject<NDMask>(inputValue->Mask()->Shape(), inputValue->Mask()->Device()));
+        ValuePtr plusOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), MakeSharedObject<NDMask>(inputValue->Mask()->Shape()));
 
         std::unordered_map<Variable, ValuePtr> outputs = { { reducedOutput, reducedOutputValue }, { plusOutput, plusOutputValue } };
         auto backpropState = rootFunc->Forward({ { inputVar, inputValue } }, outputs, device, { plusOutput });

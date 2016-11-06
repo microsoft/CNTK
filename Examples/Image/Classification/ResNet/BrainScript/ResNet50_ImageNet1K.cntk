@@ -1,4 +1,4 @@
-# Node: ResNet-50 with ImageNet -- 152 layers bottleneck ResNet for image classification
+# Node: ResNet-50 with ImageNet -- 50 layers bottleneck ResNet for image classification
 # Reference: "Deep Residual Learning for Image Recognition" https://arxiv.org/abs/1512.03385
 
 command = TrainNetwork:BNStatistics:Eval
@@ -8,8 +8,9 @@ precision = "float"; traceLevel = 1 ; deviceId = "auto"
 rootDir = "." ; configDir = "$RootDir$" ; dataDir = "$RootDir$" ;
 outputDir = "$rootDir$/Output" ;
 
-modelPath = "$outputDir$/Models/ResNet_152"
-stderr = "$outputDir$/ResNet_152_BS_out"
+meanDir = "$rootDir$/../../../DataSets/ImageNet"
+modelPath = "$outputDir$/Models/ResNet_50"
+stderr = "$outputDir$/ResNet_50_BS_out"
 
 parallelTrain = true
 
@@ -23,7 +24,7 @@ TrainNetwork = {
         labelDim    = 1000                      # number of distinct labels
 
         cMap        = 64:128:256:512:1024:2048  
-        numLayers   = 2:7:35:2
+        numLayers   = 2:3:5:2
         bnTimeConst = 0
 
         # stride in BottleneckInc
@@ -55,7 +56,7 @@ TrainNetwork = {
             AveragePoolingLayer {(7: 7), stride = 1} :
 
             # FC
-            LinearLayer {labelDim, init= 'uniform'}
+            LinearLayer {labelDim, init = 'uniform'}
         )
 
         # inputs
@@ -63,19 +64,19 @@ TrainNetwork = {
         labels      = Input {labelDim}
 
         # apply model to features
-        ol          = model (features)
+        z           = model (features)
 
         # loss and error computation
-        ce          = CrossEntropyWithSoftmax   (labels, ol)
-        errs        = ClassificationError       (labels, ol)
-        top5Errs    = ClassificationError       (labels, ol, topN = 5)
+        ce          = CrossEntropyWithSoftmax   (labels, z)
+        errs        = ClassificationError       (labels, z)
+        top5Errs    = ClassificationError       (labels, z, topN = 5)
 
         # declare special nodes
         featureNodes    = (features)
         labelNodes      = (labels)
         criterionNodes  = (ce)
         evaluationNodes = (errs) # top5Errs only used in Eval
-        outputNodes     = (ol)
+        outputNodes     = (z)
     }
 
     SGD = {
@@ -113,7 +114,7 @@ TrainNetwork = {
             jitterType = "UniRatio"
             cropRatio = 0.46666:0.875
             hflip = true
-            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+            meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {
             labelDim = 1000
@@ -130,7 +131,7 @@ TrainNetwork = {
             channels = 3
             cropType = "Center"
             cropRatio = 0.875
-            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+            meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {
             labelDim = 1000
@@ -138,7 +139,8 @@ TrainNetwork = {
     }
 }
 
-
+# Re-statistics the mean and variance of batch normalization layers while other parameters frozen after training
+# more details: https://github.com/Microsoft/CNTK/wiki/Post-Batch-Normalization-Statistics#post-batch-normalization-statistics
 BNStatistics = {
     action = "bnstat"
     modelPath = "$modelPath$"
@@ -158,7 +160,7 @@ BNStatistics = {
             hflip = true
             cropRatio = 0.46666:0.875
             jitterType = "UniRatio"
-            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+            meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {
             labelDim = 1000
@@ -182,7 +184,7 @@ Eval = {
             channels = 3
             cropType = "Center"
             cropRatio = 0.875
-            meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+            meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {
             labelDim = 1000

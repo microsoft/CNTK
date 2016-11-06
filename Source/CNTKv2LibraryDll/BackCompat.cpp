@@ -311,7 +311,6 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlendTimeConstant] = batchNormalizationNode->BlendTimeConstant();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEpsilon] = batchNormalizationNode->Epsilon();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUseCuDNNEngine] = !batchNormalizationNode->UseCNTKEngine();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSamplesSeen] = batchNormalizationNode->GetSamplesSeen();
 
                     opType = PrimitiveOpType::BatchNormalization;
                 }
@@ -351,6 +350,7 @@ namespace CNTK
         FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
         {
             ComputationNetworkPtr net = make_shared<ComputationNetwork>(AsCNTKImplDeviceId(computeDevice));
+            net->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
             net->Load<ElementType>(modelFile);
 
             // Now traverse the model and construct the Function graph
@@ -394,7 +394,16 @@ namespace CNTK
 
             ComputationNetworkPtr computationNetwork;
             DataType dataType = rootFunction->Outputs()[0].GetDataType();
-            auto device = (compositeFunction->m_computationNetwork == nullptr) ? DeviceDescriptor::CPUDevice() : AsDeviceDescriptor(compositeFunction->m_computationNetwork->GetDeviceId());
+            DeviceDescriptor device = DeviceDescriptor::CPUDevice();
+            if (compositeFunction->m_computationNetwork == nullptr)
+            {
+                auto parameters = compositeFunction->Parameters();
+                if (!parameters.empty())
+                    device = parameters.front().Value()->Device();
+            }
+            else
+                device = AsDeviceDescriptor(compositeFunction->m_computationNetwork->GetDeviceId());
+
             switch (dataType)
             {
             case DataType::Float:
