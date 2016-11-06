@@ -184,7 +184,7 @@
     </Link>
   </ItemDefinitionGroup>
 
-  <PropertyGroup Condition="'$(ConfigurationType)' == 'DynamicLibrary' And $(NoOptBuild)" Label="Configuration">
+  <PropertyGroup Condition="$(NoOptBuild)" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
     <LinkIncremental>true`</LinkIncremental>
