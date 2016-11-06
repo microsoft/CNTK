@@ -2509,14 +2509,12 @@ public:
         // and update the denominator
         if (expAvgFactor != 0 || blendFactor != 1)
             AggregateRunCount(GetMBLayout()->GetActualNumSamples());
+
+        // gradient is as of now invalid
+        m_gradientValid = false;
     }
 
-    // Note: This function assumes that inputIndex=0 is called before the others.
-    // BUGBUG: The node should not make assumptions in which order the inputs' derivates are computed. It currently assumes to start with 0.
-    //         Further, if the input has no learnables (e.g. using BN instead of corpus mean/var norm), this will not be called for inputIndex=0 at all.
-    //         And we can't just call it since we cannot overwrite the gradient. Needs some reorganization of the code, and/or a temp buffer.
-    //         A simple solution could be to simply update the gradients for scale and bias outside if inputIndex=0 was not computed.
-    //         I think the gradient is the same as ElementTimesNode() and PlusNode(), a few lines long.
+    // Note: This function assumes that inputIndex=0 is called before the others, unless the DATA input takes no gradient.
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // Must be in training mode.
@@ -2531,14 +2529,23 @@ public:
 
         FrameRange fr(Input(DATA)->GetMBLayout());
 
-        if (inputIndex == DATA) // derivative with respect to the input.
+        if (inputIndex == DATA || !m_gradientValid) // derivative with respect to the input.
         {
             auto sliceOutputGrad          = MaskedGradientFor(fr);
             auto sliceInputValue          = Input(DATA)->ValueFor(fr);
             const Matrix<ElemType>& scale = Input(SCALE)->Value();
             const Matrix<ElemType>& bias  = Input(BIAS)->Value();
 
-            auto sliceInputGrad = Input(DATA)->GradientFor(fr);
+            // If inputIndex is not DATA and we get here, then it means that DATA receives no gradient.
+            // However, the underlying engine does not foresee this case, and thus always needs a place
+            // to store the gradient. Hence, in that case, we create a dummy object and use that instead.
+            bool needsInputGradient = (inputIndex == DATA);
+            if (needsInputGradient && m_gradientValid) // because otherwise we already computed it into the dummy location
+                LogicError("BackpropTo: Batch-normalization data gradient must be requested before all others.");
+            if (!needsInputGradient)
+                m_dDataDummy->Resize(sliceInputValue);
+            auto sliceInputGrad = needsInputGradient ? Input(DATA)->GradientFor(fr) : m_dDataDummy->AsReference();
+
             m_dScale->Resize(scale); // gradients for scale and bias get stored here
             m_dBias->Resize(bias);
 
@@ -2552,13 +2559,17 @@ public:
                               blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
                               *m_savedMean, *m_savedInvStdDev,  // (in)  saved mean/invstddev values used in ForwardProp()
                               *m_dScale, *m_dBias);             // (out) gradients for scale and bias
+
+            m_gradientValid = true;
         }
-        else if (inputIndex == SCALE) // derivative with respect to the scale, precomputed during input derivative computation
+        if (inputIndex == SCALE) // derivative with respect to the scale, precomputed during input derivative computation
         {
+            assert(m_gradientValid);
             Input(SCALE)->Gradient() += *m_dScale;
         }
         else if (inputIndex == BIAS) // derivative with respect to the bias, precomputed during input derivative computation
         {
+            assert(m_gradientValid);
             Input(BIAS)->Gradient() += *m_dBias;
         }
         // No derivatives with respect to running mean and variance.
@@ -2681,6 +2692,7 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_dDataDummy, matrixPool);
         RequestMatrixFromPool(m_dScale, matrixPool);
         RequestMatrixFromPool(m_dBias, matrixPool);
     }
@@ -2690,6 +2702,7 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_savedMean, matrixPool);
         ReleaseMatrixToPool(m_savedInvStdDev, matrixPool);
+        ReleaseMatrixToPool(m_dDataDummy, matrixPool);
         ReleaseMatrixToPool(m_dScale, matrixPool);
         ReleaseMatrixToPool(m_dBias, matrixPool);
     }
@@ -2806,8 +2819,11 @@ private:
     shared_ptr<Matrix<ElemType>> m_savedInvStdDev;
     // Temp buffer for scale and bias derivatives. Only used in BackpropTo(), carrying info from first call to subsequent calls.
     // Not used for blendFactor=1 in CNTK engine.
+    shared_ptr<Matrix<ElemType>> m_dDataDummy;
     shared_ptr<Matrix<ElemType>> m_dScale;
     shared_ptr<Matrix<ElemType>> m_dBias;
+
+    bool m_gradientValid = false;
 
     std::unique_ptr<BatchNormEngine<ElemType>> m_bnEng;
 
