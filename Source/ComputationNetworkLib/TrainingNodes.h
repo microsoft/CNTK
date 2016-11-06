@@ -2582,7 +2582,7 @@ public:
         Base::Validate(isFinalValidationPass);
 
         if (GetNumInputs() != RUN_COUNT && GetNumInputs() != RUN_COUNT + 1)
-            InvalidArgument("%ls %ls operation accepts %d inputs.", NodeName().c_str(), OperationName().c_str(), RUN_COUNT + 1);
+            InvalidArgument("%ls %ls operation accepts %d inputs.", NodeName().c_str(), OperationName().c_str(), (int)RUN_COUNT + 1);
         // (we won't report that it also accepts RUN_COUNT inputs, as this is the deprecated legacy case)
 
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
