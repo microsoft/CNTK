@@ -264,12 +264,12 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 {
                     if (progressTracing)
                     {
-                    LOGPRINTF(stderr, "CNTKCommandTrainBegin: %s\n", command[i].c_str());
+                        LOGPRINTF(stderr, "CNTKCommandTrainBegin: %s\n", command[i].c_str());
                     }
                     DoTrain<ConfigParameters, ElemType>(commandParams);
                     if (progressTracing)
                     {
-                    LOGPRINTF(stderr, "CNTKCommandTrainEnd: %s\n", command[i].c_str());
+                        LOGPRINTF(stderr, "CNTKCommandTrainEnd: %s\n", command[i].c_str());
                     }
                     fullEpochsOffset += GetMaxEpochs(commandParams);
                 }
