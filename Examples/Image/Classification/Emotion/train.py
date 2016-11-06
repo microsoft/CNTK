@@ -11,7 +11,7 @@ from models import *
 from ferplus import *
 
 from cntk import Trainer
-from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+from cntk.learner import sgd, momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
 from cntk.ops import input_variable, constant, parameter, softmax
 import cntk as ct
@@ -45,6 +45,7 @@ def cost_func(training_mode, prediction, target):
     return train_loss
     
 def main(base_folder, training_mode='majority', model_name='vgg13', max_epochs = 100):
+
     # create needed folders.
     output_model_path   = os.path.join(base_folder, R'models')
     output_model_folder = os.path.join(output_model_path, model_name + '_' + training_mode)
@@ -54,7 +55,9 @@ def main(base_folder, training_mode='majority', model_name='vgg13', max_epochs =
     # creating logging file 
     logging.basicConfig(filename = os.path.join(output_model_folder, "train.log"), filemode = 'w', level = logging.INFO)
     logging.getLogger().addHandler(logging.StreamHandler())
-    
+
+    logging.info("Starting with training mode {} using {} model and max epochs {}.".format(training_mode, model_name, max_epochs))
+
     # create the model
     num_classes = len(emotion_table)
     model       = build_model(num_classes, model_name)
@@ -82,7 +85,7 @@ def main(base_folder, training_mode='majority', model_name='vgg13', max_epochs =
     minibatch_size = 32
 
     # Training config
-    lr_schedule            = [model.learning_rate]*20 + [model.learning_rate / 2.0]*20 + [model.learning_rate / 10.0]
+    lr_schedule            = model.learning_rate #[model.learning_rate]*20 + [model.learning_rate / 2.0]*20 + [model.learning_rate / 10.0]
     lr_per_minibatch       = learning_rate_schedule(lr_schedule, epoch_size, UnitType.minibatch)
     momentum_time_constant = momentum_as_time_constant_schedule(-minibatch_size/np.log(model.momentum))
     
@@ -91,8 +94,10 @@ def main(base_folder, training_mode='majority', model_name='vgg13', max_epochs =
     pe         = classification_error(pred, label_var)
 
     # construct the trainer
-    learner = momentum_sgd(pred.parameters, 
-                           lr = lr_per_minibatch, momentum = momentum_time_constant)
+    # learner = momentum_sgd(pred.parameters, 
+    #                       lr = lr_per_minibatch, momentum = momentum_time_constant)
+
+    learner = sgd(pred.parameters, lr = lr_per_minibatch)
     trainer = Trainer(z, train_loss, pe, learner)
 
     # Get minibatches of images to train with and perform model training
