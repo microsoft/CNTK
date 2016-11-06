@@ -21,12 +21,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python-yaml \
         wget \
         zlib1g-dev \
-        #For Kaldi
+        # Protobuf
+        ca-certificates \
+        curl \
+        unzip \
+        # For Kaldi
         automake \
         libtool \
         autoconf \
         subversion \
-        #For Kaldi's dependencies
+        # For Kaldi's dependencies
         libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 && \
     rm -rf /var/lib/apt/lists/*
 
@@ -68,6 +72,17 @@ RUN OPENBLAS_VERSION=0.2.18 && \
     rm -rf /OpenBLAS-${OPENBLAS_VERSION}
 
 ENV LD_LIBRARY_PATH /usr/local/openblas/lib:$LD_LIBRARY_PATH
+
+# Install Protobuf
+RUN PROTOBUF_VERSION=3.1.0 \
+    PROTOBUF_STRING=protobuf-$PROTOBUF_VERSION && \
+    wget -O - --no-verbose https://github.com/google/protobuf/archive/v${PROTOBUF_VERSION}.tar.gz | tar -xzf - && \
+    cd $PROTOBUF_STRING && \
+    ./autogen.sh && \
+    ./configure CFLAGS=-fPIC CXXFLAGS=-fPIC --disable-shared --prefix=/usr/local/$PROTOBUF_STRING && \
+    make -j $(nproc) install && \
+    cd .. && \
+    rm -rf $PROTOBUF_STRING
 
 # Install Boost
 RUN BOOST_VERSION=1_60_0 && \
@@ -143,13 +158,12 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
     make -j"$(nproc)" all
 
-RUN cd Examples/Image/Miscellaneous/CIFAR-10 && \
-    python CifarDownload.py && \
-    python CifarConverter.py cifar-10-batches-py && \
+RUN cd Examples/Image/DataSets/CIFAR-10 && \
+    python install_cifar10.py && \
     cd ../../../..
 
-RUN cd Examples/Image/MNIST/AdditionalFiles && \
-    python mnist_convert.py && \
+RUN cd Examples/Image/DataSets/MNIST && \
+    python install_mnist.py && \
     cd ../../../..
 
 ENV PATH=/cntk/build/gpu/release/bin:/usr/local/mpi/bin:$PATH

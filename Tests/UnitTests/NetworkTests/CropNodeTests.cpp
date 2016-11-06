@@ -1,7 +1,8 @@
 #include "stdafx.h"
 
-#include <memory>
 #include "../../../Source/ComputationNetworkLib/ReshapingNodes.h"
+#include "TestHelpers.h"
+#include <memory>
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
@@ -10,33 +11,6 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 // We perform test on CPU since there is nothing device specific oin crop node.
 const DEVICEID_TYPE c_deviceId = CPUDEVICE;
-
-// Helper dummy node to be used as input to crop node.
-template <class ElemType>
-class DummyNodeTest : public ComputationNode<ElemType>
-{
-public:
-    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-    static const std::wstring TypeName() { return L"DummyTest"; }
-
-    DummyNodeTest(SmallVector<size_t> shapeVec) : Base(c_deviceId, L"Dummy")
-    {
-        // Set given shape and allocate matrices.
-        TensorShape shape(shapeVec);
-        this->SetDims(shape, false);
-        this->CreateValueMatrixIfNull();
-        this->Value().Resize(1, shape.GetNumElements());
-        this->CreateGradientMatrixIfNull();
-        this->Gradient().Resize(1, shape.GetNumElements());
-    }
-    DummyNodeTest(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name) {}
-
-    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& /*fr*/) override {}
-
-    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& /*fr*/) override {}
-
-    Matrix<ElemType>& GetGradient() { return this->Gradient(); }
-};
 
 // Extends crop node to provide acces to protected members.
 template <class ElemType>
@@ -64,6 +38,14 @@ public:
 template<class ElemType>
 void CropNodeValidateTestImpl()
 {
+    // Shape and data of input nodes.
+    const size_t c_firstDim = 10;
+    const size_t c_secondDim = 5;
+    const size_t c_minibatchSize = 1;
+    SmallVector<size_t> firstInputDims = {c_firstDim, c_firstDim};
+    SmallVector<size_t> secondInputDims = {c_secondDim, c_secondDim};
+    vector<ElemType> firstData(c_firstDim * c_firstDim, 0);
+    vector<ElemType> secondData(c_secondDim * c_secondDim, 0);
     {
         // Test that validation fails if cropping cannot be done in x direction.
         auto cropNode = make_shared<CropNode<ElemType>>(6, 3, c_deviceId, L"CropNode");
@@ -71,11 +53,9 @@ void CropNodeValidateTestImpl()
         cropNode->CopyTo(cropNodeTest, cropNodeTest->GetName(), CopyNodeFlags::copyNodeValue);
 
         // 6 + 5 > 10 (offset + crop > input) -> cropping not possible in x direction.
-        SmallVector<size_t> firstInputDims = { 10, 10 };
-        SmallVector<size_t> secondInputDims = { 5, 5 };
-        auto firstInput = make_shared<DummyNodeTest<ElemType>>(firstInputDims);
-        auto secondInput = make_shared<DummyNodeTest<ElemType>>(secondInputDims);
-        vector<ComputationNodeBasePtr> inputs = { firstInput, secondInput };
+        auto firstInput = make_shared<DummyNodeTest<ElemType>>(c_deviceId, c_minibatchSize, firstInputDims, firstData);
+        auto secondInput = make_shared<DummyNodeTest<ElemType>>(c_deviceId, c_minibatchSize, secondInputDims, secondData);
+        vector<ComputationNodeBasePtr> inputs = {firstInput, secondInput};
         cropNodeTest->AttachInputs(inputs);
         BOOST_REQUIRE_EXCEPTION(
             cropNodeTest->Validate(true),
@@ -90,11 +70,9 @@ void CropNodeValidateTestImpl()
         cropNode->CopyTo(cropNodeTest, cropNodeTest->GetName(), CopyNodeFlags::copyNodeValue);
 
         // 7 + 5 > 10 (offset + crop > input) -> cropping not possible in y direction.
-        SmallVector<size_t> firstInputDims = { 10, 10 };
-        SmallVector<size_t> secondInputDims = { 5, 5 };
-        auto firstInput = make_shared<DummyNodeTest<ElemType>>(firstInputDims);
-        auto secondInput = make_shared<DummyNodeTest<ElemType>>(secondInputDims);
-        vector<ComputationNodeBasePtr> inputs = { firstInput, secondInput };
+        auto firstInput = make_shared<DummyNodeTest<ElemType>>(c_deviceId, c_minibatchSize, firstInputDims, firstData);
+        auto secondInput = make_shared<DummyNodeTest<ElemType>>(c_deviceId, c_minibatchSize, secondInputDims, secondData);
+        vector<ComputationNodeBasePtr> inputs = {firstInput, secondInput};
         cropNodeTest->AttachInputs(inputs);
         BOOST_REQUIRE_EXCEPTION(
             cropNodeTest->Validate(true),
@@ -109,11 +87,9 @@ void CropNodeValidateTestImpl()
         auto cropNodeTest = make_shared<CropNodeTest<ElemType>>();
         cropNode->CopyTo(cropNodeTest, cropNodeTest->GetName(), CopyNodeFlags::copyNodeValue);
 
-        SmallVector<size_t> firstInputDims = { 10, 10 };
-        SmallVector<size_t> secondInputDims = { 5, 5 };
-        auto firstInput = make_shared<DummyNodeTest<ElemType>>(firstInputDims);
-        auto secondInput = make_shared<DummyNodeTest<ElemType>>(secondInputDims);
-        vector<ComputationNodeBasePtr> inputs = { firstInput, secondInput };
+        auto firstInput = make_shared<DummyNodeTest<ElemType>>(c_deviceId, c_minibatchSize, firstInputDims, firstData);
+        auto secondInput = make_shared<DummyNodeTest<ElemType>>(c_deviceId, c_minibatchSize, secondInputDims, secondData);
+        vector<ComputationNodeBasePtr> inputs = {firstInput, secondInput};
         cropNodeTest->AttachInputs(inputs);
         cropNodeTest->Validate(true);
         SmallVector<size_t> outputDims = cropNodeTest->GetOutputDims();
@@ -130,14 +106,15 @@ void CropNodeForwardTestImpl()
     auto cropNodeTest = make_shared<CropNodeTest<ElemType>>();
     cropNode->CopyTo(cropNodeTest, cropNodeTest->GetName(), CopyNodeFlags::copyNodeValue);
 
-    SmallVector<size_t> firstInputDims = { 4, 4 };
-    SmallVector<size_t> secondInputDims = { 2, 2 };
-    auto firstInput = make_shared<DummyNodeTest<ElemType>>(firstInputDims);
-    auto secondInput = make_shared<DummyNodeTest<ElemType>>(secondInputDims);
-
-    Matrix<ElemType>& input = firstInput->Value();
-    ElemType inputVals[16] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-    input.SetValue(4, 4, c_deviceId, inputVals);
+    const size_t c_firstDim = 4;
+    const size_t c_secondDim = 2;
+    const size_t c_minibatchSize = 1;
+    SmallVector<size_t> firstInputDims = {c_firstDim, c_firstDim};
+    SmallVector<size_t> secondInputDims = {c_secondDim, c_secondDim};
+    vector<ElemType> firstData{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+    vector<ElemType> secondData(c_secondDim * c_secondDim, 0);
+    auto firstInput = make_shared<DummyNodeTest<ElemType>>(c_deviceId, c_minibatchSize, firstInputDims, firstData);
+    auto secondInput = make_shared<DummyNodeTest<ElemType>>(c_deviceId, c_minibatchSize, secondInputDims, secondData);
 
     vector<ComputationNodeBasePtr> inputs = { firstInput, secondInput };
     cropNodeTest->AttachInputs(inputs);
@@ -147,10 +124,10 @@ void CropNodeForwardTestImpl()
     FrameRange fr;
     cropNodeTest->ForwardProp(fr);
     ElemType* outputData = cropNodeTest->Value().Data();
-    BOOST_REQUIRE_MESSAGE(outputData[0] == inputVals[5], "Cropping output is invalid");
-    BOOST_REQUIRE_MESSAGE(outputData[1] == inputVals[6], "Cropping output is invalid");
-    BOOST_REQUIRE_MESSAGE(outputData[2] == inputVals[9], "Cropping output is invalid");
-    BOOST_REQUIRE_MESSAGE(outputData[3] == inputVals[10], "Cropping output is invalid");
+    BOOST_REQUIRE_MESSAGE(outputData[0] == firstData[5], "Cropping output is invalid");
+    BOOST_REQUIRE_MESSAGE(outputData[1] == firstData[6], "Cropping output is invalid");
+    BOOST_REQUIRE_MESSAGE(outputData[2] == firstData[9], "Cropping output is invalid");
+    BOOST_REQUIRE_MESSAGE(outputData[3] == firstData[10], "Cropping output is invalid");
 }
 
 template<class ElemType>
@@ -161,18 +138,23 @@ void CropNodeBackwardTestImpl()
     auto cropNodeTest = make_shared<CropNodeTest<ElemType>>();
     cropNode->CopyTo(cropNodeTest, cropNodeTest->GetName(), CopyNodeFlags::copyNodeValue);
 
-    SmallVector<size_t> firstInputDims = { 4, 4 };
-    SmallVector<size_t> secondInputDims = { 2, 2 };
-    auto firstInput = make_shared<DummyNodeTest<ElemType>>(firstInputDims);
-    auto secondInput = make_shared<DummyNodeTest<ElemType>>(secondInputDims);
+    const size_t c_firstDim = 4;
+    const size_t c_secondDim = 2;
+    const size_t c_minibatchSize = 1;
+    SmallVector<size_t> firstInputDims = { c_firstDim, c_firstDim };
+    SmallVector<size_t> secondInputDims = { c_secondDim, c_secondDim };
+    vector<ElemType> firstData(c_firstDim * c_firstDim, 0);
+    vector<ElemType> secondData(c_secondDim * c_secondDim, 0);
+    auto firstInput = make_shared<DummyNodeTest<ElemType>>(c_deviceId, c_minibatchSize, firstInputDims, firstData);
+    auto secondInput = make_shared<DummyNodeTest<ElemType>>(c_deviceId, c_minibatchSize, secondInputDims, secondData);
 
     vector<ComputationNodeBasePtr> inputs = { firstInput, secondInput };
     cropNodeTest->AttachInputs(inputs);
     cropNodeTest->Validate(true);
     cropNodeTest->AllocMatrices();
     Matrix<ElemType>& outputGrad = cropNodeTest->GetGradient();
-    ElemType outputGradVals[4] = { 0, 1, 2, 3 };
-    outputGrad.SetValue(2, 2, c_deviceId, outputGradVals);
+    ElemType outputGradVals[c_secondDim * c_secondDim] = { 0, 1, 2, 3 };
+    outputGrad.SetValue(c_secondDim, c_secondDim, c_deviceId, outputGradVals);
 
     FrameRange fr;
     cropNodeTest->BackpropTo(0, fr);

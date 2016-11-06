@@ -151,6 +151,8 @@ public:
     {
         VerifyIsCompiled("StartEvaluateMinibatchLoop");
         ResetEvalTimeStamps(); // invalidate all m_value fields  --TODO: redundant (called over again for every root node). Make this private and only call for sets of nodes.
+        for (auto& node : GetEvalOrder(rootNode))
+            node->OnEpochStart();
     }
     template <class NODESET>
     void StartEvaluateMinibatchLoop(const NODESET& nodes) // (ugly name; meant to be unique so we can rename if needed)
@@ -188,6 +190,9 @@ private:
     void VerifyIsCompiled(const char* where) const;
 public:
     void AllocateAllMatrices(const std::vector<ComputationNodeBasePtr>& evalRootNodes, const std::vector<ComputationNodeBasePtr>& outValueRootNodes, ComputationNodeBasePtr trainRootNode);
+
+    // From the set of nodes extract all nodes which are used as accumulator nodes.
+    std::set<ComputationNodeBasePtr> ExtractNodesWhichAccumulateResult(std::set<ComputationNodeBasePtr> nodes);
 
 private:
     void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);

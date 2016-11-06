@@ -180,7 +180,7 @@ namespace CNTK
         if (m_distributedTrainer)
         {
             // Aggregation should happen in the same order, the order of parmaters is guaranteed to be the same.
-            std::vector<std::pair<Variable, NDArrayViewPtr>> gradients;
+            std::vector<std::pair<Parameter, NDArrayViewPtr>> gradients;
             gradients.reserve(modelParameters.size());
             for (const auto& parameter : modelParameters)
                 gradients.push_back(std::make_pair(parameter, parameterGradients[parameter]->Data()));
@@ -223,22 +223,43 @@ namespace CNTK
 
     void Trainer::SaveCheckpoint(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
     {
-        m_combinedTrainingFunction->SaveModel(modelFilePath, usinglegacyModelFormat);
-
-        vector<DictionaryValue> learnerStates;
-
-        for (const auto& learner : m_parameterLearners)
+        bool shouldSave = true;
+        if (m_distributedTrainer != nullptr)
         {
-            // TODO: add DictionaryValue(T&&)
-            learnerStates.push_back(DictionaryValue(learner->Serialize()));
+            // all workers need to sync up before saving model to avoid write-after-read hazard
+            // i.e. one worker is in the middle of reading a checkpoint while another overwrites
+            m_distributedTrainer->GetCommunicator()->Barrier();
+
+            // for distributed training, only save checkpoint at worker 0
+            shouldSave = m_distributedTrainer->GetCommunicator()->CurrentWorker().IsMain();
         }
+    
+        if (shouldSave)
+        {
+            m_combinedTrainingFunction->SaveModel(modelFilePath, usinglegacyModelFormat);
+
+            vector<DictionaryValue> learnerStates;
+
+            for (const auto& learner : m_parameterLearners)
+            {
+                // TODO: add DictionaryValue(T&&)
+                learnerStates.push_back(DictionaryValue(learner->Serialize()));
+            }
         
-        std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
-        auto ckpStream = GetFstream(trainerStateCheckpointFilePath, false);
-        // TODO: this will create an extra copy of all leaner states, 
-        // add DictionaryValue ctor that takes an rvalue!
-        *ckpStream << DictionaryValue(learnerStates);
-        ckpStream->flush();
+            std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
+            auto ckpStream = GetFstream(trainerStateCheckpointFilePath, false);
+            // TODO: this will create an extra copy of all leaner states, 
+            // add DictionaryValue ctor that takes an rvalue!
+            *ckpStream << DictionaryValue(learnerStates);
+            ckpStream->flush();
+        }
+
+        if (m_distributedTrainer != nullptr)
+        {
+            // all workers need to sync up after saving model to avoid read-after-write hazard
+            // i.e. one worker is in the middle of write while another tries to read
+            m_distributedTrainer->GetCommunicator()->Barrier();
+        }
     }
 
     void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)

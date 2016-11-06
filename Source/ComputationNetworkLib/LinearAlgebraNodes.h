@@ -393,9 +393,22 @@ public:
         {
             // currently we only support one combination when the input is sparse
             // If input data is sparse, then gradient is block sparse.
-            // BUGBUG: This does not accumulate into the InputRef(0).Gradient, which might cause problems elsewhere.
             if (InputRef(1).Value().GetMatrixType() == SPARSE && InputRef(0).Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
-                InputRef(0).Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+            {
+                // We need a sparse matrix for the gradient. However, we should allocate a new one instead of switching the type in place
+                // since switching in place may affect other nodes who share this matrix due to memory sharing
+                auto& currentInput0GradientMatrixRef = InputRef(0).Gradient();
+                auto newInput0SparseGradientMatrix = std::make_shared<Matrix<ElemType>>(currentInput0GradientMatrixRef.GetNumRows(),
+                                                                                        currentInput0GradientMatrixRef.GetNumCols(),
+                                                                                        currentInput0GradientMatrixRef.GetPreferredDeviceId(),
+                                                                                        SPARSE,
+                                                                                        MatrixFormat::matrixFormatSparseBlockCol);
+
+                // BUGBUG: Copy over the current contents since we accumulate into the gradient matrix instead of overwriting the content
+                // newInput0SparseGradientMatrix.AssignValuesOf(currentInput0GradientMatrixRef);
+                InputRef(0).GradientPtrRef() = newInput0SparseGradientMatrix;
+            }
+
             auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true,  fr.AllowBroadcast());
             auto input1         = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true,  fr);
@@ -542,7 +555,22 @@ public:
         if (Input(0)->NeedsGradient() && Input(1)->Value().GetMatrixType() == SPARSE)
         {
             Input(0)->CreateGradientMatrixIfNull();
-            Input(0)->Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+
+            // We need a sparse matrix for the gradient. However, we should allocate a new one instead of switching the type in place
+            // since switching in place may affect other nodes who share this matrix due to memory sharing
+            auto& currentInput0GradientMatrixRef = InputRef(0).Gradient();
+            if (currentInput0GradientMatrixRef.GetMatrixType() != SPARSE)
+            {
+                auto newInput0SparseGradientMatrix = std::make_shared<Matrix<ElemType>>(currentInput0GradientMatrixRef.GetNumRows(),
+                                                                                        currentInput0GradientMatrixRef.GetNumCols(),
+                                                                                        currentInput0GradientMatrixRef.GetPreferredDeviceId(),
+                                                                                        SPARSE,
+                                                                                        MatrixFormat::matrixFormatSparseBlockCol);
+
+                // BUGBUG: Copy over the current contents since we accumulate into the gradient matrix instead of overwriting the content
+                // newInput0SparseGradientMatrix.AssignValuesOf(currentInput0GradientMatrixRef);
+                InputRef(0).GradientPtrRef() = newInput0SparseGradientMatrix;
+            }
         }
 
         // we need to call base allocation at end since we will need to allocate special ones first
@@ -1247,5 +1275,59 @@ private:
 
 template class CosDistanceWithNegativeSamplesNode<float>;
 template class CosDistanceWithNegativeSamplesNode<double>;
+
+template <class ElemType>
+void UpdateRunningAverage(ComputationNode<ElemType>& newInput, TensorView<ElemType>& runningAverage,
+                          size_t& runningCount);
+
+// -----------------------------------------------------------------------
+// EpochAccumulatorNode calculates mean values of all samples used in forward pass.
+// During training, mean sample value is calculated in each epoch. Value of the node will contain mean sample value of
+// its input node values since the beginning of epoch.
+// This node is useful for creating "per class" metrics like average class recall or mean intersection over union (mean
+// IOU) which is standard metric in semantic labeling.
+// For mean IOU, we calculate ratio true_positives / (true_positives + false_negatives + false_positives) for all target
+// classes and then get mean of those values. true_positives, false_negatives, false_positives should be calculated over
+// the whole data set. Here we cannot calculate mean IOU per sample and then average the result. Instead, we use
+// EpochAccumulatorNode to store those values over the whole data set.
+// -----------------------------------------------------------------------
+template <class ElemType>
+class EpochAccumulatorNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"EpochAccumulator"; }
+
+public:
+    EpochAccumulatorNode(DEVICEID_TYPE deviceId, const wstring& name);
+
+    EpochAccumulatorNode(const ScriptableObjects::IConfigRecordPtr configp);
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override;
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
+    virtual void OnEpochStart() override;
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override;
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName,
+                        const CopyNodeFlags flags) const override;
+
+    virtual void Validate(bool isFinalValidationPass);
+
+    // Request matrices needed to do node function value evaluation.
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override;
+
+    // We don't release accumulator as it is needed after forward pass.
+
+protected:
+    void Reset();
+
+    shared_ptr<Matrix<ElemType>> m_accumulator;
+    size_t m_numSamples;
+};
 
 }}}

@@ -1,0 +1,24 @@
+FROM nvidia/cuda:8.0-runtime-ubuntu16.04
+# use nvidia-docker to run! (cuda 8.0 != cuda 7.5, but should be good enough to test for now)
+
+ARG REPO_TAG
+
+# Set up fake user / sudo environment:
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sudo
+
+RUN adduser --gecos "Test User" --disabled-password testuser && \
+    test -d /home/testuser
+
+COPY visudo-helper.sh prep-run-test.sh /root/
+
+RUN VISUAL=/root/visudo-helper.sh visudo
+
+COPY test_wrapper.sh /home/testuser
+COPY BinaryDrop.tar.gz /home/testuser
+RUN chown -R testuser:testuser /home/testuser
+
+# TODO run repeated
+RUN su - testuser -c "./test_wrapper.sh BinaryDrop.tar.gz $REPO_TAG"
+RUN /root/prep-run-test.sh

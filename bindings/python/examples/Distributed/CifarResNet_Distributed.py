@@ -13,14 +13,15 @@ import numpy as np
 import sys
 import os
 from cntk import Trainer, distributed, device, persist
-from cntk.learner import momentum_sgd, learning_rate_schedule
+from cntk.cntk_py import DeviceKind_GPU
+from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
 from cntk.ops import input_variable, constant, parameter, cross_entropy_with_softmax, combine, classification_error, times, element_times, pooling, AVG_POOLING, relu
 from cntk.io import ReaderConfig, ImageDeserializer
 from cntk.initializer import he_normal, glorot_uniform
-from examples.CifarResNet.CifarResNet import create_reader, create_resnet_model
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
+from examples.CifarResNet.CifarResNet import create_reader, create_resnet_model
 from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, linear_layer, print_training_progress
 
 TRAIN_MAP_FILENAME = 'train_map.txt'
@@ -28,7 +29,7 @@ MEAN_FILENAME = 'CIFAR-10_mean.xml'
 TEST_MAP_FILENAME = 'test_map.txt'
 
 # Trains a residual network model on the Cifar image dataset
-def cifar_resnet(data_path, run_test, num_epochs, communicator=None, save_model_filename=None, load_model_filename=None, debug_output=False):
+def cifar_resnet_distributed(data_path, run_test, num_epochs, communicator=None, save_model_filename=None, load_model_filename=None, debug_output=False):
     image_height = 32
     image_width = 32
     num_channels = 3
@@ -67,16 +68,15 @@ def cifar_resnet(data_path, run_test, num_epochs, communicator=None, save_model_
     
     num_mbs = num_mb_per_epoch * num_epochs
 
-    lr_per_sample = [1/mb_size]*80+[0.1/mb_size]*40+[0.01/mb_size]
-    lr_schedule = learning_rate_schedule(lr_per_sample, units = mb_size * num_mb_per_epoch)
-    momentum_time_constant = -mb_size/np.log(0.9)
+    lr_per_minibatch = learning_rate_schedule([1]*80 + [0.1]*40 + [0.01], mb_size * num_mb_per_epoch, UnitType.minibatch)
+    momentum_time_constant = momentum_as_time_constant_schedule(-mb_size/np.log(0.9))
 
     # create data parallel distributed trainer if needed
     dist_trainer = distributed.data_parallel_distributed_trainer(communicator, False) if communicator else None
 
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(classifier_output, ce, pe,
-                      [momentum_sgd(classifier_output.parameters, lr_schedule, momentum_time_constant, l2_regularization_weight=0.0001)],
+                      [momentum_sgd(classifier_output.parameters, lr=lr_per_minibatch, momentum=momentum_time_constant, l2_regularization_weight=0.0001)],
                       distributed_trainer = dist_trainer)
     
     # Get minibatches of images to train with and perform model training
@@ -86,6 +86,8 @@ def cifar_resnet(data_path, run_test, num_epochs, communicator=None, save_model_
         training_progress_output_freq = training_progress_output_freq/4
         
     for i in range(0, num_mbs):
+    
+        # NOTE: depends on network, the mb_size can be changed dynamically here
         mb = minibatch_source.next_minibatch(mb_size)
 
         # Specify the mapping of input variables in the model to actual
@@ -127,14 +129,17 @@ def cifar_resnet(data_path, run_test, num_epochs, communicator=None, save_model_
     else:
         return 0
 
-if __name__ == '__main__':
-    data_path = os.path.abspath(os.path.normpath(os.path.join(
-        *"../../../../Examples/Image/DataSets/CIFAR-10/".split("/"))))
+        
+def train_and_evaluate(data_path, total_epochs, gpu_count=1):
+    # Create distributed communicator for 1-bit SGD for better scaling to multiple GPUs
+    # If you'd like to avoid quantization loss, use simple one instead
+    quantization_bit = 1
 
-    os.chdir(data_path)
+    if (quantization_bit == 32):
+        communicator = distributed.mpi_communicator()
+    else:
+        communicator = distributed.quantized_mpi_communicator(quantization_bit)
 
-    # Create distributed communicator for 1-bit SGD
-    communicator = distributed.communicator(distributed.quantized_mpi_communicator(1))
     workers = communicator.workers()
     current_worker = communicator.current_worker()
     print("List all distributed workers")
@@ -144,21 +149,47 @@ if __name__ == '__main__':
         else:
             print("  {} {}".format(wk.global_rank, wk.host_id))
 
+    if gpu_count == 1 and len(workers) > 1 :
+        print("Warning: running distributed training on 1-GPU will be slow")
+        device.set_default_device(gpu(0))
+
     print("Training on device type:{} id:{}".format('gpu' if device.default().type() else 'cpu', device.default().id()))
 
     start_model = "start_model.bin"
     num_start_epochs = 1
-    num_parallel_epochs = 10
+    num_parallel_epochs = total_epochs - num_start_epochs
 
     # training the start model only in one worker
     if communicator.current_worker().global_rank == 0:
-        cifar_resnet(data_path, save_model_filename=start_model, communicator=None, run_test=False, num_epochs=num_start_epochs)
+        cifar_resnet_distributed(data_path, save_model_filename=start_model, communicator=None, run_test=False, num_epochs=num_start_epochs)
     
     communicator.barrier()
     
     # train in parallel
-    error = cifar_resnet(data_path, load_model_filename=start_model, communicator=communicator, run_test=True, num_epochs=num_parallel_epochs)
+    error = cifar_resnet_distributed(data_path, load_model_filename=start_model, communicator=communicator, run_test=True, num_epochs=num_parallel_epochs)
+
+    distributed.Communicator.finalize()
+    return error
+
+    
+if __name__ == '__main__':
+    # check if we have multiple-GPU, and fallback to 1 GPU if not
+    devices = device.all_devices()
+    gpu_count = 0
+    for dev in devices:
+        gpu_count += (1 if dev.type() == DeviceKind_GPU else 0)
+    print("Found {} GPUs".format(gpu_count))
+    
+    if gpu_count == 0:
+        print("No GPU found, exiting")
+        quit()
+
+    data_path = os.path.abspath(os.path.normpath(os.path.join(
+        *"../../../../Examples/Image/DataSets/CIFAR-10/".split("/"))))
+
+    os.chdir(data_path)
+    
+    total_epochs = 11
+    error = train_and_evaluate(data_path, total_epochs, gpu_count)
     
     print("Error: %f" % error)
-
-    distributed.communicator.finalize()

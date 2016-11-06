@@ -25,9 +25,11 @@ def test_cifar_resnet_error(device_id):
     try:
         base_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
                                 *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
+        # N.B. CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY has {train,test}_map.txt
+        #      and CIFAR-10_mean.xml in the base_path.
     except KeyError:
-        base_path = os.path.join(
-            *"../../../../Examples/Image/Datasets/CIFAR-10/cifar-10-batches-py".split("/"))
+        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                *"../../../../Examples/Image/DataSets/CIFAR-10".split("/"))
 
     base_path = os.path.normpath(base_path)
     os.chdir(os.path.join(base_path, '..'))
@@ -42,7 +44,7 @@ def test_cifar_resnet_error(device_id):
     reader_test  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
 
     test_error = train_and_evaluate(reader_train, reader_test, max_epochs=5)
-    expected_test_error = 0.384
+    expected_test_error = 0.282
 
     assert np.allclose(test_error, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)

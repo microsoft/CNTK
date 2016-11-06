@@ -3,11 +3,37 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
+
 #include "CNTKLibrary.h"
 #include "Common.h"
 
 using namespace CNTK;
 using namespace std::placeholders;
+
+bool Is1bitSGDAvailable()
+{
+    static bool is1bitSGDAvailable;
+    static bool isInitialized = false;
+
+    if (!isInitialized)
+    {
+        const char* p = getenv("TEST_1BIT_SGD");
+
+        // Check the environment variable TEST_1BIT_SGD to decide whether to run on a CPU-only device.
+        if (p != nullptr && 0 == strcmp(p, "0"))
+        {
+            is1bitSGDAvailable = false;
+        }
+        else
+        {
+            is1bitSGDAvailable = true;
+        }
+        isInitialized = true;
+    }
+
+    return is1bitSGDAvailable;
+}
 
 // TODO: Move to other file.
 void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, DistributedTrainerPtr distributedTrainer, size_t rank)
@@ -31,15 +57,15 @@ void TrainSimpleDistributedFeedForwardClassifer(const DeviceDescriptor& device, 
     std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>> inputMeansAndInvStdDevs = { { featureStreamInfo, { nullptr, nullptr } } };
     ComputeInputPerDimMeansAndInvStdDevs(minibatchSource, inputMeansAndInvStdDevs);
 
-    auto nonLinearity = std::bind(Sigmoid, _1, L"");
+    auto nonLinearity = std::bind(Sigmoid, _1, L"Sigmoid");
     auto input = InputVariable({ inputDim }, DataType::Float, L"features");
     auto normalizedinput = PerDimMeanVarianceNormalize(input, inputMeansAndInvStdDevs[featureStreamInfo].first, inputMeansAndInvStdDevs[featureStreamInfo].second);
-    auto classifierOutput = FullyConnectedDNNLayer(normalizedinput, hiddenLayerDim, device, nonLinearity);
+    auto classifierOutput = FullyConnectedDNNLayer(normalizedinput, hiddenLayerDim, device, nonLinearity, std::wstring(L"FullyConnectedInput") );
     for (size_t i = 1; i < numHiddenLayers; ++i)
-        classifierOutput = FullyConnectedDNNLayer(classifierOutput, hiddenLayerDim, device, nonLinearity);
+        classifierOutput = FullyConnectedDNNLayer(classifierOutput, hiddenLayerDim, device, nonLinearity, std::wstring(L"FullyConnectedHidden"));
 
-    auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.05, 0.05, 1, device));
-    auto outputBiasParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses }, -0.05, 0.05, 1, device));
+    auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.05, 0.05, 1, device), L"outputTimesParam");
+    auto outputBiasParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses }, -0.05, 0.05, 1, device), L"outputBiasParam");
     classifierOutput = Plus(outputBiasParam, Times(outputTimesParam, classifierOutput), L"classifierOutput");
 
     auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels");
@@ -95,14 +121,29 @@ int main(int /*argc*/, char* /*argv*/[])
             TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), distributedTrainer, communicator->CurrentWorker().m_globalRank);
     }
 
+    if (Is1bitSGDAvailable())
     {
-        auto communicator = QuantizedMPICommunicator(true, true, 32);
-        auto distributedTrainer = CreateQuantizedDataParallelDistributedTrainer(communicator, false);
-        TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice(), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+        {
+            auto communicator = QuantizedMPICommunicator(true, true, 32);
+            auto distributedTrainer = CreateQuantizedDataParallelDistributedTrainer(communicator, false);
+            TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice(), distributedTrainer, communicator->CurrentWorker().m_globalRank);
 
-        if (IsGPUAvailable())
-            TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+            if (IsGPUAvailable())
+                TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+        }
+
+        {
+            auto communicator = MPICommunicator();
+            auto distributedTrainer = CreateBlockMomentumDistributedTrainer(communicator, 1024);
+            TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::CPUDevice(), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+
+            if (IsGPUAvailable())
+                TrainSimpleDistributedFeedForwardClassifer(DeviceDescriptor::GPUDevice(0), distributedTrainer, communicator->CurrentWorker().m_globalRank);
+        }
     }
+
+    fprintf(stderr, "\nCNTKv2LibraryDistribution tests: Passed\n");
+    fflush(stderr);
 
 #if defined(_MSC_VER)
     _CrtSetReportHook2(_CRT_RPTHOOK_REMOVE, HandleDebugAssert);

@@ -1,9 +1,7 @@
 dataDir: ../../Data
 tags:
-     # running on every BVT job in 'L' (LSTM) leg in Debug-GPU and Release-CPU configurations:
-     - bvt-l  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
-     # running unconditionally on every Nightly job in 'L' leg
-     - nightly-l (build_sku == 'gpu')
+     - bvt-e  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
+     - nightly-e (build_sku == 'gpu')
 
 testCases:
   CNTK Run must be completed:

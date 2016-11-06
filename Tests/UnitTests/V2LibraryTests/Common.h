@@ -113,7 +113,7 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
     const std::wstring tempModelPath = L"feedForward.net" + std::to_wstring((int)rank);
 
     if ((_wunlink(tempModelPath.c_str()) != 0) && (errno != ENOENT))
-        std::runtime_error("Error deleting temp model file 'feedForward.net'");
+       throw std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
     std::unordered_map<std::wstring, CNTK::Variable*> inputVarUids;
     std::unordered_map<std::wstring, CNTK::Variable*> outputVarNames;
@@ -122,14 +122,14 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
     {
         auto retVal = varPtr->IsOutput() ? outputVarNames.insert({ varPtr->Owner()->Name(), varPtr }) : inputVarUids.insert({ varPtr->Uid(), varPtr });
         if (!retVal.second)
-            std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
+           throw std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
 
     functionPtr->SaveModel(tempModelPath);
     functionPtr = CNTK::Function::LoadModel(functionPtr->Outputs()[0].GetDataType(), tempModelPath, device);
 
     if (_wunlink(tempModelPath.c_str()) != 0)
-         std::runtime_error("Error deleting temp model file 'feedForward.net'");
+         throw std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
     auto inputs = functionPtr->Inputs();
     for (auto inputVarInfo : inputVarUids)
@@ -157,16 +157,16 @@ inline CNTK::FunctionPtr FullyConnectedLinearLayer(CNTK::Variable input, size_t 
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
 
-    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(), device);
-    auto timesFunction = CNTK::Times(timesParam, input);
+    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(), device, L"timesParam");
+    auto timesFunction = CNTK::Times(timesParam, input, L"times");
 
-    auto plusParam = CNTK::Parameter({ outputDim }, 0.0f, device);
+    auto plusParam = CNTK::Parameter({ outputDim }, 0.0f, device, L"plusParam");
     return CNTK::Plus(plusParam, timesFunction, outputName);
 }
 
-inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t outputDim, const CNTK::DeviceDescriptor& device, const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity)
+inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t outputDim, const CNTK::DeviceDescriptor& device, const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity, const std::wstring& outputName = L"")
 {
-    return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device));
+    return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device, outputName));
 }
 
 inline CNTK::FunctionPtr FullyConnectedFeedForwardClassifierNet(CNTK::Variable input,
@@ -369,7 +369,7 @@ inline CNTK::NDShape CreateShape(size_t numAxes, size_t maxDimSize)
 inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool readonly)
 {
     if (filename.empty())
-        std::runtime_error("File: filename is empty");
+       throw std::runtime_error("File: filename is empty");
 
     std::ios_base::openmode mode = std::ios_base::binary;
     mode = mode | (readonly ? std::ios_base::in : std::ios_base::out);
@@ -485,7 +485,7 @@ inline bool AreEqual(const CNTK::Variable& var1, const CNTK::Variable& var2)
         ptr2 = reinterpret_cast<const CNTK::Constant&>(var2).Value();
     }
 
-    if (!CNTK::Internal::AreEqual(*ptr1, *ptr2))
+    if (!CNTK::Internal::AreEqual(*ptr1, *ptr2, relativeTolerance, absoluteTolerance))
     {
         return false;
     }

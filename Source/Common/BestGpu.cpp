@@ -286,10 +286,7 @@ void BestGpu::GetCudaProperties()
         pd->cudaFreeMem = free;
         pd->cudaTotalMem = total;
         dev++;
-        // cudaDeviceReset() explicitly destroys and cleans up all resources associated with the 
-        // current device in the current process.
-        // Will result in a segmentation fault is called, for instance, after cudnnCreate, but before cudnnDestroy.
-        // cudaDeviceReset();
+        cudaDeviceReset();
     }
     m_cudaData = m_procData.size() > 0;
     if (rc == CUDA_SUCCESS)

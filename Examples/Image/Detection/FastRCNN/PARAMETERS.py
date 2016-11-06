@@ -21,8 +21,8 @@ cntk_padHeight = 1000
 
 # directories
 rootDir = os.path.dirname(os.path.realpath(sys.argv[0])) + "/"
-imgDir = rootDir + "../../Datasets/Grocery/"
-pascalDataDir = rootDir + "../../Datasets/Pascal/"
+imgDir = rootDir + "../../DataSets/Grocery/"
+pascalDataDir = rootDir + "../../DataSets/Pascal/"
 
 # derived directories
 procDir = rootDir + "proc/" + datasetName + "_{}/".format(cntk_nrRois)

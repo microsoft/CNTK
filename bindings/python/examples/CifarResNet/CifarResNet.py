@@ -8,12 +8,15 @@ import os
 import math
 import numpy as np
 
+from cntk.blocks import default_options
+from cntk.layers import Convolution, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense
+from cntk.models import Sequential, LayerStack
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-from cntk.initializer import glorot_uniform
+from cntk.initializer import glorot_uniform, he_normal
 from cntk import Trainer
-from cntk.learner import momentum_sgd, learning_rate_schedule
-from cntk.ops import cross_entropy_with_softmax, classification_error, relu, convolution, pooling, AVG_POOLING
+from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+from cntk.ops import cross_entropy_with_softmax, classification_error, relu
 from cntk.ops import input_variable, constant, parameter, combine, times, element_times
 
 #
@@ -21,14 +24,8 @@ from cntk.ops import input_variable, constant, parameter, combine, times, elemen
 #
 abs_path   = os.path.dirname(os.path.abspath(__file__))
 cntk_path  = os.path.normpath(os.path.join(abs_path, "..", "..", "..", ".."))
-data_path  = os.path.join(cntk_path, "Examples", "Image", "Datasets", "CIFAR-10")
+data_path  = os.path.join(cntk_path, "Examples", "Image", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
-
-#
-# Layer wrappers
-#
-sys.path.append(os.path.join(abs_path, "..", ".."))
-from examples.common.nn import conv_bn_relu_layer, conv_bn_layer, linear_layer
 
 # model dimensions
 image_height = 32
@@ -41,9 +38,8 @@ num_classes  = 10
 #
 def create_reader(map_file, mean_file, train, distributed_communicator=None):
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
-        cifar_py3 = "" if sys.version_info.major < 3 else "_py3"
-        raise RuntimeError("File '%s' or '%s' does not exist. Please run CifarDownload%s.py and CifarConverter%s.py from CIFAR-10 to fetch them" %
-                           (map_file, mean_file, cifar_py3, cifar_py3))
+        raise RuntimeError("File '%s' or '%s' does not exist. Please run install_cifar10.py from Examples/Image/DataSets/CIFAR-10 to fetch them" %
+                           (map_file, mean_file))
 
     # transformation pipeline for the features has jitter/crop only when training
     transforms = []
@@ -64,61 +60,87 @@ def create_reader(map_file, mean_file, train, distributed_communicator=None):
 #
 # Resnet building blocks
 #
-def resnet_basic(input, out_feature_map_count, bn_time_const):
-    c1 = conv_bn_relu_layer(input, out_feature_map_count, [3, 3], [1, 1], bn_time_const)
-    c2 = conv_bn_layer(c1, out_feature_map_count, [3, 3], [1, 1], bn_time_const)
-    p = c2 + input
+#           ResNetNode                   ResNetNodeInc
+#               |                              |
+#        +------+------+             +---------+----------+
+#        |             |             |                    |
+#        V             |             V                    V
+#   +----------+       |      +--------------+   +----------------+
+#   | Conv, BN |       |      | Conv x 2, BN |   | SubSample, BN  |
+#   +----------+       |      +--------------+   +----------------+
+#        |             |             |                    |
+#        V             |             V                    |
+#    +-------+         |         +-------+                |
+#    | ReLU  |         |         | ReLU  |                |
+#    +-------+         |         +-------+                |
+#        |             |             |                    |
+#        V             |             V                    |
+#   +----------+       |        +----------+              |
+#   | Conv, BN |       |        | Conv, BN |              |
+#   +----------+       |        +----------+              |
+#        |             |             |                    |
+#        |    +---+    |             |       +---+        |
+#        +--->| + |<---+             +------>+ + +<-------+
+#             +---+                          +---+
+#               |                              |
+#               V                              V
+#           +-------+                      +-------+
+#           | ReLU  |                      | ReLU  |
+#           +-------+                      +-------+
+#               |                              |
+#               V                              V
+#
+def convolution_bn(input, filter_size, num_filters, strides=(1,1), init=he_normal(), activation=relu):
+    if activation is None:
+        activation = lambda x: x
+        
+    r = Convolution(filter_size, num_filters, strides=strides, init=init, activation=None, pad=True, bias=False)(input)
+    r = BatchNormalization(map_rank=1)(r)
+    r = activation(r)
+    
+    return r
+
+def resnet_basic(input, num_filters):
+    c1 = convolution_bn(input, (3,3), num_filters)
+    c2 = convolution_bn(c1, (3,3), num_filters, activation=None)
+    p  = c2 + input
     return relu(p)
 
-def resnet_basic_inc(input, out_feature_map_count, strides, bn_time_const):
-    c1 = conv_bn_relu_layer(input, out_feature_map_count, [3, 3], strides, bn_time_const)
-    c2 = conv_bn_layer(c1, out_feature_map_count, [3, 3], [1, 1], bn_time_const)
-    s  = conv_bn_layer(input, out_feature_map_count, [1, 1], strides, bn_time_const)
+def resnet_basic_inc(input, num_filters):
+    c1 = convolution_bn(input, (3,3), num_filters, strides=(2,2))
+    c2 = convolution_bn(c1, (3,3), num_filters, activation=None)
+
+    s = convolution_bn(input, (1,1), num_filters, strides=(2,2), activation=None)
+    
     p = c2 + s
     return relu(p)
 
-def resnet_basic_stack2(input, out_feature_map_count, bn_time_const):
-    r1 = resnet_basic(input, out_feature_map_count, bn_time_const)
-    r2 = resnet_basic(r1, out_feature_map_count, bn_time_const)
-    return r2
+def resnet_basic_stack(input, num_filters, num_stack):
+    assert (num_stack > 0)
 
-def resnet_basic_stack3(input, out_feature_map_count, bn_time_const):
-    r12 = resnet_basic_stack2(input, out_feature_map_count, bn_time_const)
-    r3 = resnet_basic(r12, out_feature_map_count, bn_time_const)
-    return r3
+    r = input
+    for _ in range(num_stack):
+        r = resnet_basic(r, num_filters)
+    return r
 
 #   
 # Defines the residual network model for classifying images
 #
 def create_resnet_model(input, num_classes):
-    bn_time_const = 4096
+    conv = convolution_bn(input, (3,3), 16)
+    r1_1 = resnet_basic_stack(conv, 16, 3)
 
-    c_map1 = 16
-    
-    feat_scale = 0.00390625
+    r2_1 = resnet_basic_inc(r1_1, 32)
+    r2_2 = resnet_basic_stack(r2_1, 32, 2)
 
-    input_norm = element_times(feat_scale, input)
-
-    conv = conv_bn_relu_layer(input, c_map1, [3, 3], [1, 1], bn_time_const)
-    r1_1 = resnet_basic_stack3(conv, c_map1, bn_time_const)
-
-    c_map2 = 32
-
-    r2_1 = resnet_basic_inc(r1_1, c_map2, [2, 2], bn_time_const)
-    r2_2 = resnet_basic_stack2(r2_1, c_map2, bn_time_const)
-
-    c_map3 = 64
-    r3_1 = resnet_basic_inc(r2_2, c_map3, [2, 2], bn_time_const)
-    r3_2 = resnet_basic_stack2(r3_1, c_map3, bn_time_const)
+    r3_1 = resnet_basic_inc(r2_2, 64)
+    r3_2 = resnet_basic_stack(r3_1, 64, 2)
 
     # Global average pooling
-    poolw = 8
-    poolh = 8
-    poolh_stride = 1
-    poolv_stride = 1
+    pool = AveragePooling(filter_shape=(8,8), strides=(1,1))(r3_2)    
+    net = Dense(num_classes, init=he_normal(), activation=None)(pool)
 
-    pool = pooling(r3_2, AVG_POOLING, (1, poolh, poolw), (1, poolv_stride, poolh_stride))
-    return linear_layer(pool, num_classes)
+    return net
 
 #
 # Train and evaluate the network.
@@ -129,8 +151,12 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     input_var = input_variable((num_channels, image_height, image_width))
     label_var = input_variable((num_classes))
 
+    # Normalize the input
+    feature_scale = 1.0 / 256.0
+    input_var_norm = element_times(feature_scale, input_var)
+
     # apply model to input
-    z = create_resnet_model(input_var, 10)
+    z = create_resnet_model(input_var_norm, 10)
 
     #
     # Training action
@@ -145,14 +171,13 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     minibatch_size = 128
 
     # Set learning parameters
-    lr_per_sample          = [1/minibatch_size]*80+[0.1/minibatch_size]*40+[0.01/minibatch_size]
-    lr_schedule            = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    momentum_time_constant = -minibatch_size/np.log(0.9)
+    lr_per_minibatch       = learning_rate_schedule([1]*80 + [0.1]*40 + [0.01], epoch_size, UnitType.minibatch)
+    momentum_time_constant = momentum_as_time_constant_schedule(-minibatch_size/np.log(0.9))
     l2_reg_weight          = 0.0001
     
     # trainer object
-    lr_schedule = learning_rate_schedule(lr_per_sample, units=epoch_size)
-    learner     = momentum_sgd(z.parameters, lr_schedule, momentum_time_constant,
+    learner     = momentum_sgd(z.parameters, 
+                               lr = lr_per_minibatch, momentum = momentum_time_constant,
                                l2_regularization_weight = l2_reg_weight)
     trainer     = Trainer(z, ce, pe, learner)
 
@@ -207,6 +232,7 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
     print("")
 
+    # return evaluation error.
     return metric_numer/metric_denom
 
 if __name__=='__main__':
