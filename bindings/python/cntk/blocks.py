@@ -184,10 +184,9 @@ def Constant(init, shape=None, dtype=dtype_default_or_float32, name=''):
 
 # TODO: this function should not be necessary anymore
 def Input(shape, dtype=dtype_default_or_float32, needs_gradient=True, is_sparse=False,
-          dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
+          dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
     dtype = dtype if _is_given(dtype) else _current_default_options.dtype
-    # Note that the name dtype is called data_type in input_variable().
-    return _name_node(input_variable(shape=shape, data_type=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
+    return _name_node(input_variable(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
                                      dynamic_axes=dynamic_axes, name=name), 'input')
 
 # use this for set_signature()

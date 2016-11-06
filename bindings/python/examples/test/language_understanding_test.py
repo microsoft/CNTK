@@ -76,7 +76,7 @@ def BNBiRecurrence(fwd, bwd, test_dual=True): # special version that calls one s
     return apply_x
 
 # TODO: the name is wrong
-def test_seq_classification_error(device_id):
+def test_language_understanding(device_id):
     DeviceDescriptor.set_default_device(cntk_device(device_id))
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed
@@ -103,7 +103,18 @@ def test_seq_classification_error(device_id):
 
         # replace lookahead by bidirectional model
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
-          with default_options(dtype=np.float64):  # test this with double precision since single precision is too little for reproducable aggregation
+            test_a_model('replace lookahead by bidirectional model', Sequential([
+                Embedding(emb_dim),
+                BatchNormalization(),
+                BiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
+                BatchNormalization(),
+                Dense(num_labels)
+            ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
+
+        # replace lookahead by bidirectional model
+        with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
+          #with default_options(dtype=np.float64):  # test this with double precision since single precision is too little for reproducable aggregation
+          # ^^ This test requires to change the #if 1 in Functions.cpp PopulateNetworkInputs() to be changed to #if 0.
             test_a_model('replace lookahead by bidirectional model, with shared BN', Sequential([
                 Embedding(emb_dim),
                 BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim), test_dual=True),
@@ -144,16 +155,6 @@ def test_seq_classification_error(device_id):
             Finished Epoch [1]: [Evaluation] loss = 0.000000 * 10984, metric = 3.2% * 10984
             --> 0.03159140568099053 0.0
             """
-
-        # replace lookahead by bidirectional model
-        with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
-            test_a_model('replace lookahead by bidirectional model', Sequential([
-                Embedding(emb_dim),
-                BatchNormalization(),
-                BiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
-                BatchNormalization(),
-                Dense(num_labels)
-            ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
 
         # BatchNorm test case for global-corpus aggregation
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
@@ -264,4 +265,4 @@ def test_seq_classification_error(device_id):
     # BUGBUG: fails eval with "RuntimeError: __v2libuid__BatchNormalization456__v2libname__BatchNormalization11: inference mode is used, but nothing has been trained."
 
 if __name__=='__main__':
-    test_seq_classification_error(0)
+    test_language_understanding(0)

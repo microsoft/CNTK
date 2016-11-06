@@ -92,7 +92,7 @@ def train(reader, model, max_epochs):
 
     # trainer object
     lr_per_sample = learning_rate_schedule(lr_schedule, epoch_size)
-    learner = adam_sgd(z.parameters,
+    learner = adam_sgd(criterion.parameters,
                        lr=lr_per_sample, momentum=momentum_time_constant,
                        low_memory=True,
                        gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
@@ -128,7 +128,7 @@ def evaluate(reader, model):
     criterion.set_signature(None, variable_of_type(num_labels, is_sparse=True))
 
     # process minibatches and perform evaluation
-    dummy_learner = adam_sgd(criterion.parameters, lr_per_sample=1, momentum_time_constant=0, low_memory=True) # BUGBUG: should not be needed
+    dummy_learner = adam_sgd(criterion.parameters, lr=1, momentum=0, low_memory=True) # BUGBUG: should not be needed
     evaluator = create_trainer(model, criterion, [dummy_learner])
     progress_printer = ProgressPrinter(freq=100, first=10, tag='Evaluation') # more detailed logging
     #progress_printer = ProgressPrinter(tag='Evaluation')
@@ -140,7 +140,7 @@ def evaluate(reader, model):
             break
         metric = evaluator.test_minibatch_from_data(criterion, data[reader.streams.query], data[reader.streams.slot_labels])
         progress_printer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
-        loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
+    loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric
 
