@@ -1282,7 +1282,8 @@ static void CopyToVector(const Matrix<ElemType>& source, vector<ElemType>& sourc
     source.CopyToArray(datap, datasz);
     assert(datap == sourceData.data() && datasz == sourceData.size()); // (make sure it used my buffer; a somewhat awkward API)
 }
-void Matrix<int>::AssignValuesOf(const Matrix<int>&) { NOT_IMPLEMENTED; }
+
+template void Matrix<int>::AssignValuesOf(const Matrix<int>&) { NOT_IMPLEMENTED; }
 template<class ElemType, class ElemTypeOther>
 static void DoCastAssignValuesOf(Matrix<ElemType>& target, const Matrix<ElemTypeOther>& source)
 {
@@ -3771,8 +3772,8 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
         }
     }
     else
-#pragma omp critical
     {
+#pragma omp critical
         if (from_id == CPUDEVICE) // from CPU to GPU
         {
             if (!m_CPUMatrix)
