@@ -137,7 +137,6 @@ void MultiThreadsEvaluationWithLoadModel(const DeviceDescriptor& device, const i
     // The model file will be trained and copied to the current runtime directory first.
     auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, L"A:\\CNTK\\x64\\Debug_CpuOnly\\0.slu.cmf", device);
 
-
     OutputFunctionInfo(modelFuncPtr);
     fprintf(stderr, "MultiThreadsEvaluationWithLoadModel on device=%d\n", device.Id());
 
@@ -426,6 +425,12 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
     graphInfo.set_model_name("my-sluhandson.cntk");
 
     graph.set_allocated_graph_info(&graphInfo);
+
+    auto serilized = evalFunc->Serialize();
+
+    {
+        evalFunc->SaveModel(L"00_fvm.log", false);
+    }
 
     std::unordered_set<FunctionPtr> functions;
     Traverse(evalFunc->RootFunction(), functions, [](const FunctionPtr& f){
