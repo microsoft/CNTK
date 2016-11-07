@@ -2270,6 +2270,8 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
         {
             File fstream(tempFileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsWrite);
+            // Buffer writes in memory then flush to filesystem, which reduces number of small writes
+            fstream.Setvbuf();
             fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BVersion"); 
             fstream << (size_t)CURRENT_CNTK_CHECKPOINT_VERSION; 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EVersion");
