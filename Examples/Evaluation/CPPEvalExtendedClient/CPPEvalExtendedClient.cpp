@@ -22,13 +22,10 @@ using namespace Microsoft::MSR::CNTK;
 template<typename ElemType>
 using GetEvalProc = void(*)(IEvaluateModelExtended<ElemType>**);
 
-typedef std::pair<std::wstring, std::vector<float>*> Variable;
-typedef std::map<std::wstring, std::vector<float>*> Variables;
-
 std::unordered_map<std::string, size_t> buildVocab(std::string filePath)
 {
     std::ifstream ifs(filePath);
-    size_t idx = 1;
+    size_t idx = 0;
 
     std::unordered_map<std::string, size_t> vocab;
     std::string line;
@@ -39,7 +36,6 @@ std::unordered_map<std::string, size_t> buildVocab(std::string filePath)
     }
 
     ifs.close();
-
     return vocab;
 }
 
@@ -57,7 +53,6 @@ std::unordered_map<size_t, std::string> buildInvVocab(std::string filePath)
     }
 
     ifs.close();
-
     return vocab;
 }
 
@@ -66,7 +61,7 @@ size_t word2idx(std::string word, std::unordered_map<std::string, size_t>& word2
     std::unordered_map<std::string, size_t>::iterator iter = word2idxVocab.find(word);
     if (iter == word2idxVocab.end())
     {
-        throw std::exception("word not found in source vocab");
+        throw std::runtime_error("word not found in source vocab");
     }
 
     return iter->second;
@@ -78,7 +73,7 @@ std::string idx2word(size_t idx, std::unordered_map<size_t, std::string>& idx2wo
     std::unordered_map<size_t, std::string>::iterator iter = idx2wordVocab.find(idx);
     if (iter == idx2wordVocab.end())
     {
-        throw std::exception("word index (idx) is not found in target vocab");
+        throw std::runtime_error("word index is not found in target vocab");
     }
 
     return iter->second;
@@ -104,7 +99,7 @@ std::vector<std::string> feedInputVectors(std::string sentence, std::unordered_m
 {
     std::vector<std::string> words;
 
-    // split input sentence by space
+    // split input sentence by space.
     char delimiters = ' ';
     size_t begin = 0;
     size_t end = sentence.find_first_of(delimiters);
@@ -200,6 +195,7 @@ int main(int argc, char* argv[])
     std::string app = argv[0];
     std::string path;
     size_t pos;
+    int ret;
 
 #ifdef _WIN32
     pos = app.rfind("\\");
@@ -219,80 +215,100 @@ int main(int argc, char* argv[])
 
     const std::string modelFilePath = modelWorkingDirectory + "ATIS.slot.lstm";
 
-    struct stat statBuf;
-    if (stat(modelFilePath.c_str(), &statBuf) != 0)
+    try
     {
-        fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/Text/ATIS to create the model.\n", modelFilePath.c_str());
-        return(1);
+        struct stat statBuf;
+        if (stat(modelFilePath.c_str(), &statBuf) != 0)
+        {
+            fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/Text/ATIS to create the model.\n", modelFilePath.c_str());
+            return(1);
+        }
+
+        std::string networkConfiguration;
+        networkConfiguration += "modelPath=\"" + modelFilePath + "\"";
+
+        VariableSchema inputLayouts;
+        VariableSchema outputLayouts;
+        IEvaluateModelExtended<float> *eval;
+        eval = SetupNetworkAndGetLayouts(networkConfiguration, inputLayouts, outputLayouts);
+
+        vector<size_t> inputBufferSize;
+        for (size_t i = 0; i < inputLayouts.size(); i++)
+        {
+            fprintf(stderr, "Input node name: %ls\n", inputLayouts[i].m_name.c_str());
+            fprintf(stdout, "Input feature dimension: %" PRIu64 "\n", inputLayouts[i].m_numElements);
+            inputBufferSize.push_back(inputLayouts[i].m_numElements);
+        }
+
+        vector<size_t> outputBufferSize;
+        for (size_t i = 0; i < outputLayouts.size(); i++)
+        {
+            outputBufferSize.push_back(outputLayouts[i].m_numElements);
+        }
+
+        // build source word to id vocab
+        const::string sourceVocab = modelBaseDir + "/data/ATIS.vocab";
+        std::unordered_map<std::string, size_t> word2idxVocab = buildVocab(sourceVocab);
+
+        // build id to target word vocab
+        const::string targetVocab = modelBaseDir + "/data/ATIS.label";
+        std::unordered_map<size_t, std::string> idx2wordVocab = buildInvVocab(targetVocab);
+
+        // input example, do language understanding by this sentence
+        // One single space is used as word sperator. 
+        std::string inputSequences = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
+
+        Values<float> inputBuffers = inputLayouts.CreateBuffers<float>(inputBufferSize);
+        Values<float> outputBuffers = outputLayouts.CreateBuffers<float>(outputBufferSize);
+
+        // feed input sequence vectors to network
+        std::vector<std::string> words = feedInputVectors(inputSequences, word2idxVocab, inputBuffers, inputLayouts);
+
+        // forward propagation
+        eval->ForwardPass(inputBuffers, outputBuffers);
+
+        // get output from output layer
+        auto buf = outputBuffers[0].m_buffer;
+        size_t bufSize = outputBuffers[0].m_buffer.size();
+
+        std::vector<std::string> outputs;
+        size_t outputDim = outputLayouts[0].m_numElements;
+        size_t outputStep = bufSize / outputDim;
+
+        auto iter = buf.begin();
+        for (size_t i = 0; i < outputStep; i++)
+        {
+            auto max_iter = std::max_element(iter, iter + outputDim);
+            auto index = max_iter - iter;
+            outputs.push_back(idx2word(index, idx2wordVocab));
+            iter += outputDim;
+        }
+
+        words.erase(words.begin());
+        words.pop_back();
+        fprintf(stdout, "Slot tag for sentence \"%s\" is as followings:\n", inputSequences.c_str());
+        for (size_t i = 0; i < outputs.size(); i++)
+        {
+            fprintf(stdout, "%10s -- %s\n", words[i].c_str(), outputs[i].c_str());
+        }
+
+        eval->Destroy();
+       
+        // This pattern is used by End2EndTests to check whether the program runs to complete.
+        fprintf(stderr, "Evaluation complete.\n");
+        ret = 0;
+    }
+    catch (const std::exception& err)
+    {
+        fprintf(stderr, "Evaluation failed. EXCEPTION occurred: %s\n", err.what());
+        ret = 1;
+    }
+    catch (...)
+    {
+        fprintf(stderr, "Evaluation failed. Unknown ERROR occurred.\n");
+        ret = 1;
     }
 
-    std::string networkConfiguration;
-    networkConfiguration += "modelPath=\"" + modelFilePath + "\"";
-
-    VariableSchema inputLayouts;
-    VariableSchema outputLayouts;
-    IEvaluateModelExtended<float> *eval;
-    eval = SetupNetworkAndGetLayouts(networkConfiguration, inputLayouts, outputLayouts);
-
-    vector<size_t> inputBufferSize;
-    for (size_t i = 0; i < inputLayouts.size(); i++)
-    {
-        fprintf(stderr, "Input node name: %ls\n", inputLayouts[i].m_name.c_str());
-        fprintf(stdout, "Input feature dimension: %" PRIu64 "\n", inputLayouts[i].m_numElements);
-        inputBufferSize.push_back(inputLayouts[i].m_numElements);
-    }
-
-    vector<size_t> outputBufferSize;
-    for (size_t i = 0; i < outputLayouts.size(); i++)
-    {
-        outputBufferSize.push_back(outputLayouts[i].m_numElements);
-    }
-
-    // build source word to id vocab
-    const::string sourceVocab = modelBaseDir + "/data/ATIS.vocab";
-    std::unordered_map<std::string, size_t> word2idxVocab = buildVocab(sourceVocab);
-
-    // build id to target word vocab
-    const::string targetVocab = modelBaseDir + "/data/ATIS.label";
-    std::unordered_map<size_t, std::string> idx2wordVocab = buildInvVocab(targetVocab);
-
-    // input example, do language understanding by this sentence
-    std::string inputSequences = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
-
-    Values<float> inputBuffers = inputLayouts.CreateBuffers<float>(inputBufferSize);
-    Values<float> outputBuffers = outputLayouts.CreateBuffers<float>(outputBufferSize);
-
-    // feed input sequence vectors to network
-    std::vector<std::string> words = feedInputVectors(inputSequences, word2idxVocab, inputBuffers, inputLayouts);
-
-    // forward propagation
-    eval->ForwardPass(inputBuffers, outputBuffers);
-
-    // get output from output layer
-    auto buf = outputBuffers[0].m_buffer;
-    size_t bufSize = outputBuffers[0].m_buffer.size();
-
-    std::vector<std::string> outputs;
-    size_t outputDim = outputLayouts[0].m_numElements;
-    size_t outputStep = bufSize / outputDim;
-
-    auto iter = buf.begin();
-    for (size_t i = 0; i < outputStep; i++)
-    {
-        auto max_iter = std::max_element(iter, iter + outputDim);
-        auto index = max_iter - iter;
-        outputs.push_back(idx2word(index, idx2wordVocab));
-        iter += outputDim;
-    }
-
-    words.erase(words.begin());
-    words.pop_back();
-    fprintf(stdout, "Slot tag for sentence \"%s\" is as followings:\n", inputSequences.c_str());
-    for (size_t i = 0; i < outputs.size(); i++)
-    {
-        fprintf(stdout, "%10s -- %s\n", words[i].c_str(), outputs[i].c_str());
-    }
-
-    eval->Destroy();
-    return 0;
+    fflush(stderr);
+    return ret;
 }
