@@ -85,7 +85,7 @@ def dynamic_axes(self):
         for (size_t i=0; i<rank; i++)
         {
             size_t dim = (&shape)->operator[](i);
-            PyTuple_SetItem(result, i, PyInt_FromLong(dim));
+            PyTuple_SetItem(result, rank-i-1, PyInt_FromLong(dim));
         }
         return result;
     }
@@ -914,7 +914,7 @@ fail:
 %extend CNTK::NDMask {
     PyObject* to_numpy() {
         std::vector<size_t> cntk_dims = (*self).Shape().Dimensions();
-        static_assert(dims.size()==2, "mask requires exactly two dimensions");
+        static_assert(cntk_dims.size()==2, "mask requires exactly two dimensions");
         std::vector<size_t> dimensions = {cntk_dims[1], cntk_dims[0]};
 
         size_t num_elements = dimensions[0] * dimensions[1];
@@ -966,17 +966,17 @@ fail:
 
         PyArrayObject* array = (PyArrayObject*)pyobj;
 
-        int rank = PyArray_NDIM(array);
-
-        npy_intp* np_shape = PyArray_SHAPE(array);
-        std::vector<size_t> shape;
+        int rank = PyArray_NDIM(array); 
+        
+        npy_intp* np_shape = PyArray_SHAPE(array); 
+        std::vector<size_t> shape(rank);
 
         npy_intp num_elements = 1;
         // CNTK uses column major, thus we reverse the shape
-        for (int i=rank-1; i>=0; i--)
+        for (int i=0; i<rank; i++)
         {
-            shape.push_back(np_shape[i]);
-            num_elements *= np_shape[i];
+            shape[rank-i-1] = np_shape[i];
+            num_elements *= np_shape[i];            
         }
 
         int typecode = PyArray_TYPE(array);
