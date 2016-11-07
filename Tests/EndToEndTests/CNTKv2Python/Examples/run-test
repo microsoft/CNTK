@@ -7,15 +7,6 @@ python -c "import numpy; print('NumPy: %s'%numpy.version.full_version)"
 python -c "import scipy; print('SciPy: %s'%scipy.version.full_version)"
 python -c "import pytest; print('PyTest: %s'%pytest.__version__)"
 
-EXAMPLES_DIR=$TEST_ROOT_DIR/../../bindings/python/examples
-
-pushd $EXAMPLES_DIR || exit $?
-echo Current dir: $PWD
-
-py.test --deviceid $TEST_DEVICE
-
 if [ "$?" -eq "0" ]; then
   echo "__COMPLETED__"
 fi
-
-popd

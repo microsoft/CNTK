@@ -20,7 +20,7 @@ fi
 # Copy the test data to the test run directory
 TestDataDir=$TEST_RUN_DIR/TestData
 mkdir $TestDataDir
-cp -R $TEST_DIR/../../../../Examples/Other/Simple2d/Data/SimpleDataTrain_cntk_text.txt $TestDataDir || exit $?
+cp -R $TEST_DIR/../../../../Tests/EndToEndTests/Simple2d/Data/SimpleDataTrain_cntk_text.txt $TestDataDir || exit $?
 
 # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
 if [ "$TEST_DEVICE" == "cpu" ]; then

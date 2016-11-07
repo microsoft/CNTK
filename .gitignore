@@ -27,6 +27,34 @@ Examples/Image/DataSets/Pascal/VOC*
 Examples/Image/DataSets/Pascal/selective_search_data*
 Examples/Image/Detection/FastRCNN/proc/
 
+Source/Readers/ImageReader/ImageTransformers - Copy.cpp
+Source/Readers/ImageReader/ImageTransformers - Copy.h
+Examples/Evaluation/packages/
+Examples/Image/Classification/ConvNet/Ndl/
+Examples/Image/DataSets/CIFAR-10/CIFAR-10_mean.xml
+Examples/Image/DataSets/CIFAR-10/Test_cntk_text.txt
+Examples/Image/DataSets/CIFAR-10/Train_cntk_text.txt
+Examples/Image/DataSets/CIFAR-10/cifar-10-batches-py/
+Examples/Image/DataSets/CIFAR-10/test/
+Examples/Image/DataSets/CIFAR-10/test_map.txt
+Examples/Image/DataSets/CIFAR-10/test_regrLabels.txt
+Examples/Image/DataSets/CIFAR-10/train/
+Examples/Image/DataSets/CIFAR-10/train_map.txt
+Examples/Image/DataSets/CIFAR-10/train_regrLabels.txt
+Examples/Image/DataSets/MNIST/Test-28x28_cntk_text.txt
+Examples/Image/DataSets/MNIST/Train-28x28_cntk_text.txt
+Examples/Image/DataSets/grocery/
+Examples/Image/Detection/FastRCNN/data/
+Examples/Image/Detection/FastRCNN/fastrcnn_ResNet_AvgPooling.cntk
+Examples/Image/Detection/FastRCNN/fastrcnn_Resnet_Roi_between_ConvLayers.cntk
+Examples/Image/Detection/FastRCNN/fastrcnn_master.cntk
+Examples/Image/Detection/FastRCNN/testConfigs/
+Examples/Image/PretrainedModels/
+bindings/python/tutorials/.ipynb_checkpoints/
+bindings/python/tutorials/atis.test.ctf
+bindings/python/tutorials/atis.train.ctf
+bindings/python/tutorials/data/
+
 
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets

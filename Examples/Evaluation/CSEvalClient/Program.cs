@@ -244,7 +244,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             {
                 // The examples assume the executable is running from the data folder
                 // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Other\Simple2d\Config");
+                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Tests\EndToEndTests\Simple2d");
                 Environment.CurrentDirectory = initialDirectory;
 
                 List<float> outputs;
@@ -291,7 +291,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             {
                 // The examples assume the executable is running from the data folder
                 // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Other\Simple2d\Config");
+                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Tests\EndToEndTests\Simple2d");
                 Environment.CurrentDirectory = initialDirectory;
 
                 List<float> outputs;

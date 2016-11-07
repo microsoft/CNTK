@@ -14,7 +14,6 @@ Please refer to the Readme file in the corresponding folder for further details.
 
 |Folder                   | Domain                                           | Network types   |
 |:------------------------|:-------------------------------------------------|:----------------|
-|Other/Simple2d           | Synthetic 2d data                                | FF (CPU and GPU)
 |Speech/AN4               | Speech data (CMU AN4)                            | FF and LSTM
 |Image/GettingStarted     | Image data (MNIST handwritten digit recognition) | CNN 
-|Text/PennTreebank        | Text data (penn treebank)                        | RNN
+|SeqToSeq/PennTreebank    | Text data (penn treebank)                        | RNN

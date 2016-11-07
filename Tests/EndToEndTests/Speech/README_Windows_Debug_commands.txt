@@ -63,9 +63,9 @@ COMMAND:     currentDirectory=$(SolutionDir)ExampleSetups\Image\MNIST  configFil
 
 COMMAND:     configFile=$(SolutionDir)Tests/EndToEndTests/Image/QuickE2E/cntk.cntk  RunDir=$(SolutionDir)Tests/EndToEndTests/Image/_run  DataDir=$(SolutionDir)Tests/EndToEndTests/Image/Data  ConfigDir=$(SolutionDir)Tests/EndToEndTests/Image/QuickE2E  stderr=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/QuickE2E/models/cntkImage.dnn.log  DeviceId=0  useCuDnn=false   makeMode=false
 
---- Other/Simple2d:
+--- Tests/EndToEndTests/Simple2d:
 
-COMMAND:     configFile=$(SolutionDir)Examples/Other/Simple2d/Config/Simple.cntk  RunDir=$(SolutionDir)Examples/Other/Simple2d/_run  DataDir=$(SolutionDir)Examples/Other/Simple2d/Data  ConfigDir=$(SolutionDir)Examples/Other/Simple2d/Config  stderr=$(SolutionDir)Examples/Other/Simple2d/_run/Simple.log  DeviceId=0  useCuDnn=false   makeMode=false
+COMMAND:     configFile=$(SolutionDir)Tests/EndToEndTests/Simple2d/OneHidden.cntk  RunDir=$(SolutionDir)Tests/EndToEndTests/Simple2d/_run  DataDir=$(SolutionDir)Tests/EndToEndTests/Simple2d/Data  ConfigDir=$(SolutionDir)Tests/EndToEndTests/Simple2d  stderr=$(SolutionDir)Tests/EndToEndTests/Simple2d/_run/Simple.log  DeviceId=0  useCuDnn=false   makeMode=false
 
 --- Text/RNN:
 
@@ -80,4 +80,4 @@ COMMAND:    configFile=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassifica
 Simple test
 -----------
 
-COMMAND:     currentDirectory=$(SolutionDir)Demos/Simple  configFile=Simple.cntk  stderr=RunDir/Simple.cntk.log  RootDir=$(SolutionDir)  DeviceNumber=-1
+COMMAND:     currentDirectory=$(SolutionDir)Demos/Simple  configFile=OneHidden.cntk  stderr=RunDir/OneHidden.cntk.log  RootDir=$(SolutionDir)  DeviceNumber=-1

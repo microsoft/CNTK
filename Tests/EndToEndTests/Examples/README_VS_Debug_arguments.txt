@@ -23,13 +23,13 @@ COMMAND:  configFile=$(SolutionDir)\Examples\Image\MNIST\Config/02_Convolution.c
 
 COMMAND:  configFile=$(SolutionDir)\Examples\Image\MNIST\Config/03_ConvBatchNorm.config currentDirectory=$(SolutionDir)\Tests\EndToEndTests\Image\Data RunDir=$(SolutionDir)\Tests\EndToEndTests\Examples\Image\MNIST_03_ConvBatchNorm@debug_gpu DataDir=$(SolutionDir)\Tests\EndToEndTests\Image\Data ConfigDir=$(SolutionDir)\Examples\Image\MNIST\Config OutputDir=$(SolutionDir)\Tests\EndToEndTests\Examples\Image\MNIST_03_ConvBatchNorm@debug_gpu DeviceId=0 train=[reader=[file=$(SolutionDir)\Tests\EndToEndTests\Image\Data/Train.txt]] test=[reader=[file=$(SolutionDir)\Tests\EndToEndTests\Image\Data/Test.txt]] train=[SGD=[maxEpochs=1]] train=[SGD=[epochSize=128]] train=[reader=[randomize=none]] imageLayout="cudnn"
 
---- Examples/Other/Simple2d/MultiGpu 
+--- Tests/EndToEndTests/Simple2d/MultiGpu 
 
-COMMAND:  configFile=$(SolutionDir)\Examples\Other\Simple2d\Config/Multigpu.config currentDirectory=$(SolutionDir)\Examples\Other\Simple2d\Data RunDir=$(SolutionDir)\Tests\EndToEndTests\Examples\Other\Simple2d_MultiGpu@debug_gpu DataDir=$(SolutionDir)\Examples\Other\Simple2d\Data ConfigDir=$(SolutionDir)\Examples\Other\Simple2d\Config OutputDir=$(SolutionDir)\Tests\EndToEndTests\Examples\Other\Simple2d_MultiGpu@debug_gpu DeviceId=0 Multigpu_Demo_Train=[SGD=[maxEpochs=1]] Multigpu_Demo_Train=[SGD=[epochSize=100]] Multigpu_Demo_Train=[reader=[randomize=none]]
+COMMAND:  configFile=$(SolutionDir)\Tests\EndToEndTests\Simple2d/Multigpu.config currentDirectory=$(SolutionDir)\Tests\EndToEndTests\Simple2d\Data RunDir=$(SolutionDir)\Tests\EndToEndTests\Tests\EndToEndTests\Simple2d_MultiGpu@debug_gpu DataDir=$(SolutionDir)\Tests\EndToEndTests\Simple2d\Data ConfigDir=$(SolutionDir)\Tests\EndToEndTests\Simple2d OutputDir=$(SolutionDir)\Tests\EndToEndTests\Tests\EndToEndTests\Simple2d_MultiGpu@debug_gpu DeviceId=0 Multigpu_Demo_Train=[SGD=[maxEpochs=1]] Multigpu_Demo_Train=[SGD=[epochSize=100]] Multigpu_Demo_Train=[reader=[randomize=none]]
 
---- Examples/Other/Simple2d/Simple 
+--- Tests/EndToEndTests/Simple2d/OneHidden 
 
-COMMAND:  configFile=$(SolutionDir)\Examples\Other\Simple2d\Config/Simple.config currentDirectory=$(SolutionDir)\Examples\Other\Simple2d\Data RunDir=$(SolutionDir)\Tests\EndToEndTests\Examples\Other\Simple2d_Simple@debug_gpu DataDir=$(SolutionDir)\Examples\Other\Simple2d\Data ConfigDir=$(SolutionDir)\Examples\Other\Simple2d\Config OutputDir=$(SolutionDir)\Tests\EndToEndTests\Examples\Other\Simple2d_Simple@debug_gpu DeviceId=0 Simple_Demo_Train=[SGD=[maxEpochs=1]] Simple_Demo_Train=[SGD=[epochSize=100]] Simple_Demo_Train=[reader=[randomize=none]]
+COMMAND:  configFile=$(SolutionDir)\Tests\EndToEndTests\Simple2d/OneHidden.config currentDirectory=$(SolutionDir)\Tests\EndToEndTests\Simple2d\Data RunDir=$(SolutionDir)\Tests\EndToEndTests\Tests\EndToEndTests\Simple2d_Simple@debug_gpu DataDir=$(SolutionDir)\Tests\EndToEndTests\Simple2d\Data ConfigDir=$(SolutionDir)\Tests\EndToEndTests\Simple2d OutputDir=$(SolutionDir)\Tests\EndToEndTests\Tests\EndToEndTests\Simple2d_Simple@debug_gpu DeviceId=0 Simple_Demo_Train=[SGD=[maxEpochs=1]] Simple_Demo_Train=[SGD=[epochSize=100]] Simple_Demo_Train=[reader=[randomize=none]]
 
 --- Examples/Speech/AN4/FeedForward 
 
