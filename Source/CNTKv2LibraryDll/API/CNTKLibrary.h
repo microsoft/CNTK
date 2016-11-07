@@ -2399,6 +2399,11 @@ namespace CNTK
         ///
         CNTK_API static FunctionPtr LoadModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
+        ///
+        /// Prints the entire graph underlying this function to stderr
+        ///
+        CNTK_API void PrintGraph() const;
+
     private:
 
         template <typename VariableType, typename FilterFunction>
@@ -2898,6 +2903,13 @@ namespace CNTK
     {
         CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");
         CNTK_API FunctionPtr IsLast(const Variable& operand, const std::wstring& name = L"");
+
+        CNTK_API FunctionPtr Slice(const Variable& operand, int beginIndex, int endIndex, const std::wstring& name = L"");
+
+        ///
+        /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the operands lone dynamic sequence axis
+        ///
+        CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name = L"");
 
         CNTK_API FunctionPtr First(const Variable& operand, const std::wstring& name = L"");
         CNTK_API FunctionPtr Last(const Variable& operand, const std::wstring& name = L"");

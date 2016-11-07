@@ -166,7 +166,7 @@ def test_op_slice_sequence(input_data, slice_params, expected_result, device_id,
           dynamic_axes=[Axis.default_batch_axis(), t],
           name='a')
 
-    result = C.slice(a, axis=t, begin_index=slice_params[
+    result = C.sequence.slice(a, begin_index=slice_params[
                      0], end_index=slice_params[1])
 
     def grad_slice(x, beg_index, end_index):
