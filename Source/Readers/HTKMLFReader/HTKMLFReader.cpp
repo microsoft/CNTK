@@ -339,8 +339,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     // get the read method, defaults to "blockRandomize" other option is "rollingWindow"
     wstring readMethod(readerConfig(L"readMethod", L"blockRandomize"));
 
-    if (readMethod == L"blockRandomize" && randomize == randomizeNone)
-        InvalidArgument("'randomize' cannot be 'none' when 'readMethod' is 'blockRandomize'.");
+    // if (readMethod == L"blockRandomize" && randomize == randomizeNone)
+    //     InvalidArgument("'randomize' cannot be 'none' when 'readMethod' is 'blockRandomize'.");
 
     if (readMethod == L"rollingWindow" && numExpandToUtt>0)
         RuntimeError("rollingWindow reader does not support expandToUtt. Change to blockRandomize.");

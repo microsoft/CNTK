@@ -1276,16 +1276,18 @@ private:
                 randomizedchunkrefs[i].push_back(allchunks[i].begin() + j);
             assert(randomizedchunkrefs[i].size() == allchunks[i].size());
 
-            if (m_useMersenneTwister)
-            {
-                m_rng.seed((unsigned long)sweep);
-                Microsoft::MSR::CNTK::RandomShuffleMT(randomizedchunkrefs[i], m_rng); // bring into random order (with random seed depending on sweep)
-            }
-            else
-            {
-                // note that sincew randomshuffle() uses sweep as seed, this will keep the randomization common across all feature streams
-                randomshuffle(randomizedchunkrefs[i], sweep); // bring into random order (with random seed depending on sweep)
-            }
+	    if (randomizationrange > 0) {
+                if (m_useMersenneTwister)
+                {
+                    m_rng.seed((unsigned long)sweep);
+                    Microsoft::MSR::CNTK::RandomShuffleMT(randomizedchunkrefs[i], m_rng); // bring into random order (with random seed depending on sweep)
+                }
+                else
+                {
+                    // note that sincew randomshuffle() uses sweep as seed, this will keep the randomization common across all feature streams
+                    randomshuffle(randomizedchunkrefs[i], sweep); // bring into random order (with random seed depending on sweep)
+                }
+	    }
         }
 
         // place them onto the global timeline -> randomizedchunks[]
@@ -1322,10 +1324,15 @@ private:
                     chunk.windowbegin = randomizedchunks[i][k - 1].windowbegin; // might be too early
                     chunk.windowend = randomizedchunks[i][k - 1].windowend;     // might have more space
                 }
-                while (chunk.globalts - randomizedchunks[i][chunk.windowbegin].globalts > randomizationrange / 2)
+	        if (randomizationrange > 0) {
+                    while (chunk.globalts - randomizedchunks[i][chunk.windowbegin].globalts > randomizationrange / 2)
+                        chunk.windowbegin++; // too early
+                    while (chunk.windowend < randomizedchunks[i].size() && randomizedchunks[i][chunk.windowend].globalte() - chunk.globalts < randomizationrange / 2)
+                        chunk.windowend++; // got more space
+		} else if (k > 0){ // randomizationrange == 0
                     chunk.windowbegin++; // too early
-                while (chunk.windowend < randomizedchunks[i].size() && randomizedchunks[i][chunk.windowend].globalte() - chunk.globalts < randomizationrange / 2)
                     chunk.windowend++; // got more space
+		}
             }
         }
         if (!framemode) // utterance mode
@@ -1381,44 +1388,46 @@ private:
             // check we got those setup right
 
             // we now randomly shuffle randomizedutterancerefs[pos], while considering the constraints of what chunk range needs to be in memory
-            m_useMersenneTwister ? m_rng.seed((unsigned long)sweep) : srand((unsigned int)sweep + 1);
-            for (size_t i = 0; i < randomizedutterancerefs.size(); i++)
-            {
-                // get valid randomization range, expressed in chunks
-                const size_t windowbegin = positionchunkwindows[i].windowbegin();
-                const size_t windowend = positionchunkwindows[i].windowend();
-
-                // get valid randomization range, expressed in utterance positions
-                // Remember, utterance positions are defined by chunks.
-                const size_t posbegin = randomizedchunks[0][windowbegin].utteranceposbegin;
-                const size_t posend = randomizedchunks[0][windowend - 1].utteranceposend();
-
-                // randomization range for this utterance position is [posbegin, posend)
-                for (;;)
+	    if (randomizationrange > 0) {
+                m_useMersenneTwister ? m_rng.seed((unsigned long)sweep) : srand((unsigned int)sweep + 1);
+                for (size_t i = 0; i < randomizedutterancerefs.size(); i++)
                 {
-                    // pick a random location
-                    const size_t j = m_useMersenneTwister ?
-                        Microsoft::MSR::CNTK::RandMT(posbegin, posend, m_rng) :
-                        Microsoft::MSR::CNTK::rand(posbegin, posend); // a random number within the window
-                    if (i == j)
-                        break; // the random gods say "this one points to its original position"... nothing wrong about that, but better not try to swap
+                    // get valid randomization range, expressed in chunks
+                    const size_t windowbegin = positionchunkwindows[i].windowbegin();
+                    const size_t windowend = positionchunkwindows[i].windowend();
 
-                    // We want to swap utterances at i and j, but need to make sure they remain in their allowed range.
-                    // This is guaranteed for a so-far untouched utterance, but both i and j may have been touched by a previous swap.
+                    // get valid randomization range, expressed in utterance positions
+                    // Remember, utterance positions are defined by chunks.
+                    const size_t posbegin = randomizedchunks[0][windowbegin].utteranceposbegin;
+                    const size_t posend = randomizedchunks[0][windowend - 1].utteranceposend();
 
-                    // We want to use the utterance previously referenced at utterance position j at position i. Is that allowed?
-                    if (!positionchunkwindows[i].isvalidforthisposition(randomizedutterancerefs[j]))
-                        continue; // nope --try another
+                    // randomization range for this utterance position is [posbegin, posend)
+                    for (;;)
+                    {
+                        // pick a random location
+                        const size_t j = m_useMersenneTwister ?
+                            Microsoft::MSR::CNTK::RandMT(posbegin, posend, m_rng) :
+                            Microsoft::MSR::CNTK::rand(posbegin, posend); // a random number within the window
+                        if (i == j)
+                            break; // the random gods say "this one points to its original position"... nothing wrong about that, but better not try to swap
 
-                    // Likewise may we use the utterance previously referenced at utterance position i at position j?
-                    if (!positionchunkwindows[j].isvalidforthisposition(randomizedutterancerefs[i]))
-                        continue; // nope --try another
+                        // We want to swap utterances at i and j, but need to make sure they remain in their allowed range.
+                        // This is guaranteed for a so-far untouched utterance, but both i and j may have been touched by a previous swap.
 
-                    // yep--swap them
-                    randomizedutterancerefs[i].swap(randomizedutterancerefs[j]);
-                    break;
+                        // We want to use the utterance previously referenced at utterance position j at position i. Is that allowed?
+                        if (!positionchunkwindows[i].isvalidforthisposition(randomizedutterancerefs[j]))
+                            continue; // nope --try another
+
+                        // Likewise may we use the utterance previously referenced at utterance position i at position j?
+                        if (!positionchunkwindows[j].isvalidforthisposition(randomizedutterancerefs[i]))
+                            continue; // nope --try another
+
+                        // yep--swap them
+                        randomizedutterancerefs[i].swap(randomizedutterancerefs[j]);
+                        break;
+                    }
                 }
-            }
+	    }
 
             // place the randomized utterances on the global timeline so we can find them by globalts
             size_t t = sweepts;
