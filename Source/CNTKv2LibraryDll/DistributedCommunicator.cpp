@@ -12,6 +12,7 @@
 #include "CUDAPageLockedMemAllocator.h"
 #include "MatrixQuantizerImpl.h"
 #include "GPUDataTransferer.h"
+#include <numeric>
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -170,6 +171,89 @@ namespace CNTK
     void MPICommunicatorImpl::Concatenate(const std::vector<ValuePtr>&, std::vector<ValuePtr>&, const std::unordered_set<DistributedWorkerDescriptor>&)
     {
         NOT_IMPLEMENTED;
+    }
+
+    void MPICommunicatorImpl::Gather(
+        const Dictionary& input,
+        std::vector<std::shared_ptr<Dictionary>>& output,
+        const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers)
+    {
+        CheckWorkers(sendToWorkers);
+
+        std::stringstream dict;
+        dict << input;
+        std::string encoded = dict.str();
+
+        // Exchange sizes.
+        int encodedSizeInBytes = (int)encoded.size();
+        std::vector<int> othersSize;
+        othersSize.resize(m_mpi->NumNodesInUse());
+        m_mpi->Gather(&encodedSizeInBytes, 1, &othersSize[0], 1, 0);
+
+        output.resize(m_mpi->NumNodesInUse());
+        int totalSizeInBytes = std::accumulate(othersSize.begin(), othersSize.end(), 0);
+
+        // Exchange actual data.
+        std::vector<char> gathered;
+        gathered.resize(totalSizeInBytes);
+        std::vector<int> offsets;
+        offsets.resize(m_mpi->NumNodesInUse());
+        m_mpi->Gatherv(&encoded[0], encoded.size(), &gathered[0], &othersSize[0], &offsets[0], 0);
+
+        offsets.push_back(totalSizeInBytes);
+        output.resize(m_workers.size());
+        for (size_t i = 0; i < offsets.size() - 1; ++i)
+        {
+            size_t startOffset = offsets[i];
+            size_t size = offsets[i + 1] - startOffset;
+            std::stringstream ss;
+            ss.write(&gathered[startOffset], size);
+            output[i] = std::make_shared<Dictionary>();
+            ss >> *output[i];
+        }
+    }
+
+    void MPICommunicatorImpl::Concatenate(const std::vector<NDArrayViewPtr>& input, std::vector<NDArrayViewPtr>& output, const std::unordered_set<DistributedWorkerDescriptor>& workers)
+    {
+        // TODO: Currently we only support concatenation of inputs of the same size.
+        CheckWorkers(workers);
+
+        // Check inputs, currently we support only CPU
+        auto nonCpu = std::find_if(input.begin(), input.end(), [](const NDArrayViewPtr& v) { return v->Device() != DeviceDescriptor::CPUDevice(); });
+        if (nonCpu != input.end())
+            LogicError("Currently only CPU located buffers are supported for concatenation.");
+
+        output.resize(input.size());
+        // Currently we only support concatenation of input of the same size.
+        // Gathering blocks sequentially.
+        for (size_t i = 0; i < input.size(); ++i)
+        {
+            if (output[i] == nullptr || 
+                output[i]->Shape().TotalSize() != m_mpi->NumNodesInUse() * input[i]->Shape().TotalSize() ||
+                output[i]->GetDataType() != input[i]->GetDataType())
+            {
+                // Allocating flat array for all ranks.
+                output[i] = std::make_shared<NDArrayView>(input[i]->GetDataType(), NDShape{ input[i]->Shape().TotalSize() * m_mpi->NumNodesInUse() }, DeviceDescriptor::CPUDevice());
+            }
+        }
+
+        // Initiate concatenation.
+        std::vector<MPI_Request> allReduceRequests(input.size());
+        for (size_t i = 0; i < input.size(); ++i)
+        {
+            auto& in = input[i];
+            auto& out = output[i];
+
+            if (input[i]->GetDataType() == DataType::Float)
+                m_mpi->AllGatherAsync(in->DataBuffer<float>(), in->Shape().TotalSize(), out->WritableDataBuffer<float>(), in->Shape().TotalSize(), &allReduceRequests[i]);
+            else if (input[i]->GetDataType() == DataType::Double)
+                m_mpi->AllGatherAsync(in->DataBuffer<double>(), in->Shape().TotalSize(), out->WritableDataBuffer<double>(), in->Shape().TotalSize(), &allReduceRequests[i]);
+            else
+                LogicError("Type is not supported.");
+        }
+
+        // Wait till all requests are finished.
+        m_mpi->WaitAll(allReduceRequests);
     }
 
     void MPICommunicatorImpl::AggregateInPlace(

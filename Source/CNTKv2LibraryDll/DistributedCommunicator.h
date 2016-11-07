@@ -30,15 +30,25 @@ namespace CNTK
         virtual DistributedCommunicatorPtr SubGroup(const std::unordered_set<DistributedWorkerDescriptor>& subGroupWorkers) const override;
 
         // A collective communication API to concatenate values across each worker of this communicator. The concatenated values are only sent to the specified workers; for all others the returned Values are null
-        // TODO: Add an async variant of the Concatenate method
         virtual void Concatenate(
             const std::vector<ValuePtr>& values,
             std::vector<ValuePtr>& outValues,
             const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
 
+        virtual void Concatenate(
+            const std::vector<NDArrayViewPtr>& input,
+            std::vector<NDArrayViewPtr>& output, const
+            std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
+
+        virtual void Gather(
+            const Dictionary& input,
+            std::vector<DictionaryPtr>& output,
+            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
+
         // A collective communication API to aggregate values across each worker of this communicator. The aggregated values are only sent to the specified workers; for all others the returned Values are null
-        virtual void AggregateInPlace(const std::vector<NDArrayViewPtr>& values,
-                                      const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
+        virtual void AggregateInPlace(
+            const std::vector<NDArrayViewPtr>& values,
+            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
 
         virtual void Aggregate(
             const std::vector<NDArrayViewPtr>& inValues,

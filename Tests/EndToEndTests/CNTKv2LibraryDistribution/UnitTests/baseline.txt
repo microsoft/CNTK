@@ -1,162 +1,174 @@
-Minibatch 0: CrossEntropy loss = 0.6954454, Evaluation criterion = 0.52
-Minibatch 20: CrossEntropy loss = 0.81229057, Evaluation criterion = 0.44
-Minibatch 40: CrossEntropy loss = 0.62668446, Evaluation criterion = 0.44
-Minibatch 60: CrossEntropy loss = 0.4867942, Evaluation criterion = 0.08
-Minibatch 80: CrossEntropy loss = 0.293085, Evaluation criterion = 0.04
-Minibatch 100: CrossEntropy loss = 0.17526035, Evaluation criterion = 0.08
-Minibatch 120: CrossEntropy loss = 0.17222725, Evaluation criterion = 0.04
-Minibatch 140: CrossEntropy loss = 0.10928572, Evaluation criterion = 0.04
-Minibatch 160: CrossEntropy loss = 0.068897753, Evaluation criterion = 0
-Minibatch 180: CrossEntropy loss = 0.070378456, Evaluation criterion = 0.04
-Minibatch 200: CrossEntropy loss = 0.1981641, Evaluation criterion = 0.16
-Minibatch 220: CrossEntropy loss = 0.14033669, Evaluation criterion = 0.08
-Minibatch 240: CrossEntropy loss = 0.10872889, Evaluation criterion = 0.04
-Minibatch 260: CrossEntropy loss = 0.079692345, Evaluation criterion = 0
-Minibatch 280: CrossEntropy loss = 0.50890541, Evaluation criterion = 0.24
-Minibatch 300: CrossEntropy loss = 0.16729982, Evaluation criterion = 0.04
-Minibatch 320: CrossEntropy loss = 0.096241093, Evaluation criterion = 0.08
-Minibatch 340: CrossEntropy loss = 0.24491482, Evaluation criterion = 0.12
-Minibatch 360: CrossEntropy loss = 0.16696636, Evaluation criterion = 0.12
-Minibatch 380: CrossEntropy loss = 0.083896952, Evaluation criterion = 0.04
-Minibatch 400: CrossEntropy loss = 0.1058311, Evaluation criterion = 0.08
-Minibatch 420: CrossEntropy loss = 0.1028916, Evaluation criterion = 0.04
-Minibatch 440: CrossEntropy loss = 0.16459396, Evaluation criterion = 0.08
-Minibatch 460: CrossEntropy loss = 0.14627156, Evaluation criterion = 0.08
-Minibatch 480: CrossEntropy loss = 0.10650005, Evaluation criterion = 0.08
-Minibatch 500: CrossEntropy loss = 0.1363752, Evaluation criterion = 0.12
-Minibatch 520: CrossEntropy loss = 0.086916132, Evaluation criterion = 0.04
-Minibatch 540: CrossEntropy loss = 0.13855596, Evaluation criterion = 0.08
-Minibatch 560: CrossEntropy loss = 0.088330908, Evaluation criterion = 0.04
-Minibatch 580: CrossEntropy loss = 0.21265511, Evaluation criterion = 0.08
-Minibatch 600: CrossEntropy loss = 0.17782074, Evaluation criterion = 0.08
-Minibatch 620: CrossEntropy loss = 0.090263462, Evaluation criterion = 0.04
-Minibatch 640: CrossEntropy loss = 0.25346519, Evaluation criterion = 0.16
-Minibatch 660: CrossEntropy loss = 0.17309887, Evaluation criterion = 0.12
-Minibatch 680: CrossEntropy loss = 0.11421286, Evaluation criterion = 0.08
-Minibatch 700: CrossEntropy loss = 0.090820036, Evaluation criterion = 0.04
-Minibatch 720: CrossEntropy loss = 0.1634412, Evaluation criterion = 0.08
-Minibatch 740: CrossEntropy loss = 0.13637156, Evaluation criterion = 0.08
-Minibatch 760: CrossEntropy loss = 0.031969812, Evaluation criterion = 0
-Minibatch 780: CrossEntropy loss = 0.066480079, Evaluation criterion = 0.04
-Minibatch 0: CrossEntropy loss = 0.69331757, Evaluation criterion = 0.48
-Minibatch 20: CrossEntropy loss = 0.80803825, Evaluation criterion = 0.44
-Minibatch 40: CrossEntropy loss = 0.59340229, Evaluation criterion = 0.4
-Minibatch 60: CrossEntropy loss = 0.390079, Evaluation criterion = 0.04
-Minibatch 80: CrossEntropy loss = 0.24672558, Evaluation criterion = 0.04
-Minibatch 100: CrossEntropy loss = 0.15607712, Evaluation criterion = 0.08
-Minibatch 120: CrossEntropy loss = 0.16455307, Evaluation criterion = 0.04
-Minibatch 140: CrossEntropy loss = 0.10465605, Evaluation criterion = 0.04
-Minibatch 160: CrossEntropy loss = 0.066373091, Evaluation criterion = 0
-Minibatch 180: CrossEntropy loss = 0.067441063, Evaluation criterion = 0.04
-Minibatch 200: CrossEntropy loss = 0.19784435, Evaluation criterion = 0.16
-Minibatch 220: CrossEntropy loss = 0.140825, Evaluation criterion = 0.08
-Minibatch 240: CrossEntropy loss = 0.10816033, Evaluation criterion = 0.04
-Minibatch 260: CrossEntropy loss = 0.078140802, Evaluation criterion = 0
-Minibatch 280: CrossEntropy loss = 0.50540421, Evaluation criterion = 0.24
-Minibatch 300: CrossEntropy loss = 0.16727772, Evaluation criterion = 0.04
-Minibatch 320: CrossEntropy loss = 0.096806526, Evaluation criterion = 0.08
-Minibatch 340: CrossEntropy loss = 0.24469637, Evaluation criterion = 0.12
-Minibatch 360: CrossEntropy loss = 0.16545345, Evaluation criterion = 0.12
-Minibatch 380: CrossEntropy loss = 0.083174438, Evaluation criterion = 0.04
-Minibatch 400: CrossEntropy loss = 0.10837061, Evaluation criterion = 0.08
-Minibatch 420: CrossEntropy loss = 0.10223916, Evaluation criterion = 0.04
-Minibatch 440: CrossEntropy loss = 0.16467476, Evaluation criterion = 0.08
-Minibatch 460: CrossEntropy loss = 0.14460797, Evaluation criterion = 0.08
-Minibatch 480: CrossEntropy loss = 0.10899806, Evaluation criterion = 0.08
-Minibatch 500: CrossEntropy loss = 0.13487343, Evaluation criterion = 0.12
-Minibatch 520: CrossEntropy loss = 0.08723834, Evaluation criterion = 0.04
-Minibatch 540: CrossEntropy loss = 0.1384371, Evaluation criterion = 0.08
-Minibatch 560: CrossEntropy loss = 0.087085314, Evaluation criterion = 0.04
-Minibatch 580: CrossEntropy loss = 0.21659525, Evaluation criterion = 0.08
-Minibatch 600: CrossEntropy loss = 0.17421137, Evaluation criterion = 0.08
-Minibatch 620: CrossEntropy loss = 0.089142971, Evaluation criterion = 0.04
-Minibatch 640: CrossEntropy loss = 0.24882771, Evaluation criterion = 0.16
-Minibatch 660: CrossEntropy loss = 0.17557541, Evaluation criterion = 0.12
-Minibatch 680: CrossEntropy loss = 0.11400983, Evaluation criterion = 0.08
-Minibatch 700: CrossEntropy loss = 0.090476017, Evaluation criterion = 0.04
-Minibatch 720: CrossEntropy loss = 0.16078716, Evaluation criterion = 0.08
-Minibatch 740: CrossEntropy loss = 0.13521654, Evaluation criterion = 0.04
-Minibatch 760: CrossEntropy loss = 0.032673693, Evaluation criterion = 0
-Minibatch 780: CrossEntropy loss = 0.06836617, Evaluation criterion = 0.04
-Minibatch 0: CrossEntropy loss = 0.69867996, Evaluation criterion = 0.52
-Minibatch 20: CrossEntropy loss = 0.81037231, Evaluation criterion = 0.44
-Minibatch 40: CrossEntropy loss = 0.62135517, Evaluation criterion = 0.44
-Minibatch 60: CrossEntropy loss = 0.47872032, Evaluation criterion = 0.16
-Minibatch 80: CrossEntropy loss = 0.28000193, Evaluation criterion = 0.04
-Minibatch 100: CrossEntropy loss = 0.16768997, Evaluation criterion = 0.04
-Minibatch 120: CrossEntropy loss = 0.16949463, Evaluation criterion = 0.04
-Minibatch 140: CrossEntropy loss = 0.10876145, Evaluation criterion = 0.04
-Minibatch 160: CrossEntropy loss = 0.068323808, Evaluation criterion = 0
-Minibatch 180: CrossEntropy loss = 0.069454532, Evaluation criterion = 0.04
-Minibatch 200: CrossEntropy loss = 0.19818489, Evaluation criterion = 0.16
-Minibatch 220: CrossEntropy loss = 0.14136215, Evaluation criterion = 0.08
-Minibatch 240: CrossEntropy loss = 0.10862691, Evaluation criterion = 0.04
-Minibatch 260: CrossEntropy loss = 0.078882818, Evaluation criterion = 0
-Minibatch 280: CrossEntropy loss = 0.50608982, Evaluation criterion = 0.24
-Minibatch 300: CrossEntropy loss = 0.16754644, Evaluation criterion = 0.04
-Minibatch 320: CrossEntropy loss = 0.097167368, Evaluation criterion = 0.08
-Minibatch 340: CrossEntropy loss = 0.24575237, Evaluation criterion = 0.12
-Minibatch 360: CrossEntropy loss = 0.165613, Evaluation criterion = 0.12
-Minibatch 380: CrossEntropy loss = 0.083667068, Evaluation criterion = 0.04
-Minibatch 400: CrossEntropy loss = 0.10856432, Evaluation criterion = 0.08
-Minibatch 420: CrossEntropy loss = 0.10331212, Evaluation criterion = 0.04
-Minibatch 440: CrossEntropy loss = 0.16514906, Evaluation criterion = 0.08
-Minibatch 460: CrossEntropy loss = 0.14375429, Evaluation criterion = 0.08
-Minibatch 480: CrossEntropy loss = 0.11091783, Evaluation criterion = 0.08
-Minibatch 500: CrossEntropy loss = 0.13466415, Evaluation criterion = 0.12
-Minibatch 520: CrossEntropy loss = 0.08790472, Evaluation criterion = 0.04
-Minibatch 540: CrossEntropy loss = 0.13872595, Evaluation criterion = 0.08
-Minibatch 560: CrossEntropy loss = 0.08639514, Evaluation criterion = 0.04
-Minibatch 580: CrossEntropy loss = 0.21813036, Evaluation criterion = 0.08
-Minibatch 600: CrossEntropy loss = 0.1733963, Evaluation criterion = 0.08
-Minibatch 620: CrossEntropy loss = 0.089930305, Evaluation criterion = 0.04
-Minibatch 640: CrossEntropy loss = 0.2478857, Evaluation criterion = 0.16
-Minibatch 660: CrossEntropy loss = 0.17713673, Evaluation criterion = 0.12
-Minibatch 680: CrossEntropy loss = 0.11394748, Evaluation criterion = 0.04
-Minibatch 700: CrossEntropy loss = 0.090961437, Evaluation criterion = 0.04
-Minibatch 720: CrossEntropy loss = 0.15971701, Evaluation criterion = 0.08
-Minibatch 740: CrossEntropy loss = 0.13449444, Evaluation criterion = 0.04
-Minibatch 760: CrossEntropy loss = 0.032643244, Evaluation criterion = 0
-Minibatch 780: CrossEntropy loss = 0.069212947, Evaluation criterion = 0.04
-Minibatch 0: CrossEntropy loss = 0.69272743, Evaluation criterion = 0.48
-Minibatch 20: CrossEntropy loss = 0.75411827, Evaluation criterion = 0.44
-Minibatch 40: CrossEntropy loss = 0.60825462, Evaluation criterion = 0.44
-Minibatch 60: CrossEntropy loss = 0.43199036, Evaluation criterion = 0.08
-Minibatch 80: CrossEntropy loss = 0.26699848, Evaluation criterion = 0.04
-Minibatch 100: CrossEntropy loss = 0.16455112, Evaluation criterion = 0.08
-Minibatch 120: CrossEntropy loss = 0.16799458, Evaluation criterion = 0.04
-Minibatch 140: CrossEntropy loss = 0.10715288, Evaluation criterion = 0.04
-Minibatch 160: CrossEntropy loss = 0.067906699, Evaluation criterion = 0
-Minibatch 180: CrossEntropy loss = 0.068846769, Evaluation criterion = 0.04
-Minibatch 200: CrossEntropy loss = 0.19838778, Evaluation criterion = 0.16
-Minibatch 220: CrossEntropy loss = 0.14056544, Evaluation criterion = 0.08
-Minibatch 240: CrossEntropy loss = 0.10901067, Evaluation criterion = 0.04
-Minibatch 260: CrossEntropy loss = 0.078888097, Evaluation criterion = 0
-Minibatch 280: CrossEntropy loss = 0.5081443, Evaluation criterion = 0.24
-Minibatch 300: CrossEntropy loss = 0.16783852, Evaluation criterion = 0.04
-Minibatch 320: CrossEntropy loss = 0.097371922, Evaluation criterion = 0.08
-Minibatch 340: CrossEntropy loss = 0.24453039, Evaluation criterion = 0.12
-Minibatch 360: CrossEntropy loss = 0.16672588, Evaluation criterion = 0.12
-Minibatch 380: CrossEntropy loss = 0.083697166, Evaluation criterion = 0.04
-Minibatch 400: CrossEntropy loss = 0.10680311, Evaluation criterion = 0.08
-Minibatch 420: CrossEntropy loss = 0.10154376, Evaluation criterion = 0.04
-Minibatch 440: CrossEntropy loss = 0.1639748, Evaluation criterion = 0.08
-Minibatch 460: CrossEntropy loss = 0.14593479, Evaluation criterion = 0.08
-Minibatch 480: CrossEntropy loss = 0.1082506, Evaluation criterion = 0.08
-Minibatch 500: CrossEntropy loss = 0.13558685, Evaluation criterion = 0.12
-Minibatch 520: CrossEntropy loss = 0.086868982, Evaluation criterion = 0.04
-Minibatch 540: CrossEntropy loss = 0.13893658, Evaluation criterion = 0.08
-Minibatch 560: CrossEntropy loss = 0.08850028, Evaluation criterion = 0.04
-Minibatch 580: CrossEntropy loss = 0.21615963, Evaluation criterion = 0.08
-Minibatch 600: CrossEntropy loss = 0.17612524, Evaluation criterion = 0.08
-Minibatch 620: CrossEntropy loss = 0.088544693, Evaluation criterion = 0.04
-Minibatch 640: CrossEntropy loss = 0.25012495, Evaluation criterion = 0.16
-Minibatch 660: CrossEntropy loss = 0.17481609, Evaluation criterion = 0.12
-Minibatch 680: CrossEntropy loss = 0.1136517, Evaluation criterion = 0.08
-Minibatch 700: CrossEntropy loss = 0.090395937, Evaluation criterion = 0.04
-Minibatch 720: CrossEntropy loss = 0.1612656, Evaluation criterion = 0.08
-Minibatch 740: CrossEntropy loss = 0.13536187, Evaluation criterion = 0.04
-Minibatch 760: CrossEntropy loss = 0.032082968, Evaluation criterion = 0
-Minibatch 780: CrossEntropy loss = 0.067839103, Evaluation criterion = 0.04
-
-CNTKv2LibraryDistribution tests: Passed
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz
+    Hardware threads: 1
+    Total Memory: 33476764 kB
+-------------------------------------------------------------------
+/tmp/cntk-test-20161110170715.224686/CNTKv2LibraryDistribution_UnitTests@debug_gpu/TestData /cygdrive/c/repo/cntk_github6/CNTK/Tests/EndToEndTests/CNTKv2LibraryDistribution/UnitTests
+=== Running C:\Program Files\Microsoft MPI\Bin\/mpiexec.exe -n 2 -l C:\repo\cntk_github6\CNTK\x64\debug\V2LibraryDistributionTests.exe F:\cygwin64\tmp\cntk-test-20161110170715.224686\CNTKv2LibraryDistribution_UnitTests@debug_gpu/v2library.log
+[0]requestnodes [MPIWrapper]: using 2 out of 2 MPI nodes on a single host (2 requested); we (0) are in (participating)
+[1]requestnodes [MPIWrapper]: using 2 out of 2 MPI nodes on a single host (2 requested); we (1) are in (participating)
+MPI Rank 0: Minibatch 0: CrossEntropy loss = 0.69241676, Evaluation criterion = 0.48
+MPI Rank 0: Minibatch 20: CrossEntropy loss = 0.69337639, Evaluation criterion = 0.44
+MPI Rank 0: Minibatch 40: CrossEntropy loss = 0.60980656, Evaluation criterion = 0.44
+MPI Rank 0: Minibatch 60: CrossEntropy loss = 0.28104153, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 80: CrossEntropy loss = 0.17967899, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 100: CrossEntropy loss = 0.10600471, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 120: CrossEntropy loss = 0.1360253, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 140: CrossEntropy loss = 0.091501751, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 160: CrossEntropy loss = 0.056065564, Evaluation criterion = 0
+MPI Rank 0: Minibatch 180: CrossEntropy loss = 0.065461845, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 200: CrossEntropy loss = 0.20466948, Evaluation criterion = 0.16
+MPI Rank 0: Minibatch 220: CrossEntropy loss = 0.14153589, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 240: CrossEntropy loss = 0.11171801, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 260: CrossEntropy loss = 0.082311573, Evaluation criterion = 0
+MPI Rank 0: Minibatch 280: CrossEntropy loss = 0.51050812, Evaluation criterion = 0.24
+MPI Rank 0: Minibatch 300: CrossEntropy loss = 0.16595322, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 320: CrossEntropy loss = 0.097113705, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 340: CrossEntropy loss = 0.23648327, Evaluation criterion = 0.12
+MPI Rank 0: Minibatch 360: CrossEntropy loss = 0.16291708, Evaluation criterion = 0.12
+MPI Rank 0: Minibatch 380: CrossEntropy loss = 0.078984389, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 400: CrossEntropy loss = 0.12134525, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 420: CrossEntropy loss = 0.098799028, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 440: CrossEntropy loss = 0.16222105, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 460: CrossEntropy loss = 0.14262832, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 480: CrossEntropy loss = 0.10843548, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 500: CrossEntropy loss = 0.13464042, Evaluation criterion = 0.12
+MPI Rank 0: Minibatch 520: CrossEntropy loss = 0.081623363, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 540: CrossEntropy loss = 0.1375001, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 560: CrossEntropy loss = 0.085772104, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 580: CrossEntropy loss = 0.20834332, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 600: CrossEntropy loss = 0.16688332, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 620: CrossEntropy loss = 0.084589157, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 640: CrossEntropy loss = 0.23415596, Evaluation criterion = 0.12
+MPI Rank 0: Minibatch 660: CrossEntropy loss = 0.17398777, Evaluation criterion = 0.12
+MPI Rank 0: Minibatch 680: CrossEntropy loss = 0.11343967, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 700: CrossEntropy loss = 0.090730791, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 720: CrossEntropy loss = 0.15637251, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 740: CrossEntropy loss = 0.13192295, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 760: CrossEntropy loss = 0.0337656, Evaluation criterion = 0
+MPI Rank 0: Minibatch 780: CrossEntropy loss = 0.080909252, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 0: CrossEntropy loss = 0.69225273, Evaluation criterion = 0.48
+MPI Rank 0: Minibatch 20: CrossEntropy loss = 0.68108383, Evaluation criterion = 0.44
+MPI Rank 0: Minibatch 40: CrossEntropy loss = 0.55950417, Evaluation criterion = 0.4
+MPI Rank 0: Minibatch 60: CrossEntropy loss = 0.21498363, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 80: CrossEntropy loss = 0.17286421, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 100: CrossEntropy loss = 0.10292575, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 120: CrossEntropy loss = 0.13511962, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 140: CrossEntropy loss = 0.091661301, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 160: CrossEntropy loss = 0.057151217, Evaluation criterion = 0
+MPI Rank 0: Minibatch 180: CrossEntropy loss = 0.064163666, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 200: CrossEntropy loss = 0.20556129, Evaluation criterion = 0.16
+MPI Rank 0: Minibatch 220: CrossEntropy loss = 0.14280916, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 240: CrossEntropy loss = 0.11125059, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 260: CrossEntropy loss = 0.082986908, Evaluation criterion = 0
+MPI Rank 0: Minibatch 280: CrossEntropy loss = 0.51586842, Evaluation criterion = 0.24
+MPI Rank 0: Minibatch 300: CrossEntropy loss = 0.16666496, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 320: CrossEntropy loss = 0.096743765, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 340: CrossEntropy loss = 0.23621889, Evaluation criterion = 0.12
+MPI Rank 0: Minibatch 360: CrossEntropy loss = 0.16260574, Evaluation criterion = 0.12
+MPI Rank 0: Minibatch 380: CrossEntropy loss = 0.077602329, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 400: CrossEntropy loss = 0.1224162, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 420: CrossEntropy loss = 0.097998457, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 440: CrossEntropy loss = 0.1605204, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 460: CrossEntropy loss = 0.14325989, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 480: CrossEntropy loss = 0.10864172, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 500: CrossEntropy loss = 0.13486629, Evaluation criterion = 0.12
+MPI Rank 0: Minibatch 520: CrossEntropy loss = 0.08147995, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 540: CrossEntropy loss = 0.1372897, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 560: CrossEntropy loss = 0.085105867, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 580: CrossEntropy loss = 0.20932877, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 600: CrossEntropy loss = 0.16583017, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 620: CrossEntropy loss = 0.084400692, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 640: CrossEntropy loss = 0.23501949, Evaluation criterion = 0.12
+MPI Rank 0: Minibatch 660: CrossEntropy loss = 0.17227427, Evaluation criterion = 0.12
+MPI Rank 0: Minibatch 680: CrossEntropy loss = 0.11319256, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 700: CrossEntropy loss = 0.089835396, Evaluation criterion = 0.04
+MPI Rank 0: Minibatch 720: CrossEntropy loss = 0.15484819, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 740: CrossEntropy loss = 0.13176038, Evaluation criterion = 0.08
+MPI Rank 0: Minibatch 760: CrossEntropy loss = 0.034538326, Evaluation criterion = 0
+MPI Rank 0: Minibatch 780: CrossEntropy loss = 0.082417784, Evaluation criterion = 0.04
+MPI Rank 0: 
+MPI Rank 0: CNTKv2LibraryDistribution tests: Passed
+MPI Rank 1: Minibatch 0: CrossEntropy loss = 0.69241676, Evaluation criterion = 0.48
+MPI Rank 1: Minibatch 20: CrossEntropy loss = 0.69337639, Evaluation criterion = 0.44
+MPI Rank 1: Minibatch 40: CrossEntropy loss = 0.60980656, Evaluation criterion = 0.44
+MPI Rank 1: Minibatch 60: CrossEntropy loss = 0.28104153, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 80: CrossEntropy loss = 0.17967899, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 100: CrossEntropy loss = 0.10600471, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 120: CrossEntropy loss = 0.1360253, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 140: CrossEntropy loss = 0.091501751, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 160: CrossEntropy loss = 0.056065564, Evaluation criterion = 0
+MPI Rank 1: Minibatch 180: CrossEntropy loss = 0.065461845, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 200: CrossEntropy loss = 0.20466948, Evaluation criterion = 0.16
+MPI Rank 1: Minibatch 220: CrossEntropy loss = 0.14153589, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 240: CrossEntropy loss = 0.11171801, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 260: CrossEntropy loss = 0.082311573, Evaluation criterion = 0
+MPI Rank 1: Minibatch 280: CrossEntropy loss = 0.51050812, Evaluation criterion = 0.24
+MPI Rank 1: Minibatch 300: CrossEntropy loss = 0.16595322, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 320: CrossEntropy loss = 0.097113705, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 340: CrossEntropy loss = 0.23648327, Evaluation criterion = 0.12
+MPI Rank 1: Minibatch 360: CrossEntropy loss = 0.16291708, Evaluation criterion = 0.12
+MPI Rank 1: Minibatch 380: CrossEntropy loss = 0.078984389, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 400: CrossEntropy loss = 0.12134525, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 420: CrossEntropy loss = 0.098799028, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 440: CrossEntropy loss = 0.16222105, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 460: CrossEntropy loss = 0.14262832, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 480: CrossEntropy loss = 0.10843548, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 500: CrossEntropy loss = 0.13464042, Evaluation criterion = 0.12
+MPI Rank 1: Minibatch 520: CrossEntropy loss = 0.081623363, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 540: CrossEntropy loss = 0.1375001, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 560: CrossEntropy loss = 0.085772104, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 580: CrossEntropy loss = 0.20834332, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 600: CrossEntropy loss = 0.16688332, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 620: CrossEntropy loss = 0.084589157, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 640: CrossEntropy loss = 0.23415596, Evaluation criterion = 0.12
+MPI Rank 1: Minibatch 660: CrossEntropy loss = 0.17398777, Evaluation criterion = 0.12
+MPI Rank 1: Minibatch 680: CrossEntropy loss = 0.11343967, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 700: CrossEntropy loss = 0.090730791, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 720: CrossEntropy loss = 0.15637251, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 740: CrossEntropy loss = 0.13192295, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 760: CrossEntropy loss = 0.0337656, Evaluation criterion = 0
+MPI Rank 1: Minibatch 780: CrossEntropy loss = 0.080909252, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 0: CrossEntropy loss = 0.69225273, Evaluation criterion = 0.48
+MPI Rank 1: Minibatch 20: CrossEntropy loss = 0.68108383, Evaluation criterion = 0.44
+MPI Rank 1: Minibatch 40: CrossEntropy loss = 0.55950417, Evaluation criterion = 0.4
+MPI Rank 1: Minibatch 60: CrossEntropy loss = 0.21498363, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 80: CrossEntropy loss = 0.17286421, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 100: CrossEntropy loss = 0.10292575, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 120: CrossEntropy loss = 0.13511962, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 140: CrossEntropy loss = 0.091661301, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 160: CrossEntropy loss = 0.057151217, Evaluation criterion = 0
+MPI Rank 1: Minibatch 180: CrossEntropy loss = 0.064163666, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 200: CrossEntropy loss = 0.20556129, Evaluation criterion = 0.16
+MPI Rank 1: Minibatch 220: CrossEntropy loss = 0.14280916, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 240: CrossEntropy loss = 0.11125059, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 260: CrossEntropy loss = 0.082986908, Evaluation criterion = 0
+MPI Rank 1: Minibatch 280: CrossEntropy loss = 0.51586842, Evaluation criterion = 0.24
+MPI Rank 1: Minibatch 300: CrossEntropy loss = 0.16666496, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 320: CrossEntropy loss = 0.096743765, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 340: CrossEntropy loss = 0.23621889, Evaluation criterion = 0.12
+MPI Rank 1: Minibatch 360: CrossEntropy loss = 0.16260574, Evaluation criterion = 0.12
+MPI Rank 1: Minibatch 380: CrossEntropy loss = 0.077602329, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 400: CrossEntropy loss = 0.1224162, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 420: CrossEntropy loss = 0.097998457, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 440: CrossEntropy loss = 0.1605204, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 460: CrossEntropy loss = 0.14325989, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 480: CrossEntropy loss = 0.10864172, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 500: CrossEntropy loss = 0.13486629, Evaluation criterion = 0.12
+MPI Rank 1: Minibatch 520: CrossEntropy loss = 0.08147995, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 540: CrossEntropy loss = 0.1372897, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 560: CrossEntropy loss = 0.085105867, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 580: CrossEntropy loss = 0.20932877, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 600: CrossEntropy loss = 0.16583017, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 620: CrossEntropy loss = 0.084400692, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 640: CrossEntropy loss = 0.23501949, Evaluation criterion = 0.12
+MPI Rank 1: Minibatch 660: CrossEntropy loss = 0.17227427, Evaluation criterion = 0.12
+MPI Rank 1: Minibatch 680: CrossEntropy loss = 0.11319256, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 700: CrossEntropy loss = 0.089835396, Evaluation criterion = 0.04
+MPI Rank 1: Minibatch 720: CrossEntropy loss = 0.15484819, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 740: CrossEntropy loss = 0.13176038, Evaluation criterion = 0.08
+MPI Rank 1: Minibatch 760: CrossEntropy loss = 0.034538326, Evaluation criterion = 0
+MPI Rank 1: Minibatch 780: CrossEntropy loss = 0.082417784, Evaluation criterion = 0.04
+MPI Rank 1: 
+MPI Rank 1: CNTKv2LibraryDistribution tests: Passed
+/cygdrive/c/repo/cntk_github6/CNTK/Tests/EndToEndTests/CNTKv2LibraryDistribution/UnitTests
