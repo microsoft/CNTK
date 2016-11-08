@@ -117,10 +117,14 @@ public:
     static const int MininumCCMajorForGpu = 3;                                                // cntk supports GPUs with Compute Capability > 3.0
     std::vector<int> GetDevices(int number = AllDevices, BestGpuFlags flags = bestGpuNormal); // get multiple devices
     std::vector<ProcessorData *> GetProcessorData();
+    void UnlockDevice(int deviceId);
 
 private:
     bool LockDevice(int deviceId, bool trial = true);
 };
+
+static DEVICEID_TYPE s_bestDeviceId = DEVICEID_NOTYETDETERMINED;
+static std::unique_ptr<BestGpu> s_bestGpu = nullptr;
 
 // DeviceFromConfig - Parse 'deviceId' config parameter to determine what type of behavior is desired
 //Symbol - Meaning
@@ -139,32 +143,49 @@ static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU, const i
 
     if (deviceId == DEVICEID_AUTO)
     {
-        static DEVICEID_TYPE bestDeviceId = DEVICEID_NOTYETDETERMINED;
         // set bestDeviceId once if not set yet
-        if (bestDeviceId == DEVICEID_NOTYETDETERMINED)
+        if (s_bestDeviceId == DEVICEID_NOTYETDETERMINED)
         {
             // GPU device to be auto-selected, so init our class
-            static BestGpu* g_bestGpu = nullptr;
-            if (g_bestGpu == nullptr)
+            if (s_bestGpu == nullptr)
             {
-                g_bestGpu = new BestGpu();
+                s_bestGpu = make_unique<BestGpu>();
                 for (int i = 0; i < excludedDevices.size(); ++i)
                 {
-                    g_bestGpu->DisallowDevice(excludedDevices[i]);
+                    s_bestGpu->DisallowDevice(excludedDevices[i]);
                 }
 
-                g_bestGpu->DisallowUnsupportedDevices();
+                s_bestGpu->DisallowUnsupportedDevices();
             }
 
-            bestDeviceId = (DEVICEID_TYPE)g_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
+            s_bestDeviceId = (DEVICEID_TYPE)s_bestGpu->GetDevice(BestGpuFlags(bLockGPU ? (bestGpuAvoidSharing | bestGpuExclusiveLock) : bestGpuAvoidSharing));
             // TODO: Do we need to hold this pointer at all? We will only query it once. Or is it used to hold lock to a GPU?
         }
         // already chosen
-        deviceId = bestDeviceId;
+        deviceId = s_bestDeviceId;
     }
 
     return deviceId;
 }
+
+DEVICEID_TYPE GetBestDevice()
+{
+     return SelectDevice(DEVICEID_AUTO, true, intargvector());
+}
+
+void OnDeviceSelected(DEVICEID_TYPE deviceId)
+{
+    if (s_bestDeviceId != DEVICEID_NOTYETDETERMINED && s_bestDeviceId != deviceId && s_bestDeviceId >= 0)
+    {
+        // In case when the selected device id is different from the best device id, 
+        // need to release the lock corresponding to the best device, so that other processes
+        // can auto-select and use it.
+        s_bestGpu->UnlockDevice(s_bestDeviceId);
+        // also, reset best device id
+        s_bestDeviceId = DEVICEID_NOTYETDETERMINED;
+    }
+}
+
 //#ifdef MATH_EXPORTS
 //__declspec(dllexport)
 //#endif
@@ -249,6 +270,8 @@ void BestGpu::GetCudaProperties()
     if (m_cudaData)
         return;
 
+    int currentDevice, rc;
+    rc = cudaGetDevice(&currentDevice);
     int dev = 0;
 
     for (ProcessorData* pd : m_procData)
@@ -266,6 +289,10 @@ void BestGpu::GetCudaProperties()
         cudaDeviceReset();
     }
     m_cudaData = m_procData.size() > 0;
+    if (rc == CUDA_SUCCESS)
+    {
+        cudaSetDevice(currentDevice);
+    }
 }
 
 void BestGpu::Init()
@@ -304,8 +331,11 @@ BestGpu::~BestGpu()
 
     if (m_nvmlData)
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
-        nvmlShutdown();
+        nvmlReturn_t r = nvmlShutdown();
+        if ((r != NVML_SUCCESS) && !std::uncaught_exception())
+        {
+            RuntimeError("BestGPU Destructor: failed to shut down NVML. \n");
+        }
     }
 }
 
@@ -682,6 +712,7 @@ void BestGpu::QueryNvmlData()
                 if (GetCurrentProcessId() == info.pid || name.length() == 0)
                     continue;
 #ifdef _WIN32
+                // TODO: add python?
                 cntkFound = cntkFound || EqualCI(name, "cntk.exe"); // recognize ourselves
                 cntkFound = cntkFound || EqualCI(name, "cn.exe") || EqualCI(name, "dbn.exe"); // also recognize some MS-proprietary legacy tools
 #else
@@ -696,6 +727,11 @@ void BestGpu::QueryNvmlData()
     return;
 }
 
+void BestGpu::UnlockDevice(int deviceId)
+{
+    delete m_GPUMutex[deviceId].release();
+}
+
 bool BestGpu::LockDevice(int deviceId, bool trial)
 {
     if (deviceId < 0) // don't lock CPU, always return true
@@ -708,16 +744,18 @@ bool BestGpu::LockDevice(int deviceId, bool trial)
     std::unique_ptr<CrossProcessMutex> mutex(new CrossProcessMutex(buffer));
     if (!mutex->Acquire(/*wait=*/false)) // GPU not available
     {
-        fprintf(stderr, "LockDevice: Failed to lock GPU %d for exclusive use.\n", deviceId);
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "LockDevice: Failed to lock GPU %d for exclusive use.\n", deviceId);
+
         return false;
     }
     else
     {
-        fprintf(stderr, "LockDevice: Locked GPU %d %s.\n", deviceId, trial ? "to test availability" : "for exclusive use");
+        //fprintf(stderr, "LockDevice: Locked GPU %d %s.\n", deviceId, trial ? "to test availability" : "for exclusive use");
         if (!trial)
             m_GPUMutex[deviceId] = std::move(mutex);
-        else
-            fprintf(stderr, "LockDevice: Unlocked GPU %d after testing.\n", deviceId);
+        //else
+        //    fprintf(stderr, "LockDevice: Unlocked GPU %d after testing.\n", deviceId);
     }
     return true;
 }

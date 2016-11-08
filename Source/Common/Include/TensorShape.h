@@ -393,6 +393,7 @@ public:
     }
 
     // TODO: move the methods in this region under their respective headline
+    // TODO: overload the << and >> operators for serializing TensorShape
     void Save(File& fstream) const
     {
         VerifyIsDense();

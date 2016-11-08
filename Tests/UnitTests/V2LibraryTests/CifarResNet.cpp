@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
@@ -60,12 +64,12 @@ Constant GetProjectionMap(size_t outputDim, size_t inputDim, const DeviceDescrip
     if (inputDim > outputDim)
         throw std::runtime_error("Can only project from lower to higher dimensionality");
 
-    std::vector<float> projectionMapValues(inputDim * outputDim);
+    std::vector<float> projectionMapValues(inputDim * outputDim, 0);
     for (size_t i = 0; i < inputDim; ++i)
-        projectionMapValues[(i * outputDim) + i] = 1.0f;
+        projectionMapValues[(i * inputDim) + i] = 1.0f;
 
-    auto projectionMap = MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ outputDim, 1, 1, inputDim }), device);
-    projectionMap->CopyFrom(NDArrayView(NDShape({ outputDim, 1, 1, inputDim }), projectionMapValues));
+    auto projectionMap = MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ 1, 1, inputDim, outputDim }), device);
+    projectionMap->CopyFrom(NDArrayView(NDShape({ 1, 1, inputDim, outputDim }), projectionMapValues));
 
     return Constant(projectionMap);
 }
@@ -86,23 +90,23 @@ FunctionPtr ResNetClassifier(Variable input, size_t numOutputClasses, const Devi
 
     double conv1WScale = 0.26;
     size_t cMap1 = 16;
-    auto conv1 = ConvBNReLULayer(input, cMap1, kernelWidth, kernelHeight, 1, 1, conv1WScale, convBValue, scValue, bnTimeConst, device);
+    auto conv1 = ConvBNReLULayer(input, cMap1, kernelWidth, kernelHeight, 1, 1, conv1WScale, convBValue, scValue, bnTimeConst, true /*spatial*/, device);
 
-    auto rn1_1 = ResNetNode2(conv1, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
-    auto rn1_2 = ResNetNode2(rn1_1, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
-    auto rn1_3 = ResNetNode2(rn1_2, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
+    auto rn1_1 = ResNetNode2(conv1, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, false /*spatial*/, device);
+    auto rn1_2 = ResNetNode2(rn1_1, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, true /*spatial*/, device);
+    auto rn1_3 = ResNetNode2(rn1_2, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, false /*spatial*/, device);
 
     size_t cMap2 = 32;
     auto rn2_1_wProj = GetProjectionMap(cMap2, cMap1, device);
-    auto rn2_1 = ResNetNode2Inc(rn1_3, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, rn2_1_wProj, device);
-    auto rn2_2 = ResNetNode2(rn2_1, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
-    auto rn2_3 = ResNetNode2(rn2_2, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
+    auto rn2_1 = ResNetNode2Inc(rn1_3, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, true /*spatial*/, rn2_1_wProj, device);
+    auto rn2_2 = ResNetNode2(rn2_1, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, false /*spatial*/, device);
+    auto rn2_3 = ResNetNode2(rn2_2, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, true /*spatial*/, device);
 
     size_t cMap3 = 64;
     auto rn3_1_wProj = GetProjectionMap(cMap3, cMap2, device);
-    auto rn3_1 = ResNetNode2Inc(rn2_3, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, rn3_1_wProj, device);
-    auto rn3_2 = ResNetNode2(rn3_1, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
-    auto rn3_3 = ResNetNode2(rn3_2, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
+    auto rn3_1 = ResNetNode2Inc(rn2_3, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, true /*spatial*/, rn3_1_wProj, device);
+    auto rn3_2 = ResNetNode2(rn3_1, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, false /*spatial*/, device);
+    auto rn3_3 = ResNetNode2(rn3_2, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, false /*spatial*/, device);
 
     // Global average pooling
     size_t poolW = 8;
@@ -112,7 +116,7 @@ FunctionPtr ResNetClassifier(Variable input, size_t numOutputClasses, const Devi
     auto pool = Pooling(rn3_3, PoolingType::Average, { poolW, poolH, 1 }, { poolhStride, poolvStride, 1 });
 
     // Output DNN layer
-    auto outTimesParams = Parameter(NDArrayView::RandomNormal<float>({ numOutputClasses, 1, 1, cMap3 }, 0.0, fc1WScale, 1, device));
+    auto outTimesParams = Parameter({ numOutputClasses, 1, 1, cMap3 }, DataType::Float, GlorotUniformInitializer(1, 0, fc1WScale), device);
     auto outBiasParams = Parameter({ numOutputClasses }, (float)fc1BValue, device);
 
     return Plus(Times(outTimesParams, pool), outBiasParams, outputName);
@@ -124,18 +128,17 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     auto imageStreamInfo = minibatchSource->StreamInfo(L"features");
     auto labelStreamInfo = minibatchSource->StreamInfo(L"labels");
 
-    // Change the input shape [C x H x W] to [W x H x C] form
     auto inputImageShape = imageStreamInfo.m_sampleLayout;
-    inputImageShape = { inputImageShape[2], inputImageShape[1], inputImageShape[0] };
-
     const size_t numOutputClasses = labelStreamInfo.m_sampleLayout[0];
 
-    auto imageInput = InputVariable(inputImageShape, imageStreamInfo.m_elementType, L"Images");
+    auto imageInputName = L"Images";
+    auto imageInput = InputVariable(inputImageShape, imageStreamInfo.m_elementType, imageInputName);
     auto classifierOutput = ResNetClassifier(imageInput, numOutputClasses, device, L"classifierOutput");
 
-    auto labelsVar = InputVariable({ numOutputClasses }, labelStreamInfo.m_elementType, L"Labels");
+    auto labelsInputName = L"Labels";
+    auto labelsVar = InputVariable({ numOutputClasses }, labelStreamInfo.m_elementType, labelsInputName);
     auto trainingLoss = CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"lossFunction");
-    auto prediction = ClassificationError(classifierOutput, labelsVar, L"predictionError");
+    auto prediction = ClassificationError(classifierOutput, labelsVar, 5, L"predictionError");
 
     if (testSaveAndReLoad)
     {
@@ -144,6 +147,10 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
         Variable predictionVar = prediction;
         auto imageClassifier = Combine({ trainingLoss, prediction, classifierOutput }, L"ImageClassifier");
         SaveAndReloadModel<float>(imageClassifier, { &imageInput, &labelsVar, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        // Make sure that the names of the input variables were properly restored
+        if ((imageInput.Name() != imageInputName) || (labelsVar.Name() != labelsInputName))
+            throw std::runtime_error("One or more input variable names were not properly restored after save and load");
 
         trainingLoss = trainingLossVar;
         prediction = predictionVar;
@@ -154,7 +161,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
 
     const size_t minibatchSize = 32;
-    size_t numMinibatchesToTrain = 100;
+    size_t numMinibatchesToTrain = 2000;
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
@@ -164,7 +171,12 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     }
 }
 
-void TestCifarResnet()
+void TrainCifarResnet()
 {
-    TrainResNetCifarClassifer(DeviceDescriptor::GPUDevice(0), true /*testSaveAndReLoad*/);
+    fprintf(stderr, "\nTrainCifarResnet..\n");
+
+    if (IsGPUAvailable())
+        TrainResNetCifarClassifer(DeviceDescriptor::GPUDevice(0), true /*testSaveAndReLoad*/);
+    else
+        fprintf(stderr, "Cannot run TrainCifarResnet test on a CPU device.\n");
 }

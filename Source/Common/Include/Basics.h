@@ -9,6 +9,7 @@
 
 #include "Platform.h"
 #include "ExceptionWithCallStack.h"
+#include <cmath>
 #include <string>
 #include <vector>
 #include <assert.h>
@@ -25,7 +26,8 @@
 #define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 
 #define EPSILON 1e-5
-#define ISCLOSE(a, b, threshold) (abs(a - b) < threshold) ? true : false
+#define ISCLOSE(a, b, threshold) (std::abs(a - b) < threshold) ? true : false
+#define DLCLOSE_SUCCESS 0
 
 #define UNUSED(x) (void)(x) // for variables that are, e.g., only used in _DEBUG builds
 
@@ -705,9 +707,14 @@ public:
     }
     ~Plugin()
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
         if (handle != NULL)
-            dlclose(handle);
+        {
+            int rc = dlclose(handle);
+            if ((rc != DLCLOSE_SUCCESS) && !std::uncaught_exception())
+            {
+                RuntimeError("Plugin: Failed to decrements the reference count.");
+            }
+        }
     }
 };
 #endif

@@ -1,0 +1,10 @@
+dataDir: .
+
+tags:
+    - bvt-l (build_sku == 'gpu') and (flavor == 'release')
+    - nightly-l (build_sku == 'gpu') and (flavor == 'release')
+
+testCases:
+  Run must finish with error code 0 (outputs __COMPLETED__ in that case):
+    patterns:
+      - __COMPLETED__

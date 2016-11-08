@@ -168,6 +168,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(NotEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClipNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ConvolutionNode), L"Convolve")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(CropNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceNode), L"CosDist")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceWithNegativeSamplesNode), L"CosWithNegSamples")) ret = true;
@@ -208,8 +209,10 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(PerDimMeanVarNormalizationNode), L"PerDimMVNorm")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PlusNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ReciprocalNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ReconcileDynamicAxisNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RectifiedLinearNode), L"ReLU")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ReshapeNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ROIPoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowRepeatNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(RowStackNode))) ret = true;
 #ifdef COMING_SOON

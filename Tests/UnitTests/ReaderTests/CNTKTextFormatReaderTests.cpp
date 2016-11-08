@@ -557,7 +557,7 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_duplicate_inputs)
         1,  // epoch size
         1,  // mb size  
         1,  // num epochs
-        1,
+        2,
         0,
         0,
         1),
@@ -805,6 +805,23 @@ BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch
         false,
         false,
         false);
+};
+
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReaderNoFirstMinibatchData)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/NonExistent.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/CNTKTextFormatReaderNoFirstMinibatchData_Output.txt",
+        "1x2",
+        "reader",
+        10, // epoch size
+        1,  // mb size
+        10,  // num epochs
+        1,
+        0,
+        1,
+        2);
 };
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -141,6 +141,7 @@ public:
     }
 
     TensorShape KernelShape() const { return m_kernelShape; }
+    TensorShape MapCount() const { return m_mapCount; }
     TensorShape Strides() const { return m_stride; }
     std::vector<bool> Sharing() const { return m_sharing; }
     std::vector<bool> AutoPad() const { return m_autoPad; }
@@ -150,7 +151,6 @@ public:
     size_t MaxTempMemSizeInSamples() const { return m_maxTempMemSizeInSamples; }
     PoolKind PoolingKind() const { return m_poolKind; }
 
-private:
     // bottomlessly expand shape to filterRank, then expand to inputRank using defaults or given 'from' values
     template<class V, typename T>
     static void FixVectorShape(size_t filterRank, size_t inputRank, V& shape, T deflt, const V& from = V())
@@ -165,6 +165,8 @@ private:
         while (shape.size() < inputRank)
             shape.push_back(shape.size() < from.size() ? from[shape.size()] : deflt);
     }
+
+private:
     static void FixTensorShape(size_t filterRank, size_t inputRank, TensorShape& shape, size_t deflt, const TensorShape& from = TensorShape())
     {
         auto dims = shape.GetDims();
@@ -185,6 +187,26 @@ protected:
         FixVectorShape(filterRank, inputShape.size(), m_sharing,     true);
     }
 
+    // Derived classes implement transforms calculation. Since all derived classes are filter based we consolidate common
+    // filter transform calculation here to be reused by derived classes. For example convolution and de-convolution
+    // have same transform but inversed, hence both of them may reuse this method and one will call inverse in addition
+    // (similar holds for pooling nodes).
+    SpaceTransform ComputeFilterTransform()
+    {
+        std::shared_ptr<const ConvolveGeometry> geometry = m_convEng->Geometry();
+
+        SpaceTransform result;
+        result.m_axisTransforms.resize(2);
+
+        result.m_axisTransforms[0].scale = (float)(geometry->GetStride(0));
+        result.m_axisTransforms[0].translate = (float)((geometry->KernelShape()[0] - 1) / 2 - geometry->GetLowerPad(0));
+
+        result.m_axisTransforms[1].scale = (float)(geometry->GetStride(1));
+        result.m_axisTransforms[1].translate = (float)((geometry->KernelShape()[1] - 1) / 2 - geometry->GetLowerPad(1));
+
+        return result;
+    }
+
 protected:
     TensorShape m_kernelShape;
     TensorShape m_mapCount;
@@ -196,7 +218,7 @@ protected:
     PoolKind m_poolKind;
     bool m_transpose; // means de-convolution ...I think
     ImageLayoutKind m_imageLayout;
-
+    
     size_t m_maxTempMemSizeInSamples;
     shared_ptr<Matrix<ElemType>> m_tempMatrix;
 
@@ -227,7 +249,7 @@ public:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
+class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
     static const std::wstring TypeName() { return L"Convolution"; }
@@ -317,8 +339,8 @@ public:
     void ForwardProp(const FrameRange& fr) override
     {
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-        const Matrix<ElemType>& input0 = Input(0)->ValueAsMatrix();
-        Matrix<ElemType> sliceInput1Value = Input(1)->ValueFor(fr);
+        const Matrix<ElemType>& input0 = InputRef(0).ValueAsMatrix();
+        Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
         if (!m_transpose)
             m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
         else
@@ -335,8 +357,8 @@ public:
         auto sliceOutputGrad = GradientFor(fr);
         if (inputIndex == 0) // derivative with respect to the weight matrix
         {
-            auto& grad = Input(0)->GradientAsMatrix();
-            auto sliceInput1Value = Input(1)->ValueFor(fr);
+            auto& grad = InputRef(0).GradientAsMatrix();
+            auto sliceInput1Value = InputRef(1).ValueFor(fr);
             if (!m_transpose)
                 m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
             else
@@ -344,8 +366,8 @@ public:
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
-            auto& input0 = Input(0)->ValueAsMatrix();
-            auto sliceInput1Grad = Input(1)->GradientFor(fr);
+            auto& input0 = InputRef(0).ValueAsMatrix();
+            auto sliceInput1Grad = InputRef(1).GradientFor(fr);
             if (!m_transpose)
                 m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
             else
@@ -485,9 +507,210 @@ public:
             m_convEng->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
     }
 
+    bool IsConvolution2D() const { return m_convolution2D; }
+
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms[1].m_axisTransforms.empty())
+        {
+            m_transforms[1] = ComputeFilterTransform();
+            if (!m_transpose)
+            {
+                // Convolution, need to inverse transform.
+                m_transforms[1] = m_transforms[1].Inverse();
+            }
+            // else: Deconvolution, nothing to do.
+        }
+        // else: transform already computed, no need to do computation again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override
+    {
+        // We support transforms just on convolution input.
+        return (inputIndex == 1);
+    }
+
 protected:
     // Flag that indicates whether the node is created using 2D-syntax.
     bool m_convolution2D;
+};
+
+// -----------------------------------------------------------------------
+// ROIPoolingNode (inputFeatures, inputROIs)--pooling for object detection.
+//
+// Each input image has a fixed number of regions of interest (ROIs),
+// specified as bounding boxes (x, y, w, h) that are relative to the
+// image size [W x H]. This node is meant as a replacement for the
+// final pooling layer of an image classification network.  The first
+// fully-connected layer expects a fixed size input, but for object
+// detection we want each ROI to look like an image to the network so
+// we can get a label for it. The ROIs have different spatial sizes,
+// so this node does Max Pooling, but with an adaptive pooling window,
+// so that each ROI output has the spatial size expected by the first
+// fully-connected layer. Images are Input(0). ROIs are Input(1). 
+//
+// Input0: Images       [W x H x C x N]
+// Input1: ROIs         [4 x roisPerImage x N], 
+// output: Pooled ROIs  [PW x PH x C x roisPerImage x N]
+// where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
+//
+// See http://arxiv.org/abs/1504.08083
+// -----------------------------------------------------------------------
+template <class ElemType>
+class ROIPoolingNode : public ComputationNode<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"ROIPooling"; }
+public:
+    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& roiOutputShape = TensorShape())
+        : Base(deviceId, name), m_roiOutputShape(roiOutputShape), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
+    {
+    }
+    ROIPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"roiOutputShape"))
+    {
+        AttachInputsFromConfig(configp, GetExpectedNumInputs());
+    }
+
+    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_tempMatrix, matrixPool);
+    }
+
+    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_tempMatrix, matrixPool);
+    }
+
+    // Input0: Images       [W x H x C x N]
+    // Input1: ROIs         [4 x roisPerImage x N], 
+    // output: Pooled ROIs  [PW x PH x C x roisPerImage x N]
+    // where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
+    //
+    // Explanation: this node has a target output shape of 
+    // [Pooled Width x Pooled Height x Channels], as does any pooling
+    // layer. However, we want each /ROI/ to have that output size,
+    // not each image. After this node, operations in the network
+    // should be on ROIs, not on the full images. The forward pass
+    // loops over images and the ROIs associated with each image; for
+    // every ROI, it treats the subset of the image specified by that
+    // ROI as a full image and does max pooling over that subset,
+    // using whatever window size will correspond to an output of
+    // [Pooled Width x Pooled Height x Channels]. Hence, 
+    // the output tensor is [PW x PH x C x roisPerImage x N]
+    // An example validation output looks like this:
+    // Validating --> z.roiOut = ROIPooling (z.conv5Out.conv5.y, rois) : [61 x 61 x 256 x *], [4 x 64 x *] -> [6 x 6 x 256 x 64 x *]
+    void ForwardProp(const FrameRange& fr) override
+    {
+        // [4 x roisPerImage x N] -- first dimension is roiSize (4), second is rois-per-image, third is mb size
+        size_t roisPerImage = (size_t)GetInputSampleLayout(1)[1];
+
+        auto inputShape = GetInputSampleLayout(0);
+        Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
+        Matrix<ElemType> ROIs = Input(1)->ValueFor(fr);
+
+        // our output slice for this minibatch.
+        Matrix<ElemType> outputSlice = ValueFor(fr);
+
+        // input slice is [W x H x C x N]; cols are images.
+        // ROIs is [4 x roisPerImage x N]; cols are ROIs for different images.
+        // each ROI is (x, y, w, h) relative to original image size.
+        size_t inputW = (size_t)inputShape[0];
+        size_t inputH = (size_t)inputShape[1];
+        size_t numChannels = (size_t)inputShape[2];
+        size_t outW = m_roiOutputShape[0];
+        size_t outH = m_roiOutputShape[1];
+
+        m_tempMatrix->Resize(outW * outH * numChannels * roisPerImage, inputSlice.GetNumCols());
+        inputSlice.ROIPoolingForward(roisPerImage, inputSlice.GetNumCols(), 
+            numChannels, inputW, inputH, outW, outH, ROIs, outputSlice, *m_tempMatrix);
+    }
+
+    void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        m_roiOutputShape.Save(fstream);
+    }
+
+    void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        m_roiOutputShape.Load(fstream);
+    }
+
+    void Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+
+        auto inShape = GetInputSampleLayout(0);   // layout of input shape is width x height x numChannels
+        auto roiShape = GetInputSampleLayout(1); // layout of ROI shape is 4 x roisPerImage
+
+        if (isFinalValidationPass && (m_roiOutputShape.size() != 2))
+            InvalidArgument("ROIPoolingNode: roi output shape must have two dimensions ([W x H]).");
+
+        if (isFinalValidationPass && (inShape[0] < m_roiOutputShape[0] || inShape[1] < m_roiOutputShape[1]))
+            InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
+
+        if (isFinalValidationPass && (inShape[2] < 1))
+            InvalidArgument("ROIPoolingNode: input must have at least one channel ([W x H x C]).");
+
+        if (isFinalValidationPass && (roiShape[0] != 4))
+            InvalidArgument("ROIPoolingNode: ROI input must have the following shape: [4 x roisPerImage].");
+
+        if (isFinalValidationPass && (roiShape[1] < 1))
+            InvalidArgument("ROIPoolingNode: ROI input must contain at least one ROI ([4 x roisPerImage]).");
+
+        // set output dimensions to [W x H x C x roisPerImage]
+        SetDims(TensorShape(m_roiOutputShape[0], m_roiOutputShape[1], inShape[2], roiShape[1]), HasMBLayout());
+    }
+
+    // similar to usual MaxPooling backpropagation. Send gradients
+    // back through to the locations that were used as the "max." Only
+    // difference: needs to sum gradients over all the ROIs that may
+    // have used that location. One image location could be in
+    // multiple ROIs--in that case each ROI may contribute a gradient term.
+    void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    {
+        auto inputShape = GetInputSampleLayout(0);
+        Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
+
+        int inputW = inputShape[0];
+        int inputH = inputShape[1];
+        int numChannels = inputShape[2];
+
+        auto inputGrad = Input(0)->GradientFor(fr);
+        auto pooledGrad = GradientFor(fr);
+
+        int roisPerImage = GetInputSampleLayout(1)[1];
+        auto roiData = Input(1)->ValueFor(fr);
+
+        pooledGrad.ROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), numChannels, 
+            inputW, inputH, m_roiOutputShape[0], m_roiOutputShape[1], roiData, inputGrad, *m_tempMatrix);
+    }
+
+    void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<ROIPoolingNode<ElemType>>(nodeP);
+            node->m_roiOutputShape = m_roiOutputShape;
+        }
+    }
+
+    TensorShape ROIOutputShape() const { return m_roiOutputShape; }
+
+protected:
+    TensorShape m_roiOutputShape;
+    shared_ptr<Matrix<ElemType>> m_tempMatrix;
+    Matrix<ElemType> m_argmaxData;
 };
 
 // -----------------------------------------------------------------------
@@ -496,7 +719,7 @@ protected:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class PoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<1>
+class PoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<1>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
     static const std::wstring TypeName() { return L"Pooling"; }
@@ -524,15 +747,15 @@ public:
     void ForwardProp(const FrameRange& fr) override
     {
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-        const Matrix<ElemType>& input0 = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& input0 = InputRef(0).ValueFor(fr);
         m_convEng->ForwardPooling(input0, sliceOutputValue);
     }
 
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         auto sliceOutputGrad = GradientFor(fr);
-        Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
-        Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
+        Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
@@ -578,6 +801,26 @@ public:
             }
         }
     }
+
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms[0].m_axisTransforms.empty())
+        {
+            m_transforms[0] = ComputeFilterTransform();
+            m_transforms[0] = m_transforms[0].Inverse();
+        }
+        // else: transform already computed, no need to do it again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t /*inputIndex*/) override
+    {
+        // We support transforms on all inputs (one here).
+        return true;
+    }
 };
 
 // -----------------------------------------------------------------------
@@ -596,7 +839,7 @@ public:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class MaxUnpoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
+class MaxUnpoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base;
     UsingConvolutionNodeBaseMembers;
@@ -624,8 +867,8 @@ public:
 public:
     void ForwardProp(const FrameRange& fr) override
     {
-        const Matrix<ElemType>& unpoolInput = Input(0)->ValueFor(fr);
-        const Matrix<ElemType>& poolInput = Input(1)->ValueFor(fr);
+        const Matrix<ElemType>& unpoolInput = InputRef(0).ValueFor(fr);
+        const Matrix<ElemType>& poolInput = InputRef(1).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
         m_convEng->MaxUnpooling(unpoolInput, poolInput, sliceOutputValue);
     }
@@ -636,7 +879,7 @@ public:
             return;
 
         auto sliceOutputGrad = GradientFor(fr);
-        Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
+        Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
         // BUGBUG: ForwardPooling overwrites values in sliceInput1Grad. Should handle correctly instead.
         m_convEng->ForwardPooling(sliceOutputGrad, sliceInput0Grad);
     }
@@ -679,6 +922,25 @@ public:
                                                                 NodeName());
             }
         }
+    }
+
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms.empty())
+        {
+            m_transforms[0] = ComputeFilterTransform();
+        }
+        // else: transform already computed, no need to do it again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override
+    {
+        // We support transform for just unpool input.
+        return (inputIndex == 0);
     }
 };
 
@@ -757,7 +1019,7 @@ public:
 
     void ForwardProp(const FrameRange& fr) override
     {
-        Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         m_convEng->ForwardPooling(sliceInput0Value, sliceOutputValue);
@@ -765,10 +1027,10 @@ public:
 
     void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
-        Matrix<ElemType> sliceInput0Grad = Input(0)->GradientFor(fr);
+        Matrix<ElemType> sliceInput0Grad = InputRef(0).GradientFor(fr);
         Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
 
-        Matrix<ElemType> sliceInput0Value = Input(0)->ValueFor(fr);
+        Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         m_convEng->BackwardPooling(sliceOutputValue, sliceOutputGrad, sliceInput0Value, sliceInput0Grad);
@@ -782,7 +1044,7 @@ public:
         // get input tensor shape and interpret as image dimensions
         auto inDims = ImageDimensions(GetInputSampleLayout(0), m_imageLayoutKind);
 
-        if (isFinalValidationPass && (inDims.m_width < m_windowWidth || inDims.m_height < m_windowHeight))
+        if (isFinalValidationPass && (inDims.m_width < m_windowWidth || inDims.m_height < m_windowHeight)) 
             InvalidArgument("PoolingNodeBase: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
         // determine output tensor shape

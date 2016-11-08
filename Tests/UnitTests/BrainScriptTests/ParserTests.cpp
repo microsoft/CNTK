@@ -10,6 +10,7 @@
 #include "BrainScriptParser.h"
 #include "BrainScriptTestsHelper.h"
 #include "boost/filesystem.hpp"
+#include <boost/algorithm/string.hpp>
 
 #include <utility>
 
@@ -25,14 +26,34 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 BOOST_FIXTURE_TEST_SUITE(ParserSuite, BSFixture)
 
-void parseLine(const wstring & input, const wstring & expectedOutput)
+// normalize strings:
+//  - remove CR characters (so that we can create the reference on Windows)
+//  - trailing spaces (which are impossible to copy-paste from screen output)
+static void Normalize(wstring& s)
+{
+    boost::replace_all(s, L"\r", L"");
+    //boost::trim_right_if(s, boost::is_any_of(L" \n"));
+    // ^^ fails with 'std::_Copy_impl': Function call with parameters that may be unsafe
+    // this ugly version compiles:
+    while (!s.empty() && (s.back() == ' ' || s.back() == '\n'))
+        s.pop_back();
+}
+
+void parseLine(wstring input, wstring expectedOutput)
 {
     let expr = BS::ParseConfigDictFromString(input, L"Test", vector<wstring>());
 
     wstringstream actualStream;
     expr->DumpToStream(actualStream);
 
-    BOOST_TEST(actualStream.str() == expectedOutput, boost::test_tools::per_element());
+    wstring actualOutput = actualStream.str();
+
+    // we normalize for newlines and trailing spaces
+    Normalize(expectedOutput);
+    Normalize(actualOutput);
+    //printf("%ls\n", wstring (actualStream.str()).c_str());
+
+    BOOST_TEST(actualOutput == expectedOutput, boost::test_tools::per_element());
 }
 
 BOOST_AUTO_TEST_CASE(ParseExpressionsAndCompareTree)
@@ -81,4 +102,4 @@ BOOST_AUTO_TEST_CASE(ParseExpressionsAndCompareTree)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-} } } }
+}}}}

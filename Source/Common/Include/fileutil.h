@@ -32,6 +32,8 @@
 #include <stdexcept> // for exception
 #include <fcntl.h>
 
+#define FCLOSE_SUCCESS 0
+
 // ----------------------------------------------------------------------------
 // fopenOrDie(): like fopen() but terminate with err msg in case of error.
 // A pathname of "-" returns stdout or stdin, depending on mode, and it will
@@ -711,7 +713,7 @@ class auto_file_ptr
                 readMode = true;
 #endif
             int rc = ::fclose(f);
-            if (!readMode && (rc != 0) && !std::uncaught_exception())
+            if (!readMode && (rc != FCLOSE_SUCCESS) && !std::uncaught_exception())
                 RuntimeError("auto_file_ptr: failed to close file: %s", strerror(errno));
 
             f = NULL;

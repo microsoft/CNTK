@@ -207,7 +207,7 @@ namespace CNTK
     TensorView<ElementType>* NDArrayView::GetWritableTensorView()
     {
         if (IsReadOnly())
-            LogicError("NDArrayView::GetWritableTensorView: Cannot get writable TensorView from a read-only NDArrayView");
+            InvalidArgument("NDArrayView::GetWritableTensorView: Cannot get writable TensorView from a read-only NDArrayView");
 
         return const_cast<TensorView<ElementType>*>(GetTensorView<ElementType>());
     }
@@ -294,7 +294,7 @@ namespace CNTK
     ElementType* NDArrayView::WritableDataBuffer()
     {
         if (IsReadOnly())
-            LogicError("NDArrayView::WritableDataBuffer: Cannot get writable data buffer from a read-only NDArrayView");
+            InvalidArgument("NDArrayView::WritableDataBuffer: Cannot get writable data buffer from a read-only NDArrayView");
 
         return const_cast<ElementType*>(DataBuffer<ElementType>());
     }
@@ -304,7 +304,7 @@ namespace CNTK
     const ElementType* NDArrayView::DataBuffer() const
     {
         if (AsDataType<ElementType>() != m_dataType)
-            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
+            InvalidArgument("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(m_dataType));
 
         if (IsSparse())
             InvalidArgument("DataBuffer/WritableDataBuffer methods can only be called for NDArrayiew objects with dense storage format");
@@ -313,6 +313,35 @@ namespace CNTK
         auto matrix = GetMatrix<ElementType>();
         matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
         return matrix->Data();
+    }
+
+    void NDArrayView::ChangeDevice(const DeviceDescriptor& device)
+    {
+        if (device == m_device)
+            return;
+
+        switch (m_dataType)
+        {
+        case DataType::Float:
+        {
+            auto matrix = GetMatrix<float>();
+            matrix->TransferFromDeviceToDevice(matrix->GetDeviceId(), AsCNTKImplDeviceId(device), /*isBeingMoved = */ true, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ true);
+            matrix->CollapseDataLocation();
+            break;
+        }
+        case DataType::Double:
+        {
+            auto matrix = GetMatrix<double>();
+            matrix->TransferFromDeviceToDevice(matrix->GetDeviceId(), AsCNTKImplDeviceId(device), /*isBeingMoved = */ true, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ true);
+            matrix->CollapseDataLocation();
+            break;
+        }
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+
+        m_device = device;
     }
 
     template <typename ElementType>

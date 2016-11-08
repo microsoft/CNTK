@@ -15,6 +15,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
+    struct MockDenseSequenceData : DenseSequenceData
+    {
+        const void* GetDataBuffer() override
+        {
+            return m_data;
+        }
+
+        void* m_data;
+    };
+
     // A mock deserializer that produces N sequential samples
     // with value from 0 .. N-1
 
@@ -59,7 +69,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             {
                 const auto& data = m_data[sequenceId];
 
-                auto s = make_shared<DenseSequenceData>();
+                auto s = make_shared<MockDenseSequenceData>();
                 s->m_data = (void*)&data[0];
                 s->m_numberOfSamples = (uint32_t)data.size();
                 s->m_sampleLayout = m_sampleLayout;
@@ -188,6 +198,37 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         DISABLE_COPY_AND_MOVE(SequentialDeserializer);
     };
 
+    inline std::vector<float> ReadNextSamples(SequenceEnumeratorPtr sequenceEnumerator, size_t numSamples)
+    {
+        ReaderConfiguration config;
+        config.m_numberOfWorkers = 1;
+        config.m_workerRank = 0;
+        config.m_minibatchSizeInSamples = 1;
+        config.m_truncationSize = 0;
+        sequenceEnumerator->SetConfiguration(config);
+
+        size_t mbSize = 1;
+        std::vector<float> result;
+        while (result.size() < numSamples)
+        {
+            auto sequences = sequenceEnumerator->GetNextSequences(mbSize);
+            assert(!sequences.m_endOfEpoch);
+            assert(sequences.m_data.size() == 1 || sequences.m_data.size() == 0);
+            if (sequences.m_data.empty())
+                continue;
+
+            for (auto& s : sequences.m_data[0])
+            {
+                float* casted = (float*)s->GetDataBuffer();
+                for (size_t i = 0; i < s->m_numberOfSamples; ++i)
+                {
+                    result.push_back(casted[i]);
+                }
+            }
+        }
+        return result;
+    }
+
     // A set of helper functions
     inline std::vector<float> ReadFullEpoch(SequenceEnumeratorPtr sequenceEnumerator, size_t epochSize, size_t epochIndex)
     {
@@ -215,7 +256,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
             for (auto& s : sequences.m_data[0])
             {
-                float* casted = (float*)s->m_data;
+                float* casted = (float*)s->GetDataBuffer();
                 for (size_t i = 0; i < s->m_numberOfSamples; ++i)
                 {
                     epoch.push_back(casted[i]);

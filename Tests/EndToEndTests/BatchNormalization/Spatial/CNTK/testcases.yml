@@ -1,4 +1,4 @@
-dataDir: ../../../../../Examples/Image/Miscellaneous/CIFAR-10
+dataDir: ../../../../../Examples/Image/DataSets/CIFAR-10
 
 tags:
     # CPU training for BatchNormalization not supported.

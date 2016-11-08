@@ -426,10 +426,10 @@
     <None Include="Config\HTKDeserializersSimpleDataLoop11_Config.cntk">
       <Filter>Config</Filter>
     </None>
-    <None Include="Config\ImageAndImageReaderSimple_Config.cntk">
+    <None Include="Config\ImageTransforms_Config.cntk">
       <Filter>Config</Filter>
     </None>
-    <None Include="Config\ImageTransforms_Config.cntk">
+    <None Include="Config\ImageDeserializers.cntk">
       <Filter>Config</Filter>
     </None>
   </ItemGroup>

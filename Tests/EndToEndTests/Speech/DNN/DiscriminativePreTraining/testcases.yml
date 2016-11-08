@@ -11,9 +11,7 @@ tags:
      # running unconditionally on every Nightly job in 'S' leg
      # - nightly-s (build_sku == 'gpu')
 
-     # running on every BVT job in 'S' (Speech) leg in Debug-GPU configuration:
      - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') and (device=='gpu'))
-     # running unconditionally on every Nightly job in 'S' leg
      - nightly-s (build_sku == 'gpu') and (device=='gpu')
 
 testCases:

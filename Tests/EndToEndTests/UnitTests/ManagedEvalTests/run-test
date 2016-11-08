@@ -6,4 +6,4 @@ VSTEST_CONSOLE=$(cygpath -au "$VS120COMNTOOLS\\..\\IDE\\CommonExtensions\\Micros
 
 test -x "$VSTEST_CONSOLE" || exit $?
 
-"$VSTEST_CONSOLE" /inIsolation /Platform:x64 $(cygpath -aw "$TEST_BIN_DIR/UnitTests/ManagedEvalTests.dll") || exit $?
+"$VSTEST_CONSOLE" /inIsolation /Platform:x64 $(cygpath -aw "$TEST_BIN_DIR/ManagedEvalTests.dll") || exit $?

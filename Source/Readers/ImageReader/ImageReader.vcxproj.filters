@@ -27,6 +27,7 @@
     <ClInclude Include="ImageReader.h" />
     <ClInclude Include="ImageConfigHelper.h" />
     <ClInclude Include="ByteReader.h" />
+    <ClInclude Include="ImageUtil.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

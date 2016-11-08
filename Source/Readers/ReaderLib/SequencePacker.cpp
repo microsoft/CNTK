@@ -47,6 +47,8 @@ Minibatch SequencePacker::ReadMinibatch()
         return minibatch;
     }
 
+    auto& currentBuffer = m_streamBuffers[m_currentBufferIndex];
+
     assert(m_outputStreamDescriptions.size() == batch.size());
 
     for (int streamIndex = 0; streamIndex < batch.size(); ++streamIndex)
@@ -62,7 +64,7 @@ Minibatch SequencePacker::ReadMinibatch()
         auto pMBLayout = (type == StorageType::dense) ?
             PackDenseStream(streamBatch, streamIndex) : PackSparseStream(streamBatch, streamIndex);
 
-        auto& buffer = m_streamBuffers[streamIndex];
+        auto& buffer = currentBuffer[streamIndex];
 
         auto streamMinibatch = std::make_shared<StreamMinibatch>();
         streamMinibatch->m_data = buffer.m_data.get();
@@ -70,6 +72,7 @@ Minibatch SequencePacker::ReadMinibatch()
         minibatch.m_data.push_back(streamMinibatch);
     }
 
+    m_currentBufferIndex = (m_currentBufferIndex + 1) % m_numberOfBuffers;
     return minibatch;
 }
 
@@ -106,7 +109,7 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
 {
     assert(m_outputStreamDescriptions[streamIndex]->m_storageType == StorageType::dense);
     const auto& stream = m_inputStreamDescriptions[streamIndex];
-    auto& buffer = m_streamBuffers[streamIndex];
+    auto& buffer = m_streamBuffers[m_currentBufferIndex][streamIndex];
     size_t sampleSize = GetSampleSize(m_outputStreamDescriptions[streamIndex]);
     auto pMBLayout = CreateMBLayout(batch);
     size_t requiredSize = pMBLayout->GetNumCols() * sampleSize;
@@ -121,8 +124,9 @@ MBLayoutPtr SequencePacker::PackDenseStream(const StreamBatch& batch, size_t str
 
     // Iterate over sequences in the layout, copy samples from the
     // source sequences into the buffer (at appropriate offsets).
-    for (const auto& sequenceInfo : sequenceInfos)
+    for (int i = 0; i < sequenceInfos.size(); ++i)
     {
+        const auto& sequenceInfo = sequenceInfos[i];
         // skip gaps
         if (sequenceInfo.seqId == GAP_SEQUENCE_ID)
         {
@@ -206,7 +210,7 @@ MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t st
         nnzCount * (elementSize + indexSize) +
         indexSize * (pMBLayout->GetNumCols() + 1);
 
-    auto& buffer = m_streamBuffers[streamIndex];
+    auto& buffer = m_streamBuffers[m_currentBufferIndex][streamIndex];
     if (buffer.m_size < requiredSize)
     {
         buffer.Resize(requiredSize);
@@ -272,7 +276,7 @@ MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t st
             // compute the sample offset in bytes.
             size_t sampleOffset = sequenceOffset * elementSize;
             // copy all nzz values from source sequence into the buffer.
-            const auto* dataSrc = reinterpret_cast<const char*>(sequence->m_data) + sampleOffset;
+            const auto* dataSrc = reinterpret_cast<const char*>(sequence->GetDataBuffer()) + sampleOffset;
             memcpy(dataDst, dataSrc, nnz * elementSize);
             dataDst += nnz * elementSize; // advance the destination pointer
 

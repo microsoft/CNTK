@@ -109,8 +109,8 @@ class MATH_API BlockHandlerAVX
 };
 
 #define LOADAVX2_128x4 \
-    __m256i r0b0a2 = _mm256_load_si256((__m256i*)currA2);		\
-__m256i r0b0b2 = _mm256_load_si256((__m256i*)(currA2 + 16));	\
+    __m256i r0b0a2 = _mm256_load_si256((__m256i*)currA2);    \
+__m256i r0b0b2 = _mm256_load_si256((__m256i*)(currA2 + 16)); \
 __m256i r0b0c2 = _mm256_load_si256((__m256i*)(currA2 + 32)); \
 __m256i r0b0d2 = _mm256_load_si256((__m256i*)(currA2 + 48)); \
 __m256i r0b0e2 = _mm256_load_si256((__m256i*)(currA2 + 64)); \
@@ -146,8 +146,8 @@ __m256i r3b0g2 = _mm256_load_si256((__m256i*)(currA2 + 480));\
 __m256i r3b0h2 = _mm256_load_si256((__m256i*)(currA2 + 496));\
 
 #define LOADAVX2_128x1 \
-    __m256i r0b0a2 = _mm256_load_si256((__m256i*)currA2);		\
-__m256i r0b0b2 = _mm256_load_si256((__m256i*)(currA2 + 16));	\
+    __m256i r0b0a2 = _mm256_load_si256((__m256i*)currA2);    \
+__m256i r0b0b2 = _mm256_load_si256((__m256i*)(currA2 + 16)); \
 __m256i r0b0c2 = _mm256_load_si256((__m256i*)(currA2 + 32)); \
 __m256i r0b0d2 = _mm256_load_si256((__m256i*)(currA2 + 48)); \
 __m256i r0b0e2 = _mm256_load_si256((__m256i*)(currA2 + 64)); \
@@ -157,8 +157,8 @@ __m256i r0b0h2 = _mm256_load_si256((__m256i*)(currA2 + 112));
 
 
 #define LOADAVX_128x1 \
-    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);		\
-__m256i r0b0b = _mm256_load_si256((__m256i*)(currA + 16));	\
+    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);    \
+__m256i r0b0b = _mm256_load_si256((__m256i*)(currA + 16)); \
 __m256i r0b0c = _mm256_load_si256((__m256i*)(currA + 32)); \
 __m256i r0b0d = _mm256_load_si256((__m256i*)(currA + 48)); \
 __m256i r0b0e = _mm256_load_si256((__m256i*)(currA + 64)); \
@@ -168,8 +168,8 @@ __m256i r0b0h = _mm256_load_si256((__m256i*)(currA + 112));
 
 
 #define LOADAVX_128x4 \
-    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);		\
-__m256i r0b0b = _mm256_load_si256((__m256i*)(currA + 16));	\
+    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);    \
+__m256i r0b0b = _mm256_load_si256((__m256i*)(currA + 16)); \
 __m256i r0b0c = _mm256_load_si256((__m256i*)(currA + 32)); \
 __m256i r0b0d = _mm256_load_si256((__m256i*)(currA + 48)); \
 __m256i r0b0e = _mm256_load_si256((__m256i*)(currA + 64)); \
@@ -205,10 +205,10 @@ __m256i r3b0g = _mm256_load_si256((__m256i*)(currA + 480));\
 __m256i r3b0h = _mm256_load_si256((__m256i*)(currA + 496));\
 
 #define LOADAVX_64x4 \
-    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);		\
-__m256i r0b0b = _mm256_load_si256((__m256i*)currA + 1);	\
-__m256i r0b0c = _mm256_load_si256((__m256i*)currA + 2); \
-__m256i r0b0d = _mm256_load_si256((__m256i*)currA + 3); \
+    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);\
+__m256i r0b0b = _mm256_load_si256((__m256i*)currA + 1);\
+__m256i r0b0c = _mm256_load_si256((__m256i*)currA + 2);\
+__m256i r0b0d = _mm256_load_si256((__m256i*)currA + 3);\
 \
 __m256i r1b0a = _mm256_load_si256((__m256i*)currA + 4);\
 __m256i r1b0b = _mm256_load_si256((__m256i*)currA + 5);\
@@ -226,15 +226,15 @@ __m256i r3b0c = _mm256_load_si256((__m256i*)currA + 14);\
 __m256i r3b0d = _mm256_load_si256((__m256i*)currA + 15);
 
 #define LOADAVX_64x1 \
-    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);		\
-__m256i r0b0b = _mm256_load_si256((__m256i*)currA + 1);	\
+    __m256i r0b0a = _mm256_load_si256((__m256i*)currA); \
+__m256i r0b0b = _mm256_load_si256((__m256i*)currA + 1); \
 __m256i r0b0c = _mm256_load_si256((__m256i*)currA + 2); \
 __m256i r0b0d = _mm256_load_si256((__m256i*)currA + 3); 
 
 
 #define LOADAVX_32x4 \
-    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);		\
-__m256i r0b0b = _mm256_load_si256((__m256i*)currA + 1);	\
+    __m256i r0b0a = _mm256_load_si256((__m256i*)currA); \
+__m256i r0b0b = _mm256_load_si256((__m256i*)currA + 1); \
 \
 __m256i r1b0a = _mm256_load_si256((__m256i*)currA + 2);\
 __m256i r1b0b = _mm256_load_si256((__m256i*)currA + 3);\
@@ -246,19 +246,19 @@ __m256i r3b0a = _mm256_load_si256((__m256i*)currA + 6);\
 __m256i r3b0b = _mm256_load_si256((__m256i*)currA + 7);\
 
 #define LOADAVX_32x1 \
-    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);		\
-__m256i r0b0b = _mm256_load_si256((__m256i*)currA + 1);	
+    __m256i r0b0a = _mm256_load_si256((__m256i*)currA); \
+__m256i r0b0b = _mm256_load_si256((__m256i*)currA + 1);
 
 
 
 #define LOADAVX_16x4 \
-    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);		\
+    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);\
 __m256i r1b0a = _mm256_load_si256((__m256i*)currA + 1);\
 __m256i r2b0a = _mm256_load_si256((__m256i*)currA + 2);\
 __m256i r3b0a = _mm256_load_si256((__m256i*)currA + 3);\
 
 #define LOADAVX_16x1 \
-    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);		
+    __m256i r0b0a = _mm256_load_si256((__m256i*)currA);
 
 #define LOAD_8x4 \
     __m128i r0b0a = _mm_load_si128((__m128i*)currA);\
@@ -388,7 +388,7 @@ FORCEINLINE void BlockHandlerAVX::HandleBlock32x4(int currBlock, int startRow, i
         __m256i accum1 = _mm256_set1_epi16(0);
         __m256i accum2 = _mm256_set1_epi16(0);
         __m256i accum3 = _mm256_set1_epi16(0);
-        __m256i accum4 = _mm256_set1_epi16(0);				
+        __m256i accum4 = _mm256_set1_epi16(0);
 
         kernelavx32x4(
                 r0b0a, r0b0b, 
@@ -447,7 +447,7 @@ FORCEINLINE void BlockHandlerAVX::HandleBlock64x4(int currBlock, int startRow, i
         __m256i accum1 = _mm256_set1_epi16(0);
         __m256i accum2 = _mm256_set1_epi16(0);
         __m256i accum3 = _mm256_set1_epi16(0);
-        __m256i accum4 = _mm256_set1_epi16(0);				
+        __m256i accum4 = _mm256_set1_epi16(0);
 
         kernelavx64x4(
                 r0b0a, r0b0b, r0b0c, r0b0d, 

@@ -208,7 +208,7 @@ void GPUSparseMatrix<ElemType>::Reset()
 // copy features to GPU matrix
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
-                                                       const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
+                                                       const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/, DataTransferer* transferer)
 {
 }
 
@@ -1014,7 +1014,7 @@ void GPUMatrix<ElemType>::SetValue(GPUSparseMatrix<ElemType> const&)
 #endif
 
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags)
+void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags, DataTransferer* transferer)
 {
 }
 
@@ -1799,6 +1799,18 @@ void GPUMatrix<ElemType>::ConvolutionBackwardKernel(const GPUMatrix<ElemType>& i
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height, 
+    const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, GPUMatrix<ElemType>& argmax) const
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+    const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, GPUMatrix<ElemType>& argmax) const
+{
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::MaxPoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
 {
 }
@@ -2187,35 +2199,34 @@ void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<do
 
 #pragma region GPUDataTransferer functions
 
-template <class ElemType>
-GPUDataTransferer<ElemType>::GPUDataTransferer(int, bool)
-{
-}
+GranularGPUDataTransferer::~GranularGPUDataTransferer() {}
 
-template <class ElemType>
-GPUDataTransferer<ElemType>::~GPUDataTransferer()
-{
-}
+void GranularGPUDataTransferer::CopyGPUToCPUAsync(const void* /*gpuBuffer*/, size_t /*numElements*/, size_t /*elementSize*/, void* /*cpuBuffer*/) {}
 
-template <class ElemType>
-void GPUDataTransferer<ElemType>::CopyGPUToCPUAsync(ElemType*, size_t, ElemType*)
-{
-}
+void GranularGPUDataTransferer::RecordGPUToCPUCopy() {}
 
-template <class ElemType>
-void GPUDataTransferer<ElemType>::WaitForCopyGPUToCPUAsync()
-{
-}
+void GranularGPUDataTransferer::WaitForCopyGPUToCPU() {}
 
-template <class ElemType>
-void GPUDataTransferer<ElemType>::CopyCPUToGPUAsync(ElemType*, size_t, ElemType*)
-{
-}
+void GranularGPUDataTransferer::CopyCPUToGPUAsync(const void* /*cpuBuffer*/, size_t /*numElements*/, size_t /*elementSize*/, void* /*gpuBuffer*/) {}
 
-template <class ElemType>
-void GPUDataTransferer<ElemType>::WaitForCopyCPUToGPUAsync()
-{
-}
+void GranularGPUDataTransferer::RecordCPUToGPUCopy() {}
+
+void GranularGPUDataTransferer::WaitForCopyCPUToGPU() {}
+
+void GranularGPUDataTransferer::RecordComputeStreamSyncPoint() {}
+
+void GranularGPUDataTransferer::WaitForSyncPointOnFetchStreamAsync() {}
+
+void GranularGPUDataTransferer::WaitForSyncPointOnAssignStreamAsync() {}
+
+PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int /*deviceId*/) : GranularGPUDataTransferer() {}
+
+GPUDataTransferer::GPUDataTransferer(int, bool){}
+GPUDataTransferer::~GPUDataTransferer(){}
+void GPUDataTransferer::CopyGPUToCPUAsync(void*, size_t, void*){}
+void GPUDataTransferer::WaitForCopyGPUToCPUAsync(){}
+void GPUDataTransferer::CopyCPUToGPUAsync(void*, size_t, void*){}
+void GPUDataTransferer::WaitForCopyCPUToGPUAsync(){}
 
 #pragma endregion GPUDataTransferer functions
 
@@ -2243,9 +2254,6 @@ template MatrixQuantizerGPU<float>::~MatrixQuantizerGPU();
 template MatrixQuantizerGPU<double>::~MatrixQuantizerGPU();
 template void MatrixQuantizerGPU<float>::QuantizeAsync(const Matrix<float>&, const Matrix<float>&, QuantizedMatrix<float>&, Matrix<float>&, bool);
 template void MatrixQuantizerGPU<double>::QuantizeAsync(const Matrix<double>&, const Matrix<double>&, QuantizedMatrix<double>&, Matrix<double>&, bool);
-
-template class GPUDataTransferer<float>;
-template class GPUDataTransferer<double>;
 
 template <class ElemType>
 cublasHandle_t GPUMatrix<ElemType>::s_cuHandle[GPUMatrix<ElemType>::MaxGpus] = {0};

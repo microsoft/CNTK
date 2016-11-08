@@ -197,6 +197,9 @@ public:
     void SetSentenceEnd(int /*actualMbSize*/){};
     void SetRandomSeed(int){NOT_IMPLEMENTED};
 
-    //bool RequireSentenceSeg() const override { return !m_frameMode; };
+    size_t GetCurrentSamplePosition() override
+    {
+        return m_mbiter->currentmbstartframe();
+    }
 };
 } } }

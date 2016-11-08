@@ -1,8 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
@@ -148,7 +152,9 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     </CudaCompile>
     <CudaCompile Include="GPUTensor.cu">
       <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</InterleaveSourceInPTX>
+      <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</InterleaveSourceInPTX>
       <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
+      <Keep Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</Keep>
       <FileType>CppCode</FileType>
     </CudaCompile>
     <CudaCompile Include="cudalatticeops.cu">
@@ -183,7 +189,9 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <CudaCompile Include="GPUMatrix.cu">
       <FileType>CppCode</FileType>
       <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
+      <Keep Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</Keep>
       <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</InterleaveSourceInPTX>
+      <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">false</InterleaveSourceInPTX>
     </CudaCompile>
     <CudaCompile Include="GPUMatrixCUDAKernels.cuh">
       <ExcludedFromBuild>true</ExcludedFromBuild>

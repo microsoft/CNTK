@@ -131,6 +131,7 @@ public:
     {
         InitFromConfig(config);
     }
+
     virtual void Destroy();
     UCIFastReader()
     {
@@ -180,6 +181,11 @@ public:
     void SetRandomSeed(int)
     {
         NOT_IMPLEMENTED;
+    }
+
+    size_t GetCurrentSamplePosition() override
+    {
+        return m_mbStartSample;
     }
 };
 } } }
