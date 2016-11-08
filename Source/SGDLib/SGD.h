@@ -347,14 +347,18 @@ public:
 
     void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
-               IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint,
-               CudaProfilerTimer& cudaProfilerTimer);
+               IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint);
     void Adapt(wstring origModelFileName, wstring refNodeName,
                IDataReader* trainSetDataReader,
                IDataReader* validationSetDataReader,
                const DEVICEID_TYPE deviceID,
-               CudaProfilerTimer& cudaProfilerTimer,
                const bool makeMode = true);
+
+    // Set instance of CudaProfilerTimer to enable performance measurement of CUDA calls.
+    void SetCudaProfilerTimer(CudaProfilerTimer& cudaProfilerTimer)
+    {
+        m_pCudaProfilerTimer = &cudaProfilerTimer;
+    }
 
 protected:
 

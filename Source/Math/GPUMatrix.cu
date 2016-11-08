@@ -4790,8 +4790,11 @@ int _ConvertSMVer2Cores(int major, int minor)
 
 // -----------------------------------------------------------------------
 // SyncCudaScope -- synchronize and time CUDA calls
+//
+// This class measures the elapsed GPU time when issuing CUDA calls. It
+// also optionally synchronizes the GPU so that it waits for the CUDA
+// kernel to complete.
 // -----------------------------------------------------------------------
-
 SyncCudaScope::SyncCudaScope(const char* functionName, const char* description, cudaStream_t stream)
 {
     bool syncEnabled;
@@ -4844,8 +4847,14 @@ SyncCudaScope::~SyncCudaScope()
 
 // -----------------------------------------------------------------------
 // AsyncGPUProfiler -- Measure GPU consumption asynchronously
+//
+// This class creates a time critical background thread to be able to
+// accuratelly measure the GPU busy/idle duty cycle. This will not
+// interfere with other threads due to calling Sleep() to give time slices
+// to the other threads. The thread here needs to be time critical to
+// ensure it can measure time accuratelly, without it being swapped out
+// for upwards of 10's of ms (OS dependent).
 // -----------------------------------------------------------------------
-
 AsyncGPUProfiler::AsyncGPUProfiler()
 {
     // Create thread to measure GPU busy/idle time in the background

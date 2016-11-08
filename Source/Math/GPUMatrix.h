@@ -2,7 +2,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-
 #pragma once
 #include "Platform.h"
 #include "File.h"
@@ -637,6 +636,10 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 
 // -----------------------------------------------------------------------
 // SyncCudaScope -- synchronize and time CUDA calls
+//
+// This class measures the elapsed GPU time when issuing CUDA calls. It
+// also optionally synchronizes the GPU so that it waits for the CUDA
+// kernel to complete.
 // -----------------------------------------------------------------------
 struct SyncCudaScope
 {
@@ -656,6 +659,13 @@ private:
 
 // -----------------------------------------------------------------------
 // AsyncGPUProfiler -- Measure GPU consumption asynchronously
+//
+// This class creates a time critical background thread to be able to
+// accuratelly measure the GPU busy/idle duty cycle. This will not
+// interfere with other threads due to calling Sleep() to give time slices
+// to the other threads. The thread here needs to be time critical to
+// ensure it can measure time accuratelly, without it being swapped out
+// for upwards of 10's of ms (OS dependent).
 // -----------------------------------------------------------------------
 struct AsyncGPUProfiler
 {

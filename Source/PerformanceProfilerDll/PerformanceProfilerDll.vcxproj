@@ -124,9 +124,6 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\Common\Include\Basics.h" />
-    <ClInclude Include="..\Common\Include\File.h" />
-    <ClInclude Include="..\Common\Include\fileutil.h" />
     <ClInclude Include="PerformanceProfiler.h" />
   </ItemGroup>
   <ItemGroup>

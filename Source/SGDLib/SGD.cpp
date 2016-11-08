@@ -42,8 +42,7 @@ template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
 template <class ElemType>
 void SGD<ElemType>::Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                           IDataReader* trainSetDataReader,
-                          IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint,
-                          CudaProfilerTimer& cudaProfilerTimer)
+                          IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint)
 {
     // log the device we are computing on
     LOGPRINTF(stderr, "%s model with %d nodes", loadNetworkFromCheckpoint ? "Loaded" : "Created", (int)net->GetTotalNumberOfNodes());
@@ -61,10 +60,6 @@ void SGD<ElemType>::Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE devi
     // set tracing flags
     net->EnableNodeTracing(m_traceNodeNamesReal, m_traceNodeNamesCategory, m_traceNodeNamesSparse);
 
-    // Set instance of CudaProfilerTimer to enable intermittent performance measurement of
-    // CUDA calls.
-    m_pCudaProfilerTimer = &cudaProfilerTimer;
-
     TrainOrAdaptModel(startEpoch, net, loadNetworkFromCheckpoint, net, nullptr, trainSetDataReader, validationSetDataReader);
 }
 
@@ -77,7 +72,6 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
                           IDataReader* trainSetDataReader,
                           IDataReader* validationSetDataReader,
                           const DEVICEID_TYPE deviceId, 
-                          CudaProfilerTimer& cudaProfilerTimer,
                           const bool makeMode)
 {
     int startEpoch = DetermineStartEpoch(makeMode);
@@ -120,10 +114,6 @@ void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
             InvalidArgument("refNodeName does not exist and is needed when adaptationRegType is KL.");
         refNode = refNet->GetNodeFromName(refNodeName);
     }
-
-    // Set instance of CudaProfilerTimer to enable intermittent performance measurement of
-    // CUDA calls.
-    m_pCudaProfilerTimer = &cudaProfilerTimer;
 
     TrainOrAdaptModel(startEpoch, net, networkLoadedFromCheckpoint, refNet, refNode, trainSetDataReader, validationSetDataReader);
 }

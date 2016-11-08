@@ -56,44 +56,21 @@ enum ProfilerEvents
     profilerSepSpace0,
 
     // Main thread events
-    profilerEvtMainEpoch,
-    profilerEvtMainMinibatch,
-    profilerEvtMainGetMinibatch,
-    profilerEvtMainFB,
-    profilerEvtMainGradient,
-    profilerEvtMainWeights,
-    profilerEvtMainPost,
-
-    // MPI/Gradient header (dummy events)
-    profilerSepSpace1,
-    profilerSepMPI,
-    profilerSepSpace2,
-
-    // MPI/Gradient aggregation multithreaded events
-    profilerEvtGradient1,
-    profilerEvtGradientAsyncComm11,
-    profilerEvtGradientWaitGradients1,
-    profilerEvtGradientWaitHeaders1,
-    profilerEvtGradientAsyncComm21,
-    profilerEvtGradientWaitAggGradients1,
-    profilerEvtGradientWaitAggHeaders1,
-    profilerEvtGradientWaitCompletion1,
-    
-    profilerEvtGradient32,
-    profilerEvtGradientAsyncComm132,
-    profilerEvtGradientWaitHeaders32,
-    profilerEvtGradientAsyncComm232,
-    profilerEvtGradientWaitGradients32,
-    profilerEvtGradientWaitCompletion32,
+    profilerEvtMainEpoch,                   // Train epoch loop time
+    profilerEvtMainMinibatch,               // One minibatch loop time
+    profilerEvtMainGetMinibatch,            // GetMinibatch() function time
+    profilerEvtMainFB,                      // Forward + Backward pass time
+    profilerEvtMainGradient,                // Gradient aggregation time
+    profilerEvtMainWeights,                 // Weight update time
+    profilerEvtMainPost,                    // Remainder time in minibatch loop
 
     // Data reader header (dummy events)
-    profilerSepSpace3,
+    profilerSepSpace1,
     profilerSepDataReader,
-    profilerSepSpace4,
+    profilerSepSpace2,
 
     // Data reader events
-    profilerEvtReadMinibatch,
-    profilerEvtZipReaderThroughput,
+    profilerEvtReadMinibatch,               // Time spend reading minibatch on async thread
 
     profilerEvtMax
 };
@@ -101,19 +78,20 @@ enum ProfilerEvents
 
 //
 // Initialize all resources to enable profiling.
-// profilerDir: Directory where the profiler logs will be saved. nullptr for default location.
+// profilerDir: Directory where the profiler logs will be saved.
 // customEventBufferBytes: Bytes to allocate for the custom event buffer.
 // logSuffix: Suffix string to append to log files.
 // syncGpu: Wait for GPU to complete processing for each profiling event.
 // syncCudaKernels: Synchronize every cuda kernel.
 //
-void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const unsigned long long customEventBufferBytes,
-    const char* logSuffix, const bool syncGpu, const bool syncCudaKernels);
+void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsigned long long customEventBufferBytes,
+    const std::wstring& logSuffix, const bool syncGpu, const bool syncCudaKernels);
 
 
 //
 // Enable/disable profiling.
 // By default, profiling is disabled after a ProfilerInit call.
+// This can be used to temporarily turn profiling on/off during execution.
 //
 void PERF_PROFILER_API ProfilerEnable(bool enable);
 
@@ -159,7 +137,7 @@ void PERF_PROFILER_API ProfilerClose();
 //
 struct PERF_PROFILER_API ProfilerContext
 {
-    void Init(const char* profilerDir = nullptr, const unsigned long long customEventBufferBytes = (32 * 1024 * 1024), const char* logSuffix = "", const bool syncGpu = false, const bool syncCudaKernels = false);
+    void Init(const std::wstring& profilerDir = L"", const unsigned long long customEventBufferBytes = (32 * 1024 * 1024), const std::wstring& logSuffix = L"", const bool syncGpu = false, const bool syncCudaKernels = false);
     ~ProfilerContext();
 };
 

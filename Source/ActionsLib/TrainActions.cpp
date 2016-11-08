@@ -119,8 +119,10 @@ void DoTrain(const ConfigRecordType& config)
                                         config(L"cudaProfilerIterations", (int)1000),
                                         config(L"cudaProfilerMaxIterations", (int)-1));
 
+    optimizer->SetCudaProfilerTimer(cudaProfilerTimer);
+
     optimizer->InitMPI(MPIWrapper::GetInstance());
-    optimizer->Train(net, deviceId, dataReader.get(), cvDataReader.get(), startEpoch, loadNetworkFromCheckpoint, cudaProfilerTimer);
+    optimizer->Train(net, deviceId, dataReader.get(), cvDataReader.get(), startEpoch, loadNetworkFromCheckpoint);
 }
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
@@ -193,8 +195,10 @@ void DoAdapt(const ConfigParameters& config)
                                         config(L"cudaProfilerIterations", (int)1000),
                                         config(L"cudaProfilerMaxIterations", (int)-1));
 
+    sgd.SetCudaProfilerTimer(cudaProfilerTimer);
+
     sgd.InitMPI(MPIWrapper::GetInstance());
-    sgd.Adapt(origModelFileName, refNodeName, dataReader.get(), cvDataReader.get(), deviceId, cudaProfilerTimer, makeMode);
+    sgd.Adapt(origModelFileName, refNodeName, dataReader.get(), cvDataReader.get(), deviceId, makeMode);
 }
 
 template void DoAdapt<float>(const ConfigParameters& config);

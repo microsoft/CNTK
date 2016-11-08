@@ -33,8 +33,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-#define PROFILER_DIR        "./profiler"
-
 //
 // Fixed profiler event descriptions
 //
@@ -64,32 +62,11 @@ static const FixedEventDesc c_fixedEvtDesc[profilerEvtMax] = {
     { "__Weight Update", profilerEvtTime, true },                   // profilerEvtMainWeights
     { "__Post Processing", profilerEvtTime, true },                 // profilerEvtMainPost
 
-    { "", profilerEvtSeparator, false },                            // profilerSepSpace1
-    { "Gradient Aggregation Thread & MPI", profilerEvtSeparator, false }, // profilerSepMPI
-    { "", profilerEvtSeparator, false },                            // profilerSepSpace2
-
-    { "Gradient Aggregation (1b)", profilerEvtTime, false },        // profilerEvtGradient1
-    { "_Async Communcation 1", profilerEvtTime, false },            // profilerEvtGradientAsyncComm11
-    { "_Wait for Gradients", profilerEvtTime, false },              // profilerEvtGradientWaitGradients1
-    { "_Wait for Headers", profilerEvtTime, false },                // profilerEvtGradientWaitHeaders1
-    { "_Async Communication 2", profilerEvtTime, false },           // profilerEvtGradientAsyncComm21
-    { "_Wait for Agg. Gradients", profilerEvtTime, false },         // profilerEvtGradientWaitAggGradients1
-    { "_Wait for Agg. Headers", profilerEvtTime, false },           // profilerEvtGradientWaitAggHeaders1
-    { "_Wait for Completion", profilerEvtTime, false },             // profilerEvtGradientWaitCompletion1
-
-    { "Gradient Aggregation (32b)", profilerEvtTime, false },       // profilerEvtGradient32
-    { "_Async Communication 1", profilerEvtTime, false },           // profilerEvtGradientAsyncComm132
-    { "_Wait for Headers", profilerEvtTime, false },                // profilerEvtGradientWaitHeaders32
-    { "_Async Communication 2", profilerEvtTime, false },           // profilerEvtGradientAsyncComm232
-    { "_Wait for Gradients", profilerEvtTime, false },              // profilerEvtGradientWaitGradients32
-    { "_Wait for Completion", profilerEvtTime, false },             // profilerEvtGradientWaitCompletion32
-
     { "", profilerEvtSeparator, false },                            // profilerSepSpace3
     { "Data Reader", profilerEvtSeparator, false },                 // profilerSepDataReader
     { "", profilerEvtSeparator, false },                            // profilerSepSpace4
 
     { "Read Minibatch Task", profilerEvtTime, false },              // profilerEvtReadMinibatch
-    { "ImageReader Throughput", profilerEvtThroughput, false },     // profilerEvtZipReaderThroughput
 };
 
 
@@ -120,26 +97,24 @@ struct CustomEventRecord
 //
 struct ProfilerState
 {
-    bool                    init = false;               // Profiler initialized
-    bool                    initWarning = true;         // Initilize warning flag so that it prints once
     bool                    enabled;                    // Profiler enabled (active)
     bool                    syncGpu;                    // Sync GPU per each profiling event
     bool                    syncCudaKernels;            // Sync GPU for each CUDA kernel
     bool                    cudaSyncEnabled;            // Runtime state of CUDA kernel sync
     bool                    cudaProfilingEnabled;       // Runtime state of profiling CUDA kernels
-    char                    profilerDir[256];           // Directory where reports/logs are saved
-    char                    logSuffix[64];              // Suffix to append to report/log file names
+    std::wstring            profilerDir;                // Directory where reports/logs are saved
+    std::wstring            logSuffix;                  // Suffix to append to report/log file names
     long long               clockFrequency;             // Timer frequency
     FixedEventRecord        fixedEvents[profilerEvtMax]; // Profiling data for each fixed event
     bool                    customEventBufferFull;      // Is custom event buffer full?
     unsigned long long      customEventBufferBytes;     // Number of bytes allocated for the custom event buffer
-    unsigned long long      customEventPtr;             // Pointer to current place in buffer
+    unsigned long long      customEventOffset;          // Offset to current place in buffer
     char*                   customEventBuffer;          // Pointer to custom event buffer
 };
 
 
 // We support one global instance of the profiler
-static ProfilerState g_profilerState;
+static ProfilerState* g_profilerState = nullptr;
 
 // Forward declarations
 unsigned int GetThreadId();
@@ -152,11 +127,11 @@ inline void LockEnter();
 inline void LockLeave();
 void LockClose();
 
-void ProfilerGenerateReport(const char* fileName, struct tm* timeInfo);
+void ProfilerGenerateReport(const std::wstring& fileName, struct tm* timeInfo);
 void FormatTimeStr(char* str, size_t strLen, double value);
 void FormatThroughputStr(char* str, size_t strLen, double value);
 void FormatBytesStr(char* str, size_t strLen, long long bytes);
-void ProfilerGenerateDetailFile(const char* fileName);
+void ProfilerGenerateDetailFile(const std::wstring& fileName);
 
 //
 // Convenience scope lock.
@@ -166,70 +141,51 @@ struct ScopeLock
     ScopeLock() { LockEnter(); }
     ~ScopeLock() { LockLeave(); }
 };
-#define LOCK    ScopeLock sl;
-
-#define INIT_GUARD_CHECK    if (!g_profilerState.init) \
-                            { \
-                                if(g_profilerState.initWarning) \
-                                { \
-                                        fprintf(stderr, "Warning: %s: Profiler is not initialized, ProfilerInit() was not called.\n", __FUNCTION__); \
-                                        g_profilerState.initWarning = false; \
-                                } \
-                                return; \
-                            } \
 
 //
 // Initialize all resources to enable profiling.
-// profilerDir: Directory where the profiler logs will be saved. nullptr for default location.
+// profilerDir: Directory where the profiler logs will be saved.
 // customEventBufferBytes: Bytes to allocate for the custom event buffer.
 // logSuffix: Suffix string to append to log files.
 // syncGpu: Wait for GPU to complete processing for each profiling event.
 // syncCudaKernels: Synchronize every cuda kernel.
 //
-void PERF_PROFILER_API ProfilerInit(const char* profilerDir, const unsigned long long customEventBufferBytes,
-    const char* logSuffix, const bool syncGpu, const bool syncCudaKernels)
+void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsigned long long customEventBufferBytes,
+    const std::wstring& logSuffix, const bool syncGpu, const bool syncCudaKernels)
 {
-    memset(&g_profilerState, 0, sizeof(g_profilerState));
+    g_profilerState = new ProfilerState();
 
     LockInit();
 
-    if (profilerDir)
-    {
-        strncpy(g_profilerState.profilerDir, profilerDir, sizeof(g_profilerState.profilerDir) - 1);
-    }
-    else
-    {
-        strncpy(g_profilerState.profilerDir, PROFILER_DIR, sizeof(g_profilerState.profilerDir) - 1);
-    }
-    g_profilerState.profilerDir[sizeof(g_profilerState.profilerDir) - 1] = 0;
+    g_profilerState->profilerDir = profilerDir;
+    g_profilerState->logSuffix = logSuffix;
 
-    strncpy(g_profilerState.logSuffix, logSuffix, sizeof(g_profilerState.logSuffix) - 1);
-    g_profilerState.logSuffix[sizeof(g_profilerState.logSuffix) - 1] = 0;
+    g_profilerState->customEventBufferFull = false;
+    g_profilerState->customEventBufferBytes = customEventBufferBytes;
+    g_profilerState->customEventOffset = 0ull;
+    g_profilerState->customEventBuffer = new char[customEventBufferBytes];
 
-    g_profilerState.customEventBufferFull = false;
-    g_profilerState.customEventBufferBytes = customEventBufferBytes;
-    g_profilerState.customEventPtr = 0ull;
-    g_profilerState.customEventBuffer = new char[customEventBufferBytes];
+    g_profilerState->clockFrequency = GetClockFrequency();
 
-    g_profilerState.clockFrequency = GetClockFrequency();
-
-    g_profilerState.syncGpu = syncGpu;
-    g_profilerState.syncCudaKernels = syncCudaKernels;
-    if (g_profilerState.syncCudaKernels) g_profilerState.cudaSyncEnabled = true;
-    g_profilerState.cudaProfilingEnabled = false;
-    g_profilerState.enabled = false;
-    g_profilerState.initWarning = true;
-    g_profilerState.init = true;
+    g_profilerState->syncGpu = syncGpu;
+    g_profilerState->syncCudaKernels = syncCudaKernels;
+    if (g_profilerState->syncCudaKernels) g_profilerState->cudaSyncEnabled = true;
+    g_profilerState->cudaProfilingEnabled = false;
+    g_profilerState->enabled = false;
 }
 
 //
 // Enable/disable profiling.
 // By default, profiling is disabled after a ProfilerInit call.
+// This can be used to temporarily turn profiling on/off during execution.
 //
 void PERF_PROFILER_API ProfilerEnable(bool enable)
 {
-    INIT_GUARD_CHECK
-    g_profilerState.enabled = enable;
+    // A nullptr state indicates that the profiler is globally disabled, and not initialized
+    if (g_profilerState == nullptr)
+        return;
+
+    g_profilerState->enabled = enable;
 }
 
 
@@ -238,53 +194,53 @@ void PERF_PROFILER_API ProfilerEnable(bool enable)
 //
 void ProfilerTimeEndInt(const int eventId, const long long beginClock, const long long endClock)
 {
-    if (!g_profilerState.enabled)
+    if (!g_profilerState->enabled)
         return;
 
-    LOCK
+    ScopeLock sl;
 
     long long delta = endClock - beginClock;
-    if (g_profilerState.fixedEvents[eventId].cnt == 0)
+    if (g_profilerState->fixedEvents[eventId].cnt == 0)
     {
-        g_profilerState.fixedEvents[eventId].min = delta;
-        g_profilerState.fixedEvents[eventId].max = delta;
+        g_profilerState->fixedEvents[eventId].min = delta;
+        g_profilerState->fixedEvents[eventId].max = delta;
     }
-    g_profilerState.fixedEvents[eventId].min = min(delta, g_profilerState.fixedEvents[eventId].min);
-    g_profilerState.fixedEvents[eventId].max = max(delta, g_profilerState.fixedEvents[eventId].max);
-    g_profilerState.fixedEvents[eventId].sum += delta;
-    g_profilerState.fixedEvents[eventId].sumsq += (double)delta * (double)delta;
-    g_profilerState.fixedEvents[eventId].cnt++;
+    g_profilerState->fixedEvents[eventId].min = min(delta, g_profilerState->fixedEvents[eventId].min);
+    g_profilerState->fixedEvents[eventId].max = max(delta, g_profilerState->fixedEvents[eventId].max);
+    g_profilerState->fixedEvents[eventId].sum += delta;
+    g_profilerState->fixedEvents[eventId].sumsq += (double)delta * (double)delta;
+    g_profilerState->fixedEvents[eventId].cnt++;
 }
 
 void ProfilerTimeEndInt(const char* eventDescription, const long long beginClock, const long long endClock)
 {
-    if (!g_profilerState.enabled)
+    if (!g_profilerState->enabled)
         return;
 
-    LOCK
+    ScopeLock sl;
 
     auto eventDescriptionBytes = strlen(eventDescription) + 1;
     auto requiredBufferBytes = eventDescriptionBytes + sizeof(CustomEventRecord);
-    if ((g_profilerState.customEventPtr + requiredBufferBytes) > g_profilerState.customEventBufferBytes)
+    if ((g_profilerState->customEventOffset + requiredBufferBytes) > g_profilerState->customEventBufferBytes)
     {
-        if (!g_profilerState.customEventBufferFull)
+        if (!g_profilerState->customEventBufferFull)
         {
             fprintf(stderr, "Warning: Performance Profiler: Buffer is full, no more events will be recorded.\n");
-            g_profilerState.customEventBufferFull = true;
+            g_profilerState->customEventBufferFull = true;
         }
         return;
     }
 
-    strcpy(g_profilerState.customEventBuffer + g_profilerState.customEventPtr, eventDescription);
-    g_profilerState.customEventPtr += eventDescriptionBytes;
+    strcpy(g_profilerState->customEventBuffer + g_profilerState->customEventOffset, eventDescription);
+    g_profilerState->customEventOffset += eventDescriptionBytes;
 
     CustomEventRecord eventRecord;
     eventRecord.beginClock = beginClock;
     eventRecord.endClock = endClock;
     eventRecord.threadId = GetThreadId();
 
-    memcpy(g_profilerState.customEventBuffer + g_profilerState.customEventPtr, &eventRecord, sizeof(CustomEventRecord));
-    g_profilerState.customEventPtr += sizeof(CustomEventRecord);
+    memcpy(g_profilerState->customEventBuffer + g_profilerState->customEventOffset, &eventRecord, sizeof(CustomEventRecord));
+    g_profilerState->customEventOffset += sizeof(CustomEventRecord);
 }
 
 
@@ -301,8 +257,13 @@ long long PERF_PROFILER_API ProfilerTimeBegin()
 
 void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const int eventId)
 {
-    INIT_GUARD_CHECK
-    if (c_fixedEvtDesc[eventId].syncGpu) ProfilerSyncGpu();
+    // A nullptr state indicates that the profiler is globally disabled, and not initialized
+    if (g_profilerState == nullptr)
+        return;
+
+    if (c_fixedEvtDesc[eventId].syncGpu)
+        ProfilerSyncGpu();
+
     long long endClock = GetClock();
     ProfilerTimeEndInt(eventId, stateId, endClock);
     ProfilerTimeEndInt(c_fixedEvtDesc[eventId].eventDescription, stateId, endClock);
@@ -311,7 +272,10 @@ void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const int eventI
 
 void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const char* eventDescription)
 {
-    INIT_GUARD_CHECK
+    // A nullptr state indicates that the profiler is globally disabled, and not initialized
+    if (g_profilerState == nullptr)
+        return;
+
     ProfilerTimeEndInt(eventDescription, stateId, GetClock());
 }
 
@@ -323,10 +287,15 @@ void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const char* even
 void PERF_PROFILER_API ProfilerSyncGpu()
 {
 #ifndef CPUONLY
-    INIT_GUARD_CHECK
-    if(!g_profilerState.enabled)
+    // A nullptr state indicates that the profiler is globally disabled, and not initialized
+    if (g_profilerState == nullptr)
         return;
-    if (g_profilerState.syncGpu) cudaDeviceSynchronize();
+
+    if(!g_profilerState->enabled)
+        return;
+
+    if (g_profilerState->syncGpu)
+        cudaDeviceSynchronize();
 #endif
 }
 
@@ -337,8 +306,11 @@ void PERF_PROFILER_API ProfilerSyncGpu()
 //
 void PERF_PROFILER_API ProfilerCudaTimeEnd(const float deltaSeconds, const char* eventDescription)
 {
-    INIT_GUARD_CHECK
-    ProfilerTimeEndInt(eventDescription, 0ll, (long long)((double)deltaSeconds * (double)g_profilerState.clockFrequency));
+    // A nullptr state indicates that the profiler is globally disabled, and not initialized
+    if (g_profilerState == nullptr)
+        return;
+
+    ProfilerTimeEndInt(eventDescription, 0ll, (long long)((double)deltaSeconds * (double)g_profilerState->clockFrequency));
 }
 
 
@@ -356,29 +328,33 @@ long long PERF_PROFILER_API ProfilerThroughputBegin()
 void PERF_PROFILER_API ProfilerThroughputEnd(const long long stateId, const int eventId, const long long bytes)
 {
     long long endClock = GetClock();
-    INIT_GUARD_CHECK
-    if (!g_profilerState.enabled)
+
+    // A nullptr state indicates that the profiler is globally disabled, and not initialized
+    if (g_profilerState == nullptr)
         return;
 
-    LOCK
+    if (!g_profilerState->enabled)
+        return;
+
+    ScopeLock sl;
 
     auto beginClock = stateId;
     if (endClock == beginClock)
         return;
 
     // Use KB rather than bytes to prevent overflow
-    long long KBytesPerSec = ((bytes * g_profilerState.clockFrequency) / 1000) / (endClock - beginClock);
-    if (g_profilerState.fixedEvents[eventId].cnt == 0)
+    long long KBytesPerSec = ((bytes * g_profilerState->clockFrequency) / 1000) / (endClock - beginClock);
+    if (g_profilerState->fixedEvents[eventId].cnt == 0)
     {
-        g_profilerState.fixedEvents[eventId].min = KBytesPerSec;
-        g_profilerState.fixedEvents[eventId].max = KBytesPerSec;
+        g_profilerState->fixedEvents[eventId].min = KBytesPerSec;
+        g_profilerState->fixedEvents[eventId].max = KBytesPerSec;
     }
-    g_profilerState.fixedEvents[eventId].min = min(KBytesPerSec, g_profilerState.fixedEvents[eventId].min);
-    g_profilerState.fixedEvents[eventId].max = max(KBytesPerSec, g_profilerState.fixedEvents[eventId].max);
-    g_profilerState.fixedEvents[eventId].sum += KBytesPerSec;
-    g_profilerState.fixedEvents[eventId].sumsq += (double)KBytesPerSec * (double)KBytesPerSec;
-    g_profilerState.fixedEvents[eventId].totalBytes += bytes;
-    g_profilerState.fixedEvents[eventId].cnt++;
+    g_profilerState->fixedEvents[eventId].min = min(KBytesPerSec, g_profilerState->fixedEvents[eventId].min);
+    g_profilerState->fixedEvents[eventId].max = max(KBytesPerSec, g_profilerState->fixedEvents[eventId].max);
+    g_profilerState->fixedEvents[eventId].sum += KBytesPerSec;
+    g_profilerState->fixedEvents[eventId].sumsq += (double)KBytesPerSec * (double)KBytesPerSec;
+    g_profilerState->fixedEvents[eventId].totalBytes += bytes;
+    g_profilerState->fixedEvents[eventId].cnt++;
 }
 
 
@@ -387,15 +363,16 @@ void PERF_PROFILER_API ProfilerThroughputEnd(const long long stateId, const int 
 //
 void PERF_PROFILER_API ProfilerClose()
 {
-    INIT_GUARD_CHECK
-    g_profilerState.init = false;
+    // A nullptr state indicates that the profiler is globally disabled, and not initialized
+    if (g_profilerState == nullptr)
+        return;
 
     LockClose();
 
     // Generate summary report
-    if (_wmkdir(s2ws(g_profilerState.profilerDir).c_str()) == ENOENT)
+    if (_wmkdir(g_profilerState->profilerDir.c_str()) == ENOENT)
     {
-        fprintf(stderr, "Error: ProfilerClose: Cannot create directory <%s>.\n", g_profilerState.profilerDir);
+        RuntimeError("Error: ProfilerClose: Cannot create directory <%s>.\n", g_profilerState->profilerDir.c_str());
         return;
     }
 
@@ -403,18 +380,17 @@ void PERF_PROFILER_API ProfilerClose()
     time(&currentTime);
     struct tm* timeInfo = localtime(&currentTime);
 
-    char timeStr[32];
-    strftime(timeStr, sizeof(timeStr), "%Y-%m-%d_%H-%M-%S", timeInfo);
+    wchar_t timeStr[32];
+    wcsftime(timeStr, sizeof(timeStr) / sizeof(timeStr[0]), L"%Y-%m-%d_%H-%M-%S", timeInfo);
 
-    char fileName[256];
-    sprintf_s(fileName, sizeof(fileName)-1, "%s/%s_summary_%s.txt", g_profilerState.profilerDir, timeStr, g_profilerState.logSuffix);
+    std::wstring fileName = g_profilerState->profilerDir + L"/" + std::wstring(timeStr) + L"_summary_" + g_profilerState->logSuffix + L".txt";
     ProfilerGenerateReport(fileName, timeInfo);
 
     // Generate detailed event file
-    sprintf_s(fileName, sizeof(fileName) - 1, "%s/%s_detail_%s.csv", g_profilerState.profilerDir, timeStr, g_profilerState.logSuffix);
+    fileName = g_profilerState->profilerDir + L"/" + std::wstring(timeStr) + L"_detail_" + g_profilerState->logSuffix + L".csv";
     ProfilerGenerateDetailFile(fileName);
 
-    delete[] g_profilerState.customEventBuffer;
+    delete[] g_profilerState->customEventBuffer;
 }
 
 
@@ -425,16 +401,28 @@ void PERF_PROFILER_API ProfilerClose()
 // Helper functions to set/get Sync flags.
 void PERF_PROFILER_API SyncCudaScopeSetFlags(bool syncEnabled, bool profilingEnabled)
 {
-    g_profilerState.cudaSyncEnabled = syncEnabled;
-    if (g_profilerState.syncCudaKernels) g_profilerState.cudaSyncEnabled = true;
-    g_profilerState.cudaProfilingEnabled = profilingEnabled;
+    // A nullptr state indicates that the profiler is globally disabled, and not initialized
+    if (g_profilerState == nullptr)
+        return;
+
+    g_profilerState->cudaSyncEnabled = syncEnabled;
+    if (g_profilerState->syncCudaKernels)
+        g_profilerState->cudaSyncEnabled = true;
+
+    g_profilerState->cudaProfilingEnabled = profilingEnabled;
 }
 
 void PERF_PROFILER_API SyncCudaScopeGetFlags(bool& syncEnabled, bool& profilingEnabled)
 {
-    syncEnabled = g_profilerState.cudaSyncEnabled;
-    if (g_profilerState.syncCudaKernels) syncEnabled = true;
-    profilingEnabled = g_profilerState.cudaProfilingEnabled;
+    // A nullptr state indicates that the profiler is globally disabled, and not initialized
+    if (g_profilerState == nullptr)
+        return;
+
+    syncEnabled = g_profilerState->cudaSyncEnabled;
+    if (g_profilerState->syncCudaKernels)
+        syncEnabled = true;
+
+    profilingEnabled = g_profilerState->cudaProfilingEnabled;
 }
 
 
@@ -491,8 +479,8 @@ long long GetClock()
 
 
 //
-// Locking primitives.
-// These are implemented directly here for best performance (rather than using STL).
+// Locking primitives used for thread safety for the profiler.
+// These are implemented directly here for better runtime performance than the STL mutex/lock functions.
 //
 
 #ifdef _WIN32
@@ -558,9 +546,9 @@ void LockClose()
 //
 // Generate summary report.
 //
-void ProfilerGenerateReport(const char* fileName, struct tm* timeInfo)
+void ProfilerGenerateReport(const std::wstring& fileName, struct tm* timeInfo)
 {
-    FILE* f = fopen(fileName, "wt");
+    FILE* f = _wfopen(fileName.c_str(), L"wt");
     if (f == NULL)
     {
         fprintf(stderr, "Error: ProfilerGenerateReport: Cannot create file <%s>.\n", fileName);
@@ -581,65 +569,65 @@ void ProfilerGenerateReport(const char* fileName, struct tm* timeInfo)
         switch (c_fixedEvtDesc[evtIdx].eventType)
         {
         case profilerEvtTime:
-            if (g_profilerState.fixedEvents[evtIdx].cnt > 0)
+            if (g_profilerState->fixedEvents[evtIdx].cnt > 0)
             {
                 printLine = true;
                 fprintfOrDie(f, "%-26s: ", c_fixedEvtDesc[evtIdx].eventDescription);
 
                 char str[32];
 
-                double mean = ((double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.fixedEvents[evtIdx].cnt) / (double)g_profilerState.clockFrequency;
+                double mean = ((double)g_profilerState->fixedEvents[evtIdx].sum / (double)g_profilerState->fixedEvents[evtIdx].cnt) / (double)g_profilerState->clockFrequency;
                 FormatTimeStr(str, sizeof(str), mean);
                 fprintfOrDie(f, "%s ", str);
 
-                double sum = (double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.clockFrequency;
-                double sumsq = g_profilerState.fixedEvents[evtIdx].sumsq / (double)g_profilerState.clockFrequency / (double)g_profilerState.clockFrequency;
-                double stdDev = sumsq - (pow(sum, 2.0) / (double)g_profilerState.fixedEvents[evtIdx].cnt);
+                double sum = (double)g_profilerState->fixedEvents[evtIdx].sum / (double)g_profilerState->clockFrequency;
+                double sumsq = g_profilerState->fixedEvents[evtIdx].sumsq / (double)g_profilerState->clockFrequency / (double)g_profilerState->clockFrequency;
+                double stdDev = sumsq - (pow(sum, 2.0) / (double)g_profilerState->fixedEvents[evtIdx].cnt);
                 if (stdDev < 0.0) stdDev = 0.0;
-                stdDev = sqrt(stdDev / (double)g_profilerState.fixedEvents[evtIdx].cnt);
+                stdDev = sqrt(stdDev / (double)g_profilerState->fixedEvents[evtIdx].cnt);
                 FormatTimeStr(str, sizeof(str), stdDev);
                 fprintfOrDie(f, "%s ", str);
 
-                FormatTimeStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].min / (double)g_profilerState.clockFrequency);
+                FormatTimeStr(str, sizeof(str), (double)g_profilerState->fixedEvents[evtIdx].min / (double)g_profilerState->clockFrequency);
                 fprintfOrDie(f, "%s ", str);
 
-                FormatTimeStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].max / (double)g_profilerState.clockFrequency);
+                FormatTimeStr(str, sizeof(str), (double)g_profilerState->fixedEvents[evtIdx].max / (double)g_profilerState->clockFrequency);
                 fprintfOrDie(f, "%s ", str);
 
-                fprintfOrDie(f, "%16d ", g_profilerState.fixedEvents[evtIdx].cnt);
+                fprintfOrDie(f, "%16d ", g_profilerState->fixedEvents[evtIdx].cnt);
 
-                FormatTimeStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.clockFrequency);
+                FormatTimeStr(str, sizeof(str), (double)g_profilerState->fixedEvents[evtIdx].sum / (double)g_profilerState->clockFrequency);
                 fprintfOrDie(f, "%s", str);
             }
             break;
 
         case profilerEvtThroughput:
-            if (g_profilerState.fixedEvents[evtIdx].cnt > 0)
+            if (g_profilerState->fixedEvents[evtIdx].cnt > 0)
             {
                 printLine = true;
                 fprintfOrDie(f, "%-26s: ", c_fixedEvtDesc[evtIdx].eventDescription);
 
                 char str[32];
 
-                double mean = ((double)g_profilerState.fixedEvents[evtIdx].sum / (double)g_profilerState.fixedEvents[evtIdx].cnt);
+                double mean = ((double)g_profilerState->fixedEvents[evtIdx].sum / (double)g_profilerState->fixedEvents[evtIdx].cnt);
                 FormatThroughputStr(str, sizeof(str), mean);
                 fprintfOrDie(f, "%s ", str);
 
-                double stdDev = g_profilerState.fixedEvents[evtIdx].sumsq - (pow((double)g_profilerState.fixedEvents[evtIdx].sum, 2.0) / (double)g_profilerState.fixedEvents[evtIdx].cnt);
+                double stdDev = g_profilerState->fixedEvents[evtIdx].sumsq - (pow((double)g_profilerState->fixedEvents[evtIdx].sum, 2.0) / (double)g_profilerState->fixedEvents[evtIdx].cnt);
                 if (stdDev < 0.0) stdDev = 0.0;
-                stdDev = sqrt(stdDev / (double)g_profilerState.fixedEvents[evtIdx].cnt);
+                stdDev = sqrt(stdDev / (double)g_profilerState->fixedEvents[evtIdx].cnt);
                 FormatThroughputStr(str, sizeof(str), stdDev);
                 fprintfOrDie(f, "%s ", str);
 
-                FormatThroughputStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].min);
+                FormatThroughputStr(str, sizeof(str), (double)g_profilerState->fixedEvents[evtIdx].min);
                 fprintfOrDie(f, "%s ", str);
 
-                FormatThroughputStr(str, sizeof(str), (double)g_profilerState.fixedEvents[evtIdx].max);
+                FormatThroughputStr(str, sizeof(str), (double)g_profilerState->fixedEvents[evtIdx].max);
                 fprintfOrDie(f, "%s ", str);
 
-                fprintfOrDie(f, "%16d ", g_profilerState.fixedEvents[evtIdx].cnt);
+                fprintfOrDie(f, "%16d ", g_profilerState->fixedEvents[evtIdx].cnt);
 
-                FormatBytesStr(str, sizeof(str), g_profilerState.fixedEvents[evtIdx].totalBytes);
+                FormatBytesStr(str, sizeof(str), g_profilerState->fixedEvents[evtIdx].totalBytes);
                 fprintfOrDie(f, "%s", str);
             }
             break;
@@ -693,9 +681,9 @@ void FormatBytesStr(char* str, size_t strLen, long long bytes)
 //
 // Generate detail event file.
 //
-void ProfilerGenerateDetailFile(const char* fileName)
+void ProfilerGenerateDetailFile(const std::wstring& fileName)
 {
-    FILE* f = fopen(fileName, "wt");
+    FILE* f = _wfopen(fileName.c_str(), L"wt");
     if (f == NULL)
     {
         fprintf(stderr, "Error: ProfilerGenerateDetailFile: Cannot create file <%s>.\n", fileName);
@@ -704,9 +692,9 @@ void ProfilerGenerateDetailFile(const char* fileName)
 
     fprintfOrDie(f, "EventDescription,ThreadId,BeginTimeStamp(ms),EndTimeStamp(ms)\n");
 
-    char* eventPtr = g_profilerState.customEventBuffer;
+    char* eventPtr = g_profilerState->customEventBuffer;
 
-    while (eventPtr < (g_profilerState.customEventBuffer + g_profilerState.customEventPtr))
+    while (eventPtr < (g_profilerState->customEventBuffer + g_profilerState->customEventOffset))
     {
         char* descriptionStr = eventPtr;
         eventPtr += strlen(descriptionStr) + 1;
@@ -715,8 +703,8 @@ void ProfilerGenerateDetailFile(const char* fileName)
         eventPtr += sizeof(CustomEventRecord);
 
         fprintfOrDie(f, "\"%s\",%u,%.8f,%.8f\n", descriptionStr, eventRecord->threadId, 
-            1000.0 * ((double)eventRecord->beginClock / (double)g_profilerState.clockFrequency),
-            1000.0 * ((double)eventRecord->endClock / (double)g_profilerState.clockFrequency));
+            1000.0 * ((double)eventRecord->beginClock / (double)g_profilerState->clockFrequency),
+            1000.0 * ((double)eventRecord->endClock / (double)g_profilerState->clockFrequency));
     }
 
     fclose(f);
@@ -727,7 +715,7 @@ void ProfilerGenerateDetailFile(const char* fileName)
 // Scoped helpers.
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void ProfilerContext::Init(const char* profilerDir, const unsigned long long customEventBufferBytes, const char* logSuffix, const bool syncGpu, const bool syncCudaKernels)
+void ProfilerContext::Init(const std::wstring& profilerDir, const unsigned long long customEventBufferBytes, const std::wstring& logSuffix, const bool syncGpu, const bool syncCudaKernels)
 {
     ProfilerInit(profilerDir, customEventBufferBytes, logSuffix, syncGpu, syncCudaKernels);
 }
