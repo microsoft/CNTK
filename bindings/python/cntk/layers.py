@@ -181,7 +181,6 @@ def Pooling(op,      # PoolingType_Max or _Average
             filter_shape,  # e.g. (3,3)
             strides=1,
             pad=False):
-    #UntestedBranchError("Pooling")
     x = Placeholder(name='pooling_arg')
     apply_x = pooling (x, op, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
 
@@ -202,6 +201,12 @@ def AveragePooling(filter_shape,  # e.g. (3,3)
                    strides=1,
                    pad=False):
     return Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad)
+
+def GlobalMaxPooling():
+    return Pooling(PoolingType_Max, None)
+
+def GlobalAveragePooling():
+    return Pooling(PoolingType_Average, None)
 
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):

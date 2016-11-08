@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+﻿# Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -184,8 +184,14 @@ def get_temp_filename(directory=None):
 def sanitize_shape(shape):
     """
     If shape is scalar, it creates a tuple out of it and reverse it as cntk uses
-    column major.
+    column major. If the shape is None, it will be returned as it is and treated
+	as Unknown shape by CNTK.
     """
+
+    # Unknown shape
+    if shape == None:
+        return shape
+
     if np.isscalar(shape):
         shape = (shape,)
     return tuple(reversed(shape))

@@ -136,8 +136,7 @@ def create_resnet_model(input, num_classes):
     r3_1 = resnet_basic_inc(r2_2, 64)
     r3_2 = resnet_basic_stack(r3_1, 64, 2)
 
-    # Global average pooling
-    pool = AveragePooling(filter_shape=(8,8), strides=(1,1))(r3_2)    
+    pool = GlobalAveragePooling()(r3_2) 
     net = Dense(num_classes, init=he_normal(), activation=None)(pool)
 
     return net

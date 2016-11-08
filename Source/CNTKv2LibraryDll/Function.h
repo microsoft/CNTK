@@ -540,6 +540,17 @@ namespace CNTK
         {
             if (inferDimensions)
             {
+                size_t inputRank = operandShape.Rank();
+
+                // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
+                if (kernelShape == NDShape::Unknown)
+                {
+                    if (op == PrimitiveOpType::Pooling)
+                        kernelShape = operandShape.SubShape(0, inputRank-1);
+                    else
+                        RuntimeError("Kernel shape can't be Unknown except for pooling operation!");
+                }
+
                 // infer reduction dimensions if not given
                 // If kernel has a lower rank than the input then the remaining dimensions are to be reduced over.
                 size_t filterRank = kernelShape.Rank();
@@ -554,7 +565,6 @@ namespace CNTK
                     kernelShape = kernelShape.SubShape(0, filterRank);
                 }
 
-                size_t inputRank = operandShape.Rank();
                 NDShape fromShape;
                 if (op == PrimitiveOpType::Convolution)
                     fromShape = operandShape;

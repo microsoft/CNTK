@@ -335,11 +335,13 @@ fail:
 %typecheck(1000) CNTK::NDShape const &, CNTK::NDShape {
     // '1000' is the typecheck precedence code. It means: check after basic
     // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
-    $1 = PyTuple_Check($input) ? 1 : 0;
+    $1 = (($input == Py_None) || PyTuple_Check($input)) ? 1 : 0;
 }
 
 %typemap(in) CNTK::NDShape const & {
-     if (PyTuple_Check($input)) {
+     if ($input == Py_None) {
+        $1 = new CNTK::NDShape(CNTK::NDShape::Unknown);
+     } else if (PyTuple_Check($input)) {
         std::vector<size_t> dimensions;
         size_t rank = PyTuple_Size($input);
         for (size_t i=0; i<rank; i++)
