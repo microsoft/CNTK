@@ -1,8 +1,6 @@
 //
-// <copyright file="ASGDHelper.h" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
-// </copyright>
 //
 #pragma once
 
@@ -30,7 +28,7 @@ class ASGDHelper
 public:
     virtual ~ASGDHelper() { }
     // -----------------------------------------------------------------------
-    // InitModel() -- Upload initilized model (, which was pre-computed by CNTK logic) .
+    // InitModel() -- Upload initialized model (, which was pre-computed by CNTK logic) .
     // to the parameter servers, so that every node could start training from same model
     // -----------------------------------------------------------------------
     virtual void InitModel(const std::list<ComputationNodeBasePtr> & learnableNodes) = 0;
@@ -46,7 +44,7 @@ public:
     virtual void WaitAll() = 0;
 
     // -----------------------------------------------------------------------
-    // WaitAsyncBuffer() -- Wait pipeline thread to finish job when useAsyncBufferd = true
+    // WaitAsyncBuffer() -- Wait pipeline thread to finish job when useAsyncBuffer is true
     // -----------------------------------------------------------------------
     virtual void WaitAsyncBuffer() = 0;
 

@@ -72,7 +72,7 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 }
 
 #define CUDA_CALL(expr)     (CudaCall((expr), #expr, "CUDA",     cudaSuccess))
-#endif // CPUONLf
+#endif // CPUONLY
 
 #ifdef ASGD_PARALLEL_SUPPORT
 
@@ -85,7 +85,7 @@ public:
 
     MultiversoHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,          // Parameters that needs to be train
         size_t nodeNumRanks,                                                            // Number of working nodes
-        bool useAsyncBuffered = true,                                                   // Using asynchonous buffer to hide communication cost
+        bool useAsyncBuffer = true,                                                   // Using asynchonous buffer to hide communication cost
         bool isSimulatedModelAveragingSGD = false,                                      // Using parameter server-based MA rather than ASGD
         AdjustLearningRateAtBeginning adjusttype = AdjustLearningRateAtBeginning::None, // Adjust learning per minibatches at very begining of training process
         // this could be used to tackle the unstableness of ASGD
@@ -95,17 +95,17 @@ public:
         int syncPerfStats = 0) :                                                        // shown perf data every syncPerfStats
         m_parameterSyncCounter(0), m_adjustLearningRateAtBeginningType(adjusttype),
         m_adjustCoefficient(adjustCoef), m_adjustMBNumber(adjustPerMinibatches),
-        m_totalClientNumber(nodeNumRanks), m_useAsyncBuffered(useAsyncBuffered),
+        m_totalClientNumber(nodeNumRanks), m_useAsyncBuffer(useAsyncBuffer),
         m_traceLevel(traceLevel), m_ModelAveragingSGDSimulating(isSimulatedModelAveragingSGD), m_doesEveryNodesShouldSynced(false),
         m_syncPerfStats(syncPerfStats)
     {
         if (m_ModelAveragingSGDSimulating)
         {
             m_doesEveryNodesShouldSynced = true;
-            m_useAsyncBuffered = false;
+            m_useAsyncBuffer = false;
         }
         // Pipeline releated variables
-        m_localBufferNum = m_useAsyncBuffered ? 2 : 1;
+        m_localBufferNum = m_useAsyncBuffer ? 2 : 1;
         m_bufferSwapIndex = new int[m_localBufferNum];
 
         // CPU asynchronous buffer
@@ -140,7 +140,7 @@ public:
         fprintf(stderr, "~MultiversoHelper\n");
         fflush(stderr);
 
-        if (m_useAsyncBuffered && m_aysncBufferThread != nullptr && m_aysncBufferThread->joinable())
+        if (m_useAsyncBuffer && m_aysncBufferThread != nullptr && m_aysncBufferThread->joinable())
             m_aysncBufferThread->join();
 
         delete m_bufferSwapIndex, m_deltaArray;
@@ -220,7 +220,7 @@ public:
         m_bufferIndexInUse = m_bufferSwapIndex[m_bufferIndexInUse];
 
         int i = 0; // indicate the index of learnable nodes
-        if (m_useAsyncBuffered)
+        if (m_useAsyncBuffer)
         {
             m_reportTimer.Restart();
             for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
@@ -565,7 +565,7 @@ private:
     size_t m_parameterSyncCounter;
     size_t m_sampleSinceLastReport;
 
-    bool m_useAsyncBuffered;
+    bool m_useAsyncBuffer;
     int m_localBufferNum;
     int * m_bufferSwapIndex;
     int m_bufferIndexInUse;
@@ -606,7 +606,7 @@ class NoneASGDHelper : public ASGDHelper<ElemType>
 public:
     NoneASGDHelper(const std::list<ComputationNodeBasePtr> & learnableNodes,
         int nodeNumRanks,
-        bool useAsyncBuffered = true,
+        bool useAsyncBuffer = true,
         bool isSimModelAveragingSGD = false,
         AdjustLearningRateAtBeginning adjusttype = AdjustLearningRateAtBeginning::None,
         double adjustcoef = 0.2,
@@ -632,7 +632,7 @@ template<class ElemType>
 ASGDHelper<ElemType>* NewASGDHelper(
     const std::list<ComputationNodeBasePtr> & learnableNodes,                // Parameters that needs to be train
     size_t nodeNumRanks,                                                     // Number of working nodes
-    bool useAsyncBuffered,                                            // Using asynchonous buffer to hide communication cost
+    bool useAsyncBuffer,                                            // Using asynchonous buffer to hide communication cost
     bool isSimulatedModelAveragingSGD,
     AdjustLearningRateAtBeginning adjusttype,
     double adjustCoef,
@@ -641,10 +641,10 @@ ASGDHelper<ElemType>* NewASGDHelper(
     int syncPerfStats) 
 {
 #ifdef ASGD_PARALLEL_SUPPORT
-    return new MultiversoHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffered, isSimulatedModelAveragingSGD, 
+    return new MultiversoHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffer, isSimulatedModelAveragingSGD, 
                                       adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats);
 #else
-    return new NoneASGDHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffered, isSimulatedModelAveragingSGD, 
+    return new NoneASGDHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffer, isSimulatedModelAveragingSGD, 
                                       adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats); 
 #endif
 }
@@ -652,7 +652,7 @@ ASGDHelper<ElemType>* NewASGDHelper(
 template ASGDHelper<float>* NewASGDHelper<float>(
     const std::list<ComputationNodeBasePtr> & learnableNodes,
     size_t nodeNumRanks,
-    bool useAsyncBuffered,
+    bool useAsyncBuffer,
     bool isSimulatedModelAveragingSGD,
     AdjustLearningRateAtBeginning adjusttype,
     double adjustCoef,
@@ -663,7 +663,7 @@ template ASGDHelper<float>* NewASGDHelper<float>(
 template ASGDHelper<double>* NewASGDHelper<double>(
     const std::list<ComputationNodeBasePtr> & learnableNodes,
     size_t nodeNumRanks,
-    bool useAsyncBuffered,
+    bool useAsyncBuffer,
     bool isSimulatedModelAveragingSGD,
     AdjustLearningRateAtBeginning adjusttype,
     double adjustCoef,
