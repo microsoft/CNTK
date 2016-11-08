@@ -424,7 +424,7 @@ requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 1
 08/16/2016 10:01:46: Starting Epoch 1: learning rate per sample = 0.003906  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 minibatchiterator: epoch 0: frames [0..2048] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 
-08/16/2016 10:01:46: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 1, NumGradientBits = 1), distributed reading is ENABLED.
+08/16/2016 10:01:46: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 1, numGradientBits = 1), distributed reading is ENABLED.
 08/16/2016 10:01:46: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 4.41144794 * 2048; EvalClassificationError = 0.92773438 * 2048; totalSamplesSeen = 2048; learningRatePerSample = 0.00390625; epochTime=0.023072s
 08/16/2016 10:01:46: SGD: Saving checkpoint model '/tmp/cntk-test-20160816100054.995555/Examples/Speech/AN4_FeedForward@release_gpu/Models/cntkSpeechFF.dnn'
 08/16/2016 10:01:46: CNTKCommandTrainEnd: speechTrain

@@ -166,17 +166,20 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
     // --- END reorder process   --TODO: eliminate this process
 
     // log the loops
-    for (auto& iter : m_allSEQNodes)
+    if (TraceLevel() > 0)
     {
-        fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int) iter->m_loopId, iter->NodeName().c_str(), (int) iter->m_nestedNodes.size());
-        size_t n = 0;
-        for (auto itr = iter->m_nestedNodes.begin(); itr != iter->m_nestedNodes.end(); itr++)
+        for (auto& iter : m_allSEQNodes)
         {
-            if (n++ % 3 == 0)
-                fprintf(stderr, "\n");
-            fprintf(stderr, "\t%ls", (*itr)->NodeName().c_str());
+            fprintf(stderr, "\nLoop[%d] --> %ls -> %d nodes\n", (int)iter->m_loopId, iter->NodeName().c_str(), (int)iter->m_nestedNodes.size());
+            size_t n = 0;
+            for (auto itr = iter->m_nestedNodes.begin(); itr != iter->m_nestedNodes.end(); itr++)
+            {
+                if (n++ % 3 == 0)
+                    fprintf(stderr, "\n");
+                fprintf(stderr, "\t%ls", (*itr)->NodeName().c_str());
+            }
+            fprintf(stderr, "\n");
         }
-        fprintf(stderr, "\n");
     }
 
 #if 0

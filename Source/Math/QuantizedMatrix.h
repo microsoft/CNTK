@@ -47,8 +47,11 @@ public:
     }
 };
 
+class MATH_API QuantizedMatrixBase
+{};
+
 template <class ElemType>
-class MATH_API QuantizedMatrix
+class MATH_API QuantizedMatrix : public QuantizedMatrixBase
 {
     typedef typename ValueQuantizer<ElemType>::QWord QWord;
     typedef typename ValueQuantizer<ElemType>::QWordVal QWordVal;

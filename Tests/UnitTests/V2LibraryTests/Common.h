@@ -6,21 +6,77 @@
 #include <fstream>
 #include <random>
 
+// enable assert in Release mode.
+#ifdef NDEBUG
+#undef NDEBUG
+#include <assert.h>
+#define NDEBUG
+#endif
+
+#ifdef _MSC_VER
+// In case of asserts in debug mode, print the message into stderr and throw exception
+int HandleDebugAssert(int /* reportType */,
+                      char *message, // fully assembled debug user message
+                      int *returnValue); // returnValue - retVal value of zero continues execution
+#endif
+
+#pragma warning(push)
+#pragma warning(disable : 4996)
+#ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
+__declspec_noreturn inline void ReportFailure(const char* format, ...) __attribute__((format(printf, 1, 2)));
+#endif
+
+__declspec_noreturn inline void ReportFailure(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    char buffer[1024] = { 0 }; // Note: pre-VS2015 vsnprintf() is not standards-compliant and may not add a terminator
+    vsnprintf(buffer, _countof(buffer) - 1, format, args); // -1 because pre-VS2015 vsnprintf() does not always write a 0-terminator
+    if (strlen(buffer)/*written*/ >= (int)_countof(buffer) - 2)
+        sprintf(buffer + _countof(buffer) - 4, "...");
+
+    throw std::runtime_error(buffer);
+}
+#pragma warning(pop)
+
 static const double relativeTolerance = 0.001f;
 static const double absoluteTolerance = 0.000001f;
 
+bool IsGPUAvailable();
+
 template <typename ElementType>
-inline void FloatingPointVectorCompare(const std::vector<ElementType>& first, const std::vector<ElementType>& second, const char* message)
+inline void FloatingPointCompare(ElementType actual, ElementType expected, const char* message)
 {
-    for (size_t i = 0; i < first.size(); ++i)
-    {
-        ElementType leftVal = first[i];
-        ElementType rightVal = second[i];
-        ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, ((ElementType)relativeTolerance) * leftVal);
-        if (std::abs(leftVal - rightVal) > allowedTolerance)
-            throw std::runtime_error(message);
-    }
+    ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, std::abs(((ElementType)relativeTolerance) * actual));
+    if (std::abs(actual - expected) > allowedTolerance)
+        ReportFailure((message + std::string("; Expected=%g, Actual=%g")).c_str(), expected, actual);
 }
+
+template <typename ElementType>
+inline void FloatingPointVectorCompare(const std::vector<ElementType>& actual, const std::vector<ElementType>& expected, const char* message)
+{
+    if (actual.size() != expected.size())
+        ReportFailure((message + std::string("; actual data vector size (%d) and expected data vector size (%d) are not equal")).c_str(), (int)actual.size(), (int)expected.size());
+
+    for (size_t i = 0; i < actual.size(); ++i)
+        FloatingPointCompare(actual[i], expected[i], message);
+}
+
+inline void VerifyException(const std::function<void()>& functionToTest, std::string errorMessage) {
+    bool error = false;
+    try
+    {
+        functionToTest();
+    }
+    catch (const std::exception&)
+    {
+        error = true;
+    }
+
+    if (!error)
+        throw std::runtime_error(errorMessage);
+};
 
 static std::mt19937_64 rng(0);
 
@@ -52,12 +108,12 @@ static inline FILE *_wfopen(const wchar_t *path, const wchar_t *mode)
 #endif
 
 template <typename ElementType>
-inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector<CNTK::Variable*>& variables, const CNTK::DeviceDescriptor& device)
+inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector<CNTK::Variable*>& variables, const CNTK::DeviceDescriptor& device, size_t rank = 0)
 {
-    static std::wstring s_tempModelPath = L"feedForward.net";
+    const std::wstring tempModelPath = L"feedForward.net" + std::to_wstring((int)rank);
 
-    if ((_wunlink(s_tempModelPath.c_str()) != 0) && (errno != ENOENT))
-        std::runtime_error("Error deleting temp model file 'feedForward.net'");
+    if ((_wunlink(tempModelPath.c_str()) != 0) && (errno != ENOENT))
+       throw std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
     std::unordered_map<std::wstring, CNTK::Variable*> inputVarUids;
     std::unordered_map<std::wstring, CNTK::Variable*> outputVarNames;
@@ -66,14 +122,14 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
     {
         auto retVal = varPtr->IsOutput() ? outputVarNames.insert({ varPtr->Owner()->Name(), varPtr }) : inputVarUids.insert({ varPtr->Uid(), varPtr });
         if (!retVal.second)
-            std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
+           throw std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
 
-    CNTK::SaveAsLegacyModel(functionPtr, s_tempModelPath);
-    functionPtr = CNTK::LoadLegacyModel(functionPtr->Outputs()[0].GetDataType(), s_tempModelPath, device);
+    functionPtr->SaveModel(tempModelPath);
+    functionPtr = CNTK::Function::LoadModel(functionPtr->Outputs()[0].GetDataType(), tempModelPath, device);
 
-    if (_wunlink(s_tempModelPath.c_str()) != 0)
-         std::runtime_error("Error deleting temp model file 'feedForward.net'");
+    if (_wunlink(tempModelPath.c_str()) != 0)
+         throw std::runtime_error("Error deleting temp model file 'feedForward.net'");
 
     auto inputs = functionPtr->Inputs();
     for (auto inputVarInfo : inputVarUids)
@@ -101,16 +157,33 @@ inline CNTK::FunctionPtr FullyConnectedLinearLayer(CNTK::Variable input, size_t 
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
 
-    auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, device));
-    auto timesFunction = CNTK::Times(timesParam, input);
+    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(), device, L"timesParam");
+    auto timesFunction = CNTK::Times(timesParam, input, L"times");
 
-    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim }, -0.05, 0.05, 1, device));
+    auto plusParam = CNTK::Parameter({ outputDim }, 0.0f, device, L"plusParam");
     return CNTK::Plus(plusParam, timesFunction, outputName);
 }
 
-inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t outputDim, const CNTK::DeviceDescriptor& device, const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity)
+inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t outputDim, const CNTK::DeviceDescriptor& device, const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity, const std::wstring& outputName = L"")
 {
-    return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device));
+    return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device, outputName));
+}
+
+inline CNTK::FunctionPtr FullyConnectedFeedForwardClassifierNet(CNTK::Variable input,
+                                                   size_t numOutputClasses,
+                                                   size_t hiddenLayerDim,
+                                                   size_t numHiddenLayers,
+                                                   const CNTK::DeviceDescriptor& device,
+                                                   const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity,
+                                                   const std::wstring& outputName)
+{
+    assert(numHiddenLayers >= 1);
+    auto classifierRoot = FullyConnectedDNNLayer(input, hiddenLayerDim, device, nonLinearity);
+    for (size_t i = 1; i < numHiddenLayers; ++i)
+        classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
+
+    auto outputTimesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, CNTK::SentinelValueForAutoSelectRandomSeed, device));
+    return Times(outputTimesParam, classifierRoot, 1, outputName);
 }
 
 template <typename ElementType>
@@ -127,9 +200,6 @@ inline CNTK::FunctionPtr Stabilize(const CNTK::Variable& x, const CNTK::DeviceDe
 template <typename ElementType>
 std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(CNTK::Variable input, CNTK::Variable prevOutput, CNTK::Variable prevCellState, const CNTK::DeviceDescriptor& device)
 {
-    if ((input.Shape().Rank() != 1) || (prevOutput.Shape().Rank() != 1) || (prevCellState.Shape().Rank() != 1))
-        std::runtime_error("The LSTM implementation in the test library currently only supports 1D inputs and outputs");
-
     size_t inputDim = input.Shape()[0];
     size_t outputDim = prevOutput.Shape()[0];
     size_t cellDim = prevCellState.Shape()[0];
@@ -140,11 +210,11 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
 
     unsigned long seed = 1;
     auto createProjectionParam = [device, &seed](size_t outputDim, size_t inputDim) {
-        return CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ outputDim, inputDim }, -0.5, 0.5, seed++, device));
+        return CNTK::Parameter({ outputDim, inputDim }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed++), device);
     };
 
     auto createDiagWeightParam = [device, &seed](size_t dim) {
-        return CNTK::Parameter(CNTK::NDArrayView::RandomUniform<ElementType>({ dim }, -0.5, 0.5, seed++, device));
+        return CNTK::Parameter({ dim }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed++), device);
     };
 
     auto stabilizedPrevOutput = Stabilize<ElementType>(prevOutput, device);
@@ -159,7 +229,7 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
     auto bit = CNTK::ElementTimes(it, CNTK::Tanh(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput)));
 
     // Forget-me-not gate
-    auto ft = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
+    auto ft = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim, outputDim), stabilizedPrevOutput) + CNTK::ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
     auto bft = CNTK::ElementTimes(ft, prevCellState);
 
     auto ct = bft + bit;
@@ -176,14 +246,14 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
 
 template <typename ElementType>
 std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPComponentWithSelfStabilization(CNTK::Variable input,
-                                                                                    size_t outputDim,
-                                                                                    size_t cellDim,
+                                                                                    const CNTK::NDShape& outputShape,
+                                                                                    const CNTK::NDShape& cellShape,
                                                                                     const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHookH,
                                                                                     const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHookC,
                                                                                     const CNTK::DeviceDescriptor& device)
 {
-    auto dh = CNTK::PlaceholderVariable({ outputDim }, input.DynamicAxes());
-    auto dc = CNTK::PlaceholderVariable({ cellDim }, input.DynamicAxes());
+    auto dh = CNTK::PlaceholderVariable(outputShape, input.DynamicAxes());
+    auto dc = CNTK::PlaceholderVariable(cellShape, input.DynamicAxes());
 
     auto LSTMCell = LSTMPCellWithSelfStabilization<ElementType>(input, dh, dc, device);
 
@@ -196,13 +266,31 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPComponentWithSelfStabilizat
     return { LSTMCell.first, LSTMCell.second };
 }
 
+// This is currently unused
+inline CNTK::FunctionPtr SimpleRecurrentLayer(const  CNTK::Variable& input, const  CNTK::NDShape& outputDim, const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHook, const CNTK::DeviceDescriptor& device)
+{
+    auto dh = CNTK::PlaceholderVariable(outputDim, input.DynamicAxes());
+
+    unsigned long seed = 1;
+    auto createProjectionParam = [device, &seed](size_t outputDim, size_t inputDim) {
+        return CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.5, 0.5, seed++, device));
+    };
+
+    auto hProjWeights = createProjectionParam(outputDim[0], outputDim[0]);
+    auto inputProjWeights = createProjectionParam(outputDim[0], input.Shape()[0]);
+
+    auto output = Times(hProjWeights, recurrenceHook(dh)) + Times(inputProjWeights, input);
+    return output->ReplacePlaceholders({ { dh, output } });
+}
+
 inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t maxAllowedSequenceLength)
 {
     std::vector<size_t> sequenceLengths(numSequences);
     size_t maxActualSequenceLength = 0;
+    size_t minActualSequenceLength = 3;
     for (size_t i = 0; i < numSequences; ++i)
     {
-        sequenceLengths[i] = (rand() % maxAllowedSequenceLength) + 1;
+        sequenceLengths[i] = (rand() % maxAllowedSequenceLength) + minActualSequenceLength;
         if (sequenceLengths[i] > maxActualSequenceLength)
             maxActualSequenceLength = sequenceLengths[i];
     }
@@ -211,13 +299,13 @@ inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t m
 }
 
 template <typename ElementType>
-inline std::vector<std::vector<ElementType>> GenerateSequences(const std::vector<size_t>& sequenceLengths, size_t dim)
+inline std::vector<std::vector<ElementType>> GenerateSequences(const std::vector<size_t>& sequenceLengths, const CNTK::NDShape& sampleShape)
 {
     size_t numSequences = sequenceLengths.size();
     std::vector<std::vector<ElementType>> sequences;
     for (size_t i = 0; i < numSequences; ++i)
     {
-        std::vector<ElementType> currentSequence(dim * sequenceLengths[i]);
+        std::vector<ElementType> currentSequence(sampleShape.TotalSize() * sequenceLengths[i]);
         for (size_t j = 0; j < currentSequence.size(); ++j)
             currentSequence[j] = ((ElementType)rand()) / RAND_MAX;
 
@@ -247,17 +335,21 @@ inline std::vector<std::vector<size_t>> GenerateOneHotSequences(const std::vecto
 }
 
 template <typename ElementType>
-inline CNTK::ValuePtr GenerateSequences(const std::vector<size_t>& sequenceLengths, size_t dim, const CNTK::DeviceDescriptor& device, bool oneHot)
+inline CNTK::ValuePtr GenerateSequences(const std::vector<size_t>& sequenceLengths, const CNTK::NDShape& sampleShape, const CNTK::DeviceDescriptor& device, bool oneHot)
 {
     if (!oneHot)
     {
-        std::vector<std::vector<ElementType>> sequences = GenerateSequences<ElementType>(sequenceLengths, dim);
-        return CNTK::Value::Create({ dim }, sequences, device, true);
+        std::vector<std::vector<ElementType>> sequences = GenerateSequences<ElementType>(sequenceLengths, sampleShape);
+        return CNTK::Value::Create(sampleShape, sequences, device, true);
     }
     else
     {
-        std::vector<std::vector<size_t>> oneHotSequences = GenerateOneHotSequences(sequenceLengths, dim);
-        return CNTK::Value::Create<ElementType>({ dim }, oneHotSequences, device, true);
+        if (sampleShape.Rank() != 1)
+            throw std::runtime_error("GenerateSequences can generate one hot sequences only for 1D sample shapes");
+
+        size_t vocabularySize = sampleShape[0];
+        std::vector<std::vector<size_t>> oneHotSequences = GenerateOneHotSequences(sequenceLengths, vocabularySize);
+        return CNTK::Value::Create<ElementType>(vocabularySize, oneHotSequences, device, true);
     }
 }
 
@@ -277,7 +369,7 @@ inline CNTK::NDShape CreateShape(size_t numAxes, size_t maxDimSize)
 inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool readonly)
 {
     if (filename.empty())
-        std::runtime_error("File: filename is empty");
+       throw std::runtime_error("File: filename is empty");
 
     std::ios_base::openmode mode = std::ios_base::binary;
     mode = mode | (readonly ? std::ios_base::in : std::ios_base::out);
@@ -287,7 +379,7 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
     #else
     stream.open(wtocharpath(filename.c_str()).c_str(), mode);
     #endif
-    stream.exceptions(std::ios_base::failbit | std::ios_base::badbit);  
+    stream.exceptions(std::ios_base::badbit);  
 }
 
 inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
@@ -297,5 +389,225 @@ inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatch
         double trainLossValue = trainer.PreviousMinibatchLossAverage();
         double evaluationValue = trainer.PreviousMinibatchEvaluationAverage();
         printf("Minibatch %d: CrossEntropy loss = %.8g, Evaluation criterion = %.8g\n", (int)minibatchIdx, trainLossValue, evaluationValue);
+    }
+}
+inline std::vector<size_t> GetStrides(const CNTK::NDShape& shape)
+{
+    if (shape.Rank() == 0)
+        return std::vector<size_t>();
+
+    std::vector<size_t> strides(shape.Rank() - 1);
+    size_t totalSize = 1;
+    for (size_t i = 0; i < shape.Rank() - 1; ++i)
+    {
+        totalSize *= shape[i];
+        strides[i] = totalSize;
+    }
+
+    return strides;
+}
+
+inline CNTK::NDShape UnflattenedShape(size_t flatennedIdx, const std::vector<size_t>& strides)
+{
+    CNTK::NDShape unflattenedShape(strides.size() + 1);
+    size_t remainder = flatennedIdx;
+    for (int i = (int)strides.size() - 1; i >= 0; --i)
+    {
+        unflattenedShape[i + 1] = remainder / strides[i];
+        remainder = remainder % strides[i];
+    }
+    unflattenedShape[0] = remainder;
+
+    return unflattenedShape;
+}
+
+inline size_t FlattenedIndex(const CNTK::NDShape& shape, const std::vector<size_t>& strides)
+{
+    if (shape.Rank() == 0)
+        return 0;
+
+    size_t flattenedIdx = shape[0];
+    for (int i = 0; i < strides.size(); ++i)
+        flattenedIdx += shape[i + 1] * strides[i];
+
+    return flattenedIdx;
+};
+
+inline CNTK::FunctionPtr Embedding(const CNTK::Variable& input, size_t embeddingDim, const CNTK::DeviceDescriptor& device)
+{
+    assert(input.Shape().Rank() == 1);
+    size_t inputDim = input.Shape()[0];
+    auto embeddingParameters = CNTK::Parameter({ embeddingDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(), device);
+    return Times(embeddingParameters, input);
+}
+
+inline CNTK::FunctionPtr LSTMSequenceClassiferNet(const CNTK::Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const CNTK::DeviceDescriptor& device, const std::wstring& outputName)
+{
+    auto embeddingFunction = Embedding(input, embeddingDim, device);
+    auto pastValueRecurrenceHook = [](const CNTK::Variable& x) { return PastValue(x); };
+    auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, { LSTMDim }, { cellDim }, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
+    auto thoughtVectorFunction = CNTK::Sequence::Last(LSTMFunction);
+
+    return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
+}
+
+template <typename ElementType> 
+inline bool AreEqual(const CNTK::NDArrayViewPtr& view1, const CNTK::NDArrayViewPtr& view2)
+{
+    return AreEqual<ElementType>(*view1, *view2);
+}
+
+inline bool AreEqual(const CNTK::Variable& var1, const CNTK::Variable& var2)
+{
+
+    if (!CNTK::Internal::AreEquivalent(var1, var2))
+    {
+        return false;
+    }
+
+    if (!(var1.IsParameter() || var1.IsConstant()))
+    {
+        return true;
+    }
+
+    CNTK::NDArrayViewPtr ptr1, ptr2;
+       
+    if (var1.IsParameter()) 
+    {
+        ptr1 = reinterpret_cast<const CNTK::Parameter&>(var1).Value();
+        ptr2 = reinterpret_cast<const CNTK::Parameter&>(var2).Value();
+    }
+
+
+    if (var1.IsConstant()) 
+    {
+        ptr1 = reinterpret_cast<const CNTK::Constant&>(var1).Value();
+        ptr2 = reinterpret_cast<const CNTK::Constant&>(var2).Value();
+    }
+
+    if (!CNTK::Internal::AreEqual(*ptr1, *ptr2, relativeTolerance, absoluteTolerance))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+inline bool AreEqual(const CNTK::FunctionPtr& f1, const CNTK::FunctionPtr& f2)
+{
+    if (f1 == f2)
+    { 
+        return true;
+    }
+
+    if (!CNTK::Internal::AreEquivalent(f1, f2))
+    {
+        return false;
+    }
+
+    auto inputs1 = f1->Inputs();
+    auto inputs2 = f2->Inputs();
+
+    if (inputs1.size() != inputs2.size())
+    {
+        return false;
+    }
+
+    for (int i = 0; i < inputs1.size(); i++)
+    {
+        if (!AreEqual(inputs1[i], inputs2[i]))
+        { 
+            return false;
+        }
+    }
+
+    return true;
+}
+
+using namespace CNTK;
+
+inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second, ParameterCloningMethod parameterCloningMethod, const std::unordered_map<Variable, Variable>& replacements, std::unordered_set<FunctionPtr>& visitedFunctions)
+{
+    // TODO: try to refactor this some more, using AreEqual functions above.
+    if ((first->RootFunction() == nullptr) != (second->RootFunction() == nullptr))
+        throw std::runtime_error("CompareFunctions: Both functions should be primitives or both should be composites");
+
+    if (first->Name() != second->Name())
+        throw std::runtime_error("CompareFunctions: Both functions' names should match");
+
+    if (first->Attributes() != second->Attributes())
+        throw std::runtime_error("CompareFunctions: Both functions' attributes should match");
+
+    auto firstPrimitive = (first->RootFunction() == nullptr) ? first : first->RootFunction();
+    auto secondPrimitive = (second->RootFunction() == nullptr) ? second : second->RootFunction();
+
+    if (firstPrimitive->Name() != secondPrimitive->Name())
+        throw std::runtime_error("CompareFunctions: Both functions' names should match");
+
+    // All the outputs must be equivalent
+    if (firstPrimitive->Outputs().size() != secondPrimitive->Outputs().size())
+        throw std::runtime_error("CompareFunctions: Both functions' should have same number of outputs");
+
+    visitedFunctions.insert(firstPrimitive);
+
+    for (size_t i = 0; i < firstPrimitive->Outputs().size(); ++i)
+    {
+        auto firstFunctionOutput = firstPrimitive->Outputs()[i];
+        auto secondFunctionOutput = secondPrimitive->Outputs()[i];
+
+        if (!AreEqual(firstFunctionOutput, secondFunctionOutput))
+        {
+            throw std::runtime_error("CompareFunctions: Both functions' outputs should match");
+        }
+    }
+
+    // All of the inputs must be identical
+    if (firstPrimitive->Inputs().size() != secondPrimitive->Inputs().size())
+        throw std::runtime_error("CompareFunctions: Both functions' should have same number of inputs");
+
+    for (size_t i = 0; i < firstPrimitive->Inputs().size(); ++i)
+    {
+        auto firstFunctionInput = firstPrimitive->Inputs()[i];
+        auto secondFunctionInput = secondPrimitive->Inputs()[i];
+
+        if (replacements.find(firstFunctionInput) != replacements.end())
+        {
+            if (replacements.at(firstFunctionInput) != secondFunctionInput)
+                throw std::runtime_error("CompareFunctions: The 2nd function does not have the expected replacement");
+        }
+       else
+        {
+            if (!Internal::AreEquivalent(firstFunctionInput, secondFunctionInput, true))
+            {
+                throw std::runtime_error("CompareFunctions: The leaves of the functions are not equivalent");
+            }
+
+            if ((firstFunctionInput.Kind() != VariableKind::Parameter) && ((firstFunctionInput.Kind() != secondFunctionInput.Kind()) || (firstFunctionInput.NeedsGradient() != secondFunctionInput.NeedsGradient())))
+                throw std::runtime_error("CompareFunctions: The leaves of the functions are not equivalent");
+
+            switch (firstFunctionInput.Kind())
+            {
+            case VariableKind::Parameter:
+            case VariableKind::Constant:
+                if ((parameterCloningMethod == ParameterCloningMethod::Share) && (firstFunctionInput != secondFunctionInput))
+                    throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+
+                NDArrayViewPtr firstFunctionInputValue = firstFunctionInput.IsConstant() ? Constant(firstFunctionInput).Value() : Parameter(firstFunctionInput).Value();
+                NDArrayViewPtr secondFunctionInputValue = secondFunctionInput.IsConstant() ? Constant(secondFunctionInput).Value() : Parameter(secondFunctionInput).Value();
+                if ((parameterCloningMethod == ParameterCloningMethod::Clone) &&
+                    ((firstFunctionInput == secondFunctionInput) || (!CNTK::Internal::AreEqual(*firstFunctionInputValue, *secondFunctionInputValue))))
+                {
+                    throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+                }
+
+                if ((parameterCloningMethod == ParameterCloningMethod::Freeze) &&
+                    ((firstFunctionInput == secondFunctionInput) || !secondFunctionInput.IsConstant() || (!CNTK::Internal::AreEqual(*firstFunctionInputValue, *secondFunctionInputValue))))
+                {
+                    throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
+                }
+
+                break;
+            }
+        }
     }
 }

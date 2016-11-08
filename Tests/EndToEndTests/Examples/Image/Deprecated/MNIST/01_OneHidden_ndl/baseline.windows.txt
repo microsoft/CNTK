@@ -1,0 +1,256 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU X5680 @ 3.33GHz
+    Hardware threads: 12
+    Total Memory: 33537232 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/d/GitHub/CNTK/x64/release/cntk.exe configFile=D:\GitHub\CNTK\Tests\EndToEndTests\Examples\Image\Deprecated\MNIST\01_OneHidden_ndl/01_OneHidden_ndl_deprecated.cntk currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST RunDir=C:\cygwin64\tmp\cntk-test-20160929144555.114295\Examples\Image\Deprecated\MNIST_01_OneHidden_ndl@release_gpu DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST ConfigDir=D:\GitHub\CNTK\Tests\EndToEndTests\Examples\Image\Deprecated\MNIST\01_OneHidden_ndl OutputDir=C:\cygwin64\tmp\cntk-test-20160929144555.114295\Examples\Image\Deprecated\MNIST_01_OneHidden_ndl@release_gpu DeviceId=0 timestamping=true train=[SGD=[maxEpochs=3]] imageLayout="" stderr=-
+CNTK 1.7.1 (chazhang/image_examples e04f12, Sep 27 2016 08:34:40) on CHAZHANG at 2016/09/29 22:45:56
+
+D:\GitHub\CNTK\x64\release\cntk.exe  configFile=D:\GitHub\CNTK\Tests\EndToEndTests\Examples\Image\Deprecated\MNIST\01_OneHidden_ndl/01_OneHidden_ndl_deprecated.cntk  currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST  RunDir=C:\cygwin64\tmp\cntk-test-20160929144555.114295\Examples\Image\Deprecated\MNIST_01_OneHidden_ndl@release_gpu  DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST  ConfigDir=D:\GitHub\CNTK\Tests\EndToEndTests\Examples\Image\Deprecated\MNIST\01_OneHidden_ndl  OutputDir=C:\cygwin64\tmp\cntk-test-20160929144555.114295\Examples\Image\Deprecated\MNIST_01_OneHidden_ndl@release_gpu  DeviceId=0  timestamping=true  train=[SGD=[maxEpochs=3]]  imageLayout=""  stderr=-
+Changed current directory to D:\GitHub\CNTK\Examples\Image\DataSets\MNIST
+09/29/2016 22:45:57: Redirecting stderr to file -_train_test.log
+09/29/2016 22:45:57: -------------------------------------------------------------------
+09/29/2016 22:45:57: Build info: 
+
+09/29/2016 22:45:57: 		Built time: Sep 27 2016 08:34:40
+09/29/2016 22:45:57: 		Last modified date: Mon Sep 26 13:22:01 2016
+09/29/2016 22:45:57: 		Build type: Release
+09/29/2016 22:45:57: 		Build target: GPU
+09/29/2016 22:45:57: 		With 1bit-SGD: no
+09/29/2016 22:45:57: 		Math lib: mkl
+09/29/2016 22:45:57: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+09/29/2016 22:45:57: 		CUB_PATH: C:\src\cub-1.4.1
+09/29/2016 22:45:57: 		CUDNN_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+09/29/2016 22:45:57: 		Build Branch: chazhang/image_examples
+09/29/2016 22:45:57: 		Build SHA1: e04f125298711fdaab8c60371888c62896780ffe (modified)
+09/29/2016 22:45:57: 		Built by chazhang on CHAZHANG
+09/29/2016 22:45:57: 		Build Path: D:\GitHub\CNTK\Source\CNTK\
+09/29/2016 22:45:57: -------------------------------------------------------------------
+09/29/2016 22:45:57: -------------------------------------------------------------------
+09/29/2016 22:45:57: GPU info:
+
+09/29/2016 22:45:57: 		Device[0]: cores = 2688; computeCapability = 3.5; type = "GeForce GTX TITAN"; memory = 6144 MB
+09/29/2016 22:45:57: -------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: 01_OneHidden_ndl_deprecated.cntk:command=train:test
+configparameters: 01_OneHidden_ndl_deprecated.cntk:configDir=D:\GitHub\CNTK\Tests\EndToEndTests\Examples\Image\Deprecated\MNIST\01_OneHidden_ndl
+configparameters: 01_OneHidden_ndl_deprecated.cntk:currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST
+configparameters: 01_OneHidden_ndl_deprecated.cntk:dataDir=D:\GitHub\CNTK\Examples\Image\DataSets\MNIST
+configparameters: 01_OneHidden_ndl_deprecated.cntk:deviceId=0
+configparameters: 01_OneHidden_ndl_deprecated.cntk:imageLayout=
+configparameters: 01_OneHidden_ndl_deprecated.cntk:modelDir=C:\cygwin64\tmp\cntk-test-20160929144555.114295\Examples\Image\Deprecated\MNIST_01_OneHidden_ndl@release_gpu/Models
+configparameters: 01_OneHidden_ndl_deprecated.cntk:modelPath=C:\cygwin64\tmp\cntk-test-20160929144555.114295\Examples\Image\Deprecated\MNIST_01_OneHidden_ndl@release_gpu/Models/01_OneHidden
+configparameters: 01_OneHidden_ndl_deprecated.cntk:numMBsToShowResult=500
+configparameters: 01_OneHidden_ndl_deprecated.cntk:outputDir=C:\cygwin64\tmp\cntk-test-20160929144555.114295\Examples\Image\Deprecated\MNIST_01_OneHidden_ndl@release_gpu
+configparameters: 01_OneHidden_ndl_deprecated.cntk:precision=float
+configparameters: 01_OneHidden_ndl_deprecated.cntk:rootDir=..
+configparameters: 01_OneHidden_ndl_deprecated.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20160929144555.114295\Examples\Image\Deprecated\MNIST_01_OneHidden_ndl@release_gpu
+configparameters: 01_OneHidden_ndl_deprecated.cntk:stderr=-
+configparameters: 01_OneHidden_ndl_deprecated.cntk:test=[
+    action = "test"
+minibatchSize = 1024    
+    evalNodeNames = ce:errs:top5Errs
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "D:\GitHub\CNTK\Examples\Image\DataSets\MNIST/Test-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+configparameters: 01_OneHidden_ndl_deprecated.cntk:timestamping=true
+configparameters: 01_OneHidden_ndl_deprecated.cntk:traceLevel=1
+configparameters: 01_OneHidden_ndl_deprecated.cntk:train=[
+    action = "train"
+    BrainScriptNetworkBuilder_disabled = [
+        include "Shared.bs"
+featDim = 28 * 28                           
+labelDim = 10                               
+        features = Input (featDim)
+        featScaled = Constant (1.0 / 256.0) .* features
+        labels = Input (labelDim)
+        hiddenDim = 200
+        h1 = DNNSigmoidLayer (featDim,  hiddenDim, featScaled, 1)
+        z  = DNNLayer        (hiddenDim, labelDim, h1,         1)
+        ce   = CrossEntropyWithSoftmax (labels, z)
+        errs = ClassificationError         (labels, z)
+        top5Errs = ClassificationError (labels, z, topN=5)
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    ]
+    NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
+        ndlMacros = "D:\GitHub\CNTK\Tests\EndToEndTests\Examples\Image\Deprecated\MNIST\01_OneHidden_ndl/../Macros.ndl"
+        networkDescription = "D:\GitHub\CNTK\Tests\EndToEndTests\Examples\Image\Deprecated\MNIST\01_OneHidden_ndl/01_OneHidden.ndl"
+    ]
+    SGD = [
+        epochSize = 60000
+        minibatchSize = 32
+        learningRatesPerSample = 0.003125
+        momentumAsTimeConstant = 0
+        maxEpochs = 30
+    ]
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "D:\GitHub\CNTK\Examples\Image\DataSets\MNIST/Train-28x28_cntk_text.txt"
+        input = [
+            features = [
+                dim = 784
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]   
+] [SGD=[maxEpochs=3]]
+
+09/29/2016 22:45:57: Commands: train test
+09/29/2016 22:45:57: precision = "float"
+
+09/29/2016 22:45:57: ##############################################################################
+09/29/2016 22:45:57: #                                                                            #
+09/29/2016 22:45:57: # train command (train action)                                               #
+09/29/2016 22:45:57: #                                                                            #
+09/29/2016 22:45:57: ##############################################################################
+
+09/29/2016 22:45:57: 
+Creating virgin network.
+NDLBuilder Using GPU 0
+09/29/2016 22:45:58: 
+Model has 17 nodes. Using GPU 0.
+
+09/29/2016 22:45:58: Training criterion:   ce = CrossEntropyWithSoftmax
+
+09/29/2016 22:45:58: Evaluation criteria:
+09/29/2016 22:45:58: 	top5Errs = ClassificationError
+09/29/2016 22:45:58: 	errs = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 27 matrices, 10 are shared as 5, and 17 are not shared.
+
+	{ h1.W : [200 x 784] (gradient)
+	  h1.z : [200 x 1 x *] }
+	{ h1.z : [200 x 1 x *] (gradient)
+	  ol.t : [10 x 1 x *] }
+	{ h1.t : [200 x 1 x *] (gradient)
+	  h1.y : [200 x 1 x *] }
+	{ h1.b : [200 x 1] (gradient)
+	  h1.y : [200 x 1 x *] (gradient) }
+	{ ol.W : [10 x 200] (gradient)
+	  ol.z : [10 x 1 x *] (gradient) }
+
+
+09/29/2016 22:45:58: Training 159010 parameters in 4 out of 4 parameter tensors and 10 nodes with gradient:
+
+09/29/2016 22:45:58: 	Node 'h1.W' (LearnableParameter operation) : [200 x 784]
+09/29/2016 22:45:58: 	Node 'h1.b' (LearnableParameter operation) : [200 x 1]
+09/29/2016 22:45:58: 	Node 'ol.W' (LearnableParameter operation) : [10 x 200]
+09/29/2016 22:45:58: 	Node 'ol.b' (LearnableParameter operation) : [10 x 1]
+
+09/29/2016 22:45:58: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+09/29/2016 22:45:58: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+09/29/2016 22:45:58: Starting minibatch loop.
+09/29/2016 22:46:00:  Epoch[ 1 of 3]-Minibatch[   1- 500, 26.67%]: ce = 1.29692065 * 16000; top5Errs = 9.300% * 16000; errs = 38.263% * 16000; time = 2.1187s; samplesPerSecond = 7551.7
+09/29/2016 22:46:01:  Epoch[ 1 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.49263281 * 16000; top5Errs = 1.013% * 16000; errs = 13.256% * 16000; time = 0.6947s; samplesPerSecond = 23031.2
+09/29/2016 22:46:02:  Epoch[ 1 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.38666846 * 16000; top5Errs = 0.706% * 16000; errs = 10.969% * 16000; time = 0.6736s; samplesPerSecond = 23752.7
+09/29/2016 22:46:02: Finished Epoch[ 1 of 3]: [Training] ce = 0.65282070 * 60000; top5Errs = 3.082% * 60000; errs = 18.747% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.003125; epochTime=4.04003s
+09/29/2016 22:46:02: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160929144555.114295\Examples\Image\Deprecated\MNIST_01_OneHidden_ndl@release_gpu/Models/01_OneHidden.1'
+
+09/29/2016 22:46:02: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+09/29/2016 22:46:02: Starting minibatch loop.
+09/29/2016 22:46:03:  Epoch[ 2 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.33698895 * 16000; top5Errs = 0.537% * 16000; errs = 9.844% * 16000; time = 0.7020s; samplesPerSecond = 22790.6
+09/29/2016 22:46:04:  Epoch[ 2 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.30980078 * 16000; top5Errs = 0.563% * 16000; errs = 8.869% * 16000; time = 0.6722s; samplesPerSecond = 23802.7
+09/29/2016 22:46:04:  Epoch[ 2 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.30312018 * 16000; top5Errs = 0.600% * 16000; errs = 8.775% * 16000; time = 0.6770s; samplesPerSecond = 23632.5
+09/29/2016 22:46:05: Finished Epoch[ 2 of 3]: [Training] ce = 0.31512295 * 60000; top5Errs = 0.562% * 60000; errs = 9.170% * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.003125; epochTime=2.57357s
+09/29/2016 22:46:05: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160929144555.114295\Examples\Image\Deprecated\MNIST_01_OneHidden_ndl@release_gpu/Models/01_OneHidden.2'
+
+09/29/2016 22:46:05: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+09/29/2016 22:46:05: Starting minibatch loop.
+09/29/2016 22:46:05:  Epoch[ 3 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.28378082 * 16000; top5Errs = 0.487% * 16000; errs = 8.338% * 16000; time = 0.6343s; samplesPerSecond = 25222.7
+09/29/2016 22:46:06:  Epoch[ 3 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.27873621 * 16000; top5Errs = 0.513% * 16000; errs = 8.200% * 16000; time = 0.6161s; samplesPerSecond = 25969.6
+09/29/2016 22:46:07:  Epoch[ 3 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.27482715 * 16000; top5Errs = 0.487% * 16000; errs = 7.587% * 16000; time = 0.6183s; samplesPerSecond = 25879.2
+09/29/2016 22:46:07: Finished Epoch[ 3 of 3]: [Training] ce = 0.27533962 * 60000; top5Errs = 0.472% * 60000; errs = 7.953% * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.003125; epochTime=2.34217s
+09/29/2016 22:46:07: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20160929144555.114295\Examples\Image\Deprecated\MNIST_01_OneHidden_ndl@release_gpu/Models/01_OneHidden'
+
+09/29/2016 22:46:07: Action "train" complete.
+
+
+09/29/2016 22:46:07: ##############################################################################
+09/29/2016 22:46:07: #                                                                            #
+09/29/2016 22:46:07: # test command (test action)                                                 #
+09/29/2016 22:46:07: #                                                                            #
+09/29/2016 22:46:07: ##############################################################################
+
+
+Post-processing network...
+
+3 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	top5Errs = ClassificationError()
+
+Validating network. 17 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *1]
+Validating --> ol.W = LearnableParameter() :  -> [10 x 200]
+Validating --> h1.W = LearnableParameter() :  -> [200 x 784]
+Validating --> featScale = LearnableParameter() :  -> [1 x 1]
+Validating --> features = InputValue() :  -> [784 x *1]
+Validating --> featScaled = ElementTimes (featScale, features) : [1 x 1], [784 x *1] -> [784 x 1 x *1]
+Validating --> h1.t = Times (h1.W, featScaled) : [200 x 784], [784 x 1 x *1] -> [200 x 1 x *1]
+Validating --> h1.b = LearnableParameter() :  -> [200 x 1]
+Validating --> h1.z = Plus (h1.t, h1.b) : [200 x 1 x *1], [200 x 1] -> [200 x 1 x *1]
+Validating --> h1.y = Sigmoid (h1.z) : [200 x 1 x *1] -> [200 x 1 x *1]
+Validating --> ol.t = Times (ol.W, h1.y) : [10 x 200], [200 x 1 x *1] -> [10 x 1 x *1]
+Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
+Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *1], [10 x 1] -> [10 x 1 x *1]
+Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> errs = ClassificationError (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> unnamed89 = LearnableParameter() :  -> [1 x 1]
+Validating --> top5Errs = ClassificationError (labels, ol.z, unnamed89) : [10 x *1], [10 x 1 x *1], [1 x 1] -> [1]
+
+Validating network. 9 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+
+Post-processing network complete.
+
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 17 matrices, 0 are shared as 0, and 17 are not shared.
+
+
+09/29/2016 22:46:08: Minibatch[1-10]: ce = 0.24792315 * 10000; errs = 7.150% * 10000; top5Errs = 0.350% * 10000
+09/29/2016 22:46:08: Final Results: Minibatch[1-10]: ce = 0.24792315 * 10000; perplexity = 1.28136145; errs = 7.150% * 10000; top5Errs = 0.350% * 10000
+
+09/29/2016 22:46:08: Action "test" complete.
+
+09/29/2016 22:46:08: __COMPLETED__

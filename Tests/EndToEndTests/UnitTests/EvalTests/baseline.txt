@@ -247,3 +247,6 @@ Test module "EvalTests" has passed with:
 
     Test case "EvalTestSuite/EvalSparseTimesTest" has passed with:
       7 assertions out of 7 passed
+
+    Test case "EvalTestSuite/EvalRNNTest" has passed with:
+      5 assertions out of 5 passed

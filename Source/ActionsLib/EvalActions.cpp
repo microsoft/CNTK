@@ -39,6 +39,12 @@ using namespace std;
 using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK;
 
+bool GetDistributedMBReadingDefaultValue(const ConfigParameters& config, const IDataReader& reader)
+{
+    // Return 'true' if we're running a parallel training with a v2 reader, 'false' otherwise.
+    return (MPIWrapper::GetInstance() != nullptr && !reader.IsLegacyReader());
+}
+
 // ===========================================================================
 // DoEvalBase() - implements CNTK "eval" command
 // ===========================================================================
@@ -56,13 +62,13 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
     wstring modelPath = config(L"modelPath");
     intargvector mbSize = minibatchSize;
 
-    int traceLevel = config(L"traceLevel", "0");
+    int traceLevel = config(L"traceLevel", 0);
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
     size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
     size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
     size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
 
-    bool enableDistributedMBReading = config(L"distributedMBReading", false);
+    bool enableDistributedMBReading = config(L"distributedMBReading", GetDistributedMBReadingDefaultValue(config, reader));
 
     vector<wstring> evalNodeNamesVector;
 
@@ -78,76 +84,21 @@ static void DoEvalBase(const ConfigParameters& config, IDataReader& reader)
     eval.Evaluate(&reader, evalNodeNamesVector, mbSize[0], epochSize);
 }
 
-// ===========================================================================
-// DoEvalBNBase() - implements CNTK "pbn" command
-// ===========================================================================
-
-template <typename ElemType>
-static void DoEvalBNBase(const ConfigParameters& config, IDataReader& reader)
-{
-    // DEVICEID_TYPE deviceId = DeviceFromConfig(config);
-    ConfigArray minibatchSize = config(L"minibatchSize", "40960");
-    size_t epochSize = config(L"epochSize", "0");
-    if (epochSize == 0)
-    {
-        epochSize = requestDataSize;
-    }
-    wstring modelPath = config(L"modelPath");
-    wstring exportPath = modelPath + L".PBN";
-    intargvector mbSize = minibatchSize;
-
-    int iters = config(L"iters", 240);
-
-    int traceLevel = config(L"traceLevel", "0");
-    size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
-    size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
-    size_t maxSamplesInRAM = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
-    size_t numSubminiBatches = config(L"numSubminibatches", (size_t)1);
-
-    bool enableDistributedMBReading = config(L"distributedMBReading", false);
-
-    vector<wstring> evalNodeNamesVector;
-
-    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"evalNodeNames", evalNodeNamesVector);
-
-    // set tracing flags
-    net->EnableNodeTracing(config(L"traceNodeNamesReal", ConfigParameters::Array(stringargvector())),
-        config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
-        config(L"traceNodeNamesSparse", ConfigParameters::Array(stringargvector())));
-
-    SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
-        firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
-    eval.EvaluateBN(&reader, evalNodeNamesVector, exportPath, mbSize[0], iters, epochSize);
-}
-
-template <typename ElemType>
-void DoEvalBN(const ConfigParameters& config)
-{
-	// evaluate batch normalization mean and various
-	ConfigParameters readerConfig(config(L"reader"));
-
-	// Should trace level to zero in Post BN?
-	//readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
-
-	DataReader evaBNDataReader(readerConfig);
-
-	DoEvalBNBase<ElemType>(config, evaBNDataReader);
-}
-
 template <typename ElemType>
 void DoEval(const ConfigParameters& config)
 {
     // test
     ConfigParameters readerConfig(config(L"reader"));
     readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+    if (!readerConfig.ExistsCurrent(L"randomize"))
+    {
+        readerConfig.Insert("randomize", "None");
+    }
 
     DataReader testDataReader(readerConfig);
-
     DoEvalBase<ElemType>(config, testDataReader);
 }
 
-template void DoEvalBN<double>(const ConfigParameters& config);
-template void DoEvalBN<float>(const ConfigParameters& config);
 template void DoEval<double>(const ConfigParameters& config);
 template void DoEval<float>(const ConfigParameters& config);
 
@@ -177,13 +128,11 @@ void DoCrossValidate(const ConfigParameters& config)
 
     size_t sleepSecondsBetweenRuns = config(L"sleepTimeBetweenRuns", "0");
 
-    int traceLevel = config(L"traceLevel", "0");
+    int traceLevel = config(L"traceLevel", 0);
     size_t numMBsToShowResult = config(L"numMBsToShowResult", "100");
     size_t firstMBsToShowResult = config(L"firstMBsToShowResult", "0");
     size_t maxSamplesInRAM    = config(L"maxSamplesInRAM", (size_t)SIZE_MAX);
     size_t numSubminiBatches  = config(L"numSubminibatches", (size_t)1);
-
-    bool enableDistributedMBReading = config(L"distributedMBReading", false);
 
     ConfigArray evalNodeNames = config(L"evalNodeNames", "");
     vector<wstring> evalNodeNamesVector;
@@ -196,6 +145,8 @@ void DoCrossValidate(const ConfigParameters& config)
     std::vector<std::wstring> cvModels;
 
     DataReader cvDataReader(readerConfig);
+
+    bool enableDistributedMBReading = config(L"distributedMBReading", GetDistributedMBReadingDefaultValue(config, cvDataReader));
 
     bool finalModelEvaluated = false;
     for (size_t i = cvInterval[0]; i <= cvInterval[2]; i += cvInterval[1])
@@ -217,7 +168,7 @@ void DoCrossValidate(const ConfigParameters& config)
         cvModels.push_back(cvModelPath);
         auto net = ComputationNetwork::CreateFromFile<ElemType>(deviceId, cvModelPath);
         // BUGBUG: ^^ Should use GetModelFromConfig()
-        
+
         SimpleEvaluator<ElemType> eval(net, MPIWrapper::GetInstance(), enableDistributedMBReading, numMBsToShowResult,
             firstMBsToShowResult, traceLevel, maxSamplesInRAM, numSubminiBatches);
 

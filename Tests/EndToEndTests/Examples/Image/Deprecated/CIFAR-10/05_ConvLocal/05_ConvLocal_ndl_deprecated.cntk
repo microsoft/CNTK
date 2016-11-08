@@ -1,0 +1,80 @@
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
+#       Please find updated samples on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+RootDir = "."
+
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+ndlMacros = "$ConfigDir$/../Macros.ndl"
+
+precision = "float"
+deviceId = 0
+imageLayout = "cudnn"
+# override the above as follows when running on CPU:
+# deviceId = -1
+
+command = Train:Test
+
+modelPath = "$ModelDir$/05_ConvLocal"
+
+stderr = "$OutputDir$/05_ConvLocal"
+traceLevel = 1
+numMBsToShowResult = 50
+
+Train = [
+    action = "train"
+
+     NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/05_ConvLocal.ndl"
+    ]
+    
+    SGD = [
+        epochSize = 49984
+        minibatchSize = 64
+        learningRatesPerMB = 0.01*10:0.003*10:0.001
+        momentumPerMB = 0.9*20:0.99
+        maxEpochs = 30
+        L2RegWeight = 0.03
+    ]
+    
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # See REAMDE.md for details on getting the data (Train_cntk_text.txt).
+        file = "$DataDir$/Train_cntk_text.txt"
+        input = [
+            features = [
+                dim = 3072
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]    
+]
+
+Test = [
+    action = "test"
+    # Set minibatch size for testing.
+    minibatchSize = 16
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test_cntk_text.txt"
+        input = [
+            features = [
+                dim = 3072
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]    
+]

@@ -246,12 +246,9 @@ struct TensorOps
     }
     static __device__ ElemType Compute(const FixedArray<ElemType*, 4>& pointers, ElementWiseOperator op)
     {
-        ElemType a = *(pointers[0]);
-        ElemType b = *(pointers[1]);
-        ElemType c = *(pointers[2]);
 #define CaseTernaryTensorOp(oper)       \
     case ElementWiseOperator::op##oper: \
-        return Op##oper(a, b, c)
+        return Op##oper(*(pointers[0]), *(pointers[1]), *(pointers[2])) // reading each time, which saves mem accesses for OpCond
         switch (op)
         {
             ForAllTernaryOps(CaseTernaryTensorOp);
@@ -466,11 +463,14 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/false, /*k=*/-1>
         // scale
         val *= alpha;
         // combine with previous value in target matrix, then write it out
-        auto* pout = pointers[pointers.size() - 1];
-        if (beta != 0)
-            val += beta * *pout;
-        // save
-        *pout = val;
+        if (N < 4 || val != 0 || beta != 1) // (skip memory access if not needed) (N<4: skip this test)
+        {
+            auto* pout = pointers[pointers.size() - 1];
+            if (beta != 0) // (skip memory access if not needed, and allow for ignoring NaNs)
+                val += beta * *pout;
+            // save
+            *pout = val;
+        }
     }
 };
 
@@ -531,21 +531,24 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
             // scale
             val *= alpha;
             // combine with previous value in target matrix, then write it out
-            auto* pout = pointers[pointers.size() - 1];
+            if (N < 4 || val != 0 || beta != 1) // (skip memory access if not needed) (N<4: skip this test)
+            {
+                auto* pout = pointers[pointers.size() - 1];
 #ifdef ALLOW_ATOMIC_REDUCTION
-            CUDA_LONG reductionBlocks = gridDim.z; // number of reduction blocks. If >1 we need atomicAdd
-            if (reductionBlocks > 1) // multiple blocks: need to use atomicAdd()
-            {
-                // in this case, outer calling code must pass beta = 1
-                atomicAdd(pout, val);
-            }
-            else
+                CUDA_LONG reductionBlocks = gridDim.z; // number of reduction blocks. If >1 we need atomicAdd
+                if (reductionBlocks > 1) // multiple blocks: need to use atomicAdd()
+                {
+                    // in this case, outer calling code must pass beta = 1
+                    atomicAdd(pout, val);
+                }
+                else
 #endif
-            {
-                if (beta != 0)
-                    val += beta * *pout;
-                // save
-                *pout = val;
+                {
+                    if (beta != 0)
+                        val += beta * *pout;
+                    // save
+                    *pout = val;
+                }
             }
         }
     }

@@ -1,0 +1,21 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+python -c "import sys; print('Python: %s'%sys.version)"
+python -c "import numpy; print('NumPy: %s'%numpy.version.full_version)"
+python -c "import scipy; print('SciPy: %s'%scipy.version.full_version)"
+python -c "import pytest; print('PyTest: %s'%pytest.__version__)"
+
+DOC_DIR=$TEST_ROOT_DIR/../../bindings/python/doc
+
+pushd $DOC_DIR || exit $?
+echo Current dir: $PWD
+
+py.test --deviceid $TEST_DEVICE
+
+if [ "$?" -eq "0" ]; then
+  echo "__COMPLETED__"
+fi
+
+popd

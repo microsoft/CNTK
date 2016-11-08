@@ -374,7 +374,7 @@ void GPUMatrixComputeStreamEvent::SynchronizeQuantizationComputeStreamWithEvent(
 template <typename ElemType>
 void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent()
 {
-    cudaStreamWaitEvent(GPUDataTransferer<ElemType>::GetFetchStream(), m_mainGPUComputeStreamCUDAEvent, 0 /*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
+    cudaStreamWaitEvent(GPUDataTransferer::GetFetchStream(), m_mainGPUComputeStreamCUDAEvent, 0 /*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
 }
 
 // Explicit template instantiations

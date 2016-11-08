@@ -1,0 +1,38 @@
+dataDir: .
+
+tags: 
+  - bvt-l (build_sku == 'cpu') and (os == 'windows') and (flavor=='release')
+  - nightly-l (build_sku == 'cpu') and (os == 'windows') and (flavor=='release')
+
+testCases:
+  Test case SingleLayer:
+    patterns:
+      - EvaluateModelSingleLayer
+      
+  Test case MultipleLayers:
+    patterns:
+      - EvaluateModelMultipleLayers
+
+  Test case NetworkSingleLayer:
+    patterns:
+      - EvaluateNetworkSingleLayer
+      
+  Test case NetworkSingleLayerNoInput:
+    patterns:
+      - EvaluateNetworkSingleLayerNoInput
+      
+  Test case ExtendedNetworkSingleLayerNoInput:
+    patterns:
+      - EvaluateExtendedNetworkSingleLayerNoInput
+     
+  Test case MultipleModels:
+    patterns:
+      - EvaluateMultipleModels
+  
+  Test case ImageInput:
+    patterns:
+      - EvaluateModelImageInput
+      
+  Test run must be completed:
+    patterns:
+      - Evaluation Complete

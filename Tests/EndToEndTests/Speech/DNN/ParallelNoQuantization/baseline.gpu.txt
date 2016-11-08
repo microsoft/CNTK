@@ -572,7 +572,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 10:00:15: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 MPI Rank 0: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 10:00:15: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 3, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 10:00:15: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: 08/16/2016 10:00:15:  Epoch[ 1 of 3]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.53638629 * 640; EvalClassificationError = 0.92031250 * 640; time = 0.0693s; samplesPerSecond = 9238.4
 MPI Rank 0: 08/16/2016 10:00:15:  Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.32517790 * 640; EvalClassificationError = 0.92500000 * 640; time = 0.0567s; samplesPerSecond = 11281.5
 MPI Rank 0: 08/16/2016 10:00:15:  Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98246287 * 640; EvalClassificationError = 0.87187500 * 640; time = 0.0566s; samplesPerSecond = 11312.8
@@ -611,7 +611,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 10:00:17: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 0: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 3, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: 08/16/2016 10:00:17:  Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.08889863 * 2560; EvalClassificationError = 0.56367188 * 2560; time = 0.0612s; samplesPerSecond = 41819.8
 MPI Rank 0: 08/16/2016 10:00:17:  Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.00776218 * 2560; EvalClassificationError = 0.54218750 * 2560; time = 0.0599s; samplesPerSecond = 42761.5
 MPI Rank 0: 08/16/2016 10:00:17:  Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 1.99260186 * 2560; EvalClassificationError = 0.54257813 * 2560; time = 0.0599s; samplesPerSecond = 42762.2
@@ -626,7 +626,7 @@ MPI Rank 0:
 MPI Rank 0: 08/16/2016 10:00:17: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 0: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 3, with 1 datapasses
 MPI Rank 0: 
-MPI Rank 0: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (MyRank = 0, NumNodes = 3, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 0: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (myRank = 0, numNodes = 3, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 0: 08/16/2016 10:00:18:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.89820595 * 10240; EvalClassificationError = 0.52470703 * 10240; time = 0.0894s; samplesPerSecond = 114526.0
 MPI Rank 0: 08/16/2016 10:00:18:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.91958075 * 10240; EvalClassificationError = 0.53974609 * 10240; time = 0.0835s; samplesPerSecond = 122653.8
 MPI Rank 0: 08/16/2016 10:00:18: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.90889335 * 20480; EvalClassificationError = 0.53222656 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=0.179159s
@@ -1121,7 +1121,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 10:00:15: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 MPI Rank 1: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 10:00:15: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 3, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 10:00:15: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: 08/16/2016 10:00:15:  Epoch[ 1 of 3]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.53638629 * 640; EvalClassificationError = 0.92031250 * 640; time = 0.0695s; samplesPerSecond = 9204.8
 MPI Rank 1: 08/16/2016 10:00:15:  Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.32517790 * 640; EvalClassificationError = 0.92500000 * 640; time = 0.0563s; samplesPerSecond = 11359.2
 MPI Rank 1: 08/16/2016 10:00:15:  Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98246287 * 640; EvalClassificationError = 0.87187500 * 640; time = 0.0567s; samplesPerSecond = 11286.5
@@ -1159,7 +1159,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 10:00:17: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 3, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: 08/16/2016 10:00:17:  Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.08889863 * 2560; EvalClassificationError = 0.56367188 * 2560; time = 0.0614s; samplesPerSecond = 41699.9
 MPI Rank 1: 08/16/2016 10:00:17:  Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.00776218 * 2560; EvalClassificationError = 0.54218750 * 2560; time = 0.0597s; samplesPerSecond = 42846.6
 MPI Rank 1: 08/16/2016 10:00:17:  Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 1.99260186 * 2560; EvalClassificationError = 0.54257813 * 2560; time = 0.0599s; samplesPerSecond = 42717.2
@@ -1173,7 +1173,7 @@ MPI Rank 1:
 MPI Rank 1: 08/16/2016 10:00:17: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 1: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 1 of 3, with 1 datapasses
 MPI Rank 1: 
-MPI Rank 1: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (MyRank = 1, NumNodes = 3, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 1: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (myRank = 1, numNodes = 3, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 1: 08/16/2016 10:00:18:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.89820595 * 10240; EvalClassificationError = 0.52470703 * 10240; time = 0.0900s; samplesPerSecond = 113825.8
 MPI Rank 1: 08/16/2016 10:00:18:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.91958075 * 10240; EvalClassificationError = 0.53974609 * 10240; time = 0.0832s; samplesPerSecond = 123133.2
 MPI Rank 1: 08/16/2016 10:00:18: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.90889335 * 20480; EvalClassificationError = 0.53222656 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=0.179295s
@@ -1667,7 +1667,7 @@ MPI Rank 2:
 MPI Rank 2: 08/16/2016 10:00:15: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 MPI Rank 2: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
-MPI Rank 2: 08/16/2016 10:00:15: Starting minibatch loop, DataParallelSGD training (MyRank = 2, NumNodes = 3, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 2: 08/16/2016 10:00:15: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 2: 08/16/2016 10:00:15:  Epoch[ 1 of 3]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.53638629 * 640; EvalClassificationError = 0.92031250 * 640; time = 0.0697s; samplesPerSecond = 9180.2
 MPI Rank 2: 08/16/2016 10:00:15:  Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.32517790 * 640; EvalClassificationError = 0.92500000 * 640; time = 0.0565s; samplesPerSecond = 11323.4
 MPI Rank 2: 08/16/2016 10:00:15:  Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98246287 * 640; EvalClassificationError = 0.87187500 * 640; time = 0.0568s; samplesPerSecond = 11270.0
@@ -1705,7 +1705,7 @@ MPI Rank 2:
 MPI Rank 2: 08/16/2016 10:00:17: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 MPI Rank 2: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
-MPI Rank 2: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (MyRank = 2, NumNodes = 3, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 2: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 2: 08/16/2016 10:00:17:  Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.08889863 * 2560; EvalClassificationError = 0.56367188 * 2560; time = 0.0612s; samplesPerSecond = 41826.0
 MPI Rank 2: 08/16/2016 10:00:17:  Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.00776218 * 2560; EvalClassificationError = 0.54218750 * 2560; time = 0.0597s; samplesPerSecond = 42906.2
 MPI Rank 2: 08/16/2016 10:00:17:  Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 1.99260186 * 2560; EvalClassificationError = 0.54257813 * 2560; time = 0.0601s; samplesPerSecond = 42627.6
@@ -1719,7 +1719,7 @@ MPI Rank 2:
 MPI Rank 2: 08/16/2016 10:00:17: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 MPI Rank 2: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 2 of 3, with 1 datapasses
 MPI Rank 2: 
-MPI Rank 2: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (MyRank = 2, NumNodes = 3, NumGradientBits = 32), distributed reading is ENABLED.
+MPI Rank 2: 08/16/2016 10:00:17: Starting minibatch loop, DataParallelSGD training (myRank = 2, numNodes = 3, numGradientBits = 32), distributed reading is ENABLED.
 MPI Rank 2: 08/16/2016 10:00:18:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.89820595 * 10240; EvalClassificationError = 0.52470703 * 10240; time = 0.0899s; samplesPerSecond = 113873.9
 MPI Rank 2: 08/16/2016 10:00:18:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.91958075 * 10240; EvalClassificationError = 0.53974609 * 10240; time = 0.0835s; samplesPerSecond = 122592.2
 MPI Rank 2: 08/16/2016 10:00:18: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.90889335 * 20480; EvalClassificationError = 0.53222656 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=0.179288s

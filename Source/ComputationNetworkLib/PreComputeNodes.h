@@ -7,13 +7,14 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "InputAndParamNodes.h"
+#include "LinearAlgebraNodes.h"
 #include "Matrix.h"
 
-#include <map>
-#include <string>
-#include <stdexcept>
-#include <list>
 #include <iostream>
+#include <list>
+#include <map>
+#include <stdexcept>
+#include <string>
 
 // this file will contain computation nodes that require several atomic computation.
 
@@ -234,32 +235,18 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         if (m_hasComputed)
             return; // not accumulating
 
         if (!IsAccumulating())
             LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
-        // set gaps to zero, since we are reducing in time
-        Input(0)->MaskMissingValueColumnsToZero(fr);
-
-        size_t numNewSamples = Input(0)->GetMBLayout()->GetActualNumSamples();
-        size_t totalNumSamples = m_numSamples + numNewSamples;
-        if (totalNumSamples == 0)
-            totalNumSamples = 1; // 0/0=1 in this context
-        ElemType alpha =                   1.0f / totalNumSamples;
-        ElemType beta  = (ElemType)m_numSamples / totalNumSamples;
-
         size_t rank = DetermineElementwiseTensorRank();
-        auto mean  =           ValueTensorFor(rank, FrameRange()); // mean is formed directly in our m_value
-        auto input = Input(0)->ValueTensorFor(rank, fr);
+        auto mean  =             ValueTensorFor(rank, FrameRange()); // mean is formed directly in our m_value
+        auto input = InputRef(0).ValueTensorFor(rank, fr);
 
-        mean.DoCopyOf(beta, input, alpha);
-        // Note: We leverage that TensorView allows "broadcasting" the output,
-        // which really means a reduction.
-
-        m_numSamples += numNewSamples;
+        UpdateRunningAverage(InputRef(0), mean, m_numSamples);
     }
 };
 
@@ -315,7 +302,7 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
+        FrameRange fr(InputRef(0).GetMBLayout());
         if (m_hasComputed)
             return; // not accumulating
 
@@ -323,9 +310,9 @@ public:
             LogicError("%ls %ls operation: MarkComputed(false) has not been called.", NodeName().c_str(), OperationName().c_str());
 
         // set gaps to zero, since we are reducing in time
-        Input(0)->MaskMissingValueColumnsToZero(fr);
+        InputRef(0).MaskMissingValueColumnsToZero(fr);
 
-        size_t numNewSamples = Input(0)->GetMBLayout()->GetActualNumSamples();
+        size_t numNewSamples = InputRef(0).GetMBLayout()->GetActualNumSamples();
         size_t totalNumSamples = m_numSamples + numNewSamples;
         if (totalNumSamples == 0)
             totalNumSamples = 1; // 0/0=1 in this context
@@ -333,7 +320,7 @@ public:
         ElemType beta  = (ElemType)m_numSamples / totalNumSamples;
 
         size_t rank = DetermineElementwiseTensorRank();
-        auto input    = Input(0)->ValueTensorFor(        rank, fr);
+        auto input    = InputRef(0).ValueTensorFor(        rank, fr);
         auto mean     =            DataTensorFor(m_mean, rank, FrameRange());
         auto temp     =            DataTensorFor(m_temp, rank, FrameRange());
         auto var      =            DataTensorFor(m_var,  rank, FrameRange());
@@ -352,7 +339,7 @@ public:
         // var += (input - mean)^2
         var.DoSqrOfDifferenceOf(beta, input, mean, alpha); // this reduces as well
 
-        m_numSamples += Input(0)->GetMBLayout()->GetActualNumSamples();
+        m_numSamples += InputRef(0).GetMBLayout()->GetActualNumSamples();
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -406,10 +393,10 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto output    =           ValueTensorFor(rank, fr);
-        auto input     = Input(0)->ValueTensorFor(rank, fr);
-        auto mean      = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
-        auto invStdDev = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
+        auto output    =             ValueTensorFor(rank, fr);
+        auto input     = InputRef(0).ValueTensorFor(rank, fr);
+        auto mean      = InputRef(1).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto invStdDev = InputRef(2).ValueTensorFor(rank, fr.AllowBroadcast());
 
         output.AssignElementwiseQuotientOf(input, invStdDev); // output = input / invStdDev
         output.AddCopyOf(mean);                               // output += mean

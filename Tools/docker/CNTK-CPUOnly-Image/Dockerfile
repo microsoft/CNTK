@@ -27,12 +27,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python-yaml \
         wget \
         zlib1g-dev \
-        #For Kaldi
+        # Protobuf
+        ca-certificates \
+        curl \
+        unzip \
+        # For Kaldi
         automake \
         libtool \
         autoconf \
         subversion \
-        #For Kaldi's dependencies
+        # For Kaldi's dependencies
         libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 && \
     rm -rf /var/lib/apt/lists/*
 
@@ -82,9 +86,20 @@ RUN BOOST_VERSION=1_60_0 && \
     ./b2 -d0 -j"$(nproc)" install  && \
     rm -rf /boost_${BOOST_VERSION}
 
-# Install CNTK custom MKL, version 1
+# Install Protobuf
+RUN PROTOBUF_VERSION=3.1.0 \
+    PROTOBUF_STRING=protobuf-$PROTOBUF_VERSION && \
+    wget -O - --no-verbose https://github.com/google/protobuf/archive/v${PROTOBUF_VERSION}.tar.gz | tar -xzf - && \
+    cd $PROTOBUF_STRING && \
+    ./autogen.sh && \
+    ./configure CFLAGS=-fPIC CXXFLAGS=-fPIC --disable-shared --prefix=/usr/local/$PROTOBUF_STRING && \
+    make -j $(nproc) install && \
+    cd .. && \
+    rm -rf $PROTOBUF_STRING
+
+# Install CNTK custom MKL, version 2
 RUN mkdir /usr/local/CNTKCustomMKL && \
-    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-1.tgz | \
+    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-2.tgz | \
     tar -xzf - -C /usr/local/CNTKCustomMKL
 
 RUN pip install pytest sphinx-rtd-theme Pillow
@@ -135,13 +150,12 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     ../../../configure --with-mkl=/usr/local/CNTKCustomMKL --with-kaldi=${KALDI_PATH} && \
     make -j"$(nproc)" all
 
-RUN cd Examples/Image/Miscellaneous/CIFAR-10 && \
-    python CifarDownload.py && \
-    python CifarConverter.py cifar-10-batches-py && \
+RUN cd Examples/Image/DataSets/CIFAR-10 && \
+    python install_cifar10.py && \
     cd ../../../..
 
-RUN cd Examples/Image/MNIST/AdditionalFiles && \
-    python mnist_convert.py && \
+RUN cd Examples/Image/DataSets/MNIST && \
+    python install_mnist.py && \
     cd ../../../..
 
 ENV PATH=/cntk/build/cpu/release/bin:$PATH

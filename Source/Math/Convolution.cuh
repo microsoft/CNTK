@@ -203,13 +203,182 @@ __global__ void kMaxPoolingBackward(int batchSize, const ElemType* out, const El
             int dcol = indices[i0 + i];
             assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
             if (in[colBase + dcol] >= m)
+            {
                 atomicAdd(&grad[colBase + dcol], g);
+                break;
+            }
         }
 
         in += blockDim.y * dstVecSize;
         out += blockDim.y * srcVecSize;
         srcGrad += blockDim.y * srcVecSize;
         grad += blockDim.y * dstVecSize;
+    }
+}
+
+__device__ float round_(float a)
+{
+    return roundf(a);
+}
+
+__device__ double round_(double a)
+{
+    return round(a);
+}
+
+// For each image, for each ROI, this function treats that ROI as an image
+// and does max pooling so that it has output size pooledHeight x pooledWidth.
+// The kernel operates on one location in the output tensor, computes which ROI
+// and image should populate that location, computes the subset of the image
+// corresponding to the ROI and which pixels in that subset should go into the
+// output location, then takes the max value over that window.
+// src: Images              [W x H x C x N]
+// roiData: ROIs            [4 x numROIs x N], 
+// dst: Pooled ROIs         [PW x PH x C x numROIs x N]
+// argmax: max positions    [PW x PH x C x numROIs x N]
+// where PW = Pooled Width, PH = Pooled Height, C = Channels, N = Batch Size
+template <typename ElemType>
+__global__ void kROIPoolingForward(const int totalIterations,
+    const int numROIs, const int numImg,
+    const int channels, const int width, const int height,
+    const int pooledWidth, const int pooledHeight, const ElemType* src,
+    const ElemType* roiData, ElemType* dst, ElemType* argmax)
+{
+    // index loops over all totalRois*c*pooledHeight*pooledWidth output locations.
+    for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+         index < (totalIterations); index += blockDim.x * gridDim.x) 
+    {
+        
+        // output is [W x H x C x N]
+        // n is the global ROI index (the new batch index)
+        int pw =  index % pooledWidth;
+        int ph = (index / pooledWidth) % pooledHeight;
+        int c  = (index / pooledWidth  / pooledHeight) % channels;
+        int n  =  index / pooledWidth  / pooledHeight  / channels;
+
+        // each ROI is 4 elements: (x, y, w, h)
+        roiData += n * 4;
+
+        // roi data is relative to original image size
+        int roiStartW = (int)(    round_(roiData[0] * width));
+        int roiStartH = (int)(    round_(roiData[1] * height));
+        int roiWidth  = (int)(max(round_(roiData[2] * width),  (ElemType)1));
+        int roiHeight = (int)(max(round_(roiData[3] * height), (ElemType)1));
+        
+        ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
+        ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
+        
+        // compute window for this output location.
+        int hstart = (int)(       ph * winH);
+        int wstart = (int)(       pw * winW);
+        int hend   = (int)(ceilf((ph + 1) * winH));
+        int wend   = (int)(ceilf((pw + 1) * winW));
+        
+        // Add ROI offsets and clip to input boundaries
+        hstart = min(max(hstart + roiStartH, 0), height);
+        hend   = min(max(hend   + roiStartH, 0), height);
+        wstart = min(max(wstart + roiStartW, 0), width);
+        wend   = min(max(wend   + roiStartW, 0), width);
+        
+        bool isempty = (hend <= hstart) || (wend <= wstart);
+        // Define an empty pooling region to be zero
+        ElemType maxval = isempty ? (ElemType)0 : -CUDART_INF_F;
+        int maxidx = -1;
+
+        int imgIdx = n / numROIs;
+        src += (imgIdx * channels + c) * height * width;
+        for (int h = hstart; h < hend; h++)
+        {
+            for (int w = wstart; w < wend; w++)
+            {
+                int srcIndex = w + h * width;
+                if (src[srcIndex] > maxval)
+                {
+                    maxval = src[srcIndex];
+                    maxidx = srcIndex;
+                }
+            }
+        }
+        dst[index] = maxval;
+        argmax[index] = maxidx;
+    }
+}
+
+// The kernel operates on one location in the input to the ROIPoolingNode (one image location).
+// It loops over the ROIs corresponding to that image, seeing which ones could contain the location
+// in their output. For each ROI, it checks the argmax data to see if that ROI indeed chose
+// this pixel location as the maximum. If so, it increments the gradient term for the input location.
+template <typename ElemType>
+__global__ void kROIPoolingBackward(const int totalIterations,
+    const int numROIs, const int numImg,
+    const int channels, const int width, const int height,
+    const int pooledWidth, const int pooledHeight, const ElemType* pooledGrad,
+    const ElemType* roiData, ElemType* grad, const ElemType* argmax)
+{
+    // index loops over all input locations (locations in the original input tensor).
+    for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+        index < (totalIterations); index += blockDim.x * gridDim.x)
+    {
+        // images are laid out [W x H x C x N]
+        // (n, c, h, w) is an element in the input image
+        int w =  index % width;
+        int h = (index / width) % height;
+        int c = (index / width  / height) % channels;
+        int n =  index / width  / height  / channels;
+
+        // compute range of ROIs corresponding to this image:
+        int roiMin = n * numROIs;
+        int roiMax = (n + 1) * numROIs;
+
+        ElemType gradient = 0;
+
+        for (int roiN = roiMin; roiN < roiMax; roiN++)
+        {
+            // each ROI is 4 elements: (x, y, w, h)
+            const ElemType* roiOffset = roiData + roiN * 4;
+
+            // ROI data is relative to original image size
+            int roiStartW = (int)(    round_(roiOffset[0] * width));
+            int roiStartH = (int)(    round_(roiOffset[1] * height));
+            int roiWidth  = (int)(max(round_(roiOffset[2] * width), 1.0));
+            int roiHeight = (int)(max(round_(roiOffset[3] * height), 1.0));
+
+            // skip this ROI if it doesn't contain our input location.
+            const bool inROI = (w >= roiStartW && w < roiStartW + roiWidth &&
+                                h >= roiStartH && h < roiStartH + roiHeight);
+            if (!inROI)
+                continue;
+
+            ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
+            ElemType winW = (ElemType)roiWidth  / (ElemType)pooledWidth;
+
+            // what pooled nodes in the output for this ROI could have pooled this input location?
+            // we use int here since the computation can yield a negative result
+            int phstart = (int)(      (float)(h - roiStartH)     / winH);
+            int pwstart = (int)(      (float)(w - roiStartW)     / winW);
+            int phend   = (int)(ceilf((float)(h - roiStartH + 1) / winH));
+            int pwend   = (int)(ceilf((float)(w - roiStartW + 1) / winW));
+
+            phstart = min(max(phstart, 0), pooledHeight);
+            pwstart = min(max(pwstart, 0), pooledWidth);
+            phend   = min(max(phend, 0), pooledHeight);
+            pwend   = min(max(pwend, 0), pooledWidth);
+
+            // go right up to this channel of this ROI.
+            int offset = (roiN * channels + c) * pooledWidth * pooledHeight;
+            const ElemType* offsetPoolGrad = pooledGrad + offset;
+            const ElemType* offsetArgmax = argmax + offset;
+
+            for (int ph = phstart; ph < phend; ph++)
+            {
+                for (int pw = pwstart; pw < pwend; pw++)
+                {
+                    if ((int)offsetArgmax[ph * pooledWidth + pw] == (h * width + w))
+                        gradient += offsetPoolGrad[ph * pooledWidth + pw];
+                }
+            }
+        }
+        grad[index] = gradient;
     }
 }
 

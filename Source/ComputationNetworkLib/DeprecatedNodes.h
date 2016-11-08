@@ -32,7 +32,7 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        auto sliceInputValue  = Input(0)->ValueFor(fr);
+        auto sliceInputValue  = InputRef(0).ValueFor(fr);
         auto sliceOutputValue =           ValueFor(fr); // row vector
 
         Matrix<ElemType>::VectorSum(sliceInputValue, sliceOutputValue, true);
@@ -40,7 +40,7 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
-        auto sliceInputGrad  = Input(0)->GradientFor(fr);
+        auto sliceInputGrad  = InputRef(0).GradientFor(fr);
         auto sliceOutputGrad =           GradientFor(fr);
 
         sliceInputGrad += sliceOutputGrad; // here the assumption is that sliceOutputGrad is a row vector
@@ -96,7 +96,7 @@ public:
     {
         size_t rank = DetermineElementwiseTensorRank();
         auto output    =           ValueTensorFor(rank, fr);
-        auto input     = Input(0)->ValueTensorFor(rank, fr);
+        auto input     = InputRef(0).ValueTensorFor(rank, fr);
         auto mean      = Input(1)->ValueTensorFor(rank, fr.AllowBroadcast());
         auto invStdDev = Input(2)->ValueTensorFor(rank, fr.AllowBroadcast());
 
@@ -109,8 +109,8 @@ public:
         Base::Validate(isFinalValidationPass);
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-        Input(1)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
-        Input(2)->ValidateInferInputDimsFrom(Input(0)->GetSampleLayout());
+        Input(1)->ValidateInferInputDimsFrom(InputRef(0).GetSampleLayout());
+        Input(2)->ValidateInferInputDimsFrom(InputRef(0).GetSampleLayout());
 
 
 #if 1
@@ -191,14 +191,14 @@ public:
             Matrix<ElemType> sliceOutputGrad = MaskedGradientFor(fr); // use Masked- version since this is reducing over frames
             Matrix<ElemType> sliceInput1Value = Input(1)->MaskedValueFor(fr);
             m_innerproduct->AssignInnerProductOf(sliceOutputGrad, sliceInput1Value, false);
-            Input(0)->GradientAsMatrix() += *m_innerproduct;
+            InputRef(0).GradientAsMatrix() += *m_innerproduct;
         }
         else // right derivative
         {
             Matrix<ElemType> sliceOutputGrad = GradientFor(fr);
             Matrix<ElemType> sliceInput1Grad = Input(1)->GradientFor(fr);
             m_rightGradient->SetValue(sliceOutputGrad);
-            m_rightGradient->ColumnElementMultiplyWith(Input(0)->ValueAsMatrix());
+            m_rightGradient->ColumnElementMultiplyWith(InputRef(0).ValueAsMatrix());
             sliceInput1Grad += *m_rightGradient;
         }
     }
@@ -216,7 +216,7 @@ public:
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
 
         sliceOutputValue.AssignValuesOf(sliceInput1Value);
-        sliceOutputValue.ColumnElementMultiplyWith(Input(0)->ValueAsMatrix());
+        sliceOutputValue.ColumnElementMultiplyWith(InputRef(0).ValueAsMatrix());
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override

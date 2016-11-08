@@ -48,6 +48,7 @@
     <ClCompile Include="BlockHandlerSSE.cpp">
       <Filter>CPU</Filter>
     </ClCompile>
+    <ClCompile Include="DataTransferer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -128,6 +129,7 @@
     </ClInclude>
     <ClInclude Include="Quantizers.h" />
     <ClInclude Include="BlockMultiplierMatrixUtil.h" />
+    <ClInclude Include="DataTransferer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">

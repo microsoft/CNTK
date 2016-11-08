@@ -33,7 +33,7 @@ ColorTransform_Test = [
             brightnessRadius=0:0.2
             contrastRadius=0:0.2
             saturationRadius=0:0.4
-            interpolations=Linear
+            interpolations=linear
         ]
         labels=[
             labelDim=4

@@ -26,6 +26,7 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+#include "PostComputingActions.h"
 
 #include <string>
 #include <chrono>
@@ -71,6 +72,7 @@ void DoTrain(const ConfigRecordType& config)
 {
     bool makeMode = config(L"makeMode", true);
     DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+    int traceLevel = config(L"traceLevel", 0);
 
     shared_ptr<SGD<ElemType>> optimizer;
     if (config.Exists(L"optimizer"))
@@ -93,11 +95,10 @@ void DoTrain(const ConfigRecordType& config)
 
     wstring modelFileName = optimizer->GetModelNameForEpoch(int(startEpoch) - 1);
     bool loadNetworkFromCheckpoint = startEpoch >= 0;
-    fprintf(stderr, "\n");
     if (loadNetworkFromCheckpoint)
-        LOGPRINTF(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
-    else
-        LOGPRINTF(stderr, "Creating virgin network.\n");
+        LOGPRINTF(stderr, "\nStarting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
+    else if (traceLevel > 0)
+        LOGPRINTF(stderr, "\nCreating virgin network.\n");
 
     // determine the network-creation function
     // We have several ways to create that network.
@@ -155,6 +156,8 @@ template void DoTrain<ConfigParameters, double>(const ConfigParameters& config);
 
 // ===========================================================================
 // DoAdapt() - implements CNTK "adapt" command
+// BUGBUG: This no longer works, use the CloneFunction() approach for KL.
+// TODO: remove this
 // ===========================================================================
 
 template <typename ElemType>
@@ -219,9 +222,31 @@ template void DoDumpNodes<double>(const ConfigParameters& config);
 // DoEdit() - implements CNTK "edit" command
 // ===========================================================================
 
+// this command supports two very different edit variants:
+//  - create a new model with a BrainScript editing action
+//  - MEL (deprecated)
 template <typename ElemType>
 void DoEdit(const ConfigParameters& config)
 {
+    // BrainScript editing
+    if (config.Exists(L"BrainScriptNetworkBuilder"))
+    {
+        bool makeMode = config(L"makeMode", true);
+        wstring outputPathname = config(L"outputModelPath");
+        // in makeMode, if output file exists, we are done
+        if (makeMode && File::Exists(outputPathname))
+        {
+            LOGPRINTF(stderr, "'%ls' exists, skipping. Specify makeMode=false to force executing the action.\n", outputPathname.c_str());
+            return;
+        }
+        DEVICEID_TYPE deviceId = DeviceFromConfig(config);
+        let createNetworkFn = GetNetworkFactory<ConfigParameters, ElemType>(config);
+        let net = createNetworkFn(deviceId);
+        net->Save(outputPathname);
+        LOGPRINTF(stderr, "\nModel with %d nodes saved as '%ls'.\n", (int)net->GetTotalNumberOfNodes(), outputPathname.c_str());
+        return;
+    }
+    // legacy model editing
     wstring editPath = config(L"editPath");
     wstring ndlMacros = config(L"ndlMacros", "");
     NDLScript<ElemType> ndlScript;
@@ -235,3 +260,46 @@ void DoEdit(const ConfigParameters& config)
 
 template void DoEdit<double>(const ConfigParameters& config);
 template void DoEdit<float>(const ConfigParameters& config);
+
+// ===========================================================================
+// DoBatchNormalizationStat() - implements CNTK "bnstat" command
+// ===========================================================================
+
+template <typename ElemType>
+void DoBatchNormalizationStat(const ConfigParameters& config)
+{
+    ConfigParameters readerConfig(config(L"reader"));
+    readerConfig.Insert("traceLevel", config(L"traceLevel", "0"));
+
+    auto dataReader = make_shared<DataReader>(readerConfig);
+
+    int traceLevel = config(L"traceLevel", "0");
+    int itersPerNode = config(L"itersPerNode", 30);
+
+    ConfigArray minibatchSize = config(L"minibatchSize", "40960");
+    intargvector mbSize = minibatchSize;
+    
+    bool enableDistributedMBReading = config(L"enableDistributedMBReading", false);
+
+    wstring curModelPath = config(L"modelPath", L"");
+    wstring newModelPath = config(L"newModelPath", L"");
+    if (newModelPath == L"")
+    {
+        newModelPath = curModelPath + L".PBN";
+    }
+
+    std::vector<std::wstring> evalNodeNames; 
+    let net = GetModelFromConfig<ConfigParameters, ElemType>(config, L"evalNodeNames", evalNodeNames);
+    // set tracing flags
+    net->EnableNodeTracing(config(L"traceNodeNamesReal",     ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesCategory", ConfigParameters::Array(stringargvector())),
+                           config(L"traceNodeNamesSparse",   ConfigParameters::Array(stringargvector())));
+
+    PostComputingActions<ElemType> postComputingActions(net, MPIWrapper::GetInstance(), enableDistributedMBReading, traceLevel);
+
+    postComputingActions.BatchNormalizationStatistics(dataReader.get(), evalNodeNames, newModelPath, mbSize[0], itersPerNode);
+}
+
+template void DoBatchNormalizationStat<double>(const ConfigParameters& config);
+template void DoBatchNormalizationStat<float>(const ConfigParameters& config);
+
