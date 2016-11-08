@@ -19,6 +19,8 @@
 #include "ReaderShim.h"
 #include "DataTransferer.h"
 
+#include "PerformanceProfiler.h"
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
@@ -212,6 +214,7 @@ void ReaderShim<ElemType>::StartEpoch(const EpochConfiguration& config, const st
     m_prefetchTask = std::async(m_launchType,
     [this, localCurrentDataTransferIndex]()
     {
+        PROFILE_SCOPE(profilerEvtReadMinibatch);
         return PrefetchMinibatch(localCurrentDataTransferIndex);
     });
 }

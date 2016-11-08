@@ -342,11 +342,6 @@ namespace CNTK
             Microsoft::MSR::CNTK::TracingGPUMemoryAllocator::SetTraceLevel(traceLevel);
         }
 
-        void ForceSynchronousCUDAKernelExecutions()
-        {
-            Microsoft::MSR::CNTK::SyncGuard::EnableSync();
-        }
-
         void ForceDeterministicAlgorithms()
         {
             Microsoft::MSR::CNTK::Globals::ForceDeterministicAlgorithms();
