@@ -267,6 +267,7 @@ private:
             {
                 int idx = MPI_UNDEFINED;
                 MPI_Waitany(recvHeaderRequests.size(), recvHeaderRequests.data(), &idx, MPI_STATUS_IGNORE) || MpiFail("MPI_Waitany");
+
                 if (idx == MPI_UNDEFINED)
                 {
                     break;
@@ -301,6 +302,7 @@ private:
         for (size_t i = 0; i < numGradMatrices; ++i)
         {
             MPI_Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
+            
             if (deviceId >= 0)
                 m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
         }

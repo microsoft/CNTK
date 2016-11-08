@@ -37,6 +37,10 @@
 #if defined(_MSC_VER) && (_MSC_VER <= 1800 /*VS2013*/)
 #define __func__ __FUNCTION__
 #endif
+
+#if defined(_MSC_VER)
+#define snprintf _snprintf
+#endif
 // ===========================================================================
 // emulation of some MSVC proprietary CRT
 // ===========================================================================
@@ -236,7 +240,8 @@ static inline int _wunlink(const wchar_t *p)
 }
 static inline int _wmkdir(const wchar_t *p)
 {
-    return mkdir(wtocharpath(p).c_str(), 0777 /*correct?*/);
+    int err = mkdir(wtocharpath(p).c_str(), 0777 /*correct?*/);
+    return err == -1 ? errno : 0;
 }
 static inline int _wsystem(const wchar_t *command)
 {
