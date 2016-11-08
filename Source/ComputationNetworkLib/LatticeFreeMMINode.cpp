@@ -500,7 +500,7 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
     while (index < nf)
     {
         int currentSenone = (int)m_labelVector[index];
-        //int startIndex = index;
+        int startIndex = index;
         index++;
         while (index < nf)
         {
@@ -510,8 +510,8 @@ double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<Elem
         
         
         {
-            //beginWithWindow = m_alignmentWindow < 0 ? 0 : std::max(0, startIndex - m_alignmentWindow);
-            //endWithWindow = (m_alignmentWindow < 0 ? nf : std::min((int)nf, index + m_alignmentWindow)) - 1;
+            beginWithWindow = m_alignmentWindow < 0 ? 0 : std::max(0, startIndex - m_alignmentWindow);
+            endWithWindow = (m_alignmentWindow < 0 ? nf : std::min((int)nf, index + m_alignmentWindow)) - 1;
             if (currentSenone != blankid && lastSenone != blankid)
             {
                 m_senoneSequence.push_back({ blankid, beginWithWindow, endWithWindow });
