@@ -404,7 +404,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         m_pASGDHelper.reset(NewASGDHelper<ElemType>(learnableNodes,
                                          m_mpi->NumNodesInUse(),
-                                         m_isPipeline,
+                                         m_isAsyncBufferEnabled,
                                          m_isSimulateMA,
                                          m_adjustLearningRateAtBeginning,
                                          m_adjustCoefficient,
@@ -3004,7 +3004,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 #else
             const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
             m_nFramesBetweenASGDSync = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
-            m_isPipeline = configDataParallelASGD(L"UsePipeline", false);
+            m_isAsyncBufferEnabled = configDataParallelASGD(L"UsePipeline", false);
             m_isSimulateMA = configDataParallelASGD(L"SimModelAverage", false); // using parameter server-based version of ModefAveragingSGD
             if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning")) // adjust learning rate per m_adjustNumInBatch minibatchs until to original one
                                                                                  // this option could be used to takcle the unstableness of ASGD
