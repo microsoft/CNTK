@@ -50,7 +50,7 @@ $operations = @(
     @{Name = "Clone CNTK from Github"; ShortName = "CNTKCLONE"; Info = "Clone CNTK from Github repository";
       Verification = @( @{Function = "VerifyDirectory"; Path = $RepoLocation } ); 
       Action = @( @{Function = "MakeDirectory"; Path = $repoDirectory },
-                  @{Function = "ExecuteApplication"; AppName = "git.exe"; Param = "clone --branch $RepoTag --recursive https://github.com/Microsoft/CNTK/ $repoName"; AppDir = "C:\Program Files\Git"; UseEnvPath=$true; WorkDir = $repoDirectory } )
+                  @{Function = "ExecuteApplication"; AppName = "git.exe"; Param = "clone --branch $RepoTag --recursive https://github.com/Microsoft/CNTK/ $repoName"; AppDir = "C:\Program Files\Git"; UseEnvPath = $true; WorkDir = $repoDirectory } )
      }
 )
 

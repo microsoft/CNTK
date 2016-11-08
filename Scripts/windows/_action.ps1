@@ -26,11 +26,7 @@ function ActionItem(
     $expr = $func +' $item' 
         
     Write-Verbose "Calling Operation: [$func]"
-    $result = Invoke-Expression $expr 
-    if (-not $result) {
-        return 
-    }
-    return 
+    Invoke-Expression $expr 
 }
 
 
@@ -47,13 +43,13 @@ function InstallExe(
     $processWait = $table["ProcessWait"]
     $message =  $table["message"]
     $runAs = $table["runAs"]
-    $maxLevel = $table["maxErrorLevel"]
+    $maxErrorLevel = $table["maxErrorLevel"]
 
     if ($runAs -eq $null) {
         $runAs = $true
     }
-    if ($maxLevel -eq $null) {
-        $maxLevel = 0
+    if ($maxErrorLevel -eq $null) {
+        $maxErrorLevel = 0
     }
     if ($platform -ne $null) {
         $runningOn = ((Get-WmiObject -class Win32_OperatingSystem).Caption).ToUpper()
@@ -69,10 +65,10 @@ function InstallExe(
     }
     
     if ($dir -eq $null) {
-        DoProcess -command $cmd -param $param -requiresRunAs $runAs -maxErrorLevel $maxLevel
+        DoProcess -command $cmd -param $param -requiresRunAs $runAs -maxErrorLevel $maxErrorLevel
     }
     else {
-        DoProcess -command $cmd -param $param -requiresRunAs $runAs -workingDir $dir -maxErrorLevel $maxLevel
+        DoProcess -command $cmd -param $param -requiresRunAs $runAs -workingDir $dir -maxErrorLevel $maxErrorLevel
     }
     
     if ( ($processWait -ne $null) -and ($Execute) -and ($false) ) {
@@ -94,7 +90,7 @@ function ExecuteApplication(
     $appDir = $table["AppDir"]
     $usePath = $table["UseEnvPath"]
     $dir  = $table["WorkDir"]
-    $maxLevel = $table["maxErrorLevel"]
+    $maxErrorLevel = $table["maxErrorLevel"]
 
     if ($appDir -eq $null) {
         $appDir = ""
@@ -102,21 +98,20 @@ function ExecuteApplication(
     if ($usePath -eq $null) {
         $usePath = $false
     }
-    if ($maxLevel -eq $null) {
-        $maxLevel = 0
+    if ($maxErrorLevel -eq $null) {
+        $maxErrorLevel = 0
     }
 
-    $application = ""
     $application = ResolveApplicationName $appName $appDir $usePath
     if ($application.Length -eq 0) {
         throw "ExecuteApplication: Couldn't resolve program [$appName] with location directory [$appDir] and usePath [$usePath]"
     }
 
     if ($dir -eq $null) {
-        DoProcess -command $application -param $param -maxErrorLevel $maxLevel
+        DoProcess -command $application -param $param -maxErrorLevel $maxErrorLevel
     }
     else {
-        DoProcess -command $application -param $param -workingDir $dir -maxErrorLevel $maxLevel
+        DoProcess -command $application -param $param -workingDir $dir -maxErrorLevel $maxErrorLevel
     }
 }
 
@@ -322,10 +317,7 @@ function SetEnvVar(
     Write-Verbose "SetEnvVar [$name] with [$content]"
     
     if ($Execute) {
-        # [environment]::SetEnvironmentVariable($name, $content, $location)
-
         $commandString = "& { [environment]::SetEnvironmentVariable('"+$name+"', '"+$content+"', '"+$location+"') }"
-
         RunPowershellCommand -command "$commandString" -elevated $true -maxErrorLevel 0
     }    
 }
@@ -408,7 +400,7 @@ function CallGetCommand(
     [string] $application)
 {
     try {
-        get-command $application -CommandType Application -ErrorAction Stop  | Out-Null
+        get-command $application -CommandType Application -ErrorAction Stop | Out-Null
         return $application
     }
     catch {
