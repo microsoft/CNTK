@@ -246,6 +246,13 @@ namespace CNTK
 
                     opType = PrimitiveOpType::ReduceElements;
                 }
+                else if (node->OperationName() == OperationNameOf(SumColumnElementsNode))
+                {
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = Axis(0);
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameReductionOpName] = PrimitiveFunction::InternalSumReductionOpName;
+
+                    opType = PrimitiveOpType::ReduceElements;
+                }
                 else if (node->OperationName() == OperationNameOf(ConvolutionNode))
                 {
                     auto convolutionNode = node->As<ConvolutionNode<ElementType>>();
