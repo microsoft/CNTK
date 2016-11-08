@@ -169,7 +169,6 @@
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Function.cpp" />
-    <ClCompile Include="Globals.cpp" />
     <ClCompile Include="Learner.cpp" />
     <ClCompile Include="MinibatchSource.cpp" />
     <ClCompile Include="NDArrayView.cpp" />

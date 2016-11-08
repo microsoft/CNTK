@@ -1518,7 +1518,7 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
         return;
 
     VerifyResizable(__func__);
-	bool isForceResize = (!growOnly) || cachedResize;
+    bool isForceResize = (!growOnly) || cachedResize;
 
     size_t numElements = numRows * numCols;
     if (numElements > GetSizeAllocated() ||                     // grow allocation

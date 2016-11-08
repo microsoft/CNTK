@@ -235,7 +235,7 @@ class BufferManagement
 {
 private:
     BufferManagement() = default;
-	
+
     // Disable all the copy & move functions to keep the instance safely
     DISABLE_COPY_AND_MOVE(BufferManagement);
 

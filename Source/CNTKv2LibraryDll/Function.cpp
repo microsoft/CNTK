@@ -16,7 +16,6 @@
 #include "InputAndParamNodes.h"
 #include "NonlinearityNodes.h"
 #include "RecurrentNodes.h"
-#include "Globals.h"
 #include "Serialization.h"
 #include "Value.h"
 

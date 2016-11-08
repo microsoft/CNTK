@@ -2506,7 +2506,7 @@ public:
         if (expAvgFactor != 0 || blendFactor != 1)
             m_samplesSeen += GetMBLayout()->GetActualNumSamples();
 
-        Base::EndBackprop();
+        Base::EndForwardProp();
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }

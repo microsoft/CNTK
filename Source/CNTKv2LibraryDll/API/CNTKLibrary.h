@@ -7,17 +7,6 @@
 
 #pragma once
 
-<<<<<<< HEAD
-#ifdef SWIG
-#define final
-#define explicit
-#define static_assert(condition, message)
-#endif
-
-#include "CNTKLibraryInternals.h"
-#include "Globals.h"
-=======
->>>>>>> master
 
 #include <memory>
 #include <vector>
@@ -31,8 +20,6 @@
 #include <sstream>
 #include <iosfwd>
 #include <algorithm>
-<<<<<<< HEAD
-=======
 #include <mutex>
 #include <future>
 
@@ -43,7 +30,6 @@
 #endif
 
 #include "CNTKLibraryInternals.h"
->>>>>>> master
 
 namespace CNTK
 {
@@ -2456,36 +2442,9 @@ namespace CNTK
         ///
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
         ///
-<<<<<<< HEAD
-        Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, const FunctionPtr& rootFunction = nullptr, const std::wstring& name = L"")
-            : m_rootFunction(rootFunction), m_name(name)
-        {
-            Microsoft::MSR::CNTK::Globals::EnableShareNodeValueMatrices();
-
-            for (auto inputVar : inputs)
-            {
-                m_inputs.push_back(inputVar);
-
-                if (!inputVar.IsInput() &&
-                    !inputVar.IsOutput() &&
-                    !inputVar.IsParameter() &&
-                    !inputVar.IsConstant() &&
-                    !inputVar.IsPlaceholder())
-                {
-                    InvalidArgument("Function input has invalid VariableKind!");
-                }
-            }
-
-            std::unordered_set<Variable> uniqueOutputs;
-            for (auto outputVar : outputs)
-            {
-                if (uniqueOutputs.find(outputVar) != uniqueOutputs.end())
-                    RuntimeError("Same variable appears multiple times in the outputs vector passed to Function constructor");
-=======
         Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"))
             : Function(inputs, outputs, std::move(functionConfig), nullptr, name, uid)
         {}
->>>>>>> master
 
         /// Restores the state of the 'this' function in place using the provided dictionary.
         /// Structurally, 'this' function graph has to be identical to the state captured in the dictionary.
