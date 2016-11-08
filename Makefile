@@ -85,7 +85,7 @@ PROTOC = $(PROTOBUF_PATH)/bin/protoc
 #SSE_FLAGS =
 
 SOURCEDIR:= Source
-INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/proto Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib)
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/proto Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
 COMMON_FLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
@@ -111,7 +111,7 @@ SRC:=
 all : buildall
 
 # Set up basic nvcc options and add CUDA targets from above
-CUFLAGS = -m 64
+CUFLAGS = -m 64 
 
 ifdef CUDA_PATH
   ifndef GDK_INCLUDE_PATH
@@ -277,6 +277,31 @@ ifneq ("$(BUILDINFO_OUTPUT)","Success")
 endif
 
 ########################################
+# Performance profiler library
+########################################
+
+PERF_PROFILER:=perfprofiler
+
+PP_SRC =\
+	$(SOURCEDIR)/PerformanceProfilerDll/PerformanceProfiler.cpp \
+	$(SOURCEDIR)/Common/File.cpp \
+	$(SOURCEDIR)/Common/fileutil.cpp \
+	$(SOURCEDIR)/Common/ExceptionWithCallStack.cpp \
+
+PP_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(PP_SRC)))
+
+PERF_PROFILER_LIB:= $(LIBDIR)/lib$(PERF_PROFILER).so
+ALL += $(PERF_PROFILER_LIB)
+SRC += $(PP_SRC)
+
+$(PERF_PROFILER_LIB): $(PP_OBJ)
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	@mkdir -p $(dir $@)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS)
+
+
+########################################
 # Math library
 ########################################
 
@@ -359,11 +384,11 @@ CNTKMATH_LIB:= $(LIBDIR)/lib$(CNTKMATH).so
 ALL_LIBS += $(CNTKMATH_LIB)
 SRC+=$(MATH_SRC)
 
-$(CNTKMATH_LIB): $(MATH_OBJ)
+$(CNTKMATH_LIB): $(MATH_OBJ) | $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -fopenmp -l$(PERF_PROFILER)
 
 ########################################
 # CNTKLibrary
@@ -446,11 +471,11 @@ CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
 ALL_LIBS+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
-$(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
+$(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a -fopenmp
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a -fopenmp -l$(PERF_PROFILER)
 
 ########################################
 # CNTKLibrary tests
@@ -486,11 +511,11 @@ CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJ
 ALL+=$(CNTKLIBRARY_TESTS)
 SRC+=$(CNTKLIBRARY_TESTS_SRC)
 
-$(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
+$(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 ########################################
 # CNTKLibrary distribution tests
@@ -554,11 +579,12 @@ EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
 ALL_LIBS+=$(EVAL_LIB)
 SRC+=$(EVAL_SRC)
 
-$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB)
+$(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) $(lMULTIVERSO) $(PROTOBUF_PATH)/lib/libprotobuf.a
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) $(lMULTIVERSO) $(PROTOBUF_PATH)/lib/libprotobuf.a -l$(PERF_PROFILER)
 
 ########################################
 # Eval Sample clients
@@ -631,9 +657,9 @@ BINARY_READER:= $(LIBDIR)/BinaryReader.so
 #ALL_LIBS += $(BINARY_READER)
 #SRC+=$(BINARYREADER_SRC)
 
-$(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
+$(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 ########################################
 # HTKMLFReader plugin
@@ -651,9 +677,9 @@ HTKMLFREADER:=$(LIBDIR)/HTKMLFReader.so
 ALL_LIBS+=$(HTKMLFREADER)
 SRC+=$(HTKMLFREADER_SRC)
 
-$(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
+$(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 ########################################
 # CompositeDataReader plugin
@@ -669,9 +695,9 @@ COMPOSITEDATAREADER:=$(LIBDIR)/CompositeDataReader.so
 ALL_LIBS+=$(COMPOSITEDATAREADER)
 SRC+=$(COMPOSITEDATAREADER_SRC)
 
-$(LIBDIR)/CompositeDataReader.so: $(COMPOSITEDATAREADER_OBJ) | $(CNTKMATH_LIB)
+$(LIBDIR)/CompositeDataReader.so: $(COMPOSITEDATAREADER_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 ########################################
 # HTKDeserializers plugin
@@ -692,9 +718,9 @@ HTKDESERIALIZERS:=$(LIBDIR)/HTKDeserializers.so
 ALL_LIBS+=$(HTKDESERIALIZERS)
 SRC+=$(HTKDESERIALIZERS_SRC)
 
-$(LIBDIR)/HTKDeserializers.so: $(HTKDESERIALIZERS_OBJ) | $(CNTKMATH_LIB)
+$(LIBDIR)/HTKDeserializers.so: $(HTKDESERIALIZERS_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 ########################################
 # LMSequenceReader plugin
@@ -712,9 +738,9 @@ LMSEQUENCEREADER:= $(LIBDIR)/LMSequenceReader.so
 ALL_LIBS+=$(LMSEQUENCEREADER)
 SRC+=$(LMSEQUENCEREADER_SRC)
 
-$(LMSEQUENCEREADER): $(LMSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
+$(LMSEQUENCEREADER): $(LMSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 ########################################
 # LUSequenceReader plugin
@@ -733,9 +759,9 @@ LUSEQUENCEREADER:=$(LIBDIR)/LUSequenceReader.so
 ALL_LIBS+=$(LUSEQUENCEREADER)
 SRC+=$(LUSEQUENCEREADER_SRC)
 
-$(LUSEQUENCEREADER): $(LUSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
+$(LUSEQUENCEREADER): $(LUSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 ########################################
 # UCIFastReader plugin
@@ -752,9 +778,9 @@ UCIFASTREADER:=$(LIBDIR)/UCIFastReader.so
 ALL_LIBS += $(UCIFASTREADER)
 SRC+=$(UCIFASTREADER_SRC)
 
-$(UCIFASTREADER): $(UCIFASTREADER_OBJ) | $(CNTKMATH_LIB)
+$(UCIFASTREADER): $(UCIFASTREADER_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 ########################################
 # LibSVMBinaryReader plugin
@@ -770,9 +796,9 @@ LIBSVMBINARYREADER:=$(LIBDIR)/LibSVMBinaryReader.so
 ALL_LIBS += $(LIBSVMBINARYREADER)
 SRC+=$(LIBSVMBINARYREADER_SRC)
 
-$(LIBSVMBINARYREADER): $(LIBSVMBINARYREADER_OBJ) | $(CNTKMATH_LIB)
+$(LIBSVMBINARYREADER): $(LIBSVMBINARYREADER_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 ########################################
 # SparsePCReader plugin
@@ -788,9 +814,9 @@ SPARSEPCREADER:=$(LIBDIR)/SparsePCReader.so
 ALL_LIBS += $(SPARSEPCREADER)
 SRC+=$(SPARSEPCREADER_SRC)
 
-$(SPARSEPCREADER): $(SPARSEPCREADER_OBJ) | $(CNTKMATH_LIB)
+$(SPARSEPCREADER): $(SPARSEPCREADER_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 ########################################
 # CNTKBinaryReader plugin
@@ -830,9 +856,9 @@ CNTKTEXTFORMATREADER:=$(LIBDIR)/CNTKTextFormatReader.so
 ALL_LIBS += $(CNTKTEXTFORMATREADER)
 SRC+=$(CNTKTEXTFORMATREADER_SRC)
 
-$(CNTKTEXTFORMATREADER): $(CNTKTEXTFORMATREADER_OBJ) | $(CNTKMATH_LIB)
+$(CNTKTEXTFORMATREADER): $(CNTKTEXTFORMATREADER_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 
 ########################################
@@ -855,9 +881,9 @@ KALDI2READER:=$(LIBDIR)/Kaldi2Reader.so
 ALL_LIBS+=$(KALDI2READER)
 SRC+=$(KALDI2READER_SRC)
 
-$(KALDI2READER): $(KALDI2READER_OBJ) | $(CNTKMATH_LIB)
+$(KALDI2READER): $(KALDI2READER_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(KALDI_LIBPATH) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(KALDI_LIBPATH) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(KALDI_LIBS) -l$(PERF_PROFILER)
 
 endif
 
@@ -899,9 +925,9 @@ SRC+=$(IMAGEREADER_SRC)
 INCLUDEPATH += $(OPENCV_PATH)/include
 LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
-$(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
+$(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGEREADER_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGEREADER_LIBS) -l$(PERF_PROFILER)
 endif
 endif
 
@@ -1022,11 +1048,11 @@ CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
 SRC+=$(CNTK_SRC)
 
-$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB) $(MULTIVERSO_LIB)
+$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB) $(MULTIVERSO_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) $(lMULTIVERSO) -fopenmp $(PROTOBUF_PATH)/lib/libprotobuf.a
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp $(PROTOBUF_PATH)/lib/libprotobuf.a -l$(PERF_PROFILER)
 
 # deployable resources: standard library of BS
 CNTK_CORE_BS:=$(BINDIR)/cntk.core.bs
@@ -1059,11 +1085,11 @@ UNITTEST_EVAL := $(BINDIR)/evaltests
 ALL += $(UNITTEST_EVAL)
 SRC += $(UNITTEST_EVAL_SRC)
 
-$(UNITTEST_EVAL) : $(UNITTEST_EVAL_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB)
+$(UNITTEST_EVAL) : $(UNITTEST_EVAL_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) -l$(CNTKMATH) $(lMULTIVERSO)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) -l$(CNTKMATH) $(lMULTIVERSO) -l$(PERF_PROFILER)
 
 #TODO: create project specific makefile or rules to avoid adding project specific path to the global path
 INCLUDEPATH += $(SOURCEDIR)/Readers/CNTKTextFormatReader
@@ -1085,11 +1111,11 @@ UNITTEST_READER := $(BINDIR)/readertests
 ALL += $(UNITTEST_READER)
 SRC += $(UNITTEST_READER_SRC)
 
-$(UNITTEST_READER): $(UNITTEST_READER_OBJ) | $(HTKMLFREADER) $(HTKDESERIALIZERS) $(UCIFASTREADER) $(COMPOSITEDATAREADER) $(IMAGEREADER) $(CNTKMATH_LIB)
+$(UNITTEST_READER): $(UNITTEST_READER_OBJ) | $(HTKMLFREADER) $(HTKDESERIALIZERS) $(UCIFASTREADER) $(COMPOSITEDATAREADER) $(IMAGEREADER) $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) -l$(CNTKMATH) -ldl 
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) -l$(CNTKMATH) -ldl -l$(PERF_PROFILER)
 
 UNITTEST_NETWORK_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/AccumulatorNodeTests.cpp \
@@ -1124,11 +1150,11 @@ UNITTEST_NETWORK := $(BINDIR)/networktests
 ALL += $(UNITTEST_NETWORK)
 SRC += $(UNITTEST_NETWORK_SRC)
 
-$(UNITTEST_NETWORK): $(UNITTEST_NETWORK_OBJ) | $(CNTKMATH_LIB) $(CNTKTEXTFORMATREADER) $(MULTIVERSO_LIB)
+$(UNITTEST_NETWORK): $(UNITTEST_NETWORK_OBJ) | $(CNTKMATH_LIB) $(CNTKTEXTFORMATREADER) $(MULTIVERSO_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) $(lMULTIVERSO) -l$(CNTKMATH) -fopenmp  $(PROTOBUF_PATH)/lib/libprotobuf.a
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) $(lMULTIVERSO) -l$(CNTKMATH) -fopenmp  $(PROTOBUF_PATH)/lib/libprotobuf.a -l$(PERF_PROFILER)
 
 UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/BatchNormalizationEngineTests.cpp \
@@ -1159,11 +1185,11 @@ UNITTEST_MATH := $(BINDIR)/mathtests
 ALL += $(UNITTEST_MATH)
 SRC += $(UNITTEST_MATH_SRC)
 
-$(UNITTEST_MATH): $(UNITTEST_MATH_OBJ) | $(CNTKMATH_LIB) 
+$(UNITTEST_MATH): $(UNITTEST_MATH_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(CNTKMATH) -ldl -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(CNTKMATH) -ldl -fopenmp -l$(PERF_PROFILER)
 
 UNITTEST_BRAINSCRIPT_SRC = \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
@@ -1182,11 +1208,11 @@ UNITTEST_BRAINSCRIPT := $(BINDIR)/brainscripttests
 ALL += $(UNITTEST_BRAINSCRIPT)
 SRC += $(UNITTEST_BRAINSCRIPT_SRC)
 
-$(UNITTEST_BRAINSCRIPT): $(UNITTEST_BRAINSCRIPT_OBJ) | $(CNTKMATH_LIB)
+$(UNITTEST_BRAINSCRIPT): $(UNITTEST_BRAINSCRIPT_OBJ) | $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -ldl -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -ldl -l$(CNTKMATH) -l$(PERF_PROFILER)
 
 unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MATH) $(UNITTEST_BRAINSCRIPT)
 

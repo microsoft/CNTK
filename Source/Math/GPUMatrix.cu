@@ -117,47 +117,6 @@ const char* CudaErrString<curandStatus>(curandStatus)
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-/*static*/ std::vector<cudaDeviceProp> GridDim::s_cachedDeviceProps;
-/*static*/ std::once_flag GridDim::s_cachedDevicePropsInitFlag;
-
-/*static*/ bool SyncGuard::s_isSyncEnabled = false;
-
-/*static*/ void SyncGuard::EnableSync()
-{
-    s_isSyncEnabled = true;
-}
-
-SyncGuard::SyncGuard(bool forceSync /*= false*/)
-    : m_forceSync(forceSync)
-{
-    m_done = nullptr;
-    if (m_forceSync || s_isSyncEnabled)
-    {
-        CUDA_CALL(cudaGetLastError());
-        CUDA_CALL(cudaEventCreate(&m_done));
-    }
-}
-
-SyncGuard::~SyncGuard()
-{
-    if (m_forceSync || s_isSyncEnabled)
-    {
-        // The regular use of this destructor is to synchronize the GPU, but also
-        // to check for errors. So this destructor is where CUDA errors would be thrown.
-        // If this destructor runs during stack unwinding, then a different error has
-        // already happened that should be reported; so we only clean up the resource.
-        if (std::uncaught_exception())
-            cudaEventDestroy(m_done);
-        else
-        {
-            // failures in a prior launch might be reported here
-            CUDA_CALL(cudaEventRecord(m_done));
-            CUDA_CALL(cudaEventSynchronize(m_done));
-            CUDA_CALL(cudaEventDestroy(m_done));
-        }
-    }
-}
-
 template <typename AllocatedElemType>
 AllocatedElemType* TracingGPUMemoryAllocator::Allocate(int deviceId, size_t numRows, size_t numCols)
 {
@@ -420,29 +379,68 @@ void GPUMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, c
     PrepareDevice();
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
-    SyncGuard syncGuard;
     switch (kind)
     {
     case ElementWiseOperator::opSigmoid:
-        return _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    {
+        PROFILE_CUDA_STREAM("_elementWiseSigmoidOnCuda", t_stream);
+        _elementWiseSigmoidOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+        break;
+    }
     case ElementWiseOperator::opTanh:
-        return _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    {
+        PROFILE_CUDA_STREAM("_elementWiseTanhOnCuda", t_stream);
+        _elementWiseTanhOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+        break;
+    }
     case ElementWiseOperator::opSqrt:
-        return _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    {
+        PROFILE_CUDA_STREAM("_elementWiseSqrtOnCuda", t_stream);
+        _elementWiseSqrtOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+        break;
+    }
     case ElementWiseOperator::opExp:
-        return _elementWiseExpOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    {
+        PROFILE_CUDA_STREAM("_elementWiseExpOnCuda", t_stream);
+        _elementWiseExpOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+        break;
+    }
     case ElementWiseOperator::opLog:
-        return _elementWiseLogOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    {
+        PROFILE_CUDA_STREAM("_elementWiseLogOnCuda", t_stream);
+        _elementWiseLogOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+        break;
+    }
     case ElementWiseOperator::opAbs:
-        return _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    {
+        PROFILE_CUDA_STREAM("_elementWiseAbsOnCuda", t_stream);
+        _elementWiseAbsOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+        break;
+    }
     case ElementWiseOperator::opLinearRectifierDerivative:
-        return _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    {
+        PROFILE_CUDA_STREAM("_elementWiseLinRectDerivativeOnCuda", t_stream);
+        _elementWiseLinRectDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+        break;
+    }
     case ElementWiseOperator::opCosine:
-        return _elementWiseCosineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    {
+        PROFILE_CUDA_STREAM("_elementWiseCosineOnCuda", t_stream);
+        _elementWiseCosineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+        break;
+    }
     case ElementWiseOperator::opNegativeSine:
-        return _elementWiseNegativeSineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    {
+        PROFILE_CUDA_STREAM("_elementWiseNegativeSineOnCuda", t_stream);
+        _elementWiseNegativeSineOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+        break;
+    }
     case ElementWiseOperator::opSigmoidDerivative:
-        return _elementWiseSigmoidDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+    {
+        PROFILE_CUDA_STREAM("_elementWiseSigmoidDerivativeOnCuda", t_stream);
+        _elementWiseSigmoidDerivativeOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(src, Data(), N);
+        break;
+    }
     default: LogicError("performElementWiseFunction: unexpected op code %d", (int)kind);
     }
 }
@@ -637,7 +635,7 @@ void GPUMatrix<ElemType>::CopyColumnsStrided(const GPUMatrix<ElemType>& fromMatr
         CUDA_LONG N = (CUDA_LONG)(m_numRows * numCols);
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         PrepareDevice();
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_copyColumnsStrided", t_stream);
         _copyColumnsStrided<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), fromMatrix.Data(), N, (CUDA_LONG) m_numRows, (CUDA_LONG) destNumColsStride, (CUDA_LONG) srcNumColsStride);
     }
 }
@@ -661,7 +659,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignToRowSliceValuesOf(const GPUMatr
     CUDA_LONG N = (CUDA_LONG) a.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignToRowSliceValuesOf", t_stream);
     _assignToRowSliceValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, (CUDA_LONG) startIndex, (CUDA_LONG) GetNumRows(), (CUDA_LONG) a.GetNumRows());
     return *this;
 }
@@ -681,7 +679,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRowSliceValuesOf(const GPUMatrix
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignRowSliceValuesOf", t_stream);
     _assignRowSliceValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, (CUDA_LONG) startIndex, (CUDA_LONG) numRows, (CUDA_LONG) a.GetNumRows());
     return *this;
 }
@@ -705,7 +703,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowSliceValuesOf(const GPUMatrix<
     CUDA_LONG N = (CUDA_LONG) a.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_addToRowSliceValuesOf", t_stream);
     _addToRowSliceValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, (CUDA_LONG) startIndex, (CUDA_LONG) GetNumRows(), (CUDA_LONG) a.GetNumRows());
     return *this;
 }
@@ -729,7 +727,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddWithRowSliceValuesOf(const GPUMatri
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_addWithRowSliceValuesOf", t_stream);
     _addWithRowSliceValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, (CUDA_LONG) startIndex, (CUDA_LONG) GetNumRows(), (CUDA_LONG) a.GetNumRows());
     return *this;
 }
@@ -747,7 +745,7 @@ GPUMatrix<ElemType> GPUMatrix<ElemType>::Diagonal() const
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignToDiagonalValuesOf", t_stream);
     _assignToDiagonalValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(diag.Data(), Data(), N, (CUDA_LONG) n);
     return diag;
 }
@@ -762,8 +760,8 @@ void GPUMatrix<ElemType>::MinusOneAt(GPUMatrix<ElemType>& c, const size_t positi
     CUDA_LONG p = (CUDA_LONG) position;
 
     int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-    // BUGBUG: PrepareDevice() missing?
-    SyncGuard syncGuard;
+    c.PrepareDevice();
+    PROFILE_CUDA_STREAM("_minusOneAt", t_stream);
     _minusOneAt<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.Data(), p, n);
 }
 
@@ -782,7 +780,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignRepeatOf(const GPUMatrix<ElemTyp
     CUDA_LONG n = (CUDA_LONG) a.GetNumCols(), m = (CUDA_LONG) a.GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignRepeatOf", t_stream);
     _assignRepeatOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, m, n, (CUDA_LONG) GetNumRows());
     return *this;
 }
@@ -801,7 +799,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddToRowRepeatValuesOf(const GPUMatrix
     CUDA_LONG N = (CUDA_LONG) a.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_addToRowRepeatValuesOf", t_stream);
     _addToRowRepeatValuesOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, (CUDA_LONG) a.GetNumRows(), (CUDA_LONG) a.GetNumCols(), (CUDA_LONG) GetNumRows());
     return *this;
 }
@@ -821,7 +819,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignPositiveAndShiftedNegSample(cons
     CUDA_LONG n = (CUDA_LONG) a.GetNumCols(), m = (CUDA_LONG) a.GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignPositiveAndShiftedNegSample", t_stream);
     _assignPositiveAndShiftedNegSample<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, m, n, (CUDA_LONG) GetNumRows(), posNumber, shiftNumber);
     return *this;
 }
@@ -842,7 +840,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddFoldedPositiveAndShiftedNegSample(c
     CUDA_LONG n = (CUDA_LONG) a.GetNumCols(), m = (CUDA_LONG) a.GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_addFoldedPositiveAndShiftedNegSample", t_stream);
     _addFoldedPositiveAndShiftedNegSample<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, m, n, (CUDA_LONG) GetNumRows(), posNumber, shiftNumber);
     return *this;
 }
@@ -902,9 +900,15 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTransposeOf(const GPUMatrix<Elem
     ElemType beta = 0;
     cublasStatus_t st;
     if (sizeof(ElemType) == sizeof(float))
-        st = cublasSgeam(cuHandle, transA, transB, m, n, reinterpret_cast<float*>(&alpha), reinterpret_cast<float*>(a.Data()), (int) a.m_numRows, reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(a.Data()), (int) a.m_numRows, reinterpret_cast<float*>(Data()), (int) m_numRows);
+    {
+        PROFILE_CUDA_STREAM("cublasSgeam", t_stream);
+        st = cublasSgeam(cuHandle, transA, transB, m, n, reinterpret_cast<float*>(&alpha), reinterpret_cast<float*>(a.Data()), (int)a.m_numRows, reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(a.Data()), (int)a.m_numRows, reinterpret_cast<float*>(Data()), (int)m_numRows);
+    }
     else if (sizeof(ElemType) == sizeof(double))
-        st = cublasDgeam(cuHandle, transA, transB, m, n, reinterpret_cast<double*>(&alpha), reinterpret_cast<double*>(a.Data()), (int) a.m_numRows, reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(a.Data()), (int) a.m_numRows, reinterpret_cast<double*>(Data()), (int) m_numRows);
+    {
+        PROFILE_CUDA_STREAM("cublasDgeam", t_stream);
+        st = cublasDgeam(cuHandle, transA, transB, m, n, reinterpret_cast<double*>(&alpha), reinterpret_cast<double*>(a.Data()), (int)a.m_numRows, reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(a.Data()), (int)a.m_numRows, reinterpret_cast<double*>(Data()), (int)m_numRows);
+    }
     else
         RuntimeError("Unsupported template argument in GPUMatrix");
     if (st != CUBLAS_STATUS_SUCCESS)
@@ -960,8 +964,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
 
     // launch the kernel
     CUDA_LONG NN = (CUDA_LONG)GetNumElements(); // linear space identifying each individual input element
-    SyncGuard syncGuard;
+    
     GridDim grid(NN);
+    PROFILE_CUDA_STREAM("_doGatherColumnsOf", t_stream);
     _doGatherColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), beta, idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), a.GetNumCols(), alpha, grid.m_N);
 
     // Note: The following fails silently (no error, immediate or delayed) for numcols = 10000 under CUDA 7.0.
@@ -1061,11 +1066,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
 
     // launch the kernel
     CUDA_LONG NN = (CUDA_LONG)(a.GetNumElements()); // linear space identifying each individual input element
-    SyncGuard syncGuard;
     GridDim grid(NN);
+    PROFILE_CUDA_STREAM("_doScatterColumnsOf", t_stream);
     _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
 
-    //SyncGuard syncGuard;
     //_doScatterColumnsOf<ElemType><<<a.GetNumCols(), a.GetNumRows(), 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
 
     return *this;
@@ -1100,7 +1104,7 @@ void GPUMatrix<ElemType>::SetValue(const ElemType v)
     {
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         PrepareDevice();
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_setValue", t_stream);
         _setValue<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), v, N);
     }
 }
@@ -1114,7 +1118,7 @@ void GPUMatrix<ElemType>::SetValue(const ElemType* d_v) // d_v is pointer to the
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_setValue", t_stream);
     _setValue<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), d_v, N);
 }
 
@@ -1129,7 +1133,7 @@ void GPUMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, E
 
     int blocksPerGrid = (int) GetNumCols();
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_maskColumnsValue", t_stream);
     _maskColumnsValue<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), columnsMask.Data(), (CUDA_LONG) GetNumCols(), (CUDA_LONG) GetNumRows(), val);
 }
 
@@ -1251,7 +1255,7 @@ void GPUMatrix<ElemType>::SetDiagonalValue(const ElemType v)
     CUDA_LONG N = (CUDA_LONG) GetNumRows();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_setDiagonalValue", t_stream);
     _setDiagonalValue<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), v, N, (CUDA_LONG) GetNumRows());
 }
 
@@ -1277,7 +1281,7 @@ void GPUMatrix<ElemType>::SetDiagonalValue(const GPUMatrix<ElemType>& vector)
         CUDA_LONG N = (CUDA_LONG) GetNumRows();
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
         PrepareDevice();
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_setDiagonalValueFromVector", t_stream);
         _setDiagonalValueFromVector<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), vector.Data(), N);
     }
 }
@@ -1289,11 +1293,18 @@ void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemTy
     CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
     cudaEvent_t done = nullptr;
-    CUDA_CALL(cudaEventCreate(&done)); // TODO: why not condition on do_sync, so that we can use SyncGuard?
+    CUDA_CALL(cudaEventCreate(&done));
     if (sizeof(ElemType) == sizeof(float))
-        CURAND_CALL(curandGenerateUniform(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements()));
+    {
+        PROFILE_CUDA("curandGenerateUniform");
+        CURAND_CALL(curandGenerateUniform(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements()));
+    }
     else
-        CURAND_CALL(curandGenerateUniformDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements()));
+    {
+        PROFILE_CUDA("curandGenerateUniformDouble");
+        CURAND_CALL(curandGenerateUniformDouble(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements()));
+    }
+    // Wait for curand* to complete before continuing
     CUDA_CALL(cudaEventRecord(done));
     CUDA_CALL(cudaEventSynchronize(done));
     // CURAND_CALL(curandDestroyGenerator(gen));
@@ -1302,7 +1313,7 @@ void GPUMatrix<ElemType>::SetUniformRandomValue(const ElemType low, const ElemTy
     size_t N = GetNumElements();
     size_t blocksPerGrid = (size_t) ceil(N / (double) GridDim::maxThreadsPerBlock);
 
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_rescaleToRange", t_stream);
     _rescaleToRange<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), N, low, high);
 }
 
@@ -1312,11 +1323,16 @@ void GPUMatrix<ElemType>::SetGaussianRandomValue(const ElemType mean, const Elem
     PrepareDevice();
     CreateCurandObject(seed, __FUNCTION__); // TODO call ResetCurandObject() instead?
 
-    // TODO: Why not use SyncGuard?
     if (sizeof(ElemType) == sizeof(float))
-        CURAND_CALL(curandGenerateNormal(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements(), (float) mean, (float) sigma));
+    {
+        PROFILE_CUDA("curandGenerateNormal");
+        CURAND_CALL(curandGenerateNormal(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<float*>(Data()), GetNumElements(), (float)mean, (float)sigma));
+    }
     else
-        CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*) s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements(), (double) mean, (double) sigma));
+    {
+        PROFILE_CUDA("curandGenerateNormalDouble");
+        CURAND_CALL(curandGenerateNormalDouble(((curandGenerator_t*)s_curandGenerator)[0], reinterpret_cast<double*>(Data()), GetNumElements(), (double)mean, (double)sigma));
+    }
     // CURAND_CALL(curandDestroyGenerator(gen));
 }
 
@@ -1331,18 +1347,26 @@ void GPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
     assert(gpuRNGHandle != nullptr);
 
     cudaEvent_t done = nullptr;
-    CUDA_CALL(cudaEventCreate(&done)); // TODO: why not condition on do_sync, so that we can use SyncGuard?
+    CUDA_CALL(cudaEventCreate(&done));
     if (sizeof(ElemType) == sizeof(float))
+    {
+        PROFILE_CUDA("curandGenerateUniform");
         CURAND_CALL(curandGenerateUniform(gpuRNGHandle->Generator(), reinterpret_cast<float*>(Data()), GetNumElements()));
+    }
     else
+    {
+        PROFILE_CUDA("curandGenerateUniformDouble");
         CURAND_CALL(curandGenerateUniformDouble(gpuRNGHandle->Generator(), reinterpret_cast<double*>(Data()), GetNumElements()));
+    }
+
+    // Wait for curand* to complete before continuing
     CUDA_CALL(cudaEventRecord(done));
     CUDA_CALL(cudaEventSynchronize(done));
     CUDA_CALL(cudaEventDestroy(done));
 
     size_t N = GetNumElements();
     size_t blocksPerGrid = (size_t) ceil(N / (double) GridDim::maxThreadsPerBlock);
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_setMaskAndScale", t_stream);
     _setMaskAndScale<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), N, maskRate, scaleValue);
 }
 
@@ -1368,7 +1392,11 @@ ElemType GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients, const bool
         multipliers = Data() + n; // temp memory used to store multipliers,
 
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
-    _adagrad<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(Data(), gradients.Data(), n, multipliers);
+    {
+        // BUGBUG: Should this use CUDA streams?
+        PROFILE_CUDA("_adagrad");
+        _adagrad<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(Data(), gradients.Data(), n, multipliers);
+    }
 
     if (!needAveMultiplier)
         return 1;
@@ -1377,12 +1405,14 @@ ElemType GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients, const bool
     if (sizeof(ElemType) == sizeof(float))
     {
         float aveMultiplier = 0;
+        PROFILE_CUDA_STREAM("cublasSasum", t_stream);
         CUBLAS_CALL(cublasSasum(cuHandle, (CUDA_LONG) n, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
         return (ElemType) aveMultiplier / n;
     }
     else
     {
         double aveMultiplier = 0;
+        PROFILE_CUDA_STREAM("cublasDasum", t_stream);
         CUBLAS_CALL(cublasDasum(cuHandle, (CUDA_LONG) n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
         return (ElemType) aveMultiplier / n;
     }
@@ -1408,6 +1438,7 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
 
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+    PROFILE_CUDA("_fsadagrad");
     _fsadagrad<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(n, gradients.Data(), Data(), Data()+ n, functionValues.Data(),
                                                                          learnRatePerSample, momentum, adaWeight, adaMul);
 }
@@ -1441,6 +1472,7 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
         ElemType* steps = Data() + 2 * n; // current step size
         // Data()+3*n is temp memory used to store multipliers, no need to initialize
 
+        PROFILE_CUDA("_rmsprop_init");
         _rmsprop_init<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, signs, steps, gradients.Data(), n);
     }
     assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == numColsNeeded);
@@ -1471,9 +1503,12 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
         CUDA_CALL(cudaMemcpy(upd_gpu, upd, sizeof(ElemType) * _countof(upd), cudaMemcpyHostToDevice));
     }
 
-    _rmsprop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, signs, steps, gradients.Data(), n,
+    {
+        PROFILE_CUDA("_rmsprop");
+        _rmsprop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(avars, signs, steps, gradients.Data(), n,
                                                                        RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN,
                                                                        floor, upd_gpu, multipliers);
+    }
 
     if (!needAveMultiplier)
         return 1;
@@ -1482,12 +1517,14 @@ ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
     if (sizeof(ElemType) == sizeof(float))
     {
         float aveMultiplier = 0;
+        PROFILE_CUDA_STREAM("cublasSasum", t_stream);
         CUBLAS_CALL(cublasSasum(cuHandle, (CUDA_LONG) n, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
         return aveMultiplier / n;
     }
     else
     {
         double aveMultiplier = 0;
+        PROFILE_CUDA_STREAM("cublasDasum", t_stream);
         CUBLAS_CALL(cublasDasum(cuHandle, (CUDA_LONG) n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
         return (ElemType) aveMultiplier / n;
     }
@@ -1584,7 +1621,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::operator+=(ElemType alpha)
         LogicError("operator+=: Matrix is empty.");
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_addValue", t_stream);
     _addValue<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), alpha, N);
     return *this;
 }
@@ -1669,7 +1706,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignDifferenceOf(const ElemType alph
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignDifferenceOf1", t_stream);
     _assignDifferenceOf1<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), alpha, a.Data(), N);
     return *this;
 }
@@ -1681,7 +1718,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignDifferenceOf(const GPUMatrix<Ele
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignDifferenceOf2", t_stream);
     _assignDifferenceOf2<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), alpha, a.Data(), N);
     return *this;
 }
@@ -1833,7 +1870,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddElementProductOf(const GPUMatrix<El
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_addElementProductOf", t_stream);
     _addElementProductOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), b.Data(), N);
     return *this;
 }
@@ -1851,7 +1888,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::ColumnElementMultiplyWith(const GPUMat
     CUDA_LONG M = (CUDA_LONG) GetNumCols();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_columnElementMultiplyWith", t_stream);
     _columnElementMultiplyWith<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, M);
     return *this;
 }
@@ -1869,8 +1906,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::RowElementMultiplyWith(const GPUMatrix
     CUDA_LONG M = (CUDA_LONG) a.GetNumCols();
     int blocksPerGrid = (int) ceil(1.0 * M / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
-    _rowElementMultiplyWith<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(Data(), a.Data(), N, M);
+    PROFILE_CUDA_STREAM("_rowElementMultiplyWith", t_stream);
+    _rowElementMultiplyWith<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, M);
     return *this;
 }
 
@@ -1887,8 +1924,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::RowElementDivideBy(const GPUMatrix<Ele
     CUDA_LONG M = (CUDA_LONG) a.GetNumCols();
     int blocksPerGrid = (int) ceil(1.0 * M / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
-    _rowElementDivideBy<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(Data(), a.Data(), N, M);
+    PROFILE_CUDA_STREAM("_rowElementDivideBy", t_stream);
+    _rowElementDivideBy<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, M);
     return *this;
 }
 
@@ -1905,7 +1942,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::ColumnElementDivideBy(const GPUMatrix<
     CUDA_LONG M = (CUDA_LONG) GetNumCols();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_ColumnElementDivideBy", t_stream);
     _ColumnElementDivideBy<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N, M);
     return *this;
 }
@@ -1919,7 +1956,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::ElementInverse()
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_elemInverse", t_stream);
     _elemInverse<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), N);
     return *this;
 }
@@ -1940,7 +1977,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSigmoidOf(const GPUMatrix<ElemTy
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignSigmoidOf", t_stream);
     // _elementWIseSigmoidOnCuda has an implementation that avoids possible overflow errors, but has a slight accuracy regression.
 #if 0
     _elementWiseSigmoidOnCuda<<<blocksPerGrid, threadsPerBlock, 0, t_stream>>>(a.Data(), Data(), N);
@@ -1965,7 +2002,7 @@ void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemT
     UNCONST(ElemType, a, my_a);
     UNCONST(ElemType, b, my_b);
     UNCONST(ElemType, bias, my_bias);
-    SyncGuard syncGuard;
+
     // a: dim * minibatch
     // b: dim * |vocab|
     int p = 512;
@@ -1973,7 +2010,8 @@ void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemT
 
     while (p / 2 > width)
         p = p / 2;
-
+    {
+        PROFILE_CUDA("_computeNceOutputMax512Threads");
     // note: kernel has hard-coded dimension of 512
     _computeNceOutputMax512Threads<ElemType> << <GetNumElements() / 2, p >> >(
         Data(),
@@ -1984,10 +2022,14 @@ void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemT
         my_b.Data(), // b
         my_bias.Data(),
         tmp.Data()); // tmp
+    }
 
     p = 512;
     while (p / 2 > GetNumElements() / 2)
         p = p / 2;
+
+    {
+        PROFILE_CUDA("_assignNoiseContrastiveEstimationMax512Threads");
     // summing up objective must be done in one block
     // note: kernel has hard-coded dimension of 512
     _assignNoiseContrastiveEstimationMax512Threads<ElemType> << <1, p >> >(
@@ -2000,6 +2042,7 @@ void GPUMatrix<ElemType>::AssignNoiseContrastiveEstimation(const GPUMatrix<ElemT
         tmp.Data(),
         c.Data());
 }
+}
 
 template <class ElemType>
 void GPUMatrix<ElemType>::AssignNCEDerivative(GPUMatrix<ElemType>& tmp, const GPUMatrix<ElemType>& a,
@@ -2007,12 +2050,13 @@ void GPUMatrix<ElemType>::AssignNCEDerivative(GPUMatrix<ElemType>& tmp, const GP
 {
     UNCONST(ElemType, a, my_a);
     UNCONST(ElemType, b, my_b);
-    SyncGuard syncGuard;
+
     int p = 512;
     int width = a.GetNumRows();
     while (p / 2 > width)
         p = p / 2;
 
+    PROFILE_CUDA("_assignNceDerivativeNew");
     _assignNceDerivativeNew<ElemType><<<(tmp.GetNumElements() + p - 1) / p, p>>>(
         Data(),
         tmp.GetNumCols(),
@@ -2029,12 +2073,13 @@ template <class ElemType>
 void GPUMatrix<ElemType>::AssignSoftmaxSum(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c)
 {
     UNCONST(ElemType, a, my_a);
-    SyncGuard syncGuard;
+
     int p = 512;
     int width = a.GetNumRows();
     while (p / 2 > width)
         p = p / 2;
 
+    PROFILE_CUDA("_assignSoftmaxSumMax512Threads");
     // note: kernel has hard-coded dimension of 512
     _assignSoftmaxSumMax512Threads<ElemType> << <1, p >> >(
         my_a.Data(),
@@ -2089,14 +2134,14 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceLogSoftmax(const bool isColWise
     {
         CUDA_LONG N = (CUDA_LONG) GetNumCols(); // one kernel per column
         int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_logSoftMaxColWise", t_stream);
         _logSoftMaxColWise<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), (CUDA_LONG) m_numCols, (CUDA_LONG) m_numRows);
     }
     else
     {
         CUDA_LONG N = (CUDA_LONG) GetNumRows(); // one kernel per column
         int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_logSoftMaxRowWise", t_stream);
         _logSoftMaxRowWise<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), (CUDA_LONG) m_numCols, (CUDA_LONG) m_numRows);
     }
     return *this;
@@ -2111,7 +2156,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignLogSoftmaxOf(const GPUMatrix<Ele
         PrepareDevice();
         CUDA_LONG N = (CUDA_LONG) GetNumCols();
         CUDA_LONG M = (CUDA_LONG) GetNumRows();
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_assignColumnwiseLogSoftmaxOf512Threads", t_stream);
         // note: kernel uses hard-coded thread dimension
         _assignColumnwiseLogSoftmaxOf512Threads<<<N, 512, 0, t_stream>>>(a.Data(), Data(), N, M);
     }
@@ -2138,7 +2183,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignHardmaxOf(const GPUMatrix<ElemTy
         PrepareDevice();
         CUDA_LONG N = (CUDA_LONG) GetNumCols();
         CUDA_LONG M = (CUDA_LONG) GetNumRows();
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_assignColumnwiseHardmaxOf512Threads", t_stream);
         // note: kernel uses hard-coded thread dimension
         _assignColumnwiseHardmaxOf512Threads << <N, 512, 0, t_stream >> >(a.Data(), Data(), N, M);
     }
@@ -2191,7 +2236,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTruncateBottomOf(const GPUMatrix
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignTruncateBottom", t_stream);
     _assignTruncateBottom<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), threshold, N);
     return *this;
 }
@@ -2216,7 +2261,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignTruncateTopOf(const GPUMatrix<El
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignTruncateTop", t_stream);
     _assignTruncateTop<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), threshold, N);
     return *this;
 }
@@ -2230,7 +2275,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceTruncate(const ElemType thresho
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_inplaceTruncate", t_stream);
     _inplaceTruncate<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), threshold, N);
     return *this;
 }
@@ -2244,7 +2289,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::InplaceSoftThreshold(const ElemType th
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_inplaceSoftThreshold", t_stream);
     _inplaceSoftThreshold<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), threshold, N);
     return *this;
 }
@@ -2256,7 +2301,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::SetToZeroIfAbsLessThan(const ElemType 
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_setToZeroIfAbsLessThan", t_stream);
     _setToZeroIfAbsLessThan<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), threshold, N);
     return *this;
 }
@@ -2271,12 +2316,14 @@ ElemType GPUMatrix<ElemType>::SumOfAbsElements() const
     if (sizeof(ElemType) == sizeof(float))
     {
         float res = 0;
+        PROFILE_CUDA_STREAM("cublasSasum", t_stream);
         CUBLAS_CALL(cublasSasum(cuHandle, (CUDA_LONG) GetNumElements(), reinterpret_cast<float*>(Data()), 1, &res));
         return res;
     }
     else
     {
         double res = 0;
+        PROFILE_CUDA_STREAM("cublasDasum", t_stream);
         CUBLAS_CALL(cublasDasum(cuHandle, (CUDA_LONG) GetNumElements(), reinterpret_cast<double*>(Data()), 1, &res));
         return ElemType(res);
     }
@@ -2292,8 +2339,11 @@ ElemType GPUMatrix<ElemType>::SumOfElements() const
     ElemType h_sum;
 
     // WARNING: THIS kernel is not the most efficient way!
+    {
+        PROFILE_CUDA_STREAM("_reductionSum1024Threads", t_stream);
     // note: kernel has hard-coded dimension of 1024
     _reductionSum1024Threads<ElemType> << <1, 1024, 0, t_stream >> >(Data(), d_sum, (CUDA_LONG)GetNumElements());
+    }
     CUDA_CALL(cudaMemcpy(&h_sum, d_sum, sizeof(ElemType), cudaMemcpyDeviceToHost));
     TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), d_sum);
     return h_sum;
@@ -2308,7 +2358,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSumOfElements(const GPUMatrix<El
     RequireSize(1, 1);
 
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA("_reductionSumAndAssign1024Threads");
     // WARNING: THIS kernel is not the most efficient way!
     // note: kernel has hard-coded dimension of 1024
     _reductionSumAndAssign1024Threads<ElemType> << <1, 1024 >> >(Data(), a.Data(), (CUDA_LONG)a.GetNumElements(), (CUDA_LONG)GetNumElements());
@@ -2323,8 +2373,11 @@ DeviceBoundNumber<ElemType> GPUMatrix<ElemType>::Sum_AsDeviceBoundNum() const
     ElemType* d_sum = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), 1);
 
     // WARNING: THIS kernel is not the most efficient way!
+    {
+        PROFILE_CUDA_STREAM("_reductionSum1024Threads", t_stream);
     // note: kernel has hard-coded dimension of 1024
     _reductionSum1024Threads<ElemType> << <1, 1024, 0, t_stream >> >(Data(), d_sum, (CUDA_LONG)GetNumElements());
+    }
     DeviceBoundNumber<ElemType> result;
     result.ShallowCopyFrom(d_sum, GetComputeDeviceId());
     return result;
@@ -2338,7 +2391,10 @@ ElemType GPUMatrix<ElemType>::Max() const
     if (sizeof(ElemType) == sizeof(float))
     {
         int resInd = 0;
-        cublasIsamax(cuHandle, (CUDA_LONG) GetNumElements(), reinterpret_cast<float*>(Data()), 1, &resInd);
+        {
+            PROFILE_CUDA_STREAM("cublasIsamax", t_stream);
+            cublasIsamax(cuHandle, (CUDA_LONG)GetNumElements(), reinterpret_cast<float*>(Data()), 1, &resInd);
+        }
         resInd--;
         CUDA_CALL(cudaMemcpy(reinterpret_cast<float*>(&res), reinterpret_cast<float*>(Data()+ resInd), sizeof(float), cudaMemcpyDeviceToHost));
         return res;
@@ -2346,7 +2402,10 @@ ElemType GPUMatrix<ElemType>::Max() const
     else
     {
         int resInd = 0;
-        cublasIdamax(cuHandle, (CUDA_LONG) GetNumElements(), reinterpret_cast<double*>(Data()), 1, &resInd);
+        {
+            PROFILE_CUDA_STREAM("cublasIdamax", t_stream);
+            cublasIdamax(cuHandle, (CUDA_LONG)GetNumElements(), reinterpret_cast<double*>(Data()), 1, &resInd);
+        }
         resInd--;
         CUDA_CALL(cudaMemcpy(reinterpret_cast<double*>(&res), Data()+ resInd, sizeof(float), cudaMemcpyDeviceToHost));
         return res;
@@ -2367,7 +2426,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::ElementMultiplyWith(const GPUMatrix<El
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_elemMul", t_stream);
     _elemMul<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), N);
     return *this;
 }
@@ -2386,7 +2445,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOf(const GPUMatrix
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignElementProductOf", t_stream);
     _assignElementProductOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), b.Data(), N);
     return *this;
 }
@@ -2411,7 +2470,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementDivisionOf(const GPUMatri
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignElementDivisionOf", t_stream);
     _assignElementDivisionOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), b.Data(), N);
     return *this;
 }
@@ -2451,7 +2510,7 @@ void GPUMatrix<ElemType>::VectorSum(const GPUMatrix<ElemType>& a, GPUMatrix<Elem
         blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     }
 
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_vectorSum", t_stream);
     _vectorSum<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.Data(), a.Data(), n, m, isColWise);
 }
 template <class ElemType>
@@ -2479,7 +2538,7 @@ void GPUMatrix<ElemType>::VectorNorm1(GPUMatrix<ElemType>& c, const bool isColWi
         blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     }
 
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_vectorNorm1", t_stream);
     _vectorNorm1<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.Data(), Data(), n, m, isColWise);
 }
 
@@ -2516,7 +2575,7 @@ void GPUMatrix<ElemType>::VectorNorm2(GPUMatrix<ElemType>& c, const bool isColWi
         blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
     }
 
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_vectorNorm2", t_stream);
     _vectorNorm2<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.Data(), Data(), n, m, isColWise);
 }
 
@@ -2571,7 +2630,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignKhatriRaoProductOf(const GPUMatr
     float N = (float) GetNumElements();
     int blocksPerGrid = (int) ceil(N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignKhatriRaoProductOf", t_stream);
     _assignKhatriRaoProductOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), b.Data(), rowsA, rowsB, cols);
     return *this;
 }
@@ -2604,7 +2663,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddColumnReshapeProductOf(const GPUMat
     float N = (float) GetNumElements();
     int blocksPerGrid = (int) ceil(N / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_addColumnReshapeProductOf", t_stream);
     _addColumnReshapeProductOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), b.Data(), rowsB, rowsC, cols, transposeAColumn);
     return *this;
 }
@@ -2626,8 +2685,11 @@ ElemType GPUMatrix<ElemType>::FrobeniusNorm() const
 
     ElemType h_sum = 0;
     // WARNING: THIS kernel is not the most efficient way!
+    {
+        PROFILE_CUDA_STREAM("_reductionSum21024Threads", t_stream);
     // note: kernel has hard-coded dimension of 1024
     _reductionSum21024Threads<ElemType> << <1, 1024, 0, t_stream >> >(Data(), d_sum, (CUDA_LONG)GetNumElements(), true);
+    }
     CUDA_CALL(cudaMemcpy(&h_sum, d_sum, sizeof(ElemType), cudaMemcpyDeviceToHost));
     TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), d_sum);
 
@@ -2644,6 +2706,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignFrobeniusNormOf(const GPUMatrix<
 
     PrepareDevice();
     // WARNING: THIS kernel is not the most efficient way!
+    PROFILE_CUDA_STREAM("_reductionSum21024Threads", t_stream);
     // note: kernel has hard-coded dimension of 1024
     _reductionSum21024Threads<ElemType> << <1, 1024, 0, t_stream >> >(a.Data(), Data(), (CUDA_LONG)a.GetNumElements(), true);
 
@@ -2660,8 +2723,11 @@ ElemType GPUMatrix<ElemType>::MatrixNormInf() const
 
     ElemType h_maxAbs = 0;
     // WARNING: THIS kernel is not the most efficient way!
+    {
+        PROFILE_CUDA_STREAM("_reductionMatrixNormInf1024Threads", t_stream);
     // note: kernel has hard-coded dimension of 1024
     _reductionMatrixNormInf1024Threads<ElemType> << <1, 1024, 0, t_stream >> >(Data(), d_maxAbs, (CUDA_LONG)GetNumElements());
+    }
     CUDA_CALL(cudaMemcpy(&h_maxAbs, d_maxAbs, sizeof(ElemType), cudaMemcpyDeviceToHost));
     TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), d_maxAbs);
     return h_maxAbs;
@@ -2684,8 +2750,11 @@ ElemType GPUMatrix<ElemType>::MatrixNorm0() const
     ElemType* d_nz = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), 1);
     ElemType h_nz = 0;
     // WARNING: THIS kernel is not the most efficient way!
+    {
+        PROFILE_CUDA_STREAM("_reductionMatrixNorm01024Threads", t_stream);
     // note: kernel has hard-coded dimension of 1024
     _reductionMatrixNorm01024Threads<ElemType> << <1, 1024, 0, t_stream >> >(Data(), d_nz, (CUDA_LONG)GetNumElements());
+    }
     CUDA_CALL(cudaMemcpy(&h_nz, d_nz, sizeof(ElemType), cudaMemcpyDeviceToHost));
     TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), d_nz);
     return h_nz;
@@ -2702,7 +2771,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSignOf(const GPUMatrix<ElemType>
 
     PrepareDevice();
     int blocksPerGrid = (int) ceil(1.0 * GetNumElements() / GridDim::maxThreadsPerBlock);
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignSignOf", t_stream);
     _assignSignOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), (CUDA_LONG) GetNumElements());
     return *this;
 }
@@ -2718,7 +2787,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddSignOf(const GPUMatrix<ElemType>& a
 
     PrepareDevice();
     int blocksPerGrid = (int) ceil(1.0 * GetNumElements() / GridDim::maxThreadsPerBlock);
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_addSignOf", t_stream);
     _addSignOf<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), (CUDA_LONG) GetNumElements());
     return *this;
 }
@@ -2735,13 +2804,13 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
     PrepareDevice();
-    SyncGuard syncGuard;
     if (isColWise)
     {
         maxValues.RequireSize(1, n);
         maxIndexes.RequireSize(1, n);
 
         int blocksPerGrid = n; // we'll have 1 block processing 1 column
+        PROFILE_CUDA_STREAM("_vectorMaxMinReduce512Threads", t_stream);
         // note: kernel has hard-coded dimension of 512
         _vectorMaxMinReduce512Threads<ElemType, true><<<blocksPerGrid, 512, 0, t_stream>>>(us.Data(), maxIndexes.Data(), maxValues.Data(), m, n);
 
@@ -2753,6 +2822,7 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
         maxValues.RequireSize(m, 1);
         maxIndexes.RequireSize(m, 1);
         int blocksPerGrid = (int) ceil(1.0 * m / GridDim::maxThreadsPerBlock);
+        PROFILE_CUDA_STREAM("_vectorMax", t_stream);
         _vectorMax<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(us.Data(), maxIndexes.Data(), maxValues.Data(), m, n, isColWise);
     }
 }
@@ -2789,7 +2859,6 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
     PrepareDevice();
-    SyncGuard syncGuard;
     maxValues.RequireSize(topK, n);
     maxIndexes.RequireSize(topK, n);
 
@@ -2809,11 +2878,17 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
     // Determine temp buffer size needed for SortPairsDescending to sort values on the first pass.
     size_t cbtemp = 0;
     // If first param is nullptr then no actual work is done except writing result to cbtemp.
-    CUDA_CALL(cub::DeviceRadixSort::SortPairsDescending(nullptr, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream));
+    {
+        PROFILE_CUDA_STREAM("SortPairsDescending", t_stream);
+        CUDA_CALL(cub::DeviceRadixSort::SortPairsDescending(nullptr, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream));
+    }
     size_t ctemp1 = (cbtemp + sizeof(ElemType) - 1) / sizeof(ElemType);
     // Determine temp buffer size needed for SortPairs to sort indices on the second pass.
     cbtemp = 0;
-    CUDA_CALL(cub::DeviceRadixSort::SortPairs(nullptr, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream));
+    {
+        PROFILE_CUDA_STREAM("SortPairs", t_stream);
+        CUDA_CALL(cub::DeviceRadixSort::SortPairs(nullptr, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream));
+    }
     size_t ctemp2 = (cbtemp + sizeof(ElemType) - 1) / sizeof(ElemType);
     size_t ctemp = std::max(ctemp1, ctemp2);
     cbtemp = ctemp * sizeof(ElemType);
@@ -2837,14 +2912,26 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
     // Initialize indices.
     const int ThreadsPerBlock = 128;
     int cblock = (celt + ThreadsPerBlock - 1) / ThreadsPerBlock;
-    _initIndicesForSort<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, m, n);
+    {
+        PROFILE_CUDA_STREAM("_initIndicesForSort", t_stream);
+        _initIndicesForSort<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, m, n);
+    }
     // Sort by values.
+    {
+        PROFILE_CUDA_STREAM("SortPairsDescending", t_stream);
     CUDA_CALL(cub::DeviceRadixSort::SortPairsDescending(ptmp, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream));
+    }
     // Sort by column indices. outIdx contains indices after the first pass so it's used as an input.
+    {
+        PROFILE_CUDA_STREAM("SortPairs", t_stream);
     CUDA_CALL(cub::DeviceRadixSort::SortPairs(ptmp, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream));
+    }
     // Copy results.
     cblock = (topK * n + ThreadsPerBlock - 1) / ThreadsPerBlock;
+    {
+        PROFILE_CUDA_STREAM("_copyTopKResults", t_stream);
     _copyTopKResults<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, outVal2, maxIndexes.Data(), maxValues.Data(), m, n, topK);
+    }
 
     ReleaseWorkspace(std::move(workspace));
 
@@ -2862,13 +2949,13 @@ void GPUMatrix<ElemType>::VectorMin(GPUMatrix<ElemType>& minIndexes, GPUMatrix<E
 
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
     PrepareDevice();
-    SyncGuard syncGuard;
     if (isColWise)
     {
         minValues.RequireSize(1, n);
         minIndexes.RequireSize(1, n);
 
         int blocksPerGrid = n; // we'll have 1 block processing 1 column
+        PROFILE_CUDA_STREAM("_vectorMaxMinReduce512Threads", t_stream);
         // note: kernel has hard-coded dimension of 512
         _vectorMaxMinReduce512Threads<ElemType, false> << <blocksPerGrid, 512, 0, t_stream >> >(us.Data(), minIndexes.Data(), minValues.Data(), m, n);
 
@@ -2881,6 +2968,7 @@ void GPUMatrix<ElemType>::VectorMin(GPUMatrix<ElemType>& minIndexes, GPUMatrix<E
         minValues.RequireSize(m, 1);
         minIndexes.RequireSize(m, 1);
         int blocksPerGrid = (int) ceil(1.0 * m / GridDim::maxThreadsPerBlock);
+        PROFILE_CUDA_STREAM("_vectorMin", t_stream);
         _vectorMin<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(us.Data(), minIndexes.Data(), minValues.Data(), m, n, isColWise);
     }
 }
@@ -2896,17 +2984,18 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemTy
     RequireSize(1, 1); // result should be one element
 
     PrepareDevice();
-    SyncGuard syncGuard;
     if (!searchInCol)
     {
         // int blocksPerGrid=(int)ceil(1.0*a.GetNumElements()/GridDim::maxThreadsPerBlock);
         // _assignNumOfDiff1024Threads<ElemType><<<blocksPerGrid,GridDim::maxThreadsPerBlock,0,t_stream>>>(a.Data(), b.Data(), Data(), a.GetNumElements());
         // note: kernel has hard-coded dimension of 1024
+        PROFILE_CUDA_STREAM("_assignNumOfDiff1024Threads", t_stream);
         _assignNumOfDiff1024Threads<ElemType> << <1, 1024, 0, t_stream >> >(a.Data(), b.Data(), Data(), (CUDA_LONG)a.GetNumElements());
     }
     else
     {
         const int blockSize = 1024;
+        PROFILE_CUDA_STREAM("_assignNumOfDiffCol", t_stream);
         _assignNumOfDiffCol<blockSize><<<1, blockSize, 0, t_stream>>>(a.Data(), b.Data(), Data(),
                                                                       static_cast<CUDA_LONG>(b.GetNumRows()), static_cast<CUDA_LONG>(a.GetNumCols()));
     }
@@ -2952,7 +3041,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignPackedConvolutionInput(const GPU
 #else
     dim3 blocksPerGrid((inputWidth * inputHeight * inputChannels + numThreadPerBlock - 1) / numThreadPerBlock, smallBatchSize);
 #endif
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignPackedConvolutionInput", t_stream);
     _assignPackedConvolutionInput<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(Data(),
                                                                                      inputSubBatch.Data(),
                                                                                      smallBatchSize,
@@ -2982,7 +3071,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::UnpackConvolutionInput(GPUMatrix<ElemT
 #else
     dim3 blocksPerGrid((inputWidth * inputHeight * inputChannels + numThreadPerBlock - 1) / numThreadPerBlock, smallBatchSize);
 #endif
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_unpackConvolutionInput", t_stream);
     _unpackConvolutionInput<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(Data(),
                                                                                inputSubBatch.Data(),
                                                                                smallBatchSize,
@@ -3008,7 +3097,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignMaxPoolingResult(const GPUMatrix
     int blocksPerGrid = (batchSize * outputSizePerSample + numThreadPerBlock - 1) / numThreadPerBlock;
 
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignMaxPoolingResult", t_stream);
     _assignMaxPoolingResult<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(Data(), inputBatch.Data(), batchSize, channels,
                                                                                inputWidth, inputHeight, inputSizePerSample,
                                                                                outputWidth, outputHeight, outputSizePerSample,
@@ -3030,9 +3119,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddMaxPoolingGradient(const GPUMatrix<
     int numThreadPerBlock = GridDim::maxThreadsPerBlock;
 
     PrepareDevice();
-    SyncGuard syncGuard;
 
     int blocksPerGrid = (batchSize * inputSizePerSample + numThreadPerBlock - 1) / numThreadPerBlock;
+    PROFILE_CUDA_STREAM("_addMaxPoolingGradient", t_stream);
     _addMaxPoolingGradient<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(Data(), outputGradientBatch.Data(), inputBatch.Data(), outputBatch.Data(), batchSize, channels,
                                                                               inputWidth, inputHeight, inputSizePerSample,
                                                                               outputWidth, outputHeight, outputSizePerSample,
@@ -3056,7 +3145,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignAveragePoolingResult(const GPUMa
     int blocksPerGrid = (batchSize * outputSizePerSample + numThreadPerBlock - 1) / numThreadPerBlock;
 
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignAveragePoolingResult", t_stream);
     _assignAveragePoolingResult<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(Data(), inputBatch.Data(), batchSize, channels,
                                                                                    inputWidth, inputHeight, inputSizePerSample,
                                                                                    outputWidth, outputHeight, outputSizePerSample,
@@ -3078,7 +3167,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AddAveragePoolingGradient(const GPUMat
     int numThreadPerBlock = GridDim::maxThreadsPerBlock;
 
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_addAveragePoolingGradient", t_stream);
     size_t blocksPerGrid = (batchSize * inputSizePerSample + numThreadPerBlock - 1) / numThreadPerBlock;
     _addAveragePoolingGradient<<<blocksPerGrid, numThreadPerBlock, 0, t_stream>>>(Data(), outputGradientBatch.Data(), (CUDA_LONG) batchSize, channels,
                                                                                   inputWidth, inputHeight, inputSizePerSample,
@@ -3097,7 +3186,7 @@ void GPUMatrix<ElemType>::ConvolutionForward(const GPUMatrix<ElemType>& kernel, 
     const int BlockSize = 128;
     auto gdim = dim3((output.GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("kConvolutionForward", t_stream);
     kConvolutionForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), kernel.Data(), mpRowCol.Data(), mpRowIwht.Data(), mpRowRun.Data(),
                                                             runs.Data(), Data(), (int)GetNumRows(), output.Data(), (int)output.GetNumRows());
 }
@@ -3109,7 +3198,7 @@ void GPUMatrix<ElemType>::ConvolutionBackwardData(const GPUMatrix<ElemType>& ker
     const int BlockSize = 128;
     auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("kConvolutionBackwardData", t_stream);
     kConvolutionBackwardData<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), kernel.Data(), mpRowCol.Data(), mpRowIwht.Data(), mpRowRun.Data(),
                                                                  runs.Data(), Data(), (int)GetNumRows(), grad.Data(), (int)grad.GetNumRows());
 }
@@ -3121,7 +3210,7 @@ void GPUMatrix<ElemType>::ConvolutionBackwardKernel(const GPUMatrix<ElemType>& i
     const int BlockSize = 128;
     auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("kConvolutionBackwardKernel", t_stream);
     kConvolutionBackwardKernel<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), (int)in.GetNumRows(), (int)GetNumRows(),
                                                                    in.Data(), mpRowCol.Data(), mpRowIwht.Data(), mpRowRun.Data(),
                                                                    runs.Data(), Data(), kernelGrad.Data());
@@ -3133,7 +3222,7 @@ void GPUMatrix<ElemType>::MaxPoolingForward(const GPUMatrix<int>& mpRowCol, cons
     const int BlockSize = 128;
     auto gdim = dim3((output.GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("kMaxPoolingForward", t_stream);
     kMaxPoolingForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
                                                            Data(), (int)GetNumRows(), output.Data(), (int)output.GetNumRows());
 }
@@ -3146,7 +3235,7 @@ void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, con
     const int BlockSize = 128;
     auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("kMaxPoolingBackward", t_stream);
     kMaxPoolingBackward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), out.Data(), in.Data(),
                                                             mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
                                                             Data(), (int)GetNumRows(), grad.Data(), (int)grad.GetNumRows());
@@ -3158,11 +3247,11 @@ void GPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t n
                                             GPUMatrix<ElemType>& argmax) const
 {
     PrepareDevice();
-    SyncGuard syncGuard;
 
     int count = numRois * numImg * channels * pooledHeight * pooledWidth;
     const int blockSize = GridDim::maxThreadsPerBlock;
     auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
+    PROFILE_CUDA_STREAM("kROIPoolingForward", t_stream);
     kROIPoolingForward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
                                                                pooledWidth, pooledHeight, Data(), roiData.Data(), output.Data(), argmax.Data());
 }
@@ -3173,11 +3262,11 @@ void GPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
                                              GPUMatrix<ElemType>& argmax) const
 {
     PrepareDevice();
-    SyncGuard syncGuard;
 
     int count = numImg * channels * height * width;
     const int blockSize = GridDim::maxThreadsPerBlock;
     auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
+    PROFILE_CUDA_STREAM("kROIPoolingBackward", t_stream);
     kROIPoolingBackward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
                                                                 pooledWidth, pooledHeight, Data(), roiData.Data(), grad.Data(), argmax.Data());
 }
@@ -3188,7 +3277,7 @@ void GPUMatrix<ElemType>::MaxUnpooling(const GPUMatrix<int>& mpRowCol, const GPU
     const int BlockSize = 128;
     auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("kMaxUnpooling", t_stream);
     kMaxUnpooling<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
                                                      Data(), poolInput.Data(), (int)GetNumRows(), input.Data(), (int)input.GetNumRows());
 }
@@ -3199,7 +3288,7 @@ void GPUMatrix<ElemType>::AveragePoolingForward(const GPUMatrix<int>& mpRowCol, 
     const int BlockSize = 128;
     auto gdim = dim3((output.GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("kAveragePoolingForward", t_stream);
     kAveragePoolingForward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
                                                                Data(), (int)GetNumRows(), output.Data(), (int)output.GetNumRows());
 }
@@ -3210,7 +3299,7 @@ void GPUMatrix<ElemType>::AveragePoolingBackward(const GPUMatrix<int>& mpRowCol,
     const int BlockSize = 128;
     auto gdim = dim3((GetNumRows() + BlockSize - 1)/ BlockSize, std::min((int)GetNumCols(), 65535));
     PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("kAveragePoolingBackward", t_stream);
     kAveragePoolingBackward<<<gdim, BlockSize, 0, t_stream>>>((int)GetNumCols(), mpRowCol.Data(), mpRowIndices.Data(), indices.Data(),
                                                                 Data(), (int)GetNumRows(), grad.Data(), (int)grad.GetNumRows());
 }
@@ -3232,7 +3321,7 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
     assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
 
-    SyncGuard syncGuard;
+
     if (inferenceOnly)
     {
         // Pick running statistics for normalizing. No update reuqired, and
@@ -3252,6 +3341,7 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
         savedInvStdDev.RequireSize(runMean);
         if (spatial)
         {
+            PROFILE_CUDA_STREAM("ComputeSpatialBatchMeanAndInvStdDev", t_stream);
             Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, Data(),
                                                                 expAvgFactor, blendFactor,
                                                                 runMean.Data(), runVariance.Data(), epsilon,
@@ -3259,6 +3349,7 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
         }
         else
         {
+            PROFILE_CUDA_STREAM("ComputeBatchMeanAndInvStdDev", t_stream);
             Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, Data(),
                                                          expAvgFactor, blendFactor,
                                                          runMean.Data(), runVariance.Data(), epsilon,
@@ -3266,10 +3357,10 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
         }
     }
 
-    Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
+        Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
                                            normalizeRunningStats, epsilon,
-                                           Data(), out.Data(),
-                                           scale.Data(), bias.Data(),
+                                               Data(), out.Data(),
+                                               scale.Data(), bias.Data(),
                                            runMean.Data(), runVariance.Data(),
                                            savedMean.Data(), savedInvStdDev.Data(),
                                            GetStream());
@@ -3292,18 +3383,20 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
     assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
     assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
 
-    SyncGuard syncGuard;
     if (spatial)
     {
+        PROFILE_CUDA_STREAM("ComputeSpatialScaleAndBiasGradients", t_stream);
         Call<ComputeSpatialScaleAndBiasGradients, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
                                                             savedMean.Data(), savedInvStdDev.Data(), GetStream());
     }
     else
     {
+        PROFILE_CUDA_STREAM("ComputeScaleAndBiasGradients", t_stream);
         Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
                                                      savedMean.Data(), savedInvStdDev.Data(), GetStream());
     }
     ElemType mbStatsWeight = (ElemType)(1 - blendFactor); // weight for contribution from actual MB stats (0 if none, e.g. locked BN node)
+    PROFILE_CUDA_STREAM("BackpropagateBatchNormGradients", t_stream);
     Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
                                                     in.Data(), Data(), grad.Data(), scale.Data(), mbStatsWeight, scaleGrad.Data(), biasGrad.Data(), savedMean.Data(), savedInvStdDev.Data(), GetStream());
 }
@@ -3376,6 +3469,8 @@ void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix
         RuntimeError("!(m>0 && k>0 && l>0 && n>0)"); // converting from size_t to int may cause overflow
     if (k != l)
         RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
+
+    PROFILE_CUDA_STREAM("cublas_gemm", t_stream);
     CUBLAS_CALL(cublas_gemm(cuHandle, transA, transB, m, n, k, &alpha, a.Data(), (int) a.m_numRows, b.Data(), (int) b.m_numRows, &beta, c.Data(), (int) c.m_numRows));
     c.m_numRows = m;
     c.m_numCols = n;
@@ -3389,7 +3484,7 @@ void GPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const GPUMat
         InvalidArgument("All matrices must be on the same GPU");
     CUDA_LONG N = (CUDA_LONG) c.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_multiply1x1AndWeightedAdd", t_stream);
     _multiply1x1AndWeightedAdd<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha, a.Data(), b.Data(), beta, c.Data(), N);
 }
 
@@ -3450,10 +3545,12 @@ template <class ElemType>
             // TODO: Overload the call to cublas_axpy to remove these ugly if/else statements.
             if (sizeof(ElemType) == sizeof(float))
             {
+                PROFILE_CUDA_STREAM("cublasSaxpy", t_stream);
                 CUBLAS_CALL(cublasSaxpy(cuHandle, len, reinterpret_cast<float*>(&alpha), reinterpret_cast<float*>(a.Data()), incx, reinterpret_cast<float*>(c.Data()), incy));
             }
             else if (sizeof(ElemType) == sizeof(double))
             {
+                PROFILE_CUDA_STREAM("cublasDaxpy", t_stream);
                 CUBLAS_CALL(cublasDaxpy(cuHandle, len, reinterpret_cast<double*>(&alpha), reinterpret_cast<double*>(a.Data()), incx, reinterpret_cast<double*>(c.Data()), incy));
             }
             else
@@ -3466,7 +3563,7 @@ template <class ElemType>
             CUDA_LONG N = (CUDA_LONG) c.GetNumElements();
             int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
             c.PrepareDevice();
-            SyncGuard syncGuard;
+            PROFILE_CUDA_STREAM("_scaleAndAddScalar", t_stream);
             _scaleAndAddScalar<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.Data(), N, alpha, a.Data(), c.Data());
                                 }
         else if (a.GetNumCols() == 1) // col vector, add it to all columns
@@ -3477,7 +3574,7 @@ template <class ElemType>
                 InvalidArgument("To add column vector, rows should match.");
 
             int blocksPerGrid = (int) (ceil(1.0 * m * n / GridDim::maxThreadsPerBlock));
-            SyncGuard syncGuard;
+            PROFILE_CUDA_STREAM("_matrixVectorColumnWiseAddWithThreadPerElem", t_stream);
 #ifdef VALIDATION
             printf(">>>> CUDA compute device is %d\n", a.GetComputeDeviceId());
             printf(">>>> a.Data()= %p, c.Data()= %p, alpha = %f, m = %ld, n = %ld\n", a.Data(), c.Data(), alpha, m, n);
@@ -3507,6 +3604,7 @@ template <class ElemType>
             {
                 foreach_row (i, c)
                 {
+                    PROFILE_CUDA_STREAM("cublasDaxpy", t_stream);
                     CUBLAS_CALL(cublasDaxpy(cuHandle, n, reinterpret_cast<double*>(&alpha), reinterpret_cast<double*>(a.Data()), 1, reinterpret_cast<double*>(c.Data()+ i), m));
                 }
             }
@@ -3514,6 +3612,7 @@ template <class ElemType>
             {
                 foreach_row (i, c)
                 {
+                    PROFILE_CUDA_STREAM("cublasSaxpy", t_stream);
                     CUBLAS_CALL(cublasSaxpy(cuHandle, n, reinterpret_cast<float*>(&alpha), reinterpret_cast<float*>(a.Data()), 1, reinterpret_cast<float*>(c.Data()+ i), m));
                 }
             }
@@ -3560,7 +3659,7 @@ template <class ElemType>
             CUDA_LONG N = (CUDA_LONG) c.GetNumElements();
             int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
             c.PrepareDevice();
-            SyncGuard syncGuard;
+            PROFILE_CUDA_STREAM("_matrixMatrixAddOnCuda", t_stream);
             _matrixMatrixAddOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha, a.Data(), b.Data(), c.Data(), N);
         }
         else if (a.GetNumElements() == 1)
@@ -3568,7 +3667,7 @@ template <class ElemType>
             CUDA_LONG N = (CUDA_LONG) c.GetNumElements();
             int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
             c.PrepareDevice();
-            SyncGuard syncGuard;
+            PROFILE_CUDA_STREAM("_scaleAndAddScalar", t_stream);
             _scaleAndAddScalar<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.Data(), N, alpha, a.Data(), b.Data());
         }
         else if (a.GetNumCols() == 1) // col vector, add it to all columns
@@ -3579,7 +3678,7 @@ template <class ElemType>
                 InvalidArgument("To add column vector, rows should match.");
 
             int blocksPerGrid = (int) (ceil(1.0 * m * n / GridDim::maxThreadsPerBlock));
-            SyncGuard syncGuard;
+            PROFILE_CUDA_STREAM("_matrixVectorColumnWiseAddWithThreadPerElem", t_stream);
             _matrixVectorColumnWiseAddWithThreadPerElem<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), c.Data(), alpha, m, n);
 
         }
@@ -3591,7 +3690,7 @@ template <class ElemType>
                 InvalidArgument("To add column vector, rows should match.");
 
             int blocksPerGrid = (int) (ceil(1.0 * m * n / GridDim::maxThreadsPerBlock));
-            SyncGuard syncGuard;
+            PROFILE_CUDA_STREAM("_matrixVectorRowWiseAddWithThreadPerElem", t_stream);
             _matrixVectorRowWiseAddWithThreadPerElem<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), c.Data(), alpha, m, n);
         }
         else
@@ -3630,7 +3729,7 @@ void GPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const GPUMat
 
         CUDA_LONG n = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_addScaledDifference", t_stream);
         _addScaledDifference<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha, a.Data(), b.Data(), c.Data(), n);
     }
 }
@@ -3665,7 +3764,7 @@ void GPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const GPU
 
         CUDA_LONG n = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_assignScaledDifference", t_stream);
         _assignScaledDifference<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha, a.Data(), b.Data(), c.Data(), n);
     }
 }
@@ -3705,7 +3804,7 @@ void GPUMatrix<ElemType>::AddScaledDifference(const GPUMatrix<ElemType>& alpha, 
 
         CUDA_LONG n = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_addScaledDifference", t_stream);
         _addScaledDifference<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha.Data(), a.Data(), b.Data(), c.Data(), n);
     }
 }
@@ -3745,7 +3844,7 @@ void GPUMatrix<ElemType>::AssignScaledDifference(const GPUMatrix<ElemType>& alph
 
         CUDA_LONG n = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * n / GridDim::maxThreadsPerBlock);
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_assignScaledDifference", t_stream);
         _assignScaledDifference<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha.Data(), a.Data(), b.Data(), c.Data(), n);
     }
 }
@@ -3759,7 +3858,7 @@ void GPUMatrix<ElemType>::AddElementToElement(ElemType beta, const GPUMatrix<Ele
         InvalidArgument("AddElementToElement: Index out of range.");
 
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_addElementToElement", t_stream);
     _addElementToElement<ElemType><<<1, 1, 0, t_stream>>>(beta, a.Data(), (CUDA_LONG) a.LocateElement(ai, aj), c.Data(), (CUDA_LONG) c.LocateElement(ci, cj));
 }
 
@@ -3777,11 +3876,13 @@ template <class ElemType>
     if (sizeof(ElemType) == sizeof(float))
     {
         float alph = (float) alpha;
+        PROFILE_CUDA_STREAM("cublasSscal", t_stream);
         CUBLAS_CALL(cublasSscal(cuHandle, int(a.m_numRows * a.m_numCols), &alph, (float*) a.Data(), 1));
     }
     else if (sizeof(ElemType) == sizeof(double))
     {
         double alph = alpha;
+        PROFILE_CUDA_STREAM("cublasDscal", t_stream);
         CUBLAS_CALL(cublasDscal(cuHandle, int(a.m_numRows * a.m_numCols), &alph, (double*) a.Data(), 1));
     }
     else
@@ -3801,10 +3902,12 @@ template <class ElemType>
     cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE);
     if (sizeof(ElemType) == sizeof(float))
     {
+        PROFILE_CUDA_STREAM("cublasSscal", t_stream);
         CUBLAS_CALL(cublasSscal(cuHandle, int(a.m_numRows * a.m_numCols), (float*) alpha.Data(), (float*) a.Data(), 1));
     }
     else if (sizeof(ElemType) == sizeof(double))
     {
+        PROFILE_CUDA_STREAM("cublasDscal", t_stream);
         CUBLAS_CALL(cublasDscal(cuHandle, int(a.m_numRows * a.m_numCols), (double*) alpha.Data(), (double*) a.Data(), 1));
     }
     else
@@ -3866,7 +3969,7 @@ void GPUMatrix<ElemType>::InnerProduct(const GPUMatrix<ElemType>& a, const GPUMa
             blocksPerGrid = (int) ceil(1.0 * m / GridDim::maxThreadsPerBlock);
         }
 
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_innerProduct", t_stream);
         _innerProduct<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(c.Data(), a.Data(), b.Data(), m, n, isColWise);
     }
 }
@@ -3891,6 +3994,7 @@ ElemType GPUMatrix<ElemType>::InnerProductOfMatrices(const GPUMatrix<ElemType>& 
     if (sizeof(ElemType) == sizeof(double))
     {
         double tmp = 0;
+        PROFILE_CUDA_STREAM("cublasDdot", t_stream);
         CUBLAS_CALL(cublasDdot(cuHandle, m * n, reinterpret_cast<double*>(a.Data()), 1, reinterpret_cast<double*>(b.Data()), 1, &tmp));
         return ElemType(tmp);
         // return (ElemType)ddot((int)a.GetNumElements(), reinterpret_cast <double*>(a.Data()), 1, reinterpret_cast <double*>(b.Data()), 1);
@@ -3898,6 +4002,7 @@ ElemType GPUMatrix<ElemType>::InnerProductOfMatrices(const GPUMatrix<ElemType>& 
     else
     {
         float tmp = 0;
+        PROFILE_CUDA_STREAM("cublasSdot", t_stream);
         CUBLAS_CALL(cublasSdot(cuHandle, m * n, reinterpret_cast<float*>(a.Data()), 1, reinterpret_cast<float*>(b.Data()), 1, &tmp));
         return tmp;
         // return (ElemType)sdot((int)a.GetNumElements(), reinterpret_cast <float*>(a.Data()), 1, reinterpret_cast <float*>(b.Data()), 1);
@@ -3926,10 +4031,12 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignInnerProductOfMatrices(const GPU
     cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE);
     if (sizeof(ElemType) == sizeof(double))
     {
+        PROFILE_CUDA_STREAM("cublasDdot", t_stream);
         CUBLAS_CALL(cublasDdot(cuHandle, m * n, reinterpret_cast<double*>(a.Data()), 1, reinterpret_cast<double*>(b.Data()), 1, reinterpret_cast<double*>(Data())));
     }
     else
     {
+        PROFILE_CUDA_STREAM("cublasSdot", t_stream);
         CUBLAS_CALL(cublasSdot(cuHandle, m * n, reinterpret_cast<float*>(a.Data()), 1, reinterpret_cast<float*>(b.Data()), 1, reinterpret_cast<float*>(Data())));
     }
     cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST);
@@ -3951,9 +4058,9 @@ void GPUMatrix<ElemType>::ElementWisePower(ElemType alpha, const GPUMatrix<ElemT
         c.RequireSize(a.GetNumRows(), a.GetNumCols());
 
         a.PrepareDevice();
-        SyncGuard syncGuard;
         CUDA_LONG N = (CUDA_LONG) a.GetNumElements();
         int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+        PROFILE_CUDA_STREAM("_elementWisePowerOnCuda", t_stream);
         _elementWisePowerOnCuda<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(alpha, a.Data(), c.Data(), N);
     }
 }
@@ -3975,7 +4082,10 @@ bool GPUMatrix<ElemType>::AreEqual(const GPUMatrix<ElemType>& a, const GPUMatrix
     CUDA_CALL(cudaMemcpy(d_res, res, sizeof(long) * 1, cudaMemcpyHostToDevice));
     CUDA_LONG N = (CUDA_LONG) a.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+    {
+        PROFILE_CUDA_STREAM("_areEqual", t_stream);
     _areEqual<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), N, threshold, d_res);
+    }
     CUDA_CALL(cudaMemcpy(res, d_res, sizeof(long) * 1, cudaMemcpyDeviceToHost));
     TracingGPUMemoryAllocator::Free<long>(a.GetComputeDeviceId(), d_res);
     if (res[0] != 0)
@@ -3992,8 +4102,8 @@ void GPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GP
     assert(N == (CUDA_LONG) a.GetNumElements() && N == (CUDA_LONG) b.GetNumElements());
     assert(a.GetComputeDeviceId() == c.GetComputeDeviceId() && b.GetComputeDeviceId() == c.GetComputeDeviceId());
     a.PrepareDevice();
-    SyncGuard syncGuard;
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+    PROFILE_CUDA_STREAM("_tensorShuffleScaleAndAdd", t_stream);
     _tensorShuffleScaleAndAdd<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(keepWeight, a.Data(), D, S, M, K, T, scaleFactor, b.Data(), c.Data());
 }
 
@@ -4011,7 +4121,10 @@ bool GPUMatrix<ElemType>::HasElement(const GPUMatrix<ElemType>& a, const ElemTyp
     CUDA_CALL(cudaMemcpy(d_res, res, sizeof(ElemType) * 2, cudaMemcpyHostToDevice));
     CUDA_LONG N = (CUDA_LONG) a.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+    {
+        PROFILE_CUDA_STREAM("_hasElement", t_stream);
     _hasElement<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), N, d_res);
+    }
     CUDA_CALL(cudaMemcpy(res, d_res, sizeof(ElemType) * 2, cudaMemcpyDeviceToHost));
     TracingGPUMemoryAllocator::Free<ElemType>(a.GetComputeDeviceId(), d_res);
     if (res[1] != 0)
@@ -4120,20 +4233,29 @@ ElemType GPUMatrix<ElemType>::GetLearnRateForBlock_Helper(const GPUMatrix<ElemTy
     {
         cublasHandle_t cuHandle = GetCublasHandle(Gradients.GetComputeDeviceId());
         cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE);
+        {
+            PROFILE_CUDA_STREAM("cublasDdot", t_stream);
         CUBLAS_CALL(cublasDdot(cuHandle, m * n, reinterpret_cast<double*>(Gradients.Data()), 1, reinterpret_cast<double*>(SmoothedGradients.Data()), 1, reinterpret_cast<double*>(d_res)));
+        }
         cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST);
     }
     else
     {
         cublasHandle_t cuHandle = GetCublasHandle(Gradients.GetComputeDeviceId());
         cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_DEVICE);
+        {
+            PROFILE_CUDA_STREAM("cublasSdot", t_stream);
         CUBLAS_CALL(cublasSdot(cuHandle, m * n, reinterpret_cast<float*>(Gradients.Data()), 1, reinterpret_cast<float*>(SmoothedGradients.Data()), 1, reinterpret_cast<float*>(d_res)));
+        }
         cublasSetPointerMode(cuHandle, CUBLAS_POINTER_MODE_HOST);
     }
     // d_res[0] should now contain inner product of matrices
     // Compute squared Frobenius norms (squared sums of elements)
+    {
+        PROFILE_CUDA_STREAM("_lrHelper512Threads", t_stream);
     // note: kernel has hard-coded dimension of 512
     _lrHelper512Threads<ElemType> << <1, 512, 0, t_stream >> >(Gradients.Data(), SmoothedGradients.Data(), (CUDA_LONG)Gradients.GetNumElements(), d_res);
+    }
     ElemType res;
     CUDA_CALL(cudaMemcpy(&res, d_res, sizeof(ElemType), cudaMemcpyDeviceToHost));
     TracingGPUMemoryAllocator::Free<ElemType>(Gradients.GetComputeDeviceId(), d_res);
@@ -4164,7 +4286,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
     dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (BS + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignElementProductOfWithShiftNeg", t_stream);
     _assignElementProductOfWithShiftNeg<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), a.Data(), b.Data(), shift, nt + 1, BS);
     //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(Data(), a.Data(), b.Data(), nt);
 
@@ -4199,7 +4321,7 @@ void GPUMatrix<ElemType>::InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a,
         dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
         dim3 block_tail((nt + 1 + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (n + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_innerProductWithShiftNeg", t_stream);
         _innerProductWithShiftNeg<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(c.Data(), a.Data(), b.Data(), m, n, shift, nt + 1);
     }
 }
@@ -4221,7 +4343,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemTyp
     int blocksPerGrid = (int) ceil(((double) P) / GridDim::maxThreadsPerBlock);
 
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_getARowByIndex", t_stream);
     _getARowByIndex<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), n, P, m);
     //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(Data(), a.Data(), b.Data(), nt);
     return *this;
@@ -4254,7 +4376,7 @@ void GPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const GPUMatrix<Ele
         dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
         dim3 block_tail((O + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (P + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
-        SyncGuard syncGuard;
+        PROFILE_CUDA_STREAM("_conductRowElementMultiplyWithShift", t_stream);
         _conductRowElementMultiplyWithShift<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(c.Data(), a.Data(), b.Data(), O, P, shift, isafixed);
     }
 }
@@ -4276,7 +4398,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShift(const 
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
     a.PrepareDevice();
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_assignElementProductOfWithShift", t_stream);
     _assignElementProductOfWithShift<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), a.Data(), b.Data(), shift, N);
     return *this;
 }
@@ -4292,7 +4414,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DropFrame(const GPUMatrix<ElemType>& l
 
     long N = (long) GetNumCols(); // one kernel per column
     int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
-    SyncGuard syncGuard;
+    PROFILE_CUDA_STREAM("_DropFrame", t_stream);
     _DropFrame<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(Data(), label.Data(), gamma.Data(), threshhold, (long) m_numCols, (long) m_numRows);
     return *this;
 }
@@ -4306,9 +4428,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignSequenceError(const ElemType hsm
 
     PrepareDevice();
 
-    SyncGuard syncGuard;
     long N = (LONG64) label.GetNumElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+    PROFILE_CUDA_STREAM("_AssignSequenceError", t_stream);
     _AssignSequenceError<<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(hsmoothingWeight, Data(), label.Data(), dnnoutput.Data(), gamma.Data(), alpha, N);
     return *this;
 }
@@ -4328,8 +4450,12 @@ ElemType GPUMatrix<ElemType>::LogSumOfElements() const
     CUDA_LONG N = (CUDA_LONG) GetNumElements();
     int blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
 
+    {
+        // BUGBUG: Should this use CUDA streams?
+        PROFILE_CUDA("_reductionLogAddSum");
     _reductionLogAddSum<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(Data(),
                                                                                   d_sum, 1, N);
+    }
     CUDA_CALL(cudaMemcpy(&h_sum, d_sum, sizeof(ElemType), cudaMemcpyDeviceToHost));
     TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), d_sum);
 
@@ -4365,11 +4491,15 @@ void GPUMatrix<ElemType>::RCRFBackwardCompute(
         szMemSize = sizeof(ElemType) * iNumLab;
         // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
         assert(iNumLab <= 1024);
+        {
+            PROFILE_CUDA("_rcrfBackwardComputeZetaMax1024Labels");
         _rcrfBackwardComputeZetaMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, shift);
+        }
         szMemSize = iNumLab * 3;
         szMemSize *= sizeof(ElemType);
         // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == 3 * iNumLab.
         assert(iNumLab <= 1024);
+        PROFILE_CUDA("_rcrfBackwardComputeMax1024Labels");
         _rcrfBackwardComputeMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t, iNumPos, alpha.Data(), beta.Data(),
                                                                                            d_zeta, pair_scores.Data(), iNumLab, shift);
     }
@@ -4412,11 +4542,15 @@ void GPUMatrix<ElemType>::RCRFTransGrdCompute(const GPUMatrix<ElemType>& lbls,
         // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
         assert(iNumLab <= 1024);
         // BUGBUG: This is launched with 512 threads per block, but allocates shared mem as if there is only one block. Likewise for all 4 of these functions.
+        {
+            PROFILE_CUDA("_rcrfTransGrdComputeZetaMax1024Labels");
         _rcrfTransGrdComputeZetaMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t - 1, iNumPos, alpha.Data(), d_zeta, pair_scores.Data(), iNumLab, startLbl, shift);
+        }
         szMemSize = iNumLab * 3;
         szMemSize *= sizeof(ElemType);
         // This function assumes iNumLab <= 1024 and that shared memory == total (!) number of threads == iNumLab.
         assert(iNumLab <= 1024);
+        PROFILE_CUDA("_rcrfTransGrdComputeMax1024Labels");
         _rcrfTransGrdComputeMax1024Labels<ElemType> << <blocksPerGrid, 512, szMemSize >> >(t, startLbl, alpha.Data(), beta.Data(),
                                                                                            d_zeta, pair_scores.Data(), lbls.Data(), grd.Data(), iNumPos, iNumLab, shift);
     }
@@ -4479,7 +4613,12 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
         if (op == ElementWiseOperator::opCopy && beta == 0 && alpha == 1)
             return CUDA_CALL(cudaMemcpy(Data()+ offsets[1], a.Data()+ offsets[0], sizeof(ElemType) * regularOpDims[0], cudaMemcpyDeviceToDevice));
         else if (op == ElementWiseOperator::opCopy && beta == 1)
-            return CUBLAS_CALL(cublas_axpy(GetCublasHandle(GetComputeDeviceId()), (int) regularOpDims[0], &alpha, a.Data()+ offsets[0], 1, Data()+ offsets[1], 1));
+        {
+            cublasHandle_t handle = GetCublasHandle(GetComputeDeviceId());
+            PROFILE_CUDA_STREAM("cublas_axpy", t_stream);
+            CUBLAS_CALL(cublas_axpy(handle, (int)regularOpDims[0], &alpha, a.Data() + offsets[0], 1, Data() + offsets[1], 1));
+            return;
+        }
         else
             return LaunchUnaryTensorOp<ElemType>(beta, a.Data()+ offsets[0], Data()+ offsets[1], alpha, op, regularOpDims[0]);
     }
@@ -4500,6 +4639,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
         auto ACols = reducingOpDims[0];   // horizontal steps (reduction)
         auto ALd = reducingStrides[0][0]; // horizontal step width through matrix
         cublasHandle_t cuHandle = GetCublasHandle(a.GetComputeDeviceId());
+        PROFILE_CUDA_STREAM("cublas_gemm", t_stream);
         CUBLAS_CALL(cublas_gemm(cuHandle, CUBLAS_OP_N, CUBLAS_OP_N, (int) /*CRows=*/ARows, /*CCols=*/1, (int) ACols, &alpha,
                                 /*A00=*/a.Data()+ offsets[0], (int) ALd,
                                 /*B00=*/GetOnesVector<ElemType>(ACols, a.GetComputeDeviceId())->Data(), (int) /*BRows=*/ACols, &beta,
@@ -4700,5 +4840,116 @@ int _ConvertSMVer2Cores(int major, int minor)
 //    else
 //        return (CUDA_LONG)free;
 //}
+
+
+// -----------------------------------------------------------------------
+// SyncCudaScope -- synchronize and time CUDA calls
+//
+// This class measures the elapsed GPU time when issuing CUDA calls. It
+// also optionally synchronizes the GPU so that it waits for the CUDA
+// kernel to complete.
+// -----------------------------------------------------------------------
+SyncCudaScope::SyncCudaScope(const char* functionName, const char* description, cudaStream_t stream)
+{
+    bool syncEnabled;
+    bool profilingEnabled;
+    Microsoft::MSR::CNTK::SyncCudaScopeGetFlags(syncEnabled, profilingEnabled);
+
+    if (!syncEnabled) return;
+
+    CUDA_CALL(cudaEventCreate(&m_beginEvent));
+    CUDA_CALL(cudaEventCreate(&m_endEvent));
+
+    if (profilingEnabled)
+    {
+        // We want proper truncation on both Windows and Unix, with different snprintf behaviors
+        m_description[0] = 0;
+        snprintf(m_description, sizeof(m_description) - 1, "CUDA %s %s", functionName, description);
+        m_description[sizeof(m_description) - 1] = 0;
+    }
+
+    m_stream = stream;
+    CUDA_CALL(cudaEventRecord(m_beginEvent, m_stream));
+}
+
+SyncCudaScope::~SyncCudaScope()
+{
+    bool syncEnabled;
+    bool profilingEnabled;
+    Microsoft::MSR::CNTK::SyncCudaScopeGetFlags(syncEnabled, profilingEnabled);
+
+    if (!syncEnabled) return;
+
+    if (!std::uncaught_exception())
+    {
+        // failures in a prior launch might be reported here
+        CUDA_CALL(cudaEventRecord(m_endEvent, m_stream));
+        CUDA_CALL(cudaEventSynchronize(m_endEvent));
+
+        if (profilingEnabled)
+        {
+            float deltaTime = 0.0f;
+            CUDA_CALL(cudaEventElapsedTime(&deltaTime, m_beginEvent, m_endEvent));
+
+            Microsoft::MSR::CNTK::ProfilerCudaTimeEnd(deltaTime / 1000.0f, m_description);
+        }
+    }
+
+    cudaEventDestroy(m_beginEvent);
+    cudaEventDestroy(m_endEvent);
+}
+
+// -----------------------------------------------------------------------
+// AsyncGPUProfiler -- Measure GPU consumption asynchronously
+//
+// This class creates a time critical background thread to be able to
+// accuratelly measure the GPU busy/idle duty cycle. This will not
+// interfere with other threads due to calling Sleep() to give time slices
+// to the other threads. The thread here needs to be time critical to
+// ensure it can measure time accuratelly, without it being swapped out
+// for upwards of 10's of ms (OS dependent).
+// -----------------------------------------------------------------------
+AsyncGPUProfiler::AsyncGPUProfiler()
+{
+    // Create thread to measure GPU busy/idle time in the background
+    m_workerThread = new std::thread([this]
+    {
+        const double minSyncDuration = 0.1;     // Number of ms for a sync duration to be valid
+        const int profilerGranularity = 1;      // Profiler frequency in ms
+
+        while (!this->m_threadQuit)
+        {
+            Microsoft::MSR::CNTK::Timer tm;
+
+            auto stateId = Microsoft::MSR::CNTK::ProfilerTimeBegin();
+            tm.Start();
+            auto err = cudaDeviceSynchronize();
+            tm.Stop();
+
+            if (err == cudaSuccess && tm.ElapsedSeconds() > (minSyncDuration / 1000.0))
+            {
+                Microsoft::MSR::CNTK::ProfilerTimeEnd(stateId, "GPU Busy");
+            }
+
+            Sleep(profilerGranularity);
+        }
+    });
+
+#ifdef _WIN32
+    SetThreadPriority((HANDLE)m_workerThread->native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
+#else
+    int policy = SCHED_FIFO;
+    struct sched_param param;
+    param.sched_priority = sched_get_priority_max(policy);
+    pthread_setschedparam(m_workerThread->native_handle(), policy, &param);
+#endif
+}
+
+AsyncGPUProfiler::~AsyncGPUProfiler()
+{
+    m_threadQuit = true;
+    m_workerThread->join();
+    delete m_workerThread;
+}
 
 #endif // CPUONLY
