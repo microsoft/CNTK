@@ -59,9 +59,52 @@ def alias(x, name=''):
     return alias(x, name)
 
 ##########################################################################
-# evaluation ops
+# loss and evaluation ops
 ##########################################################################
 
+@typemap
+def binary_cross_entropy(output, target, name=''):
+    r'''
+    This operation computes the binary cross entropy between the ``output`` and ``target``.
+
+    Example:
+        TBA
+
+    Args:
+        output: the computed posterior probability from the network
+        target: ground-truth label, 0 or 1
+        name (`str`, optional): the name of the Function instance in the network
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import binary_cross_entropy
+    dtype = get_data_type(output, target)
+    output = sanitize_input(output, dtype)
+    target = sanitize_input(target, dtype)
+    return binary_cross_entropy(output, target, name)
+
+@typemap
+def weighted_binary_cross_entropy(output, target, weight, name=''):
+    r'''
+    This operation computes the weighted binary cross entropy between the ``output`` and ``target``.
+
+    Example:
+        TBA
+
+    Args:
+        output: the computed posterior probability from the network
+        target: ground-truth label, 0 or 1
+        weight: weight of each example
+        name (`str`, optional): the name of the Function instance in the network
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import weighted_binary_cross_entropy
+    dtype = get_data_type(output, target, weight)
+    output = sanitize_input(output, dtype)
+    target = sanitize_input(target, dtype)
+    weight = sanitize_input(weight, dtype)
+    return weighted_binary_cross_entropy(output, target, weight, name)
 
 @typemap
 def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):

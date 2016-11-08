@@ -65,7 +65,7 @@ namespace CNTK
         {PrimitiveOpType::Times, L"Times"},
         {PrimitiveOpType::TransposeTimes, L"TransposeTimes"},
         {PrimitiveOpType::Convolution, L"Convolution"},
-        {PrimitiveOpType::SquaredError, L"SquaredError"},
+        { PrimitiveOpType::SquaredError, L"SquaredError" },
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::PastValue, L"PastValue"},
@@ -79,6 +79,7 @@ namespace CNTK
         {PrimitiveOpType::RandomSample, L"RandomSample"},
         {PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency"},
         {PrimitiveOpType::ROIPooling, L"ROIPooling"},
+        { PrimitiveOpType::Logistic, L"Logistic" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -103,7 +104,15 @@ namespace CNTK
             if (numFunctionInputs > 2)
                 indexMap.insert({2, 2});
         }
-        else if ((op == PrimitiveOpType::CrossEntropyWithSoftmax) || (op == PrimitiveOpType::GatherPacked))
+        else if (op == PrimitiveOpType::Logistic)
+        {
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
+            if (numFunctionInputs > 2)
+                indexMap.insert({ 2, 2 });
+        }
+        else if (op == PrimitiveOpType::CrossEntropyWithSoftmax)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
+        else if (op == PrimitiveOpType::GatherPacked)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
         else if (op == PrimitiveOpType::ScatterPacked)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 2 }, { 1, 1 }, { 2, 0 } });
