@@ -58,6 +58,19 @@ function VerifyItem(
     return $noInstallRequired
 }
 
+function VerifyScanPrograms(
+    [Parameter(Mandatory = $true)][hashtable] $table)
+{
+    FunctionIntro $table
+    $func = $table["Function"]
+    $noInstallRequired = $true
+    
+    # no actual work is being performed, just the script local datastructure with the list
+    # of installed programs is being initialized
+    LoadWin32Product
+    return $noInstallRequired
+}
+
 function VerifyWin32ProductExists(
     [Parameter(Mandatory = $true)][hashtable] $table)
 {
