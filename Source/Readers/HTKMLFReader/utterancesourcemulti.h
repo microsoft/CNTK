@@ -1276,7 +1276,7 @@ private:
                 randomizedchunkrefs[i].push_back(allchunks[i].begin() + j);
             assert(randomizedchunkrefs[i].size() == allchunks[i].size());
 
-	    if (randomizationrange > 0) {
+            if (randomizationrange > 0) {
                 if (m_useMersenneTwister)
                 {
                     m_rng.seed((unsigned long)sweep);
@@ -1287,7 +1287,7 @@ private:
                     // note that sincew randomshuffle() uses sweep as seed, this will keep the randomization common across all feature streams
                     randomshuffle(randomizedchunkrefs[i], sweep); // bring into random order (with random seed depending on sweep)
                 }
-	    }
+            }
         }
 
         // place them onto the global timeline -> randomizedchunks[]
@@ -1324,15 +1324,15 @@ private:
                     chunk.windowbegin = randomizedchunks[i][k - 1].windowbegin; // might be too early
                     chunk.windowend = randomizedchunks[i][k - 1].windowend;     // might have more space
                 }
-	        if (randomizationrange > 0) {
+                if (randomizationrange > 0) {
                     while (chunk.globalts - randomizedchunks[i][chunk.windowbegin].globalts > randomizationrange / 2)
                         chunk.windowbegin++; // too early
                     while (chunk.windowend < randomizedchunks[i].size() && randomizedchunks[i][chunk.windowend].globalte() - chunk.globalts < randomizationrange / 2)
                         chunk.windowend++; // got more space
-		} else if (k > 0){ // randomizationrange == 0
+                } else if (k > 0){ // randomizationrange == 0
                     chunk.windowbegin++; // too early
                     chunk.windowend++; // got more space
-		}
+                }
             }
         }
         if (!framemode) // utterance mode
@@ -1388,7 +1388,7 @@ private:
             // check we got those setup right
 
             // we now randomly shuffle randomizedutterancerefs[pos], while considering the constraints of what chunk range needs to be in memory
-	    if (randomizationrange > 0) {
+            if (randomizationrange > 0) {
                 m_useMersenneTwister ? m_rng.seed((unsigned long)sweep) : srand((unsigned int)sweep + 1);
                 for (size_t i = 0; i < randomizedutterancerefs.size(); i++)
                 {
@@ -1427,7 +1427,7 @@ private:
                         break;
                     }
                 }
-	    }
+            }
 
             // place the randomized utterances on the global timeline so we can find them by globalts
             size_t t = sweepts;
