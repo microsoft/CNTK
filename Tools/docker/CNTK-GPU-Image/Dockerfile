@@ -170,6 +170,10 @@ RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/linu
 
 ENV PATH /root/anaconda3/envs/cntk-py34/bin/:$PATH
 
+ENV TMP_LD_LIBRARY_PATH = $LD_LIBRARY_PATH
+
+ENV LD_LIBRARY_PATH=/usr/local/cuda-7.5/lib64/stubs/:$TMP_LD_LIBRARY_PATH
+
 WORKDIR /cntk
 
 # Build CNTK
@@ -203,4 +207,4 @@ RUN cd Examples/Image/DataSets/MNIST && \
 ENV PATH=/cntk/build/gpu/release/bin:/usr/local/mpi/bin:$PATH
 
 ENV PYTHONPATH /cntk/bindings/python:$PYTHONPATH
-ENV LD_LIBRARY_PATH /cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH /cntk/bindings/python/cntk/libs:$TMP_LD_LIBRARY_PATH
