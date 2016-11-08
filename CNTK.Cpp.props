@@ -49,6 +49,9 @@
     <HasSwig>false</HasSwig>
     <HasSwig Condition="Exists('$(SWIG_PATH)\swig.exe')">true</HasSwig>
 
+    <!-- If an executable links ReaderLib.lib, it has dependency on Common.dll, Math.dll and PerformanceProfilerDll.dll -->
+    <ReaderLibs>ReaderLib.lib;Common.lib;Math.lib;PerformanceProfilerDll.lib</ReaderLibs>
+
   </PropertyGroup>
 
   <PropertyGroup>

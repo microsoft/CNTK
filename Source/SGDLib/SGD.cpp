@@ -31,6 +31,7 @@
 #include "SimpleDistGradAggregator.h"
 #include "V2SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
+#include "PerformanceProfiler.h"
 
 #include <map>
 #include <set>
@@ -424,6 +425,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // --- MAIN EPOCH LOOP
     for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
     {
+        // Always skip the first epoch for profiling to avoid startup behavior.
+        // This has effect only if the profiler is globally enabled (profilerEnabled="true" in the config).
+        if (i > startEpoch)
+        {
+            ProfilerEnable(true);
+        }
+
         // Synchronize all ranks before proceeding to ensure that
         // rank 0 has finished writing the previous model file
         SynchronizeWorkers();
@@ -850,6 +858,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     const std::string& prefixMsg,
                                     const size_t maxNumberOfSamples)
 {
+    PROFILE_SCOPE(profilerEvtMainEpoch);
+
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
     // bring our 'out' values into consistent state
@@ -1008,18 +1018,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool isFirstMinibatch = true;
     for (;;)
     {
-        // Per-minibatch performance measurements; only enabled when perfTraceLevel > 0
-        Timer fineGrainedPerfMeasurementTimer;
-        double readTime = 0;
-        double computeTime = 0;
-        double parameterUpdateTime = 0;
-        double parameterSyncTime = 0; // perf communication time between syncs.
-        if (m_perfTraceLevel > 0)
-            fineGrainedPerfMeasurementTimer.Start();
+        auto profMinibatch = ProfilerTimeBegin();
 
         // get minibatch
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
         size_t actualMBSize = 0;
+
+        auto profGetMinibatch = ProfilerTimeBegin();
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
                                                                                 useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
 
@@ -1029,18 +1034,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
             break;                                                                // end of epoch
 
-        if (m_perfTraceLevel > 0)
-        {
-            fineGrainedPerfMeasurementTimer.Stop();
-            readTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
-            fineGrainedPerfMeasurementTimer.Start();
-        }
-
-        // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to full in are undefined.
+        // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to fill in are undefined.
         // Must not touch them.
 
         if (!wasDataRead)
+        {
             actualMBSize = 0; // (undefined if !wasDataRead)
+            ProfilerEnable(false); // Profiler will be enabled at the beginning of the next epoch.
+        }
+
+        ProfilerTimeEnd(profGetMinibatch, profilerEvtMainGetMinibatch);
+        auto profForwardBackward = ProfilerTimeBegin();
 
         nSamplesSinceLastModelSync += actualMBSize;
 
@@ -1132,14 +1136,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 maxNumSamplesExceeded = true;
         }
 
-        if (m_perfTraceLevel > 0)
-        {
-            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(net->GetDeviceId()));
-            mainStreamSyncEvent->SynchronizeEvent();
-            fineGrainedPerfMeasurementTimer.Stop();
-            computeTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
-            fineGrainedPerfMeasurementTimer.Start();
-        }
+        ProfilerTimeEnd(profForwardBackward, profilerEvtMainFB);
+        auto profGradientAgg = ProfilerTimeBegin();
 
         // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
         // #samples according to the default dynamic axis, for use with criterion nodes that do not have an MBLayout
@@ -1229,6 +1227,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
         }
 
+        ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
+        auto profWeights = ProfilerTimeBegin();
+
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
         {
@@ -1275,15 +1276,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
 
-        if (m_perfTraceLevel > 0)
-        {
-            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(net->GetDeviceId()));
-            mainStreamSyncEvent->SynchronizeEvent();
-            fineGrainedPerfMeasurementTimer.Stop();
-            parameterUpdateTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
-            fineGrainedPerfMeasurementTimer.Start();
-        }
-
         // aggregation by model averaging or block momentum 
         if (useModelAggregation)
         {
@@ -1319,18 +1311,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
 
-        if (m_perfTraceLevel > 0)
-        {
-            fineGrainedPerfMeasurementTimer.Stop();
-            parameterSyncTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
-        }
+        ProfilerTimeEnd(profWeights, profilerEvtMainWeights);
+        auto profPost = ProfilerTimeBegin();
 
         timer.Stop();
-        if (m_perfTraceLevel > 0)
-        {
-            PREPENDTS(stderr);
-            fprintf(stderr, "Perf trace: Worker MB size = %d, Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs; Parameter sync = %.5gs; Aggregate MB size = %d\n", (int)actualMBSize, readTime, computeTime, parameterUpdateTime, parameterSyncTime, (int)aggregateNumSamples);
-        }
 
         numMBsRun++;
         totalTimeInMBs += timer.ElapsedSeconds();
@@ -1453,6 +1437,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         profiler.NextSample();
         isFirstMinibatch = false;
+
+        ProfilerTimeEnd(profPost, profilerEvtMainPost);
+        ProfilerTimeEnd(profMinibatch, profilerEvtMainMinibatch);
     }
 
     // --- END MAIN MINIBATCH LOOP
@@ -2894,8 +2881,6 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 
     // BUGBUG: these are not passed to Init()
     m_doUnitTest = configSGD(L"unitTest", false);
-
-    m_perfTraceLevel = configSGD(L"perfTraceLevel", (int)0);
 
     // parallel training
     m_parallelizationMethod = ParallelizationMethod::none;

@@ -75,7 +75,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>htkmlfreader.lib;HTKDeserializers.lib;Math.lib;Common.lib;ReaderLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ReaderLibs);htkmlfreader.lib;HTKDeserializers.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>

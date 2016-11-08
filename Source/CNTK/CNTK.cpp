@@ -23,7 +23,6 @@
 #include "NDLNetworkBuilder.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
-#include "GPUMatrix.h" // used for SyncGuard::EnableSync()
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
@@ -36,6 +35,7 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+#include "PerformanceProfiler.h"
 
 #include <string>
 #include <chrono>
@@ -68,6 +68,20 @@ using namespace Microsoft::MSR::CNTK;
 // internal test routine forward declaration
 template <typename ElemType>
 void TestCn(const ConfigParameters& config);
+
+// Setup profiling
+template <typename ConfigParamType>
+void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& config, int nodeRank)
+{
+    if (config(L"profilerEnabled", false))
+    {
+        wstring workDir = config(L"WorkDir", L".");
+        profilerContext.Init(workDir + L"/profiler",
+                             config(L"profilerBufferSize", static_cast<uint64_t>(32 * 1024 * 1024)),
+                             std::to_wstring(nodeRank),
+                             config(L"profilerSyncGpu", true));
+    }
+}
 
 void RedirectStdErr(wstring logpath)
 {
@@ -570,10 +584,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
-    bool synchronizeCUDAKernelExecutions = config(L"synchronizeCUDAKernelExecutions", false);
-    if (synchronizeCUDAKernelExecutions)
-        SyncGuard::EnableSync();
-
     // logging
     wstring logpath = config(L"stderr", L"");
     if (logpath != L"")
@@ -588,6 +598,10 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // echo gpu info to log
     PrintGpuInfo();
+
+    // Setup profiling
+    ProfilerContext profilerContext;
+    SetupProfiling(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
 
     // execute the actions
     // std::string type = config(L"precision", "float");
@@ -780,6 +794,10 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         fprintf(stderr, " %s", command[i].c_str());
     fprintf(stderr, "\n");
     }
+
+    // Setup profiling
+    ProfilerContext profilerContext;
+    SetupProfiling(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
 
     // run commands
     std::string type = config(L"precision", "float");
