@@ -187,6 +187,8 @@ namespace CNTK
         static const std::wstring AttributeNameEpsilon;
         static const std::wstring AttributeNameUseCuDNNEngine;
         static const std::wstring AttributeNameNewDynamicAxes;
+        static const std::wstring AttributeNameNewSequenceAxisLengthScalingFactor;
+        static const std::wstring AttributeNameNewSequenceAxisLengthAdditiveFactor;
         static const std::wstring AttributeNameBeginIndex;
         static const std::wstring AttributeNameEndIndex;
         static const std::wstring AttributeNameReductionOpName;
@@ -699,22 +701,11 @@ namespace CNTK
             return CompositeFunctionOpName;
         }
 
-    private:
-        virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                                std::unordered_set<const Function*>& visitedFunctions,
-                                                std::unordered_set<Variable>& replacedPlaceholders) override;
-
-        CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name, const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
-            : Function({}, rootFunction->Outputs(), Dictionary(), rootFunction, name, uid),
-            m_allPrimitiveFunctions(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
-        {}
-
         template <typename FunctionType>
-        void Traverse(const FunctionType& functor) const
+        static void Traverse(const FunctionPtr& rootFunction, const FunctionType& functor)
         {
-            const auto& root = RootFunction();
             std::unordered_set<FunctionPtr> visitedFunctions;
-            Traverse(root, visitedFunctions, functor);
+            Traverse(rootFunction, visitedFunctions, functor);
         }
 
         // Recursively traverses the Function graph underlying the 'rootFunction' invoking the provided functor for all visited nodes in the graph.
@@ -734,6 +725,16 @@ namespace CNTK
                 }
             }
         }
+
+    private:
+        virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                                std::unordered_set<const Function*>& visitedFunctions,
+                                                std::unordered_set<Variable>& replacedPlaceholders) override;
+
+        CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name, const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
+            : Function({}, rootFunction->Outputs(), Dictionary(), rootFunction, name, uid),
+            m_allPrimitiveFunctions(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
+        {}
 
         std::vector<Variable> DetermineInputs() const
         {

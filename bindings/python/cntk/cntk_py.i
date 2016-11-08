@@ -19,6 +19,8 @@
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
 %rename(cpu_device) CNTK::DeviceDescriptor::CPUDevice;
 %rename(times_transpose) CNTK::TransposeTimes;
+%rename(sequence_slice) CNTK::Sequence::Slice;
+%rename(sequence_reduce_sum) CNTK::Sequence::ReduceSum;
 
 %rename(momentum_as_time_constant_schedule) CNTK::MomentumAsTimeConstantSchedule;
 

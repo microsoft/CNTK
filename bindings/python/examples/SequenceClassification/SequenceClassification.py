@@ -10,11 +10,11 @@ from cntk import Trainer, Axis #, text_format_minibatch_source, StreamConfigurat
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, set_default_device
 from cntk.learner import sgd
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
+from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
-from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, select_last, print_training_progress
+from examples.common.nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, print_training_progress
 
 # Creates the reader
 def create_reader(path, is_training, input_dim, label_dim):
@@ -28,7 +28,7 @@ def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_d
     embedding_function = embedding(input, embedding_dim)
     LSTM_function = LSTMP_component_with_self_stabilization(
         embedding_function.output, LSTM_dim, cell_dim)[0]
-    thought_vector = select_last(LSTM_function)
+    thought_vector = sequence.last(LSTM_function)
 
     return linear_layer(thought_vector, num_output_classes)
 
