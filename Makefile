@@ -561,7 +561,7 @@ $(EVAL_CLIENT): $(EVAL_CLIENT_OBJ) | $(EVAL_LIB)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH)
-	
+
 EVAL_EXTENDED_CLIENT:=$(BINDIR)/cppevalextendedclient
 
 EVAL_EXTENDED_CLIENT_SRC=\

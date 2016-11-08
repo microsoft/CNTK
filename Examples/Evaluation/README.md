@@ -1,4 +1,4 @@
-EvalClients
+#EvalClients
 
 The folder contains some examples using the CNTK evaluation library. Please note that only the 64-bit target is supported by CNTK evaluation library.
 
