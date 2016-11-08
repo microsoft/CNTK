@@ -1,5 +1,27 @@
 FROM nvidia/cuda:7.5-cudnn5-devel
 
+ARG ENABLE_1BIT_SGD
+
+ENV MSG1BIT "\
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\
+You are attempting to build the Image of CNTK with 1-bit Stochastic Gradient\n\
+Descent (1bit-SGD) enabled. Before proceeding further please ensure you     \n\ 
+understand the license difference between CNTK and 1bit-SGD. See            \n\
+https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD#license-difference-between-cntk-and-1bit-sgd\n\
+\n\
+To build the Image pass the following parameter to Docker:\n\
+\n\
+  --build-arg ENABLE_1BIT_SGD=true\n\
+\n\
+Example:\n\
+\n\
+  docker build -t cntk --build-arg ENABLE_1BIT_SGD=true ./CNTK-GPU-1bit-Image\n\
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\
+\n\
+"
+
+RUN test x$ENABLE_1BIT_SGD = "xtrue" || (echo $MSG1BIT; exit 1)
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
         autotools-dev \
         build-essential \
@@ -169,6 +191,10 @@ RUN conda create --name cntk-py34 python=3.4.3 numpy scipy jupyter matplotlib pi
 
 ENV PATH /root/anaconda3/envs/cntk-py34/bin/:$PATH
 
+ENV TMP_LD_LIBRARY_PATH = $LD_LIBRARY_PATH
+
+ENV LD_LIBRARY_PATH=/usr/local/cuda-7.5/lib64/stubs/:$TMP_LD_LIBRARY_PATH
+
 WORKDIR /cntk
 
 # Build CNTK
@@ -203,4 +229,4 @@ RUN cd Examples/Image/DataSets/MNIST && \
 ENV PATH=/cntk/build/gpu/release/bin:/usr/local/mpi/bin:$PATH
 
 ENV PYTHONPATH /cntk/bindings/python:$PYTHONPATH
-ENV LD_LIBRARY_PATH /cntk/bindings/cntk/libs:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH /cntk/bindings/cntk/libs:$TMP_LD_LIBRARY_PATH

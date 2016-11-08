@@ -169,6 +169,10 @@ RUN conda create --name cntk-py34 python=3.4.3 numpy scipy jupyter matplotlib pi
 
 ENV PATH /root/anaconda3/envs/cntk-py34/bin/:$PATH
 
+ENV TMP_LD_LIBRARY_PATH = $LD_LIBRARY_PATH
+
+ENV LD_LIBRARY_PATH=/usr/local/cuda-7.5/lib64/stubs/:$TMP_LD_LIBRARY_PATH
+
 WORKDIR /cntk
 
 # Build CNTK
@@ -202,4 +206,4 @@ RUN cd Examples/Image/DataSets/MNIST && \
 ENV PATH=/cntk/build/gpu/release/bin:/usr/local/mpi/bin:$PATH
 
 ENV PYTHONPATH /cntk/bindings/python:$PYTHONPATH
-ENV LD_LIBRARY_PATH /cntk/bindings/cntk/libs:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH /cntk/bindings/cntk/libs:$TMP_LD_LIBRARY_PATH
