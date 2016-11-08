@@ -889,30 +889,18 @@ COMMON_FLAGS += -DASGD_PARALLEL_SUPPORT
 MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
 
 ALL_LIBS+=$(MULTIVERSO_LIB)
-
 ifeq ("$(BUILDTYPE)","release")
-$(MULTIVERSO_LIB): 
-	@echo "Build Multiverso lib"
-	@mkdir -p $(LIBDIR)
-	@mkdir -p $(BINDIR)
-	@mkdir -p $(SOURCEDIR)/Multiverso/build/release
-	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
-		-DBoost_NO_BOOST_CMAKE=TRUE \
-		-DBoost_NO_SYSTEM_PATHS=TRUE \
-		-DBOOST_ROOT:PATHNAME=$(BOOST_PATH) \
-		-DBOOST_LIBRARY_DIRS:FILEPATH=$(BOOST_PATH) \
-		-DLIBRARY_OUTPUT_PATH=$(shell readlink -f $(LIBDIR)) \
-		-DEXECUTABLE_OUTPUT_PATH=$(shell readlink -f $(BINDIR)) \
-		-B./Source/Multiverso/build/release -H./Source/Multiverso
-	@make VERBOSE=1 -C ./Source/Multiverso/build/release -j multiverso
+MULTIVERSO_CMAKE_BUILDTYPE=Release
 endif
-
 ifeq ("$(BUILDTYPE)","debug")
+MULTIVERSO_CMAKE_BUILDTYPE=Debug
+endif
+
 $(MULTIVERSO_LIB): 
 	@echo "Build Multiverso lib"
 	@mkdir -p $(LIBDIR)
 	@mkdir -p $(BINDIR)
-	@mkdir -p $(SOURCEDIR)/Multiverso/build/debug
+	@mkdir -p $(SOURCEDIR)/Multiverso/build/$(BUILDTYPE)
 	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
 		-DBoost_NO_BOOST_CMAKE=TRUE \
 		-DBoost_NO_SYSTEM_PATHS=TRUE \
@@ -920,11 +908,9 @@ $(MULTIVERSO_LIB):
 		-DBOOST_LIBRARY_DIRS:FILEPATH=$(BOOST_PATH) \
 		-DLIBRARY_OUTPUT_PATH=$(shell readlink -f $(LIBDIR)) \
 		-DEXECUTABLE_OUTPUT_PATH=$(shell readlink -f $(BINDIR)) \
-		-DCMAKE_BUILD_TYPE=Debug \
-		-B./Source/Multiverso/build/debug -H./Source/Multiverso
-	@make VERBOSE=1 -C ./Source/Multiverso/build/debug -j multiverso
-endif
-
+		-DCMAKE_BUILD_TYPE=$(MULTIVERSO_CMAKE_BUILDTYPE) \
+		-B./Source/Multiverso/build/$(BUILDTYPE) -H./Source/Multiverso
+	@make VERBOSE=1 -C ./Source/Multiverso/build/$(BUILDTYPE) -j multiverso
 
 UNITTEST_MULTIVERSO_SRC = \
 	$(SOURCEDIR)/Multiverso/Test/unittests/test_array.cpp \
