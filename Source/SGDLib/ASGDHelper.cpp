@@ -97,7 +97,7 @@ public:
         m_adjustCoefficient(adjustCoef), m_adjustMBNumber(adjustPerMinibatches),
         m_totalClientNumber(nodeNumRanks), m_useAsyncBuffer(useAsyncBuffer),
         m_traceLevel(traceLevel), m_ModelAveragingSGDSimulating(isSimulatedModelAveragingSGD), m_doesEveryNodesShouldSynced(false),
-        m_syncPerfStats(syncPerfStats)
+        m_syncPerfStats(syncPerfStats), m_isInitialized(false)
     {
         if (m_ModelAveragingSGDSimulating)
         {
