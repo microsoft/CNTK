@@ -34,10 +34,16 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     for (size_t r = 0; r<numRanks; r++)
     {
         if (allDevs[r] == CPUDEVICE)
+        {
+            fprintf(stderr, "NcclComm: disabled, at least one rank using CPU device\n");
             return;
+        }
         for (size_t s = 0; s<r; s++)
-            if (allDevs[r] == allDevs[s]) // same device used by more than one rank
+            if (allDevs[r] == allDevs[s])
+            {
+                fprintf(stderr, "NcclComm: disabled, same device used by more than one rank\n");
                 return;
+            }
     }
 
     ncclUniqueId ncclId;
@@ -57,6 +63,7 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
 
     cudaStreamCreateWithFlags(&m_stream, cudaStreamNonBlocking)
         || "cudaStreamCreateWithFlags failed";
+    fprintf(stderr, "NcclComm: initialized\n");
 }
 
 NcclComm::~NcclComm()
@@ -108,10 +115,7 @@ bool NcclComm::IsSupported()
     return false;
 }
 
-void NcclComm::Sync()
-{
-    return;
-}
+void NcclComm::Sync() { }
 
 }}} // end namespaces
 #endif
