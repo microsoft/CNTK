@@ -2617,15 +2617,17 @@ static LearningRateSearchAlgorithm ParseLearningRateSearchType(const wstring& s)
     else if (EqualCI(s, L"afterEpoch")  || EqualCI(s, L"after"))  return LearningRateSearchAlgorithm::AdjustAfterEpoch;
     else InvalidArgument("autoAdjustLR: Invalid learning rate search type. Valid values are (none | searchBeforeEpoch | adjustAfterEpoch)");
 }
-
-static AdjustLearningRateAtBeginning AdjustLearningRateAtBeginningType(wstring s)
+  
+#ifdef ASGD_PARALLEL_SUPPORT
+static AdjustLearningRateAtBeginning AdjustLearningRateAtBeginningType(const wstring& s)
 {
     if      (EqualCI(s.c_str(), L"") || EqualCI(s.c_str(), L"none")) return AdjustLearningRateAtBeginning::None;
     else if (EqualCI(s.c_str(), L"linearly"))                        return AdjustLearningRateAtBeginning::Linearly;
     else if (EqualCI(s.c_str(), L"staircase"))                       return AdjustLearningRateAtBeginning::Staircase;
     else InvalidArgument("AdjustLearningRateatBeginningType: Invalid Type. Valid values are (None | Linearly | Staircase)");
 }
-
+#endif
+  
 template<class ConfigRecordType>
 SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 {
