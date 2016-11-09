@@ -23,8 +23,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         pkg-config \
         python-dev \
         python-numpy \
-        python-pip \
-        python-yaml \
         wget \
         zlib1g-dev \
         # Protobuf
@@ -103,19 +101,6 @@ RUN PROTOBUF_VERSION=3.1.0 \
 RUN mkdir /usr/local/CNTKCustomMKL && \
     wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-2.tgz | \
     tar -xzf - -C /usr/local/CNTKCustomMKL
-
-RUN pip install pytest sphinx-rtd-theme Pillow
-
-ENV BLAS=/usr/local/openblas/lib/libopenblas.so
-ENV LAPACK=/usr/local/openblas/lib/libopenblas.so
-
-RUN SCIPY_VERSION=0.18.0 && \
-    wget -q -O - https://github.com/scipy/scipy/releases/download/v${SCIPY_VERSION}/scipy-${SCIPY_VERSION}.tar.gz | tar -zxf - && \
-    cd scipy-${SCIPY_VERSION} && \
-    python setup.py build && \
-    python setup.py install && \
-    cd .. && \
-    rm -rf scipy-${SCIPY_VERSION}
 
 # Install Kaldi
 ENV KALDI_VERSION=c024e8aa

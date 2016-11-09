@@ -5,4 +5,4 @@ If you plan to use the 1bit-SGD version, please make sure you understand the
 [license difference between CNTK and 1bit-SGD](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD).
 
 See also [this page](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers) 
-that provides general instructions on getting things working with docker.
+that provides general instructions on getting things working with Docker.
