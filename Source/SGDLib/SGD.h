@@ -482,7 +482,7 @@ protected:
                          const std::string& prefixMsg = "",
                          const size_t maxNumberOfSamples = SIZE_MAX);
 
-    void InitDistGradAgg(int numEvalNodes, int numGradientBits, int traceLevel);
+    void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
     // UpdateWeights() - actual weight update, implementing various update rules

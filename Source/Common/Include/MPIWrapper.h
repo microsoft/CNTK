@@ -1,5 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
@@ -76,6 +77,7 @@ class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
     std::wstring m_myName;
     int m_numMPINodes;
     size_t m_numNodesInUse;
+    bool m_multiHost;
 
     // MPI communicator that reflects the current subset selection
     MPI_Comm m_currentComm;
@@ -149,6 +151,7 @@ public:
         MPI_Comm_rank(MPI_COMM_WORLD, &m_myRank);
         MPI_Comm_size(MPI_COMM_WORLD, &m_numMPINodes);
         m_numNodesInUse = m_numMPINodes;
+        m_multiHost = true;
 
         // Verify that the environment variable used by GetTotalNumberOfMPINodes()  
         // matches what the MPI API says. There're actually two possible cases:
@@ -309,6 +312,35 @@ private:
             fflush(stderr);
         }
         Ping("requestnodes (after change)");
+
+        // If all ranks run on a single host, we can enable optimized communication
+        // paths (e.g. NCCL). To determine if a single machine is being used, we
+        // check that MPI_Get_processor_name matches for all ranks.
+        const int nameMax = MPI_MAX_PROCESSOR_NAME + 1;
+        char myName[nameMax] = {0};
+        int  myNameLen = 0;
+        MPI_Get_processor_name(myName, &myNameLen) || MpiFail("requestnodes: MPI_Get_processor_name");
+        myName[myNameLen] = '\0';
+
+        std::vector<char> nameBuffer(m_numNodesInUse * nameMax);
+        char* allNames = nameBuffer.data();
+        MPI_Allgather(myName, nameMax, MPI_CHAR, allNames, nameMax, MPI_CHAR, m_currentComm)
+            || MpiFail("requestnodes: MPI_Allgather");
+
+        m_multiHost = false;
+        for(size_t i=1; i<m_numNodesInUse; i++)
+        {
+            if (strcmp(allNames, allNames+i*nameMax) != 0)
+            {
+                m_multiHost = true;
+                break;
+            }
+        }
+
+        fprintf(stderr, "requestnodes [%s]: using %d out of %d MPI nodes on %s (%d requested); we (%d) are %s\n",
+                msg, (int) m_numNodesInUse, (int) m_numMPINodes, m_multiHost ? "multiple hosts" : "a single host",
+                (int) requestednodes, (int) CurrentNodeRank(), IsIdle() ? "out (idle)" : "in (participating)");
+        fflush(stderr);
     }
 
 public:
@@ -362,6 +394,11 @@ public:
     size_t MainNodeRank() const
     {
         return 0;
+    }
+
+    bool IsMultiHost()
+    {
+        return m_multiHost;
     }
 
     // -----------------------------------------------------------------------
