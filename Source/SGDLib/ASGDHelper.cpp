@@ -436,7 +436,6 @@ public:
 private:
     void MultiversoInit(const std::list<ComputationNodeBasePtr> & learnableNodes)
     {
-        assert(!m_isInitialized);
         m_isInitialized = true;
 
         // parameter server offer vary of updaters, we only use the SGD updater for this simple case.
