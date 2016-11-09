@@ -3,9 +3,9 @@ dataDir: .
 tags:
      # running on every BVT job in 'P' (Parallel) leg in Debug-GPU on Linux configurations:
      # TODO: Enable windows test when Jenkins ready
-     - bvt-p  ((build_sku == 'gpu') or (build_sku == '1bitsgd')) and (flavor=='debug') and (os == 'linux') 
+     - bvt-p  (build_sku == 'gpu') and (flavor=='debug') and (os == 'linux') 
      # running unconditionally on every Nightly job in 'P' leg
-     - nightly-p ((build_sku == 'gpu') or (build_sku == '1bitsgd')) and (os == 'linux') 
+     - nightly-p (build_sku == 'gpu') and (os == 'linux') 
 
 testCases:
   Must train epochs in exactly same order and parameters for each MPI Rank:
