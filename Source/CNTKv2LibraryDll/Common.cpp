@@ -60,9 +60,14 @@ namespace CNTK
             return s_disableAutomaticUnpackingOfPackedValues.load();
         }
 
-        void SetForwardValuesSharing(bool enableSharing)
+        void EnableForwardValuesSharing()
         {
-            g_shareNodeValueMatrices = enableSharing;
+            Microsoft::MSR::CNTK::Globals::EnableShareNodeValueMatrices();
+        }
+
+        void EnableHyperMemoryCompress()
+        {
+            Microsoft::MSR::CNTK::Globals::EnableHyperCompressMemory();
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
