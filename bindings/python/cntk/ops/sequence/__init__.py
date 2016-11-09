@@ -63,6 +63,28 @@ def is_last(seq, name=''):
     seq = sanitize_input(seq, get_data_type(seq))
     return is_last(seq, name)
 
+@typemap
+def slice(seq, begin_index, end_index, name=''):
+    '''
+    Slice the input sequence.
+
+    Examples:
+        TBA
+    Args:
+        seq: sequence input tensor
+        begin_index (`int`): the index along sequence axis where the slicing starts
+        end_index (`int`): the index along sequence axis where the slicing ends
+        name (`str`, optional): the name of the Function instance in the network
+
+    See also:
+        Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sequence_slice
+    seq = sanitize_input(seq, get_data_type(seq))
+    return sequence_slice(seq, begin_index, end_index, name)
 
 @typemap
 def first(seq, name=''):
@@ -281,3 +303,21 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
     broadcast_as_operand = sanitize_input(
         broadcast_as_operand, get_data_type(broadcast_as_operand))
     return broadcast_as(operand, broadcast_as_operand, name)
+
+@typemap
+def reduce_sum(seq, name=''):
+    '''
+    Computes the sum of the input sequence's elements across the sequence axis.
+
+    Examples:
+        TBA
+    Args:
+        seq: sequence input tensor
+        name (`str`, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sequence_reduce_sum
+    seq = sanitize_input(seq, get_data_type(seq))
+    return sequence_reduce_sum(seq, name)

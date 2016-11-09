@@ -114,7 +114,6 @@ if IS_WINDOWS:
         "/EHsc",
         "/DEBUG",
         "/Zi",
-        "/EHsc",
     ]
     runtime_library_dirs = []
 else:

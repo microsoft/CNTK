@@ -10,8 +10,3 @@
 
 // TODO: Get rid of these globals
 Microsoft::MSR::CNTK::MPIWrapper* g_mpi = nullptr;
-
-// TODO: Temporary mechanism to enable memory sharing for
-// node output value matrices. This will go away when the
-// sharing is ready to be enabled by default
-bool g_shareNodeValueMatrices = false;

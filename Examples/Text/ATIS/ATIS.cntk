@@ -2,7 +2,7 @@
 # An LSTM model is built to tag each word in sentences with its semantic label.
 
 WorkDir = work
-DataDir = data
+DataDir = Data
 
 makeMode = false
 modelPath = $WorkDir$/ATIS.slot.lstm
@@ -96,9 +96,11 @@ Train = [
             parallelizationMethod = "DataParallelSGD"
             parallelizationStartEpoch = 2
             distributedMBReading = true
-            dataParallelSGD = [
-                gradientBits = 1
-            ]
+            # Comment out the following lines if you want to enable parallelTrain to use 1-bit-SGD.
+            # For that you also need CNTK binaries built with 1-bit-SGD enabled.
+            # dataParallelSGD = [
+            #    gradientBits = 1
+            # ]
         ]
     ]
 
