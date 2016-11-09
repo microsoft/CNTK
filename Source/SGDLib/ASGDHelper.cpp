@@ -97,7 +97,7 @@ public:
         m_adjustCoefficient(adjustCoef), m_adjustMBNumber(adjustPerMinibatches),
         m_totalClientNumber(nodeNumRanks), m_useAsyncBuffer(useAsyncBuffer),
         m_traceLevel(traceLevel), m_ModelAveragingSGDSimulating(isSimulatedModelAveragingSGD), m_doesEveryNodesShouldSynced(false),
-        m_syncPerfStats(syncPerfStats), m_isInitialized(false)
+        m_syncPerfStats(syncPerfStats)
     {
         if (m_ModelAveragingSGDSimulating)
         {
@@ -436,9 +436,6 @@ public:
 private:
     void MultiversoInit(const std::list<ComputationNodeBasePtr> & learnableNodes)
     {
-        assert(!m_isInitialized);
-        m_isInitialized = true;
-
         // parameter server offer vary of updaters, we only use the SGD updater for this simple case.
         multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
         multiverso::MV_Init();
@@ -554,7 +551,6 @@ private:
     multiverso::ArrayWorker<ElemType>* m_workerArray;
 
     thread * m_aysncBufferThread;
-    bool m_isInitialized;
     bool m_doesEveryNodesShouldSynced;
     bool m_ModelAveragingSGDSimulating;
 
