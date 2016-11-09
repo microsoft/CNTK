@@ -782,6 +782,8 @@ namespace CNTK
                 NDShape outputMapCount = { 1 };
                 std::vector<bool> sharing = { true };
                 outputShape = ConvolutionOpOutputShape(op, inputs[0].Shape(), poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
+
+                functionConfig[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowsShape;
                 break;
             }
             case PrimitiveOpType::SumAll:
@@ -820,9 +822,9 @@ namespace CNTK
             case PrimitiveOpType::Times:
             {
                 assert(inputs.size() == 2);
-                    auto outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-                    auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
-                    outputShape = TimesOpOutputShape(inputs[0], inputs[1], outputRank, inferInputRankToMap, inferDimensions);
+                auto outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
+                auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
+                outputShape = TimesOpOutputShape(inputs[0], inputs[1], outputRank, inferInputRankToMap, inferDimensions);
                 break;
             }
             case PrimitiveOpType::TransposeTimes:
@@ -852,9 +854,9 @@ namespace CNTK
             case PrimitiveOpType::Convolution:
             {
                 assert(inputs.size() == 2);
-                    auto& strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
-                    auto& lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
-                    auto& upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                auto& strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                auto& lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
+                auto& upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
                 auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
                 auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                 bool transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();

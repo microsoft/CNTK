@@ -171,11 +171,12 @@ def Convolution(filter_shape,        # e.g. (3,3)
     apply_x = apply_x >> activation
     return Block(apply_x, 'Convolution', Record(W=W, b=b))
 
-# MaxPooling, AveragePooling -- create a max- or average-pooling layer
-# TODO: do we need MaxPooling and AveragePooling?
-# TODO: This is not really a layer as it does not hold learnable parameters. So:
-#  - keep it in layer format, since users may think about it this way?
-#  - turn it into a function (lower-case)? Then how would it work inside Sequential() (we'd need partial application)?
+# Create a Pooling layer with one of following types:
+#
+#   MaxPooling and GlobalMaxPooling
+#   AveragePooling and GlobalAveragePooling
+#
+# Setting the filter_shape to None, mean global pooling.
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 def Pooling(op,      # PoolingType_Max or _Average
             filter_shape,  # e.g. (3,3)
@@ -192,21 +193,25 @@ def Pooling(op,      # PoolingType_Max or _Average
         raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
     return Block(apply_x, op_name)
 
+# MaxPooling
 def MaxPooling(filter_shape,  # e.g. (3,3)
                strides=1,
                pad=False):
     return Pooling(PoolingType_Max, filter_shape, strides=strides, pad=pad)
 
+# AveragePooling
 def AveragePooling(filter_shape,  # e.g. (3,3)
                    strides=1,
                    pad=False):
     return Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad)
 
+# GlobalMaxPooling
 def GlobalMaxPooling():
-    return Pooling(PoolingType_Max, None)
+    return Pooling(PoolingType_Max, None, pad=False)
 
+# GlobalAveragePooling
 def GlobalAveragePooling():
-    return Pooling(PoolingType_Average, None)
+    return Pooling(PoolingType_Average, None, pad=False)
 
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):

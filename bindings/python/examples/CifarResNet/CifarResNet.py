@@ -9,7 +9,7 @@ import math
 import numpy as np
 
 from cntk.blocks import default_options
-from cntk.layers import Convolution, GlobalAveragePooling, Dropout, BatchNormalization, Dense
+from cntk.layers import Convolution, AveragePooling, GlobalAveragePooling, Dropout, BatchNormalization, Dense
 from cntk.models import Sequential, LayerStack
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs

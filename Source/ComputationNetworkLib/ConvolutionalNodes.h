@@ -783,10 +783,6 @@ public:
 
         const auto& inputShape = GetInputSampleLayout(0);
 
-        // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
-        if (m_kernelShape == NDShape::Unknown)
-            m_kernelShape = inputShape.SubShape(0, inputShape.Rank()-1);
-
         // infer reduction dimensions if not given
         InferReductionDims(inputShape, TensorShape());
 
