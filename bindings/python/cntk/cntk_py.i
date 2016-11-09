@@ -394,8 +394,8 @@ fail:
      if ($input == Py_None) {
         $1 = new CNTK::NDShape(CNTK::NDShape::Unknown);
      } else if (PyTuple_Check($input)) {
-        std::vector<size_t> dimensions(rank);
         size_t rank = PyTuple_Size($input);
+        std::vector<size_t> dimensions(rank);
         for (size_t i=0; i<rank; i++)
             dimensions[i] = PyLong_AsLong(PyTuple_GET_ITEM($input, rank-i-1));
 
