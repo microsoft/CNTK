@@ -166,8 +166,9 @@ def test_op_slice_sequence(input_data, slice_params, expected_result, device_id,
           dynamic_axes=[Axis.default_batch_axis(), t],
           name='a')
 
-    result = C.slice(a, axis=t, begin_index=slice_params[
-                     0], end_index=slice_params[1])
+    result = C.sequence.slice(a, 
+            begin_index=slice_params[0], 
+            end_index=slice_params[1])
 
     def grad_slice(x, beg_index, end_index):
         res = np.zeros_like(x)
@@ -176,8 +177,8 @@ def test_op_slice_sequence(input_data, slice_params, expected_result, device_id,
 
     expected_gradient = grad_slice(np.asarray(input_data), *slice_params)
 
-    expected_forward = AA(
-        [expected_result], dtype=PRECISION_TO_TYPE[precision])
+    expected_forward = AA([expected_result], 
+            dtype=PRECISION_TO_TYPE[precision])
     expected_backward = {
         a: [grad_slice(np.asarray(input_data), *slice_params)]
     }

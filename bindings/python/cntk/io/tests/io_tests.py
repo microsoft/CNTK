@@ -10,7 +10,7 @@ import numpy as np
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
-def test_text_format():
+def _test_text_format():
     from cntk.io import text_format_minibatch_source, StreamConfiguration, MinibatchSource
 
     # 0	|x 560	|y 1 0 0 0 0

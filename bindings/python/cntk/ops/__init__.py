@@ -239,9 +239,8 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    return convolution(convolution_map, operand, tuple(reversed(strides)), sharing, auto_padding,
-                       tuple(reversed(lower_pad)), tuple(
-                           reversed(upper_pad)), transpose,
+    return convolution(convolution_map, operand, tuple(strides), sharing, auto_padding,
+                       tuple(lower_pad), tuple(upper_pad), transpose,
                        max_temp_mem_size_in_samples, name)
 
 
