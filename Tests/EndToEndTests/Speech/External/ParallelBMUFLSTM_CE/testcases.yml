@@ -1,9 +1,8 @@
 dataDir: ../../Data
 tags:
-     # running for 1bitsgd build SKU on every BVT job in 'S' (Speech) leg in Release-GPU configurations:
-     - bvt-s  (build_sku == '1bitsgd') and (flavor=='release') and (device=='gpu') and (os == 'linux')
-     # running for 1bitsgd build SKU on GPU  on every Nightly job in 'S' leg
-     - nightly-s (build_sku == '1bitsgd') and (device=='gpu') and (os == 'linux')
+     # TODO: enable Windows
+     - bvt-s  (build_sku=='1bitsgd') and (flavor=='release') and (device=='gpu')
+     - nightly-s (build_sku=='1bitsgd') and (device=='gpu')
 
 testCases:
 

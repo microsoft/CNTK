@@ -5,15 +5,15 @@
 set -ex 
 
 if [[ -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then 
-	if [ "$OS" == "Windows_NT" ]; then 
-		CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY="$(cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY)" 
-	fi
-	
-	ConfigDir="$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY"/Speech/Models/BMUF_LSTM_CE
-	[[ -d "$ConfigDir" ]]
+    if [ "$OS" == "Windows_NT" ]; then 
+        CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY="$(cygpath -aw $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY)" 
+    fi
+    
+    ConfigDir="$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY"/Speech/Models/BMUF_LSTM_CE
+    [[ -d "$ConfigDir" ]]
 else
-	echo Config not available.
-	exit 0 
+    echo Config not available.
+    exit 0 
 fi
 
 LogFileName=stderr
@@ -21,7 +21,8 @@ Instances=3
 NumCPUThreads=$(threadsPerInstance $Instances)
 
 # cntkmpirun <MPI args> <CNTK config file name> <additional CNTK args>
-cntkmpirun "-n $Instances" cntk.cntk "numCPUThreads=$NumCPUThreads ConfigDir=$ConfigDir speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]"
+# traceLevel must remain 0 to avoid leaking model configuration to the baseline
+cntkmpirun "-n $Instances" cntk.cntk "numCPUThreads=$NumCPUThreads ConfigDir=$ConfigDir speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]] traceLevel=0"
 
 [[ -d "$ConfigDir" ]] 
 
