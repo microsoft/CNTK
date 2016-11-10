@@ -2871,7 +2871,6 @@ namespace CNTK
                                             bool useCuDNNEngine = false,
                                             const std::wstring& name = L"");
 
-
     ///
     /// Create an instance of the CNTK built-in elementwise clip operation on the tensor operand
     ///
