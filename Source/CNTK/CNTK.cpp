@@ -690,7 +690,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
 #ifndef CPUONLY
     ConfigValue val = config("deviceId", "auto");
-    if (!EqualCI(val, "cpu") && !EqualCI(val, "auto"))
+    if (!EqualCI(val, "cpu") && !EqualCI(val, "auto") && !EqualCI(val, "localRank"))
     {
         if (static_cast<int>(val) >= 0) // gpu (id >= 0)
         {
@@ -725,11 +725,19 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     if (paralleltrain)
     {
        mpi = MPIWrapper::GetInstance(true /*create*/);
+
+       // check support for gpu in case using localRank mode
+       if(EqualCI(val, "localRank")) CheckSupportForGpu(mpi->CurrentLocalNodeRank());
     } 
+    // check gpu 0 in case using localRank mode in single process
+    else if(EqualCI(val, "localRank"))
+        CheckSupportForGpu(0);
 
     Globals::SetShareNodeValueMatrices(config(L"shareNodeValueMatrices", true));
     Globals::SetGradientAccumulationOptimization(config(L"optimizeGradientAccumulation", true));
     Globals::SetHyperCompressMemory(config(L"hyperCompressMemory", false));
+
+
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 

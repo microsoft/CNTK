@@ -1,5 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 // This file requires the NVML library. Unfortunately, this library does not install an environment variable for locating it.
@@ -48,6 +49,9 @@ int bestGPUDummy = 42; // put something into this CPP, as to avoid a linker warn
 
 #include <memory>
 #include "CrossProcessMutex.h"
+
+// Need for localRank mode
+#include "MPIWrapper.h"
 
 // ---------------------------------------------------------------------------
 // BestGpu class
@@ -223,6 +227,12 @@ DEVICEID_TYPE DeviceFromConfig(const ConfigParameters& config)
 
     if (EqualCI(val, "cpu"))  return SelectDevice(CPUDEVICE, false, excludedDevices);
     else if (EqualCI(val, "auto")) return SelectDevice(DEVICEID_AUTO, bLockGPU, excludedDevices);
+    // adding support for 'localRank' mode, which will select device(gpu) by process local rank in node
+    // note that this mode will only work when number of processes launched <= number of GPU
+    else if (EqualCI(val, "localRank")) {
+      auto t_mpi = MPIWrapper::GetInstance(false);
+      return (DEVICEID_TYPE) (t_mpi ? t_mpi->CurrentLocalNodeRank() : 0);
+    }
     else                           return SelectDevice((int)val, bLockGPU, excludedDevices);
 }
 
