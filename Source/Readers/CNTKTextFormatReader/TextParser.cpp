@@ -368,7 +368,6 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
         }
         else
         {
-            IncrementNumberOfErrorsOrDie();
             if (ShouldWarn())
             {
                 fprintf(stderr,
@@ -378,6 +377,7 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
                     GetSequenceKey(sequenceDsc).c_str(),
                     GetFileInfo().c_str());
             }
+            IncrementNumberOfErrorsOrDie();
         }
 
         if (!bytesToRead && numRowsRead < expectedRowCount)
@@ -585,7 +585,6 @@ bool TextParser<ElemType>::TryReadSample(SequenceBuffer& sequence, size_t& bytes
     size_t id;
     if (!TryGetInputId(id, bytesToRead))
     {
-        IncrementNumberOfErrorsOrDie();
         return false;
     }
 
@@ -672,12 +671,16 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
                 if (ShouldWarn())
                 {
                     fprintf(stderr,
-                        "WARNING: Invalid input ('%s') %ls. "
+                        "WARNING: Unknown input ('%s') %ls. "
                         "Input name '%s' was not specified in the reader config section.\n",
                         name.c_str(), GetFileInfo().c_str(), name.c_str());
                 }
+
+                // return false here to skip this input, but do not call IncrementNumberOfErrorsOrDie()
+                return false;
             }
-            else if (ShouldWarn())
+            
+            if (ShouldWarn())
             {
                 fprintf(stderr,
                     "WARNING: Input name prefix ('%c') is followed by"
@@ -685,7 +688,7 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
                     NAME_PREFIX, c, GetFileInfo().c_str());
             }
 
-            return false;
+            break;
         }
         else if (scratchIndex < (m_scratch.get() + m_maxAliasLength))
         {
@@ -702,19 +705,20 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
                     "WARNING: Did not find a valid input name %ls.\n",
                     GetFileInfo().c_str());
             }
-            return false;
+            break;
         }
 
         ++m_pos;
         --bytesToRead;
     }
 
-    if (ShouldWarn())
+    if (bytesToRead == 0 && ShouldWarn())
     {
         fprintf(stderr,
             "WARNING: Exhausted all input expected for the current sequence"
             " while reading an input name %ls.\n", GetFileInfo().c_str());
     }
+    IncrementNumberOfErrorsOrDie();
     return false;
 }
 
@@ -781,13 +785,13 @@ bool TextParser<ElemType>::TryReadDenseSample(vector<ElemType>& values, size_t s
         ++counter;
     }
 
-    IncrementNumberOfErrorsOrDie();
     if (ShouldWarn())
     {
         fprintf(stderr,
             "WARNING: Exhausted all input expected for the current sequence"
             " while reading a dense sample %ls.\n", GetFileInfo().c_str());
     }
+    IncrementNumberOfErrorsOrDie();
     return false;
 }
 
@@ -1135,8 +1139,13 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
             }
             break;
         default:
-            LogicError("Reached an invalid state while reading a floating point value %ls.\n",
-                GetFileInfo().c_str());
+            if (ShouldWarn())
+            {
+                fprintf(stderr,
+                    "WARNING: Reached an invalid state while reading a floating point value %ls.\n",
+                    GetFileInfo().c_str());
+            }
+            return false;
         }
 
         ++m_pos;

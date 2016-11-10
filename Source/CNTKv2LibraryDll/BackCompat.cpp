@@ -232,6 +232,8 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOffset] = (size_t)node->As<FutureValueNode<ElementType>>()->TimeStep();
                     opType = PrimitiveOpType::FutureValue;
                 }
+                else if (node->OperationName() == OperationNameOf(LogisticNode))
+                    opType = PrimitiveOpType::Logistic;
                 else if (node->OperationName() == OperationNameOf(SquareErrorNode))
                     opType = PrimitiveOpType::SquaredError;
                 else if (node->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode))

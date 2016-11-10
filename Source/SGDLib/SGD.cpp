@@ -1,4 +1,10 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 // SGD.cpp -- implements SGD with all bells and whistles, parallelization, randomization, etc.
+//
 
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms  --add this at the top of all CPP files that give "function or variable may be unsafe" warnings
 
@@ -325,7 +331,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     if (GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD)
     {
         currentNumGradientBits = m_numGradientBits[startEpoch]; // remember so that we can detect a change
-        InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, m_traceLevel);
+        InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel);
     }
     else if (GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD || 
              GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD)
@@ -412,7 +418,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             currentNumGradientBits != m_numGradientBits[i])
         {
             currentNumGradientBits = m_numGradientBits[i];
-            InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, m_traceLevel);
+            InitDistGradAgg(evaluationNodes.size(), currentNumGradientBits, net->GetDeviceId(), m_traceLevel);
         }
 
         Timer timer;
@@ -2006,31 +2012,35 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
 }
 
 template <class ElemType>
-void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int traceLevel)
+void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel)
 {
     assert(GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD);
-    if (traceLevel > 0)
-        fprintf(stderr, "Initializing dataParallelSGD for %d-bit quantization.\n", numGradientBits);
 
-#ifdef CNTK_PARALLEL_TRAINING_SUPPORT
-    if (Globals::UseV2Aggregator())
-    {
-        auto communicator = ::CNTK::QuantizedMPICommunicator(m_zeroThresholdFor1Bit, true, numGradientBits);
-        m_distGradAgg = std::make_shared<V2AllReduceDistGradAggregator<ElemType>>(communicator, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
-    }
-    else
-        m_distGradAgg = std::make_shared<AllReduceDistGradAggregator<ElemType>>(m_mpi, numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
-#else
     if (numGradientBits != (8 * sizeof(ElemType)))
     {
+        if (traceLevel > 0)
+            fprintf(stderr, "Initializing dataParallelSGD for %d-bit quantization.\n", numGradientBits);
+#ifdef CNTK_PARALLEL_TRAINING_SUPPORT
+        if (Globals::UseV2Aggregator())
+        {
+            auto communicator = ::CNTK::QuantizedMPICommunicator(m_zeroThresholdFor1Bit, true, numGradientBits);
+            m_distGradAgg = std::make_shared<V2AllReduceDistGradAggregator<ElemType>>(communicator, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+        }
+        else
+            m_distGradAgg = std::make_shared<AllReduceDistGradAggregator<ElemType>>(m_mpi, numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+#else
         RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
-    }
-
-    if (Globals::UseV2Aggregator()) // Currently used to check V2 against baselines.
-        m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace, ::CNTK::MPICommunicator());
-    else
-        m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace);
 #endif // !CNTK_PARALLEL_TRAINING_SUPPORT
+    }
+    else
+    {
+        if (traceLevel > 0)
+            fprintf(stderr, "Initializing dataParallelSGD with FP%d aggregation.\n", numGradientBits);
+        if (Globals::UseV2Aggregator()) // Currently used to check V2 against baselines.
+            m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, m_syncStatsTrace, ::CNTK::MPICommunicator());
+        else
+            m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace);
+    }
 
     m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) { DistGradHeader::Destroy(ptr); });
 }

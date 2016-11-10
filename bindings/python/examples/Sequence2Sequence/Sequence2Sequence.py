@@ -11,7 +11,7 @@ from cntk import Trainer, Axis, save_model, load_model #, text_format_minibatch_
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, set_default_device
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, element_select, alias, hardmax
+from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, element_select, alias, hardmax
 from cntk.ops.functions import CloneMethod
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -94,7 +94,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     input_sequence = raw_input
 
     # Drop the sentence start token from the label, for decoder training
-    label_sequence = slice(raw_labels, label_seq_axis, 1, 0) # <s> A B C </s> --> A B C </s>
+    label_sequence = sequence.slice(raw_labels, 1, 0) # <s> A B C </s> --> A B C </s>
     label_sentence_start = sequence.first(raw_labels)        # <s>
 
     is_first_label = sequence.is_first(label_sequence)       # <s> 0 0 0 ...
@@ -239,7 +239,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     z = load_model("seq2seq.dnn")
 
     label_seq_axis = Axis('labelAxis')
-    label_sequence = slice(find_arg_by_name('raw_labels',z), label_seq_axis, 1, 0)
+    label_sequence = sequence.slice(find_arg_by_name('raw_labels',z), 1, 0)
     ce = cross_entropy_with_softmax(z, label_sequence)
     errs = classification_error(z, label_sequence)
     trainer = Trainer(z, ce, errs, [momentum_sgd(

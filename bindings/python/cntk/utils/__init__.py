@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+﻿# Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -183,12 +183,9 @@ def get_temp_filename(directory=None):
 
 def sanitize_shape(shape):
     """
-    If shape is scalar, it creates a tuple out of it and reverse it as cntk uses
-    column major.
+    If shape is scalar, it creates a tuple out of it.
     """
-    if np.isscalar(shape):
-        shape = (shape,)
-    return tuple(reversed(shape))
+    return _as_tuple(shape)
 
 
 def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
@@ -383,14 +380,15 @@ def sanitize_batch(var, batch, seq_starts=None, data_type=None, device=None):
                              'array and not "%s"' % type(batch))
 
         from cntk.cntk_py import NDMask
-        mask = NDMask((max(seq_lens), num_seq), device)
+        mask = NDMask((num_seq, max(seq_lens)), device)
         for idx, seq_len in enumerate(seq_lens):
-            if seq_starts is None:
+            if seq_starts is None or seq_starts[idx]:
                 mask.mark_sequence_begin((0, idx))
-            elif seq_starts[idx]:
-                mask.mark_sequence_begin((0, idx))
+            # The second parameter is specifying the rectangle of the mask that
+            # is invalid. As C++ is taking an NDShape, and we reverse the shape
+            # in the SWIG layer, we provide it here as row-major.
             mask.invalidate_section((seq_len, idx),
-                                    (cntk_py.InferredDimension, 1))
+                                    (1, cntk_py.InferredDimension))
 
         # Then we pad the batch to rectangular shape
         if isinstance(batch, list):
@@ -814,6 +812,17 @@ class _ClassFromDict(dict):
 def Record(**kwargs):
     return _ClassFromDict(kwargs)
 
-# type-cast a shape given as a scalar into a tuple
 def _as_tuple(x):
-    return x if (isinstance(x,tuple)) else (x,)
+    '''
+    Convert an argument to a tuple.
+
+    Args:
+        x: if scalar, it returns ``(x,)``. If iterable, it converts it to
+        tuple.
+
+    Returns:
+        Tuple of ``x``.
+    '''
+    if np.isscalar(x):
+        x = (x,)
+    return tuple(x)

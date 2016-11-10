@@ -9,7 +9,7 @@ import math
 import numpy as np
 
 from cntk.blocks import default_options
-from cntk.layers import Convolution, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense
+from cntk.layers import Convolution, AveragePooling, GlobalAveragePooling, Dropout, BatchNormalization, Dense
 from cntk.models import Sequential, LayerStack
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
@@ -136,8 +136,7 @@ def create_resnet_model(input, num_classes):
     r3_1 = resnet_basic_inc(r2_2, 64)
     r3_2 = resnet_basic_stack(r3_1, 64, 2)
 
-    # Global average pooling
-    pool = AveragePooling(filter_shape=(8,8), strides=(1,1))(r3_2)    
+    pool = GlobalAveragePooling()(r3_2) 
     net = Dense(num_classes, init=he_normal(), activation=None)(pool)
 
     return net

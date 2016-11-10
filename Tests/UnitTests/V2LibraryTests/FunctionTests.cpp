@@ -99,18 +99,14 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 
     // Test ReduceSum along a dynamic axis
     {
-        auto testReduceSum = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](const Axis& axis)
+        auto testReduceSum = [&sequences, &sequenceLengths, inputShape, sequencesValue, device]()
         {
-            if (!axis.IsDynamicAxis())
-                RuntimeError("Called the dynamic axis ReduceSum test with a static axis");
-
-            size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             auto inputVar = InputVariable({ inputShape }, DataType::Float, L"input");
-            FunctionPtr reduceSumFunc = ReduceSum(inputVar, axis);
+            FunctionPtr reduceSumFunc = Sequence::ReduceSum(inputVar);
 
-            NDShape maskShape = { ((axis == Axis::DefaultBatchAxis()) ? maxActualSequenceLength : 1), ((axis == Axis::DefaultBatchAxis()) ? 1 : numSequences) };
+            NDShape maskShape = { 1, numSequences };
             NDShape outputShape = reduceSumFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape(maskShape);
 
@@ -130,10 +126,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
                     for (size_t k = 0; k < inputShape.TotalSize(); ++k)
                     {
                         float value = sequences[i][(j * inputShape.TotalSize()) + k];
-                        if (axis == Axis::DefaultBatchAxis())
-                            expectedTotals[(j * inputShape.TotalSize()) + k] += value;
-                        else
-                            expectedTotals[(i * inputShape.TotalSize()) + k] += value;
+                        expectedTotals[(i * inputShape.TotalSize()) + k] += value;
                     }
                 }
             }
@@ -141,7 +134,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
             FloatingPointVectorCompare(outputData, expectedTotals, "testReduceSum: Forward prop results do not match expected results");
         };
 
-        testReduceSum(Axis::DefaultDynamicAxis());
+        testReduceSum();
     }
 }
 
@@ -217,11 +210,8 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
 
     // Test slice along a dynamic axis
     {
-        auto testDynamicAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](const Axis& axis, int beginOffset, int endOffset)
+        auto testDynamicAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](int beginOffset, int endOffset)
         {
-            if (!axis.IsDynamicAxis())
-                RuntimeError("Called the dynamic axis slice test with a static axis");
-
             size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
@@ -229,11 +219,11 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             size_t maxSliceLength = (endAndBeginOffsetDiff > 0) ? endAndBeginOffsetDiff : maxActualSequenceLength + endAndBeginOffsetDiff;
 
             auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
-            auto sliceFunc = Slice(inputVar, axis, beginOffset, endOffset);
+            auto sliceFunc = Sequence::Slice(inputVar, beginOffset, endOffset);
             sliceFunc = sliceFunc + sliceFunc;
 
-            size_t outputSequenceAxisLength = (axis == Axis::DefaultDynamicAxis()) ? maxSliceLength : maxActualSequenceLength;
-            size_t outputBatchAxisLength = (axis == Axis::DefaultBatchAxis()) ? maxSliceLength : numSequences;
+            size_t outputSequenceAxisLength = maxSliceLength;
+            size_t outputBatchAxisLength = numSequences;
             NDShape outputShape = sliceFunc->Output().Shape().AppendShape({ outputSequenceAxisLength, outputBatchAxisLength });
             std::vector<float> outputData(outputShape.TotalSize(), 0);
             NDMaskPtr mask;
@@ -247,15 +237,15 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             std::unordered_map<Variable, ValuePtr> outputs = { { sliceFunc->Output(), outputValue } };
             sliceFunc->Forward({ { inputVar, sequencesValue } }, outputs, device);
 
-            size_t startSequenceIdx = (axis == Axis::DefaultBatchAxis()) ? ((beginOffset >= 0) ? beginOffset : (numSequences + beginOffset)) : 0;
-            size_t endSequenceIdx = (axis == Axis::DefaultBatchAxis()) ? ((endOffset > 0) ? endOffset : (numSequences + endOffset)) : numSequences;
+            size_t startSequenceIdx = 0;
+            size_t endSequenceIdx = numSequences;
 
             std::vector<float> expectedOutputValues(inputShape.TotalSize() * outputSequenceAxisLength * outputBatchAxisLength);
             for (size_t i = startSequenceIdx; i < endSequenceIdx; ++i)
             {
                 size_t currentSequenceLength = sequenceLengths[i];
-                size_t startFrameIdx = (axis == Axis::DefaultDynamicAxis()) ? ((beginOffset >= 0) ? beginOffset : (currentSequenceLength + beginOffset)) : 0;
-                size_t endFrameIdx = (axis == Axis::DefaultDynamicAxis()) ? ((endOffset > 0) ? endOffset : (currentSequenceLength + endOffset)) : currentSequenceLength;
+                size_t startFrameIdx = ((beginOffset >= 0) ? beginOffset : (currentSequenceLength + beginOffset));
+                size_t endFrameIdx = ((endOffset > 0) ? endOffset : (currentSequenceLength + endOffset));
                 size_t j = startFrameIdx;
                 for (; j < endFrameIdx; ++j)
                 {
@@ -272,12 +262,12 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             FloatingPointVectorCompare(outputData, expectedOutputValues, "testDynamicAxisSlice: Forward prop results do not match expected results");
         };
 
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), 0, 1);
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), 0, 2);
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), -1, 0);
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), -2, 0);
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), 0, -1);
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), 1, 0);
+        testDynamicAxisSlice(0, 1);
+        testDynamicAxisSlice(0, 2);
+        testDynamicAxisSlice(-1, 0);
+        testDynamicAxisSlice(-2, 0);
+        testDynamicAxisSlice(0, -1);
+        testDynamicAxisSlice(1, 0);
     }
 }
 

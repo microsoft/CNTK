@@ -26,11 +26,7 @@ function ActionItem(
     $expr = $func +' $item' 
         
     Write-Verbose "Calling Operation: [$func]"
-    $result = Invoke-Expression $expr 
-    if (-not $result) {
-        return 
-    }
-    return 
+    Invoke-Expression $expr 
 }
 
 
@@ -47,9 +43,13 @@ function InstallExe(
     $processWait = $table["ProcessWait"]
     $message =  $table["message"]
     $runAs = $table["runAs"]
+    $maxErrorLevel = $table["maxErrorLevel"]
 
     if ($runAs -eq $null) {
         $runAs = $true
+    }
+    if ($maxErrorLevel -eq $null) {
+        $maxErrorLevel = 0
     }
     if ($platform -ne $null) {
         $runningOn = ((Get-WmiObject -class Win32_OperatingSystem).Caption).ToUpper()
@@ -65,10 +65,10 @@ function InstallExe(
     }
     
     if ($dir -eq $null) {
-        $ecode = DoProcess -command $cmd -param "$param" -requiresRunAs $runAs
+        DoProcess -command $cmd -param $param -requiresRunAs $runAs -maxErrorLevel $maxErrorLevel
     }
     else {
-        $ecode = DoProcess -command $cmd -param "$param" -requiresRunAs $runAs -workingDir "$dir" 
+        DoProcess -command $cmd -param $param -requiresRunAs $runAs -workingDir $dir -maxErrorLevel $maxErrorLevel
     }
     
     if ( ($processWait -ne $null) -and ($Execute) -and ($false) ) {
@@ -77,11 +77,44 @@ function InstallExe(
             $pwait = Get-Process $processWait -ErrorAction SilentlyContinue
         } while (-not ($pwait -eq $null))
     }
+}
+
+function ExecuteApplication(
+    [Parameter(Mandatory = $true)][hashtable] $table)
+{
+    FunctionIntro $table
     
-      
-    if ($ecode -eq 0) { return $true }
-          
-    return $false
+    $func = $table["Function"]
+    $appName = $table["AppName"]
+    $param= $table["Param"]
+    $appDir = $table["AppDir"]
+    $usePath = $table["UseEnvPath"]
+    $dir  = $table["WorkDir"]
+    $maxErrorLevel = $table["maxErrorLevel"]
+
+    if ($appDir -eq $null) {
+        $appDir = ""
+    }
+    if ($usePath -eq $null) {
+        $usePath = $false
+    }
+    if ($maxErrorLevel -eq $null) {
+        $maxErrorLevel = 0
+    }
+
+    if ($Execute) {
+        $application = ResolveApplicationName $appName $appDir $usePath
+        if ($application.Length -eq 0) {
+            throw "ExecuteApplication: Couldn't resolve program [$appName] with location directory [$appDir] and usePath [$usePath]"
+        }
+
+        if ($dir -eq $null) {
+            DoProcess -command $application -param $param -maxErrorLevel $maxErrorLevel
+        }
+        else {
+            DoProcess -command $application -param $param -workingDir $dir -maxErrorLevel $maxErrorLevel
+        }
+    }
 }
 
 function InstallWheel(
@@ -110,12 +143,12 @@ function InstallWheel(
     $whl = $whlFile.FullName
 
     $condaExe = Join-Path $BasePath 'Scripts\conda.exe'
-    $newPaths = Invoke-DosCommand $condaExe (Write-Output ..activate cmd.exe $EnvName)
+    $newPaths = Invoke-DosCommand $condaExe (Write-Output ..activate cmd.exe $EnvName)  -maxErrorLevel 0
 
     $oldPath = $env:PATH
     $env:PATH = $newPaths + ';' + $env:PATH
 
-    Invoke-DosCommand pip (Write-Output install $whl)
+    Invoke-DosCommand pip (Write-Output install $whl) -maxErrorLevel 0
     $env:PATH = $oldPath 
     return
 }
@@ -133,8 +166,6 @@ function MakeDirectory(
             New-Item $path -type directory
         }
     }
-    
-    return $true
 }
 
 function AddToPath(
@@ -160,7 +191,6 @@ function AddToPath(
 
     if ($pv.Contains("$ap")) {
         Write-Verbose "AddToPath - path information already up-to-date" 
-        return $true
     }
 
     Write-Host Adding [$dir] to environment [$env]
@@ -173,7 +203,6 @@ function AddToPath(
     if ($Execute) {
         SetEnvVar -name $env -content "$pathvalue" 
     }
-    return $true
 }
 
 function ExtractAllFromZip(
@@ -186,10 +215,10 @@ function ExtractAllFromZip(
     $destinationFolder = $table["destinationFolder"]
 
     if (-not (test-path -path $destinationFolder)) {
-        return $false
+        throw "$destinationFolder doesn't exist"
     }
     if (-not (test-path $zipFileName -PathType Leaf)) {
-        return $false
+        throw "$zipFileName doesn't exist"
     }
 
     if ($Execute) {
@@ -199,7 +228,6 @@ function ExtractAllFromZip(
 
         $destination.CopyHere($zipFile.Items())
     }
-    return $true
 }
 
 function CreateBatch(
@@ -237,7 +265,8 @@ function DoProcess(
     [string]  $command,
     [string]  $param,
     [string]  $workingDir = "",
-    [boolean] $requiresRunAs = $false)
+    [boolean] $requiresRunAs = $false,
+    [int] $maxErrorLevel)
 {
     $info = "start-process [$command] with [$param]"
 
@@ -245,7 +274,7 @@ function DoProcess(
 
     if (-not $Execute) {
          Write-Host  "** Running in DEMOMODE - setting Exit Code **: 0"
-         return 0
+         return
     }
 
     if ($workingDir.Length -eq 0) {
@@ -266,15 +295,13 @@ function DoProcess(
         }
     }
 
-
     $eCode = ($process.ExitCode)
 
-    if ($eCode -ne 0) {
-        Write-Host  "$message ** Exit Code **:($eCode)"
-    } else {
-        Write-Verbose "$message ** Exit Code **:($eCode)"
+    if ($ecode -gt $maxErrorLevel) {
+        throw "Running 'start-process $commandString $param' failed with exit code [$ecode]"
     }
-    return $eCode
+    
+    return
 }
 
 
@@ -287,17 +314,15 @@ function SetEnvVar(
     Write-Verbose "SetEnvVar [$name] with [$content]"
     
     if ($Execute) {
-        # [environment]::SetEnvironmentVariable($name, $content, $location)
-
         $commandString = "& { [environment]::SetEnvironmentVariable('"+$name+"', '"+$content+"', '"+$location+"') }"
-
-        RunPowershellCommand -command "$commandString" -elevated $true
+        RunPowershellCommand -command "$commandString" -elevated $true -maxErrorLevel 0
     }    
 }
 
 function RunPowershellCommand(
     [string] $commandString,
-    [boolean] $elevated
+    [boolean] $elevated,
+    [int] $maxErrorLevel
 )
 {
     $commandBytes = [System.Text.Encoding]::Unicode.GetBytes($commandString)
@@ -310,8 +335,12 @@ function RunPowershellCommand(
     else {
         $process = Start-Process -PassThru -FilePath powershell.exe -ArgumentList $commandLine -wait
     }
+    
     $eCode = ($process.ExitCode)
-    return ($ecode -eq 0)
+    if ($ecode -gt $maxErrorLevel) {
+        throw "Running 'powershell.exe $commandString' failed with exit code [$ecode]"
+    }
+    return
 }
 
 function Invoke-DosCommand {
@@ -321,7 +350,7 @@ function Invoke-DosCommand {
     [string] $Command,
     [string[]] $Argument,
     [string] [ValidateScript({ Test-Path -PathType Container $_ })] $WorkingDirectory,
-    [switch] $IgnoreNonZeroExitCode,
+    [int] $maxErrorLevel,
     [switch] $SuppressOutput
   )
     Write-Verbose "Running '$Command $Argument'"
@@ -336,7 +365,43 @@ function Invoke-DosCommand {
     if ($WorkingDirectory) {
         Pop-Location
     }
-    if (($LASTEXITCODE -ne 0) -and -not $IgnoreNonZeroExitCode) {
+    if ($LASTEXITCODE -gt $maxErrorLevel) {
         throw "Running '$Command $Argument' failed with exit code $LASTEXITCODE"
+    }
+}
+
+function ResolveApplicationName(
+    [string] $name,
+    [string] $directory,
+    [bool] $usePath)
+{
+    $application = ""
+
+    if ($directory.Length -gt 0) {
+        $application = CallGetCommand (join-path $directory $name)
+    }
+    if ($application.Length -eq 0) {
+        if ($usePath) {
+            # we are at this point if we are supposed to check in the path environment for a match and
+            # $directory was empty or we couldn't find it in the $directory
+
+            $application = CallGetCommand $name
+        }
+    }
+    # application will be an empty string if we couldn't resolve the name, otherwise we can execute $application
+
+    return $application
+}
+
+function CallGetCommand(
+    [string] $application)
+{
+    try {
+        get-command $application -CommandType Application -ErrorAction Stop | Out-Null
+        return $application
+    }
+    catch {
+        # the application can't be found, so return empty string
+        return ""
     }
 }
