@@ -114,7 +114,6 @@ if IS_WINDOWS:
         "/EHsc",
         "/DEBUG",
         "/Zi",
-        "/EHsc",
     ]
     runtime_library_dirs = []
 else:
@@ -166,7 +165,7 @@ else:
     kwargs = dict(package_data = package_data)
 
 setup(name="cntk",
-      version="2.0.beta2.0",
+      version="2.0.beta3.0",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

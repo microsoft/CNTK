@@ -3,7 +3,7 @@ set -x -e -o pipefail
 
 USAGE="Usage: $0 <drops-to-test>"
 
-REPO_TAG=v2.0.beta2.0
+REPO_TAG=v2.0.beta3.0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -52,9 +52,11 @@ for drop in $*; do
   if [[ "$DROP_FILE" == *CPU* ]] || [[ "$DROP_FILE" == *cpu* ]]; then
     TEST_DEVICE=cpu
     DOCKER_TO_RUN=docker
+    DOCKERFILE_SUFFIX=CPU
   else
     TEST_DEVICE=gpu
     DOCKER_TO_RUN=nvidia-docker
+    DOCKERFILE_SUFFIX=GPU
   fi
 
   rm -f "$DROP_RESERVED"
@@ -63,7 +65,7 @@ for drop in $*; do
 
   IMAGE=cntk:installtest
   for base in Ubuntu16 Ubuntu14; do
-    docker build -t $IMAGE -f Dockerfile-$base-GPU --build-arg REPO_TAG=$REPO_TAG .
+    docker build -t $IMAGE -f Dockerfile-$base-$DOCKERFILE_SUFFIX --build-arg REPO_TAG=$REPO_TAG .
     $DOCKER_TO_RUN run --rm $IMAGE su - testuser -c "./run-test.sh $TEST_DEVICE"
     docker rmi $IMAGE
   done

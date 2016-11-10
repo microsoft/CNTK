@@ -59,9 +59,52 @@ def alias(x, name=''):
     return alias(x, name)
 
 ##########################################################################
-# evaluation ops
+# loss and evaluation ops
 ##########################################################################
 
+@typemap
+def binary_cross_entropy(output, target, name=''):
+    r'''
+    This operation computes the binary cross entropy between the ``output`` and ``target``.
+
+    Example:
+        TBA
+
+    Args:
+        output: the computed posterior probability from the network
+        target: ground-truth label, 0 or 1
+        name (`str`, optional): the name of the Function instance in the network
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import binary_cross_entropy
+    dtype = get_data_type(output, target)
+    output = sanitize_input(output, dtype)
+    target = sanitize_input(target, dtype)
+    return binary_cross_entropy(output, target, name)
+
+@typemap
+def weighted_binary_cross_entropy(output, target, weight, name=''):
+    r'''
+    This operation computes the weighted binary cross entropy between the ``output`` and ``target``.
+
+    Example:
+        TBA
+
+    Args:
+        output: the computed posterior probability from the network
+        target: ground-truth label, 0 or 1
+        weight: weight of each example
+        name (`str`, optional): the name of the Function instance in the network
+    Returns:
+        :class:`cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import weighted_binary_cross_entropy
+    dtype = get_data_type(output, target, weight)
+    output = sanitize_input(output, dtype)
+    target = sanitize_input(target, dtype)
+    weight = sanitize_input(weight, dtype)
+    return weighted_binary_cross_entropy(output, target, weight, name)
 
 @typemap
 def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
@@ -185,17 +228,21 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                 auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False,
                 max_temp_mem_size_in_samples=0, name=''):
     '''
-    Computes the convolution of a weight matrix with an image or tensor. This operation is used in image-processing applications
-    and language processing. It supports any dimensions, stride, sharing or padding.
+    Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
+    ``operand`` (commonly an image or output of a previous convolution/pooling operation).
+    This operation is used in image and language processing applications. It supports arbitrary
+    dimensions, strides, sharing, and padding.
 
-    This function operates on input tensors of the form [M1 x M2 x ... x Mn x inChannels]. This can be understood as a rank-n
-    object, where each entry consists of a inChannels-dimensional vector. For example, an RGB image would have dimensions
-    [W x H x 3], i.e. a [W x H]-sized structure, where each entry (pixel) consists of a 3-tuple (note, however, that the
-    memory-storage format is the concatenation of 3 planes of size [W x H]).
+    This function operates on input tensors with dimensions :math:`[C \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`. This can be understood as a rank-n
+    object, where each entry consists of a :math:`C`-dimensional vector. For example, an RGB image would have dimensions
+    :math:`[3 \\times W \\times H]`, i.e. a :math:`[W \\times H]`-sized structure, where each entry (pixel) consists of a 3-tuple.
 
-    `convolution` convolves the input with n+1-dimensional filters, where the first n dimensions are the spatial extent of the
-    filter, and the last one must be equal to inChannels. There are outChannels filters. I.e. for each output position, a vector of
-    dimension outChannels is computed. Hence, the total number of filter parameters is (M1*M2*...*Mn) * inChannels * outChannels.
+    `convolution` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
+    ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
+    The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
+    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input.
+    The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
+    dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
 
 
     Example:
@@ -210,12 +257,12 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
               [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
 
     Args:
-        convolution_map: convolution filter weights, stored as a tensor of dimensions [outChannels x M1 x M2 x ... x Mn],
-         where [M1 x M2 x ... x Mn] must be the kernel dimensions.
-        operand: convolution input. A tensor with dimensions [M1 x M2 x ... x Mn x inChannels].
-        strides (optional): stride dimensions. A stride > 1 means that only pixel positions that are multiples of the stride value are computed.
-         For example, a stride of 2 will lead to a halving of the dimensions. The last stride dimension that lines up with the number
-         of input channels must be equal to the number of input channels.
+        convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
+         where :math:`[m_1 \\times m_2 \\times \\ldots \\times m_n]` must be the kernel dimensions (spatial extent of the filter).
+        operand: convolution input. A tensor with dimensions :math:`[I \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`.
+        strides (`tuple`, optional): stride dimensions. If strides[i] > 1 then only pixel positions that are multiples of strides[i] are computed.
+         For example, a stride of 2 will lead to a halving of that dimension. The first stride dimension that lines up with the number
+         of input channels can be set to any non-zero value.
         sharing (bool): sharing flags for each input dimension
         auto_padding (bool): flags for each input dimension whether it should be padded automatically (that is,
          symmetrically) or not padded at all. Padding means that the convolution kernel is applied to all pixel positions, where all
@@ -235,9 +282,8 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    return convolution(convolution_map, operand, tuple(reversed(strides)), sharing, auto_padding,
-                       tuple(reversed(lower_pad)), tuple(
-                           reversed(upper_pad)), transpose,
+    return convolution(convolution_map, operand, tuple(strides), sharing, auto_padding,
+                       tuple(lower_pad), tuple(upper_pad), transpose,
                        max_temp_mem_size_in_samples, name)
 
 
@@ -333,7 +379,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
         normalization_time_constant(`float`, default 5000): time constant for computing running average of
-         mean and variance as a low-pass filtered version of the batch statistics. 
+         mean and variance as a low-pass filtered version of the batch statistics.
         blend_time_constant(`float`, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
@@ -1702,32 +1748,32 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
 
 @typemap
 def random_sample_inclusion_frequency(
-    weights, 
-    num_samples, 
-    allow_duplicates, 
+    weights,
+    num_samples,
+    allow_duplicates,
     name=''):
     '''
     For weighted sampling with the specifed sample size (`num_samples`)
     this node computes the expected number of occurences of each class
-    in the the sampled set. In case of sampling without replacement 
+    in the the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the
     case of small sample sizes.
-    Intended uses are e.g. sampled softmax, noise contrastive 
+    Intended uses are e.g. sampled softmax, noise contrastive
     estimation etc.
-    This operation will be typically used together 
+    This operation will be typically used together
     with :func:`random_sample`.
 
     Args:
-        weights: input vector of sampling weights which should be 
-            non-negative numbers. 
+        weights: input vector of sampling weights which should be
+            non-negative numbers.
         num_samples (`int`): number of expected samples
-        allow_duplicates (`bool`): If sampling is done 
+        allow_duplicates (`bool`): If sampling is done
             with replacement (`True`) or without (`False`).
 
     Examples:
         >>> import numpy as np
         >>> from cntk import *
-        >>> # weight vector with 100 '1000'-values followed 
+        >>> # weight vector with 100 '1000'-values followed
         >>> # by 100 '1' values
         >>> w1 = np.full((100),1000, dtype = np.float)
         >>> w2 = np.full((100),1, dtype = np.float)
@@ -1752,9 +1798,9 @@ def random_sample_inclusion_frequency(
     weights = sanitize_input(weights)
 
     return random_sample_inclusion_frequency(
-        weights, 
-        num_samples, 
-        allow_duplicates, 
+        weights,
+        num_samples,
+        allow_duplicates,
         name)
 
 

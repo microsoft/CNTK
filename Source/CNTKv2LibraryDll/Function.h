@@ -65,7 +65,7 @@ namespace CNTK
         {PrimitiveOpType::Times, L"Times"},
         {PrimitiveOpType::TransposeTimes, L"TransposeTimes"},
         {PrimitiveOpType::Convolution, L"Convolution"},
-        {PrimitiveOpType::SquaredError, L"SquaredError"},
+        { PrimitiveOpType::SquaredError, L"SquaredError" },
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::PastValue, L"PastValue"},
@@ -79,6 +79,7 @@ namespace CNTK
         {PrimitiveOpType::RandomSample, L"RandomSample"},
         {PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency"},
         {PrimitiveOpType::ROIPooling, L"ROIPooling"},
+        { PrimitiveOpType::Logistic, L"Logistic" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -103,7 +104,15 @@ namespace CNTK
             if (numFunctionInputs > 2)
                 indexMap.insert({2, 2});
         }
-        else if ((op == PrimitiveOpType::CrossEntropyWithSoftmax) || (op == PrimitiveOpType::GatherPacked))
+        else if (op == PrimitiveOpType::Logistic)
+        {
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
+            if (numFunctionInputs > 2)
+                indexMap.insert({ 2, 2 });
+        }
+        else if (op == PrimitiveOpType::CrossEntropyWithSoftmax)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
+        else if (op == PrimitiveOpType::GatherPacked)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
         else if (op == PrimitiveOpType::ScatterPacked)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 2 }, { 1, 1 }, { 2, 0 } });
@@ -187,6 +196,8 @@ namespace CNTK
         static const std::wstring AttributeNameEpsilon;
         static const std::wstring AttributeNameUseCuDNNEngine;
         static const std::wstring AttributeNameNewDynamicAxes;
+        static const std::wstring AttributeNameNewSequenceAxisLengthScalingFactor;
+        static const std::wstring AttributeNameNewSequenceAxisLengthAdditiveFactor;
         static const std::wstring AttributeNameBeginIndex;
         static const std::wstring AttributeNameEndIndex;
         static const std::wstring AttributeNameReductionOpName;
@@ -699,22 +710,11 @@ namespace CNTK
             return CompositeFunctionOpName;
         }
 
-    private:
-        virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                                std::unordered_set<const Function*>& visitedFunctions,
-                                                std::unordered_set<Variable>& replacedPlaceholders) override;
-
-        CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name, const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
-            : Function({}, rootFunction->Outputs(), Dictionary(), rootFunction, name, uid),
-            m_allPrimitiveFunctions(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
-        {}
-
         template <typename FunctionType>
-        void Traverse(const FunctionType& functor) const
+        static void Traverse(const FunctionPtr& rootFunction, const FunctionType& functor)
         {
-            const auto& root = RootFunction();
             std::unordered_set<FunctionPtr> visitedFunctions;
-            Traverse(root, visitedFunctions, functor);
+            Traverse(rootFunction, visitedFunctions, functor);
         }
 
         // Recursively traverses the Function graph underlying the 'rootFunction' invoking the provided functor for all visited nodes in the graph.
@@ -734,6 +734,16 @@ namespace CNTK
                 }
             }
         }
+
+    private:
+        virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                                std::unordered_set<const Function*>& visitedFunctions,
+                                                std::unordered_set<Variable>& replacedPlaceholders) override;
+
+        CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name, const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
+            : Function({}, rootFunction->Outputs(), Dictionary(), rootFunction, name, uid),
+            m_allPrimitiveFunctions(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
+        {}
 
         std::vector<Variable> DetermineInputs() const
         {

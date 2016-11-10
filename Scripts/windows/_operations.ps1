@@ -4,6 +4,9 @@
 #
 
 $operations = @(
+    @{Name = "Scan System for installed programs"; ShortName = "SCANPROG"; Info = "Scan System for installed programs"; 
+      Verification = @( @{Function = "VerifyScanPrograms" } )
+     },
     @{Name = "Verifying Installation contents"; ShortName = "INSTCONTENT"; Info = "Verifying Installation contents"; 
       Verification = @( @{Function = "VerifyInstallationContent"; Path = "$cntkRootDir" } )
      },
@@ -45,8 +48,9 @@ $operations = @(
                   @{Function = "AddToPath"; Dir = "C:\Program Files\Git\cmd"; AtStart  = $true; } )
      },
     @{Name = "Clone CNTK from Github"; ShortName = "CNTKCLONE"; Info = "Clone CNTK from Github repository";
-      Verification = @( @{Function = "VerifyDirectory"; Path = "$RepoLocation" } );
+      Verification = @( @{Function = "VerifyDirectory"; Path = $RepoLocation } ); 
       Action = @( @{Function = "MakeDirectory"; Path = $repoDirectory },
-                  @{Function = "InstallExe"; Command = "C:\Program Files\Git\bin\git.exe"; Param = "clone --branch $RepoTag --recursive https://github.com/Microsoft/CNTK/ $repoName"; WorkDir = "$repoDirectory"; Message="Cloning CNTK (branch $RepoTag) repository...." } )
+                  @{Function = "ExecuteApplication"; AppName = "git.exe"; Param = "clone --branch $RepoTag --recursive https://github.com/Microsoft/CNTK/ $repoName"; AppDir = "C:\Program Files\Git\bin"; UseEnvPath = $true; WorkDir = $repoDirectory } )
      }
 )
+
