@@ -126,6 +126,10 @@ Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 # 	Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalV2Client -Recurse
 # }
 
+# Copy Examples
+Write-Verbose "Copying Tutorials ..."
+Copy-Item Tutorials -Recurse -Destination $baseDropPath\Tutorials
+
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."
 Copy-Item Scripts -Recurse -Destination $baseDropPath\Scripts
