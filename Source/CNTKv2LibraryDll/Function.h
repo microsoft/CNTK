@@ -547,6 +547,10 @@ namespace CNTK
                 // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
                 if (kernelShape == NDShape::Unknown)
                 {
+                    if ((std::find(autoPad.begin(), autoPad.end(), true) != autoPad.end()) ||
+                        (lowerPad.TotalSize() > 0) || (upperPad.TotalSize() > 0))
+                        RuntimeError("Padding isn't allowed for Unknown shape!");
+
                     if (op == PrimitiveOpType::Pooling)
                         kernelShape = operandShape.SubShape(0, inputRank-1);
                     else
