@@ -15,10 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libswscale-dev \
         libtiff-dev \
         pkg-config \
-        python-dev \
-        python-numpy \
-        python-pip \
-        python-yaml \
         wget \
         zlib1g-dev \
         # Protobuf
@@ -26,6 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         unzip \
         # For Kaldi
+        python-dev \
         automake \
         libtool \
         autoconf \
@@ -75,6 +72,15 @@ RUN OPENBLAS_VERSION=0.2.18 && \
 
 ENV LD_LIBRARY_PATH /usr/local/openblas/lib:$LD_LIBRARY_PATH
 
+# Install Boost
+RUN BOOST_VERSION=1_60_0 && \
+    BOOST_DOTTED_VERSION=$(echo $BOOST_VERSION | tr _ .) && \
+    wget -q -O - https://sourceforge.net/projects/boost/files/boost/${BOOST_DOTTED_VERSION}/boost_${BOOST_VERSION}.tar.gz/download | tar -xzf - && \
+    cd boost_${BOOST_VERSION} && \
+    ./bootstrap.sh --prefix=/usr/local/boost-${BOOST_DOTTED_VERSION} --with-libraries=filesystem,system,test  && \
+    ./b2 -d0 -j"$(nproc)" install  && \
+    rm -rf /boost_${BOOST_VERSION}
+
 # Install Protobuf
 RUN PROTOBUF_VERSION=3.1.0 \
     PROTOBUF_STRING=protobuf-$PROTOBUF_VERSION && \
@@ -86,15 +92,6 @@ RUN PROTOBUF_VERSION=3.1.0 \
     cd .. && \
     rm -rf $PROTOBUF_STRING
 
-# Install Boost
-RUN BOOST_VERSION=1_60_0 && \
-    BOOST_DOTTED_VERSION=$(echo $BOOST_VERSION | tr _ .) && \
-    wget -q -O - https://sourceforge.net/projects/boost/files/boost/${BOOST_DOTTED_VERSION}/boost_${BOOST_VERSION}.tar.gz/download | tar -xzf - && \
-    cd boost_${BOOST_VERSION} && \
-    ./bootstrap.sh --prefix=/usr/local/boost-${BOOST_DOTTED_VERSION} --with-libraries=filesystem,system,test  && \
-    ./b2 -d0 -j"$(nproc)" install  && \
-    rm -rf /boost_${BOOST_VERSION}
-
 # Install CNTK custom MKL, version 2
 RUN mkdir /usr/local/CNTKCustomMKL && \
     wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-2.tgz | \
@@ -104,20 +101,6 @@ RUN mkdir -p /usr/local/cudnn/cuda/include && \
     ln -s /usr/include/cudnn.h /usr/local/cudnn/cuda/include/cudnn.h && \
     mkdir -p /usr/local/cudnn/cuda/lib64 && \
     ln -s /etc/alternatives/libcudnn_so /usr/local/cudnn/cuda/lib64/libcudnn.so
-
-RUN pip install pytest sphinx-rtd-theme Pillow
-
-ENV BLAS=/usr/local/openblas/lib/libopenblas.so
-ENV LAPACK=/usr/local/openblas/lib/libopenblas.so
-
-
-RUN SCIPY_VERSION=0.18.0 && \
-    wget -q -O - https://github.com/scipy/scipy/releases/download/v${SCIPY_VERSION}/scipy-${SCIPY_VERSION}.tar.gz | tar -zxf - && \
-    cd scipy-${SCIPY_VERSION} && \
-    python setup.py build && \
-    python setup.py install && \
-    cd .. && \
-    rm -rf scipy-${SCIPY_VERSION}
 
 # Install Kaldi
 ENV KALDI_VERSION=c024e8aa
@@ -147,32 +130,21 @@ RUN mv /bin/sh /bin/sh.orig && \
 RUN cd /root && \
     wget -q http://prdownloads.sourceforge.net/swig/swig-3.0.10.tar.gz -O - | tar xvfz - && \
     cd swig-3.0.10 && \
-    ./configure --without-java --without-perl5 --prefix=$(readlink -m ./root) && \
-    make -j 4 && \
+    ./configure --without-java --without-perl5 && \
+    make -j $(nproc) && \
     make install
-
-# UTF-8
-RUN locale-gen en_US.UTF-8
-ENV LANG=en_US.UTF-8        \
-    LANGUAGE=en_US:en       \
-    LC_ALL=en_US.UTF-8      \
-    PYTHONIOENCODING=utf-8
 
 # Anaconda
 RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh && \
     bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
     rm Anaconda3-4.2.0-Linux-x86_64.sh
 
-ENV PATH /root/anaconda3/bin:$PATH
-
 RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/linux/conda-linux-cntk-py34-environment.yml -O /tmp/conda-linux-cntk-py34-environment.yml && \
-    conda env create -p /root/anaconda3/envs/cntk-py34/ --file /tmp/conda-linux-cntk-py34-environment.yml
+    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py34/ --file /tmp/conda-linux-cntk-py34-environment.yml
 
-ENV PATH /root/anaconda3/envs/cntk-py34/bin/:$PATH
+ENV PATH /root/anaconda3/envs/cntk-py34/bin:$PATH
 
 ENV TMP_LD_LIBRARY_PATH = $LD_LIBRARY_PATH
-
-ENV LD_LIBRARY_PATH=/usr/local/cuda-7.5/lib64/stubs/:$TMP_LD_LIBRARY_PATH
 
 WORKDIR /cntk
 
@@ -183,7 +155,6 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
       --with-gdk-include=/usr/local/cuda/include \
       --with-gdk-nvml-lib=/usr/local/cuda/lib64/stubs \
       --with-kaldi=${KALDI_PATH} \
-      --with-swig=/root/swig-3.0.10/root \
       --with-py34-path=/root/anaconda3/envs/cntk-py34 \
       --with-cudnn=/usr/local/cudnn" && \
     mkdir -p build/gpu/release && \
@@ -204,7 +175,4 @@ RUN cd Examples/Image/DataSets/MNIST && \
     python install_mnist.py && \
     cd ../../../..
 
-ENV PATH=/cntk/build/gpu/release/bin:/usr/local/mpi/bin:$PATH
-
-ENV PYTHONPATH /cntk/bindings/python:$PYTHONPATH
-ENV LD_LIBRARY_PATH /cntk/bindings/python/cntk/libs:$TMP_LD_LIBRARY_PATH
+ENV PATH=/cntk/build/gpu/release/bin:/usr/local/mpi/bin:$PATH PYTHONPATH=/cntk/bindings/python LD_LIBRARY_PATH=/cntk/bindings/python/cntk/libs:$TMP_LD_LIBRARY_PATH
