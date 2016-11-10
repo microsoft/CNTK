@@ -118,6 +118,13 @@ namespace CNTK
         // TODO: FPGA
     };
 
+    typedef FunctionPtr FuntionFactorPtr(const std::wstring& op,
+                                         std::vector<Variable>& inputs,
+                                         std::vector<Variable>& outputs,
+                                         Dictionary&& functionConfig,
+                                         const std::wstring& functionName,
+                                         const std::wstring& uid);
+
     ///
     /// Denotes a compute device instance.
     ///
@@ -401,7 +408,8 @@ namespace CNTK
         friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
                                               std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
                                               std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions,
+                                              FuntionFactorPtr functionFactory);
 
     public:
         ///
@@ -1573,7 +1581,8 @@ namespace CNTK
         friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
                                               std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
                                               std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions,
+                                              FuntionFactorPtr functionFactory);
 
 #ifndef SWIG
     private:
@@ -1926,7 +1935,8 @@ private:
         friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
                                               std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
                                               std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions,
+                                              FuntionFactorPtr functionFactory);
 
     public:
         ///
@@ -2011,7 +2021,8 @@ private:
         friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
                                               std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
                                               std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions,
+                                              FuntionFactorPtr functionFactory);
 
     public:
         ///
@@ -2207,7 +2218,7 @@ namespace CNTK
         /// and the user is responsible for ensuring that the contents of the inputs and outputs are unchanged until after any uses of the BackPropState instance
         /// for backpropagating gradients through this function.
         ///
-        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+        CNTK_API virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                          std::unordered_map<Variable, ValuePtr>& outputs,
                                          const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
                                          const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
@@ -2221,14 +2232,14 @@ namespace CNTK
         /// The 'state' parameter is an instance of an BackPropState instance obtained from a previous call to the Forward method on 'this; Function for the 
         /// computation that this gradient backpropagation corresponds to.
         ///
-        virtual void Backward(const BackPropStatePtr& state,
+        CNTK_API virtual void Backward(const BackPropStatePtr& state,
                               const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                               std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
 
         ///
         /// Returns the name of the operation that this Function denotes
         ///
-        virtual const std::wstring& OpName() = 0;
+        CNTK_API virtual const std::wstring& OpName() = 0;
 
     public:
 
@@ -2255,24 +2266,24 @@ namespace CNTK
         /// TODO: add a second overload with a 'function builder' parameter that would allow hooking
         /// user-defined op-codes with custom functionality.
         ///
-        CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), FuntionFactorPtr functionFactory = nullptr);
 
     public:
         ///
         /// Returns the name of 'this' function.
         ///
-        const std::wstring& Name() const { return m_name; }
+        CNTK_API const std::wstring& Name() const { return m_name; }
 
         ///
         /// Returns the internally generated unique name of the function
         ///
-        const std::wstring& Uid() const { return m_uid; }
+        CNTK_API const std::wstring& Uid() const { return m_uid; }
 
         ///
         /// Returns the primitive Function at the root of the graph of Functions underlying this Function.
         /// If 'this' Function itself is a primitive function then (this->RootFunction() == this).
         ///
-        FunctionPtr RootFunction() const
+        CNTK_API FunctionPtr RootFunction() const
         {
             return (m_rootFunction == nullptr) ? const_cast<Function*>(this)->shared_from_this() : m_rootFunction;
         }
@@ -2280,7 +2291,7 @@ namespace CNTK
         ///
         /// Returns all Input variables of 'this' Function.
         ///
-        std::vector<Variable> Inputs() const
+        CNTK_API std::vector<Variable> Inputs() const
         {
             return *(InputsImpl().get());
         }
@@ -2299,12 +2310,12 @@ namespace CNTK
         ///
         /// Returns a vector consisting of all Output variables of 'this' Function.
         ///
-        const std::vector<Variable>& Outputs() const { return m_outputs; }
+        CNTK_API const std::vector<Variable>& Outputs() const { return m_outputs; }
 
         ///
         /// Returns a set comprising of all input variables of 'this' Function's variables that are not of kind 'Parameter' or 'Constant'.
         ///
-        std::vector<Variable> Arguments() const
+        CNTK_API std::vector<Variable> Arguments() const
         {
             return FilteredInputs<Variable>([](const Variable& var) {
                 return (var.IsInput() || var.IsOutput());
@@ -2314,7 +2325,7 @@ namespace CNTK
         ///
         /// Returns the set of all Parameter variables of 'this' Function.
         ///
-        std::vector<Parameter> Parameters() const
+        CNTK_API std::vector<Parameter> Parameters() const
         {
             return FilteredInputs<Parameter>([](const Variable& var) {
                 return var.IsParameter();
@@ -2324,7 +2335,7 @@ namespace CNTK
         ///
         /// Returns the set of all Constant variables of 'this' Function.
         ///
-        std::vector<Constant> Constants() const
+        CNTK_API std::vector<Constant> Constants() const
         {
             return FilteredInputs<Constant>([](const Variable& var) {
                 return var.IsConstant();
@@ -2344,7 +2355,7 @@ namespace CNTK
         ///
         /// Returns the dictionary of attributes of 'this' Function
         ///
-        const Dictionary& Attributes() const { return m_attributes; }
+        CNTK_API const Dictionary& Attributes() const { return m_attributes; }
 
         ///
         /// In-place replace specified placeholders in the Function graph with the specified replacements in the map
@@ -2365,12 +2376,15 @@ namespace CNTK
         ///
         /// Restore the models parameters (in-place) from a model file
         ///
-        CNTK_API void RestoreModel(const std::wstring& modelFilePath);
+        CNTK_API void RestoreModel(const std::wstring& modelFilePath, FuntionFactorPtr functionFactory = nullptr);
 
         ///
         /// Load a function from a model file
         ///
-        CNTK_API static FunctionPtr LoadModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static FunctionPtr LoadModel(DataType dataType,
+                            const std::wstring& modelFile,
+                            const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
+                            FuntionFactorPtr functionFactory = nullptr);
 
     private:
 
@@ -2396,7 +2410,7 @@ namespace CNTK
 
         void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified);
 
-        virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+        CNTK_API virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
                                                 std::unordered_set<const Function*>& visitedFunctions,
                                                 std::unordered_set<Variable>& replacedPlaceholders);
 
@@ -2415,7 +2429,7 @@ namespace CNTK
         ///
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
         ///
-        Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"))
+        CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"))
             : Function(inputs, outputs, std::move(functionConfig), nullptr, name, uid)
         {}
 

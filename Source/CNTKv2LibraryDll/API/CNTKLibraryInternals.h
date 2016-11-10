@@ -157,7 +157,6 @@ namespace CNTK
     class DeviceDescriptor;
     enum class PrimitiveOpType : unsigned int;
     enum class DataType : unsigned int;
-
     class Serializer;
 
     // Similar to make_shared except that it associates a custom deleter with the shared_ptr to ensure
@@ -186,6 +185,13 @@ namespace CNTK
     typedef std::shared_ptr<Learner> LearnerPtr;
 
     class Dictionary;
+
+    typedef FunctionPtr FuntionFactorPtr(const std::wstring& op,
+                                         std::vector<Variable>& inputs,
+                                         std::vector<Variable>& outputs,
+                                         Dictionary&& functionConfig,
+                                         const std::wstring& functionName,
+                                         const std::wstring& uid);
 
     class MinibatchSource;
     typedef std::shared_ptr<MinibatchSource> MinibatchSourcePtr;
@@ -243,7 +249,7 @@ namespace CNTK
 
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2);
 
-        CNTK_API ::CNTK::FunctionPtr LoadLegacyModel(::CNTK::DataType dataType, const std::wstring& modelFile, const ::CNTK::DeviceDescriptor& computeDevice);
+        CNTK_API ::CNTK::FunctionPtr LoadLegacyModel(::CNTK::DataType dataType, const std::wstring& modelFile, const ::CNTK::DeviceDescriptor& computeDevice, ::CNTK::FuntionFactorPtr functionFactory = nullptr);
 
         CNTK_API void SaveAsLegacyModel(const ::CNTK::FunctionPtr& rootFunction, const std::wstring& modelFile);
 
@@ -251,6 +257,7 @@ namespace CNTK
         Variable GetVariable(const  Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, ::CNTK::Variable>& nodeToVariableMap,
                              std::unordered_map<::CNTK::Variable, ::CNTK::Variable>& placeholderReplacements,
-                             std::unordered_set<::CNTK::FunctionPtr>& allPrimitiveFunctions);
+                             std::unordered_set<::CNTK::FunctionPtr>& allPrimitiveFunctions,
+                             FuntionFactorPtr functionFactory);
     }
 }

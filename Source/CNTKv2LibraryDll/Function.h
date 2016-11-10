@@ -218,7 +218,8 @@ namespace CNTK
 
         static FunctionPtr Deserialize(const Dictionary& dictionary, 
                                        const std::unordered_map<std::wstring, Variable>& uidToVariableMap, 
-                                       const CNTK::DeviceDescriptor& device);
+                                       const CNTK::DeviceDescriptor& device,
+                                       FuntionFactorPtr functionFactory);
 
         virtual const std::wstring& OpName() override
         {
@@ -603,6 +604,7 @@ namespace CNTK
             return UnaryElementwiseOpOutputShape(mainOperandShape);
         }
 
+    public: // actually, this is internal
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
         // Returns a pair of determined output variables and a bool indicating if any input operand shape was modified
         static std::vector<Variable> GetOutputVariables(PrimitiveOpType op,
@@ -691,7 +693,7 @@ namespace CNTK
 
         virtual size_t CurrentVersion() const override { return s_serializationVersion; }
 
-        static FunctionPtr Deserialize(const Dictionary& dictionary, const CNTK::DeviceDescriptor& device);
+        static FunctionPtr Deserialize(const Dictionary& dictionary, const CNTK::DeviceDescriptor& device, FuntionFactorPtr functionFactory = nullptr);
 
         virtual const std::wstring& OpName() override
         {

@@ -27,7 +27,8 @@ namespace CNTK
         Variable GetVariable(const ComputationNodeBasePtr& node,
                              std::unordered_map<ComputationNodeBasePtr, Variable>& nodeToVariableMap,
                              std::unordered_map<Variable, Variable>& placeholderReplacements,
-                             std::unordered_set<FunctionPtr>& allPrimitiveFunctions)
+                             std::unordered_set<FunctionPtr>& allPrimitiveFunctions,
+                             FuntionFactorPtr functionFactory)
         {
             auto iter = nodeToVariableMap.find(node);
             if (iter != nodeToVariableMap.end())
@@ -87,7 +88,7 @@ namespace CNTK
                 std::vector<Variable> inputVars(node->GetNumInputs());
                 for (size_t i = 0; i < inputVars.size(); ++i)
                 {
-                    inputVars[i] = GetVariable<ElementType>(node->Input(i), nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions);
+                    inputVars[i] = GetVariable<ElementType>(node->Input(i), nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions, functionFactory);
                     if (inputVars[i].IsPlaceholder())
                         placeholderReplacements[inputVars[i]] = Variable();
                 }
@@ -336,11 +337,27 @@ namespace CNTK
                 std::wstring functionUid, functionName;
                 std::tie(functionUid, functionName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), opType);
 
-                FunctionPtr primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), functionName, functionUid);
+                FunctionPtr primitiveFunction = nullptr;
+
+                if (functionFactory != nullptr)
+                {
+                    // act on a copy since we might get a nullptr in return.
+                    auto primitiveFunctionConfigParametersCopy = primitiveFunctionConfigParameters;
+
+                    auto outputVars = PrimitiveFunction::GetOutputVariables(opType, inputVars, nullptr, primitiveFunctionConfigParameters, true, (functionName != L"" ? functionName : functionUid));
+                    primitiveFunction = functionFactory(PrimitiveOpTypeName(opType), inputVars, outputVars, std::move(primitiveFunctionConfigParametersCopy), functionName, functionUid);
+                }
+
+                if (primitiveFunction == nullptr)
+                {
+                    primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), functionName, functionUid);
+                }
+
                 allPrimitiveFunctions.insert(primitiveFunction);
-                var = primitiveFunction->Output();
-                if (placeholderReplacements.find(placeholderVar) != placeholderReplacements.end())
-                    placeholderReplacements[placeholderVar] = var;
+
+            var = primitiveFunction->Output();
+            if (placeholderReplacements.find(placeholderVar) != placeholderReplacements.end())
+                placeholderReplacements[placeholderVar] = var;
             }
 
             nodeToVariableMap[node] = var;
@@ -348,7 +365,7 @@ namespace CNTK
         }
 
         template <typename ElementType>
-        FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+        FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/, FuntionFactorPtr functionFactory /*= nullptr*/)
         {
             ComputationNetworkPtr net = make_shared<ComputationNetwork>(AsCNTKImplDeviceId(computeDevice));
             net->Load<ElementType>(modelFile);
@@ -364,7 +381,7 @@ namespace CNTK
                 if (rootNode->IsLeaf())
                     continue;
 
-                rootVariables.push_back(Internal::GetVariable<ElementType>(rootNode, nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions).Owner());
+                rootVariables.push_back(Internal::GetVariable<ElementType>(rootNode, nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions, functionFactory).Owner());
             }
 
             auto rootComposite = Combine(rootVariables);
@@ -373,14 +390,14 @@ namespace CNTK
             return rootComposite;
         }
 
-        FunctionPtr LoadLegacyModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+        FunctionPtr LoadLegacyModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/, FuntionFactorPtr functionFactory /*= nullptr*/)
         {
             switch (dataType)
             {
             case DataType::Float:
-                return LoadLegacyModel<float>(modelFile, computeDevice);
+                return LoadLegacyModel<float>(modelFile, computeDevice, functionFactory);
             case DataType::Double:
-                return LoadLegacyModel<double>(modelFile, computeDevice);
+                return LoadLegacyModel<double>(modelFile, computeDevice, functionFactory);
             default:
                 LogicError("Unknown DataType %s", DataTypeName(dataType));
             }

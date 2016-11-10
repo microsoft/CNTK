@@ -123,65 +123,67 @@ namespace CNTK
 
     void Function::ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified)
     {
-        auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(this);
-        if (primitiveFunction == nullptr)
-            LogicError("ValidateOrUpdateOutputs currently only supported for PrimitiveFunction instances");
-
         assert(visitedFunctions.find(this) == visitedFunctions.end());
         visitedFunctions[this] = 1;
 
-        // Validate each of the inputs first
-        for (auto input : m_inputs)
+        auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(this);
+        if (primitiveFunction != nullptr)
         {
-            if (input.IsOutput())
+            ////LogicError("ValidateOrUpdateOutputs currently only supported for PrimitiveFunction instances");
+
+            // Validate each of the inputs first
+            for (auto input : m_inputs)
             {
-                auto owner = input.Owner().get();
-                if (visitedFunctions.find(owner) == visitedFunctions.end())
-                    owner->ValidateOrUpdateOutputs(visitedFunctions, recurrentNodeOutputModified);
-                else
-                    visitedFunctions[owner]++;
+                if (input.IsOutput())
+                {
+                    auto owner = input.Owner().get();
+                    if (visitedFunctions.find(owner) == visitedFunctions.end())
+                        owner->ValidateOrUpdateOutputs(visitedFunctions, recurrentNodeOutputModified);
+                    else
+                        visitedFunctions[owner]++;
+                }
             }
-        }
 
-        auto outputsUsingNewInputs = PrimitiveFunction::GetOutputVariables(primitiveFunction->OpType(), m_inputs, this, primitiveFunction->m_attributes, true, primitiveFunction->Name());
-        auto currentOutputs = Outputs();
-        for (size_t i = 0; i < currentOutputs.size(); ++i)
-        {
-            auto newOutputVar = outputsUsingNewInputs[i];
-            auto currentOutputVar = currentOutputs[i];
-
-            if (visitedFunctions[this] > 1)
+            auto outputsUsingNewInputs = PrimitiveFunction::GetOutputVariables(primitiveFunction->OpType(), m_inputs, this, primitiveFunction->m_attributes, true, primitiveFunction->Name());
+            auto currentOutputs = Outputs();
+            for (size_t i = 0; i < currentOutputs.size(); ++i)
             {
-                if (!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape()))
+                auto newOutputVar = outputsUsingNewInputs[i];
+                auto currentOutputVar = currentOutputs[i];
+
+                if (visitedFunctions[this] > 1)
                 {
-                    recurrentNodeOutputModified = true;
+                    if (!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape()))
+                    {
+                        recurrentNodeOutputModified = true;
+                        currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
+                    }
+
+                    if ((currentOutputVar.GetDataType() == DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType()))
+                    {
+                        recurrentNodeOutputModified = true;
+                        currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
+                    }
+
+                    if ((currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
+                    {
+                        recurrentNodeOutputModified = true;
+                        currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
+                    }
+
+                    if ((!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape())) ||
+                        ((newOutputVar.GetDataType() != DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType())) ||
+                        ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())))
+                    {
+                        InvalidArgument("Inconsistency in output variable shape, DataType or Dynamic axes computed after replaced placeholders vs. existing output properties, for the Recurrent Function");
+                    }
+                }
+                else
+                {
                     currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
-                }
-
-                if ((currentOutputVar.GetDataType() == DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType()))
-                {
-                    recurrentNodeOutputModified = true;
                     currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
-                }
-
-                if ((currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
-                {
-                    recurrentNodeOutputModified = true;
                     currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
                 }
-
-                if ((!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape())) ||
-                    ((newOutputVar.GetDataType() != DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType())) ||
-                    ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())))
-                {
-                    InvalidArgument("Inconsistency in output variable shape, DataType or Dynamic axes computed after replaced placeholders vs. existing output properties, for the Recurrent Function");
-                }
-            }
-            else
-            {
-                currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
-                currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
-                currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
             }
         }
     }
@@ -202,14 +204,14 @@ namespace CNTK
     }
 
     // data type is only need for legacy format, in V2, data type is baked into the model file.
-    /*static*/ FunctionPtr Function::LoadModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice)
+    /*static*/ FunctionPtr Function::LoadModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice, FuntionFactorPtr functionFactory)
     {
         auto stream = GetFstream(modelFile, true);
         if (!IsLegacyModel(*stream))
         {
             Dictionary model;
             *stream >> model;
-            auto restoredFunction = Function::Deserialize(model, computeDevice);
+            auto restoredFunction = Function::Deserialize(model, computeDevice, functionFactory);
             if (restoredFunction->Outputs()[0].GetDataType() != dataType)
             {
                 InvalidArgument("The loaded model's data type (%s) is different form the requested data type(%s).",
@@ -220,11 +222,11 @@ namespace CNTK
         }
         else
         {
-            return Internal::LoadLegacyModel(dataType, modelFile, computeDevice);
+            return Internal::LoadLegacyModel(dataType, modelFile, computeDevice, functionFactory);
         }
     }
 
-    void Function::RestoreModel(const std::wstring& modelFilePath)
+    void Function::RestoreModel(const std::wstring& modelFilePath, FuntionFactorPtr functionFactory)
     {
         auto stream = GetFstream(modelFilePath, true);
         if (!IsLegacyModel(*stream))
@@ -235,7 +237,7 @@ namespace CNTK
             return;
         }
 
-        auto loadedModelFunction = Internal::LoadLegacyModel(Outputs()[0].GetDataType(), modelFilePath, DeviceDescriptor::CPUDevice());
+        auto loadedModelFunction = Internal::LoadLegacyModel(Outputs()[0].GetDataType(), modelFilePath, DeviceDescriptor::CPUDevice(), functionFactory);
 
         // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
         // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
@@ -539,9 +541,9 @@ namespace CNTK
         }
     }
 
-    /*static*/ FunctionPtr Function::Deserialize(const Dictionary& modelDictionary, const CNTK::DeviceDescriptor& device)
+    /*static*/ FunctionPtr Function::Deserialize(const Dictionary& modelDictionary, const CNTK::DeviceDescriptor& device, FuntionFactorPtr functionFactory)
     {
-        return CompositeFunction::Deserialize(modelDictionary, device);
+        return CompositeFunction::Deserialize(modelDictionary, device, functionFactory);
     }
 
     // Names for the reduction operations as used by the CNTK ReduceElementsNode
@@ -1037,7 +1039,8 @@ namespace CNTK
 
     /*static*/ FunctionPtr PrimitiveFunction::Deserialize(const Dictionary& dict, 
                                                           const std::unordered_map<std::wstring, Variable>& uidToVariableMap,
-                                                          const CNTK::DeviceDescriptor& device)
+                                                          const CNTK::DeviceDescriptor& device,
+                                                          FuntionFactorPtr functionFactory)
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, opKey, uidKey, attributesKey, inputsKey, nameKey };
        
@@ -1075,8 +1078,23 @@ namespace CNTK
             inputs.push_back(uidToVariableMap.at(inputUid));
         }
 
-        return std::shared_ptr<PrimitiveFunction>(new PrimitiveFunction(op, inputs, std::move(attributes), name, uid), 
-                                                  [](PrimitiveFunction* ptr) { delete ptr; });
+        FunctionPtr root = nullptr;
+
+        if (functionFactory != nullptr)
+        {
+            // act on a copy since we might get a nullptr in return.
+            auto attributesCopy = attributes;
+
+      //      root = functionFactory(PrimitiveOpTypeName(op), inputs, PrimitiveFunction::GetOutputVariables(op, inputs, nullptr, attributesCopy, true, (name != L"" ? name : uid)), std::move(attributesCopy), name, uid);
+        }
+
+        if (root == nullptr)
+        {
+            root = std::shared_ptr<PrimitiveFunction>(new PrimitiveFunction(op, inputs, std::move(attributes), name, uid),
+                                                      [](PrimitiveFunction* ptr) { delete ptr; });
+        }
+
+        return root;
     }
 
     static const std::wstring s_compositeFunctionTypeValue = L"CompositeFunction";
@@ -1171,7 +1189,7 @@ namespace CNTK
         return dict;
     }
 
-    /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
+    /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device, FuntionFactorPtr functionFactory)
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, rootKey, nameKey, uidKey, inputsKey, functionsKey };
        
@@ -1204,7 +1222,8 @@ namespace CNTK
         std::unordered_set<FunctionPtr> allPrimitiveFunctions; // this keeps all primitive functions alive until a composite function is created.
         for (const auto& dictionaryValue : functions)
         {
-            root = PrimitiveFunction::Deserialize(dictionaryValue.Value<Dictionary>(), uidToInputMap, device);
+            root = PrimitiveFunction::Deserialize(dictionaryValue.Value<Dictionary>(), uidToInputMap, device, functionFactory);
+
             allPrimitiveFunctions.insert(root);
 
             auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(root.get());
