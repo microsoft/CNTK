@@ -9,18 +9,18 @@ class CloneMethod(Enum):
     works.
     '''
 
-    clone = 1
-    '''
-    New learnable Parameters are created and initialied with the current values of the
-    corresponding Parameters of the Function being cloned
-    '''
-
-    share = 2
+    share = 'share'
     '''
     Parameters are shared between the Function being cloned and the new clone
     '''
 
-    freeze = 3
+    clone = 'clone'
+    '''
+    New learnable parameters are created and initialied with the current values of the
+    corresponding parameters of the Function being cloned
+    '''
+
+    freeze = 'freeze'
     '''
     Parameters are cloned and made immutable; i.e. Constants in the new clone
     (e.g. for use as a fixed feature extractor)
@@ -116,7 +116,7 @@ class Function(cntk_py.Function):
         return super(Function, self).attributes()
 
     @typemap
-    def clone(self, method=CloneMethod.freeze, substitutions=None):
+    def clone(self, method, substitutions=None):
         '''
         Clones the function. The parameters of the Function are either cloned,
         shared or frozen as specified by the method argument and any variable
@@ -125,9 +125,9 @@ class Function(cntk_py.Function):
         Args:
             method (:class:`CloneMethod`): one of
 
-             * 'clone': the returned function gets its own copy of parameters (default)
-             * 'share': the returned function shares its parameters with this function
-             * 'freeze': parameters are cloned and made immutable (constant).
+             * 'cloned': the returned function gets its own copy of parameters (default)
+             * 'shared': the returned function shares its parameters with this function
+             * 'constant': parameters are cloned and made immutable (constant).
 
             substitutions (`dict`): a dictionary mapping variables in this
              function to variables in the cloned function
@@ -135,12 +135,8 @@ class Function(cntk_py.Function):
         Returns:
             :class:`~cntk.ops.functions.Function`: the cloned Function
         '''
-        if not isinstance(method, CloneMethod):
-            raise ValueError('clone method "%s" is not supported' %
-                    str(method))
-
         method = getattr(cntk_py,
-                'ParameterCloningMethod_' + method.name.capitalize())
+                'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
         if substitutions is None:
             substitutions = {}
         return super(Function, self).clone(method, substitutions)
