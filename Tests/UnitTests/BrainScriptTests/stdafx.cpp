@@ -9,8 +9,3 @@
 #define BOOST_TEST_MODULE BrainScriptTests
 
 #include "stdafx.h"
-
-// TODO: Temporary mechanism to enable memory sharing for
-// node output value matrices. This will go away when the
-// sharing is ready to be enabled by default
-bool g_shareNodeValueMatrices = false;

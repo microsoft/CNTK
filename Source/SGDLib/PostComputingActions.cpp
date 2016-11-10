@@ -116,7 +116,7 @@ void PostComputingActions<ElemType>::BatchNormalizationStatistics(IDataReader * 
             // push the statistics results of mean and variance of bn nodes into mpi updating vector
             std::vector<Matrix<ElemType>*> learnParamsValues(2, nullptr);
 
-            SimpleDistGradAggregator<ElemType> distGradAgg(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/);
+            SimpleDistGradAggregator<ElemType> distGradAgg(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/);
 
             auto runMeanParameterPtr = node->Input(3);
             auto runStdParameterPtr  = node->Input(4);

@@ -76,6 +76,9 @@ private:
     mutable size_t m_numTimesDeviceChanged;
     mutable size_t m_numTimesMatrixTypeChanged;
     mutable int m_devicesTransferedTo[2]; // TODO: what is this for? Seems only diagnostics
+ 
+    // whether to use cached memory Resize() or not
+    static bool m_useCachedResize;
 
     // Moves matrix from device id_from to device with id_to. This method doesn't change preferred device Id
     void _transferFromDeviceToDevice(int id_from, int id_to, bool isBeingMoved = true, bool emptyTransfer = false) const;
@@ -129,6 +132,8 @@ public:
     {
         SetDataLocation(GetDeviceId() < 0 ? CurrentDataLocation::CPU : CurrentDataLocation::GPU, GetMatrixType());
     }
+
+    static void UseCachedResizeOrNot(bool useCachedResize);
 
 private:
     Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID); // only used internally to initialize a blank matrix

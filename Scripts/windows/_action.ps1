@@ -102,16 +102,18 @@ function ExecuteApplication(
         $maxErrorLevel = 0
     }
 
-    $application = ResolveApplicationName $appName $appDir $usePath
-    if ($application.Length -eq 0) {
-        throw "ExecuteApplication: Couldn't resolve program [$appName] with location directory [$appDir] and usePath [$usePath]"
-    }
+    if ($Execute) {
+        $application = ResolveApplicationName $appName $appDir $usePath
+        if ($application.Length -eq 0) {
+            throw "ExecuteApplication: Couldn't resolve program [$appName] with location directory [$appDir] and usePath [$usePath]"
+        }
 
-    if ($dir -eq $null) {
-        DoProcess -command $application -param $param -maxErrorLevel $maxErrorLevel
-    }
-    else {
-        DoProcess -command $application -param $param -workingDir $dir -maxErrorLevel $maxErrorLevel
+        if ($dir -eq $null) {
+            DoProcess -command $application -param $param -maxErrorLevel $maxErrorLevel
+        }
+        else {
+            DoProcess -command $application -param $param -workingDir $dir -maxErrorLevel $maxErrorLevel
+        }
     }
 }
 
@@ -164,8 +166,6 @@ function MakeDirectory(
             New-Item $path -type directory
         }
     }
-    
-    return $true
 }
 
 function AddToPath(
@@ -191,7 +191,6 @@ function AddToPath(
 
     if ($pv.Contains("$ap")) {
         Write-Verbose "AddToPath - path information already up-to-date" 
-        return $true
     }
 
     Write-Host Adding [$dir] to environment [$env]
@@ -204,7 +203,6 @@ function AddToPath(
     if ($Execute) {
         SetEnvVar -name $env -content "$pathvalue" 
     }
-    return $true
 }
 
 function ExtractAllFromZip(
@@ -217,10 +215,10 @@ function ExtractAllFromZip(
     $destinationFolder = $table["destinationFolder"]
 
     if (-not (test-path -path $destinationFolder)) {
-        return $false
+        throw "$destinationFolder doesn't exist"
     }
     if (-not (test-path $zipFileName -PathType Leaf)) {
-        return $false
+        throw "$zipFileName doesn't exist"
     }
 
     if ($Execute) {
@@ -230,7 +228,6 @@ function ExtractAllFromZip(
 
         $destination.CopyHere($zipFile.Items())
     }
-    return $true
 }
 
 function CreateBatch(
@@ -277,7 +274,7 @@ function DoProcess(
 
     if (-not $Execute) {
          Write-Host  "** Running in DEMOMODE - setting Exit Code **: 0"
-         return 0
+         return
     }
 
     if ($workingDir.Length -eq 0) {
