@@ -196,6 +196,10 @@ cp -r Examples $baseDropPath
 # Include CPPEvalV2Client examples in 2.0 Beta drop
 # rm -rf $baseDropPath/Examples/Evaluation/CPPEvalV2Client
 
+# Copy Tutorials
+echo "Copying Tutorials..." >&3
+cp -r Tutorials $baseDropPath
+
 # Copy Scripts (Scripts folder from the root of the Repo)
 echo "Copying Scripts..." >&3
 cp -r Scripts $baseDropPath
