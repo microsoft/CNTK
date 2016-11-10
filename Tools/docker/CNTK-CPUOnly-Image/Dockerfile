@@ -21,8 +21,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libswscale-dev \
         libtiff-dev \
         pkg-config \
-        python-dev \
-        python-numpy \
         wget \
         zlib1g-dev \
         # Protobuf
@@ -30,6 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         unzip \
         # For Kaldi
+        python-dev \
         automake \
         libtool \
         autoconf \
@@ -130,35 +129,26 @@ RUN mv /bin/sh /bin/sh.orig && \
 RUN cd /root && \
     wget -q http://prdownloads.sourceforge.net/swig/swig-3.0.10.tar.gz -O - | tar xvfz - && \
     cd swig-3.0.10 && \
-    ./configure --without-java --without-perl5 --prefix=$(readlink -m ./root) && \
-    make -j 4 && \
+    ./configure --without-java --without-perl5 && \
+    make -j $(nproc) && \
     make install
-
-# UTF-8
-RUN locale-gen en_US.UTF-8
-ENV LANG=en_US.UTF-8        \
-    LANGUAGE=en_US:en       \
-    LC_ALL=en_US.UTF-8      \
-    PYTHONIOENCODING=utf-8
 
 # Anaconda
 RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh && \
     bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
     rm Anaconda3-4.2.0-Linux-x86_64.sh
 
-ENV PATH /root/anaconda3/bin:$PATH
-
 RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/linux/conda-linux-cntk-py34-environment.yml -O /tmp/conda-linux-cntk-py34-environment.yml && \
-    conda env create -p /root/anaconda3/envs/cntk-py34/ --file /tmp/conda-linux-cntk-py34-environment.yml
+    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py34/ --file /tmp/conda-linux-cntk-py34-environment.yml
 
-ENV PATH /root/anaconda3/envs/cntk-py34/bin/:$PATH
+ENV PATH /root/anaconda3/envs/cntk-py34/bin:$PATH
 
 WORKDIR /cntk
 
+# Build CNTK
 RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     CONFIGURE_OPTS="\
       --with-kaldi=${KALDI_PATH} \
-      --with-swig=/root/swig-3.0.10/root \
       --with-py34-path=/root/anaconda3/envs/cntk-py34" && \
     mkdir -p build/cpu/release && \
     cd build/cpu/release && \
@@ -178,7 +168,4 @@ RUN cd Examples/Image/DataSets/MNIST && \
     python install_mnist.py && \
     cd ../../../..
 
-ENV PATH=/cntk/build/cpu/release/bin:$PATH
-
-ENV PYTHONPATH /cntk/bindings/python:$PYTHONPATH
-ENV LD_LIBRARY_PATH /cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
+ENV PATH=/cntk/build/cpu/release/bin:$PATH PYTHONPATH=/cntk/bindings/python LD_LIBRARY_PATH=/cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
