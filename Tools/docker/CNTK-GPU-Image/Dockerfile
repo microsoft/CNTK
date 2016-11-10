@@ -144,8 +144,6 @@ RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/linu
 
 ENV PATH /root/anaconda3/envs/cntk-py34/bin:$PATH
 
-ENV TMP_LD_LIBRARY_PATH = $LD_LIBRARY_PATH
-
 WORKDIR /cntk
 
 # Build CNTK
@@ -175,4 +173,4 @@ RUN cd Examples/Image/DataSets/MNIST && \
     python install_mnist.py && \
     cd ../../../..
 
-ENV PATH=/cntk/build/gpu/release/bin:/usr/local/mpi/bin:$PATH PYTHONPATH=/cntk/bindings/python LD_LIBRARY_PATH=/cntk/bindings/python/cntk/libs:$TMP_LD_LIBRARY_PATH
+ENV PATH=/cntk/build/gpu/release/bin:$PATH PYTHONPATH=/cntk/bindings/python LD_LIBRARY_PATH=/cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
