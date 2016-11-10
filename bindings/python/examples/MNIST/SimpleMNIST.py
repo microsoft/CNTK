@@ -45,11 +45,11 @@ def simple_mnist(debug_output=False):
 
     # Instantiate the feedforward classification model
     scaled_input = element_times(constant(0.00390625), input)
-    netout = fully_connected_classifier_net(
+    z = fully_connected_classifier_net(
         scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, relu)
 
-    ce = cross_entropy_with_softmax(netout, label)
-    pe = classification_error(netout, label)
+    ce = cross_entropy_with_softmax(z, label)
+    pe = classification_error(z, label)
 
     try:
         rel_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
@@ -67,7 +67,7 @@ def simple_mnist(debug_output=False):
     }
 
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(netout, ce, pe, sgd(netout.parameters, lr=0.003125))
+    trainer = Trainer(z, ce, pe, sgd(z.parameters, lr=1./320))
 
     # Get minibatches of images to train with and perform model training
     minibatch_size = 64

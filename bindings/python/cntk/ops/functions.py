@@ -5,7 +5,7 @@ from enum import Enum, unique
 @unique
 class CloneMethod(Enum):
     '''
-    Describes different ways how :class:`cntk.ops.functions.Function.forward`
+    Describes different ways how :class:`~cntk.ops.functions.Function.forward`
     works.
     '''
 
@@ -123,7 +123,7 @@ class Function(cntk_py.Function):
         substitutions requested are applied in the cloned Function instance.
 
         Args:
-            method (:class:`cntk.ops.functions.CloneMethod`): one of
+            method (:class:`CloneMethod`): one of
 
              * 'clone': the returned function gets its own copy of parameters (default)
              * 'share': the returned function shares its parameters with this function
@@ -133,7 +133,7 @@ class Function(cntk_py.Function):
              function to variables in the cloned function
 
         Returns:
-            :class:`Function`: the cloned Function
+            :class:`~cntk.ops.functions.Function`: the cloned Function
         '''
         if not isinstance(method, CloneMethod):
             raise ValueError('clone method "%s" is not supported' %
@@ -149,7 +149,7 @@ class Function(cntk_py.Function):
     @typemap
     def constants(self):
         '''
-        List of all `Constant` variables of this :class:`Function`
+        List of all `Constant` variables of this :class:`~cntk.ops.functions.Function`
         '''
         return super(Function, self).constants()
 
@@ -171,8 +171,8 @@ class Function(cntk_py.Function):
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
-             :class:`cntk.io.MinibatchData` instance.
-            device (:class:`cntk.device.DeviceDescriptor`): the device descriptor that
+             :class:`~cntk.io.MinibatchData` instance.
+            device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
 
@@ -222,14 +222,14 @@ class Function(cntk_py.Function):
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
-             :class:`cntk.io.MinibatchData` instance.
+             :class:`~cntk.io.MinibatchData` instance.
             outputs (iterable): outputs to fetch values for.
             keep_for_backward (`set`, default `None`): the subset of the
              Function's output variables for which gradients shall be calculated
              in a subsequent backward call. If `None`, the returned state will
              be `None` and a subsequent call to :func:`backward` will not be
              possible.
-            device (:class:`cntk.device.DeviceDescriptor`, default `None`): the device
+            device (:class:`~cntk.device.DeviceDescriptor`, default `None`): the device
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
 
@@ -371,7 +371,7 @@ class Function(cntk_py.Function):
         specified substitution.
 
         Args:
-            substitution (:class:`cntk.ops.variables.Variable`): the variable
+            substitution (:class:`~cntk.ops.variables.Variable`): the variable
              that will replace the placeholder 
 
         Returns:

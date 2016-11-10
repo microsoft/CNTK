@@ -119,7 +119,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
              the next minibatch. Must be > 0.
             minibatch_size_in_sequences (`int`, defaults to `None`): number of
              samples to retrieve for the next minibatch. Must be > 0.
-            input_map (`dict`): mapping of :class:`cntk.ops.variabls.Variable`
+            input_map (`dict`): mapping of :class:`~cntk.ops.variabls.Variable`
              to :class:`StreamInformation` which will be used to convert the
              returned data.
             device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor
@@ -127,7 +127,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Returns:
             A mapping of :class:`StramInformation` to :class:`MinibatchData` if
             ``input_map`` was not specified. Otherwise, the returned value will
-            be a mapping of :class:`cntk.ops.variabls.Variable` to class:`MinibatchData`.
+            be a mapping of :class:`~cntk.ops.variabls.Variable` to class:`MinibatchData`.
         '''
         if device is None:
             device = use_default_device()
@@ -161,7 +161,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Gets the checkpoint state of the MinibatchSource.
 
         Returns:
-            :class:`cntk_py.Dictionary`
+            :class:`~cntk_py.Dictionary`
         '''
         return super(MinibatchSource, self).get_checkpoint_state()
 
@@ -170,7 +170,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Restores the MinibatchSource state from the specified checkpoint.
 
         Args:
-            checkpoint (:class:`cntk_py.Dictionary`): checkpoint to restore from
+            checkpoint (:class:`~cntk_py.Dictionary`): checkpoint to restore from
         '''
         super(MinibatchSource, self).restore_from_checkpoint(checkpoint)
 
@@ -181,7 +181,7 @@ def _py_dict_to_cntk_dict(py_dict):
     Args:
         py_dict (`dict`): a dictionary to be converted.
     Returns:
-        :class:`cntk_py.Dictionary`
+        :class:`~cntk_py.Dictionary`
     '''
     res = cntk_py.Dictionary()
     for k, v in py_dict.items():
@@ -244,10 +244,10 @@ class ReaderConfig(dict):
         '''
         Creates an instance of :class:`MinibatchSource` from this
         instance, which can be used to feed data into the `eval()` methods of
-        the graph nodes or the `train_minibatch()` of :class:`cntk.trainer.Trainer`.
+        the graph nodes or the `train_minibatch()` of :class:`~cntk.trainer.Trainer`.
 
         Args:
-            distributed_communicator (:class:`cntk.distributed.communicator`): distributed communicator
+            distributed_communicator (:class:`~cntk.distributed.communicator`): distributed communicator
         
         Returns:
             instance of :class:`MinibatchSource`
@@ -481,7 +481,7 @@ def text_format_minibatch_source(path, stream_configs, epoch_size=INFINITELY_REP
         epoch_size (`int`, optional): size of an epoch. In case of 0 the size
          of the training set will be taken. Default is max of 64bit.
         randomize (`bool`, optional): whether to randomize the contents of data file.
-        distributed_communicator (:class:`cntk.distributed.communicator`): optional distributed communicator
+        distributed_communicator (:class:`~cntk.distributed.communicator`): optional distributed communicator
 
     Returns:
         :class:`MinibatchSource`
