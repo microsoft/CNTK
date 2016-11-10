@@ -824,9 +824,20 @@ namespace CNTK
                 auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                 NDShape outputMapCount = { 1 };
                 std::vector<bool> sharing = { true };
-                outputShape = ConvolutionOpOutputShape(op, inputs[0].Shape(), poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
+                auto inputShape = inputs[0].Shape();
 
-                functionConfig[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowsShape;
+                // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
+                if (poolingWindowsShape == NDShape::Unknown)
+                {
+                    if ((std::find(autoPadding.begin(), autoPadding.end(), true) != autoPadding.end()) ||
+                        (lowerPad.TotalSize() > 0) || (upperPad.TotalSize() > 0))
+                        RuntimeError("Padding isn't allowed for Unknown shape!");
+
+                    poolingWindowsShape = inputShape.SubShape(0, inputShape.Rank()-1);
+                    functionConfig[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowsShape;
+                }
+
+                outputShape = ConvolutionOpOutputShape(op, inputShape, poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
                 break;
             }
             case PrimitiveOpType::SumAll:

@@ -553,17 +553,11 @@ namespace CNTK
             {
                 size_t inputRank = operandShape.Rank();
 
-                // In case of pooling if the kernel shape is unknown, then treat it as global pooling.
+                // Unknown kernel shape valid only for pooling, however, the shape should have expanded before
+                // this call.
                 if (kernelShape == NDShape::Unknown)
                 {
-                    if ((std::find(autoPad.begin(), autoPad.end(), true) != autoPad.end()) ||
-                        (lowerPad.TotalSize() > 0) || (upperPad.TotalSize() > 0))
-                        RuntimeError("Padding isn't allowed for Unknown shape!");
-
-                    if (op == PrimitiveOpType::Pooling)
-                        kernelShape = operandShape.SubShape(0, inputRank-1);
-                    else
-                        RuntimeError("Kernel shape can't be Unknown except for pooling operation!");
+                    RuntimeError("Kernel shape can't be Unknown!");
                 }
 
                 // infer reduction dimensions if not given
