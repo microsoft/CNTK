@@ -2263,8 +2263,8 @@ Global
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release_NoOpt|Any CPU.ActiveCfg = Release_CpuOnly|x64
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release_NoOpt|Mixed Platforms.ActiveCfg = Release_CpuOnly|x64
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release_NoOpt|Mixed Platforms.Build.0 = Release_CpuOnly|x64
-		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release_NoOpt|x64.ActiveCfg = Release_CpuOnly|x64
-		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release_NoOpt|x64.Build.0 = Release_CpuOnly|x64
+		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
+		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release|Any CPU.ActiveCfg = Release|x64
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release|Mixed Platforms.ActiveCfg = Release|x64
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release|Mixed Platforms.Build.0 = Release|x64

@@ -634,10 +634,16 @@ namespace CNTK
         if (outputDataType == DataType::Unknown)
             outputDataType = firstKnownInputDataType;
 
-        // We currently require that the inputs' dynamic axes if any match
+        // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
-        if ((op == PrimitiveOpType::SumAll) || (op == PrimitiveOpType::SquaredError) || (op == PrimitiveOpType::CrossEntropyWithSoftmax) || (op == PrimitiveOpType::ClassificationError))
+        if ((op == PrimitiveOpType::SumAll) ||
+            (op == PrimitiveOpType::SquaredError) ||
+            (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
+            (op == PrimitiveOpType::ClassificationError) ||
+            (op == PrimitiveOpType::Logistic))
+        {
             outputDynamicAxes = std::vector<Axis>({});
+        }
         else if (op == PrimitiveOpType::Where)
         {
             if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewDynamicAxes))
@@ -902,23 +908,24 @@ namespace CNTK
 
                 NDShape outputMapCount, kernelShape;
                 std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(inputs[0].Shape(), inputs[1].Shape());
-                    auto originalKernelShape = kernelShape;
-                    outputShape = ConvolutionOpOutputShape(op, inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, inferDimensions);
-                    if (originalKernelShape != kernelShape)
-                    {
-                        for (size_t i = 0; i < kernelShape.Rank(); ++i)
-                            inputs[0].m_dataFields->m_shape[i] = kernelShape[i];
-                    }
+                auto originalKernelShape = kernelShape;
+                outputShape = ConvolutionOpOutputShape(op, inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, inferDimensions);
+                if (originalKernelShape != kernelShape)
+                {
+                    for (size_t i = 0; i < kernelShape.Rank(); ++i)
+                        inputs[0].m_dataFields->m_shape[i] = kernelShape[i];
+                }
 
-                    functionConfig[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
-                    functionConfig[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+                functionConfig[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
+                functionConfig[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
                 break;
             }
+            case PrimitiveOpType::Logistic:
             case PrimitiveOpType::SquaredError:
             case PrimitiveOpType::CrossEntropyWithSoftmax:
             case PrimitiveOpType::ClassificationError:
             {
-                if (op == PrimitiveOpType::ClassificationError)
+                if ((op == PrimitiveOpType::ClassificationError) || (op == PrimitiveOpType::Logistic))
                     assert(inputs.size() >= 2);
                 else
                     assert(inputs.size() == 2);
@@ -931,9 +938,9 @@ namespace CNTK
                 if (predictionShape != labelsShape)
                     RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %S operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(op).c_str());
 
-                    std::vector<int> reductionAxes;
-                    for (int i = 0; i < (int)inputs[0].Shape().Rank(); ++i)
-                    reductionAxes.push_back(i);
+                std::vector<int> reductionAxes;
+                for (int i = 0; i < (int)inputs[0].Shape().Rank(); ++i)
+                reductionAxes.push_back(i);
 
                 outputShape = ReductionOpOutputShape(op, predictionShape, reductionAxes, /*preserveReductionAxes =*/ false);
                 break;
@@ -1615,6 +1622,9 @@ namespace CNTK
             computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose, ImageLayoutKind::CHW, maxTempMemSizeInSamples);
             break;
         }
+        case PrimitiveOpType::Logistic:
+            computationNodePtr = New<LogisticNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
         case PrimitiveOpType::SquaredError:
             computationNodePtr = New<SquareErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
@@ -2792,6 +2802,18 @@ namespace CNTK
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
         return BinaryOp(PrimitiveOpType::TransposeTimes, leftOperand, rightOperand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { prediction, targets };
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Logistic, operands, Dictionary(), name), name);
+    }
+
+    FunctionPtr WeightedBinaryCrossEntropy(const Variable& prediction, const Variable& targets, const Variable& weights, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { prediction, targets, weights };
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Logistic, operands, Dictionary(), name), name);
     }
 
     FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name)

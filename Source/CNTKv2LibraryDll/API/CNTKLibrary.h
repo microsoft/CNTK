@@ -2700,6 +2700,16 @@ namespace CNTK
     }
 
     ///
+    /// Create an instance of the CNTK built-in operation to compute binary cross-entropy for specified input operands.
+    ///
+    CNTK_API FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operation to compute weighted binary cross-entropy for specified input operands.
+    ///
+    CNTK_API FunctionPtr WeightedBinaryCrossEntropy(const Variable& prediction, const Variable& targets, const Variable& weights, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in operation to compute squared-error for specified input operands.
     ///
     CNTK_API FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
