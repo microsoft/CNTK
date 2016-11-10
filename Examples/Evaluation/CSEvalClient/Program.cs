@@ -70,12 +70,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             Console.WriteLine("\n====== EvaluateModelMultipleLayers ========");
             EvaluateModelMultipleLayers();
 
-            Console.WriteLine("\n====== EvaluateNetworkSingleLayer ========");
-            EvaluateNetworkSingleLayer();
-
-            Console.WriteLine("\n====== EvaluateNetworkSingleLayerNoInput ========");
-            EvaluateNetworkSingleLayerNoInput();
-
             Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
             EvaluateExtendedNetworkSingleLayerNoInput();
 
@@ -224,94 +218,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 }
 
                 OutputResults(outputs);
-            }
-            catch (CNTKException ex)
-            {
-                OnCNTKException(ex);
-            }
-            catch (Exception ex)
-            {
-                OnGeneralException(ex);
-            }
-        }
-
-        /// <summary>
-        /// Evaluates a network (without a model, but requiring input) and obtains a single layer output
-        /// </summary>
-        private static void EvaluateNetworkSingleLayer()
-        {
-            try
-            {
-                // The examples assume the executable is running from the data folder
-                // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Tests\EndToEndTests\Simple2d");
-                Environment.CurrentDirectory = initialDirectory;
-
-                List<float> outputs;
-                string outputLayerName;
-
-                using (var model = new IEvaluateModelManagedF())
-                {
-                    // Create the network
-                    // This network (AddOperatorConstant_ndl_deprecated.cntk) is a simple network consisting of a single binary operator (Plus)
-                    // operating over a single input and a constant
-                    string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstant_ndl_deprecated.cntk");
-                    ThrowIfFileNotExist(networkFilePath, string.Format("Error: The network configuration file '{0}' does not exist.", networkFilePath));
-
-                    string networkDescription = File.ReadAllText(networkFilePath);
-                    model.CreateNetwork(networkDescription, deviceId: -1);
-
-                    // Prepare input value in the appropriate structure and size
-                    var inputs = new Dictionary<string, List<float>>() { { "features", new List<float>() { 1.0f } } };
-
-                    // We can call the evaluate method and get back the results (single layer output)...
-                    var outDims = model.GetNodeDimensions(NodeGroup.Output);
-                    outputLayerName = outDims.First().Key;
-                    outputs = model.Evaluate(inputs, outputLayerName);
-                }
-
-                OutputResults(outputLayerName, outputs);
-            }
-            catch (CNTKException ex)
-            {
-                OnCNTKException(ex);
-            }
-            catch (Exception ex)
-            {
-                OnGeneralException(ex);
-            }
-        }
-
-        /// <summary>
-        /// Evaluates a network (without a model and without input) and obtains a single layer output
-        /// </summary>
-        private static void EvaluateNetworkSingleLayerNoInput()
-        {
-            try
-            {
-                // The examples assume the executable is running from the data folder
-                // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Tests\EndToEndTests\Simple2d");
-                Environment.CurrentDirectory = initialDirectory;
-
-                List<float> outputs;
-
-                using (var model = new IEvaluateModelManagedF())
-                {
-                    // Create the network
-                    // This network (AddOperatorConstantNoInput_ndl_deprecated.cntk) is a simple network consisting of a single binary operator (Plus)
-                    // operating over a two constants, therefore no input is necessary.
-                    string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstantNoInput_ndl_deprecated.cntk");
-                    ThrowIfFileNotExist(networkFilePath, string.Format("Error: The network configuration file '{0}' does not exist.", networkFilePath));
-
-                    string networkDescription = File.ReadAllText(networkFilePath);
-                    model.CreateNetwork(networkDescription, deviceId: -1);
-
-                    // We can call the evaluate method and get back the results (single layer)...
-                    outputs = model.Evaluate("ol", 1);
-                }
-
-                OutputResults("ol", outputs);
             }
             catch (CNTKException ex)
             {

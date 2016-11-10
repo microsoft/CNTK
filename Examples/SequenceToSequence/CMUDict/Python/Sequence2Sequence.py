@@ -15,7 +15,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.ops.functions import CloneMethod
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Tests", "EndToEndTests", "CNTKv2Python", "Examples", "common"))
+sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "common"))
 from nn import LSTMP_component_with_self_stabilization, stabilize, linear_layer, print_training_progress
 
 # Given a vocab and tensor, print the output

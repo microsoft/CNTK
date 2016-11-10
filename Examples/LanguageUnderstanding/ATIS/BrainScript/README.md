@@ -1,10 +1,6 @@
 # Build Language Understanding Models with CNTK
 
-This example demonstrates how to use build language understanding model with CNTK using ATIS data set. The recipes in this example are in BrainScript. For Python click [here](https://github.com/Microsoft/CNTK/blob/master/bindings/python/examples/LanguageUnderstanding/LanguageUnderstanding.py).  This example is similar to 
-[SLU example](https://github.com/Microsoft/CNTK/tree/master/Examples/Text/Miscellaneous/SLU). They are different in that
-  - CNTKTextFormatReader is used here, instead of LUSequenceReader
-  - With CNTKTextFormatReader, the input format is much more flexible. In the example setting, sparse contextual feature vectors are explored
-  - Sparse label input is used.
+This example demonstrates how to build a language understanding model with CNTK using the ATIS data set. The recipes in this example are in BrainScript. For Python click [here](https://github.com/Microsoft/CNTK/blob/master/Examples/LanguageUnderstanding/ATIS/Python/LanguageUnderstanding.py).  This example uses the CNTKTextFormatReader, sparse contextual feature vectors and sparse label input.
 
 The Air travel information system (ATIS) corpus is used for training and testing.
 ## Download the example
@@ -13,7 +9,7 @@ The data and configuration is checked in to github. You can get it by command:
 `git clone https://github.com/Microsoft/cntk`
 
 The example is under folder: 
-`<cntk_root>\Examples\Text\ATIS`
+`<cntk_root>\Examples\LanguageUnderstanding\ATIS\BrainScript`
 
 ## Data File Format
 There are four files under `data` sub-folder
@@ -111,7 +107,7 @@ for details, especially how the reader is configured in ATIS.cntk.
         ]
     ]  
 
-The above section tell CNTK to use CNTKTextFormatReader to read data from the file "$DataDir/ATIS.train.cntk.sparse". The same input names (PW, CW, NW, L) are used to refer inputs (features and labels) provided in data files. The input is read into different 
+The above section tells CNTK to use CNTKTextFormatReader to read data from the file "$DataDir/ATIS.train.cntk.sparse". The same input names (PW, CW, NW, L) are used to refer inputs (features and labels) provided in data files. The input is read into different 
 feature vectors: featuresPW, featuresCW, featuresNW and labels. These vectors are later used to build LSTM node with BrainScript as follows. 
 ```
         featuresPW = Input(inputDim)

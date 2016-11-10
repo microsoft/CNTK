@@ -10,8 +10,8 @@
 
 # directory defaults (if not overridden)
 
-RunRootDir = "../.."      # default if not overridden
-DataDir    = "$RunRootDir$/Data"
+RunRootDir = "."      # default if not overridden
+DataDir    = "$RunRootDir$/../Data"
 OutDir     = "$RunRootDir$/Out"
 
 # command to execute

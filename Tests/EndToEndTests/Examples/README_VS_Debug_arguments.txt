@@ -39,7 +39,7 @@ COMMAND:  configFile=$(SolutionDir)\Examples\Speech\AN4\Config/FeedForward.confi
 
 COMMAND:  configFile=$(SolutionDir)\Examples\Speech\AN4\Config/LSTM-NDL.config currentDirectory=$(SolutionDir)\Examples\Speech\AN4\Data RunDir=$(SolutionDir)\Tests\EndToEndTests\Examples\Speech\AN4_LSTM@debug_gpu DataDir=$(SolutionDir)\Examples\Speech\AN4\Data ConfigDir=$(SolutionDir)\Examples\Speech\AN4\Config OutputDir=$(SolutionDir)\Tests\EndToEndTests\Examples\Speech\AN4_LSTM@debug_gpu DeviceId=0 speechTrain=[SGD=[maxEpochs=1]] speechTrain=[SGD=[epochSize=64]] parallelTrain=false
 
---- Examples/Text/PennTreebank/RNN 
+--- Examples/SequenceToSequence/PennTreebank/RNN 
 
-COMMAND:  configFile=$(SolutionDir)\Examples\Text\PennTreebank\Config/rnn.config currentDirectory=$(SolutionDir)\Examples\Text\PennTreebank\Data RunDir=$(SolutionDir)\Tests\EndToEndTests\Examples\Text\PennTreebank_RNN@debug_gpu DataDir=$(SolutionDir)\Examples\Text\PennTreebank\Data ConfigDir=$(SolutionDir)\Examples\Text\PennTreebank\Config OutputDir=$(SolutionDir)\Tests\EndToEndTests\Examples\Text\PennTreebank_RNN@debug_gpu DeviceId=0 train=[SGD=[maxEpochs=1]] train=[epochSize=2048]] trainFile=ptb.small.train.txt validFile=ptb.small.valid.txt testFile=ptb.small.test.txt confVocabSize=1000
+COMMAND:  configFile=$(SolutionDir)\Examples\SequenceToSequence\PennTreebank\Config/rnn.config currentDirectory=$(SolutionDir)\Examples\SequenceToSequence\PennTreebank\Data RunDir=$(SolutionDir)\Tests\EndToEndTests\Examples\SequenceToSequence\PennTreebank_RNN@debug_gpu DataDir=$(SolutionDir)\Examples\SequenceToSequence\PennTreebank\Data ConfigDir=$(SolutionDir)\Examples\SequenceToSequence\PennTreebank\Config OutputDir=$(SolutionDir)\Tests\EndToEndTests\Examples\SequenceToSequence\PennTreebank_RNN@debug_gpu DeviceId=0 train=[SGD=[maxEpochs=1]] train=[epochSize=2048]] trainFile=ptb.small.train.txt validFile=ptb.small.valid.txt testFile=ptb.small.test.txt confVocabSize=1000
 

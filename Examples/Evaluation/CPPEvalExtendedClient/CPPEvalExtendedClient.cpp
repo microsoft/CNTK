@@ -186,7 +186,7 @@ IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefini
 /// The CNTK evaluation library (EvalDLL.dll on Windows, and LibEval.so on Linux), must be found through the system's path. 
 /// The other requirement is that Eval.h be included
 /// In order to run this program the model must already exist in the example. To create the model,
-/// first run the example in <CNTK>/Examples/Text/ATIS. Once the model file ATIS.slot.lstm is created,
+/// first run the example in <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript. Once the model file ATIS.slot.lstm is created,
 /// you can run this client.
 /// This program demonstrates the usage of the Evaluate method requiring the input and output layers as parameters.
 int main(int argc, char* argv[])
@@ -203,14 +203,14 @@ int main(int argc, char* argv[])
     path = (pos == std::string::npos) ? "." : app.substr(0, pos);
 
     // This relative path assumes launching from CNTK's binary folder, e.g. x64\Release
-    const std::string modelBaseDir = path + "/../../Examples/Text/ATIS/";
+    const std::string modelBaseDir = path + "/../../Examples/LanguageUnderstanding/ATIS/BrainScript/";
     
 #else // on Linux
     pos = app.rfind("/");
     path = (pos == std::string::npos) ? "." : app.substr(0, pos);
 
     // This relative path assumes launching from CNTK's binary folder, e.g. build/cpu/release/bin/
-    const std::string modelBaseDir = path + "/../../../../Examples/Text/ATIS/";
+    const std::string modelBaseDir = path + "/../../../../Examples/LanguageUnderstanding/ATIS/BrainScript/";
 #endif
     const std::string modelWorkingDirectory = modelBaseDir + "work/";
 
@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
         struct stat statBuf;
         if (stat(modelFilePath.c_str(), &statBuf) != 0)
         {
-            fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/Text/ATIS to create the model.\n", modelFilePath.c_str());
+            fprintf(stderr, "Error: The model %s does not exist. Please follow instructions in README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript to create the model.\n", modelFilePath.c_str());
             return(1);
         }
 
@@ -248,7 +248,7 @@ int main(int argc, char* argv[])
         }
 
         // Build source word vocab to id 
-        const::string sourceVocab = modelBaseDir + "/Data/ATIS.vocab";
+        const::string sourceVocab = modelBaseDir + "/../Data/ATIS.vocab";
         if (stat(sourceVocab.c_str(), &statBuf) != 0)
         {
             fprintf(stderr, "Error: The file '%s' does not exist.\n", sourceVocab.c_str());
@@ -257,7 +257,7 @@ int main(int argc, char* argv[])
         std::unordered_map<std::string, size_t> word2idxVocab = buildVocab(sourceVocab);
 
         // Build id to target word vocab
-        const::string targetVocab = modelBaseDir + "/Data/ATIS.label";
+        const::string targetVocab = modelBaseDir + "/../Data/ATIS.label";
         if (stat(targetVocab.c_str(), &statBuf) != 0)
         {
             fprintf(stderr, "Error: The file '%s' does not exist.\n", targetVocab.c_str());

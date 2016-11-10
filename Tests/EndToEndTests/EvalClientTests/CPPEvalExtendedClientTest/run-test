@@ -21,9 +21,9 @@ else
   TestDataDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
 fi
 
-ATISDir=$TEST_ROOT_DIR/../../Examples/Text/ATIS
-DataDir=$ATISDir/Data
-OutputDir=$ATISDir/Data
+ATISDir=$TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript
+DataDir=$ATISDir/..
+OutputDir=$ATISDir
 ConfigDir=$ATISDir
 
 # Train model for evaluation
@@ -31,11 +31,6 @@ DeleteModelsAfterTest=0
 [ -f $ConfigDir/ATIS.cntk ] || exit 1
 cntkrun ATIS.cntk "stderr=- command=Train Train=[SGD=[maxEpochs=1]]" || exit $?
 
-# The created model is saved under $DataDir/work, according to ATIS.cntk. Move it to the $ATISDir/work
-[ -d $DataDir/work ] || exit $?
-[ -d $ATISDir/work ] && rm -rf $ATISDir/work
-mv $DataDir/work $ATISDir/ || exit $?
- 
 if [ "$OS" == "Windows_NT" ]; then
   $TEST_BIN_DIR/CPPEvalExtendedClientTest.exe
 else

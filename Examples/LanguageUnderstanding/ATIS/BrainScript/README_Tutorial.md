@@ -2,7 +2,7 @@
 The ATIS corpus was converted to CTF format with these commands (tcsh):
 
 # convert third column into the IOB format
-cd Examples/Text/ATIS/Data
+cd Examples/LanguageUnderstanding/ATIS/Data
 foreach f (atis.test atis.train)
  cat $f.tsv \
   | awk -F '\t' '{print $3}' $f.tsv \

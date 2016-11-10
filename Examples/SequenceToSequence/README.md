@@ -16,5 +16,5 @@ Modify the following in G2P.cntk as needed:
 * deviceId to specify CPU (-1) or GPU (>=0 or "auto")
 
 Run:
-* command line:  ```        cntk  configFile=Examples/SequenceToSequence/CMUDict/Config/G2P.cntk  RunRootDir=g2p```
-* VS Debugger:   ```configFile=$(SolutionDir)Examples/SequenceToSequence/CMUDict/Config/G2P.cntk  RunRootDir=$(SolutionDir)Examples/SequenceToSequence/CMUDict```
+* command line:  ```        cntk  configFile=Examples/SequenceToSequence/CMUDict/BrainScript/G2P.cntk  RunRootDir=g2p```
+* VS Debugger:   ```configFile=$(SolutionDir)Examples/SequenceToSequence/CMUDict/BrainScript/G2P.cntk  RunRootDir=$(SolutionDir)Examples/SequenceToSequence/CMUDict```

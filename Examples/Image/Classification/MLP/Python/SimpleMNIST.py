@@ -14,7 +14,7 @@ from cntk.learner import sgd
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "..", "Tests", "EndToEndTests", "CNTKv2Python", "Examples", "common"))
+sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "..", "Examples", "common"))
 from nn import fully_connected_classifier_net, print_training_progress
 
 def check_path(path):
