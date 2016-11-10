@@ -412,8 +412,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                          m_traceLevel,
                                          m_syncStatsTrace));
         m_pASGDHelper->InitModel(learnableNodes);
-        m_pASGDHelperBarrier = false;
-        m_pASGDHelper->WaitAll();
     }
 
     // --- MAIN EPOCH LOOP
@@ -425,6 +423,11 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         {
             m_mpi->WaitAll();
         }
+
+		if (m_mpi != nullptr && GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD)
+		{
+			m_pASGDHelper->WaitAll();
+		}
 
         // (re-)initialize 1-bit SGD
         if (GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD &&
@@ -809,6 +812,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         m_mpi->WaitAll();
     }
 
+    if (m_mpi != nullptr && GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD)
+    {
+        m_pASGDHelper->WaitAll();
+    }
     // progress tracing for compute cluster management
     ProgressTracing::TraceProgressPercentage(m_maxEpochs, 0.0, true);
     ProgressTracing::TraceTrainLoss(m_lastFinishedEpochTrainLoss);

@@ -574,7 +574,6 @@ protected:
 private:
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
     std::shared_ptr<ASGDHelper<ElemType>> m_pASGDHelper;
-    bool m_pASGDHelperBarrier;
 
     bool UsingGradientAggregation(size_t epochNumber) const
     {
