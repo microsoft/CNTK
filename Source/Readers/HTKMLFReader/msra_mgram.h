@@ -92,7 +92,7 @@ static inline double invertlogprob(double logP)
 // compare function to allow char* as keys (without, unordered_map will correctly
 // compute a hash key from the actual strings, but then compare the pointers
 // -- duh!)
-struct less_strcmp : public binary_function<const char *, const char *, bool>
+struct less_strcmp : public std::binary_function<const char *, const char *, bool>
 { // this implements operator<
     bool operator()(const char *const &_Left, const char *const &_Right) const
     {
@@ -102,7 +102,7 @@ struct less_strcmp : public binary_function<const char *, const char *, bool>
 
 class CSymbolSet : public std::unordered_map<const char *, int, std::hash<const char *>, less_strcmp>
 {
-    vector<const char *> symbols; // the symbols
+    std::vector<const char *> symbols; // the symbols
 
     CSymbolSet(const CSymbolSet &);
     CSymbolSet &operator=(const CSymbolSet &);
@@ -149,7 +149,7 @@ public:
         {
             int id = (int) symbols.size();
             symbols.push_back(p); // we own the memory--remember to free it
-            insert(make_pair(p, id));
+            insert(std::make_pair(p, id));
             return id;
         }
         catch (...)
@@ -167,11 +167,11 @@ public:
     }
 
     // overloads to be compatible with C++ strings and CSymMap
-    int sym2existingId(const string &key) const
+    int sym2existingId(const std::string &key) const
     {
         return (*this)[key.c_str()];
     }
-    int sym2id(const string &key)
+    int sym2id(const std::string &key)
     {
         return (*this)[key.c_str()];
     }
@@ -475,14 +475,14 @@ public:
     // swap --used e.g. in merging
     void swap(mgram_map &other)
     {
-        ::swap(M, other.M);
+        std::swap(M, other.M);
         firsts.swap(other.firsts);
         ids.swap(other.ids);
-        ::swap(level1nonsparse, other.level1nonsparse);
+        std::swap(level1nonsparse, other.level1nonsparse);
         level1lookup.swap(other.level1lookup);
         w2id.swap(other.w2id);
         id2w.swap(other.id2w);
-        ::swap(idmax, other.idmax);
+        std::swap(idmax, other.idmax);
     }
 
     // --- id mapping
@@ -1022,7 +1022,7 @@ public:
         }
         // id mapping
         // user-provided w->id map
-        ::swap(w2id, userToLMSymMap);
+        std::swap(w2id, userToLMSymMap);
         // reverse map
         id2w.assign(maxid() + 1, nindex);
         foreach_index (w, w2id)
@@ -1268,7 +1268,7 @@ private:
     std::wstring filename; // input filename
     struct SYMBOL
     {
-        string symbol; // token
+        std::string symbol; // token
         int id;        // numeric id in LM space (index of word read)
         bool operator<(const SYMBOL &other) const
         {
@@ -1318,7 +1318,7 @@ private:
     {
         return p;
     }
-    static const char *const_char_ptr(const string &s)
+    static const char *const_char_ptr(const std::string &s)
     {
         return s.c_str();
     }
@@ -1599,7 +1599,7 @@ public:
 
             skipMGram:
                 // remember current mgram for next iteration
-                ::swap(mgram, prevmgram);
+                std::swap(mgram, prevmgram);
             }
 
             // fix the symbol set -- now we can binary-search in them with symbolToId()
@@ -1710,7 +1710,7 @@ public:
     {
         // deterine sort order
         // Note: This code copies all strings twice.
-        std::vector<pair<std::string, int>> sortTemp(userSymMap.size()); // (string, w)
+        std::vector<std::pair<std::string, int>> sortTemp(userSymMap.size()); // (string, w)
         foreach_index (w, sortTemp)
             sortTemp[w] = make_pair(userSymMap[w], w);
         std::sort(sortTemp.begin(), sortTemp.end());

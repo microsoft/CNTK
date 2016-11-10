@@ -77,10 +77,10 @@ protected:
     }
     void swap(ssematrixbase &other)
     {
-        ::swap(p, other.p);
-        ::swap(numrows, other.numrows);
-        ::swap(numcols, other.numcols);
-        ::swap(colstride, other.colstride);
+        std::swap(p, other.p);
+        std::swap(numrows, other.numrows);
+        std::swap(numcols, other.numcols);
+        std::swap(colstride, other.colstride);
     }
     void move(ssematrixbase &other)
     {
@@ -506,7 +506,7 @@ public:
         assert(i < rows() && j < cols());
         for (size_t n = 0; n < rows(); n++)
         {
-            ::swap(p[locate(n, i)], p[locate(n, j)]);
+            std::swap(p[locate(n, i)], p[locate(n, j)]);
         }
     }
 
@@ -601,13 +601,13 @@ public:
         // loop over col stripes of V
         for (size_t j0 = 0; j0 < V.cols(); j0 += colstripewV)
         {
-            const size_t j1 = min(j0 + colstripewV, V.cols());
+            const size_t j1 = std::min(j0 + colstripewV, V.cols());
             // stripe of V is columns [j0,j1)
 
             // loop over row stripes of M
             for (size_t i0 = beginrow; i0 < endrow; i0 += rowstripehM)
             {
-                const size_t i1 = min(i0 + rowstripehM, endrow);
+                const size_t i1 = std::min(i0 + rowstripehM, endrow);
 
                 // loop over sub-ranges of the dot product (full dot product will exceed the L1 cache)
                 float patchbuffer[rowstripehM * colstripewV + 3]; // note: don't forget column rounding
@@ -616,7 +616,7 @@ public:
 
                 for (size_t k0 = 0; k0 < V.rows(); k0 += dotprodstep)
                 {
-                    const size_t k1 = min(k0 + dotprodstep, V.rows());
+                    const size_t k1 = std::min(k0 + dotprodstep, V.rows());
                     const bool first = k0 == 0;
                     // const bool last = k0 + dotprodstep >= V.rows();
 
@@ -934,7 +934,7 @@ public:
         // loop over stripes of V
         for (size_t j0 = 0; j0 < V.cols(); j0 += cacheablecolsV)
         {
-            const size_t j1 = min(j0 + cacheablecolsV, V.cols());
+            const size_t j1 = std::min(j0 + cacheablecolsV, V.cols());
             // loop over rows of result = rows of M = cols of Mt
             for (size_t i = i0; i < i1; i++)
             {
@@ -1367,11 +1367,11 @@ public:
     // only assignment is by rvalue reference
     ssematrixstriperef &operator=(ssematrixstriperef &&other)
     {
-        move(other);
+        this->move(other);
     }
     ssematrixstriperef(ssematrixstriperef &&other)
     {
-        move(other);
+        this->move(other);
     }
 
     // getting a one-column sub-view on this
@@ -1540,7 +1540,7 @@ public:
         const size_t totalelem = newcolstride * m;
         // fprintf (stderr, "resize (%d, %d) allocating %d elements\n", n, m, totalelem);
         float *pnew = totalelem > 0 ? new_sse<float>(totalelem) : NULL;
-        ::swap(this->p, pnew);
+        std::swap(this->p, pnew);
         delete_sse(pnew); // pnew is now the old p
         this->numrows = n;
         this->numcols = m;
@@ -1775,7 +1775,7 @@ pair<unsigned int, unsigned int> printmatvaluedistributionf(const char *name, co
     const size_t numparts = 100;
     for (size_t i = 1; i <= numparts; i++)
     {
-        fprintf(stderr, "%.5f%% absolute values are under %.10f\n", i * 100.0 / numparts, vals[min((size_t)(num - 1), i * num / numparts)]);
+        fprintf(stderr, "%.5f%% absolute values are under %.10f\n", i * 100.0 / numparts, vals[std::min((size_t)(num - 1), i * num / numparts)]);
     }
     fprintf(stderr, "\n%.5f%% values are zero\n\n", 100.0 * numzeros / num);
 #endif
