@@ -41,6 +41,18 @@ def _graph_dict():
     d['root'] = d['first']
 
     return d
+
+def _simple_dict():
+    d = {}
+
+    d['i1'] = input_variable(shape=(2,3), name='i1')
+    d['i2'] = input_variable(shape=(2,3), name='i2')
+    d['p1'] = parameter(shape=(3,2), name='p1')
+    d['op1'] = plus(d['i1'], d['i2'], name='op1')
+    d['op2'] = times(d['op1'], d['p1'], name='op2')
+    d['root'] = d['op2']
+
+    return d
     
 
 def test_find_nodes():
@@ -58,34 +70,15 @@ def test_find_nodes():
     none = find_nodes_by_name(d['root'], 'none')
     assert none == []
 
-d_string = "\nPlus(Input97, Input98) -> Plus100_Output_0" \
-                "\nTimes(Parameter99, Plus100_Output_0) -> Times102_Output_0" \
-                "\nPlus(Times102_Output_0, Parameter104) -> Plus105_Output_0" \
-                "\nPlus(Plus105_Output_0, Parameter104) -> Plus107_Output_0"\
-                "\nPlus(Input97, Input98) -> Plus100_Output_0"\
-                "\nTimes(Parameter99, Plus100_Output_0) -> Times102_Output_0"\
-                "\nPlus(Times102_Output_0, Parameter104) -> Plus105_Output_0"\
-                "\nPlus(Plus105_Output_0, Parameter104) -> Plus107_Output_0"\
-                "\nPlus(Input97, Input98) -> Plus100_Output_0"\
-                "\nTimes(Parameter99, Plus100_Output_0) -> Times102_Output_0"\
-                "\nPlus(Times102_Output_0, Parameter104) -> Plus105_Output_0"\
-                "\nPlus(Plus105_Output_0, Parameter104) -> Plus107_Output_0"\
-                "\nReduceElements(Plus107_Output_0) -> ReduceElements109_Output_0"\
-                "\nPlus(Input97, Input98) -> Plus100_Output_0"\
-                "\nTimes(Parameter99, Plus100_Output_0) -> Times102_Output_0"\
-                "\nPlus(Times102_Output_0, Parameter104) -> Plus105_Output_0"\
-                "\nPlus(Plus105_Output_0, Parameter104) -> Plus107_Output_0"\
-                "\nReduceElements(Plus107_Output_0) -> ReduceElements109_Output_0"\
-                "\nMinus(ReduceElements109_Output_0, ReduceElements109_Output_0) -> Minus111_Output_0"\
-                "\nPastValue(Minus111_Output_0, Parameter113) -> PastValue114_Output_0"\
-                "\nWhere(PastValue114_Output_0) -> Where116_Output_0"\
-                "\nPackedIndex(Plus107_Output_0, Where116_Output_0) -> PackedIndex118_Output_0"\
-                "\nGatherPacked(Plus107_Output_0, PackedIndex118_Output_0) -> GatherPacked120_Output_0"
 
 def test_output_funtion_graph():
-    d = _graph_dict()
+    d = _simple_dict()
 
     m = output_function_graph(d['root'])
-    
+    p = "\nPlus"
+    t = "\nTimes"
+
     assert len(m) != 0
-    assert m==d_string
+    assert p in m
+    assert t in m
+    assert m.find(p) < m.find(t)
