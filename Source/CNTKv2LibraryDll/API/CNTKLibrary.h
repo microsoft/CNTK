@@ -2866,6 +2866,10 @@ namespace CNTK
                                             bool useCuDNNEngine = false,
                                             const std::wstring& name = L"");
 
+    /// Create an instance of the CNTK built-in OptimizedRNNStack operation on specified input operands
+    ///
+    CNTK_API FunctionPtr OptimizedRNNStack(const Variable& weights, const Variable& operand, size_t hiddenSize, size_t numLayers, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in elementwise clip operation on the tensor operand
     ///

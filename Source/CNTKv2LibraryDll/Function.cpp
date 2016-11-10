@@ -996,6 +996,10 @@ namespace CNTK
 
                 break;
             }
+            case PrimitiveOpType::OptimizedRNNStack:
+            {
+
+            }
             default:
                 LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
                 break;
