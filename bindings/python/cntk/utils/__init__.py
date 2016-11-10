@@ -183,12 +183,8 @@ def get_temp_filename(directory=None):
 
 def sanitize_shape(shape):
     """
-    If shape is scalar, it creates a tuple out of it. If the shape is None, then return it as it is, it will be mapped as NDShape::Unknown.
+    If shape is scalar, it creates a tuple out of it.
     """
-
-    # Unknown shape
-    if shape is None:
-        return shape
     return _as_tuple(shape)
 
 

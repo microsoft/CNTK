@@ -177,7 +177,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
 #   AveragePooling and GlobalAveragePooling
 #
 # Setting the filter_shape to None, mean global pooling.
-from cntk.cntk_py import PoolingType_Max, PoolingType_Average
+from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
 def Pooling(op,      # PoolingType_Max or _Average
             filter_shape,  # e.g. (3,3)
             strides=1,
@@ -207,11 +207,11 @@ def AveragePooling(filter_shape,  # e.g. (3,3)
 
 # GlobalMaxPooling
 def GlobalMaxPooling():
-    return Pooling(PoolingType_Max, None, pad=False)
+    return Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False)
 
 # GlobalAveragePooling
 def GlobalAveragePooling():
-    return Pooling(PoolingType_Average, None, pad=False)
+    return Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False)
 
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):
