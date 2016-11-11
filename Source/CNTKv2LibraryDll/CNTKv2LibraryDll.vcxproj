@@ -47,8 +47,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
-      <LinkIncremental>true</LinkIncremental>
-      <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
+    <LinkIncremental>true</LinkIncremental>
+    <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
     <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
@@ -134,6 +134,7 @@
     <ClInclude Include="API\CNTKLibrary.h" />
     <ClInclude Include="API\CNTKLibraryExperimental.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
+    <ClInclude Include="BackCompat.h" />
     <ClInclude Include="DataParallelDistributedTrainer.h" />
     <ClInclude Include="DistributedCommunicator.h" />
     <ClInclude Include="DistributedTrainerBase.h" />

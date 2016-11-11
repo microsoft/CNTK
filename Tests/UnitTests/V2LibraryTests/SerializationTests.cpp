@@ -668,7 +668,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
 void TestThatExceptionsAreRaisedForNonExistentPaths()
 {
     VerifyException([]() {
-        Function::LoadModel(DataType::Float, L"This.File.Does.Not.Exist");
+        Function::LoadModel(L"This.File.Does.Not.Exist");
     }, "Was able to open file 'This.File.Does.Not.Exist' for reading.");
 
     VerifyException([]() {

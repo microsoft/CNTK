@@ -201,33 +201,25 @@ namespace CNTK
         }
     }
 
-    // data type is only need for legacy format, in V2, data type is baked into the model file.
-    /*static*/ FunctionPtr Function::LoadModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice)
+    /*static*/ FunctionPtr Function::LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice)
     {
         auto stream = GetFstream(modelFile, true);
-        if (!IsLegacyModel(*stream))
+        if (!Internal::IsLegacyModel(*stream))
         {
             Dictionary model;
             *stream >> model;
-            auto restoredFunction = Function::Deserialize(model, computeDevice);
-            if (restoredFunction->Outputs()[0].GetDataType() != dataType)
-            {
-                InvalidArgument("The loaded model's data type (%s) is different form the requested data type(%s).",
-                                DataTypeName(restoredFunction->Outputs()[0].GetDataType()),
-                                DataTypeName(dataType));
-            }
-            return restoredFunction;
+            return Function::Deserialize(model, computeDevice);
         }
         else
         {
-            return Internal::LoadLegacyModel(dataType, modelFile, computeDevice);
+            return Internal::LoadLegacyModel(modelFile, computeDevice);
         }
     }
 
     void Function::RestoreModel(const std::wstring& modelFilePath)
     {
         auto stream = GetFstream(modelFilePath, true);
-        if (!IsLegacyModel(*stream))
+        if (!Internal::IsLegacyModel(*stream))
         {
             Dictionary model;
             *stream >> model;
@@ -235,7 +227,7 @@ namespace CNTK
             return;
         }
 
-        auto loadedModelFunction = Internal::LoadLegacyModel(Outputs()[0].GetDataType(), modelFilePath, DeviceDescriptor::CPUDevice());
+        auto loadedModelFunction = Internal::LoadLegacyModel(modelFilePath, DeviceDescriptor::CPUDevice());
 
         // TODO: Make sure that the loaded model is the same as the trainer's model through UID matching in the V2 format
         // TODO: For V1 format models make sure that the loaded model is isomorphic to the trainer's model
