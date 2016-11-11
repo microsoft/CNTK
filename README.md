@@ -1,9 +1,18 @@
 # Latest news
+*2016-11-11.* V 2.0 Beta 3 Release  
+Highlights of this Release:
+* Integration with [NVIDIA NCCL](https://github.com/NVIDIA/nccl). Works Linux when building CNTK from sources. See here [how to enable](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#optional-nccl)
+* The first V.2.0 Prerelease Nuget Package for CNTK Evaluation library
+* Stability Improvements and bug fixes
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_3_Release_Notes)  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
+
 *2016-11-03.* V 2.0 Beta 2 Release  
 Highlights of this Release:
 * Feature tuning and bug fixing based on the feedback on Beta 1
 * Changes in the Examples and Tutorials based on the same feedback
-* New [Tutorial on Reinforcement Learning](https://github.com/Microsoft/CNTK/blob/master/bindings/python/tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb)
+* New [Tutorial on Reinforcement Learning](https://github.com/Microsoft/CNTK/blob/v2.0.beta2.0/bindings/python/tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb)
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_2_Release_Notes)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
@@ -45,19 +54,6 @@ Highlights of this Release:
 * Multiple bug fixes
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_1_Release_Notes) (including the full list of bugs fixed)  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
-
-*2016-08-31.* V 1.7 Binary release  
-Highlights of this Release:
-* Improvements in BrainScript (new library of predefined common layer types; common random-initialization types; GRUs)
-* Support of NVIDIA cuDNN 5.1 and cuDNN RNN
-* Improvements in readers and deserializers
-* Additions to Evaluator library (Eval Client Sample, strong name for EvalWrapper)
-* New unit tests incl. Linux support
-* Python API Preview (since V.1.5)
-* Multiple bug fixes
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_Release_Notes)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
