@@ -23,11 +23,11 @@ class Trainer(cntk_py.Trainer):
     using computed gradients.
 
     Args:
-       model (:class:`cntk.ops.functions.Function`): root node of the function to train
-       loss_function (:class:`cntk.ops.functions.Function`): loss function 
-       eval_function (:class:`cntk.ops.functions.Function`): evaluation function
-       parameter_learners (`list`): list of learners from :mod:`cntk.learner`
-       distributed_trainer (:class:`cntk.distributed.distributed_trainer`): distributed trainer
+       model (:class:`~cntk.ops.functions.Function`): root node of the function to train
+       loss_function (:class:`~cntk.ops.functions.Function`): loss function 
+       eval_function (:class:`~cntk.ops.functions.Function`): evaluation function
+       parameter_learners (list): list of learners from :mod:`cntk.learner`
+       distributed_trainer (:class:`~cntk.distributed.distributed_trainer`): distributed trainer
     '''
     def __init__(self, model, loss_function, eval_function, parameter_learners, distributed_trainer=None):
         # TODO sanitizing should be removed once Swig's typemaps are in place
@@ -62,9 +62,9 @@ class Trainer(cntk_py.Trainer):
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
-             :class:`cntk.io.MinibatchData` instance.
+             :class:`~cntk.io.MinibatchData` instance.
             outputs (iterable): outputs to fetch values for.
-            device (:class:`cntk.device.DeviceDescriptor`): the device descriptor that
+            device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
 
@@ -113,8 +113,8 @@ class Trainer(cntk_py.Trainer):
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
-             :class:`cntk.io.MinibatchData` instance.
-            device (:class:`cntk.device.DeviceDescriptor`): the device descriptor that
+             :class:`~cntk.io.MinibatchData` instance.
+            device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
         Returns:
@@ -133,8 +133,8 @@ class Trainer(cntk_py.Trainer):
         specified file location.
 
         Args:
-            filename (`str`): filename to store the checkpoint
-            use_legacy_format (`str`): if 'True', model is stored using legacy format.
+            filename (str): filename to store the checkpoint
+            use_legacy_format (str): if 'True', model is stored using legacy format.
              Otherwise, it's stored using protobuf-based protocol serialization.
         '''
 
@@ -146,7 +146,7 @@ class Trainer(cntk_py.Trainer):
         specified file location.
 
         Args:
-            filename (`str`): filename to restore the checkpoint from
+            filename (str): filename to restore the checkpoint from
         '''
 
         super(Trainer, self).restore_from_checkpoint(filename)
