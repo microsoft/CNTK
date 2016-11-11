@@ -74,7 +74,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         {
 #ifdef _MSC_VER
             static const std::wstring emptywstring;
-            static const wregex deleteextensionre(L"\\.[^\\.\\\\/:]*$");
+            static const std::wregex deleteextensionre(L"\\.[^\\.\\\\/:]*$");
             return regex_replace(logicalpath(), deleteextensionre, emptywstring); // delete extension (or not if none)
 #else
             return removeExtension(logicalpath());

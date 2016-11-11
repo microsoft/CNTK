@@ -312,7 +312,7 @@ public:
             if (!labels.empty()) // empty means unsupervised mode (don't load any)
             {
 #ifdef _WIN32
-                key = regex_replace((std::wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), std::wstring()); // delete extension (or not if none)
+                key = regex_replace((std::wstring) ppath, std::wregex(L"\\.[^\\.\\\\/:]*$"), std::wstring()); // delete extension (or not if none)
 #else
                 key = removeExtension(ppath);
 #endif
@@ -629,7 +629,7 @@ public:
                     if (!labels[0].empty()) // empty means unsupervised mode (don't load any)
                     {
 #ifdef _WIN32
-                        key = regex_replace((std::wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), std::wstring()); // delete extension (or not if none)
+                        key = regex_replace((std::wstring) ppath, std::wregex(L"\\.[^\\.\\\\/:]*$"), std::wstring()); // delete extension (or not if none)
 #else
                         key = removeExtension(ppath);
 #endif
