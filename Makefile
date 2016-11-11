@@ -569,7 +569,7 @@ $(EVAL_CLIENT): $(EVAL_CLIENT_OBJ) | $(EVAL_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH)  $(lMULTIVERSO)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH) $(lMULTIVERSO)
 
 EVAL_EXTENDED_CLIENT:=$(BINDIR)/cppevalextendedclient
 
@@ -585,7 +585,7 @@ $(EVAL_EXTENDED_CLIENT): $(EVAL_EXTENDED_CLIENT_OBJ) | $(EVAL_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(EVAL_EXTENDED_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH) $(lMULTIVERSO)
 
 ########################################
 # Eval V2 Sample client
