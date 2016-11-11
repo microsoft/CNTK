@@ -76,11 +76,11 @@ if "%p_CNTK_ENABLE_1BitSGD%" == "true" (
 ) else (
     echo #define _WITH_1BITSGD_ "no">>buildinfo.h$$
 )
-
-if "%p_CNTK_ENABLE_ASGD%" == "true" (
-    echo #define _WITH_ASGD_ "yes">>buildinfo.h$$
-) else (
+:: assuming CNTK_ENABLE_ASGD was true as default value 
+if "%p_CNTK_ENABLE_ASGD%" == "false" (
     echo #define _WITH_ASGD_ "no">>buildinfo.h$$
+) else (
+    echo #define _WITH_ASGD_ "yes">>buildinfo.h$$
 )
 if not %l_build_target% == CPU-only (
     if "%p_CudaPath%" == "" (
