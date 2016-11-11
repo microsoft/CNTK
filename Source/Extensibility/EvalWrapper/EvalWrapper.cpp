@@ -465,38 +465,31 @@ public:
         std::map<std::wstring, std::vector<ElemType>*> stdOutputs;
         // The CLI structure that will be returned to the caller.
         auto outputList = gcnew List<ElemType>(outputSize);
+        std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
+        pin_ptr<const WCHAR> inputKey = PtrToStringChars(inputNodeName);
+        shared_ptr<std::vector<ElemType>> f2(featureVector);
+        stdInputs.insert(MapEntry(inputKey, f2.get()));
+
+        pin_ptr<const WCHAR> key = PtrToStringChars(outputKey);
+        // Do we have to initialize the output nodes?
+        shared_ptr<std::vector<ElemType>> ptr(new std::vector<ElemType>(outputSize));
+        sharedOutputVectors.push_back(ptr);
+        stdOutputs.insert(MapEntry(key, ptr.get()));
         try
         {
-            std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
-            pin_ptr<const WCHAR> inputKey = PtrToStringChars(inputNodeName);
-            shared_ptr<std::vector<ElemType>> f2(featureVector);
-            stdInputs.insert(MapEntry(inputKey, f2.get()));
-
-            pin_ptr<const WCHAR> key = PtrToStringChars(outputKey);
-            // Do we have to initialize the output nodes?
-            shared_ptr<std::vector<ElemType>> ptr(new std::vector<ElemType>(outputSize));
-            sharedOutputVectors.push_back(ptr);
-            stdOutputs.insert(MapEntry(key, ptr.get()));
-            try
-            {
-                m_eval->Evaluate(stdInputs, stdOutputs);
-            }
-            catch (const exception& ex)
-            {
-                throw GetCustomException(ex);
-            }
-
-            auto &refVec = *stdOutputs[key];
-            for (auto& vec : refVec)
-            {
-                // List has been pre-allocated to the right size,
-                // so this should be fast.
-                outputList->Add(vec);
-            }
+            m_eval->Evaluate(stdInputs, stdOutputs);
         }
-        catch (Exception^)
+        catch (const exception& ex)
         {
-            throw;
+            throw GetCustomException(ex);
+        }
+
+        auto &refVec = *stdOutputs[key];
+        for (auto& vec : refVec)
+        {
+            // List has been pre-allocated to the right size,
+            // so this should be fast.
+            outputList->Add(vec);
         }
         return outputList;
     }
