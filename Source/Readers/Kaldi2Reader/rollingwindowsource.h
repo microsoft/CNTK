@@ -29,7 +29,7 @@ class biggrowablevectorarray : public growablevectorbase<msra::dbn::matrix>
     size_t inmembegin; // range we have in memory, rounded to enclosing blocks (not rounded at end)
     size_t inmemend;
 
-    wstring pagepath; // path for paging, empty if no paging
+    std::wstring pagepath; // path for paging, empty if no paging
     auto_file_ptr f;  // file handle for paging
     bool reading;     // have we begun reading?
 
@@ -57,7 +57,7 @@ class biggrowablevectorarray : public growablevectorbase<msra::dbn::matrix>
         if (!wantread)
         {
             FILE *ftry = NULL;
-            wstring pathname(pagepath);
+            std::wstring pathname(pagepath);
             ftry = _wfopen(pathname.c_str(), L"wbS");
             if (ftry)
                 fclose(ftry);
@@ -75,7 +75,7 @@ class biggrowablevectorarray : public growablevectorbase<msra::dbn::matrix>
                 char trynum = 'a';
                 while (!ftry && trynum <= 'z')
                 {
-                    wstring pathname (pagepath);
+                    std::wstring pathname (pagepath);
                     pathname += trynum++;
                     ftry = _wfopen (pathname.c_str(), L"wbS");
                 }
@@ -124,7 +124,7 @@ class biggrowablevectorarray : public growablevectorbase<msra::dbn::matrix>
     }
 
 public:
-    biggrowablevectorarray(const wstring &pagepath)
+    biggrowablevectorarray(const std::wstring &pagepath)
         : growablevectorbase(65536), m(0), inmembegin(0), inmemend(0), pagepath(pagepath), reading(false)
     {
         openpagefile(false);
@@ -192,7 +192,7 @@ public:
 
         // get bounds rounded to block boundaries
         const size_t ts = bounds.first / elementsperblock * elementsperblock;
-        const size_t te = min(n, (bounds.second + elementsperblock - 1) / elementsperblock * elementsperblock);
+        const size_t te = std::min(n, (bounds.second + elementsperblock - 1) / elementsperblock * elementsperblock);
         assert(paging());
         // free all the memmory
         for (size_t t = inmembegin; t < inmemend; t += elementsperblock)
@@ -226,7 +226,7 @@ public:
         /*const*/ msra::dbn::matrix &block = getblock(t);
         return msra::dbn::matrixstripe(block, blockt, 1);
     }
-    wstring pagepathname()
+    std::wstring pagepathname()
     {
         return pagepath;
     }
@@ -263,7 +263,7 @@ class minibatchframesourcemulti : public minibatchsource
     size_t maxvdim;
     // cache
     // std::vector<biggrowablevectorarray> frames;
-    std::vector<unique_ptr<biggrowablevectorarray>> pframes; // [t][i] all features concatenated
+    std::vector<std::unique_ptr<biggrowablevectorarray>> pframes; // [t][i] all features concatenated
     std::vector<char> boundaryflags;                         // [t] -1 for first and +1 for last frame, 0 else (for augmentneighbors())
     std::vector<std::vector<CLASSIDTYPE>> classids;          // [t] the state that the frame belongs to
     size_t numframes;                                        // total frames (==frames.size()==boundaryflags.size()==classids.size()) unless special modes vdim == 0 and/or no labels
@@ -274,13 +274,13 @@ class minibatchframesourcemulti : public minibatchsource
 public:
     // constructor
     // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
-    minibatchframesourcemulti(std::vector<msra::asr::FeatureSection *> &featuresections, const std::vector<std::vector<wstring>> &infiles, const std::vector<map<std::wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
-                              std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange, const std::vector<wstring> &pagepath, const bool mayhavenoframe = false, int addEnergy = 0)
+    minibatchframesourcemulti(std::vector<msra::asr::FeatureSection *> &featuresections, const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
+                              std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange, const std::vector<std::wstring> &pagepath, const bool mayhavenoframe = false, int addEnergy = 0)
         : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), numframes(0), timegetbatch(0), verbosity(2), maxvdim(0)
     {
 
         if (vdim[0] == 0 && labels.empty())
-            throw runtime_error("minibatchframesourcemulti: when running without features, labels are needed");
+            throw std::runtime_error("minibatchframesourcemulti: when running without features, labels are needed");
         // at this stage, we simply page in the entire training set at once and work off RAM
         // We will benefit from feature archives indirectly through htkfeatio.
         // TODO:
@@ -295,14 +295,14 @@ public:
         std::vector<size_t> framesaccum;
 
         if (infiles.size() == 0)
-            throw runtime_error("minibatchframesourcemulti: need at least one network input specified with features");
+            throw std::runtime_error("minibatchframesourcemulti: need at least one network input specified with features");
 
         if (labels.size() == 0)
             fprintf(stderr, "no MLF label files detected\n");
 
         foreach_index (i, infiles)
         {
-            pframes.push_back(unique_ptr<biggrowablevectorarray>(new biggrowablevectorarray(pagepath[i])));
+            pframes.push_back(std::unique_ptr<biggrowablevectorarray>(new biggrowablevectorarray(pagepath[i])));
 
             if (vdim[i] > maxvdim)
                 maxvdim = vdim[i];
@@ -335,13 +335,13 @@ public:
                 msra::asr::htkfeatreader::parsedpath ppath(infiles[m][i], featuresections[m]);
 
                 // skip files for which labels don't exist (assuming bad alignment)
-                wstring key;
+                std::wstring key;
                 if (!labels.empty())
                 {
                     if (!labels[0].empty()) // empty means unsupervised mode (don't load any)
                     {
 #ifdef _WIN32
-                        key = regex_replace((wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), wstring()); // delete extension (or not if none)
+                        key = regex_replace((std::wstring) ppath, wregex(L"\\.[^\\.\\\\/:]*$"), std::wstring()); // delete extension (or not if none)
 #endif
 #ifdef __unix__
                         key = removeExtension(basename(ppath));
@@ -421,7 +421,7 @@ public:
                                     if (e.classid != (CLASSIDTYPE) e.classid)
                                         throw std::runtime_error("CLASSIDTYPE has too few bits");
                                     classids[j].push_back((CLASSIDTYPE) e.classid);
-                                    numclasses[j] = max(numclasses[j], (long unsigned int) (1u + e.classid));
+                                    numclasses[j] = std::max(numclasses[j], (long unsigned int) (1u + e.classid));
                                 }
                             }
                             if (vdim[m] == 0)
@@ -506,9 +506,9 @@ public:
     // sweep-boundary-spanning mini-batch will simply be shortened.
     // This function is NOT thread-safe (due to caching of random sequence).
     bool getbatch(const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids,
-                  std::vector<std::pair<wstring, size_t>> & /*utterances*/,
+                  std::vector<std::pair<std::wstring, size_t>> & /*utterances*/,
                   std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
-                  std::vector<shared_ptr<const latticesource::latticepair>> &latticepairs)
+                  std::vector<std::shared_ptr<const latticesource::latticepair>> &latticepairs)
     {
 
         auto_timer timergetbatch;
@@ -520,7 +520,7 @@ public:
         assert(totalframes() > 0);
         const size_t sweep = globalts / totalframes();              // which sweep (this determines randomization)
         const size_t ts = globalts % totalframes();                 // start frame within the sweep
-        const size_t te = min(ts + framesrequested, totalframes()); // do not go beyond sweep boundary
+        const size_t te = std::min(ts + framesrequested, totalframes()); // do not go beyond sweep boundary
         assert(te > ts);
         if (verbosity >= 2)
             fprintf(stderr, "getbatch: frames [%zu..%zu] in sweep %zu\n", ts, te - 1, sweep);
@@ -544,7 +544,7 @@ public:
                 leftextent = leftcontext[i];
                 rightextent = rightcontext[i];
             }
-            readfromdisk = pframes[i]->require(m_randomOrdering.Bounds(max(ts, leftextent) - leftextent, te + 1 + rightextent));
+            readfromdisk = pframes[i]->require(m_randomOrdering.Bounds(std::max(ts, leftextent) - leftextent, te + 1 + rightextent));
             // generate features and uids
             feat[i].resize(vdim[i], te - ts); // note: special mode vdim == 0 means no features to be loaded
             if (issupervised())               // empty means unsupervised training -> return empty uids
@@ -579,12 +579,12 @@ public:
     }
 
     bool getbatch(const size_t /*globalts*/, const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/,
-                  std::vector<size_t> & /*uids*/, std::vector<std::pair<wstring, size_t>> & /*utterances*/,
+                  std::vector<size_t> & /*uids*/, std::vector<std::pair<std::wstring, size_t>> & /*utterances*/,
                   std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/,
-                  std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
+                  std::vector<std::shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
     {
         // should never get here
-        throw runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchframesource instead\n");
+        throw std::runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchframesource instead\n");
     }
 
     double gettimegetbatch()
@@ -601,7 +601,7 @@ public:
 
     /*implement*/ const std::vector<size_t> &unitcounts() const
     {
-        throw logic_error("unitcounts: not implemented for this feature source");
+        throw std::logic_error("unitcounts: not implemented for this feature source");
     }
 };
 };

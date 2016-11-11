@@ -43,8 +43,6 @@
 typedef unsigned char byte;
 #endif
 
-using namespace std; // Ugh!
-
 static inline wchar_t *GetWC(const char *c)
 {
     const size_t cSize = strlen(c) + 1;
@@ -394,7 +392,7 @@ static inline void bytereverse(T &v) throw()
     char *p = (char *) &v;
     const size_t elemsize = sizeof(v);
     for (int k = 0; k < elemsize / 2; k++) // swap individual bytes
-        swap(p[k], p[elemsize - 1 - k]);
+        std::swap(p[k], p[elemsize - 1 - k]);
 }
 
 // byte-swap an entire array
