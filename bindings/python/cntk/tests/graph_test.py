@@ -41,6 +41,18 @@ def _graph_dict():
     d['root'] = d['first']
 
     return d
+
+def _simple_dict():
+    d = {}
+
+    d['i1'] = input_variable(shape=(2,3), name='i1')
+    d['i2'] = input_variable(shape=(2,3), name='i2')
+    d['p1'] = parameter(shape=(3,2), name='p1')
+    d['op1'] = plus(d['i1'], d['i2'], name='op1')
+    d['op2'] = times(d['op1'], d['p1'], name='op2')
+    d['root'] = d['op2']
+
+    return d
     
 
 def test_find_nodes():
@@ -57,3 +69,16 @@ def test_find_nodes():
 
     none = find_nodes_by_name(d['root'], 'none')
     assert none == []
+
+
+def test_output_funtion_graph():
+    d = _simple_dict()
+
+    m = output_function_graph(d['root'])
+    p = "\nPlus"
+    t = "\nTimes"
+
+    assert len(m) != 0
+    assert p in m
+    assert t in m
+    assert m.find(p) < m.find(t)

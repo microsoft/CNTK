@@ -21,10 +21,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libswscale-dev \
         libtiff-dev \
         pkg-config \
-        python-dev \
-        python-numpy \
-        python-pip \
-        python-yaml \
         wget \
         zlib1g-dev \
         # Protobuf
@@ -32,12 +28,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         unzip \
         # For Kaldi
+        python-dev \
         automake \
         libtool \
         autoconf \
         subversion \
         # For Kaldi's dependencies
-        libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 && \
+        libapr1 libaprutil1 libltdl-dev libltdl7 libserf-1-1 libsigsegv2 libsvn1 m4 \
+        # For SWIG
+        libpcre++-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN OPENMPI_VERSION=1.10.3 && \
@@ -102,19 +101,6 @@ RUN mkdir /usr/local/CNTKCustomMKL && \
     wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-2.tgz | \
     tar -xzf - -C /usr/local/CNTKCustomMKL
 
-RUN pip install pytest sphinx-rtd-theme Pillow
-
-ENV BLAS=/usr/local/openblas/lib/libopenblas.so
-ENV LAPACK=/usr/local/openblas/lib/libopenblas.so
-
-RUN SCIPY_VERSION=0.18.0 && \
-    wget -q -O - https://github.com/scipy/scipy/releases/download/v${SCIPY_VERSION}/scipy-${SCIPY_VERSION}.tar.gz | tar -zxf - && \
-    cd scipy-${SCIPY_VERSION} && \
-    python setup.py build && \
-    python setup.py install && \
-    cd .. && \
-    rm -rf scipy-${SCIPY_VERSION}
-
 # Install Kaldi
 ENV KALDI_VERSION=c024e8aa
 ENV KALDI_PATH /usr/local/kaldi-$KALDI_VERSION
@@ -137,17 +123,41 @@ RUN mv /bin/sh /bin/sh.orig && \
    for dir in $KALDI_PATH/src/*bin; do make -C $dir clean; done && \
    mv -f /bin/sh.orig /bin/sh
 
+## PYTHON
+
+# Swig
+RUN cd /root && \
+    wget -q http://prdownloads.sourceforge.net/swig/swig-3.0.10.tar.gz -O - | tar xvfz - && \
+    cd swig-3.0.10 && \
+    ./configure --without-java --without-perl5 && \
+    make -j $(nproc) && \
+    make install
+
+# Anaconda
+RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh && \
+    bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
+    rm Anaconda3-4.2.0-Linux-x86_64.sh
+
+RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/linux/conda-linux-cntk-py34-environment.yml -O /tmp/conda-linux-cntk-py34-environment.yml && \
+    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py34/ --file /tmp/conda-linux-cntk-py34-environment.yml
+
+ENV PATH /root/anaconda3/envs/cntk-py34/bin:$PATH
+
 WORKDIR /cntk
 
+# Build CNTK
 RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
+    CONFIGURE_OPTS="\
+      --with-kaldi=${KALDI_PATH} \
+      --with-py34-path=/root/anaconda3/envs/cntk-py34" && \
     mkdir -p build/cpu/release && \
     cd build/cpu/release && \
-    ../../../configure --with-openblas=/usr/local/openblas --with-kaldi=${KALDI_PATH} && \
+    ../../../configure $CONFIGURE_OPTS --with-openblas=/usr/local/openblas && \
     make -j"$(nproc)" all && \
     cd ../../.. && \
     mkdir -p build-mkl/cpu/release && \
     cd build-mkl/cpu/release && \
-    ../../../configure --with-mkl=/usr/local/CNTKCustomMKL --with-kaldi=${KALDI_PATH} && \
+    ../../../configure $CONFIGURE_OPTS --with-mkl=/usr/local/CNTKCustomMKL && \
     make -j"$(nproc)" all
 
 RUN cd Examples/Image/DataSets/CIFAR-10 && \
@@ -158,4 +168,4 @@ RUN cd Examples/Image/DataSets/MNIST && \
     python install_mnist.py && \
     cd ../../../..
 
-ENV PATH=/cntk/build/cpu/release/bin:$PATH
+ENV PATH=/cntk/build/cpu/release/bin:$PATH PYTHONPATH=/cntk/bindings/python LD_LIBRARY_PATH=/cntk/bindings/python/cntk/libs:$LD_LIBRARY_PATH
