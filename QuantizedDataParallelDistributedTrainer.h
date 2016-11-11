@@ -44,7 +44,8 @@ namespace CNTK
             std::vector<NDArrayViewPtr> gradients;
             for (const auto& i : gradientValues)
                 gradients.push_back(i.second);
-            m_communicator->QuantizedAggregateInPlace(
+
+            dynamic_cast<QuantizedDistributedCommunicator*>(m_communicator.get())->QuantizedAggregateInPlace(
                 gradients,
                 m_residuals,
                 m_stripeResiduals,
@@ -75,8 +76,6 @@ namespace CNTK
         }
 
     private:
-        QuantizedDistributedCommunicatorPtr m_communicator;
-
         // Residuals of quantized gradients.
         std::vector<NDArrayViewPtr> m_residuals;
         // Residuals of quantized aggregated stripes this node is responsible for.
