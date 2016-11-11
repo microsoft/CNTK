@@ -579,6 +579,7 @@ private:
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
     }
+
     bool UsingModelAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
@@ -590,9 +591,23 @@ private:
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD) && (epochNumber >= m_parallelizationStartEpochNum));
     }
+
     bool UsingParallelTrain(size_t epochNumber)
     {
         return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber) || UsingAsyncGradientAggregation(epochNumber);
+    }
+
+    void BarrierWorkers()
+    {
+        if (m_mpi != nullptr && GetParallelizationMethod() != ParallelizationMethod::dataParallelASGD)
+        {
+            m_mpi->WaitAll();
+        }
+        if (m_mpi != nullptr && GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD)
+        {
+            m_pASGDHelper->WaitAll();
+        }
+        return;
     }
 };
 
