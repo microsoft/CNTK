@@ -34,8 +34,6 @@ Repeated operation of this script will reuse already downloaded components.
 
  - If required VS2012 Runtime and VS2013 Runtime will be installed
  - If required MSMPI will be installed
- - If required the standard Git tool will be installed
- - CNTK source will be cloned from Git into [$RepoLocation]
  - Anaconda3 will be installed into [$AnacondaBasePath]
  - A CNTK-PY34 environment will be created in [$AnacondaBasePath\envs]
  - CNTK will be installed into the CNTK-PY34 environment
@@ -135,9 +133,9 @@ CNTK v2 Python install complete.
 To activate the CNTK Python environment and set the PATH to include CNTK, start a command shell and run
    $cntkRootDir\scripts\cntkpy34.bat
 
-
-Please checkout examples in the CNTK repository clone here:
-    c:\repos\cntk\bindings\python\examples
+Please checkout tutorials and examples here:
+   $cntkRootDir\Tutorials
+   $cntkRootDir\Examples
 
 "
 }

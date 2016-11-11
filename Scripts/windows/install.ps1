@@ -16,8 +16,6 @@
 
  - If required VS2012 Runtime and VS2013 Runtime will be installed
  - If required MSMPI will be installed
- - If required the standard Git tool will be installed
- - CNTK source will be cloned from Git into [<RepoLocation>]
  - Anaconda3 will be installed into [<AnacondaBasePath>]
  - A CNTK-PY34 environment will be created in [<AnacondaBasePath>\envs]
  - CNTK will be installed into the CNTK-PY34 environment
@@ -28,13 +26,6 @@
  .PARAMETER AnacondaBasePath
  This is an optional parameter and can be used to specify an already installed Anaconda3 installation.
  By default a version of Anaconda3 will be installed into [C:\local\Anaconda3-4.1.1-Windows-x86_64]
-
- .PARAMETER RepoTag
- Optional parameter to specify a specific tag to clone
-
- .PARAMETER RepoLocation
- This optional parameter allows to specify in what directory github repositories will be cloned into.
- By default the CNTK repository will be cloned into [c:\repos\CNTK]
 
 .EXAMPLE
  .\install.ps1
@@ -49,9 +40,9 @@
 
  Run the installer and install CNTK on the machine. Force a CNTK whl Update in the CNTK-Anaconda install
 .EXAMPLE
- .\install.ps1 -Execute -AnacondaBasePath d:\cntkBeta -RepoLocation d:\repos\cntkBeta1
+ .\install.ps1 -Execute -AnacondaBasePath d:\cntkBeta
 
- This will install Anaconda in the [d:\cntkBeta] directory and clone the cntk repository from Github into the location [d:\repos\cntkBeta1]
+ This will install Anaconda in the [d:\cntkBeta] directory.
   
 
 #>
@@ -59,17 +50,12 @@
 [CmdletBinding()]
 Param(
     [parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64",
-    [parameter(Mandatory=$false)] [switch] $Execute,
-    [parameter(Mandatory=$false)] [string] $RepoTag="v2.0.beta3.0",
-    [parameter(Mandatory=$false)] [string] $RepoLocation="c:\repos\CNTK"
+    [parameter(Mandatory=$false)] [switch] $Execute
 )
 
 $MyDir = Split-Path $MyInvocation.MyCommand.Definition
 
 $cntkRootDir = split-path $MyDir | split-path
-
-$repoDirectory = split-path $RepoLocation
-$repoName = split-path $RepoLocation -Leaf
 
 $roboCopyCmd    = "C:\Windows\System32\robocopy.exe"
 $localCache     = "$MyDir\InstallCache"

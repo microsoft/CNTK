@@ -10,26 +10,6 @@
 # TODO cut down on logging
 set -x -e -o pipefail
 
-REPO_TAG=v2.0.beta3.0
-
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --repo-tag)
-      REPO_TAG="$2"
-      [ -z "$REPO_TAG" ] && {
-        echo Missing value for --repo-tag option.
-        exit 1
-      }
-      shift # extra shift
-      ;;
-    *)
-      echo Unknown option $1
-      exit 1
-      ;;
-  esac
-  shift
-done
-
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
 # Go to the drop root
@@ -39,10 +19,12 @@ CNTK_BIN_PATH="$PWD/cntk/bin"
 CNTK_LIB_PATH="$PWD/cntk/lib"
 CNTK_DEP_LIB_PATH="$PWD/cntk/dependencies/lib"
 CNTK_EXAMPLES_PATH="$PWD/Examples"
+CNTK_TUTORIALS_PATH="$PWD/Tutorials"
 CNTK_BINARY="$CNTK_BIN_PATH/cntk"
 CNTK_PY34_ENV_FILE="$SCRIPT_DIR/conda-linux-cntk-py34-environment.yml"
 CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta3.0-cp34-cp34m-linux_x86_64.whl"
 test -d "$CNTK_BIN_PATH" && test -d "$CNTK_LIB_PATH" && test -d "$CNTK_DEP_LIB_PATH" && 
+test -d "$CNTK_TUTORIALS_PATH" &&
 test -d "$CNTK_EXAMPLES_PATH" && test -x "$CNTK_BINARY" &&
 test -f "$CNTK_PY34_ENV_FILE" && test -f "$CNTK_WHEEL_PATH" || {
   echo Cannot find expected drop content. Please double-check that this is a
@@ -62,9 +44,6 @@ test -f "$CNTK_PY34_ENV_FILE" && test -f "$CNTK_WHEEL_PATH" || {
 # Anaconda download / install dependencies
 # [coreutils for sha{1,256}sum]
 PACKAGES="bzip2 wget coreutils"
-
-# CNTK examples dependencies
-PACKAGES+=" git ca-certificates"
 
 # CNTK run-time dependencies (OpenMPI)
 if [[ "$(lsb_release -i)" =~ :.*Ubuntu ]] && [[ "$(lsb_release -r)" =~ :.*14\.04 ]]; then
@@ -155,26 +134,13 @@ set -x
 pip install "$CNTK_WHEEL_PATH"
 
 ###########################################
-# Clone CNTK repository
-
-CNTK_WORKING_COPY="$HOME/repos/cntk"
-
-if [ -d "$CNTK_WORKING_COPY" ]; then
-  printf "Path '%s' already exists, skipping CNTK clone\nMake sure to checkout $REPO_TAG\n" "$CNTK_WORKING_COPY"
-else
-  mkdir -p "$HOME/repos"
-  CNTK_GIT_CLONE_URL=https://github.com/Microsoft/CNTK.git
-  git clone --branch $REPO_TAG --recursive "$CNTK_GIT_CLONE_URL" "$HOME/repos/cntk"
-fi
+# Create an activation script
 
 LD_LIBRARY_PATH_SETTING="$CNTK_LIB_PATH:$CNTK_DEP_LIB_PATH"
 if [ "$BUILD_OPENMPI" = "1" ]; then
   LD_LIBRARY_PATH_SETTING+=":$OPENMPI_PREFIX/lib"
 fi
 LD_LIBRARY_PATH_SETTING+=":\$LD_LIBRARY_PATH"
-
-###########################################
-# Create an activation script
 
 ACTIVATE_SCRIPT_NAME=activate-cntk
 cat >| "$ACTIVATE_SCRIPT_NAME" <<ACTIVATE
@@ -192,12 +158,8 @@ else
 ************************************************************
 CNTK is activated.
 
-Please check out CNTK Python examples in the CNTK repository clone here:
-
-  $CNTK_WORKING_COPY/bindings/python/examples
-
-Please check out CNTK Brainscript examples here:
-
+Please checkout tutorials and examples here:
+  $CNTK_TUTORIALS_PATH
   $CNTK_EXAMPLES_PATH
 
 ************************************************************
@@ -216,12 +178,8 @@ CNTK install complete.
 To activate the CNTK environment, run
   source "$PWD/$ACTIVATE_SCRIPT_NAME"
 
-Please check out CNTK Python examples in the CNTK repository clone here:
-
-  $CNTK_WORKING_COPY/bindings/python/examples
-
-Please check out CNTK Brainscript examples here:
-
+Please checkout tutorials and examples here:
+  $CNTK_TUTORIALS_PATH
   $CNTK_EXAMPLES_PATH
 
 ************************************************************
