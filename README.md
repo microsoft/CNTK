@@ -1,7 +1,7 @@
 # Latest news
 *2016-11-11.* V 2.0 Beta 3 Release  
 Highlights of this Release:
-* Integration with [NVIDIA NCCL](https://github.com/NVIDIA/nccl). Works Linux when building CNTK from sources. See here [how to enable](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#optional-nccl)
+* Integration with [NVIDIA NCCL](https://github.com/NVIDIA/nccl). Works with Linux when building CNTK from sources. See here [how to enable](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#optional-nccl)
 * The first V.2.0 Prerelease Nuget Package for CNTK Evaluation library
 * Stability Improvements and bug fixes
 
