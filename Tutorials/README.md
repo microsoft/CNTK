@@ -1,17 +1,17 @@
 # Tutorials
 
-In this folder you find several tutorials both for the CNTK python API and for brain script. 
+In this folder you find several tutorials both for the CNTK Python API and for BrainScript. 
 
 ## Python
 
-The pyhton notebooks in this folder cover a range of different application including 
+The Python Jupyter notebooks in this folder cover a range of different application including 
 image classification, language understanding, reinforcement learning and others. 
 Additionally, the folder NumpyInterop contains a simple example of how to use 
 numpy arrays as input for CNTK training and evaluation.
 
-## Brain script
+## BrainScript
 
-There are four detailed tutorials on how to use CNTK with brain script. 
+There are four detailed tutorials on how to use CNTK with BrainScript. 
 A step-by-step walk through for each of these is provided on the [CNTK wiki](https://github.com/Microsoft/CNTK/wiki/Tutorials).
 
 * Hello World - Logistic Regression ([Details](https://github.com/Microsoft/CNTK/wiki/Tutorial))

@@ -3,7 +3,7 @@ CPU info:
     Hardware threads: 24
     Total Memory: 264172964 kB
 -------------------------------------------------------------------
-=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Tests/EndToEndTests/Simple2d/Simple/../../../../../../Tests/EndToEndTests/Simple2d/OneHidden.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data RunDir=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Tests/EndToEndTests/Simple2d/Simple/../../../../../../Tests/EndToEndTests/Simple2d OutputDir=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu DeviceId=0 timestamping=true Simple_Demo_Train=[SGD=[maxEpochs=3]]
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Other/Simple2d/Simple/../../../../../../Examples/Other/Simple2d/Config/Simple.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data RunDir=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Other/Simple2d/Simple/../../../../../../Examples/Other/Simple2d/Config OutputDir=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu DeviceId=0 timestamping=true Simple_Demo_Train=[SGD=[maxEpochs=3]]
 -------------------------------------------------------------------
 Build info: 
 
@@ -21,7 +21,7 @@ Build info:
 		Built by philly on f67b30a647de
 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
 -------------------------------------------------------------------
-Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data
+Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data
 08/16/2016 10:51:39: -------------------------------------------------------------------
 08/16/2016 10:51:39: Build info: 
 
@@ -50,7 +50,7 @@ Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/T
 
 08/16/2016 10:51:40: Running on localhost at 2016/08/16 10:51:40
 08/16/2016 10:51:40: Command line: 
-/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Tests/EndToEndTests/Simple2d/Simple/../../../../../../Tests/EndToEndTests/Simple2d/OneHidden.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data  RunDir=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Tests/EndToEndTests/Simple2d/Simple/../../../../../../Tests/EndToEndTests/Simple2d  OutputDir=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu  DeviceId=0  timestamping=true  Simple_Demo_Train=[SGD=[maxEpochs=3]]
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Other/Simple2d/Simple/../../../../../../Examples/Other/Simple2d/Config/Simple.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data  RunDir=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Other/Simple2d/Simple/../../../../../../Examples/Other/Simple2d/Config  OutputDir=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu  DeviceId=0  timestamping=true  Simple_Demo_Train=[SGD=[maxEpochs=3]]
 
 
 
@@ -142,11 +142,11 @@ labelMappingFile = "$DataDir$/SimpleMapping.txt"
 sequenceEpilogue = "\t// %s\n"                   
     ]
 ]
-currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data
-RunDir=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu
-DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data
-ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Tests/EndToEndTests/Simple2d/Simple/../../../../../../Tests/EndToEndTests/Simple2d
-OutputDir=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu
+currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data
+RunDir=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu
+DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data
+ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Other/Simple2d/Simple/../../../../../../Examples/Other/Simple2d/Config
+OutputDir=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu
 DeviceId=0
 timestamping=true
 Simple_Demo_Train=[SGD=[maxEpochs=3]]
@@ -158,12 +158,12 @@ Simple_Demo_Train=[SGD=[maxEpochs=3]]
 ConfigDir = "../Config"
 DataDir   = "../Data"
 OutputDir = "../Output"
-ModelDir  = "/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu/Models"
+ModelDir  = "/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu/Models"
 deviceId = -1
 command = Simple_Demo_Train:Simple_Demo_Test:Simple_Demo_Output
 precision = "float"
 traceLevel = 1
-modelPath = "/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu/Models/simple.dnn"
+modelPath = "/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu/Models/simple.dnn"
 outputNodeNames = ScaledLogLikelihood
 Simple_Demo_Train = [
     action = "train"
@@ -187,7 +187,7 @@ Simple_Demo_Train = [
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data/SimpleDataTrain_cntk_text.txt"
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data/SimpleDataTrain_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -204,7 +204,7 @@ Simple_Demo_Test = [
     action = "test"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data/SimpleDataTest_cntk_text.txt"
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -221,7 +221,7 @@ Simple_Demo_Output=[
     action = "write"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data/SimpleDataTest_cntk_text.txt"
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -234,18 +234,18 @@ dim = 2
         ]
     ]
 outputNodeNames = PosteriorProb : labels    
-outputPath = "/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu/SimpleOutput"     
+outputPath = "/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu/SimpleOutput"     
     format = [
 type = "category"                                
-labelMappingFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data/SimpleMapping.txt" 
+labelMappingFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data/SimpleMapping.txt" 
 sequenceEpilogue = "\t// %s\n"                   
     ]
 ]
-currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data
-RunDir=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu
-DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data
-ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Tests/EndToEndTests/Simple2d/Simple/../../../../../../Tests/EndToEndTests/Simple2d
-OutputDir=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu
+currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data
+RunDir=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu
+DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data
+ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Other/Simple2d/Simple/../../../../../../Examples/Other/Simple2d/Config
+OutputDir=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu
 DeviceId=0
 timestamping=true
 Simple_Demo_Train=[SGD=[maxEpochs=3]]
@@ -253,23 +253,23 @@ Simple_Demo_Train=[SGD=[maxEpochs=3]]
 08/16/2016 10:51:40: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
 08/16/2016 10:51:40: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-configparameters: OneHidden.cntk:command=Simple_Demo_Train:Simple_Demo_Test:Simple_Demo_Output
-configparameters: OneHidden.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Tests/EndToEndTests/Simple2d/Simple/../../../../../../Tests/EndToEndTests/Simple2d
-configparameters: OneHidden.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data
-configparameters: OneHidden.cntk:DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data
-configparameters: OneHidden.cntk:deviceId=0
-configparameters: OneHidden.cntk:ModelDir=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu/Models
-configparameters: OneHidden.cntk:modelPath=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu/Models/simple.dnn
-configparameters: OneHidden.cntk:OutputDir=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu
-configparameters: OneHidden.cntk:outputNodeNames=ScaledLogLikelihood
-configparameters: OneHidden.cntk:precision=float
-configparameters: OneHidden.cntk:RootDir=..
-configparameters: OneHidden.cntk:RunDir=/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu
-configparameters: OneHidden.cntk:Simple_Demo_Output=[
+configparameters: Simple.cntk:command=Simple_Demo_Train:Simple_Demo_Test:Simple_Demo_Output
+configparameters: Simple.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Examples/Other/Simple2d/Simple/../../../../../../Examples/Other/Simple2d/Config
+configparameters: Simple.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data
+configparameters: Simple.cntk:DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data
+configparameters: Simple.cntk:deviceId=0
+configparameters: Simple.cntk:ModelDir=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu/Models
+configparameters: Simple.cntk:modelPath=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu/Models/simple.dnn
+configparameters: Simple.cntk:OutputDir=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu
+configparameters: Simple.cntk:outputNodeNames=ScaledLogLikelihood
+configparameters: Simple.cntk:precision=float
+configparameters: Simple.cntk:RootDir=..
+configparameters: Simple.cntk:RunDir=/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu
+configparameters: Simple.cntk:Simple_Demo_Output=[
     action = "write"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data/SimpleDataTest_cntk_text.txt"
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -282,19 +282,19 @@ dim = 2
         ]
     ]
 outputNodeNames = PosteriorProb : labels    
-outputPath = "/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu/SimpleOutput"     
+outputPath = "/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu/SimpleOutput"     
     format = [
 type = "category"                                
-labelMappingFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data/SimpleMapping.txt" 
+labelMappingFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data/SimpleMapping.txt" 
 sequenceEpilogue = "\t// %s\n"                   
     ]
 ]
 
-configparameters: OneHidden.cntk:Simple_Demo_Test=[
+configparameters: Simple.cntk:Simple_Demo_Test=[
     action = "test"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data/SimpleDataTest_cntk_text.txt"
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -308,7 +308,7 @@ dim = 2
     ]
 ]
 
-configparameters: OneHidden.cntk:Simple_Demo_Train=[
+configparameters: Simple.cntk:Simple_Demo_Train=[
     action = "train"
     SimpleNetworkBuilder = [
         layerSizes = 2:50*2:2
@@ -330,7 +330,7 @@ configparameters: OneHidden.cntk:Simple_Demo_Train=[
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Simple2d/Data/SimpleDataTrain_cntk_text.txt"
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Examples/Other/Simple2d/Data/SimpleDataTrain_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -344,12 +344,12 @@ dim = 2
     ]
 ] [SGD=[maxEpochs=3]]
 
-configparameters: OneHidden.cntk:timestamping=true
-configparameters: OneHidden.cntk:traceLevel=1
+configparameters: Simple.cntk:timestamping=true
+configparameters: Simple.cntk:traceLevel=1
 08/16/2016 10:51:40: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 08/16/2016 10:51:40: Commands: Simple_Demo_Train Simple_Demo_Test Simple_Demo_Output
 08/16/2016 10:51:40: Precision = "float"
-08/16/2016 10:51:40: CNTKModelPath: /tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu/Models/simple.dnn
+08/16/2016 10:51:40: CNTKModelPath: /tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu/Models/simple.dnn
 08/16/2016 10:51:40: CNTKCommandTrainInfo: Simple_Demo_Train : 3
 08/16/2016 10:51:40: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 
@@ -526,7 +526,7 @@ BlockRandomizer::StartEpoch: epoch 0: frames [0..10000] (first sequence at sampl
 08/16/2016 10:51:40:  Epoch[ 1 of 3]-Minibatch[ 381- 390]: CrossEntropyWithSoftmax = 0.65152734 * 250; EvalClassificationError = 0.10400000 * 250; time = 0.0062s; samplesPerSecond = 40630.6
 08/16/2016 10:51:40:  Epoch[ 1 of 3]-Minibatch[ 391- 400]: CrossEntropyWithSoftmax = 0.63594727 * 250; EvalClassificationError = 0.22000000 * 250; time = 0.0062s; samplesPerSecond = 40283.6
 08/16/2016 10:51:40: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 0.70729233 * 10000; EvalClassificationError = 0.47740000 * 10000; totalSamplesSeen = 10000; learningRatePerSample = 0.02; epochTime=0.256818s
-08/16/2016 10:51:40: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu/Models/simple.dnn.1'
+08/16/2016 10:51:40: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu/Models/simple.dnn.1'
 
 08/16/2016 10:51:40: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
 BlockRandomizer::StartEpoch: epoch 1: frames [10000..20000] (first sequence at sample 10000), data subset 0 of 1
@@ -573,7 +573,7 @@ BlockRandomizer::StartEpoch: epoch 1: frames [10000..20000] (first sequence at s
 08/16/2016 10:51:41:  Epoch[ 2 of 3]-Minibatch[ 381- 390, 97.50%]: CrossEntropyWithSoftmax = 0.13596484 * 250; EvalClassificationError = 0.05600000 * 250; time = 0.0064s; samplesPerSecond = 39099.2
 08/16/2016 10:51:41:  Epoch[ 2 of 3]-Minibatch[ 391- 400, 100.00%]: CrossEntropyWithSoftmax = 0.15469434 * 250; EvalClassificationError = 0.07600000 * 250; time = 0.0064s; samplesPerSecond = 38965.1
 08/16/2016 10:51:41: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 0.24215964 * 10000; EvalClassificationError = 0.09440000 * 10000; totalSamplesSeen = 20000; learningRatePerSample = 0.0080000004; epochTime=0.253663s
-08/16/2016 10:51:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu/Models/simple.dnn.2'
+08/16/2016 10:51:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu/Models/simple.dnn.2'
 
 08/16/2016 10:51:41: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
 BlockRandomizer::StartEpoch: epoch 2: frames [20000..30000] (first sequence at sample 20000), data subset 0 of 1
@@ -620,7 +620,7 @@ BlockRandomizer::StartEpoch: epoch 2: frames [20000..30000] (first sequence at s
 08/16/2016 10:51:41:  Epoch[ 3 of 3]-Minibatch[ 381- 390, 97.50%]: CrossEntropyWithSoftmax = 0.11988379 * 250; EvalClassificationError = 0.05600000 * 250; time = 0.0063s; samplesPerSecond = 39827.9
 08/16/2016 10:51:41:  Epoch[ 3 of 3]-Minibatch[ 391- 400, 100.00%]: CrossEntropyWithSoftmax = 0.13059082 * 250; EvalClassificationError = 0.06400000 * 250; time = 0.0064s; samplesPerSecond = 39345.3
 08/16/2016 10:51:41: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 0.15767216 * 10000; EvalClassificationError = 0.07330000 * 10000; totalSamplesSeen = 30000; learningRatePerSample = 0.0080000004; epochTime=0.255461s
-08/16/2016 10:51:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu/Models/simple.dnn'
+08/16/2016 10:51:41: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu/Models/simple.dnn'
 08/16/2016 10:51:41: CNTKCommandTrainEnd: Simple_Demo_Train
 
 08/16/2016 10:51:41: Action "train" complete.
@@ -769,7 +769,7 @@ Memory Sharing: Out of 25 matrices, 3 are shared as 1, and 22 are not shared.
 	  ScaledLogLikelihood : [2 x 1 x *2] }
 
 Minibatch[0]: ActualMBSize = 603
-Written to /tmp/cntk-test-20160816095502.258817/Tests/EndToEndTests/Simple2d_Simple@release_gpu/SimpleOutput*
+Written to /tmp/cntk-test-20160816095502.258817/Examples/Other/Simple2d_Simple@release_gpu/SimpleOutput*
 Total Samples Evaluated = 603
 
 08/16/2016 10:51:41: Action "write" complete.

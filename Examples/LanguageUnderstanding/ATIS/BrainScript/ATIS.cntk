@@ -1,14 +1,14 @@
 # The configuration file to build language understanding model with ATIS corpus.
 # An LSTM model is built to tag each word in sentences with its semantic label.
 
-WorkDir = work
+OutputDir = ./work
 DataDir = ../Data
 
 makeMode = false
-modelPath = $WorkDir$/ATIS.slot.lstm
+modelPath = $OutputDir$/ATIS.slot.lstm
 parallelTrain = true
 
-#stderr = $WorkDir$/log
+#stderr = $OutputDir$/log
 
 command = Train:Output:Test
 
@@ -147,7 +147,7 @@ Output = [
         final = Hardmax(modelAsTrained.outputs)
     ]
     
-    outputPath = $WorkDir$/model.writeaction
+    outputPath = $OutputDir$/model.writeaction
     outputNodeNames = final
     
     reader = [

@@ -3,7 +3,7 @@ CPU info:
     Hardware threads: 24
     Total Memory: 268381192 kB
 -------------------------------------------------------------------
-=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d/OneHidden.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu DeviceId=-1 timestamping=true Simple_Demo_Train=[SGD=[maxEpochs=3]]
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config/Simple.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu DeviceId=-1 timestamping=true Simple_Demo_Train=[SGD=[maxEpochs=3]]
 -------------------------------------------------------------------
 Build info: 
 
@@ -21,7 +21,7 @@ Build info:
 		Built by svcphil on Philly-Pool3
 		Build Path: c:\Jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
 -------------------------------------------------------------------
-Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
 08/16/2016 03:04:13: -------------------------------------------------------------------
 08/16/2016 03:04:13: Build info: 
 
@@ -50,7 +50,7 @@ Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\End
 
 08/16/2016 03:04:16: Running on DPHAIM-24 at 2016/08/16 03:04:16
 08/16/2016 03:04:16: Command line: 
-C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d/OneHidden.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu  DeviceId=-1  timestamping=true  Simple_Demo_Train=[SGD=[maxEpochs=3]]
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config/Simple.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu  DeviceId=-1  timestamping=true  Simple_Demo_Train=[SGD=[maxEpochs=3]]
 
 
 
@@ -142,11 +142,11 @@ labelMappingFile = "$DataDir$/SimpleMapping.txt"
 sequenceEpilogue = "\t// %s\n"                   
     ]
 ]
-currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu
-DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
-ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu
 DeviceId=-1
 timestamping=true
 Simple_Demo_Train=[SGD=[maxEpochs=3]]
@@ -158,12 +158,12 @@ Simple_Demo_Train=[SGD=[maxEpochs=3]]
 ConfigDir = "../Config"
 DataDir   = "../Data"
 OutputDir = "../Output"
-ModelDir  = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu/Models"
+ModelDir  = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu/Models"
 deviceId = -1
 command = Simple_Demo_Train:Simple_Demo_Test:Simple_Demo_Output
 precision = "float"
 traceLevel = 1
-modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu/Models/simple.dnn"
+modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu/Models/simple.dnn"
 outputNodeNames = ScaledLogLikelihood
 Simple_Demo_Train = [
     action = "train"
@@ -187,7 +187,7 @@ Simple_Demo_Train = [
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTrain_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTrain_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -204,7 +204,7 @@ Simple_Demo_Test = [
     action = "test"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -221,7 +221,7 @@ Simple_Demo_Output=[
     action = "write"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -234,18 +234,18 @@ dim = 2
         ]
     ]
 outputNodeNames = PosteriorProb : labels    
-outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu/SimpleOutput"     
+outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu/SimpleOutput"     
     format = [
 type = "category"                                
-labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleMapping.txt" 
+labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleMapping.txt" 
 sequenceEpilogue = "\t// %s\n"                   
     ]
 ]
-currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu
-DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
-ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu
 DeviceId=-1
 timestamping=true
 Simple_Demo_Train=[SGD=[maxEpochs=3]]
@@ -253,23 +253,23 @@ Simple_Demo_Train=[SGD=[maxEpochs=3]]
 08/16/2016 03:04:16: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
 08/16/2016 03:04:16: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-configparameters: OneHidden.cntk:command=Simple_Demo_Train:Simple_Demo_Test:Simple_Demo_Output
-configparameters: OneHidden.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d
-configparameters: OneHidden.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
-configparameters: OneHidden.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
-configparameters: OneHidden.cntk:deviceId=-1
-configparameters: OneHidden.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu/Models
-configparameters: OneHidden.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu/Models/simple.dnn
-configparameters: OneHidden.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu
-configparameters: OneHidden.cntk:outputNodeNames=ScaledLogLikelihood
-configparameters: OneHidden.cntk:precision=float
-configparameters: OneHidden.cntk:RootDir=..
-configparameters: OneHidden.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu
-configparameters: OneHidden.cntk:Simple_Demo_Output=[
+configparameters: Simple.cntk:command=Simple_Demo_Train:Simple_Demo_Test:Simple_Demo_Output
+configparameters: Simple.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config
+configparameters: Simple.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+configparameters: Simple.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+configparameters: Simple.cntk:deviceId=-1
+configparameters: Simple.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu/Models
+configparameters: Simple.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu/Models/simple.dnn
+configparameters: Simple.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu
+configparameters: Simple.cntk:outputNodeNames=ScaledLogLikelihood
+configparameters: Simple.cntk:precision=float
+configparameters: Simple.cntk:RootDir=..
+configparameters: Simple.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu
+configparameters: Simple.cntk:Simple_Demo_Output=[
     action = "write"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -282,19 +282,19 @@ dim = 2
         ]
     ]
 outputNodeNames = PosteriorProb : labels    
-outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu/SimpleOutput"     
+outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu/SimpleOutput"     
     format = [
 type = "category"                                
-labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleMapping.txt" 
+labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleMapping.txt" 
 sequenceEpilogue = "\t// %s\n"                   
     ]
 ]
 
-configparameters: OneHidden.cntk:Simple_Demo_Test=[
+configparameters: Simple.cntk:Simple_Demo_Test=[
     action = "test"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -308,7 +308,7 @@ dim = 2
     ]
 ]
 
-configparameters: OneHidden.cntk:Simple_Demo_Train=[
+configparameters: Simple.cntk:Simple_Demo_Train=[
     action = "train"
     SimpleNetworkBuilder = [
         layerSizes = 2:50*2:2
@@ -330,7 +330,7 @@ configparameters: OneHidden.cntk:Simple_Demo_Train=[
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTrain_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTrain_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -344,12 +344,12 @@ dim = 2
     ]
 ] [SGD=[maxEpochs=3]]
 
-configparameters: OneHidden.cntk:timestamping=true
-configparameters: OneHidden.cntk:traceLevel=1
+configparameters: Simple.cntk:timestamping=true
+configparameters: Simple.cntk:traceLevel=1
 08/16/2016 03:04:16: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 08/16/2016 03:04:16: Commands: Simple_Demo_Train Simple_Demo_Test Simple_Demo_Output
 08/16/2016 03:04:16: Precision = "float"
-08/16/2016 03:04:16: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu/Models/simple.dnn
+08/16/2016 03:04:16: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu/Models/simple.dnn
 08/16/2016 03:04:16: CNTKCommandTrainInfo: Simple_Demo_Train : 3
 08/16/2016 03:04:16: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 
@@ -525,7 +525,7 @@ BlockRandomizer::StartEpoch: epoch 0: frames [0..10000] (first sequence at sampl
 08/16/2016 03:04:17:  Epoch[ 1 of 3]-Minibatch[ 381- 390]: CrossEntropyWithSoftmax = 0.59652344 * 250; EvalClassificationError = 0.04800000 * 250; time = 0.0242s; samplesPerSecond = 10346.8
 08/16/2016 03:04:17:  Epoch[ 1 of 3]-Minibatch[ 391- 400]: CrossEntropyWithSoftmax = 0.55820898 * 250; EvalClassificationError = 0.12000000 * 250; time = 0.0238s; samplesPerSecond = 10488.3
 08/16/2016 03:04:17: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 0.70129624 * 10000; EvalClassificationError = 0.46850000 * 10000; totalSamplesSeen = 10000; learningRatePerSample = 0.02; epochTime=1.01068s
-08/16/2016 03:04:17: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu/Models/simple.dnn.1'
+08/16/2016 03:04:17: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu/Models/simple.dnn.1'
 
 08/16/2016 03:04:18: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
 BlockRandomizer::StartEpoch: epoch 1: frames [10000..20000] (first sequence at sample 10000), data subset 0 of 1
@@ -572,7 +572,7 @@ BlockRandomizer::StartEpoch: epoch 1: frames [10000..20000] (first sequence at s
 08/16/2016 03:04:18:  Epoch[ 2 of 3]-Minibatch[ 381- 390, 97.50%]: CrossEntropyWithSoftmax = 0.13554053 * 250; EvalClassificationError = 0.05600000 * 250; time = 0.0228s; samplesPerSecond = 10988.5
 08/16/2016 03:04:18:  Epoch[ 2 of 3]-Minibatch[ 391- 400, 100.00%]: CrossEntropyWithSoftmax = 0.15504346 * 250; EvalClassificationError = 0.08400000 * 250; time = 0.0228s; samplesPerSecond = 10968.3
 08/16/2016 03:04:18: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 0.20713335 * 10000; EvalClassificationError = 0.08030000 * 10000; totalSamplesSeen = 20000; learningRatePerSample = 0.0080000004; epochTime=0.921702s
-08/16/2016 03:04:18: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu/Models/simple.dnn.2'
+08/16/2016 03:04:18: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu/Models/simple.dnn.2'
 
 08/16/2016 03:04:18: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
 BlockRandomizer::StartEpoch: epoch 2: frames [20000..30000] (first sequence at sample 20000), data subset 0 of 1
@@ -619,7 +619,7 @@ BlockRandomizer::StartEpoch: epoch 2: frames [20000..30000] (first sequence at s
 08/16/2016 03:04:19:  Epoch[ 3 of 3]-Minibatch[ 381- 390, 97.50%]: CrossEntropyWithSoftmax = 0.11991260 * 250; EvalClassificationError = 0.05200000 * 250; time = 0.0229s; samplesPerSecond = 10911.3
 08/16/2016 03:04:19:  Epoch[ 3 of 3]-Minibatch[ 391- 400, 100.00%]: CrossEntropyWithSoftmax = 0.13070557 * 250; EvalClassificationError = 0.06400000 * 250; time = 0.0230s; samplesPerSecond = 10857.8
 08/16/2016 03:04:19: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 0.15755114 * 10000; EvalClassificationError = 0.07370000 * 10000; totalSamplesSeen = 30000; learningRatePerSample = 0.0080000004; epochTime=0.918193s
-08/16/2016 03:04:19: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu/Models/simple.dnn'
+08/16/2016 03:04:19: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu/Models/simple.dnn'
 08/16/2016 03:04:19: CNTKCommandTrainEnd: Simple_Demo_Train
 
 08/16/2016 03:04:19: Action "train" complete.
@@ -768,9 +768,9 @@ Memory Sharing: Out of 25 matrices, 3 are shared as 1, and 22 are not shared.
 	  ScaledLogLikelihood : [2 x 1 x *2] }
 
 Minibatch[0]: ActualMBSize = 603
-Written to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Tests\EndToEndTests\Simple2d_Simple@release_cpu/SimpleOutput*
+Written to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Other\Simple2d_Simple@release_cpu/SimpleOutput*
 Total Samples Evaluated = 603
 
 08/16/2016 03:04:19: Action "write" complete.
 
-08/16/2016 03:04:19: __COMPLETED__
+08/16/2016 03:04:19: __COMPLETED__

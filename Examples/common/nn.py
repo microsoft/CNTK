@@ -4,6 +4,8 @@
 # for full license information.
 # ==============================================================================
 
+# Note: the files in the 'common' folder are deprecated and will be replaced by the layer library
+
 import numpy as np
 from cntk.ops import *
 from cntk.utils import get_train_eval_criterion, get_train_loss

@@ -3,7 +3,7 @@ CPU info:
     Hardware threads: 24
     Total Memory: 268381192 kB
 -------------------------------------------------------------------
-=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d/Multigpu.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu DeviceId=-1 timestamping=true Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config/Multigpu.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu DeviceId=-1 timestamping=true Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
 -------------------------------------------------------------------
 Build info: 
 
@@ -21,7 +21,7 @@ Build info:
 		Built by svcphil on Philly-Pool1
 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
 -------------------------------------------------------------------
-Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
 MPIWrapper: initializing MPI
 ping [requestnodes (before change)]: 1 nodes pinging each other
 ping [requestnodes (before change)]: all 1 nodes responded
@@ -58,7 +58,7 @@ ping [mpihelper]: all 1 nodes responded
 
 08/16/2016 03:19:46: Running on DPHAIM-25 at 2016/08/16 03:19:46
 08/16/2016 03:19:46: Command line: 
-C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d/Multigpu.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu  DeviceId=-1  timestamping=true  Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config/Multigpu.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu  DeviceId=-1  timestamping=true  Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
 
 
 
@@ -152,11 +152,11 @@ dim = 2
     ]
 outputPath = "$OutputDir$/MultigpuOutput"    
 ]
-currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu
-DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
-ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu
 DeviceId=-1
 timestamping=true
 Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
@@ -168,12 +168,12 @@ Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
 ConfigDir = "../Config"
 DataDir = "../Data"
 OutputDir = "../Output"
-ModelDir = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu/Models"
+ModelDir = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu/Models"
 deviceId = "auto"
 command = Multigpu_Demo_Train:Multigpu_Demo_Test
 precision = "float"
 traceLevel = 1
-modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn"
+modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn"
 outputNodeNames = ScaledLogLikelihood
 parallelTrain = true
 Multigpu_Demo_Train=[
@@ -205,7 +205,7 @@ Multigpu_Demo_Train=[
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTrain_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTrain_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -222,7 +222,7 @@ Multigpu_Demo_Test=[
     action = "test"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -239,7 +239,7 @@ Multigpu_Demo_Output=[
     action = "write"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -251,13 +251,13 @@ dim = 2
             ]
         ]
     ]
-outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu/MultigpuOutput"    
+outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu/MultigpuOutput"    
 ]
-currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu
-DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
-ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu
+currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu
+DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu
 DeviceId=-1
 timestamping=true
 Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
@@ -266,17 +266,17 @@ Multigpu_Demo_Train=[SGD=[maxEpochs=3]]
 
 08/16/2016 03:19:46: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: Multigpu.cntk:command=Multigpu_Demo_Train:Multigpu_Demo_Test
-configparameters: Multigpu.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d
-configparameters: Multigpu.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
-configparameters: Multigpu.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data
+configparameters: Multigpu.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Config
+configparameters: Multigpu.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
+configparameters: Multigpu.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data
 configparameters: Multigpu.cntk:deviceId=-1
-configparameters: Multigpu.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu/Models
-configparameters: Multigpu.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn
+configparameters: Multigpu.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu/Models
+configparameters: Multigpu.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn
 configparameters: Multigpu.cntk:Multigpu_Demo_Output=[
     action = "write"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -288,14 +288,14 @@ dim = 2
             ]
         ]
     ]
-outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu/MultigpuOutput"    
+outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu/MultigpuOutput"    
 ]
 
 configparameters: Multigpu.cntk:Multigpu_Demo_Test=[
     action = "test"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTest_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTest_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -338,7 +338,7 @@ configparameters: Multigpu.cntk:Multigpu_Demo_Train=[
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Simple2d\Data/SimpleDataTrain_cntk_text.txt"
+        file = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Other\Simple2d\Data/SimpleDataTrain_cntk_text.txt"
         input = [
             features = [
 dim = 2        
@@ -352,18 +352,18 @@ dim = 2
     ]
 ] [SGD=[maxEpochs=3]]
 
-configparameters: Multigpu.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu
+configparameters: Multigpu.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu
 configparameters: Multigpu.cntk:outputNodeNames=ScaledLogLikelihood
 configparameters: Multigpu.cntk:parallelTrain=true
 configparameters: Multigpu.cntk:precision=float
 configparameters: Multigpu.cntk:RootDir=..
-configparameters: Multigpu.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu
+configparameters: Multigpu.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu
 configparameters: Multigpu.cntk:timestamping=true
 configparameters: Multigpu.cntk:traceLevel=1
 08/16/2016 03:19:46: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 08/16/2016 03:19:46: Commands: Multigpu_Demo_Train Multigpu_Demo_Test
 08/16/2016 03:19:46: Precision = "float"
-08/16/2016 03:19:46: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn
+08/16/2016 03:19:46: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn
 08/16/2016 03:19:46: CNTKCommandTrainInfo: Multigpu_Demo_Train : 3
 08/16/2016 03:19:46: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 
@@ -539,7 +539,7 @@ BlockRandomizer::StartEpoch: epoch 0: frames [0..10000] (first sequence at sampl
 08/16/2016 03:19:48:  Epoch[ 1 of 3]-Minibatch[ 381- 390]: CrossEntropyWithSoftmax = 0.59652344 * 250; EvalClassificationError = 0.04800000 * 250; time = 0.0236s; samplesPerSecond = 10595.5
 08/16/2016 03:19:48:  Epoch[ 1 of 3]-Minibatch[ 391- 400]: CrossEntropyWithSoftmax = 0.55820898 * 250; EvalClassificationError = 0.12000000 * 250; time = 0.0245s; samplesPerSecond = 10215.8
 08/16/2016 03:19:48: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 0.70129624 * 10000; EvalClassificationError = 0.46850000 * 10000; totalSamplesSeen = 10000; learningRatePerSample = 0.02; epochTime=0.964546s
-08/16/2016 03:19:48: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn.1'
+08/16/2016 03:19:48: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn.1'
 
 08/16/2016 03:19:48: Starting Epoch 2: learning rate per sample = 0.008000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
 BlockRandomizer::StartEpoch: epoch 1: frames [10000..20000] (first sequence at sample 10000), data subset 0 of 1
@@ -586,7 +586,7 @@ BlockRandomizer::StartEpoch: epoch 1: frames [10000..20000] (first sequence at s
 08/16/2016 03:19:49:  Epoch[ 2 of 3]-Minibatch[ 381- 390, 97.50%]: CrossEntropyWithSoftmax = 0.13535163 * 250; EvalClassificationError = 0.05600000 * 250; time = 0.0256s; samplesPerSecond = 9772.1
 08/16/2016 03:19:49:  Epoch[ 2 of 3]-Minibatch[ 391- 400, 100.00%]: CrossEntropyWithSoftmax = 0.15552570 * 250; EvalClassificationError = 0.08000000 * 250; time = 0.0249s; samplesPerSecond = 10044.2
 08/16/2016 03:19:49: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 0.20771504 * 10000; EvalClassificationError = 0.08060000 * 10000; totalSamplesSeen = 20000; learningRatePerSample = 0.0080000004; epochTime=1.02956s
-08/16/2016 03:19:49: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn.2'
+08/16/2016 03:19:49: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn.2'
 
 08/16/2016 03:19:49: Starting Epoch 3: learning rate per sample = 0.008000  effective momentum = 0.900000  momentum as time constant = 237.3 samples
 BlockRandomizer::StartEpoch: epoch 2: frames [20000..30000] (first sequence at sample 20000), data subset 0 of 1
@@ -633,7 +633,7 @@ BlockRandomizer::StartEpoch: epoch 2: frames [20000..30000] (first sequence at s
 08/16/2016 03:19:50:  Epoch[ 3 of 3]-Minibatch[ 381- 390, 97.50%]: CrossEntropyWithSoftmax = 0.11889087 * 250; EvalClassificationError = 0.05600000 * 250; time = 0.0245s; samplesPerSecond = 10185.0
 08/16/2016 03:19:50:  Epoch[ 3 of 3]-Minibatch[ 391- 400, 100.00%]: CrossEntropyWithSoftmax = 0.12990310 * 250; EvalClassificationError = 0.06000000 * 250; time = 0.0252s; samplesPerSecond = 9902.2
 08/16/2016 03:19:50: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 0.15784221 * 10000; EvalClassificationError = 0.07350000 * 10000; totalSamplesSeen = 30000; learningRatePerSample = 0.0080000004; epochTime=1.00011s
-08/16/2016 03:19:50: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Tests\EndToEndTests\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn'
+08/16/2016 03:19:50: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816031849.416502\Examples\Other\Simple2d_MultiGpu@release_cpu/Models/multigpu.dnn'
 08/16/2016 03:19:50: CNTKCommandTrainEnd: Multigpu_Demo_Train
 
 08/16/2016 03:19:50: Action "train" complete.
@@ -714,4 +714,4 @@ Actual gradient aggregation time: 0.000128
 08/16/2016 03:19:50: Action "test" complete.
 
 08/16/2016 03:19:50: __COMPLETED__
-~MPIWrapper
+~MPIWrapper

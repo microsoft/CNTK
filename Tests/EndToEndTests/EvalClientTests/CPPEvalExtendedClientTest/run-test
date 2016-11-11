@@ -22,8 +22,8 @@ else
 fi
 
 ATISDir=$TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript
-DataDir=$ATISDir/..
-OutputDir=$ATISDir
+DataDir=$ATISDir/../Data
+OutputDir=$ATISDir/work
 ConfigDir=$ATISDir
 
 # Train model for evaluation
