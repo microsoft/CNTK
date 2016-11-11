@@ -10,31 +10,25 @@
 
 #include <vector>
 #include "CNTKLibrary.h"
+#include "DistributedTrainerBase.h"
 
 namespace CNTK
 {
     ///
     /// Quantized Distributed Trainer.
     ///
-    class QuantizedDataParallelDistributedTrainer : public DistributedTrainer
+    class QuantizedDataParallelDistributedTrainer : public DistributedTrainerBase
     {
     public:
-        QuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t parallelizationStartAfterSampleCount)
-            : DistributedTrainer(parallelizationStartAfterSampleCount),
-            m_communicator(communicator),
-            m_useAsyncBufferedParameterUpdate(useAsyncBufferedParameterUpdate)
+        QuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t distributedAfterSampleCount)
+            : DistributedTrainerBase(communicator, distributedAfterSampleCount)
         {
-            if (m_useAsyncBufferedParameterUpdate)
+            if (useAsyncBufferedParameterUpdate)
                 LogicError("Asynchronous parameter update is not yet supported.");
         }
 
-        // Optional override that gets called before each minbatch during training
-        void PreMinibatchCallback(const Trainer& /*trainer*/) override
-        {
-        }
-
         // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
-        void PreParameterUpdateCallback(const Trainer& /*trainer*/, std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info) override
+        bool PreParameterUpdateCallback(const Trainer& /*trainer*/, std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info) override
         {
             std::vector<NDArrayViewPtr> headerToAggregate;
             headerToAggregate.push_back(info.evalCriterionValue);
@@ -55,12 +49,14 @@ namespace CNTK
                 m_residuals,
                 m_stripeResiduals,
                 m_communicator->Workers());
+
+            return info.numberOfSamples == 0;
         }
 
         // Optionally overridable method to get checkpoint state associated with this Distributed train method
-        Dictionary GetCheckpointState() const override
+        Dictionary CreateCheckpoint(const Trainer& trainer, const Dictionary& localStateToShare) override
         {
-            // Resetting the residuals. TODO: Does not seem right though... Get should not change the state.
+            // Resetting the residuals.
             // We do this to make sure that the returned checkpoint state is consistent with the in - memory state, since we do not checkpoint the residues.
             for (size_t i = 0; i < m_residuals.size(); ++i)
                 if (m_residuals[i]->GetDataType() == DataType::Double)
@@ -75,26 +71,15 @@ namespace CNTK
                     else
                         m_stripeResiduals[i]->SetValue(0.0f);
 
-            return Dictionary();
-        }
-
-        // Optionally overridable method to restore state pertaining this distributed training method from a previous checkpoint
-        void RestoreFromCheckpoint(const Dictionary& /*checkpoint*/) override
-        {
-        }
-
-        DistributedCommunicatorPtr GetCommunicator() override
-        {
-            return m_communicator;
+            return DistributedTrainerBase::CreateCheckpoint(trainer, localStateToShare);
         }
 
     private:
         QuantizedDistributedCommunicatorPtr m_communicator;
-        bool m_useAsyncBufferedParameterUpdate;
 
         // Residuals of quantized gradients.
-        std::vector<::CNTK::NDArrayViewPtr> m_residuals;
+        std::vector<NDArrayViewPtr> m_residuals;
         // Residuals of quantized aggregated stripes this node is responsible for.
-        std::vector<::CNTK::NDArrayViewPtr> m_stripeResiduals;
+        std::vector<NDArrayViewPtr> m_stripeResiduals;
     };
 }
