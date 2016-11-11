@@ -66,7 +66,7 @@ class Learner(cntk_py.Learner):
             gradient_values (`dict`): maps :class:`~cntk.variables.Parameter` to
              a NumPy array containing the first order gradient values for the
              Parameter w.r.t. the training objective.
-            training_sample_count (`int`): training sample count
+            training_sample_count (int): training sample count
 
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
@@ -91,7 +91,7 @@ class Learner(cntk_py.Learner):
         Resets the learning rate.
 
         Args:
-            learning_rate (`float`, `list` or a training schedule): learning rate 
+            learning_rate (float, list or a training schedule): learning rate 
             to reset to
         '''
         learning_rate = learning_rate_schedule(learning_rate)
@@ -102,7 +102,7 @@ class Learner(cntk_py.Learner):
         The learning rate.
 
         Args:
-            minibatch_size (``int``): minibatch size to re-scaled
+            minibatch_size (int): minibatch size to re-scaled
             the learning rate to the per-sample value (in case when the schedule 
             was build with ``unit=UnitType.minibatch``).
         '''
@@ -132,11 +132,11 @@ def training_parameter_schedule(schedule, epoch_size=1, unit=UnitType.sample):
         (0.1, 0.1, 0.01, 0.01, 0.001, 0.001)
 
     Args:
-        schedule (``float`` or ``list``): if ``float``, is the parameter schedule to be used
+        schedule (float or list): if float, is the parameter schedule to be used
          for all samples. In case of list, the elements are used as the
          values for ``epoch_size`` samples. If list contains pair, the second element is
          used as a value for (``epoch_size`` x first element) samples
-        epoch_size (`int`): number of samples as a scheduling unit. Parameters in
+        epoch_size (int): number of samples as a scheduling unit. Parameters in
          the schedule change their values every ``epoch_size`` samples.
         unit (:class:`UnitType`): one of two
 
@@ -145,6 +145,9 @@ def training_parameter_schedule(schedule, epoch_size=1, unit=UnitType.sample):
 
     Returns:
         training parameter schedule
+
+    See also:
+        :func:`learning_rate_schedule`
     '''
     if not isinstance(unit, UnitType):
             raise ValueError('schedule unit "%s" is not supported' %
@@ -176,15 +179,18 @@ def learning_rate_schedule(lr, epoch_size=1, unit=UnitType.sample):
     :func:`training_parameter_schedule`).
 
     Args:
-        lr (``float`` or ``list``): see parameter ``schedule`` in 
+        lr (float or list): see parameter ``schedule`` in 
          :func:`training_parameter_schedule`.
-        epoch_size (``int``): see parameter ``epoch_size`` in 
+        epoch_size (int): see parameter ``epoch_size`` in 
          :func:`training_parameter_schedule`.
         unit (:class:`UnitType`): see parameter 
          ``unit`` in :func:`training_parameter_schedule`.
 
     Returns:
         learning rate schedule
+
+    See also:
+        :func:`training_parameter_schedule`
     '''
     return training_parameter_schedule(lr, epoch_size, unit)
 
@@ -195,9 +201,9 @@ def momentum_schedule(momentum, epoch_size=1, unit=UnitType.sample):
     :func:`training_parameter_schedule`).
 
     Args:
-        momentum (``float`` or ``list``): see parameter ``schedule`` in 
+        momentum (float or list): see parameter ``schedule`` in 
          :func:`training_parameter_schedule`.
-        epoch_size (``int``): see parameter ``epoch_size`` in 
+        epoch_size (int): see parameter ``epoch_size`` in 
          :func:`training_parameter_schedule`.
         unit (:class:`UnitType`): see parameter 
          ``unit`` in :func:`training_parameter_schedule`.
@@ -223,9 +229,9 @@ def momentum_schedule(momentum, epoch_size=1, unit=UnitType.sample):
         (0.99, 0.99, 0.88, 0.88, 0.77)
 
     Args:
-        momentum (``float`` or ``list``): see parameter ``schedule`` in 
+        momentum (float or list): see parameter ``schedule`` in 
          :func:`training_parameter_schedule`.
-        epoch_size (``int``): see parameter ``epoch_size`` in 
+        epoch_size (int): see parameter ``epoch_size`` in 
          :func:`training_parameter_schedule`.
         unit (:class:`UnitType`): see parameter 
          ``unit`` in :func:`training_parameter_schedule`.
@@ -242,9 +248,9 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=1):
     semantics as :func:`training_parameter_schedule`).
 
     Args:
-        momentum (``float`` or ``list``): see parameter ``schedule`` in 
+        momentum (float or list): see parameter ``schedule`` in 
          :func:`training_parameter_schedule`.
-        epoch_size (``int``): see parameter ``epoch_size`` in 
+        epoch_size (int): see parameter ``epoch_size`` in 
          :func:`training_parameter_schedule`.
         unit (:class:`UnitType`): see parameter 
          ``unit`` in :func:`training_parameter_schedule`.
@@ -267,9 +273,9 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=1):
         >>> m = momentum_as_time_constant_schedule([1100, 1500], 1000)
 
     Args:
-        momentum (``float`` or ``list``): see parameter ``schedule`` in 
+        momentum (float or list): see parameter ``schedule`` in 
          :func:`training_parameter_schedule`.
-        epoch_size (``int``): see parameter ``epoch_size`` in 
+        epoch_size (int): see parameter ``epoch_size`` in 
          :func:`training_parameter_schedule`.
 
     Returns:
@@ -299,21 +305,21 @@ def sgd(parameters, lr,
     information on how to set the parameters.
 
     Args:
-        parameters (`list` of parameters): list of network parameters to tune.
+        parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the '.parameters()' method of the root
          operator.
-        lr (``float``, ``list`` or output of :func:`learning_rate_schedule`): learning rate 
-         schedule. When the argument value is a `float` or a `list`, lr is 
+        lr (float, list or output of :func:`learning_rate_schedule`): learning rate 
+         schedule. When the argument value is a float or a list, lr is 
          converted to a per-sample schedule by invoking :func:`learning_rate_schedule`.
-        l1_regularization_weight (``float``, optional): the L1 regularization weight per sample,
+        l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
-        l2_regularization_weight (``float``, optional): the L2 regularization weight per sample,
+        l2_regularization_weight (float, optional): the L2 regularization weight per sample,
          defaults to 0.0
-        gaussian_noise_injection_std_dev (``float``, optional): the standard deviation
+        gaussian_noise_injection_std_dev (float, optional): the standard deviation
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        gradient_clipping_threshold_per_sample (``float``, optional): clipping threshold
+        gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation (``bool``, default ``True``): gradient clipping
+        gradient_clipping_with_truncation (bool, default ``True``): gradient clipping
 
     Returns:
         Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
@@ -346,22 +352,22 @@ def momentum_sgd(parameters, lr, momentum,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
-        lr (``float``, `list````` or output of :func:`learning_rate_schedule`): learning rate 
-         schedule. When the argument value is a `float` or a `list`, lr is 
+        lr (float, list```` or output of :func:`learning_rate_schedule`): learning rate 
+         schedule. When the argument value is a float or a list, lr is 
          converted to a per-sample schedule by invoking :func:`learning_rate_schedule`.
-        momentum (``float``, ``list`` or output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule. When the argument 
-         value is a ``float`` or a ``list``, momentum is converted to a per-sample schedule by 
+        momentum (float, list or output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule. When the argument 
+         value is a float or a list, momentum is converted to a per-sample schedule by 
          invoking :func:`momentum_schedule`. Refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
-        l1_regularization_weight (``float``, optional): the L1 regularization weight per sample,
+        l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
-        l2_regularization_weight (``float``, optional): the L2 regularization weight per sample,
+        l2_regularization_weight (float, optional): the L2 regularization weight per sample,
          defaults to 0.0
-        gaussian_noise_injection_std_dev (``float``, optional): the standard deviation
+        gaussian_noise_injection_std_dev (float, optional): the standard deviation
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        gradient_clipping_threshold_per_sample (``float``, optional): clipping threshold
+        gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation (``bool``, default ``True``): gradient clipping
+        gradient_clipping_with_truncation (bool, default ``True``): gradient clipping
 
     Returns:
         Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
@@ -387,28 +393,28 @@ def nesterov(parameters, lr, momentum,
         gradient_clipping_with_truncation=True):
     '''
     Creates a Nesterov SGD learner instance to learn the parameters. This was
-    originally proposed by Nesterov [1] in 1983 and then proved to work well in
+    originally proposed by Nesterov [1] in 1983 and then shown to work well in
     a deep learning context by Sutskever, et al. [2].
 
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
-        lr (``float``, ``list`` or output of :func:`learning_rate_schedule`): learning rate 
-         schedule. When the argument value is a ``float`` or a ``list``, lr is 
+        lr (float, list or output of :func:`learning_rate_schedule`): learning rate 
+         schedule. When the argument value is a float or a list, lr is 
          converted to a per-sample schedule by invoking :func:`learning_rate_schedule`.
-        momentum (``float``, ``list`` or output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule. When the argument 
-         value is a ``float`` or a ``list``, momentum is converted to a per-sample schedule by 
+        momentum (float, list or output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule. When the argument 
+         value is a float or a list, momentum is converted to a per-sample schedule by 
          invoking :func:`momentum_schedule`. Refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
-        l1_regularization_weight (``float``, optional): the L1 regularization weight per sample,
+        l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
-        l2_regularization_weight (``float``, optional): the L2 regularization weight per sample,
+        l2_regularization_weight (float, optional): the L2 regularization weight per sample,
          defaults to 0.0
-        gaussian_noise_injection_std_dev (``float``, optional): the standard deviation
+        gaussian_noise_injection_std_dev (float, optional): the standard deviation
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        gradient_clipping_threshold_per_sample (``float``, optional): clipping threshold
+        gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation (``bool``, default ``True``): gradient clipping
+        gradient_clipping_with_truncation (bool, default ``True``): gradient clipping
 
     Returns:
         Instance of a :class:`~cntk.learner.Learner` that can be passed to the
@@ -449,19 +455,19 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
-        lr (``float``, `list` or output of :func:`learning_rate_schedule`): learning rate 
-         schedule. When the argument value is a `float` or a `list`, lr is 
+        lr (float, list or output of :func:`learning_rate_schedule`): learning rate 
+         schedule. When the argument value is a float or a list, lr is 
          converted to a per-sample schedule by invoking :func:`learning_rate_schedule`.
-        need_ave_multiplier (``bool``, default):
-        l1_regularization_weight (``float``, optional): the L1 regularization weight per sample,
+        need_ave_multiplier (bool, default):
+        l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
-        l2_regularization_weight (``float``, optional): the L2 regularization weight per sample,
+        l2_regularization_weight (float, optional): the L2 regularization weight per sample,
          defaults to 0.0
-        gaussian_noise_injection_std_dev (``float``, optional): the standard deviation
+        gaussian_noise_injection_std_dev (float, optional): the standard deviation
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        gradient_clipping_threshold_per_sample (``float``, optional): clipping threshold
+        gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation (``bool``, default `True`): gradient clipping
+        gradient_clipping_with_truncation (bool, default `True`): gradient clipping
 
     Returns:
         Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
@@ -500,25 +506,25 @@ def adam_sgd(parameters, lr, momentum,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
-        lr (``float``, `list` or output of :func:`learning_rate_schedule`): learning rate 
-         schedule. When the argument value is a `float` or a `list`, lr is 
+        lr (float, list or output of :func:`learning_rate_schedule`): learning rate 
+         schedule. When the argument value is a float or a list, lr is 
          converted to a per-sample schedule by invoking :func:`learning_rate_schedule`.
-        momentum (`float`, `list` or output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule. When the argument 
-         value is a `float` or a `list`, momentum is converted to a per-sample schedule by 
+        momentum (float, list or output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule. When the argument 
+         value is a float or a list, momentum is converted to a per-sample schedule by 
          invoking :func:`momentum_schedule`. Refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
-        variance_momentum (`float`, `list` or output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. When the argument 
-         value is a `float` or a `list`, variance momentum is converted to a per-sample schedule by 
+        variance_momentum (float, list or output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. When the argument 
+         value is a float or a list, variance momentum is converted to a per-sample schedule by 
          invoking :func:`momentum_schedule`. Defaults to momentum_as_time_constant_schedule(720000).
-        l1_regularization_weight (``float``, optional): the L1 regularization weight per sample,
+        l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
-        l2_regularization_weight (``float``, optional): the L2 regularization weight per sample,
+        l2_regularization_weight (float, optional): the L2 regularization weight per sample,
          defaults to 0.0
-        gaussian_noise_injection_std_dev (``float``, optional): the standard deviation
+        gaussian_noise_injection_std_dev (float, optional): the standard deviation
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        gradient_clipping_threshold_per_sample (``float``, optional): clipping threshold
+        gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation (``bool``, default `True`): gradient clipping
+        gradient_clipping_with_truncation (bool, default `True`): gradient clipping
 
     Returns:
         Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
@@ -559,24 +565,24 @@ def rmsprop(parameters, lr,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
-        lr (``float``, `list` or output of :func:`learning_rate_schedule`): learning rate 
-         schedule. When the argument value is a `float` or a `list`, lr is 
+        lr (float, list or output of :func:`learning_rate_schedule`): learning rate 
+         schedule. When the argument value is a float or a list, lr is 
          converted to a per-sample schedule by invoking :func:`learning_rate_schedule`.
-        gamma (``float``):
-        inc (``float``):
-        dec (``float``):
-        max (``float``):
-        min (``float``):
-        need_ave_multiplier (``bool``, default):
-        l1_regularization_weight (``float``, optional): the L1 regularization weight per sample,
+        gamma (float):
+        inc (float):
+        dec (float):
+        max (float):
+        min (float):
+        need_ave_multiplier (bool, default):
+        l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
-        l2_regularization_weight (``float``, optional): the L2 regularization weight per sample,
+        l2_regularization_weight (float, optional): the L2 regularization weight per sample,
          defaults to 0.0
-        gaussian_noise_injection_std_dev (``float``, optional): the standard deviation
+        gaussian_noise_injection_std_dev (float, optional): the standard deviation
          of the Gaussian noise added to parameters post update, defaults to 0.0
-        gradient_clipping_threshold_per_sample (``float``, optional): clipping threshold
+        gradient_clipping_threshold_per_sample (float, optional): clipping threshold
          per sample, defaults to infinity
-        gradient_clipping_with_truncation (``bool``, default `True`): gradient clipping
+        gradient_clipping_with_truncation (bool, default `True`): gradient clipping
 
     Returns:
         Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`

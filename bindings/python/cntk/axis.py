@@ -41,7 +41,7 @@ class Axis(cntk_py.Axis):
         Returns True if the axis is of type static and False otherwise
 
         Returns:
-            `bool`: True if this axis is of type static and False otherwise
+            bool: True if this axis is of type static and False otherwise
         '''
         return super(Axis, self).is_static_axis()
 
@@ -51,7 +51,7 @@ class Axis(cntk_py.Axis):
         Returns the name of this axis.
 
         Returns:
-            `str`: the name of this axis.
+            str: the name of this axis.
         '''
         return super(Axis, self).name()
 
@@ -60,7 +60,7 @@ class Axis(cntk_py.Axis):
         Returns the integer with which the static axis is defined. For example, 0 = first axis, 1 = second axis, etc.
 
         Args:
-            checked (`bool`): if True then this function will throw an exception if the axis is not static.
+            checked (bool): if True then this function will throw an exception if the axis is not static.
 
         Returns:
             `int`: the number with which the static axis is defined.
@@ -107,7 +107,7 @@ class Axis(cntk_py.Axis):
         Creates an Axis object representing a new unique dynamic axis.
 
         Args:
-            name (`str`): name of the dynmic axis
+            name (str): name of the dynmic axis
 
         Returns:
             :class:`Axis`: new unique dynamic axis

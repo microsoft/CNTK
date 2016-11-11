@@ -13,9 +13,9 @@ def save_model(root_op, filename, use_legacy_format=True):
     Save the network of ``root_op`` in ``filename``.
 
     Args:
-        root_op (:class:`cntk.functions.Function`): op of the graph to save
-        filename (`str`): filename to store the model in
-        use_legacy_format (`str`): if 'True', model is stored using legacy format.
+        root_op (:class:`~cntk.functions.Function`): op of the graph to save
+        filename (str): filename to store the model in
+        use_legacy_format (str): if 'True', model is stored using legacy format.
              Otherwise, it's stored using protobuf-based protocol serialization.
     '''
     root_op.save_model(filename, use_legacy_format)
@@ -27,10 +27,10 @@ def load_model(filename, dtype=np.float32, device=None):
     `:func:save_model`.
 
     Args:
-        filename (`str`): filename to load the model from
-        dtype ('float', 'double', or NumPy type, default ``np.float32``): data
+        filename (str): filename to load the model from
+        dtype ('float', 'double', or NumPy type, default np.float32): data
          type of the operation
-        device (:class:`cntk.DeviceDescriptor`, default is the default device):
+        device (:class:`~cntk.DeviceDescriptor`, default is the default device):
          instance of DeviceDescriptor
 
     Returns:

@@ -26,7 +26,7 @@ class Trainer(cntk_py.Trainer):
        model (:class:`~cntk.ops.functions.Function`): root node of the function to train
        loss_function (:class:`~cntk.ops.functions.Function`): loss function 
        eval_function (:class:`~cntk.ops.functions.Function`): evaluation function
-       parameter_learners (`list`): list of learners from :mod:`cntk.learner`
+       parameter_learners (list): list of learners from :mod:`cntk.learner`
        distributed_trainer (:class:`~cntk.distributed.distributed_trainer`): distributed trainer
     '''
     def __init__(self, model, loss_function, eval_function, parameter_learners, distributed_trainer=None):
@@ -133,8 +133,8 @@ class Trainer(cntk_py.Trainer):
         specified file location.
 
         Args:
-            filename (`str`): filename to store the checkpoint
-            use_legacy_format (`str`): if 'True', model is stored using legacy format.
+            filename (str): filename to store the checkpoint
+            use_legacy_format (str): if 'True', model is stored using legacy format.
              Otherwise, it's stored using protobuf-based protocol serialization.
         '''
 
@@ -146,7 +146,7 @@ class Trainer(cntk_py.Trainer):
         specified file location.
 
         Args:
-            filename (`str`): filename to restore the checkpoint from
+            filename (str): filename to restore the checkpoint from
         '''
 
         super(Trainer, self).restore_from_checkpoint(filename)

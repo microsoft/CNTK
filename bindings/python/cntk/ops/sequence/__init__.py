@@ -30,7 +30,7 @@ def is_first(seq, name=''):
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import is_first
     seq = sanitize_input(seq, get_data_type(seq))
@@ -57,7 +57,7 @@ def is_last(seq, name=''):
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk.Function`:
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import is_last
     seq = sanitize_input(seq, get_data_type(seq))
@@ -80,7 +80,7 @@ def slice(seq, begin_index, end_index, name=''):
         Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import sequence_slice
     seq = sanitize_input(seq, get_data_type(seq))
@@ -106,7 +106,7 @@ def first(seq, name=''):
         seq: the symbolic tensor denoting a sequence
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import first
     seq = sanitize_input(seq, get_data_type(seq))
@@ -134,7 +134,7 @@ def last(seq, name=''):
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import last
     seq = sanitize_input(seq, get_data_type(seq))
@@ -164,7 +164,7 @@ def where(condition, name=''):
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import where
     condition = sanitize_input(condition, get_data_type(condition))
@@ -199,7 +199,7 @@ def gather(seq, condition, name=''):
             elements should be selected
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import gather
     seq = sanitize_input(seq, get_data_type(seq))
@@ -249,7 +249,7 @@ def scatter(seq, condition, name=''):
             elements should be copied
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import scatter
     seq = sanitize_input(seq, get_data_type(seq))
@@ -296,7 +296,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import broadcast_as
     operand = sanitize_input(operand, get_data_type(operand))
@@ -316,7 +316,7 @@ def reduce_sum(seq, name=''):
         name (`str`, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import sequence_reduce_sum
     seq = sanitize_input(seq, get_data_type(seq))
