@@ -101,3 +101,12 @@ In the fifth example, we show how CNTK can be used to perform a regression task.
 `cntk configFile=05_OneConvRegr.cntk`
 
  The trained network achieves root-mean-square error (RMSE) of 0.0039. To see more sophisticated examples on regression tasks, please refer to [Regression](../Regression).
+
+ ### 06_OneConvRegrMultiNode.cntk
+
+In the sixth example, we show how to train CNTK with multiple process(GPUs) for a regression task. CNTK using MPI for the multiple nodes task, and CNTK currently support four parallel SGD algorithms: DataParallelSGD, BlockMomentumSGD, ModelAveragingSGD, DataParallelASGD. We reuse the same network architecture in `05_OneConvRegr`, only to add a parallel train block. To run this example on a machine, use the following command:
+
+`mpiexec -n 2 cntk configFile=06_OneConvRegrMultiNode.cntk parallelTrain=True parallelizationMethod=DataParallelSGD`
+
+You can change the parallelizationMethod to other three options. To see more detailed guide on multiple GPUs and machines tasks, please refer to [Multiple GPUs and machines](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines).
+

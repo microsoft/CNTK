@@ -99,6 +99,7 @@ class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
 
             int argc = 0;
             char **argv = NULL;
+            // TODO(qiwye) Multiverso(parameter server) will benefit from MPI_THREAD_MULTIPLE .
             int requiredThreadLevelSupport = MPI_THREAD_SERIALIZED;
             int provided;
             int ret = MPI_Init_thread(&argc, &argv, requiredThreadLevelSupport, &provided);

@@ -130,7 +130,7 @@ public:
                 actualMBSize = 0; // (undefined if !wasDataRead)
 
             if (actualMBSize > 0)
-        {
+            {
 
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
