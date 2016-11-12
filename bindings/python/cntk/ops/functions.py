@@ -5,22 +5,22 @@ from enum import Enum, unique
 @unique
 class CloneMethod(Enum):
     '''
-    Describes different ways how :class:`cntk.ops.functions.Function.forward`
+    Describes different ways how :func:`~cntk.ops.functions.Function.clone`
     works.
     '''
 
-    clone = 1
-    '''
-    New learnable Parameters are created and initialied with the current values of the
-    corresponding Parameters of the Function being cloned
-    '''
-
-    share = 2
+    share = 'share'
     '''
     Parameters are shared between the Function being cloned and the new clone
     '''
 
-    freeze = 3
+    clone = 'clone'
+    '''
+    New learnable parameters are created and initialied with the current values of the
+    corresponding parameters of the Function being cloned
+    '''
+
+    freeze = 'freeze'
     '''
     Parameters are cloned and made immutable; i.e. Constants in the new clone
     (e.g. for use as a fixed feature extractor)
@@ -116,31 +116,27 @@ class Function(cntk_py.Function):
         return super(Function, self).attributes()
 
     @typemap
-    def clone(self, method=CloneMethod.freeze, substitutions=None):
+    def clone(self, method, substitutions=None):
         '''
         Clones the function. The parameters of the Function are either cloned,
         shared or frozen as specified by the method argument and any variable
         substitutions requested are applied in the cloned Function instance.
 
         Args:
-            method (:class:`cntk.ops.functions.CloneMethod`): one of
+            method (:class:`CloneMethod`): one of
 
              * 'clone': the returned function gets its own copy of parameters (default)
              * 'share': the returned function shares its parameters with this function
              * 'freeze': parameters are cloned and made immutable (constant).
 
-            substitutions (`dict`): a dictionary mapping variables in this
+            substitutions (dict): a dictionary mapping variables in this
              function to variables in the cloned function
 
         Returns:
-            :class:`Function`: the cloned Function
+            :class:`~cntk.ops.functions.Function`: the cloned Function
         '''
-        if not isinstance(method, CloneMethod):
-            raise ValueError('clone method "%s" is not supported' %
-                    str(method))
-
         method = getattr(cntk_py,
-                'ParameterCloningMethod_' + method.name.capitalize())
+                'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
         if substitutions is None:
             substitutions = {}
         return super(Function, self).clone(method, substitutions)
@@ -149,7 +145,7 @@ class Function(cntk_py.Function):
     @typemap
     def constants(self):
         '''
-        List of all `Constant` variables of this :class:`Function`
+        List of all `Constant` variables of this :class:`~cntk.ops.functions.Function`
         '''
         return super(Function, self).constants()
 
@@ -161,9 +157,9 @@ class Function(cntk_py.Function):
             arguments: maps variables to their input data. The interpretation depends on
              the input type:
 
-               * `dict`: keys are input variable or names, and values are the input data.
+               * dict: keys are input variable or names, and values are the input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
-                For nodes with more than one input, only `dict` is allowed.
+                For nodes with more than one input, only dict is allowed.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
@@ -171,8 +167,8 @@ class Function(cntk_py.Function):
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
-             :class:`cntk.io.MinibatchData` instance.
-            device (:class:`cntk.device.DeviceDescriptor`): the device descriptor that
+             :class:`~cntk.io.MinibatchData` instance.
+            device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
 
@@ -212,9 +208,9 @@ class Function(cntk_py.Function):
             arguments: maps variables to their
              input data. The interpretation depends on the input type:
 
-               * `dict`: keys are input variable or names, and values are the input data.
+               * dict: keys are input variable or names, and values are the input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
-                For nodes with more than one input, only `dict` is allowed.
+                For nodes with more than one input, only dict is allowed.
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as ``tuple``: the
@@ -222,19 +218,19 @@ class Function(cntk_py.Function):
              be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
-             :class:`cntk.io.MinibatchData` instance.
+             :class:`~cntk.io.MinibatchData` instance.
             outputs (iterable): outputs to fetch values for.
-            keep_for_backward (`set`, default `None`): the subset of the
+            keep_for_backward (set, default `None`): the subset of the
              Function's output variables for which gradients shall be calculated
              in a subsequent backward call. If `None`, the returned state will
              be `None` and a subsequent call to :func:`backward` will not be
              possible.
-            device (:class:`cntk.device.DeviceDescriptor`, default `None`): the device
+            device (:class:`~cntk.device.DeviceDescriptor`, default `None`): the device
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
 
         Returns:
-             A tuple (`BackpropState`, `map` of outputs to NumPy arrays). The
+             A tuple (BackpropState, map of outputs to NumPy arrays). The
              BackpropState is a handle taken by :func:`backward`.
         '''
         if device is None:
@@ -274,15 +270,15 @@ class Function(cntk_py.Function):
             array([[[ 0.25]]], dtype=float32)
 
         Args:
-            state (`BackPropState`): state obtained from a previous call to the
+            state (BackPropState): state obtained from a previous call to the
              func:`cntk.ops.Function.forward` method on this Function for the
              computation that this gradient backpropagation corresponds to.
-            root_gradients (`dict`): the gradients that will be backpropagated
-            variables (`set`): a list of input variables with respect to which
+            root_gradients (dict): the gradients that will be backpropagated
+            variables (set): a list of input variables with respect to which
              the gradients have to be computed.
 
         Returns:
-            `dict`: mapping of ``variables`` to NumPy arrays
+            dict: mapping of ``variables`` to NumPy arrays
         '''
         root_gradients = sanitize_var_map(self.outputs, root_gradients)
 
@@ -357,7 +353,7 @@ class Function(cntk_py.Function):
         specified replacements in the map.
 
         Args:
-            substitutions (``dict``): map from placeholder to variables
+            substitutions (dict): map from placeholder to variables
 
         Returns:
             :class:`Function`: itself
@@ -371,7 +367,7 @@ class Function(cntk_py.Function):
         specified substitution.
 
         Args:
-            substitution (:class:`cntk.ops.variables.Variable`): the variable
+            substitution (:class:`~cntk.ops.variables.Variable`): the variable
              that will replace the placeholder 
 
         Returns:
@@ -387,8 +383,8 @@ class Function(cntk_py.Function):
         Save this function graph into a model file
 
         Args:
-            filename (`str`): model path
-            use_legacy_format (`str`): if 'True', model is stored using legacy format.
+            filename (str): model path
+            use_legacy_format (str): if 'True', model is stored using legacy format.
              Otherwise, it's stored using protobuf-based protocol serialization.
         '''
         return super(Function, self).save_model(filename, use_legacy_format)
@@ -399,7 +395,7 @@ class Function(cntk_py.Function):
         Restore the models parameters from a saved model file
 
         Args:
-            filename (`str`): saved model path 
+            filename (str): saved model path 
 
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file

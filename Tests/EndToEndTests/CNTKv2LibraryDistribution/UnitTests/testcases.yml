@@ -7,5 +7,7 @@ tags:
 testCases:
   Test run must be completed:
     patterns:
-      - "CNTKv2LibraryDistribution tests: Passed"
+      - ^MPI Rank {{integer}}
+      - CNTKv2LibraryDistribution tests
+      - Passed
 

@@ -21,6 +21,7 @@
     </ClCompile>
     <ClCompile Include="DistributedCommunicator.cpp" />
     <ClCompile Include="DataParallelDistributedTrainer.cpp" />
+    <ClCompile Include="DistributedTrainerBase.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -43,6 +44,7 @@
     <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="DistributedCommunicator.h" />
     <ClInclude Include="DataParallelDistributedTrainer.h" />
+    <ClInclude Include="DistributedTrainerBase.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

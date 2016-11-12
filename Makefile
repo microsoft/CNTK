@@ -418,6 +418,7 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Serialization.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/DistributedCommunicator.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/DistributedTrainerBase.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/DataParallelDistributedTrainer.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/proto/CNTK.pb.cc \
 
@@ -492,6 +493,7 @@ $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 CNTKLIBRARY_DISTRIBUTION_TESTS_SRC =\
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/Common.cpp \
 	Tests/UnitTests/V2LibraryDistributionTests/Main.cpp \
+	Tests/UnitTests/V2LibraryDistributionTests/FrameModeTests.cpp \
 
 CNTKLIBRARY_DISTRIBUTION_TESTS:=$(BINDIR)/v2librarydistributiontests
 CNTKLIBRARY_DISTRIBUTION_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_DISTRIBUTION_TESTS_SRC)))

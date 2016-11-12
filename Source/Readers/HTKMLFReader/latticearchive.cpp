@@ -22,6 +22,8 @@
 #pragma warning(disable : 4996)
 namespace msra { namespace lattices {
 
+using namespace std;
+
 // helper to write a symbol hash (string -> int) to a file
 // File has two sections:
 //  - physicalunitname     // line number is mapping, starting with 0

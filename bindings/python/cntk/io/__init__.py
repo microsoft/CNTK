@@ -57,9 +57,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
     Parent class of all minibatch sources. For most cases you will need the
     helper functions :func:`text_format_minibatch_source` or
     :func:`minibatch_source`.
-    A `MinibatchSource` can be indexed by a `StreamInfo`, which will return a
-    `MinibatchData` object that can be passed e.g. to the
-    :func:`cntk.trainer.Trainer.train_minibatch` function.
+    A `MinibatchSource` can be indexed by the stream name, which will return a
+    :class:`MinibatchData` object that can be passed e.g. to the
+    :func:`~cntk.trainer.Trainer.train_minibatch` function.
     '''
 
     def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_communicator=None):
@@ -81,7 +81,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Describes the stream that this source produces.
 
         Returns:
-            `dict` mapping input names to the stream information
+            dict mapping input names to the stream information
         '''
         return super(MinibatchSource, self).stream_infos()
 
@@ -98,7 +98,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Return the :class:`StreamInfo` for the given stream name
 
         Args:
-            name (`str`): stream name to fetch :class:`StreamInfo` for
+            name (str): stream name to fetch :class:`StreamInfo` for
         '''
         return self.stream_info(name)
 
@@ -115,11 +115,11 @@ class MinibatchSource(cntk_py.MinibatchSource):
         when the MinibatchSource has no more data to return.
 
         Args:
-            minibatch_size_in_samples (`int`): number of samples to retrieve for
+            minibatch_size_in_samples (int): number of samples to retrieve for
              the next minibatch. Must be > 0.
-            minibatch_size_in_sequences (`int`, defaults to `None`): number of
+            minibatch_size_in_sequences (int, defaults to `None`): number of
              samples to retrieve for the next minibatch. Must be > 0.
-            input_map (`dict`): mapping of :class:`cntk.ops.variabls.Variable`
+            input_map (dict): mapping of :class:`~cntk.ops.variabls.Variable`
              to :class:`StreamInformation` which will be used to convert the
              returned data.
             device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor
@@ -127,7 +127,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Returns:
             A mapping of :class:`StramInformation` to :class:`MinibatchData` if
             ``input_map`` was not specified. Otherwise, the returned value will
-            be a mapping of :class:`cntk.ops.variabls.Variable` to class:`MinibatchData`.
+            be a mapping of :class:`~cntk.ops.variabls.Variable` to class:`MinibatchData`.
         '''
         if device is None:
             device = use_default_device()
@@ -161,7 +161,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Gets the checkpoint state of the MinibatchSource.
 
         Returns:
-            :class:`cntk_py.Dictionary`
+            :class:`~cntk_py.Dictionary`
         '''
         return super(MinibatchSource, self).get_checkpoint_state()
 
@@ -170,7 +170,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Restores the MinibatchSource state from the specified checkpoint.
 
         Args:
-            checkpoint (:class:`cntk_py.Dictionary`): checkpoint to restore from
+            checkpoint (:class:`~cntk_py.Dictionary`): checkpoint to restore from
         '''
         super(MinibatchSource, self).restore_from_checkpoint(checkpoint)
 
@@ -179,9 +179,9 @@ def _py_dict_to_cntk_dict(py_dict):
     '''
     Converts a Python dictionary into a CNTK Dictionary whose values are CNTK DictionaryValue instances.
     Args:
-        py_dict (`dict`): a dictionary to be converted.
+        py_dict (dict): a dictionary to be converted.
     Returns:
-        :class:`cntk_py.Dictionary`
+        :class:`~cntk_py.Dictionary`
     '''
     res = cntk_py.Dictionary()
     for k, v in py_dict.items():
@@ -208,7 +208,7 @@ def minibatch_source(config, distributed_communicator):
     '''
     Instantiate the CNTK built-in composite minibatch source which is used to stream data into the network.
     Args:
-        config (`dict`): a dictionary containing all the key-value configuration entries.
+        config (dict): a dictionary containing all the key-value configuration entries.
         distributed_communicator: optional distributed communicator
     Returns:
         :class:`MinibatchSource`
@@ -227,8 +227,8 @@ class ReaderConfig(dict):
     Args:
         deserializers ('list', default is empty): list of deserializers
          (:class:`ImageDeserializer` for now).
-        randomize (`bool`, default True): randomize images before every epoch
-        epoch_size (`int`): epoch size
+        randomize (bool, default True): randomize images before every epoch
+        epoch_size (int): epoch size
     '''
 
     def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT):
@@ -244,10 +244,10 @@ class ReaderConfig(dict):
         '''
         Creates an instance of :class:`MinibatchSource` from this
         instance, which can be used to feed data into the `eval()` methods of
-        the graph nodes or the `train_minibatch()` of :class:`cntk.trainer.Trainer`.
+        the graph nodes or the `train_minibatch()` of :class:`~cntk.trainer.Trainer`.
 
         Args:
-            distributed_communicator (:class:`cntk.distributed.communicator`): distributed communicator
+            distributed_communicator (:class:`~cntk.distributed.communicator`): distributed communicator
         
         Returns:
             instance of :class:`MinibatchSource`
@@ -270,7 +270,7 @@ class Deserializer(dict):
     ========================== ============
 
     Args:
-        type (`str`): type of the deserializer
+        type (str): type of the deserializer
 
     See also:
         https://github.com/microsoft/cntk/wiki/Understanding-and-Extending-Readers
@@ -288,7 +288,7 @@ class ImageDeserializer(Deserializer):
          <full path to image><tab><numerical label (0-based class id)>
 
     Args:
-        filename (`str`): file name of the map file that associates images to
+        filename (str): file name of the map file that associates images to
          classes
 
     See also:
@@ -322,7 +322,7 @@ class ImageDeserializer(Deserializer):
         of the network with data augmentation.
 
         Args:
-            node (`str` or input node): node or its name
+            node (str or input node): node or its name
             transforms (`list` of transforms): the transforms can be created by
              the static methods `crop`, `scale`, or `mean`.
 
@@ -341,8 +341,8 @@ class ImageDeserializer(Deserializer):
         ground truth of train or test.
 
         Args:
-            node (`str` or input node): node or its name
-            num_classes (`int`): number of classes
+            node (str or input node): node or its name
+            num_classes (int): number of classes
 
         '''
         if not isinstance(node, str):
@@ -355,7 +355,7 @@ class ImageDeserializer(Deserializer):
         Crop transform that can be used to pass to `map_features`
 
         Args:
-            crop_type (`str`, default 'center'): 'center' or 'random'.  'random'
+            crop_type (str, default 'center'): 'center' or 'random'.  'random'
              is usually used during training while 'center' is usually for testing.
              Random cropping is a popular data augmentation technique used to improve
              generalization of the DNN.
@@ -368,12 +368,12 @@ class ImageDeserializer(Deserializer):
              augmentation technique), use colon-delimited values like  cropRatio=0.875:0.466
              which means 224 crop will be taken from images randomly scaled to have
              size in [256, 480] range.
-            jitter_type (`str`, default 'uniRatio'): crop scale jitter type, possible
+            jitter_type (str, default 'uniRatio'): crop scale jitter type, possible
              values are 'None', 'UniRatio'. 'uniRatio' means uniform distributed jitter
              scale between the minimum and maximum cropRatio values.
 
         Returns:
-            `dict` describing the crop transform
+            dict describing the crop transform
         '''
         return dict(type='Crop', cropType=crop_type, cropRatio=ratio,
                 jitterType=jitter_type)
@@ -384,14 +384,14 @@ class ImageDeserializer(Deserializer):
         Scale transform that can be used to pass to `map_features` for data augmentation.
 
         Args:
-            width (`int`): width of the image in pixels
-            height (`int`): height of the image in pixels
-            channels (`int`): channels of the image
-            interpolations (`str`, default 'linear'): possible values are
+            width (int): width of the image in pixels
+            height (int): height of the image in pixels
+            channels (int): channels of the image
+            interpolations (str, default 'linear'): possible values are
              'nearest', 'linear', 'cubic', and 'lanczos'
 
         Returns:
-            `dict` describing the scale transform
+            dict describing the scale transform
         '''
         return dict(type='Scale', width=width, height=height, channels=channels,
                 interpolations=interpolations)
@@ -402,11 +402,11 @@ class ImageDeserializer(Deserializer):
         Mean transform that can be used to pass to `map_features` for data augmentation.
 
         Args:
-            filename (`str`): file that stores the mean values for each pixel
+            filename (str): file that stores the mean values for each pixel
              in OpenCV matrix XML format
 
         Returns:
-            `dict` describing the mean transform
+            dict describing the mean transform
         '''
         return dict(type='Mean', meanFile=filename)
 
@@ -427,7 +427,7 @@ class CTFDeserializer(Deserializer):
         where
          Sample=|Input_Name (Value )* 
     Args:
-        filename (`str`): file name containing the text input
+        filename (str): file name containing the text input
     See also:
         https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
     '''
@@ -451,12 +451,12 @@ class CTFDeserializer(Deserializer):
         Example: for node name 'Apples' an input line could look like this:
         |Apples 0 1 2 3 4 5 6 7 8 9
         Args:
-            node (`str` or input node): node or its name
-            dim (`int`): specifies the dimension of the input value vector 
+            node (str or input node): node or its name
+            dim (int): specifies the dimension of the input value vector 
              (for dense input this directly corresponds to the number of values in each sample, 
              for sparse this represents the upper bound on the range of possible index values).
-            format (`str`, default 'dense'): 'dense' or 'sparse'. Specifies the input type. 
-            alias (`str`, default None): None or alias name. Optional abbreviated name that 
+            format (str, default 'dense'): 'dense' or 'sparse'. Specifies the input type. 
+            alias (str, default None): None or alias name. Optional abbreviated name that 
              is used in the text file to avoid repeating long input names. For details please
              see https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
         '''
@@ -474,14 +474,14 @@ def text_format_minibatch_source(path, stream_configs, epoch_size=INFINITELY_REP
     Creates a minibatch source from a CNTKTextFormatReader file.
 
     Args:
-        path ('file'): filename of the data file
+        path (file): filename of the data file
         stream_configs (`list` of :class:`StreamConfiguration` instances): list
          of stream configurations, each of which describes one stream in the
          file
-        epoch_size (`int`, optional): size of an epoch. In case of 0 the size
+        epoch_size (int, optional): size of an epoch. In case of 0 the size
          of the training set will be taken. Default is max of 64bit.
-        randomize (`bool`, optional): whether to randomize the contents of data file.
-        distributed_communicator (:class:`cntk.distributed.communicator`): optional distributed communicator
+        randomize (bool, optional): whether to randomize the contents of data file.
+        distributed_communicator (:class:`~cntk.distributed.communicator`): optional distributed communicator
 
     Returns:
         :class:`MinibatchSource`
@@ -499,13 +499,13 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
     :func:`text_format_minibatch_source`.
 
     Args:
-        name (`str`): name of this stream
-        dim (`int`): dimensions of this stream. A text format reader reads data
+        name (str): name of this stream
+        dim (int): dimensions of this stream. A text format reader reads data
          as flat arrays. If you need different shapes you can
-         :func:`cntk.ops.reshape` it later.
-        is_sparse (`bool`, default `False`): whether the provided data is sparse
+         :func:`~cntk.ops.reshape` it later.
+        is_sparse (bool, default `False`): whether the provided data is sparse
          (`False` by default)
-        stream_alias (`str`, default ''): name of the stream in the file that is fed to the
+        stream_alias (str, default ''): name of the stream in the file that is fed to the
          :func:`text_format_minibatch_source`
     '''
 
