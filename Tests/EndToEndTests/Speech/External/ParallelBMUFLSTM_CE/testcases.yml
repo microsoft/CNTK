@@ -1,6 +1,5 @@
 dataDir: ../../Data
 tags:
-     # TODO: enable Windows
      - bvt-s  (build_sku=='1bitsgd') and (flavor=='release') and (device=='gpu')
      - nightly-s (build_sku=='1bitsgd') and (device=='gpu')
 
