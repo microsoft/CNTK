@@ -1020,7 +1020,7 @@ if test $enable_cuda = yes ; then
     echo GDK_NVML_LIB_PATH=$gdk_nvml_lib_path >> $config
     echo CUB_PATH=$cub_path >> $config
     echo CUDNN_PATH=$cudnn_path >> $config
-    [-z "$nccl_path"] || echo NCCL_PATH=$nccl_path >> $config
+    [ -z "$nccl_path" ] || echo NCCL_PATH=$nccl_path >> $config
 fi
 if test $enable_python = yes ; then
     echo PYTHON_SUPPORT=true >> $config
