@@ -8,25 +8,28 @@ tags:
      - nightly-p (build_sku == 'gpu') and (os == 'linux') and (device == 'gpu')
 
 testCases:
-# TODO: quick fix for master branch fail, will addback when new baseline ready
- Must train epochs in exactly same order and parameters for each MPI Rank:
-   patterns:
-#      - ^MPI Rank {{integer}}
-#      - Starting Epoch {{integer}}
-#      - learning rate per sample = {{float}}
-#
- Epochs must be finished with expected results for each MPI Rank:
-   patterns:
-#      - ^MPI Rank {{integer}}
-#      - Finished Epoch[{{integer}} of {{integer}}]
-#
- Per-minibatch training results must match for each MPI Rank:
-   patterns:
-#      - ^MPI Rank {{integer}}
-#      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-#      - " * {{integer}}; "
-#
- DataParallelASGD training parameters must match for each MPI Rank:
-   patterns:
-#      - ^MPI Rank {{integer}}
-#      - Starting minibatch loop
+  Must train epochs in exactly same order and parameters for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+
+  Epochs must be finished with expected results for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - CE = {{float,tolerance=0.5}}
+      - Err = {{float,tolerance=0.5}}
+
+  Per-minibatch training results must match for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - " * {{integer}}; "
+      - CE = {{float,tolerance=0.8}}
+      - Err = {{float,tolerance=0.8}}
+
+  DataParallelASGD training parameters must match for each MPI Rank:
+    patterns:
+      - ^MPI Rank {{integer}}
+      - Starting minibatch loop
