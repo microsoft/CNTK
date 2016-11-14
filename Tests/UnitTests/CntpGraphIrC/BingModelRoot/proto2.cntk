@@ -1,0 +1,188 @@
+# proto2.cntk
+
+DataDir = "data"
+OutDir  = "Out"
+
+# command to execute
+command = train
+#command = write
+modelPath  = "$OutDir$/proto2.dnn"
+
+# top-level model configuration
+hiddenDim = 256
+embedDim = 200
+precision  = "float"
+vocabSize = 40000
+rnnLayers = 0 # actually number of layers minus 1.. so 0 for 1 layer...
+
+# corpus
+trainFile   = "training.ctf"
+validFile   = "testing.ctf"
+testFile    = "testing.ctf"
+mappingFile = "vocab_40k.txt"
+
+# some reader variables that occur multiple times
+cntkReaderInputDef = { rawContext = { alias = "S0" ; dim = $vocabSize$ ; format = "sparse" } ; rawQuery   = { alias = "S1" ; dim = $vocabSize$ ; format = "sparse" } ; rawAnswer  = { alias = "S2" ; dim = $vocabSize$ ; format = "sparse" } }
+
+#######################################
+#  network definition                 #
+#######################################
+
+BrainScriptNetworkBuilder = (new ComputationNetwork {
+
+    vocabDim = $vocabSize$
+    hiddenDim = $hiddenDim$
+    embedDim = $embedDim$
+    rnnLayers = $rnnLayers$
+    useStabilizer = true
+
+    #############################################################
+    # inputs
+    #############################################################
+
+    sourceSeqAxis  = DynamicAxis()
+    contextSeqAxis = DynamicAxis()
+    rawQuery   = Input (vocabDim, dynamicAxis=sourceSeqAxis , /*sparse=true,*/ tag='feature')
+    rawContext = Input (vocabDim, dynamicAxis=contextSeqAxis, /*sparse=true,*/ tag='feature')
+    rawAnswer  = Input (vocabDim, /*sparse=true,*/ tag='label')
+
+    #############################################################
+    # embeddings
+    #############################################################
+
+    embedding = BS.Parameters.WeightParam (vocabDim, embedDim)
+
+    sourceEmbedded  = TransposeTimes(embedding, rawQuery)
+    contextEmbedded = TransposeTimes(embedding, rawContext)
+
+    S(x) = BS.Parameters.Stabilize (x, enabled=useStabilizer)
+
+    #############################################################
+    # source and context representations
+    #############################################################
+
+    rnnDims[i:0..rnnLayers] = hiddenDim
+    
+    sourceHidden  = BS.RNNs.RecurrentBidirectionalGRUStack(rnnDims, cellDims=rnnDims, S(sourceEmbedded ), inputDim=embedDim, enableSelfStabilization=useStabilizer)
+    contextHidden = BS.RNNs.RecurrentBidirectionalGRUStack(rnnDims, cellDims=rnnDims, S(contextEmbedded), inputDim=embedDim, enableSelfStabilization=useStabilizer)
+
+    sourceOutput  = sourceHidden [Length (rnnDims)-1]
+    contextOutput = contextHidden[Length (rnnDims)-1]
+
+    sourceRep = BS.Sequences.Last(sourceOutput.h)
+
+    # attention
+    attention = ReduceSum(ElementTimes(BS.Sequences.BroadcastSequenceAs(contextEmbedded, sourceRep), contextOutput.h), axis=1)
+    
+    # reduction
+    ReduceTimesSum (z) = {
+        # define a recursive expression for \sum_{i=1}^t (z_i)
+        runningSum = Plus (z, PastValue (0, runningSum, defaultHiddenActivation=0)) 
+        result = BS.Sequences.Last(runningSum)
+    }.result
+
+    q = ElementTimes(attention, rawContext)
+    reduct = ReduceTimesSum(q)
+
+    #############################################################
+    # training criteria
+    #############################################################
+
+    # fix mini-batch layout
+    #z = ReconcileDynamicAxis(reduct, rawAnswer, tag='output')
+    z = BS.Sequences.BroadcastSequenceAs(rawAnswer, reduct)
+        
+    # training criteria
+    ce = CrossEntropyWithSoftmax(rawAnswer, z, tag='criterion')   // this is the training objective
+    er = ErrorPrediction        (rawAnswer, z, tag='evaluation')  // this also gets tracked
+})
+
+#######################################
+#  TRAINING CONFIG                    #
+#######################################
+
+train = {
+    action = "train"
+    traceLevel = 1
+    epochSize = 0               # (for quick tests, this can be overridden with something small)
+
+    # BrainScriptNetworkBuilder is defined in outer scope
+
+    SGD = {
+        minibatchSize = 1024
+        learningRatesPerSample = 0.001
+        momentumAsTimeConstant = 1100
+        gradientClippingWithTruncation = true   # (as opposed to clipping the Frobenius norm of the matrix)
+        clippingThresholdPerSample = 10
+        maxEpochs = 50
+        numMBsToShowResult = 100
+        firstMBsToShowResult = 10
+        gradUpdateType = None
+
+        dropoutRate = 0.0
+
+        # settings for Auto Adjust Learning Rate
+        AutoAdjust = {
+            autoAdjustLR = "adjustAfterEpoch"
+            reduceLearnRateIfImproveLessThan = 0.001
+            continueReduce = false
+            increaseLearnRateIfImproveMoreThan = 1000000000
+            learnRateDecreaseFactor = 0.5
+            learnRateIncreaseFactor = 1.382
+            numMiniBatch4LRSearch = 100
+            numPrevLearnRates = 5
+            numBestSearchEpoch = 1
+        }
+    }
+
+    # reader definitions
+    reader = {
+        randomize = true
+        deserializers = ({
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "$DataDir$/$trainFile$"
+            input = $cntkReaderInputDef$
+        })
+
+    }
+}
+
+
+#######################################
+#  WRITE CONFIG                       #
+#######################################
+
+Write = {
+    action="write"
+    run=BrainScriptNetworkBuilder
+    
+    format = {
+      # %n = minibatch, %x = shape, %d = sequenceId
+      sequencePrologue=%d\t|w.shape %x\n%d\t|w\s
+      sampleSeparator=\n%d\t|w\s
+      elementSeparator=\s
+    }
+    
+    modelFile = "$modelPath$"
+    outputPath = "output"
+    
+    # We configure the output to emit a flat sequence of token strings.
+    format = {
+        type = "category"
+        transpose = false
+        labelMappingFile = "$DataDir$/$mappingFile$"
+    }
+
+    minibatchSize = 100
+    traceLevel = 1
+    epochSize = 0
+
+    reader = {
+        randomize = false
+        deserializers = ({
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "$DataDir$/$testFile$"
+            input = $cntkReaderInputDef$
+        })
+    }
+}
