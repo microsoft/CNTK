@@ -45,6 +45,7 @@
     <ClInclude Include="DistributedCommunicator.h" />
     <ClInclude Include="DataParallelDistributedTrainer.h" />
     <ClInclude Include="DistributedTrainerBase.h" />
+    <ClInclude Include="BackCompat.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

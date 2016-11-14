@@ -91,15 +91,4 @@ namespace CNTK
 
         return version;
     }
-
-    inline bool IsLegacyModel(std::fstream& stream)
-    {
-        static const char legacyMarker[] = { 0x42, 0x00, 0x43, 0x00, 0x4e, 0x00, 0x00, 0x00 }; // L"BCN"
-        static const auto size = sizeof(legacyMarker);
-        char buffer[size];
-        const auto position = stream.tellg();
-        stream.read(buffer, size);
-        stream.seekg(position);
-        return (strcmp(legacyMarker, buffer) == 0);
-    }
 }

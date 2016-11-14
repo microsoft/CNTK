@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
+#include "BackCompat.h"
 #include "Function.h"
 #include "ComputationNetworkBuilder.h"
 #include "Utils.h"
@@ -348,12 +349,26 @@ namespace CNTK
             return var;
         }
 
-        template <typename ElementType>
         FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
         {
             ComputationNetworkPtr net = make_shared<ComputationNetwork>(AsCNTKImplDeviceId(computeDevice));
             net->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
-            net->Load<ElementType>(modelFile);
+
+            auto dataType = DetectLegacyModelDataType(modelFile);
+            switch (dataType)
+            {
+            case LegacyModelDataType::Auto:
+                net->Load<float>(modelFile); // the actual template type will be ignored.
+                break;
+            case LegacyModelDataType::Float:
+                net->Load<float>(modelFile);
+                break;
+            case LegacyModelDataType::Double:
+                net->Load<double>(modelFile);
+                break;
+            default:
+                NOT_IMPLEMENTED;
+            }
 
             // Now traverse the model and construct the Function graph
             std::unordered_map<ComputationNodeBasePtr, Variable> nodeToVariableMap;
@@ -366,26 +381,24 @@ namespace CNTK
                 if (rootNode->IsLeaf())
                     continue;
 
-                rootVariables.push_back(Internal::GetVariable<ElementType>(rootNode, nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions).Owner());
+                if (ComputationNetwork::IsNodePtr<ComputationNode<float>>(rootNode))
+                {
+                    rootVariables.push_back(Internal::GetVariable<float>(rootNode, nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions).Owner());
+                }
+                else if (ComputationNetwork::IsNodePtr<ComputationNode<double>>(rootNode))
+                {
+                    rootVariables.push_back(Internal::GetVariable<double>(rootNode, nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions).Owner());
+                }
+                else
+                {
+                    LogicError("LoadLegacyModel(): invalid computation node element type.");
+                }
             }
 
             auto rootComposite = Combine(rootVariables);
             rootComposite->ReplacePlaceholders(placeholderReplacements);
 
             return rootComposite;
-        }
-
-        FunctionPtr LoadLegacyModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
-        {
-            switch (dataType)
-            {
-            case DataType::Float:
-                return LoadLegacyModel<float>(modelFile, computeDevice);
-            case DataType::Double:
-                return LoadLegacyModel<double>(modelFile, computeDevice);
-            default:
-                LogicError("Unknown DataType %s", DataTypeName(dataType));
-            }
         }
 
         void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile)
@@ -419,6 +432,51 @@ namespace CNTK
             }
 
             computationNetwork->Save(modelFile);
+        }
+
+        LegacyModelDataType DetectLegacyModelDataType(const std::wstring& modelFile)
+        {
+            File fstream(modelFile, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
+            fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
+
+            // model version
+            size_t modelVersion = CNTK_MODEL_VERSION_1; // if version info is not there it is version 1
+            if (fstream.TryGetMarker(FileMarker::fileMarkerBeginSection, L"BVersion"))
+            {
+                fstream >> modelVersion;
+                fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EVersion");
+            }
+
+            if (modelVersion > CNTK_MODEL_VERSION_7)
+            {
+                return LegacyModelDataType::Auto;
+            }
+
+            char b = 0x42;
+            std::wstring bmat = L"BMAT";
+            for (;;)
+            {
+                fstream.SkipToDelimiter(b); // skip to the next 'B' character.
+                ungetc(b, fstream); // but the character back into the stream.
+                if (fstream.TryGetMarker(fileMarkerBeginSection, bmat))
+                {
+                    size_t elementSize;
+                    fstream >> elementSize;
+                    if (elementSize == sizeof(float))
+                    {
+                        return LegacyModelDataType::Float;
+                    }
+                    else if (elementSize == sizeof(double))
+                    {
+                        return LegacyModelDataType::Double;
+                    }
+                    else
+                    {
+                        RuntimeError("DetectLegacyModelDataType(): invalid element size %zu.", elementSize);
+                    }
+                }
+                fgetc(fstream); // consume 'B' character to avoid an infinite cycle.
+            }
         }
     }
 }
