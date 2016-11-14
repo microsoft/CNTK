@@ -56,6 +56,7 @@ def simple_mnist(debug_output=False):
     netout = fully_connected_classifier_net(
         scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, relu)
 
+    ipdb.set_trace()
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
 
@@ -77,7 +78,7 @@ def simple_mnist(debug_output=False):
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(netout, ce, pe, sgd(netout.parameters, lr=0.003125))
 
-    train_writer = tf.train.SummaryWriter('/home/alona/tflogs/SimpleMNIST')
+    train_writer = tf.train.SummaryWriter(logdir='/home/alona/tflogs/SimpleMNIST', flush_secs=30)
     # test_writer = tf.train.SummaryWriter('/home/alona/tflogs/SimpleMNIST/test')
 
     # Get minibatches of images to train with and perform model training
