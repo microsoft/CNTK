@@ -7,7 +7,7 @@
 
 namespace CNTK
 {
-    enum class PrimitiveOpType : unsigned int
+    CNTK_API enum class PrimitiveOpType : unsigned int
     {
         Negate = 0,
         Sigmoid = 1,
@@ -58,5 +58,6 @@ namespace CNTK
         RandomSampleInclusionFrequency = 46,
         ROIPooling = 47,
         // New op types should only be appended to the end of this list.
+        UserDefinedBinary = 0x10000,
     };
 }

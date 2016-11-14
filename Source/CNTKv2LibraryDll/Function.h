@@ -78,7 +78,8 @@ namespace CNTK
         {PrimitiveOpType::Combine, L"Combine"},
         {PrimitiveOpType::RandomSample, L"RandomSample"},
         {PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency"},
-        {PrimitiveOpType::ROIPooling, L"ROIPooling"},
+        { PrimitiveOpType::ROIPooling, L"ROIPooling" },
+        { PrimitiveOpType::UserDefinedBinary, L"UserDefinedBinary" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -233,6 +234,7 @@ namespace CNTK
         }
 
     private:
+        FunctionPtr m_interptTarget;
 
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
             : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig, true, (functionName != L"" ? functionName : uid)), std::move(functionConfig), functionName, uid), m_op(op)
@@ -618,6 +620,12 @@ namespace CNTK
         PrimitiveOpType m_op;
         static const size_t s_serializationVersion = 1;
     };
+
+
+    inline FunctionPtr UserDefinedFuntion(std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
+    {
+        return MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::UserDefinedBinary, inputs, std::move(functionConfig), functionName, uid);
+    }
 
     class CNTKBackPropState final : public BackPropState
     {

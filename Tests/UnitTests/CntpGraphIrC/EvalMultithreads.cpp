@@ -31,7 +31,6 @@ public:
         const std::wstring& uid) :
         Function(inputs, GetOutputVariables(outputs, this), std::move(functionConfig), name, uid)
     {
-        fprintf(stderr, "fpga node created");
     }
 
     std::vector<Variable> GetOutputVariables(std::vector<Variable> outputs, Function *ownerFunction)
@@ -51,9 +50,9 @@ public:
         const DeviceDescriptor& /*computeDevice*/,
         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/) override
     {
-        fprintf(stderr, "fpga node called");
-        outputs.insert(arguments.begin(), arguments.end());
+        fprintf(stderr, "FpgaBaseFunction::Forward(...) called\n");
 
+        outputs.insert(arguments.begin(), arguments.end());
         return nullptr;
     }
 
@@ -163,7 +162,7 @@ graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc, const DeviceDescriptor& 
 
         if (strlen(sout) > 100)
         {
-            strcpy_s(sout + 90, str.length() - 100, "...");
+            strcpy_s(sout + 90, str.length()*2 - 100, "...");
         }
 
         (*node->mutable_ext_attrs())["##CNTK##NODE##"] = sout;
@@ -369,16 +368,138 @@ FunctionPtr FpgaFunctionFactory(
     const std::wstring& functionName,
     const std::wstring& uid)
 {
+    fprintf(stderr, "Inspecting %-32S%S\n", uid.c_str(), functionName.c_str());
+
     if (op == L"Times")
     {
-        fprintf(stderr, "log"); // dict[L"inputs"].Value<std::vector<DictionaryValue>>()
-
-        return std::make_shared<FpgaBaseFunction>(inputs, outputs, std::move(functionConfig), functionName, uid);
-        // FpgaBaseFunction(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"FpgaNode")) :
+        fprintf(stderr, "    OVERRIDING as fpga node.\n");
+        return UserDefinedFuntion(inputs, std::move(functionConfig), functionName, uid);
     }
 
     return nullptr;
 }
+
+
+bool GetVariableByName(std::vector<Variable> variableLists, std::wstring varName, Variable& var)
+{
+    for (std::vector<Variable>::iterator it = variableLists.begin(); it != variableLists.end(); ++it)
+    {
+        if (it->Name().compare(varName) == 0)
+        {
+            var = *it;
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool GetInputVariableByName(FunctionPtr evalFunc, std::wstring varName, Variable& var)
+{
+    return GetVariableByName(evalFunc->Arguments(), varName, var);
+}
+
+inline bool GetOutputVaraiableByName(FunctionPtr evalFunc, std::wstring varName, Variable& var)
+{
+    return GetVariableByName(evalFunc->Outputs(), varName, var);
+}
+
+void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& device)
+{
+    std::vector<std::wstring> inputNodeNames = { L"rawAnswer", L"rawContext", L"rawQuery"/*, L"contextSeqAxis", L"sourceSeqAxis"*/ };
+
+    std::vector<Variable> inputVars;
+
+    for (auto inputNodeName : inputNodeNames)
+    {
+        Variable inputVar;
+
+        if (!GetInputVariableByName(evalFunc, inputNodeName, inputVar))
+        {
+            fprintf(stderr, "Input variable %S is not available.\n", inputNodeName.c_str());
+            throw("Input variable not found error.");
+        }
+
+        inputVars.push_back(inputVar);
+    }
+
+    // Evaluate the network in several runs 
+    size_t numSamples = 3;
+    size_t iterationCount = 4;
+    unsigned int randSeed = 2;
+    srand(randSeed);
+    for (size_t t = 0; t < iterationCount; ++t)
+    {
+        std::unordered_map<Variable, ValuePtr> arguments;
+
+        for (auto inputVar : inputVars)
+        {
+            std::vector<float> inputData(inputVar.Shape().TotalSize() * numSamples);
+
+            for (size_t i = 0; i < inputData.size(); ++i)
+            {
+                inputData[i] = ((float)rand()) / RAND_MAX;
+            }
+
+            // Create input data shape. Adding sequence length and numSamples as axes.
+            // Todo: remove sequence length when only numSamples is supported.
+            // Todo: add convenience APIs to simplify data preparation here.
+            NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
+            ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData, true));
+
+            arguments[inputVar] = inputValue;
+        }
+
+        // Define output.
+        std::unordered_map<Variable, ValuePtr> outputs;
+
+        for (auto ov : evalFunc->Outputs())
+        {
+            ValuePtr outputValue;
+            Variable outputVar;
+
+            outputVar = ov;
+            outputs[ov] = outputValue;
+        }
+
+        // Evaluate the model
+        evalFunc->Forward(arguments, outputs, device);
+
+        ////for (auto outputTuple : outputs)
+        ////{
+        ////    // Get output value
+        ////    auto outputVar = outputTuple.first;
+        ////    auto outputValue = outputTuple.second;
+
+        ////    // Todo: remove sequence length when only numSamples is supported.
+        ////    // Todo: add convenience APIs to simplify retrieval of output results.
+        ////    NDShape outputShape = outputVar.Shape().AppendShape({ 1, numSamples });
+        ////    std::vector<float> outputData(outputShape.TotalSize());
+        ////    NDArrayViewPtr cpuArrayOutput = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
+        ////    cpuArrayOutput->CopyFrom(*outputValue->Data());
+
+        ////    assert(outputData.size() == outputVar.Shape()[0] * numSamples);
+        ////    fprintf(stderr, "Evaluation result:\n");
+        ////    size_t dataIndex = 0;
+        ////    auto outputDim = outputVar.Shape()[0];
+        ////    for (size_t i = 0; i < numSamples; i++)
+        ////    {
+        ////        fprintf(stderr, "Iteration:%lu, Sample %lu:\n", t, i);
+        ////        fprintf(stderr, "    ");
+        ////        dataIndex = i * outputDim;
+        ////        for (size_t j = 0; j < std::min((size_t)10, outputDim); j++)
+        ////        {
+        ////            fprintf(stderr, "%f ", outputData[dataIndex++]);
+        ////        }
+        ////        if (outputDim > 10)
+        ////        {
+        ////            fprintf(stderr, "...");
+        ////        }
+        ////        fprintf(stderr, "\n");
+        ////    }
+        ////}
+    }
+}
+
 
 
 void MultiThreadsEvaluation(bool isGPUAvailable)
@@ -386,10 +507,12 @@ void MultiThreadsEvaluation(bool isGPUAvailable)
     auto device = DeviceDescriptor::CPUDevice();
 
     // The model file will be trained and copied to the current runtime directory first.
-    auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, L"\\CNTK\\x64\\0.slu.cmf", device, FpgaFunctionFactory);
+    auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, L"A:\\CNTK\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn", device, FpgaFunctionFactory);
 
     // convert cntk to graphir
     auto graphIrPtr = CntkGraphToGraphIr(modelFuncPtr, device);
+
+    RunEvaluationClassifier(modelFuncPtr, device);
 
     // convert graphir back to cntk (with the original cntk model as template)
     auto modelImportFuncPtr = GraphIrToCntkGraph(graphIrPtr, modelFuncPtr);

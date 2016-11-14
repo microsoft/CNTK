@@ -2202,6 +2202,7 @@ namespace CNTK
     {
         friend class CompositeFunction;
         friend class Trainer;
+        friend class InterceptableFunction;
 
     public:
         ///
@@ -2450,6 +2451,8 @@ namespace CNTK
         Dictionary m_attributes;
     };
 
+    CNTK_API FunctionPtr UserDefinedFuntion(std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid);
+
     ///
     /// Create an instance of the CNTK built-in elementwise negate operation with the specified input operand.
     ///
@@ -2575,6 +2578,11 @@ namespace CNTK
     /// Create an instance of the CNTK built-in elementwise tensor addition operation with the specified input operands.
     ///
     CNTK_API FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Creates an instance of the CNTK UserDefined binary custom operator with the specified input operands.
+    ///
+    CNTK_API FunctionPtr UserDefinedBinary(const Variable& leftOperand, const Variable& rightOperand, Dictionary &&opConfig, const std::wstring& name = L"");
 
     ///
     /// Binary addition operator corresponding to the Plus operation

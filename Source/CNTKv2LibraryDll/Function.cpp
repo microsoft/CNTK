@@ -597,6 +597,13 @@ namespace CNTK
         if (op == PrimitiveOpType::Combine)
             return inputs;
 
+        // TODO fmegen fixme
+        ////if (op == PrimitiveOpType::UserDefinedBinary)
+        ////{
+        ////    // TODO: figure out what to do.
+        ////    assert(false);
+        ////}
+
         // We use the first non-constant input operand's DataType as the output DataType
         // In case there are no non-constant known DataTypes, we just pick the first known operand DataType
         // Also, all the known DataTypes of operands should match except for constants where coercion is allowed
@@ -818,6 +825,14 @@ namespace CNTK
                 }
 
                 outputShape = BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);
+                break;
+            }
+            case PrimitiveOpType::UserDefinedBinary: // TODO fmegen fixme
+            {
+                assert(inputs.size() == 2);
+                auto outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
+                auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
+                outputShape = TimesOpOutputShape(inputs[0], inputs[1], outputRank, inferInputRankToMap, inferDimensions);
                 break;
             }
             case PrimitiveOpType::Times:
@@ -1567,6 +1582,15 @@ namespace CNTK
             break;
         case PrimitiveOpType::GreaterEqual:
             computationNodePtr = New<GreaterEqualNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
+        case PrimitiveOpType::UserDefinedBinary:
+            {
+                // TODO: figure out what to do.
+                //todo fixme fmegen            assert(false);
+                size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
+                auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
+                computationNodePtr = New<UserDefinedBinaryNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputRank, inferInputRankToMap);
+            }
             break;
         case PrimitiveOpType::Times:
         {
@@ -2796,6 +2820,14 @@ namespace CNTK
     FunctionPtr GreaterEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::GreaterEqual, leftOperand, rightOperand, Dictionary(), name);
+    }
+
+    FunctionPtr UserDefinedBinary(const Variable& leftOperand, const Variable& rightOperand, Dictionary &&opConfig, const std::wstring& name)
+    {
+        assert(false); // todo fmegen fixme
+        assert(opConfig.Contains(PrimitiveFunction::AttributeNameOutputRank)); // todo fmegen fixme
+        assert(opConfig.Contains(PrimitiveFunction::AttributeNameInferInputRankToMap)); // todo fmegen fixme
+        return BinaryOp(PrimitiveOpType::UserDefinedBinary, leftOperand, rightOperand, std::move(opConfig), name);
     }
 
     FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap, const std::wstring& name)

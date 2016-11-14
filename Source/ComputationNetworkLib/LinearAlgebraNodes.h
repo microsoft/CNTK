@@ -558,6 +558,79 @@ private:
     int m_inferInputRankToMap;  // -1 (not specified) or says how to expand shape of W, to keep this many mapping dims
 };
 
+
+// -----------------------------------------------------------------------
+// UserDefinedBinaryNode (summand1, summand2)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class UserDefinedBinaryNode : public TimesNodeBase<ElemType, false>
+{
+    typedef TimesNodeBase<ElemType, false> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"UserDefinedBinary"; }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(UserDefinedBinaryNode);
+    UserDefinedBinaryNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = -1)
+        : m_outputRank(outputRank), m_inferInputRankToMap(inferInputRankToMap), Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+       //fmegen assert(false); // TODO: fix me
+        Base::ForwardProp(fr);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //fmegen assert(false); // TODO: fix me
+        Base::BackpropTo(inputIndex, fr);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<UserDefinedBinaryNode<ElemType>>(nodeP);
+            node->m_outputRank = m_outputRank;
+            node->m_inferInputRankToMap = m_inferInputRankToMap;
+        }
+    }
+
+    void Save(File& fstream) const
+    {
+        Base::Save(fstream);
+        fstream << m_outputRank;
+        fstream << m_inferInputRankToMap;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        if (modelVersion >= CNTK_MODEL_VERSION_3)
+            fstream >> m_outputRank;
+        else
+            m_outputRank = 1;
+        if (modelVersion >= CNTK_MODEL_VERSION_12)
+            fstream >> m_inferInputRankToMap;
+        else
+            m_inferInputRankToMap = -1;
+    }
+
+
+private:
+    size_t m_outputRank;
+    int m_inferInputRankToMap;
+};
+
+template class UserDefinedBinaryNode<float>;
+template class UserDefinedBinaryNode<double>;
+
+
+
 // -----------------------------------------------------------------------
 // TimesNode (A, B, outputRank=1) -- matrix product
 // Right operand and output can have MB layout, while left operand cannot.
