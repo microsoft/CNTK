@@ -71,8 +71,10 @@ def strip_ext(fn):
 if IS_WINDOWS:
     libname_rt_ext = '.dll'
 
-    link_libs = [strip_ext(strip_path(fn)) for fn in
-                 glob(os.path.join(CNTK_LIB_PATH, '*.lib'))]
+    link_libs = [
+        "CNTKLibrary-2.0",
+        "Math"
+    ]
 else:
     link_libs = [
         "cntklibrary-2.0",
