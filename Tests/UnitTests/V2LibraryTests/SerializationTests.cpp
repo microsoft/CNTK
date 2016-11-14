@@ -203,7 +203,7 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
         gradientValues[parameter] = NDArrayView::RandomUniform<ElementType>(shape, -0.5, 0.5, numParameters + i, device);
     }
 
-    auto learner1 = SGDLearner(parameters, 0.05);
+    auto learner1 = SGDLearner(parameters, LearningRatePerSampleSchedule(0.05));
     
     learner1->Update(gradientValues, 1);
 
@@ -215,7 +215,7 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
         stream.flush();
     }
 
-    auto learner2 = SGDLearner(parameters, 0.05);
+    auto learner2 = SGDLearner(parameters, LearningRatePerSampleSchedule( 0.05));
 
     {
         Dictionary checkpoint;
@@ -405,7 +405,9 @@ void TestFunctionSerialization(const DeviceDescriptor& device)
     TestFunctionSaveAndLoad(BuildLSTMClassifierNet(inputVar, 5, device), device);
 }
 
-Trainer BuildTrainer(const FunctionPtr& function, const Variable& labels, LearningRateSchedule lr = 0.005, MomentumSchedule m = 0.0)
+Trainer BuildTrainer(const FunctionPtr& function, const Variable& labels, 
+                     LearningRateSchedule lr = LearningRatePerSampleSchedule(0.005), 
+                     MomentumSchedule m = MomentumAsTimeConstantSchedule(0.0))
 {
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(function, labels, L"lossFunction");
     auto prediction = CNTK::ClassificationError(function, labels, L"classificationError");
@@ -498,7 +500,7 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
     auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
      auto actualMBSize = minibatchData[labelStreamInfo].m_numSamples;
 
-    LearningRateSchedule learningRateSchedule({ { 2, 0.005 }, { 2, 0.0025 }, { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
+    LearningRatePerSampleSchedule learningRateSchedule({ { 2, 0.005 }, { 2, 0.0025 }, { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
     MomentumAsTimeConstantSchedule momentumValues({ { 2, 100 }, { 2, 200 }, { 2, 400 }, { 2, 800 } }, actualMBSize);
 
 
@@ -633,7 +635,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
     auto actualMBSize = minibatchData[labelStreamInfo].m_numSamples;
 
-    LearningRateSchedule learningRateSchedule({ { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
+    LearningRatePerSampleSchedule learningRateSchedule({ { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
     auto learner = SGDLearner(classifierOutput->Parameters(), learningRateSchedule);
     Trainer trainer(classifierOutput, trainingLoss, prediction, { learner });
 

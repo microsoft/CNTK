@@ -170,7 +170,7 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     minibatch_size = 128
 
     # Set learning parameters
-    lr_per_minibatch       = learning_rate_schedule([1]*80 + [0.1]*40 + [0.01], epoch_size, UnitType.minibatch)
+    lr_per_minibatch       = learning_rate_schedule([1]*80 + [0.1]*40 + [0.01], UnitType.minibatch, epoch_size)
     momentum_time_constant = momentum_as_time_constant_schedule(-minibatch_size/np.log(0.9))
     l2_reg_weight          = 0.0001
     

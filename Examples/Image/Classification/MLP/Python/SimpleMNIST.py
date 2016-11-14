@@ -10,7 +10,7 @@ import os
 from cntk import Trainer
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, set_default_device
-from cntk.learner import sgd
+from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -66,8 +66,9 @@ def simple_mnist(debug_output=False):
         label  : reader_train.streams.labels
     }
 
+    lr_per_minibatch=learning_rate_schedule(0.2, UnitType.minibatch)
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(z, ce, pe, sgd(z.parameters, lr=1./320))
+    trainer = Trainer(z, ce, pe, sgd(z.parameters, lr=lr_per_minibatch))
 
     # Get minibatches of images to train with and perform model training
     minibatch_size = 64

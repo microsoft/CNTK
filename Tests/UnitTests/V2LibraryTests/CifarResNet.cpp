@@ -157,7 +157,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
         classifierOutput = classifierOutputVar;
     }
 
-    double learningRatePerSample = 0.0078125;
+    LearningRatePerSampleSchedule learningRatePerSample = 0.0078125;
     Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
 
     const size_t minibatchSize = 32;

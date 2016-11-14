@@ -68,7 +68,8 @@ def cifar_resnet_distributed(data_path, run_test, num_epochs, communicator=None,
     
     num_mbs = num_mb_per_epoch * num_epochs
 
-    lr_per_minibatch = learning_rate_schedule([1]*80 + [0.1]*40 + [0.01], mb_size * num_mb_per_epoch, UnitType.minibatch)
+    lr_schedule = [1.0/mb_size]*80 + [0.1/mb_size]*40 + [0.01/mb_size]
+    lr_per_minibatch = learning_rate_schedule(lr_schedule, UnitType.minibatch, mb_size * num_mb_per_epoch)
     momentum_time_constant = momentum_as_time_constant_schedule(-mb_size/np.log(0.9))
 
     # create data parallel distributed trainer if needed
