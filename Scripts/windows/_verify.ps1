@@ -154,18 +154,14 @@ function VerifyDirectory(
     return $noInstallRequired
 }
 
-function VerifyWheelDirectory(
-    [Parameter(Mandatory = $true)][hashtable] $table)
+function VerifyRunAlways(
+	[Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
-
     $func = $table["Function"]
-    $path = $table["WheelDirectory"]
-    $forceUpdate = $table["ForceUpdate"]
 
     $noInstallRequired = $false
-
-    Write-Verbose "[$func]: [$path] returned [$noInstallRequired]"
+    Write-Verbose "[$func]: returned [$noInstallRequired]"
     return $noInstallRequired
 }
 

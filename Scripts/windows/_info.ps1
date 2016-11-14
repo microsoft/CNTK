@@ -35,8 +35,8 @@ Repeated operation of this script will reuse already downloaded components.
  - If required VS2012 Runtime and VS2013 Runtime will be installed
  - If required MSMPI will be installed
  - Anaconda3 will be installed into [$AnacondaBasePath]
- - A CNTK-PY34 environment will be created in [$AnacondaBasePath\envs]
- - CNTK will be installed into the CNTK-PY34 environment
+ - A CNTK-PY34 environment will be created or updated in [$AnacondaBasePath\envs]
+ - CNTK will be installed or updated in the CNTK-PY34 environment
 "
 }
 

@@ -79,6 +79,29 @@ function InstallExe(
     }
 }
 
+function InstallYml(
+    [Parameter(Mandatory = $true)][hashtable] $table)
+{
+    FunctionIntro $table
+    
+    $func = $table["Function"]
+    $basePath  = $table["BasePath"]
+    $env= $table["Env"]
+    $ymlFile  = $table["ymlFile"]
+
+    $envsDir = join-path $basePath "envs"
+    $targetDir = join-path $envsDir $env
+
+    if (test-path -path $targetDir -PathType Container) {
+        $newTable = @{ Function = "InstallExe"; Command = "$basepath\Scripts\conda.exe"; Param = "env update --file $ymlFile --name $targetDir"; WorkDir = "$basePath\Scripts"; runAs=$false }
+    }
+    else {
+        $newTable = @{ Function = "InstallExe"; Command = "$basepath\Scripts\conda.exe"; Param = "env create --file $ymlFile --prefix $targetDir"; WorkDir = "$basePath\Scripts"; runAs=$false }
+    }
+
+    InstallExe $newTable
+}
+
 function ExecuteApplication(
     [Parameter(Mandatory = $true)][hashtable] $table)
 {

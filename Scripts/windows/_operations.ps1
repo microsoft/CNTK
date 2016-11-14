@@ -30,11 +30,11 @@ $operations = @(
       Action = @( @{Function = "InstallExe"; Command = "$localCache\Anaconda3-4.1.1-Windows-x86_64.exe"; Param = "/InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S /D=$AnacondaBasePath"; runAs=$false; Message="Installing Anaconda3-4.1.1. This will take several minutes. Please be patient ...."} );
      },
     @{Name = "CNTK Python Environment 3.4"; ShortName = "CNTKPY34"; Info = "Setup CNTK PythonEnvironment 3.4";
-      Verification  = @( @{Function = "VerifyDirectory"; Path = "$AnacondaBasePath\envs\cntk-py34"; } );
-      Action = @( @{Function = "InstallExe"; Command = "$AnacondaBasePath\Scripts\conda.exe"; Param = "env create --file $MyDir\conda-windows-cntk-py34-environment.yml --prefix $AnacondaBasePath\envs\cntk-py34"; WorkDir = "$AnacondaBasePath\Scripts"; runAs=$false; Message="Setting up CNTK-PY34 environment. Please be patient...." } )
+      Verification  = @( @{Function = "VerifyRunAlways"  } );
+      Action = @( @{Function = "InstallYml"; BasePath = $AnacondaBasePath; Env = "cntk-py34"; ymlFile= "$MyDir\conda-windows-cntk-py34-environment.yml" } )
      },
     @{Name = "CNTK WHL Install"; ShortName = "CNTKWHL34"; Info = "Setup/Update CNTK Wheel";
-      Verification  = @( @{Function = "VerifyWheelDirectory"; WheelDirectory = "$AnacondaBasePath\envs\cntk-py34\Lib\site-packages\cntk" } );
+      Verification  = @( @{Function = "VerifyRunAlways" } );
       Action = @( @{Function = "InstallWheel"; BasePath = "$AnacondaBasePath"; EnvName = "cntk-py34"; WheelDirectory="$AnacondaBasePath\envs\cntk-py34\Lib\site-packages\cntk"; Message="Setup/Update of CNTK Wheel environment. Please be patient...." } )
      },
     @{Name = "Create CNTKPY34 batch file"; ShortName = "BATCH34"; Info = "Create CNTKPY34 batch file";

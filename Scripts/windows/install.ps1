@@ -5,7 +5,7 @@
 
 <#
   .SYNOPSIS
- Use this cmdlet to install CNTK 
+ Use this cmdlet to install CNTK from a precompiled binary drop (see https://github.com/Microsoft/CNTK/releases)
 
  .DESCRIPTION
  The script will download and install the CNTK prerequisites and Anaconda environment
@@ -17,8 +17,8 @@
  - If required VS2012 Runtime and VS2013 Runtime will be installed
  - If required MSMPI will be installed
  - Anaconda3 will be installed into [<AnacondaBasePath>]
- - A CNTK-PY34 environment will be created in [<AnacondaBasePath>\envs]
- - CNTK will be installed into the CNTK-PY34 environment
+ - A CNTK-PY34 environment will be created or updated in [<AnacondaBasePath>\envs]
+ - CNTK will be installed or updated in the CNTK-PY34 environment
  
  .PARAMETER Execute
  This is an optional parameter. Without setting this switch, no changes to the machine setup/installation will be performed
@@ -35,10 +35,6 @@
  .\install.ps1 -Execute
  
  Run the installer and perform the installation operations
-.EXAMPLE
- .\install.ps1 -Execute -ForceWheelUpdate
-
- Run the installer and install CNTK on the machine. Force a CNTK whl Update in the CNTK-Anaconda install
 .EXAMPLE
  .\install.ps1 -Execute -AnacondaBasePath d:\cntkBeta
 

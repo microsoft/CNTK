@@ -114,10 +114,12 @@ PY_ACTIVATE="$HOME/anaconda3/bin/activate"
 
 CNTK_PY34_ENV_PREFIX="$ANACONDA_PREFIX/envs/cntk-py34"
 if [ -d "$CNTK_PY34_ENV_PREFIX" ]; then
-  printf "Path '%s' already exists, skipping CNTK Python 3.4 environment setup\n" "$CNTK_PY34_ENV_PREFIX"
+  "$CONDA" env update --file "$CNTK_PY34_ENV_FILE" --name "$CNTK_PY34_ENV_PREFIX" || {
+    echo Updating Anaconda environment failed.
+    exit 1
+  }
 else
-  # (--force shouldn't be needed)
-  "$CONDA" env create --quiet --force --file "$CNTK_PY34_ENV_FILE" --prefix "$CNTK_PY34_ENV_PREFIX" || {
+  "$CONDA" env create --file "$CNTK_PY34_ENV_FILE" --prefix "$CNTK_PY34_ENV_PREFIX" || {
     echo Creating Anaconda environment failed.
     rm -rf "$CNTK_PY34_ENV_PREFIX"
     exit 1
