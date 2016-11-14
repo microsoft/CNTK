@@ -597,7 +597,7 @@ private:
         return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber) || UsingAsyncGradientAggregation(epochNumber);
     }
 
-    void BarrierWorkers()
+    void SynchronizeWorkers()
     {
         if (m_mpi != nullptr && GetParallelizationMethod() != ParallelizationMethod::dataParallelASGD)
         {

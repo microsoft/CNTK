@@ -425,7 +425,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     {
         // Synchronize all ranks before proceeding to ensure that
         // rank 0 has finished writing the previous model file
-        BarrierWorkers();
+        SynchronizeWorkers();
 
         // (re-)initialize 1-bit SGD
         if (GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD &&
@@ -728,7 +728,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         // Synchronize all ranks before proceeding to ensure that
         // nobody tries reading the checkpoint file at the same time
         // as rank 0 deleting it below
-        BarrierWorkers();
+        SynchronizeWorkers();
 
         // Persist model and check-point info
         if ((m_mpi == nullptr) || m_mpi->IsMainNode())
@@ -797,7 +797,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // Synchronize all ranks before proceeding to ensure that
     // rank 0 has finished writing the model file
     // TODO[DataASGD]: should othet other rank waiting in async-mode
-    BarrierWorkers();
+    SynchronizeWorkers();
 
     // progress tracing for compute cluster management
     ProgressTracing::TraceProgressPercentage(m_maxEpochs, 0.0, true);
