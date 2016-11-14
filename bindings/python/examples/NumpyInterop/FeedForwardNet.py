@@ -9,7 +9,7 @@ import sys
 import os
 from cntk.device import cpu, set_default_device
 from cntk import Trainer
-from cntk.learner import sgd
+from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sigmoid
 from cntk.utils import ProgressPrinter
 
@@ -52,8 +52,9 @@ def ffnet():
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
 
+    lr_per_minibatch=learning_rate_schedule(0.5, UnitType.minibatch)
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(netout, ce, pe, sgd(netout.parameters, lr=0.02))
+    trainer = Trainer(netout, ce, pe, sgd(netout.parameters, lr=lr_per_minibatch))
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25

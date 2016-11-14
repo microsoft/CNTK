@@ -175,13 +175,12 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     auto rawInputStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto rawLabelsStreamInfo = minibatchSource->StreamInfo(labelStreamName);
 
-    double learningRatePerSample = 0.007;
-    size_t momentumTimeConstant = 1100;
-    double momentumPerSample = std::exp(-1.0 / momentumTimeConstant);
+    LearningRatePerSampleSchedule learningRatePerSample = 0.007;
+    MomentumAsTimeConstantSchedule momentumTimeConstant = 1100;
     AdditionalLearningOptions additionalOptions;
     additionalOptions.gradientClippingThresholdPerSample = 2.3;
     additionalOptions.gradientClippingWithTruncation = true;
-    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumPerSample, additionalOptions) });
+    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumTimeConstant, additionalOptions) });
 
     size_t outputFrequencyInMinibatches = 1;
     size_t minibatchSize1 = 72;

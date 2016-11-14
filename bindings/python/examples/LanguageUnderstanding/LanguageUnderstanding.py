@@ -12,7 +12,7 @@ from cntk.models import *  # higher abstraction level, e.g. entire standard mode
 from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 from cntk import Trainer
-from cntk.learner import adam_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
+from cntk.learner import adam_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error
 
 ########################
@@ -76,10 +76,10 @@ def train(reader, model, max_epochs):
     num_mbs_to_show_result = 100
     momentum_time_constant = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9))  # TODO: Change to round number. This is 664.39. 700?
 
-    lr_schedule = [0.003]*2+[0.0015]*12+[0.0003] # LR schedule over epochs (we don't run that mayn epochs, but if we did, these are good values)
+    lr_schedule = [0.003]*2+[0.0015]*12+[0.0003] # LR schedule over epochs (we don't run that many epochs, but if we did, these are good values)
 
     # trainer object
-    lr_per_sample = learning_rate_schedule(lr_schedule, epoch_size)
+    lr_per_sample = learning_rate_schedule(lr_schedule, UnitType.sample, epoch_size)
     learner = adam_sgd(z.parameters,
                        lr=lr_per_sample, momentum=momentum_time_constant,
                        low_memory=True,

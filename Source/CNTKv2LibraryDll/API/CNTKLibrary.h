@@ -2963,14 +2963,14 @@ namespace CNTK
         ///
         /// Create a schedule with a constant parameter value.
         ///
-        CNTK_API TrainingParameterSchedule(T value, UnitType unit = UnitType::Sample);
+        CNTK_API TrainingParameterSchedule(T value, UnitType unit);
 
         ///
         /// Create a schedule where the parameter changes its value every 'epochSize' samples:
         /// schedule[0] is used for the first 'epochSize' samples, schedule[1] -- for the second,
         /// and so on. The last value is then used repeatedly until the end of training.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, size_t epochSize = 1, UnitType unit = UnitType::Sample);
+        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, UnitType unit, size_t epochSize = 1);
 
         ///
         /// Create a schedule using the list of key-value pairs, where the key specifies 
@@ -2981,7 +2981,7 @@ namespace CNTK
         /// the first 100 samples, then '0.1' is used for the second 200 samples, 
         /// after which the values is switched to '0.005'.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = 1, UnitType unit = UnitType::Sample);
+        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, UnitType unit, size_t epochSize = 1);
 
         ///
         /// Returns a value corresponding to the absolute sample (or sweep) 
@@ -3033,11 +3033,11 @@ namespace CNTK
         { }
         
         TrainingParameterPerUnitSchedule(const std::vector<double>& schedule, size_t epochSize = 1) 
-            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, epochSize, U)
+            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, U, epochSize)
         { }
         
         TrainingParameterPerUnitSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epochSize = 1) 
-            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, epochSize, U)
+            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, U, epochSize)
         { }
 
 #ifdef SWIG // for Python interop (adds indexer)
@@ -3077,19 +3077,19 @@ namespace CNTK
     {
     public:
         MomentumAsTimeConstantSchedule(double value) 
-            : TrainingParameterSchedule<double>::TrainingParameterSchedule(value)
+            : TrainingParameterSchedule<double>::TrainingParameterSchedule(value, UnitType::Sample)
         { 
             ConvertToPerSampleValues();
         }
         
         MomentumAsTimeConstantSchedule(const std::vector<double>& schedule, size_t epochSize = 1) 
-            : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, epochSize) 
+            : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, UnitType::Sample, epochSize) 
         { 
             ConvertToPerSampleValues();
         }
         
         MomentumAsTimeConstantSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epochSize = 1) 
-            : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, epochSize)
+            : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, UnitType::Sample, epochSize)
         { 
             ConvertToPerSampleValues();
         }
@@ -3112,7 +3112,11 @@ namespace CNTK
     {
         double l1RegularizationWeight = 0.0;
         double l2RegularizationWeight = 0.0;
-        TrainingParameterSchedule<double> gaussianNoiseInjectionStdDev = 0.0;
+#ifdef SWIG //for python interop (swig does not fully support "using")
+        TrainingParameterPerUnitSchedule<double, TrainingParameterSchedule<double>::UnitType::Minibatch> gaussianNoiseInjectionStdDev = 0.0;
+#else
+        TrainingParameterPerMinibatchSchedule<double> gaussianNoiseInjectionStdDev = 0.0;
+#endif
         double gradientClippingThresholdPerSample = std::numeric_limits<double>::infinity();
         bool gradientClippingWithTruncation = true;
     };
@@ -3171,18 +3175,11 @@ namespace CNTK
         virtual void ResetSmoothedGradients() = 0;
 
         ///
-        /// Returns current (per-sample) learning rate.
+        /// Returns current learning rate.
         ///
-        virtual double LearningRate(size_t minibatchSize = 1) const
+        virtual double LearningRate() const
         {
-            auto learningRate = GetCurrentTrainingParameterValue<double>(m_learningRateSchedule);
-            if (m_learningRateSchedule.Unit() == LearningRateSchedule::UnitType::Minibatch)
-            {
-                // learning rate needs to be converted to the per-sample value.
-                return (minibatchSize == 0) ? 0.0 : learningRate / minibatchSize;
-            }
-
-            return learningRate;
+            return GetCurrentTrainingParameterValue<double>(m_learningRateSchedule);
         }
 
     protected:

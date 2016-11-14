@@ -51,7 +51,7 @@ void TestSGDLearner(size_t numParameters, size_t numMinibatches, const DeviceDes
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = SGDLearner(parameters, 0.4);
+    auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule(0.4));
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -61,10 +61,10 @@ void TestMomentumSGDLearner(size_t numParameters, size_t numMinibatches, const D
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
     LearningRatePerMinibatchSchedule learnigRateSchedule = { { 3.0, 2.0, 1.0 }, numMinibatches };
-    MomentumSchedule momentumValues = { { { 1, 1.0 }, { 3, 0.1 }, { 10, 0.01 } }, 2 };
+    MomentumPerSampleSchedule momentumValues = { { { 1, 1.0 }, { 3, 0.1 }, { 10, 0.01 } }, 2 };
     auto learner = MomentumSGDLearner(parameters, learnigRateSchedule, momentumValues);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
-    FloatingPointCompare(learner->LearningRate(100), 0.02, "Learner::LearningRate does not match expectation");
+    FloatingPointCompare(learner->LearningRate(), 2.0, "Learner::LearningRate does not match expectation");
 }
 
 template <typename ElementType>
@@ -91,7 +91,7 @@ void TestFSAdaGradLearner(size_t numParameters, size_t numMinibatches, const Dev
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = AdamLearner(parameters, { { 0.5 } }, MomentumAsTimeConstantSchedule({ 10, 100, 1000 }));
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }));
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -100,7 +100,7 @@ void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const Devic
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = RMSPropLearner(parameters, { { { 3, 0.7 }, { 1, 0.2 } } }, 0.01, 0.02, 0.03, 0.1, 0.001);
+    auto learner = RMSPropLearner(parameters, LearningRatePerMinibatchSchedule({ { 3, 0.7 }, { 1, 0.2 } }), 0.01, 0.02, 0.03, 0.1, 0.001);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -110,19 +110,19 @@ void TestTrainingParametersSchedule()
         LearningRatePerMinibatchSchedule({ 3.0, 2.0, 1.0 }, LearningRateSchedule::EntireSweep);
     }, "Was able to create not-yet-implemented sweep-based schedule.");
 
-    LearningRateSchedule schedule1 = 0.5;
+    LearningRatePerSampleSchedule schedule1 = 0.5;
     assert(schedule1.Unit() == LearningRateSchedule::UnitType::Sample);
     assert(schedule1[0] == 0.5);
     assert(schedule1[1] == 0.5);
     assert(schedule1[100] == 0.5);
 
-    LearningRateSchedule schedule2 = { 0.5 };
+    LearningRatePerSampleSchedule schedule2 = { 0.5 };
     assert(schedule2.Unit() == LearningRateSchedule::UnitType::Sample);
     assert(schedule2[0] == 0.5);
     assert(schedule2[10] == 0.5);
     assert(schedule2[100] == 0.5);
 
-    LearningRateSchedule schedule3 = { { 0.5, 0.3, 0.3 } };
+    LearningRatePerSampleSchedule schedule3({ 0.5, 0.3, 0.3 });
     assert(schedule3.Unit() == LearningRateSchedule::UnitType::Sample);
     assert(schedule3[0] == 0.5);
     assert(schedule3[1] == 0.3);
@@ -143,8 +143,8 @@ void TestTrainingParametersSchedule()
     assert(schedule5[20] == 0.2);
     assert(schedule5[100] == 0.2);
 
-    MomentumSchedule schedule6 = { { make_pair(1, 0.5) } }; // without make_pair this is interpreted as a vector of doubles
-    assert(schedule6.Unit() == MomentumSchedule::UnitType::Sample);
+    MomentumPerMinibatchSchedule schedule6 = { { make_pair(1, 0.5) } }; // without make_pair this is interpreted as a vector of doubles
+    assert(schedule6.Unit() == MomentumSchedule::UnitType::Minibatch);
     assert(schedule6[0] == 0.5);
     assert(schedule6[10] == 0.5);
     assert(schedule6[100] == 0.5);
@@ -165,7 +165,7 @@ void TestTrainingParametersSchedule()
     assert(schedule8[20] == 0.2);
     assert(schedule8[100] == 0.2);
 
-    LearningRateSchedule schedule9 = { { { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } } };
+    LearningRatePerSampleSchedule schedule9 = { { { 3, 0.5 }, { 2, 0.3 }, { 1, 0.2 } } };
     assert(schedule9.Unit() == LearningRateSchedule::UnitType::Sample);
     assert(schedule9[0] == 0.5);
     assert(schedule9[2] == 0.5);

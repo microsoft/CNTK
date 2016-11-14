@@ -59,7 +59,7 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
         prediction = predictionVar;
     }
 
-    double learningRatePerSample = 0.02;
+    LearningRatePerSampleSchedule learningRatePerSample = 0.02;
     minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { L"features", inputDim }, { L"labels", numOutputClasses } });
     Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
     size_t outputFrequencyInMinibatches = 20;
@@ -121,7 +121,7 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
-    double learningRatePerSample = 0.003125;
+    LearningRatePerSampleSchedule learningRatePerSample = 0.003125;
     Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
 
     size_t outputFrequencyInMinibatches = 20;
