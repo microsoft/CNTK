@@ -145,7 +145,7 @@ public:
 #ifdef _DEBUG
                 // If we're padding then extra should be covered.
                 bool padded = GetAutoPad(i);
-                assert(!padded || extra + 1 <= m_kernelShape[i]);
+                //assert(!padded || extra + 1 <= m_kernelShape[i]);
                 // If we're not padding then, we should stay within the input dimension.
                 assert(padded || extra + 1 >= m_kernelShape[i]);
 
@@ -161,7 +161,7 @@ public:
 
                 int min = m_start[i] - left;
                 int max = m_start[i] + (int)cells + right;
-                assert(!padded || min <= 0 && max >= m_inputShape[i]);
+                //assert(!padded || min <= 0 && max >= m_inputShape[i]);
                 assert(padded || min >= 0 && max <= m_inputShape[i]);
 
                 int diff = min - ((int)m_inputShape[i] - max);
