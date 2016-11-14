@@ -176,7 +176,6 @@
     <ClCompile Include="Variable.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\bindings\python\cntk\PythonBindings.pyproj" />
     <None Include="proto\CNTK.proto" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

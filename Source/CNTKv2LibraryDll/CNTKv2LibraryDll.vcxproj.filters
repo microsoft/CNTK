@@ -56,7 +56,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\bindings\python\cntk\PythonBindings.pyproj" />
     <None Include="proto\CNTK.proto">
       <Filter>proto</Filter>
     </None>
