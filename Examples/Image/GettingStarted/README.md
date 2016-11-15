@@ -67,7 +67,6 @@ To run this example, use the following command:
 `cntk configFile=02_OneConv.cntk`
 
 After normalization, a convolution layer with `16` kernels at size `(5,5)` is added, followed by a ReLU nonlinearity. Then, we perform max pooling on the output feature map, with size `(2,2)` and stride `(2,2)`. A dense layer of 64 hidden nodes is then added, followed by another ReLU, and another dense layer to generate the output. This network achieves `1.22%` error rate, which is better than the previous network.
-
 In practice, one would be stacking multiple convolution layers to improve classification accuracy. State-of-the-art convolution neural networks can achieve lower than 0.5% error rate on MNIST. Interested readers can find more examples in [Classification/ConvNet](../Classification/ConvNet).
 
 ### 03_OneConvdropout.cntk
@@ -102,7 +101,7 @@ In the fifth example, we show how CNTK can be used to perform a regression task.
 
  The trained network achieves root-mean-square error (RMSE) of 0.0039. To see more sophisticated examples on regression tasks, please refer to [Regression](../Regression).
 
- ### 06_OneConvRegrMultiNode.cntk
+### 06_OneConvRegrMultiNode.cntk
 
 In the sixth example, we show how to train CNTK with multiple process(GPUs) for a regression task. CNTK using MPI for the multiple nodes task, and CNTK currently support four parallel SGD algorithms: DataParallelSGD, BlockMomentumSGD, ModelAveragingSGD, DataParallelASGD. We reuse the same network architecture in `05_OneConvRegr`, only to add a parallel train block. To run this example on a machine, use the following command:
 
