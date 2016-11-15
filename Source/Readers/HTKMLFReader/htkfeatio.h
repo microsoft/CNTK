@@ -824,10 +824,10 @@ private:
     // We distinguish
     static void parseframerange(const vector<char*>& toks, size_t& ts, size_t& te, const double htkTimeToFrame)
     {
-        const double maxFrameNumber = htkTimeToFrame / 2.0; // if frame number is greater than this we assume it is time instead of frame
         double rts = msra::strfun::todouble(toks[0]);
         double rte = msra::strfun::todouble(toks[1]);
-        if (rte > maxFrameNumber) // convert time to frame
+        // if the difference between two frames is more than htkTimeToFrame, we expect conversion to time
+        if (rte - rts >= htkTimeToFrame - 1) // convert time to frame
         {
             ts = (size_t)(rts / htkTimeToFrame + 0.5); // get start frame
             te = (size_t)(rte / htkTimeToFrame + 0.5); // get end frame
