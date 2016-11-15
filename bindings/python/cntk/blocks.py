@@ -169,6 +169,16 @@ def _initializer_for(init, rank_params=None):
 def Block(f, op_name, members={}):
     #f = combine([f], op_name)  # 'combine' to create a separate identity so we can reassign the debug name --BUGBUG: "Unknown DataType"
     #_name_node(f, op_name) ; _extend_Function(f)  # debugging
+
+    #p = f.placeholders
+    #a = f.arguments
+    #f = alias(f, name=op_name)
+    #p1 = f.placeholders
+    #a1 = f.arguments
+    # BUGBUG: alias() does not work. Once I add this, some clone() call no longer finds the placeholder
+    #if len(p) != len(p1) or len(a) != len(a1):
+    #    raise AssertionError('')
+
     for key in members:   # self.__dict__.update(args_dict)
         f.__dict__[key] = members[key]
     return f

@@ -2199,7 +2199,7 @@ namespace CNTK
 
         MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
 
-#if 1
+#if 0
         auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
 
         // Switch the node matrix to the right matrix type

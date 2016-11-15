@@ -33,6 +33,7 @@ def test_cifar_convnet_error(device_id):
 
     base_path = os.path.normpath(base_path)
     os.chdir(os.path.join(base_path, '..'))
+    #os.chdir(os.path.join(base_path, '..'))    # (Frank's setup, will be changed back)
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_computation_network_trace_level(1) 
@@ -65,3 +66,6 @@ def test_cifar_convnet_error(device_id):
     ## test
     #reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', is_training=False)
     #evaluate(reader_test, model)
+
+if __name__=='__main__':
+    test_cifar_convnet_error(0)

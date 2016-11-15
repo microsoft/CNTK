@@ -38,13 +38,20 @@ def Sequential(layers):
     #        apply_x = apply_x >> Sequential(layer)
     #attrs['layers'] = [layer for layer in layers if not _is_string(layer)]
     from functools import reduce
-    apply_x = reduce(lambda f, g: f >> Sequential(g), layers, identity)
-    attrs = Record(layers=layers)
-    return Block(apply_x, 'Sequential', attrs)
+    layers = [Sequential(layer) for layer in layers] # expand all layers recursively
+    apply_x = reduce(lambda f, g: f >> g, layers, identity)
+    # BUGBUG: In conjunction with alias(), this looses the placeholders somewhere; use this for debugging
+    #apply_x = identity
+    #for layer in layers:
+    #    arg = apply_x
+    #    apply_x = layer(apply_x)
+    #    if len(apply_x.placeholders) != len(arg.placeholders):
+    #        raise AssertionError('boom')
+    return Block(apply_x, 'Sequential', Record(layers=layers))
 
-# LayerStack(3, lambda i: Dense(3))
-# LayerStack(3, lambda: Dense(3))
-def LayerStack(N, constructor):
+# For(range(3), lambda i: Dense(2000))
+# For(range(3), lambda: Dense(2000))
+def For(range, constructor):
     from inspect import signature
     takes_arg = len(signature(constructor).parameters) > 0
     # helper to call the layer constructor
@@ -53,6 +60,9 @@ def LayerStack(N, constructor):
             return constructor(i)  # takes an arg: pass it
         else:
             return constructor()   # takes no arg: call without, that's fine too
-    layers = [call(i) for i in range(N)]
+    layers = [call(i) for i in range]
     apply_x = Sequential(layers)
-    return Block(apply_x, 'LayerStack', Record(layers=layers))
+    return Block(apply_x, 'For', Record(layers=layers))
+
+def LayerStack(N, constructor):
+    return For(range(N), constructor)

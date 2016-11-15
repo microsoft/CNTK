@@ -8,18 +8,17 @@ import os
 import math
 import numpy as np
 
-from cntk.blocks import default_options
+from cntk.blocks import default_options, Placeholder
 from cntk.layers import Convolution, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense
-from cntk.models import Sequential, LayerStack
+from cntk.models import Sequential, For
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 from cntk.initializer import glorot_uniform
 from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu
-from cntk.ops import input_variable, constant, parameter, element_times
+from cntk.ops import input_variable, constant, parameter, element_times, combine
 from cntk.persist import load_model, save_model
-
 
 ########################
 # variables and paths  #
@@ -37,9 +36,10 @@ image_width  = 32
 num_channels = 3  # RGB
 num_classes  = 10
 
-#
-# Define the reader for both training and evaluation action.
-#
+########################
+# define the reader    #
+########################
+
 def create_reader(map_file, mean_file, train):
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         raise RuntimeError("File '%s' or '%s' does not exist. Please run install_cifar10.py from Examples/Image/DataSets/CIFAR-10 to fetch them" %
@@ -61,8 +61,12 @@ def create_reader(map_file, mean_file, train):
         labels   = StreamDef(field='label', shape=num_classes)      # and second as 'label'
     )))
 
+########################
+# define the model     #
+########################
+
 #
-# Define a VGG like network for Cifar dataset.
+# VGG like network for Cifar dataset.
 #
 #       | VGG9          |
 #       | ------------- |
@@ -83,26 +87,45 @@ def create_reader(map_file, mean_file, train):
 #       |               |
 #       | FC-10         |
 #
-def create_vgg9_model(input, num_classes):
+def create_vgg9_model(num_classes):
     with default_options(activation=relu):
-        model = Sequential([
-            LayerStack(3, lambda i: [
+        return Sequential([
+            For(range(3), lambda i: [
                 Convolution((3,3), [64,96,128][i], init=glorot_uniform(), pad=True),
                 Convolution((3,3), [64,96,128][i], init=glorot_uniform(), pad=True),
                 MaxPooling((3,3), strides=(2,2))
             ]),
-            LayerStack(2, lambda : [
+            For(range(2), lambda:
                 Dense(1024, init=glorot_uniform())
-            ]),
+            ),
             Dense(num_classes, init=glorot_uniform(), activation=None)
         ])
 
-    return model(input)
+########################
+# define the criteria  #
+########################
 
-#
-# Train and evaluate the network.
-#
-def train_and_evaluate(reader_train, reader_test, max_epochs):
+# compose model function and criterion primitives into a criterion function
+#  takes:   Function: features -> prediction
+#  returns: Function: (features, labels) -> (loss, metric)
+# This function is generic and could be a stock function create_ce_classification_criter().
+def create_criterion_function(model):
+    _1, _2 = (Placeholder(), Placeholder())
+    z = model(_1)
+    ce   = cross_entropy_with_softmax(z, _2, name='_ce')
+    errs = classification_error      (z, _2, name='_errs')
+    return combine ([ce, errs]) # (features, labels) -> (loss, metric)
+
+
+########################
+# train & eval action  #
+########################
+
+def train_and_evaluate(reader_train, reader_test, model, max_epochs):
+
+    # declare the model's input dimension
+    model.replace_placeholders({model.placeholders[0]: input_variable((num_channels, image_height, image_width))})
+    # BUGBUG: ^^ Trainer requires this, although the criterion roots are not part of this.
 
     # Input variables denoting the features and label data
     input_var = input_variable((num_channels, image_height, image_width))
@@ -111,17 +134,20 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     # Normalize the input
     feature_scale = 1.0 / 256.0
     input_var_norm = element_times(feature_scale, input_var)
-   
-    # apply model to input
-    z = create_vgg9_model(input_var_norm, 10)
+    _ = Placeholder()
+    norm_function = element_times(feature_scale, _)
+
+    # criterion function. This is what is being trained trained.
+    criterion = create_criterion_function(norm_function >> model)    #(input_var_norm))
+    criterion.replace_placeholders({criterion.placeholders[0]: input_var, criterion.placeholders[1]: label_var})
 
     #
     # Training action
     #
 
     # loss and metric
-    ce = cross_entropy_with_softmax(z, label_var)
-    pe = classification_error(z, label_var)
+    #ce = cross_entropy_with_softmax(model, label_var)
+    #pe = classification_error(model, label_var)
 
     # training config
     epoch_size     = 50000
@@ -134,10 +160,10 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     l2_reg_weight          = 0.0001
 
     # trainer object
-    learner     = momentum_sgd(z.parameters, 
+    learner     = momentum_sgd(model.parameters, 
                                lr = lr_per_minibatch, momentum = momentum_time_constant,
                                l2_regularization_weight = l2_reg_weight)
-    trainer     = Trainer(z, ce, pe, learner)
+    trainer     = Trainer(model, criterion.outputs[0], criterion.outputs[1], learner)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -145,7 +171,7 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
         label_var: reader_train.streams.labels
     }
 
-    log_number_of_parameters(z) ; print()
+    log_number_of_parameters(model) ; print()
     progress_printer = ProgressPrinter(tag='Training')
 
     # perform model training
@@ -190,7 +216,9 @@ def train_and_evaluate(reader_train, reader_test, max_epochs):
     print("Final Results: Minibatch[1-{}]: errs = {:0.1f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
     print("")
 
-    return loss, metric # return values from last epoch
+    # return evaluation error.
+    return metric_numer/metric_denom
+    #return loss, metric # return values from last epoch
 
 ########################
 # eval action          #
@@ -238,20 +266,19 @@ def evaluate(reader, model):
 #############################
 
 if __name__=='__main__':
-    reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
-    reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
     # create model
-    model = create_basic_model_layer()   # TODO: clean this up more
-    # TODO: move out the model creation from anove
+    model = create_vgg9_model(10)
 
     # train
+    reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
+    reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'),  os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
     train_and_evaluate(reader_train, reader_test, model, max_epochs=5)
 
     # save and load (as an illustration)
-    #path = data_path + "/model.cmf"
-    #save_model(model, path)
-    #model = load_model(path)
+    path = data_path + "/model.cmf"
+    save_model(model, path)
+    model1 = load_model(path)
 
     # test
-    reader_test  = create_reader(data_path, 'test_map.txt', 'CIFAR-10_mean.xml', is_training=False)
-    evaluate(reader_test, model)
+    reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'),  os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
+    evaluate(reader_test, model1)
