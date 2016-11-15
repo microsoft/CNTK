@@ -16,7 +16,7 @@ import ipdb, pdb
 import tensorflow as tf
 from tensorflow.core.framework import summary_pb2
 from cntk.utils import get_train_eval_criterion, get_train_loss, ProgressPrinter
-
+from cntk.graph import *
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
 from examples.common.nn import fully_connected_classifier_net, print_training_progress
@@ -42,6 +42,7 @@ def summary_message(tag,value):
 # Creates and trains a feedforward classification model for MNIST images
 
 def simple_mnist(debug_output=False):
+    session = tf.Session()
     input_dim = 784
     num_output_classes = 10
     num_hidden_layers = 1
@@ -56,7 +57,14 @@ def simple_mnist(debug_output=False):
     netout = fully_connected_classifier_net(
         scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, relu)
 
-    ipdb.set_trace()
+    
+    create_tensorflow_graph(netout, session.graph)
+    # x = tf.placeholder(netout.inputs[0].dtype, shape=netout.inputs[0].shape)
+    # y = tf.placeholder(netout.inputs[1].dtype, shape=netout.inputs[1].shape)
+    # with tf.name_scope(netout.root_function.name):
+    # op = tf.add(x,y)
+    # op2 = tf.add(op,y)
+
     ce = cross_entropy_with_softmax(netout, label)
     pe = classification_error(netout, label)
 
@@ -78,13 +86,13 @@ def simple_mnist(debug_output=False):
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(netout, ce, pe, sgd(netout.parameters, lr=0.003125))
 
-    train_writer = tf.train.SummaryWriter(logdir='/home/alona/tflogs/SimpleMNIST', flush_secs=30)
+    train_writer = tf.train.SummaryWriter(logdir='/home/alona/tflogs/graph', graph=session.graph, flush_secs=30)
     # test_writer = tf.train.SummaryWriter('/home/alona/tflogs/SimpleMNIST/test')
 
     # Get minibatches of images to train with and perform model training
     minibatch_size = 64
-    num_samples_per_sweep = 60000
-    num_sweeps_to_train_with = 10
+    num_samples_per_sweep = 6000
+    num_sweeps_to_train_with = 2
     num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
     training_progress_output_freq = 500
 
@@ -129,6 +137,9 @@ def simple_mnist(debug_output=False):
         train_writer.add_summary(summary_message("eval_error", eval_error), i)
         test_result = test_result + eval_error
 
+    # print(output_function_graph(trainer.model))
+    # output_function_graph(trainer.model, png_file_path="/home/alona/graph.png")
+    # ipdb.set_trace()
     train_writer.close()
 
 

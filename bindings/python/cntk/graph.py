@@ -3,7 +3,7 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
-
+import ipdb
 def dfs_walk(node, visitor):
     '''
     Generic function that walks through the graph starting at ``node`` and
@@ -157,3 +157,147 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
 
     # return lines in reversed order
     return "\n".join(model.split("\n")[::-1])
+
+ops_dict = {
+    "Plus": "Add",
+    "Times": "MatMul",
+    "ElementTimes": "Mul",
+    "ReLU": "Relu"
+    }
+
+def create_tensorflow_graph(node,graph):
+
+    try:
+        import tensorflow as tf
+    except ImportError:
+        raise ImportError("Tensorflow module is required to create a tensorflow graph object")
+
+    # graph = tf.Graph()
+    # walk every node of the graph iteratively
+    visitor = lambda x: True
+    stack = [node]
+    accum = []
+    visited = set()
+    outputs = {}
+    # with tf.name_scope("mnist"):
+    while stack:
+        node = stack.pop()
+        
+        if node in visited:
+            continue
+
+        try:
+            tf_outputs = []
+            tf_inputs = []
+            # Function node
+            node = node.root_function
+            stack.extend(node.inputs)
+
+
+            # find corresponding tf operator
+            # convert_to_tf_op(node)
+            
+
+            # add node's inputs
+            for i in range(len(node.inputs)):
+                child = node.inputs[i]
+
+                try:
+                    tf_input = graph.get_operation_by_name(child.uid)
+
+                    
+                except  KeyError:
+                    shape = convert_shape(child.shape, child.is_parameter, node.op_name=="Times")
+                    tf_input = tf.placeholder(child.dtype, shape=shape, name=child.uid)
+                
+                tf_inputs.append(tf_input)
+                # ipdb.set_trace()
+               
+            # ad node's output
+            # outputs[node.outputs[0].uid] = tf.placeholder(node.outputs[0].dtype, 
+            #     shape=node.outputs[0].shape)
+            
+            try: 
+                graph.create_op(compute_shapes=True,op_type=ops_dict[node.op_name], inputs=tf_inputs, 
+                    dtypes=[node.outputs[0].dtype], name=node.outputs[0].uid)
+                # print(g.name)
+
+            except Exception:
+                if (node.op_name=='Times'):
+                    from tensorflow.core.framework import attr_value_pb2
+                    attr = attr_value_pb2.AttrValue()
+                    attr.b = False
+                    attrs = {"transpose_a": attr, "transpose_b": attr}
+                    try:
+                        graph.create_op(op_type=ops_dict[node.op_name], inputs=tf_inputs, 
+                            dtypes=[node.outputs[0].dtype], name=node.outputs[0].uid, attrs=attrs) 
+                    except TypeError:
+
+                        graph.create_op(op_type=ops_dict["ElementTimes"], inputs=tf_inputs, 
+                            dtypes=[node.outputs[0].dtype], name=node.outputs[0].uid, attrs=attrs) 
+                        # tf.matmul(tf_inputs[0],tf_inputs[1])
+                    # except Exception:
+                    #     print("Could not create graph operation ", ops_dict[node.op_name]) 
+                    # print(g.name)
+            # print(graph)
+
+           
+        except AttributeError:
+            # OutputVariable node
+            try:
+                if node.is_output:
+                    stack.append(node.owner)
+            except AttributeError:
+                pass
+
+    if visitor(node):
+        accum.append(node)
+
+    # ipdb.set_trace()   
+    for op in graph.get_operations():
+        print(op.name)
+        print("inputs")
+        for i in range(len(op.inputs)):
+            print(op.inputs[i])
+        print("outputs")
+        for i in range(len(op.outputs)):
+            print(op.outputs[i])
+    graph.finalize()
+    # return graph
+
+def convert_shape(shape, param, times):
+    if (len(shape)==0):
+        shape = (1,1)
+    if (len(shape)==1):
+        shape += (1,)
+    if (param and times):
+        shape = shape[::-1]
+    return shape
+
+def convert_to_tf_op(cntk_op):
+    import ipdb
+
+    try:
+        import tensorflow as tf
+    except ImportError:
+        raise ImportError("Tensorflow module is required")
+    print(cntk_op.op_name)
+    tf_inputs = []
+    if (len(cntk_op.inputs)>0):
+        for i in range(len(cntk_op.inputs)):
+            print(cntk_op.inputs[i].uid)
+            tf_inputs.append(tf.placeholder(cntk_op.inputs[i].dtype))#, shape=cntk_op.inputs[i].shape))
+        # print(tf_inputs)
+    # ipdb.set_trace()
+    ops_dict = {
+    "Plus": "Add",
+    "Times": "MatMul",
+    "ElementTimes": "Mul",
+    "ReLU": "Relu"
+    }
+
+    return ops_dict[cntk_op.op_name]
+
+
+
+    
