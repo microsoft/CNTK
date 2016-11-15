@@ -138,7 +138,7 @@ RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh &&
     bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
     rm Anaconda3-4.2.0-Linux-x86_64.sh
 
-RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/linux/conda-linux-cntk-py34-environment.yml -O /tmp/conda-linux-cntk-py34-environment.yml && \
+RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/install/linux/conda-linux-cntk-py34-environment.yml -O /tmp/conda-linux-cntk-py34-environment.yml && \
     /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py34/ --file /tmp/conda-linux-cntk-py34-environment.yml
 
 ENV PATH /root/anaconda3/envs/cntk-py34/bin:$PATH
