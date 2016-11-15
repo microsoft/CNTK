@@ -87,11 +87,9 @@ elif datasetName.startswith("pascalVoc"):
                    'dog', 'horse', 'motorbike', 'person', 'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor')
         lutImageSet = {"train": "trainval", "test": "test"}
 
+    # use cntk_nrRois = 4000. more than 99% of the test images have less than 4000 rois, but 50% more than 2000
     # model training / scoring
     classifier = 'nn'
-
-    #more than 99% of the test images have less than 4000 rois, but 50% more than 2000
-    cntk_nrRois = 4000
 
     # database
     imdbs = dict()
