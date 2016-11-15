@@ -528,14 +528,14 @@ Factory functions to create a dropout layer.
 Parameters
 ~~~~~~~~~~
 
--  ``prob``: a fraction between [0, 1[ that specify the probability by which
-   Dropout will randomly select elements of the input. 0 mean select everything
-   and close to 1 mean drop every element.
+-  ``prob``: a fraction between [0, 1) that specify the probability by which
+   the dropout operation will randomly select elements of the input. 0 mean 
+   select everything and close to 1 mean drop every element.
 
 Return Value
 ~~~~~~~~~~~~
 
-A function that implements the desired pooling layer.
+A function that implements the desired dropout layer.
 
 Description
 ~~~~~~~~~~~
