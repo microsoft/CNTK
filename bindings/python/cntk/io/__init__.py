@@ -379,7 +379,7 @@ class ImageDeserializer(Deserializer):
                 jitterType=jitter_type)
 
     @staticmethod
-    def scale(width, height, channels, interpolations='linear'):
+    def scale(width, height, channels, interpolations='linear', scaleMode="fill", padValue=-1):
         '''
         Scale transform that can be used to pass to `map_features` for data augmentation.
 
@@ -389,12 +389,18 @@ class ImageDeserializer(Deserializer):
             channels (int): channels of the image
             interpolations (str, default 'linear'): possible values are
              'nearest', 'linear', 'cubic', and 'lanczos'
+            scaleMode (`str`, default 'center'): 'fill', 'crop' or 'pad'. 
+             'fill' - warp the image to the given target size.
+             'crop' - resize the image's shorter side to the given target size and crops the overlap.
+             'pad'  - resize the image's larger side to the given target size, center it and pad the rest
+            padValue (`int`, default -1): -1 or int value. The pad value used for the 'pad' mode.
+             If set to -1 then the border will be replicated.
 
         Returns:
             dict describing the scale transform
         '''
         return dict(type='Scale', width=width, height=height, channels=channels,
-                interpolations=interpolations)
+                interpolations=interpolations, scaleMode=scaleMode, padValue=padValue)
 
     @staticmethod
     def mean(filename):
