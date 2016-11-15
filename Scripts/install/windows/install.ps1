@@ -51,7 +51,7 @@ Param(
 
 $MyDir = Split-Path $MyInvocation.MyCommand.Definition
 
-$cntkRootDir = split-path $MyDir | split-path
+$cntkRootDir = split-path $MyDir | split-path | Split-Path
 
 $roboCopyCmd    = "C:\Windows\System32\robocopy.exe"
 $localCache     = "$MyDir\InstallCache"

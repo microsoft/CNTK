@@ -13,7 +13,7 @@ set -x -e -o pipefail
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
 # Go to the drop root
-cd "$SCRIPT_DIR/../.."
+cd "$SCRIPT_DIR/../../.."
 
 CNTK_BIN_PATH="$PWD/cntk/bin"
 CNTK_LIB_PATH="$PWD/cntk/lib"
