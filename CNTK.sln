@@ -957,6 +957,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Multiverso", "Source\Multiverso\src\Multiverso.vcxproj", "{16F14058-B116-49D9-8BA0-209F3AFFE849}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MultiversoTests", "Source\Multiverso\Test\unittests\MultiversoTests.vcxproj", "{EC7157E9-A51F-4702-A5FD-8DAF88C7029F}"
+	ProjectSection(ProjectDependencies) = postProject
+		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalExtendedClientTest", "Tests\EndToEndTests\EvalClientTests\CPPEvalExtendedClientTest\CPPEvalExtendedClientTest.vcxproj", "{5D29C76D-648A-456F-920D-48230F2FB3C8}"
 	ProjectSection(ProjectDependencies) = postProject

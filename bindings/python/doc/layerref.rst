@@ -484,7 +484,7 @@ Example:
 GlobalMaxPooling(), GlobalAveragePooling()
 ------------------------------
 
-Factory functions to create a global-max- or global-average-pooling layer.
+Factory functions to create a global-max-pooling or global-average-pooling layer.
 
 ::
 
@@ -501,7 +501,7 @@ Description
 
 Use this factory function to create a global pooling operation. Use
 ``GlobalMaxPooling()`` to compute the maximum over all spatial data, 
-and ``GlobalAveragePooling()`` to take their average.
+or ``GlobalAveragePooling()`` to take their average.
 
 The global pooling operation infer the pooling window shape from the input 
 tensor and create a pooling function with pooling window size that
@@ -528,8 +528,8 @@ Factory functions to create a dropout layer.
 Parameters
 ~~~~~~~~~~
 
--  ``prob``: a fraction between [0, 1) that specify the probability by which
-   the dropout operation will randomly select elements of the input. 0 mean 
+-  ``prob``: a fraction between [0, 1) that specifies the probability by which
+   the dropout operation will randomly set elements of the input to zero. 0 mean 
    select everything and close to 1 mean drop every element.
 
 Return Value
