@@ -17,14 +17,14 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
     const size_t hiddenLayerDim = 50;
     const size_t numHiddenLayers = 2;
 
-    const size_t minibatchSize = 25;
+    const size_t minibatchSize = 50;
     const size_t numSamplesPerSweep = 10000;
     const size_t numSweepsToTrainWith = 2;
     const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
 
     auto featureStreamName = L"features";
     auto labelsStreamName = L"labels";
-    auto minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } }, 0, false);
+    auto minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } }, MinibatchSource::FullDataSweep, false);
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
@@ -59,15 +59,23 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
         prediction = predictionVar;
     }
 
-    double learningRatePerSample = 0.02;
+    LearningRatePerSampleSchedule learningRatePerSample = 0.02;
     minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { L"features", inputDim }, { L"labels", numOutputClasses } });
     Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
     size_t outputFrequencyInMinibatches = 20;
+    size_t trainingCheckpointFrequency = 100;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
         trainer.TrainMinibatch({ { input, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
+
+        if ((i % trainingCheckpointFrequency) == (trainingCheckpointFrequency - 1))
+        {
+            const wchar_t* ckpName = L"feedForward.net";
+            trainer.SaveCheckpoint(ckpName);
+            trainer.RestoreFromCheckpoint(ckpName);
+        }
     }
 }
 
@@ -101,9 +109,9 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
         prediction = predictionVar;
     }
 
-    const size_t minibatchSize = 32;
+    const size_t minibatchSize = 64;
     const size_t numSamplesPerSweep = 60000;
-    const size_t numSweepsToTrainWith = 3;
+    const size_t numSweepsToTrainWith = 2;
     const size_t numMinibatchesToTrain = (numSamplesPerSweep * numSweepsToTrainWith) / minibatchSize;
 
     auto featureStreamName = L"features";
@@ -113,7 +121,7 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
-    double learningRatePerSample = 0.003125;
+    LearningRatePerSampleSchedule learningRatePerSample = 0.003125;
     Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
 
     size_t outputFrequencyInMinibatches = 20;
@@ -127,6 +135,8 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
 
 void TrainerTests()
 {
+    fprintf(stderr, "\nTrainerTests..\n");
+
     TrainSimpleFeedForwardClassifer(DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())
     {

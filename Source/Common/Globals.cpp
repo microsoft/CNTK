@@ -9,6 +9,11 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    // TODO: get rid of this source file once static initializers in methods are thread-safe (VS 2015)
     std::atomic<bool> Globals::m_forceDeterministicAlgorithms(false);
+    std::atomic<bool> Globals::m_forceConstantRandomSeed(false);
+
+    std::atomic<bool> Globals::m_enableShareNodeValueMatrices(false);
+    std::atomic<bool> Globals::m_enableHyperCompressMemory(false);
 
 }}}

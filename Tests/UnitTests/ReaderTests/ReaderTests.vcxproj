@@ -5,6 +5,10 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
@@ -89,14 +93,10 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
-      <BrowseInformation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</BrowseInformation>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
     </Link>
-    <Bscmake>
-      <PreserveSbr Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</PreserveSbr>
-    </Bscmake>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
@@ -233,8 +233,8 @@
     <None Include="Config\HTKDeserializersSimpleDataLoop5_Config.cntk" />
     <None Include="Config\HTKDeserializersSimpleDataLoop8_Config.cntk" />
     <None Include="Config\HTKDeserializersSimpleDataLoop9_Config.cntk" />
-    <None Include="Config\ImageAndImageReaderSimple_Config.cntk" />
     <None Include="Config\ImageAndTextReaderSimple_Config.cntk" />
+    <None Include="Config\ImageDeserializers.cntk" />
     <None Include="Config\ImageTransforms_Config.cntk" />
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />

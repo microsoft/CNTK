@@ -37,7 +37,7 @@ def _test_unary_op(precision, device_id, op_func,
     value = AA(value, dtype=PRECISION_TO_TYPE[precision])
 
     a = I(shape=value.shape,
-          data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           name='a')
 
@@ -59,19 +59,18 @@ def _test_unary_op(precision, device_id, op_func,
 
 
 def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
-                    expected_forward, expected_backward_all,
-                    only_input_variables=False, wrap_batch_seq=True):
+                    expected_forward, expected_backward_all, wrap_batch_seq=True, op_param_dict=None):
 
     left_value = AA(left_operand, dtype=PRECISION_TO_TYPE[precision])
     right_value = AA(right_operand, dtype=PRECISION_TO_TYPE[precision])
 
     a = I(shape=left_value.shape,
-          data_type=sanitize_dtype_cntk(precision),
+          dtype=sanitize_dtype_cntk(precision),
           needs_gradient=True,
           name='a')
 
     b = I(shape=right_value.shape,
-          data_type=sanitize_dtype_cntk(precision),
+          dtype=sanitize_dtype_cntk(precision),
           needs_gradient=True,
           name='b')
 
@@ -80,9 +79,14 @@ def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
         constant_op_input = eval('left_operand %s b' % op_func)
         input_op_input = eval('a %s b' % op_func)
     else:
-        input_op_constant = op_func(a, right_value)
-        constant_op_input = op_func(left_value, b)
-        input_op_input = op_func(a, b)
+        if op_param_dict:
+            input_op_constant = op_func(a, right_value, **op_param_dict)
+            constant_op_input = op_func(left_value, b, **op_param_dict)
+            input_op_input = op_func(a, b, **op_param_dict)
+        else:
+            input_op_constant = op_func(a, right_value)
+            constant_op_input = op_func(left_value, b)
+            input_op_input = op_func(a, b)
 
     # create batch by wrapping the data point into a sequence of length one and
     # putting it into a batch of one sample
@@ -97,28 +101,27 @@ def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
                     forward_input, expected_forward, expected_backward,
                     device_id=device_id, precision=precision)
 
-    if not only_input_variables:
-        forward_input = {a: left_value}
-        expected_backward = {a: expected_backward_all['left_arg'], }
-        unittest_helper(input_op_constant,
-                        forward_input, expected_forward, expected_backward,
-                        device_id=device_id, precision=precision)
+    forward_input = {a: left_value}
+    expected_backward = {a: expected_backward_all['left_arg'], }
+    unittest_helper(input_op_constant,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
 
-        forward_input = {b: right_value}
-        expected_backward = {b: expected_backward_all['right_arg'], }
-        unittest_helper(constant_op_input,
-                        forward_input, expected_forward, expected_backward,
-                        device_id=device_id, precision=precision)
+    forward_input = {b: right_value}
+    expected_backward = {b: expected_backward_all['right_arg'], }
+    unittest_helper(constant_op_input,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
 
 
 def unittest_helper(root_node,
                     forward_input, expected_forward, expected_backward,
                     device_id=-1, precision="float"):
 
-    assert isinstance(root_node, Function) 
+    assert isinstance(root_node, Function)
     backward_pass = expected_backward is not None
     forward, backward = cntk_eval(root_node, forward_input, precision,
-            cntk_device(device_id), backward_pass)
+            cntk_device(device_id), backward_pass, expected_backward)
 
     # for forward we always expect only one result
     assert len(forward) == 1
@@ -151,7 +154,7 @@ def batch_dense_to_sparse(batch, dynamic_axis=''):
     representation that can be consumed by :func:`cntk.ops.sparse_input_numpy`.
 
     Args:
-        batch (list): list of samples. If `dynamic_axis` is given, samples are sequences
+        batch (list): list of samples. If ``dynamic_axis`` is given, samples are sequences
          of tensors. Otherwise, they are simple tensors.
         dynamic_axis (str or :func:`cntk.ops.dynamic_axis` instance): the dynamic axis
 

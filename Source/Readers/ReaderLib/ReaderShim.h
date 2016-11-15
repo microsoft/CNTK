@@ -88,6 +88,16 @@ public:
 
     virtual size_t GetCurrentSamplePosition() override;
 
+    void SetCurrentSamplePosition(size_t currentSamplePosition)
+    {
+        m_reader->SetCurrentSamplePosition(currentSamplePosition);
+    }
+
+    void SetConfiguration(const ReaderConfiguration& config, const std::map<std::wstring, int>& inputDescriptions)
+    {
+        m_reader->SetConfiguration(config, inputDescriptions);
+    }
+
     bool IsEndOfEpoch() const
     {
         return m_endOfEpoch;

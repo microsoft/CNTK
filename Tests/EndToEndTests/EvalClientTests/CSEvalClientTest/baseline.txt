@@ -730,14 +730,6 @@ Output layer: out.z
 3.654128
 -1.261754
 
-====== EvaluateNetworkSingleLayer ========
-Output layer: ol
-2
-
-====== EvaluateNetworkSingleLayerNoInput ========
-Output layer: ol
-3
-
 ====== EvaluateExtendedNetworkSingleLayerNoInput ========
 Expected values: 2 - 3
 Actual Values  : 2 - 3

@@ -114,12 +114,12 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
         if (!isImage)
         {
             if (parameter.size() < 1)
-                RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [vecdim] or [rows, cols]) plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
+                RuntimeError("%ls should have 1 or more parameters (tensor dimensions, e.g. [vecdim] or [rows, cols]) plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue|fromFile|heNormal|bilinear], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
         }
         else
         {
             if (parameter.size() < 3)
-                RuntimeError("%ls should have 3 or more parameters [imageWidth, imageHeight, imageChannels] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
+                RuntimeError("%ls should have 3 or more parameters [imageWidth, imageHeight, imageChannels] plus other optional parameters (learningRateMultiplier=[1|0|float], init=[uniform|gaussian|fixedvalue|fromFile|heNormal|bilinear], initValueScale=[1|float], value=[0|float]).", cnNodeType.c_str());
         }
 
         if (pass == ndlPassInitial)
@@ -174,8 +174,10 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                     RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
                 dynamic_pointer_cast<LearnableParameter<ElemType>>(nodePtr)->InitFromFile(msra::strfun::utf16(initFromFilePath));
             }
+            else if (EqualCI(initString, L"heNormal"))
+                m_net->InitLearnableParameters(nodePtr, L"heNormal", initValueScale, forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed, initOnCPUOnly);
             else
-                RuntimeError("'init' must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
+                RuntimeError("'init' must be one of the values of [ uniform | gaussian | fixedValue | fromFile | heNormal | bilinear]");
         }
     }
     else if (cnNodeType == L"Constant")
@@ -537,6 +539,55 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
 
             nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
+        }
+    }
+    else if (cnNodeType == OperationNameOf(CropNode))
+    {
+        // We expect 2 or 4 inputs.
+        if (parameter.size() != 2 && parameter.size() != 4)
+        {
+            RuntimeError("%ls accepts inputs: [input1, input2, offsetX, offsetY] or \
+                                              [input1, input2] or \
+                                              [input1, input2, eqNode1, eqNode2].", cnNodeType.c_str());
+        }
+
+        if (pass == ndlPassInitial)
+        {
+            // In initial phase we just need to create node.
+            if (parameter.size() == 4)
+            {
+                // Here we need to determine if 3rd and 4th parameters are offsets or equivalence nodes.
+                vector<void*> params = EvaluateParameters(node, baseName, 0, parameter.size(), pass);
+                // TODO: Is there a better way to discriminate?
+                if (((NDLNode<ElemType>*) params[2])->GetType() == NDLType::ndlTypeConstant)
+                {
+                    // We have offsets given, take offsets from evaluated parameters.
+                    size_t offsetX = ((NDLNode<ElemType>*) params[2])->GetScalar();
+                    size_t offsetY = ((NDLNode<ElemType>*) params[3])->GetScalar();
+
+                    // Create crop node with offsets but without inputs (will be attached later in resolve phase).
+                    nodePtr = builder.Crop(nullptr, nullptr, offsetX, offsetY, name);
+                }
+                else
+                {
+                    // We have 4 node inputs (2 crop inputs and 2 equivalence node inputs).
+                    nodePtr = builder.Crop(nullptr, nullptr, nullptr, nullptr, name);
+                }
+            }
+            else
+            {
+                // Just two inputs, must be node inputs which will be attached in the resolve phase below.
+                nodePtr = builder.Crop(nullptr, nullptr, name);
+            }
+            // Done processing in this phase.
+            nodeParamStart = 0;
+            nodeParamCount = 0;
+        }
+        else
+        {
+            // In non-initial phase we just process node inputs below, here we just set inputs of interest.
+            nodeParamStart = 0;
+            nodeParamCount = nodePtr->GetNumInputs();
         }
     }
     else

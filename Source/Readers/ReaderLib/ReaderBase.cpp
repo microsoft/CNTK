@@ -54,7 +54,7 @@ void ReaderBase::StartEpoch(const EpochConfiguration& config, const std::map<std
     }
 
     m_sequenceEnumerator->StartEpoch(config);
-    m_packer->StartEpoch(config, m_memoryProviders);
+    m_packer->SetConfiguration(config, m_memoryProviders);
 }
 
 Minibatch ReaderBase::ReadMinibatch()
@@ -66,6 +66,17 @@ Minibatch ReaderBase::ReadMinibatch()
 size_t ReaderBase::GetCurrentSamplePosition()
 {
     return m_sequenceEnumerator->GetCurrentSamplePosition();
+}
+
+void ReaderBase::SetCurrentSamplePosition(size_t currentSamplePosition)
+{
+    m_sequenceEnumerator->SetCurrentSamplePosition(currentSamplePosition);
+}
+
+void ReaderBase::SetConfiguration(const ReaderConfiguration& config, const std::map<std::wstring, int>&)
+{
+    m_sequenceEnumerator->SetConfiguration(config);
+    m_packer->SetConfiguration(config, m_memoryProviders);
 }
 
 }}}

@@ -1,32 +1,8 @@
 Getting started 
 ===============
 
-Installation
-------------
-This page will guide you through the following three required steps:
-
-#. Make sure that all Python requirements are met
-#. Install CNTK2
-
-Requirements
-~~~~~~~~~~~~
-You will need the following Python packages: 
-
-:Python: 3.4
-:NumPy: >= 1.11
-:Scipy: >= 0.17
-
-On Linux a simple ``pip install`` should suffice. On Windows, you will get
-everything you need from `Anaconda <https://www.continuum.io/downloads>`_.
-
-CNTK also depends on MPI (`Linux <https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi>`_ and 
-`Windows <https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#ms-mpi>`_) and 
-`CUDA <https://developer.nvidia.com/cuda-downloads>`_ (if you want to use GPUs). Please see the 
-`CNTK wiki <https://github.com/Microsoft/CNTK/wiki>`_ for more information on installation.
-
-Testing your installation
-~~~~~~~~~~~~~~~~~~~~~~~~~
-After installing the pip package, you can then start using CNTK from Python right away:
+After going through the `installation steps <https://github.com/Microsoft/CNTK/wiki/CNTK-Binary-Download-and-Configuration>`__, 
+you can start using CNTK from Python right away (don't forget to ``activate`` your Python environment):
 
     >>> import cntk
     >>> cntk.__version__
@@ -39,16 +15,29 @@ The above makes use of the CNTK ``minus`` node with two array constants. Every o
 pass for that node using its inputs, and returns the result of the forward pass. A slightly more interesting example that uses input variables (the 
 more common case) is as follows:
 
-    >>> i1 = cntk.input_variable((1, 2))
-    >>> i2 = cntk.input_variable((1, 2))
-    >>> cntk.squared_error(i1, i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32),  i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
+    >>> import numpy as np
+    >>> x = cntk.input_variable((1, 2))
+    >>> y = cntk.input_variable((1, 2))
+    >>> x0 = np.asarray([[2., 1.]], dtype=np.float32)
+    >>> y0 = np.asarray([[4., 6.]], dtype=np.float32)
+    >>> cntk.squared_error(x, y).eval({x:x0, y:y0})
     array([[ 29.]], dtype=float32)
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. 
-These have to be specified as minibatches. Let's take e.g. the data for `i1`: ``[[2., 1.]]`` describes the 1x2 matrix as one element in a sequence. Then we need a `[ ]` 
-pair for the sequence, and another one for the batch.
 The squared error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
+
+As the graph nodes implement the NumPy array interface, you can easily access
+their content and use them in other NumPy operations:
+
+    >>> import cntk as C
+    >>> c = C.constant(3, shape=(2,3))
+    >>> np.asarray(c)
+    array([[ 3.,  3.,  3.],
+           [ 3.,  3.,  3.]], dtype=float32)
+    >>> np.ones_like(c)
+    array([[ 1.,  1.,  1.],
+           [ 1.,  1.,  1.]], dtype=float32)
 
 Overview and first run
 ----------------------
@@ -58,58 +47,97 @@ construction. The Python bindings provide direct access to the created network g
 for more powerful and complex networks, but also for interactive Python sessions while a model is being created and debugged.
 
 CNTK2 also includes a number of ready-to-extend examples and a layers library. The latter allows one to simply build a powerful deep network by 
-snapping together levels of convolution layers, recurrent neural net layers (LSTMs, etc.), and fully-connected layers. To begin, we will take a 
+snapping together building blocks such as convolution layers, recurrent neural net layers (LSTMs, etc.), and fully-connected layers. To begin, we will take a 
 look at a standard fully connected deep network in our first basic use.
 
 First basic use
 ~~~~~~~~~~~~~~~
 
 The first step in training or running a network in CNTK is to decide which device it should be run on. If you have access to a GPU, training time 
-can be vastly improved. To explicitly set the device to GPU, set the target device as follows:
+can be vastly improved. To explicitly set the device to GPU, set the target device as follows::
 
-    >>> import cntk
-    >>> target_device = cntk.DeviceDescriptor.gpu_device(0)
-    >>> cntk.DeviceDescriptor.set_default_device(target_device)
+    from cntk.device import set_default_device, gpu
+    set_default_device(gpu(0))
 
 Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
 (``examples.common.nn.fully_connected_classifier_net``). This is defined, along with several other simple and more complex DNN building blocks in 
-``bindings/python/examples/common/nn.py``. Here is the basic code for setting up a network that uses it::
+``bindings/python/examples/common/nn.py``. Go to the ``[CNTK root]/bindings/python`` directory and create a ``simplenet.py`` file with the 
+following contents::
 
-    def ffnet(debug_output=True):
-        input_dim = 2
-        num_output_classes = 2
-        num_hidden_layers = 2
-        hidden_layers_dim = 50
+	import numpy as np
+	import cntk
+	import cntk.ops as C
+	from cntk.learner import sgd
+	from cntk.utils import get_train_loss
+	from examples.common.nn import fully_connected_classifier_net
+	from cntk.utils import ProgressPrinter
 
-        # Input variables denoting the features and label data
-        input = input_variable((input_dim), np.float32)
-        label = input_variable((num_output_classes), np.float32)
+	def generate_random_data(sample_size, feature_dim, num_classes):
+		 # Create synthetic data using NumPy.
+		 Y = np.random.randint(size=(sample_size, 1), low=0, high=num_classes)
 
-        # Instantiate the feedforward classification model
-        netout = fully_connected_classifier_net(input, num_output_classes, hidden_layers_dim, num_hidden_layers, sigmoid)
+		 # Make sure that the data is separable
+		 X = (np.random.randn(sample_size, feature_dim) + 3) * (Y + 1)
+		 X = X.astype(np.float32)
+		 # converting class 0 into the vector "1 0 0",
+		 # class 1 into vector "0 1 0", ...
+		 class_ind = [Y == class_number for class_number in range(num_classes)]
+		 Y = np.asarray(np.hstack(class_ind), dtype=np.float32)
+		 return X, Y
 
-        ce = cross_entropy_with_softmax(netout, label)
-        pe = classification_error(netout, label)
+	def ffnet():
+		inputs = 2
+		outputs = 2
+		layers = 2
+		hidden_dimension = 50
 
-        # Instantiate the trainer object to drive the model training
-        trainer = Trainer(netout, ce, pe, [sgd_learner(netout.parameters(), lr=0.02)])
+		# Input variables denoting the features and label data
+		input = C.input_variable((inputs), np.float32)
+		label = C.input_variable((outputs), np.float32)
 
-        # Get minibatches of training data and perform model training
-        minibatch_size = 25
-        num_samples_per_sweep = 10000
-        num_sweeps_to_train_with = 2
-        num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
-        training_progress_output_freq = 20
+		# Instantiate the feedforward classification model
+		z = fully_connected_classifier_net(input, outputs, hidden_dimension, layers, C.sigmoid)
 
-        for i in range(0, int(num_minibatches_to_train)):
-            features, labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
-            # Specify the mapping of input variables in the model to actual minibatch data to be trained with
-            trainer.train_minibatch({input : features, label : labels})
-            if debug_output:
-                print_training_progress(trainer, i, training_progress_output_freq)
-        
-        test_features, test_labels = generate_random_data(minibatch_size, input_dim, num_output_classes)
-        avg_error = trainer.test_minibatch({input : test_features, label : test_labels})
+		ce = C.cross_entropy_with_softmax(z, label)
+		pe = C.classification_error(z, label)
+
+		# Instantiate the trainer object to drive the model training
+		trainer = cntk.Trainer(z, ce, pe, [sgd(z.parameters, lr=0.005)])
+
+		# Get minibatches of training data and perform model training
+		minibatch_size = 25
+		num_minibatches_to_train = 1024
+
+		pp = ProgressPrinter(0)
+		for i in range(num_minibatches_to_train):
+			features, labels = generate_random_data(minibatch_size, inputs, outputs)
+			# Specify the mapping of input variables in the model to actual minibatch data to be trained with
+			trainer.train_minibatch({input : features, label : labels})
+			pp.update_with_trainer(trainer)
+		test_features, test_labels = generate_random_data(minibatch_size, inputs, outputs)
+		avg_error = trainer.test_minibatch({input : test_features, label : test_labels})
+		print(' error rate on an unseen minibatch: {}'.format(avg_error))
+
+	np.random.seed(98052)
+	ffnet()
+
+Running ``python simplenet.py`` (using the correct python environment) will generate this output::
+
+      average      since    average      since      examples
+         loss       last     metric       last
+      ------------------------------------------------------
+        0.693      0.693                                  25
+        0.699      0.703                                  75
+        0.727      0.747                                 175
+        0.706      0.687                                 375
+        0.687       0.67                                 775
+        0.656      0.626                                1575
+         0.59      0.525                                3175
+        0.474      0.358                                6375
+        0.359      0.245                               12775
+         0.29      0.221                               25575
+      error rate on an unseen minibatch: 0.0
+
 
 The example above sets up a 2-layer fully connected deep neural network with 50 hidden dimensions per layer. We first setup two input variables, one for 
 the input data and one for the labels. We then called the fully connected classifier network model function which simply sets up the required weights, 

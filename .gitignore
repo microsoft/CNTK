@@ -23,6 +23,24 @@ build/
 .run-*
 lib/
 bin/
+Examples/Image/DataSets/Pascal/VOC*
+Examples/Image/DataSets/Pascal/selective_search_data*
+Examples/Image/Detection/FastRCNN/proc/
+Examples/Image/DataSets/CIFAR-10/CIFAR-10_mean.xml
+Examples/Image/DataSets/CIFAR-10/Test_cntk_text.txt
+Examples/Image/DataSets/CIFAR-10/Train_cntk_text.txt
+Examples/Image/DataSets/CIFAR-10/cifar-10-batches-py/
+Examples/Image/DataSets/CIFAR-10/test/
+Examples/Image/DataSets/CIFAR-10/test_map.txt
+Examples/Image/DataSets/CIFAR-10/test_regrLabels.txt
+Examples/Image/DataSets/CIFAR-10/train/
+Examples/Image/DataSets/CIFAR-10/train_map.txt
+Examples/Image/DataSets/CIFAR-10/train_regrLabels.txt
+Examples/Image/DataSets/MNIST/Test-28x28_cntk_text.txt
+Examples/Image/DataSets/MNIST/Train-28x28_cntk_text.txt
+Examples/Image/DataSets/grocery/
+Examples/Image/PretrainedModels/
+
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
 !packages/*/build/
@@ -196,6 +214,8 @@ Tests/EndToEndTests/UnitTests/MathTests/MCPU.txt
 Tests/EndToEndTests/UnitTests/MathTests/MGPU.txt
 Tests/EndToEndTests/UnitTests/MathTests/MS.txt
 
+Tests/Install/linux/BinaryDrops.tar.gz
+
 Dependencies/CNTKCustomMKL/Publish
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Linux-*.tgz
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Windows-*.zip
@@ -208,3 +228,14 @@ bindings/python/cntk/libs/
 bindings/python/cntk/cntk_py_wrap.cpp
 bindings/python/cntk/cntk_py_wrap.h
 bindings/python/dist/
+
+# Auto-generated sources from CNTK.proto
+Source/CNTKv2LibraryDll/proto/CNTK.pb.cc
+Source/CNTKv2LibraryDll/proto/CNTK.pb.h
+
+bindings/python/cntk/c_plus_c.mod
+bindings/python/cntk/i_plus_c_0.mod
+bindings/python/cntk/i_plus_i_0.mod
+
+Tutorials/HelloWorld-LogisticRegression/LR.txt.p
+Tutorials/HelloWorld-LogisticRegression/Models/

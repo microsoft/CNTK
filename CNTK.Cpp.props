@@ -20,6 +20,9 @@
     <CpuOnlyBuild>true</CpuOnlyBuild>
     <CpuOnlyBuild Condition="$(GpuBuild)">false</CpuOnlyBuild>
 
+    <NoOptBuild>false</NoOptBuild>
+    <NoOptBuild Condition="$(Configuration.Contains('NoOpt'))">true</NoOptBuild>
+
     <NvmlInclude>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
     <NvmlLibPath>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
 
@@ -30,12 +33,19 @@
 
     <HasOpenCv>false</HasOpenCv>
     <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)')">true</HasOpenCv>
-	
-	<HasBoost>false</HasBoost>
+    
+    <HasProtobuf>false</HasProtobuf>
+    <HasProtobuf Condition="Exists('$(PROTOBUF_PATH)')">true</HasProtobuf>
+
+    <HasBoost>false</HasBoost>
     <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
 
     <UseZip>false</UseZip>
     <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
+
+    <HasMultiverso>false</HasMultiverso>
+    <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
+
   </PropertyGroup>
 
   <PropertyGroup>
@@ -86,6 +96,13 @@
     <OpenCvLib>$(OpenCvWorld).lib</OpenCvLib>
     <OpenCvLibPath>$(OpenCvPath)\x64\vc12\lib</OpenCvLibPath>
     <OpenCvBinPath>$(OpenCvPath)\x64\vc12\bin</OpenCvBinPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(HasProtobuf)">
+    <ProtobufInclude>$(PROTOBUF_PATH)\include;</ProtobufInclude>
+    <ProtobufLibPath>$(PROTOBUF_PATH)\lib;</ProtobufLibPath>
+    <ProtobufLib Condition="$(ReleaseBuild)">libprotobuf.lib</ProtobufLib>
+    <ProtobufLib Condition="$(DebugBuild)">libprotobufd.lib</ProtobufLib>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(CudaVersion)' == '8.0'">
@@ -145,7 +162,7 @@
     </Link>
   </ItemDefinitionGroup>
 
-  <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'StaticLibrary' And $(ReleaseBuild)">
+  <ItemDefinitionGroup Condition="$(ReleaseBuild) And !$(NoOptBuild)">
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -159,5 +176,24 @@
       <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="$(NoOptBuild)">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <FunctionLevelLinking>false</FunctionLevelLinking>
+      <IntrinsicFunctions>false</IntrinsicFunctions>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
+      <OptimizeReferences>false</OptimizeReferences>
+      <Profile>false</Profile>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <PropertyGroup Condition="$(NoOptBuild)" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
 
 </Project>

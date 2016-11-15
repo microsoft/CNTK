@@ -1,6 +1,41 @@
-# CNTK
+# Latest news
+*2016-11-11.* V 2.0 Beta 3 Release  
+Highlights of this Release:
+* Integration with [NVIDIA NCCL](https://github.com/NVIDIA/nccl). Works with Linux when building CNTK from sources. See here [how to enable](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#optional-nccl)
+* The first V.2.0 Prerelease Nuget Package for CNTK Evaluation library
+* Stability Improvements and bug fixes
 
-## Latest news
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_3_Release_Notes)  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
+
+*2016-11-03.* V 2.0 Beta 2 Release  
+Highlights of this Release:
+* Feature tuning and bug fixing based on the feedback on Beta 1
+* Changes in the Examples and Tutorials based on the same feedback
+* New [Tutorial on Reinforcement Learning](https://github.com/Microsoft/CNTK/blob/v2.0.beta2.0/bindings/python/tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb)
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_2_Release_Notes)  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
+
+*2016-10-25.* New CNTK Name, new Web Site and V 2.0 Beta 1 Release  
+
+CNTK becomes **The Microsoft Cognitive Toolkit**. See more at our [new Web Site](https://www.microsoft.com/en-us/research/product/cognitive-toolkit/).
+
+With the today's Release we start delivering CNTK V2 - a major upgrade of Microsoft Cognitive Toolkit.
+
+Expect a set of Beta Releases in the Coming Weeks.
+
+Highlights of this Release:
+* CNTK can now be used as a library with [brand new C++ and Python APIs](https://github.com/microsoft/cntk/wiki/CNTK-Library-API)
+* New Python Examples and Tutorials
+* Support of Protocol Buffers serialization
+* Support of Fast R-CNN algorithm
+* New automated installation procedures
+* Improvements in CNTK Evaluation library including support of CNTK APIs
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_1_Release_Notes). You will find there links to the materials about the new features.  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
+
 *2016-10-03.* V 1.7.2 Binary release  
 **This is a Hot Fix Release. It affects all users of Model Evaluation Library**
 
@@ -21,27 +56,9 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_1_Release_Notes) (including the full list of bugs fixed)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-*2016-08-31.* V 1.7 Binary release  
-Highlights of this Release:
-* Improvements in BrainScript (New library of predefined common layer types, Support of cuDNN5 RNN and Common random-initialization types, improved handling of GRUs)
-* Support of NVIDIA cuDNN 5.1
-* Improvements in Readers and Deserializers
-* Additions to Evaluator Library (Eval Client Sample, Strong Name for EvalWrapper)
-* New in Unit Tests (Linux support, Randomization engines)
-* Python API Preview (since V.1.5)
-* Multiple bug fixes
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_1_7_Release_Notes)  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
-
-*2016-08-29.* Two new Tutorials are available:  
-[Image recognition](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (CIFAR-10) and [Language understanding](https://github.com/Microsoft/CNTK/wiki/Hands-On-Labs-Image-Recognition) (ATIS).
-
-*2016-08-10.* We have significantly simplified handling of **Gated Recurrent Units (GRU)**. Read more in the [corresponding article](https://github.com/Microsoft/CNTK/wiki/GRUs-on-CNTK-with-BrainScript).
-
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
-## What is CNTK
+# What is CNTK
 CNTK (http://www.cntk.ai/), the Computational Network Toolkit by Microsoft Research, is a unified deep-learning toolkit that describes neural networks as a series of computational steps via a directed graph. In this directed graph, leaf nodes represent input values or network parameters, while other nodes represent matrix operations upon their inputs. CNTK allows to easily realize and combine popular model types such as feed-forward DNNs, convolutional nets (CNNs), and recurrent networks (RNNs/LSTMs). It implements stochastic gradient descent (SGD, error backpropagation) learning with automatic differentiation and parallelization across multiple GPUs and servers. CNTK has been available under an open-source license since April 2015. It is our hope that the community will take advantage of CNTK to share ideas more quickly through the exchange of open source working code.
 
 Wiki: Go to the [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) for all information on CNTK including [setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine ), [examples](https://github.com/Microsoft/CNTK/wiki/Examples ), etc.

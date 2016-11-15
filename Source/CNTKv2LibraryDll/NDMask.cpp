@@ -26,7 +26,7 @@ namespace CNTK
         m_matrixView = std::shared_ptr<Matrix<char>>(matrix, [](Matrix<char>* ptr) { delete ptr; });
     }
 
-    NDMask::NDMask(const NDShape& shape, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/)
+    NDMask::NDMask(const NDShape& shape, const DeviceDescriptor& device)
         : NDMask(shape, AllocateMatrix(shape, device))
     {
         if (shape.Rank() > 2)

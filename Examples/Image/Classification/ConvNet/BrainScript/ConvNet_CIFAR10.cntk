@@ -1,0 +1,94 @@
+# ConvNet applied on CIFAR-10 dataset, with no data augmentation.
+
+command = TrainConvNet:Eval
+
+precision = "float"; traceLevel = 1 ; deviceId = "auto"
+
+rootDir = "../../.." ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
+outputDir = "./Output" ;
+
+modelPath = "$outputDir$/Models/ConvNet_CIFAR10"
+#stderr = "$outputDir$/ConvNet_CIFAR10_bs_out"
+
+TrainConvNet = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        imageShape = 32:32:3
+        labelDim = 10
+
+        featMean = 128
+        featScale = 1/256
+        Normalize{m,f} = x => f .* (x - m)
+
+        model = Sequential (
+            Normalize {featMean, featScale} :
+            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
+              MaxPoolingLayer {(3:3), stride = (2:2)} :
+            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
+              MaxPoolingLayer {(3:3), stride = (2:2)} :
+            DenseLayer {256} : ReLU : Dropout : 
+            DenseLayer {128} : ReLU : Dropout : 
+            LinearLayer {labelDim}
+        )
+
+        # inputs
+        features = Input {imageShape}
+        labels   = Input {labelDim}
+
+        # apply model to features
+        z = model (features)
+
+        # connect to system
+        ce       = CrossEntropyWithSoftmax     (labels, z)
+        errs     = ClassificationError         (labels, z)
+        top5Errs = ClassificationError         (labels, z, topN=5)  # only used in Eval action
+
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)  # top5Errs only used in Eval
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize = 0
+        minibatchSize = 64
+
+        learningRatesPerSample = 0.0015625*10:0.00046875*10:0.00015625
+        momentumAsTimeConstant = 0*20:607.44
+        maxEpochs = 30
+        L2RegWeight = 0.002
+        dropoutRate = 0*5:0.5
+
+        numMBsToShowResult = 100
+    }
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Train_cntk_text.txt"
+        randomize = true
+        keepDataInMemory = true     # cache all data in memory 	 
+        input = {
+            features = { dim = 3072 ; format = "dense" }
+            labels   = { dim = 10 ;   format = "dense" }
+        }
+    }
+}
+
+# Eval action
+Eval = {
+    action = "eval"
+    minibatchSize = 16
+    evalNodeNames = errs:top5Errs  # also test top-5 error rate
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test_cntk_text.txt"
+        input = {
+            features = { dim = 3072 ; format = "dense" }
+            labels   = { dim = 10 ;   format = "dense" }
+        }
+    }
+}

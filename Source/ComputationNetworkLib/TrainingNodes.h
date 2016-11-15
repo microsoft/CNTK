@@ -8,6 +8,7 @@
 #include "ComputationNode.h"
 #include "BatchNormalizationEngine.h"
 #include "RNGHandle.h"
+#include "InputAndParamNodes.h"
 #include "CPURNGHandle.h"
 
 
@@ -449,6 +450,464 @@ template class MatrixL1RegNode<float>;
 template class MatrixL1RegNode<double>;
 
 // -----------------------------------------------------------------------
+// LambdaRankNode (gain, prediction, queryId)
+// Check "From RankNet to LambdaRank to LambdaMART: An Overview" for details.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class LambdaRankNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"LambdaRank";
+    }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(LambdaRankNode);
+    LambdaRankNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name), m_sigma(1.0)
+    {
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+
+        if (inputIndex == 1 &&  // right derivative
+            m_numberOfUrlPairs > 0)   // 
+        {
+            auto gradient = Input(1)->GradientFor(fr);
+
+            // sigma * (si - sj)
+            *m_pairwiseDifferences *= m_sigma;
+            // exp(sigma * (si - sj))
+            m_lambdas->AssignExpOf(*m_pairwiseDifferences);
+            // 1 + exp(sigma * (si - sj))
+            *m_lambdas += 1;
+            // 1 / (1 + exp(sigma * (si - sj)))
+            m_lambdas->AssignElementInverseOf(*m_lambdas);
+            // -sigma/(1+exp(sigma*(si - sj)))
+            m_lambdas->AssignProductOf(-m_sigma, *m_lambdas);
+
+            // Get the update of weight.
+            const Matrix<ElemType>& lambdas = *m_lambdas;
+            m_weightUpdate->SetValue(gradient);
+            size_t pairsCount = 0;
+            ElemType discountI, discountJ;
+            ElemType gainI;
+            ElemType lambdaIJ;
+            for (auto qu : m_queryUrls)
+            {
+                ElemType idealMetric = qu.m_idealMetric;
+                for (typename std::vector<Url>::iterator itUrlI = qu.m_urls.begin(); itUrlI != qu.m_urls.end(); itUrlI++)
+                {
+                    Url& UrlI = *itUrlI;
+                    size_t k = UrlI.m_K;
+                    discountI = m_logWeights[UrlI.m_rank];
+                    gainI = UrlI.m_gain;
+                    if (k == 0) continue;
+                    for (typename std::vector<Url>::iterator itUrlJ = itUrlI + 1; itUrlJ <= itUrlI + k; itUrlJ++)
+                    {
+                        Url& UrlJ = *itUrlJ;
+                        discountJ = m_logWeights[UrlJ.m_rank];
+                        if (abs(gainI - UrlJ.m_gain) < 0.0000001)
+                        {
+                            continue;
+                        }
+
+                        // delta DCG
+                        lambdaIJ = (gainI - UrlJ.m_gain) * (discountI - discountJ) / (discountI * discountJ);
+
+                        // |delta NDCG|
+                        lambdaIJ = (idealMetric == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / idealMetric));
+
+                        // Combine lambda
+                        lambdaIJ = lambdas(0, pairsCount++) * lambdaIJ;
+
+                        // Assign to gradient
+                        (*m_weightUpdate)(0, UrlI.m_id) += lambdaIJ;
+                        (*m_weightUpdate)(0, UrlJ.m_id) -= lambdaIJ;
+                        
+                    }
+                }
+            }
+
+            gradient.SetValue(*m_weightUpdate);
+        }
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        UpdateCounts();
+
+        // clean up first
+        if (!m_queryUrls.empty()) m_queryUrls.clear();
+        if (!m_urlSorter.empty()) m_urlSorter.clear();
+        if (!m_logWeights.empty()) m_logWeights.clear();
+
+        m_pairwiseDifferences->Resize(1, m_numberOfUrlPairs);
+        m_lambdas->Resize(1, m_numberOfUrlPairs);
+
+        m_urlGain0->Resize(1, m_numberOfQueryUrls);
+        m_urlGain1->Resize(1, m_numberOfQueryUrls);
+        m_urlDiscount0->Resize(1, m_numberOfQueryUrls);
+        m_urlDiscount1->Resize(1, m_numberOfQueryUrls);
+
+        // keep one additional space to avoid pointer moving out
+        m_urlSorter.resize(m_maxNumberOfUrlsPerQuery + 1);
+        
+        // prepared lookup table
+        m_logWeights.resize(m_maxNumberOfUrlsPerQuery);
+        size_t i = 0;
+        for (typename std::vector<ElemType>::iterator it = m_logWeights.begin(); it != m_logWeights.end(); it++, i++)
+        {
+            *it = (ElemType) log(2.0 + i);
+        }
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        // Inputs:
+        //      0. gain
+        //      1. predicted score
+        //      2. query id (used to separate urls belonging to different queries)
+        // 
+        // Following is an example: two queries (0 and 1) and 6 urls (three for each).
+        // 31,  0.9,    0
+        // 7,   0.3,    0
+        // 0,   0.0,    0
+        // 3,   0.4,    1
+        // 0,   0.5,    1
+        // 0,   0.3,    1
+        FrameRange fr(Input(0)->GetMBLayout());
+
+        // Construct matrices for further computation.
+        const Matrix<ElemType>& gains = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& preds = Input(1)->ValueFor(fr);
+        const Matrix<ElemType>& queryIds = Input(2)->ValueFor(fr);
+
+        // Iterate through all samples
+        size_t numberOfSamples = gains.GetNumCols();
+        QueryUrls aqu;
+        int previousQueryId = -1;
+        int numberOfQueries = 0;
+
+        // Iterate all samples and populate m_queryUrls table. 
+        for (size_t i = 0; i < numberOfSamples; i++)
+        {
+            int queryId = (int)queryIds(0, i);
+            // Samples are grouped by queries. Find all the urls 
+            // belonging to each individual query.
+            if (queryId != previousQueryId)
+            {
+                m_queryUrls.push_back(aqu);
+                numberOfQueries++;
+                previousQueryId = queryId;
+            }
+
+            // Get the last QueryUrls and add the Url.
+            QueryUrls& qu = m_queryUrls.back();
+            Url u(i, qu.m_urls.size(), preds(0, i), gains(0, i));
+            qu.m_urls.push_back(u);
+        }
+
+        // Update K (number of url pairs that have smaller or equal gain), rk (rank of 
+        // score in descending order) and and m_pairwiseDifferences (save for gradient 
+        // computation).
+        size_t pairCount = 0;
+        for (auto &qu : m_queryUrls)
+        {
+            std::vector<Url>& urls = qu.m_urls;
+            size_t numberOfUrls = urls.size();
+            // Urls are pre-sorted in descending order of gains.
+            ElemType minGain = urls[numberOfUrls - 1].m_gain;
+            for (size_t j = 0; j < urls.size(); j++)
+            {
+                if (urls[j].m_gain > minGain)
+                {
+                    size_t numberOfPairs = numberOfUrls - j - 1;
+                    urls[j].m_K = numberOfPairs;
+                    if (numberOfPairs > 0)
+                    {
+                        for (size_t k = 0; k < numberOfPairs; k++)
+                        {
+                            (*m_pairwiseDifferences)(0, pairCount++) = urls[j].m_score - urls[j + 1 + k].m_score;
+                        }
+                    }
+                }
+                // Skip urls with gain equal to min (0).
+                else 
+                {
+                    urls[j].m_K = 0;
+                }
+            }
+
+            typename std::vector<Url>::iterator its = m_urlSorter.begin(), it = urls.begin();
+            typename std::vector<Url>::iterator its0 = its;
+            its = std::copy(it, urls.end(), its);
+            std::sort(its0, its);
+            // Set the sorted rk order to each url and 
+            // the urls are still in the original order
+            int rk = 0;
+            for (it = its0; it != its; it++)
+            {
+                urls[it->m_rank0].m_rank = rk++;
+            }
+        }
+
+        // Compute ir metric.
+        size_t sampleCount = 0;
+        for (const auto &qu: m_queryUrls)
+        {
+            for (const auto &url : qu.m_urls)
+            {
+                (*m_urlGain0)(0, sampleCount) = url.m_gain;
+                (*m_urlGain1)(0, sampleCount) = url.m_gain;
+                (*m_urlDiscount0)(0, sampleCount) = (ElemType)url.m_rank0;
+                (*m_urlDiscount1)(0, sampleCount) = (ElemType)url.m_rank;
+                sampleCount++;
+            }
+        }
+        
+        // log(2+rank)
+        *m_urlDiscount0 += 2.0;
+        m_urlDiscount0->InplaceLog();
+        *m_urlDiscount1 += 2.0;
+        m_urlDiscount1->InplaceLog();
+        // gain/log(2+rank)
+        m_urlGain0->AssignElementDivisionOf(*m_urlGain0, *m_urlDiscount0);
+        m_urlGain1->AssignElementDivisionOf(*m_urlGain1, *m_urlDiscount1);
+
+        // Aggregate at query level.
+        const Matrix<ElemType>& urlDiscountedGain0 = *m_urlGain0;
+        const Matrix<ElemType>& urlDiscountedGain1 = *m_urlGain1;
+        ElemType irMetricValue = 0.0;
+        for (auto &qu : m_queryUrls)
+        {
+            qu.m_idealMetric = 0.0;
+            qu.m_metric = 0.0;
+
+            for (const auto &url : qu.m_urls)
+            {
+                qu.m_idealMetric += urlDiscountedGain0(0, url.m_id);
+                qu.m_metric += urlDiscountedGain1(0, url.m_id);
+            }
+
+            if (qu.m_idealMetric != 0.0)
+            {
+                irMetricValue += (qu.m_metric / qu.m_idealMetric);
+            }
+        }
+
+        if (numberOfQueries == 0)
+        {
+            LogicError("In %ls %ls numberOfQueries==0, check your data.", NodeName().c_str(), OperationName().c_str());
+        }
+
+        // to make up the reporting
+        irMetricValue = (1.0f - irMetricValue / numberOfQueries) * 100 * numberOfSamples;
+        Value().SetValue(irMetricValue);
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        if (m_inputs.size() != 3)
+            InvalidArgument("%ls operation requires three inputs instead of %d.", NodeDescription().c_str(), (int)m_inputs.size());
+
+        if (Input(0)->NeedsGradient() == true)
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st input.", NodeName().c_str(), OperationName().c_str());
+
+        if (Input(2)->NeedsGradient() == true)
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 3rd input.", NodeName().c_str(), OperationName().c_str());
+
+        ValidateBinaryReduce(isFinalValidationPass);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<LambdaRankNode<ElemType>>(nodeP);
+            node->m_pairwiseDifferences->SetValue(*m_pairwiseDifferences);
+            node->m_lambdas->SetValue(*m_lambdas);
+            node->m_weightUpdate->SetValue(*m_weightUpdate);
+            node->m_urlGain0->SetValue(*m_urlGain0);
+            node->m_urlGain1->SetValue(*m_urlGain1);
+            node->m_urlDiscount0->SetValue(*m_urlDiscount0);
+            node->m_urlDiscount1->SetValue(*m_urlDiscount1);
+
+            node->m_queryUrls = m_queryUrls;
+            node->m_urlSorter = m_urlSorter;
+            node->m_logWeights = m_logWeights;
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_pairwiseDifferences, matrixPool);
+        RequestMatrixFromPool(m_lambdas, matrixPool);
+        RequestMatrixFromPool(m_weightUpdate, matrixPool);
+        RequestMatrixFromPool(m_urlGain0, matrixPool);
+        RequestMatrixFromPool(m_urlGain1, matrixPool);
+        RequestMatrixFromPool(m_urlDiscount0, matrixPool);
+        RequestMatrixFromPool(m_urlDiscount1, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_pairwiseDifferences, matrixPool);
+        ReleaseMatrixToPool(m_lambdas, matrixPool);
+        ReleaseMatrixToPool(m_weightUpdate, matrixPool);
+        ReleaseMatrixToPool(m_urlGain0, matrixPool);
+        ReleaseMatrixToPool(m_urlGain1, matrixPool);
+        ReleaseMatrixToPool(m_urlDiscount0, matrixPool);
+        ReleaseMatrixToPool(m_urlDiscount1, matrixPool);
+        
+        // is this the right place?  it was not called after bp.
+        m_queryUrls.clear();
+        m_urlSorter.clear();
+        m_logWeights.clear();
+    }
+
+protected:
+
+    void UpdateCounts()
+    {
+        FrameRange fr(Input(0)->GetMBLayout());
+        const Matrix<ElemType>& gains = Input(0)->ValueFor(fr);
+        const Matrix<ElemType>& queryIds = Input(2)->ValueFor(fr);
+        const size_t numberOfQueryUrls = gains.GetNumCols();
+        int previousQueryId = -1;
+
+        // Number of urls we have seen for the current query
+        size_t numberOfUrls = 0;
+
+        // Number of urls that have gains greater than 0 for the current query 
+        size_t numberOfUrlsWithNonZeroGain = 0;
+        size_t numberOfUrlPairs = 0;
+        size_t maxNumberOfUrlsPerQuery = 0;
+        for (size_t i = 0; i < numberOfQueryUrls; i++)
+        {
+            int queryId = (int)queryIds(0, i);
+            ElemType gain = gains(0, i);
+            if (queryId != previousQueryId)
+            {
+                // Ignore pairs between urls with zero gains.
+                numberOfUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
+                if (numberOfUrls > maxNumberOfUrlsPerQuery)
+                {
+                    maxNumberOfUrlsPerQuery = numberOfUrls;
+                }
+
+                // New query
+                numberOfUrls = 0;
+                numberOfUrlsWithNonZeroGain = 0;
+                previousQueryId = queryId;
+            }
+            
+            numberOfUrls++;
+            if (gain > 0)
+            {
+                numberOfUrlsWithNonZeroGain++;
+            }
+        }
+
+        // Add last query.
+        {
+            numberOfUrlPairs += (2 * numberOfUrls - 1 - numberOfUrlsWithNonZeroGain) * numberOfUrlsWithNonZeroGain / 2;
+            if (numberOfUrls > maxNumberOfUrlsPerQuery)
+            {
+                maxNumberOfUrlsPerQuery = numberOfUrls;
+            }
+        }
+
+        m_numberOfQueryUrls = numberOfQueryUrls;
+        m_numberOfUrlPairs = numberOfUrlPairs;
+        m_maxNumberOfUrlsPerQuery = maxNumberOfUrlsPerQuery;
+    }
+
+    struct Url
+    {
+        Url()
+        {
+            m_id = 0;
+            m_rank0 = 0;
+            m_rank = 0;
+            m_score = (ElemType)0;
+            m_gain = (ElemType)0;
+            m_K = 0;
+        }
+
+        Url(int id, int rk0, ElemType sc, ElemType gn) : m_id(id), m_rank0(rk0), m_rank(0), m_score(sc), m_gain(gn), m_K(0) {}
+
+        int m_id;           // sample id
+        int m_rank0;        // original rank based on label
+        int m_rank;         // rank based on s in the associated query
+        ElemType m_score;   // score
+        ElemType m_gain;    // gain
+        int m_K;            // the pair index
+        bool operator < (const Url &url) const {
+            // tie breaking
+            if (m_score == url.m_score || std::isnan(m_score) || std::isnan(url.m_score))
+            {
+                return m_gain < url.m_gain;
+            }
+
+            return m_score > url.m_score;
+        }
+    };
+
+    struct QueryUrls
+    {
+        ElemType m_idealMetric;  // the ideal NDCG
+        ElemType m_metric;   // NDCG based on the current scores
+
+        std::vector<Url> m_urls;
+    };
+
+    // master data structure
+    std::list<QueryUrls> m_queryUrls;
+    // buffer for sorting
+    std::vector<Url> m_urlSorter;
+    // lookup table for position based weights
+    std::vector<ElemType> m_logWeights;
+
+    size_t m_numberOfQueryUrls;
+    size_t m_numberOfUrlPairs;
+    size_t m_maxNumberOfUrlsPerQuery;
+
+    ElemType m_sigma;
+    // Score differences between url pairs
+    shared_ptr<Matrix<ElemType>> m_pairwiseDifferences;
+    // 1/(1+exp(sigma*(si - sj)))
+    shared_ptr<Matrix<ElemType>> m_lambdas;
+    
+    // update of weight matrix
+    shared_ptr<Matrix<ElemType>> m_weightUpdate;
+    
+    // store the gains and position discounts
+    shared_ptr<Matrix<ElemType>> m_urlGain0;
+    shared_ptr<Matrix<ElemType>> m_urlGain1;
+    shared_ptr<Matrix<ElemType>> m_urlDiscount0;
+    shared_ptr<Matrix<ElemType>> m_urlDiscount1;
+};
+
+template class LambdaRankNode<float>;
+template class LambdaRankNode<double>;
+
+// -----------------------------------------------------------------------
 // MatrixL2RegNode (input)
 // TODO: share most code with MatrixL1RegNode
 // -----------------------------------------------------------------------
@@ -726,7 +1185,7 @@ protected:
 // Provides random sampling functionality.
 //
 // Parameters:
-// * Input(0) Sampling weight vector: Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0) Sampling weight vector: Matrix of shape [numClasses x 1] providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -738,7 +1197,7 @@ class RandomSampleNodeBase : public ComputationNodeNonLooping<ElemType>, public 
     static const std::wstring TypeName(){return L"RandomSampleNodeBase";}
 
 public:
-    RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+    RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates)
     {
         SetRandomSeed((unsigned long)CreateUniqId());
@@ -762,36 +1221,36 @@ protected:
 
     // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
     // to get the expected number of samples.
-    const std::vector<size_t> RunSampling(long& nTries);
+    const std::vector<size_t> RunSampling(size_t& nTries);
 
 public:
-    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override {
-        // This node does not propagate gradients.
-    }
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override{}
-
+    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override {} // This node does not propagate gradients.
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false;}
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override{}
+    virtual bool GetAllowDuplicates() const { return m_allowDuplicates; }
+    virtual size_t GetNumSamples() const { return m_sizeOfSampledSet; }
 
 protected:
     bool m_allowDuplicates; // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
-    int m_sizeOfSampledSet; // Requested size of sample in case of run-mode = CREATE_SAMPLES.
+    size_t m_sizeOfSampledSet; // Requested size of sample in case of run-mode = CREATE_SAMPLES.
     std::vector<double> m_samplingWeightsPrefixSum;
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleNode(samplingWeights, sizeOfSampledSet, allowDuplicates):
-// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix of shape [nClasses x sizeOfSampledSet] where nClasses is the number of classes (categories) to choose from.
+// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix 
+// of shape [numClasses x sizeOfSampledSet] where numClasses is the number of classes (categories) to choose from.
 // The output has no dynamic axis.
-// The samples are drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
+// The samples are drawn with a probability proportional to the weights w of the vector 'samplingWeights' : p(w_i) = w_i / sum_k(w_k)
 // We get one set of samples for per minibatch.
+// Multiply a 'numClasses' - dimensional vector with this matrix to randomly sample 'sizeOfSampledSet' values from it.
+// The resulting vector has a dimension of 'sizeOfSampledSet'.Currently, only rank - 1 tensors are supported.
 // Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
 //
 // Parameters:
-// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0): Sampling weight vector. Matrix of shape [numClasses x 1] providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -802,7 +1261,7 @@ class RandomSampleNode : public RandomSampleNodeBase<ElemType>
     static const std::wstring TypeName(){ return L"RandomSample"; }
 
 public:
-    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
     {}
 
@@ -820,13 +1279,13 @@ public:
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleInclusionFrequencyNode(samplingWeights, sizeOfSampledSet, allowDuplicates): 
-// Intended uses are e.g. sampled softmax, noise contrastive estimation etc where it is used together with RandomSampleNode.
+// Intended uses are e.g. sampled softmax, noise contrastive estimation etc. where it is used together with RandomSampleNode.
 // This node estimates how often each class will occur in a set sampled with RandomSampleNode(...) on the average. 
 // If the sampling mode 'allowDuplicates = true' is choosen this is trivial and exact. 
 // For allowDuplicates = false we get some estimate. The value is updated only when the input weights change.
 //
 // Parameters:
-// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0): Sampling weight vector. Matrix of shape (numClasses x 1) providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -836,7 +1295,7 @@ class RandomSampleInclusionFrequencyNode : public RandomSampleNodeBase<ElemType>
     typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName(){ return L"RandomSampleInclusionFrequency"; }
 public:
-    RandomSampleInclusionFrequencyNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+    RandomSampleInclusionFrequencyNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
     {}
 
@@ -1757,7 +2216,8 @@ template class DropoutNode<double>;
 // * imageLayout is the image layout. Only cudnn is supported at present.
 // -----------------------------------------------------------------------
 template <class ElemType>
-class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<5>, public IFreezable
+class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<5>, public IFreezable,
+    public IdentityTransformerNodeOnOneInput<0>
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"BatchNormalization"; }
@@ -1765,15 +2225,15 @@ class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, publi
 public:
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name) :
         Base(deviceId, name), m_spatial(false), m_normTimeConst(0), m_blendTimeConst(0), m_epsilon(0), m_useCntkEngine(true),
-        m_samplesSeen(0), m_imageLayoutKind(ImageLayoutKind::CHW), m_postBatchNormalization(false), m_swapNormTimeConst(0),
-        m_swapBlendTimeConst(0), m_convertRunningVariancePending(false)
+        m_samplesSeen(0), m_imageLayoutKind(ImageLayoutKind::CHW),
+        m_convertRunningVariancePending(false)
     {
     }
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
-                           double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind) :
+                           double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind, size_t samplesSeen = 0) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(0), m_postBatchNormalization(false),
-        m_swapNormTimeConst(0), m_swapBlendTimeConst(0), m_convertRunningVariancePending(false)
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(samplesSeen),
+        m_convertRunningVariancePending(false)
     {
     }
     BatchNormalizationNode(const ScriptableObjects::IConfigRecordPtr configp) :
@@ -1783,9 +2243,6 @@ public:
                                ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
-        m_postBatchNormalization = false;
-        m_swapNormTimeConst = 0;
-        m_swapBlendTimeConst = 0;
     }
 
     void Save(File& fstream) const override
@@ -1895,6 +2352,8 @@ public:
         }
     }
 
+    size_t GetSamplesSeen() const { return m_samplesSeen; }
+
 private: // time-constant conversions
 
     // map time constants to exp avg factor
@@ -1902,12 +2361,8 @@ private: // time-constant conversions
     double ComputeExpAvgFactor() const
     {
         // in inference mode, only use long-term mean and do not update running estimates
-        if (!Environment().IsTraining() && !m_postBatchNormalization)
-        {
-            if (m_samplesSeen == 0)
-                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
+        if (!Environment().IsTraining())
             return 0;                                        // (m_normTimeConst == infinity) no new contribution from current minibatch
-        }
 
         // Initialization case: only use current minibatch.
         if (m_samplesSeen == 0) return 1.0;
@@ -1934,12 +2389,8 @@ private: // time-constant conversions
     double ComputeBlendFactor() const
     {
         // in inference mode, only use long-term mean and do not update running estimates
-        if (!Environment().IsTraining() && !m_postBatchNormalization)
-        {
-            if (m_samplesSeen == 0)
-                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
+        if (!Environment().IsTraining())
             return 1.0;                 // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
-        }
 
         // Initialization case: only use current minibatch.
         if (m_samplesSeen == 0) return 0;
@@ -1983,7 +2434,7 @@ public:
         // In inference-only mode, m_savedMean and m_saveInvStdDev will not be
         // produced and BackpropToNonLooping() may not be called. In
         // non-inference (training) mode, saved statistics must be produced.
-        bool inferenceOnly = !Environment().IsTraining() && !m_postBatchNormalization;
+        bool inferenceOnly = !Environment().IsTraining();
         m_bnEng->Forward(/*in=*/ sliceInputValue, scale, bias,   // (in)
                          inferenceOnly, expAvgFactor, blendFactor,
                          runMean, runVariance,                   // (in/out) running estimates, updated from the current MB mean/variance
@@ -2049,21 +2500,13 @@ public:
 
     virtual void EndForwardProp() override
     {
-        if(m_postBatchNormalization)
-            m_samplesSeen += GetMBLayout()->GetActualNumSamples();
-
-        Base::EndForwardProp();
-    }
-
-    virtual void EndBackprop() override
-    {
         // Update samples if not locked.
         double expAvgFactor = ComputeExpAvgFactor(); // weight for the new MB statistics in the running estimate. The previous value of the running statistics is kept with weight (1-this)
         double blendFactor  = ComputeBlendFactor();  // interpolation weight for the running statistics (the current MB statistics are weighted with 1-this)
         if (expAvgFactor != 0 || blendFactor != 1)
             m_samplesSeen += GetMBLayout()->GetActualNumSamples();
 
-        Base::EndBackprop();
+        Base::EndForwardProp();
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -2112,7 +2555,6 @@ public:
                 runInvStdDev.AssignElementPowerOf(runInvStdDev, 2);
                 runInvStdDev.ElementInverse();
                 runInvStdDev += (float) m_epsilon;
-                runInvStdDev.Print();
                 m_convertRunningVariancePending = false;
             }
 
@@ -2197,27 +2639,28 @@ public:
         m_blendTimeConst = std::numeric_limits<double>::infinity();
     }
 
+    // ResetStatisticsState will set the batch normal statistics into initial state
+    // used for re-statistics the mean and variance of BN
+    // any others use may lead undependable results, please be careful
+    void ResetStatisticsState()
+    {
+        m_samplesSeen = 0;
+        m_normTimeConst = 0;
+        m_blendTimeConst = 0;
+    }
+    // Turn off the L1 and L2 regularization
+    void DisableRegInBatchNormalization()
+    {
+        let scaleNode   = dynamic_pointer_cast<LearnableParameter<ElemType>>(Input(1));
+        let biasNode    = dynamic_pointer_cast<LearnableParameter<ElemType>>(Input(2));
+        scaleNode->SetRegMultiplier(0.f);
+        biasNode->SetRegMultiplier(0.f);
+    }
     double NormalizationTimeConstant() const { return m_normTimeConst; }
     double BlendTimeConstant() const { return m_blendTimeConst; }
     bool Spatial() const { return m_spatial; }
     double Epsilon() const { return m_epsilon; }
     bool UseCNTKEngine() const { return m_useCntkEngine; }
-
-    void SetPostBatchNormalizationBegin()
-    {
-        m_postBatchNormalization = true;
-        m_samplesSeen = 0;
-        m_swapNormTimeConst = m_normTimeConst;
-        m_swapBlendTimeConst = m_blendTimeConst;
-        m_normTimeConst = -1;
-        m_blendTimeConst = 0;
-    }
-    void SetPostBatchNormalizationEnd()
-    {
-        m_postBatchNormalization = false;
-        m_normTimeConst = m_swapNormTimeConst;
-        m_blendTimeConst = m_swapBlendTimeConst;
-    }
 
 private:
     // Old versioning - do not use. Do not remove until we're sure there are no old models around.
@@ -2282,11 +2725,6 @@ private:
 
     std::unique_ptr<BatchNormEngine<ElemType>> m_bnEng;
 
-    // post batch normalization process mark
-    bool m_postBatchNormalization;
-
-    double m_swapNormTimeConst;
-    double m_swapBlendTimeConst;
     bool m_convertRunningVariancePending;
 };
 

@@ -155,7 +155,7 @@ namespace CNTK
     {
         // Ensure none of the shape dimensions are unknown
         if (viewShape.HasInferredDimension())
-            InvalidArgument("Cannot create an NDArrayView using a view shape that has unknown dimensions for any of it's axes!");
+            InvalidArgument("Cannot create an NDArrayView using a view shape that has unknown dimensions for any of its axes!");
 
         size_t matrixRowSize = (viewShape.Rank() > 0) ? viewShape[0] : 1;
         size_t matrixColSize = (viewShape.Rank() > 0) ? viewShape.SubShape(1).TotalSize() : 1;
@@ -192,6 +192,9 @@ namespace CNTK
             break;
         case DictionaryValue::Type::String:
             s << value.Value<std::wstring>();
+            break;
+        case DictionaryValue::Type::Int:
+            s << value.Value<int>();
             break;
         case DictionaryValue::Type::SizeT:
             s << value.Value<size_t>();
@@ -305,7 +308,7 @@ namespace CNTK
     }
 
     static size_t const CNTKInternalIdxValueForAllStaticAxes = 0;
-    inline Axis AsAxis(size_t CNTKInternalAxisIdx)
+    inline Axis AsAxis(int CNTKInternalAxisIdx)
     {
         if (CNTKInternalAxisIdx == CNTKInternalIdxValueForAllStaticAxes)
             return Axis::AllStaticAxes();
@@ -333,11 +336,6 @@ namespace CNTK
             paddedOutputMapCount[paddedOutputMapCount.Rank() - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
 
         return{ paddedOutputMapCount, kernelShape };
-    }
-
-    inline double MomentumValueForMB(double momentumPerSample, size_t minibatchSize)
-    {
-        return std::pow(momentumPerSample, minibatchSize);
     }
 
     template <typename SourceElementType, typename TargetElementType>
@@ -371,6 +369,19 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(sourceShape, castValue, sourceSize, DeviceDescriptor::CPUDevice(), readOnly);
     }
 
+    template <typename T>
+    inline std::string Typename(const T* = nullptr)
+    {
+        auto name = typeid(T).name(); 
+        if (strncmp(name, "class ", 6) == 0)
+        {
+            // On Windows, the type name contains "class" prefix. 
+            // Return the actual name, omitting the prefix.
+            return &name[6];
+        }
+        return name;
+    }
+
     inline std::wstring ParanthesizedName(const std::wstring& name)
     {
         if (name.empty())
@@ -387,7 +398,7 @@ namespace CNTK
         return UidPrefix + uid + NamePrefix + name;
     }
 
-    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, VariableKind varKind)
+    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName)
     {
         std::wstring uid, name;
         auto uidPrefixBeginPos = CNTKInternalNodeName.find(UidPrefix);
@@ -402,7 +413,15 @@ namespace CNTK
             uid = CNTKInternalNodeName.substr(uidBeginPos, namePrefixBeginPos - uidBeginPos);
             name = CNTKInternalNodeName.substr(nameBeginPos);
         }
-        else
+
+        return{ uid, name };
+    }
+
+    inline std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, VariableKind varKind)
+    {
+        std::wstring uid, name;
+        std::tie(uid, name) = UidAndNameFromCNTKInternalNodeName(CNTKInternalNodeName);
+        if (uid == L"")
         {
             name = CNTKInternalNodeName;
             uid = Internal::GenerateUid(varKind);
@@ -411,10 +430,12 @@ namespace CNTK
         return{ uid, name };
     }
 
+    std::pair<std::wstring, std::wstring> UidAndNameFromCNTKInternalNodeName(const std::wstring& CNTKInternalNodeName, const PrimitiveOpType& opType);
+
     inline std::vector<Axis> GetDerivedDynamicAxes(const Axis& sourceAxis, size_t multiplicativeFactor, int additiveFactor)
     {
-        if (sourceAxis.IsStaticAxis())
-            LogicError("Static axes cannot be derived from to create new dynamic axes!");
+        if (!sourceAxis.IsDynamicAxis())
+            LogicError("Only dynamic axes can be derived from to create new dynamic axes!");
 
         if ((multiplicativeFactor == 0) && (additiveFactor == 0))
             LogicError("Zero size dynamic axes are not allowed!");
@@ -443,4 +464,33 @@ namespace CNTK
 
         return{ Axis(derivedDynamicAxisName, sourceAxis.IsOrdered()) };
     }
+
+    inline Axis& NormalizeStaticAxis(Axis& axis, const NDShape& operandShape)
+    {
+        if (axis != Axis::AllStaticAxes())
+        {
+            assert(axis.IsStaticAxis());
+            assert(operandShape != NDShape::Unknown);
+
+            if (axis.StaticAxisIndex() < 0)
+                axis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
+        }
+
+        return axis;
+    }
+
+    inline void VerifyStaticAxis(const Axis& axis, const NDShape& operandShape)
+    {
+        assert(axis.IsStaticAxis());
+        assert(axis.StaticAxisIndex() >= 0);
+
+        if (axis.StaticAxisIndex() >= (int)operandShape.Rank())
+            InvalidArgument("The specified axis index (%d) exceeds the static #axes (%d) of the corresponding operand", (int)axis.StaticAxisIndex(), (int)operandShape.Rank());
+    }
+
+    std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly);
+    int GetFileDescriptor(const std::wstring& filePath, bool readOnly);
+
+    std::string ToString(const std::wstring& wstring);
+    std::wstring ToWString(const std::string& string);
 }

@@ -22,7 +22,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 
     // Test ReduceSum along a static axis
     {
-        auto testReduceSum = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](int reductionAxis)
+        auto testReduceSum = [&sequences, &sequenceLengths, inputShape, sequencesValue, device, sampleRank](int reductionAxis, bool useNegativeAxisIndex)
         {
             size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
@@ -34,7 +34,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
             if (reduceAll)
                 reduceSumFunc = ReduceSum(inputVar);
             else
-                reduceSumFunc = ReduceSum(inputVar, Axis(reductionAxis));
+                reduceSumFunc = ReduceSum(inputVar, Axis(useNegativeAxisIndex ? (reductionAxis - (int)sampleRank) : reductionAxis));
 
             NDShape outputShape = reduceSumFunc->Output().Shape();
             NDShape outputDataShape = outputShape;
@@ -81,36 +81,32 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
         };
 
         // Reduce over all axes
-        testReduceSum(-1);
+        testReduceSum(-1, false);
 
         int reductionAxis = 0;
-        testReduceSum(reductionAxis);
+        testReduceSum(reductionAxis, true);
 
         if (reductionAxis < (inputShape.Rank() - 1))
             reductionAxis++;
 
-        testReduceSum(reductionAxis);
+        testReduceSum(reductionAxis, false);
 
         if (reductionAxis < (inputShape.Rank() - 1))
             reductionAxis++;
 
-        testReduceSum(reductionAxis);
+        testReduceSum(reductionAxis, true);
     }
 
     // Test ReduceSum along a dynamic axis
     {
-        auto testReduceSum = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](const Axis& axis)
+        auto testReduceSum = [&sequences, &sequenceLengths, inputShape, sequencesValue, device]()
         {
-            if (axis.IsStaticAxis())
-                RuntimeError("Called the dynamic axis ReduceSum test with a static axis");
-
-            size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             auto inputVar = InputVariable({ inputShape }, DataType::Float, L"input");
-            FunctionPtr reduceSumFunc = ReduceSum(inputVar, axis);
+            FunctionPtr reduceSumFunc = Sequence::ReduceSum(inputVar);
 
-            NDShape maskShape = { ((axis == Axis::DefaultBatchAxis()) ? maxActualSequenceLength : 1), ((axis == Axis::DefaultBatchAxis()) ? 1 : numSequences) };
+            NDShape maskShape = { 1, numSequences };
             NDShape outputShape = reduceSumFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape(maskShape);
 
@@ -130,10 +126,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
                     for (size_t k = 0; k < inputShape.TotalSize(); ++k)
                     {
                         float value = sequences[i][(j * inputShape.TotalSize()) + k];
-                        if (axis == Axis::DefaultBatchAxis())
-                            expectedTotals[(j * inputShape.TotalSize()) + k] += value;
-                        else
-                            expectedTotals[(i * inputShape.TotalSize()) + k] += value;
+                        expectedTotals[(i * inputShape.TotalSize()) + k] += value;
                     }
                 }
             }
@@ -141,7 +134,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
             FloatingPointVectorCompare(outputData, expectedTotals, "testReduceSum: Forward prop results do not match expected results");
         };
 
-        testReduceSum(Axis::DefaultDynamicAxis());
+        testReduceSum();
     }
 }
 
@@ -161,13 +154,13 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
 
     // Test slice along a static axis
     {
-        auto testStaticAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](size_t sliceAxis, int beginOffset, int endOffset)
+        auto testStaticAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device, sampleRank](int sliceAxis, int beginOffset, int endOffset, bool useNegativeAxisIndex)
         {
             size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
-            auto sliceFunc = Slice(inputVar, Axis(sliceAxis), beginOffset, endOffset);
+            auto sliceFunc = Slice(inputVar, Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis), beginOffset, endOffset);
 
             NDShape outputShape = sliceFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape({ maxActualSequenceLength, numSequences });
@@ -201,27 +194,24 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             FloatingPointVectorCompare(outputData, expectedOutputValues, "testStaticAxisSlice: Forward prop results do not match expected results");
         };
 
-        size_t sliceAxis = 0;
-        testStaticAxisSlice(sliceAxis, 3, 5);
+        int sliceAxis = 0;
+        testStaticAxisSlice(sliceAxis, 3, 5, true);
 
         if (sliceAxis < (inputShape.Rank() - 1))
             sliceAxis++;
 
-        testStaticAxisSlice(sliceAxis, -1, 0);
+        testStaticAxisSlice(sliceAxis, -1, 0, false);
 
         if (sliceAxis < (inputShape.Rank() - 1))
             sliceAxis++;
 
-        testStaticAxisSlice(sliceAxis, -3, -1);
+        testStaticAxisSlice(sliceAxis, -3, -1, true);
     }
 
     // Test slice along a dynamic axis
     {
-        auto testDynamicAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](const Axis& axis, int beginOffset, int endOffset)
+        auto testDynamicAxisSlice = [&sequences, &sequenceLengths, inputShape, sequencesValue, device](int beginOffset, int endOffset)
         {
-            if (axis.IsStaticAxis())
-                RuntimeError("Called the dynamic axis slice test with a static axis");
-
             size_t maxActualSequenceLength = sequencesValue->Shape()[inputShape.Rank()];
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
@@ -229,11 +219,11 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             size_t maxSliceLength = (endAndBeginOffsetDiff > 0) ? endAndBeginOffsetDiff : maxActualSequenceLength + endAndBeginOffsetDiff;
 
             auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
-            auto sliceFunc = Slice(inputVar, axis, beginOffset, endOffset);
+            auto sliceFunc = Sequence::Slice(inputVar, beginOffset, endOffset);
             sliceFunc = sliceFunc + sliceFunc;
 
-            size_t outputSequenceAxisLength = (axis == Axis::DefaultDynamicAxis()) ? maxSliceLength : maxActualSequenceLength;
-            size_t outputBatchAxisLength = (axis == Axis::DefaultBatchAxis()) ? maxSliceLength : numSequences;
+            size_t outputSequenceAxisLength = maxSliceLength;
+            size_t outputBatchAxisLength = numSequences;
             NDShape outputShape = sliceFunc->Output().Shape().AppendShape({ outputSequenceAxisLength, outputBatchAxisLength });
             std::vector<float> outputData(outputShape.TotalSize(), 0);
             NDMaskPtr mask;
@@ -247,15 +237,15 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             std::unordered_map<Variable, ValuePtr> outputs = { { sliceFunc->Output(), outputValue } };
             sliceFunc->Forward({ { inputVar, sequencesValue } }, outputs, device);
 
-            size_t startSequenceIdx = (axis == Axis::DefaultBatchAxis()) ? ((beginOffset >= 0) ? beginOffset : (numSequences + beginOffset)) : 0;
-            size_t endSequenceIdx = (axis == Axis::DefaultBatchAxis()) ? ((endOffset > 0) ? endOffset : (numSequences + endOffset)) : numSequences;
+            size_t startSequenceIdx = 0;
+            size_t endSequenceIdx = numSequences;
 
             std::vector<float> expectedOutputValues(inputShape.TotalSize() * outputSequenceAxisLength * outputBatchAxisLength);
             for (size_t i = startSequenceIdx; i < endSequenceIdx; ++i)
             {
                 size_t currentSequenceLength = sequenceLengths[i];
-                size_t startFrameIdx = (axis == Axis::DefaultDynamicAxis()) ? ((beginOffset >= 0) ? beginOffset : (currentSequenceLength + beginOffset)) : 0;
-                size_t endFrameIdx = (axis == Axis::DefaultDynamicAxis()) ? ((endOffset > 0) ? endOffset : (currentSequenceLength + endOffset)) : currentSequenceLength;
+                size_t startFrameIdx = ((beginOffset >= 0) ? beginOffset : (currentSequenceLength + beginOffset));
+                size_t endFrameIdx = ((endOffset > 0) ? endOffset : (currentSequenceLength + endOffset));
                 size_t j = startFrameIdx;
                 for (; j < endFrameIdx; ++j)
                 {
@@ -272,113 +262,12 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             FloatingPointVectorCompare(outputData, expectedOutputValues, "testDynamicAxisSlice: Forward prop results do not match expected results");
         };
 
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), 0, 1);
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), 0, 2);
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), -1, 0);
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), -2, 0);
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), 0, -1);
-        testDynamicAxisSlice(Axis::DefaultDynamicAxis(), 1, 0);
-    }
-}
-
-void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second, ParameterCloningMethod parameterCloningMethod, const std::unordered_map<Variable, Variable>& replacements, std::unordered_set<FunctionPtr>& visitedFunctions)
-{
-    if ((first->RootFunction() == nullptr) != (second->RootFunction() == nullptr))
-        throw std::runtime_error("CompareFunctions: Both functions should be primitives or both should be composites");
-
-    if (first->Name() != second->Name())
-        throw std::runtime_error("CompareFunctions: Both functions' names should match");
-
-    if (first->Attributes() != second->Attributes())
-        throw std::runtime_error("CompareFunctions: Both functions' attributes should match");
-
-    auto firstPrimitive = (first->RootFunction() == nullptr) ? first : first->RootFunction();
-    auto secondPrimitive = (second->RootFunction() == nullptr) ? second : second->RootFunction();
-
-    // All the outputs must be equivalent
-    if (firstPrimitive->Outputs().size() != secondPrimitive->Outputs().size())
-        throw std::runtime_error("CompareFunctions: Both functions' should have same number of outputs");
-
-    visitedFunctions.insert(firstPrimitive);
-
-    for (size_t i = 0; i < firstPrimitive->Outputs().size(); ++i)
-    {
-        auto firstFunctionOutput = firstPrimitive->Outputs()[i];
-        auto secondFunctionOutput = secondPrimitive->Outputs()[i];
-
-        if ((firstFunctionOutput.Name() != secondFunctionOutput.Name()) ||
-            (firstFunctionOutput.DynamicAxes() != secondFunctionOutput.DynamicAxes()) ||
-            (firstFunctionOutput.GetDataType() != secondFunctionOutput.GetDataType()) ||
-            (firstFunctionOutput.IsSparse() != secondFunctionOutput.IsSparse()) ||
-            (firstFunctionOutput.Kind() != secondFunctionOutput.Kind()) ||
-            (firstFunctionOutput.Shape() != secondFunctionOutput.Shape()))
-        {
-            throw std::runtime_error("CompareFunctions: Both functions' outputs should match");
-        }
-    }
-
-    // All of the inputs must be identical
-    if (firstPrimitive->Inputs().size() != secondPrimitive->Inputs().size())
-        throw std::runtime_error("CompareFunctions: Both functions' should have same number of inputs");
-
-    for (size_t i = 0; i < firstPrimitive->Inputs().size(); ++i)
-    {
-        auto firstFunctionInput = firstPrimitive->Inputs()[i];
-        auto secondFunctionInput = secondPrimitive->Inputs()[i];
-
-        if (replacements.find(firstFunctionInput) != replacements.end())
-        {
-            if (replacements.at(firstFunctionInput) != secondFunctionInput)
-                throw std::runtime_error("CompareFunctions: The 2nd function does not have the expected replacement");
-        }
-        else
-        {
-            if (firstFunctionInput.IsOutput())
-            {
-                if (visitedFunctions.find(firstFunctionInput.Owner()) == visitedFunctions.end())
-                    CompareFunctions(firstFunctionInput.Owner(), secondFunctionInput.Owner(), parameterCloningMethod, replacements, visitedFunctions);
-            }
-            else
-            {
-                if ((firstFunctionInput.Name() != secondFunctionInput.Name()) ||
-                    (firstFunctionInput.DynamicAxes() != secondFunctionInput.DynamicAxes()) ||
-                    (firstFunctionInput.IsSparse() != secondFunctionInput.IsSparse()) ||
-                    (firstFunctionInput.Shape() != secondFunctionInput.Shape()) ||
-                    (firstFunctionInput.GetDataType() != secondFunctionInput.GetDataType()))
-                {
-                    throw std::runtime_error("CompareFunctions: The leaves of the functions are not equivalent");
-                }
-
-                if ((firstFunctionInput.Kind() != VariableKind::Parameter) && ((firstFunctionInput.Kind() != secondFunctionInput.Kind()) || (firstFunctionInput.NeedsGradient() != secondFunctionInput.NeedsGradient())))
-                    throw std::runtime_error("CompareFunctions: The leaves of the functions are not equivalent");
-
-                switch (firstFunctionInput.Kind())
-                {
-                case VariableKind::Parameter:
-                    if ((parameterCloningMethod == ParameterCloningMethod::Share) && (firstFunctionInput != secondFunctionInput))
-                        throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
-
-                    if ((parameterCloningMethod == ParameterCloningMethod::Clone) &&
-                        ((firstFunctionInput == secondFunctionInput) || (DictionaryValue(*(Parameter(firstFunctionInput).Value())) != DictionaryValue(*(Parameter(secondFunctionInput).Value())))))
-                    {
-                        throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
-                    }
-
-                    if ((parameterCloningMethod == ParameterCloningMethod::Freeze) &&
-                        ((firstFunctionInput == secondFunctionInput) || !secondFunctionInput.IsConstant() || (DictionaryValue(*(Parameter(firstFunctionInput).Value())) != DictionaryValue(*(Constant(secondFunctionInput).Value())))))
-                    {
-                        throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
-                    }
-
-                    break;
-                case VariableKind::Constant:
-                    if (DictionaryValue(*(Constant(firstFunctionInput).Value())) != DictionaryValue(*(Constant(secondFunctionInput).Value())))
-                        throw std::runtime_error("CompareFunctions: The constants of the functions are not equivalent");
-
-                    break;
-                }
-            }
-        }
+        testDynamicAxisSlice(0, 1);
+        testDynamicAxisSlice(0, 2);
+        testDynamicAxisSlice(-1, 0);
+        testDynamicAxisSlice(-2, 0);
+        testDynamicAxisSlice(0, -1);
+        testDynamicAxisSlice(1, 0);
     }
 }
 
@@ -416,7 +305,7 @@ void TestRecurrentFunctionCloning()
     CompareFunctions(clonedFunctionWithParametersShared, clonedFunctionWithParametersFrozen, ParameterCloningMethod::Freeze, cloningReplacements, visitedFunctions);
 }
 
-void TestTranspose(size_t numAxes, size_t axis1, size_t axis2, const DeviceDescriptor& device)
+void TestTranspose(size_t numAxes, int axis1, int axis2, const DeviceDescriptor& device)
 {
     srand(1);
 
@@ -459,59 +348,122 @@ void TestTranspose(size_t numAxes, size_t axis1, size_t axis2, const DeviceDescr
     FloatingPointVectorCompare(outputData, expectedOutputValues, "TestTimesAndPlus: Forward prop results do not match expected results");
 }
 
-void TestShapeInferenceInRecurrence(size_t inputRank, size_t outputRank)
+void TestTimesNodeShapeInference()
 {
-    auto placeholderInput = PlaceholderVariable(NDShape(inputRank));
+    auto timesNodeShapeInferenceTest = [](size_t inputRank, size_t outputRank, int inputRankToMap) {
+        
+        auto device = DeviceDescriptor::CPUDevice();
 
-    srand(1);
+        size_t maxDimSize = 15;
+        NDShape outputShape(outputRank);
+        for (size_t i = 0; i < outputRank; ++i)
+            outputShape[i] = (rand() % maxDimSize) + 1;
 
-    size_t maxDimSize = 15;
-    NDShape inputShape(inputRank);
-    for (size_t i = 0; i < inputRank; ++i)
-        inputShape[i] = (rand() % maxDimSize) + 1;
+        NDShape paramShape = outputShape;
+        if (inputRankToMap > 0)
+            paramShape = paramShape.AppendShape({ NDShape::InferredDimension });
+        else
+            paramShape = paramShape.AppendShape(NDShape(inputRank));
 
-    NDShape outputShape(outputRank);
-    for (size_t i = 0; i < outputRank; ++i)
-        outputShape[i] = (rand() % maxDimSize) + 1;
+        auto timesParam = Parameter(paramShape, DataType::Float, ConstantInitializer(), device);
 
-    auto device = DeviceDescriptor::CPUDevice();
-    Parameter timesParam(outputShape.AppendShape(placeholderInput.Shape()), DataType::Float, GlorotUniformInitializer((int)outputRank), device, L"timesParameters");
-    Parameter plusParam(NDShape(outputRank, NDShape::InferredDimension), DataType::Float, ConstantInitializer(), device, L"plusParameters");
+        auto placeholderInput = PlaceholderVariable();
+        auto timesFunction = Times(timesParam, placeholderInput, outputRank, inputRankToMap);
 
-    auto recurrenceForwardReference = PlaceholderVariable(NDShape(outputRank, NDShape::InferredDimension));
-    auto projectionOutput = Times(timesParam, placeholderInput, outputRank);
-    auto firstPlusOutput = Plus(recurrenceForwardReference, projectionOutput);
-    auto plusOutput = Plus(plusParam, firstPlusOutput, L"plusOutput");
-    auto placeholderReplacement = PastValue(plusOutput);
-    plusOutput = plusOutput->ReplacePlaceholders({ { recurrenceForwardReference, placeholderReplacement } });
+        NDShape inputShape(inputRank);
+        for (size_t i = 0; i < inputRank; ++i)
+            inputShape[i] = (rand() % maxDimSize) + 1;
 
-    auto reducedOutput = ReduceSum(plusOutput, L"sum");
-    auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
+        auto actualInput = InputVariable(inputShape, DataType::Float);
+        timesFunction->ReplacePlaceholders({ { placeholderInput, actualInput } });
 
-    auto inputVar = InputVariable(inputShape, false, DataType::Float, true, L"input", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });
-    rootFuncOriginal->ReplacePlaceholders({ { placeholderInput, inputVar } });
+        // Verify that the inferred shape of the param, input and output matches expectation
+        auto expectedInputShape = inputShape;
+        auto expectedParamShape = outputShape;
+        if (inputRankToMap > 0)
+            expectedParamShape = expectedParamShape.AppendShape(inputShape.SubShape(0, inputRank - inputRankToMap));
+        else
+            expectedParamShape = expectedParamShape.AppendShape(inputShape);
 
-    if (timesParam.Shape() != outputShape.AppendShape(inputShape))
-        ReportFailure("timesParams shape does not match expectation; expected = %S, actual = %S", outputShape.AppendShape(inputShape).AsString().c_str(), timesParam.Shape().AsString().c_str());
+        auto expectedOutputShape = outputShape;
+        if (inputRankToMap > 0)
+            expectedOutputShape = expectedOutputShape.AppendShape(inputShape.SubShape(inputRank - inputRankToMap));
 
-    if (plusParam.Shape() != outputShape)
-        ReportFailure("plusParam shape does not match expectation; expected = %S, actual = %S", outputShape.AsString().c_str(), plusParam.Shape().AsString().c_str());
+        auto actualInputShape = timesFunction->Arguments()[0].Shape();
+        auto actualParamShape = timesFunction->Parameters()[0].Shape();
+        auto actualOutputShape = timesFunction->Output().Shape();
 
-    if (plusOutput->Output().DynamicAxes() != inputVar.DynamicAxes())
-        ReportFailure("plusOutput dynamic axes do not match expectation!");
+        if (actualInputShape != expectedInputShape)
+            ReportFailure("Times nodes actual input shape (%S) does not match expectation (%S)", actualInputShape.AsString().c_str(), expectedInputShape.AsString().c_str());
+
+        if (actualParamShape != expectedParamShape)
+            ReportFailure("Times nodes actual parameter shape (%S) does not match expectation (%S)", actualParamShape.AsString().c_str(), expectedParamShape.AsString().c_str());
+
+        if (actualOutputShape != expectedOutputShape)
+            ReportFailure("Times nodes actual output shape (%S) does not match expectation (%S)", actualOutputShape.AsString().c_str(), expectedOutputShape.AsString().c_str());
+    };
+
+    timesNodeShapeInferenceTest(2, 2, -1);
+    timesNodeShapeInferenceTest(2, 1, 1);
+    timesNodeShapeInferenceTest(1, 2, 0);
+    timesNodeShapeInferenceTest(3, 2, 2);
 }
 
-void TestShapeInference()
+void TestRecurrenceShapeInference()
 {
-    TestShapeInferenceInRecurrence(1, 1);
-    TestShapeInferenceInRecurrence(2, 1);
-    TestShapeInferenceInRecurrence(1, 2);
-    TestShapeInferenceInRecurrence(2, 2);
+    auto testShapeInferenceInRecurrence = [](size_t inputRank, size_t outputRank) {
+        auto placeholderInput = PlaceholderVariable(NDShape(inputRank));
+
+        srand(1);
+
+        size_t maxDimSize = 15;
+        NDShape inputShape(inputRank);
+        for (size_t i = 0; i < inputRank; ++i)
+            inputShape[i] = (rand() % maxDimSize) + 1;
+
+        NDShape outputShape(outputRank);
+        for (size_t i = 0; i < outputRank; ++i)
+            outputShape[i] = (rand() % maxDimSize) + 1;
+
+        auto device = DeviceDescriptor::CPUDevice();
+        Parameter timesParam(outputShape.AppendShape(placeholderInput.Shape()), DataType::Float, GlorotUniformInitializer((int)outputRank), device, L"timesParameters");
+        Parameter plusParam(NDShape(outputRank, NDShape::InferredDimension), DataType::Float, ConstantInitializer(), device, L"plusParameters");
+
+        auto recurrenceForwardReference = PlaceholderVariable(NDShape(outputRank, NDShape::InferredDimension));
+        auto projectionOutput = Times(timesParam, placeholderInput, outputRank);
+        auto firstPlusOutput = Plus(recurrenceForwardReference, projectionOutput);
+        auto plusOutput = Plus(plusParam, firstPlusOutput, L"plusOutput");
+        auto placeholderReplacement = PastValue(plusOutput);
+        plusOutput = plusOutput->ReplacePlaceholders({ { recurrenceForwardReference, placeholderReplacement } });
+
+        auto reducedOutput = ReduceSum(plusOutput, L"sum");
+        auto rootFuncOriginal = Combine({ reducedOutput, plusOutput });
+
+        auto inputVar = InputVariable(inputShape, false, DataType::Float, true, L"input", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });
+        rootFuncOriginal->ReplacePlaceholders({ { placeholderInput, inputVar } });
+
+        if (timesParam.Shape() != outputShape.AppendShape(inputShape))
+            ReportFailure("timesParams shape does not match expectation; expected = %S, actual = %S", outputShape.AppendShape(inputShape).AsString().c_str(), timesParam.Shape().AsString().c_str());
+
+        if (plusParam.Shape() != outputShape)
+            ReportFailure("plusParam shape does not match expectation; expected = %S, actual = %S", outputShape.AsString().c_str(), plusParam.Shape().AsString().c_str());
+
+        if (plusOutput->Output().DynamicAxes() != inputVar.DynamicAxes())
+            ReportFailure("plusOutput dynamic axes do not match expectation!");
+    };
+
+    testShapeInferenceInRecurrence(1, 1);
+    testShapeInferenceInRecurrence(2, 1);
+    testShapeInferenceInRecurrence(1, 2);
+    testShapeInferenceInRecurrence(2, 2);
 }
 
 void FunctionTests()
 {
-    TestShapeInference();
+    fprintf(stderr, "\nFunctionTests..\n");
+
+    TestTimesNodeShapeInference();
+    TestRecurrenceShapeInference();
 
     TestSlice(2, DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())

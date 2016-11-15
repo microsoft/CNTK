@@ -64,11 +64,9 @@ protected:
     // Disallow copy and move construction and assignment
     DISABLE_COPY_AND_MOVE(GranularGPUDataTransferer);
 
-    template <class ElemType>
     friend class GPUDataTransferer;
 };
 
-template <class ElemType>
 class MATH_API GPUDataTransferer
 {
 #pragma warning(push)
@@ -83,10 +81,26 @@ public:
     // Disallow copy and move construction and assignment
     DISABLE_COPY_AND_MOVE(GPUDataTransferer);
 
-    void CopyGPUToCPUAsync(ElemType* gpuBuffer, size_t numElements, ElemType* cpuBuffer);
-    void CopyCPUToGPUAsync(ElemType* cpuBuffer, size_t numElements, ElemType* gpuBuffer);
+    // GPU to CPU
+    void CopyGPUToCPUAsync(void* gpuBuffer, size_t totalSize, void* cpuBuffer);
+
+    template <class ElemType>
+    void CopyGPUToCPUAsync(ElemType* gpuBuffer, size_t numElements, ElemType* cpuBuffer)
+    {
+        CopyGPUToCPUAsync(static_cast<void*>(gpuBuffer), numElements * sizeof(ElemType), cpuBuffer);
+    }
 
     void WaitForCopyGPUToCPUAsync();
+
+    // CPU to GPU
+    void CopyCPUToGPUAsync(void* cpuBuffer, size_t totalSize, void* gpuBuffer);
+
+    template <class ElemType>
+    void CopyCPUToGPUAsync(ElemType* cpuBuffer, size_t numElements, ElemType* gpuBuffer)
+    {
+        CopyCPUToGPUAsync(static_cast<void*>(cpuBuffer), numElements * sizeof(ElemType), gpuBuffer);
+    }
+
     void WaitForCopyCPUToGPUAsync();
 
 #ifndef CPUONLY

@@ -8,6 +8,24 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifdef _MSC_VER
+// In case of asserts in debug mode, print the message into stderr and throw exception
+int HandleDebugAssert(int /* reportType */,
+                      char *message,
+                      int *returnValue)
+{
+    fprintf(stderr, "C-Runtime error: %s\n", message);
+
+    if (returnValue) {
+        // Return 0 to continue operation and NOT start the debugger.
+        *returnValue = 0;
+    }
+
+    // Return true to ensure no message box is displayed.
+    return true;
+}
+#endif
+
 bool IsGPUAvailable()
 {
     static bool isGPUDeviceAvailable;
@@ -34,4 +52,28 @@ bool IsGPUAvailable()
     }
 
     return isGPUDeviceAvailable;
+}
+
+bool Is1bitSGDAvailable()
+{
+    static bool is1bitSGDAvailable;
+    static bool isInitialized = false;
+
+    if (!isInitialized)
+    {
+        const char* p = getenv("TEST_1BIT_SGD");
+
+        // Check the environment variable TEST_1BIT_SGD to decide whether to run on a CPU-only device.
+        if (p != nullptr && 0 == strcmp(p, "0"))
+        {
+            is1bitSGDAvailable = false;
+        }
+        else
+        {
+            is1bitSGDAvailable = true;
+        }
+        isInitialized = true;
+    }
+
+    return is1bitSGDAvailable;
 }

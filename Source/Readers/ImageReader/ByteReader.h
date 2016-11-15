@@ -30,8 +30,13 @@ public:
 class FileByteReader : public ByteReader
 {
 public:
+    FileByteReader(const std::string& expandDirectory) : m_expandDirectory(expandDirectory)
+    {}
+
     void Register(const std::map<std::string, size_t>&) override {}
     cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) override;
+
+    std::string m_expandDirectory;
 };
 
 #ifdef USE_ZIP

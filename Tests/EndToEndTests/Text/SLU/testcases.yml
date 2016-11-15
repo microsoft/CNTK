@@ -3,9 +3,7 @@ tags:
      # the complete suite (2 flavours x 2 devices) should take
      # no longer than 60 seconds with the longest test (debug cpu)
      # finishing in below 30 seconds.
-     # running on every BVT job in 'S' (Speech) leg
      - bvt-s  (build_sku == 'gpu')
-     # running unconditionally on every Nightly job in 'S' leg
      - nightly-s (build_sku == 'gpu')
 
 testCases:

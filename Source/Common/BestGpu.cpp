@@ -286,10 +286,7 @@ void BestGpu::GetCudaProperties()
         pd->cudaFreeMem = free;
         pd->cudaTotalMem = total;
         dev++;
-        // cudaDeviceReset() explicitly destroys and cleans up all resources associated with the 
-        // current device in the current process.
-        // Will result in a segmentation fault is called, for instance, after cudnnCreate, but before cudnnDestroy.
-        // cudaDeviceReset();
+        cudaDeviceReset();
     }
     m_cudaData = m_procData.size() > 0;
     if (rc == CUDA_SUCCESS)
@@ -715,6 +712,7 @@ void BestGpu::QueryNvmlData()
                 if (GetCurrentProcessId() == info.pid || name.length() == 0)
                     continue;
 #ifdef _WIN32
+                // TODO: add python?
                 cntkFound = cntkFound || EqualCI(name, "cntk.exe"); // recognize ourselves
                 cntkFound = cntkFound || EqualCI(name, "cn.exe") || EqualCI(name, "dbn.exe"); // also recognize some MS-proprietary legacy tools
 #else
@@ -746,7 +744,9 @@ bool BestGpu::LockDevice(int deviceId, bool trial)
     std::unique_ptr<CrossProcessMutex> mutex(new CrossProcessMutex(buffer));
     if (!mutex->Acquire(/*wait=*/false)) // GPU not available
     {
-        fprintf(stderr, "LockDevice: Failed to lock GPU %d for exclusive use.\n", deviceId);
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "LockDevice: Failed to lock GPU %d for exclusive use.\n", deviceId);
+
         return false;
     }
     else

@@ -101,6 +101,23 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_Simple_dense)
         1);
 };
 
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_Simple_dense_single_stream)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/Simple_dense_single_stream.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/Simple_dense_single_stream_Output.txt",
+        "Simple_single_stream",
+        "reader",
+        1000, // epoch size
+        250,  // mb size
+        10,   // num epochs 
+        1,
+        0,
+        0,
+        1);
+};
+
 
 BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_MNIST_dense)
 {
