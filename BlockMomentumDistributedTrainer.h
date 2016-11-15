@@ -51,25 +51,22 @@ namespace CNTK
             m_blockMomentumAsTimeConstantPerWorker(blockMomentumAsTimeConstant / communicator->Workers().size()),
             m_globalModelAggregationBlockSize(globalModelAggregationBlockSize),
             m_numSamplesSeenInCurrentBlock(0),
-            m_endOfDataReached(false)
+            m_endOfDataReached(false),
+            m_shutdown(false)
         {
             m_syncPeriodPerWorker = globalModelAggregationBlockSize / communicator->Workers().size();
             if (m_syncPeriodPerWorker == 0)
                 InvalidArgument("Sync period is too small.");
         }
 
-        // Optional override that gets called before each minbatch during training
-        void PreMinibatchCallback(const Trainer& /*trainer*/) override
-        {
-        }
-
         // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
-        bool PreParameterUpdateCallback(const Trainer& trainer, std::vector<std::pair<Parameter, NDArrayViewPtr>>& parameters, MinibatchInfo& info) override
+        bool PreParameterUpdateCallback(const Trainer& trainer, std::vector<std::pair<Parameter, NDArrayViewPtr>>&, MinibatchInfo& info) override
         {
             // If the last minibatch, set the end of data state.
             if (info.atEndOfData)
                 m_endOfDataReached = true;
 
+            std::vector<NDArrayViewPtr> parameters;
             if (!m_endOfDataReached)
             {
                 m_numSamplesSeenInCurrentBlock += info.numberOfSamples;
@@ -77,32 +74,42 @@ namespace CNTK
                     return false;
 
                 m_numSamplesSeenInCurrentBlock = 0;
-                Aggregate(trainer, parameters);
+                GetModelParameters(trainer, parameters);
+                Aggregate(trainer.ParameterLearners(), parameters);
                 return false;
             }
 
-            return Shutdown(trainer, parameters);
+            GetModelParameters(trainer, parameters);
+            return Shutdown(trainer.ParameterLearners(), parameters);
         }
 
         // Optionally overridable method to get checkpoint state associated with this Distributed train method
         Dictionary CreateCheckpoint(const Trainer& trainer, const Dictionary& localState) override
         {
-            std::vector<std::pair<Parameter, NDArrayViewPtr>> parameters;
-            auto modelParameters = trainer.Model()->Parameters();
-            for (auto p : modelParameters)
-                parameters.push_back(std::make_pair(p, p.Value()));
+            std::vector<NDArrayViewPtr> parameters;
+            GetModelParameters(trainer, parameters);
 
             // During checkpoint, other workers could be in aggregation state. Let's allow them to finish aggregation.
             Action action;
             while ((action = SynchronizeAction(Action::Checkpoint)) != Action::Checkpoint)
             {
                 if (action == Action::Aggregate)
-                    AggregateImpl(trainer, parameters);
+                    AggregateImpl(trainer.ParameterLearners(), parameters);
                 else
                     RuntimeError("Unexpected action received.");
             }
 
             return DistributedTrainerBase::CreateCheckpoint(trainer, localState);
+        }
+
+        void Shutdown(const Trainer& trainer) override
+        {
+            if (!m_shutdown)
+            {
+                std::vector<NDArrayViewPtr> parameters;
+                GetModelParameters(trainer, parameters);
+                Shutdown(trainer.ParameterLearners(), parameters);
+            }
         }
 
     private:
@@ -121,37 +128,47 @@ namespace CNTK
             Shutdown
         };
 
-        void Aggregate(const Trainer& trainer, std::vector<std::pair<Parameter, NDArrayViewPtr>>& parameters)
+        void GetModelParameters(const Trainer& trainer, std::vector<NDArrayViewPtr>& result)
+        {
+            auto modelParameters = trainer.Model()->Parameters();
+            for (auto p : modelParameters)
+                result.push_back(p.Value());
+        }
+
+        void Aggregate(const std::vector<LearnerPtr>& learners, std::vector<NDArrayViewPtr>& parameters)
         {
             // Synchronization action. Aggregate has the highest priority, so the expected result is aggregate.
             Action action = SynchronizeAction(Action::Aggregate);
             if (action != Action::Aggregate)
                 LogicError("Unexpected action during aggregation.");
 
-            AggregateImpl(trainer, parameters);
+            AggregateImpl(learners, parameters);
         }
 
-        bool Shutdown(const Trainer& trainer, std::vector<std::pair<Parameter, NDArrayViewPtr>>& parameters)
+        bool Shutdown(const std::vector<LearnerPtr>& learners, std::vector<NDArrayViewPtr>& parameters)
         {
             // During shutdown, other workers could be in checkpointing or aggregation state.
             // Finished workers should properly behave in this case.
-            Action action = SynchronizeAction(Action::Shutdown);
-            switch (action)
+            Action action;
+            while ((action = SynchronizeAction(Action::Shutdown)) != Action::Shutdown)
             {
-            case Action::Shutdown:
-                // Last synchronization
-                AggregateImpl(trainer, parameters);
-                return true;
-            case Action::Aggregate:
-                AggregateImpl(trainer, parameters);
-                return false;
-            case Action::Checkpoint:
-                // There should be a checkpoint somewhere in the future for this worker, do busy waiting.
-                return false;
-            default:
-                RuntimeError("Unexpected action received.");
+                switch (action)
+                {
+                case Action::Aggregate:
+                    AggregateImpl(learners, parameters);
+                    break;
+                case Action::Checkpoint:
+                    CreateCheckpointImpl(std::vector<LearnerPtr> {}, parameters, Dictionary());
+                    break;
+                default:
+                    RuntimeError("Unexpected action received.");
+                }
             }
-            return false; // Make compiler happy.
+
+            // Last synchronization
+            AggregateImpl(learners, parameters);
+            m_shutdown = true;
+            return true; // Make compiler happy.
         }
 
         Action SynchronizeAction(Action self)
@@ -178,25 +195,40 @@ namespace CNTK
             return Action::Shutdown;
         }
 
-        void AggregateImpl(const Trainer& trainer, std::vector<std::pair<Parameter, NDArrayViewPtr>>& parameters)
+        void AggregateImpl(const std::vector<LearnerPtr>& learners, std::vector<NDArrayViewPtr>& parameters)
         {
             if (IsResetRequired(parameters))
                 Reset(parameters);
 
             // Let update the weights.
-            if (parameters.front().first.Value()->GetDataType() == DataType::Double)
+            if (parameters.front()->GetDataType() == DataType::Double)
                 SynchronizeModel<double>(parameters);
-            else if (parameters.front().first.Value()->GetDataType() == DataType::Float)
+            else if (parameters.front()->GetDataType() == DataType::Float)
                 SynchronizeModel<float>(parameters);
             else
                 RuntimeError("Unsupported type.");
 
             if (m_resetSGDMomentumAfterAggregation)
-                for (auto learner : trainer.ParameterLearners())
+                for (auto learner : learners)
                     learner->ResetSmoothedGradients();
         }
 
-        bool IsResetRequired(std::vector<std::pair<Parameter, NDArrayViewPtr>>& parameters) const
+        Dictionary CreateCheckpointImpl(const std::vector<LearnerPtr>& learners, std::vector<NDArrayViewPtr>& parameters, const Dictionary& localState)
+        {
+            // During checkpoint, other workers could be in aggregation state. Let's allow them to finish aggregation.
+            Action action;
+            while ((action = SynchronizeAction(Action::Checkpoint)) != Action::Checkpoint)
+            {
+                if (action == Action::Aggregate)
+                    AggregateImpl(learners, parameters);
+                else
+                    RuntimeError("Unexpected action received.");
+            }
+
+            return DistributedTrainerBase::CreateCheckpoint(localState);
+        }
+
+        bool IsResetRequired(std::vector<NDArrayViewPtr>& parameters) const
         {
             if (m_prevParameters.size() != parameters.size() ||
                 m_blockLevelSmoothedGradient.size() != parameters.size())
@@ -204,10 +236,10 @@ namespace CNTK
 
             for (size_t i = 0; i < parameters.size(); ++i)
             {
-                if (m_prevParameters[i]->Shape() != parameters[i].first.Shape() ||
-                    m_prevParameters[i]->Device() != parameters[i].first.Value()->Device() ||
-                    m_blockLevelSmoothedGradient[i]->Shape() != parameters[i].first.Shape() ||
-                    m_blockLevelSmoothedGradient[i]->Device() != parameters[i].first.Value()->Device())
+                if (m_prevParameters[i]->Shape() != parameters[i]->Shape() ||
+                    m_prevParameters[i]->Device() != parameters[i]->Device() ||
+                    m_blockLevelSmoothedGradient[i]->Shape() != parameters[i]->Shape() ||
+                    m_blockLevelSmoothedGradient[i]->Device() != parameters[i]->Device())
                 {
                     return true;
                 }
@@ -215,7 +247,7 @@ namespace CNTK
             return false;
         }
 
-        void Reset(std::vector<std::pair<Parameter, NDArrayViewPtr>>& parameters)
+        void Reset(std::vector<NDArrayViewPtr>& parameters)
         {
             m_blockLevelSmoothedGradient.resize(parameters.size());
             m_prevParameters.resize(parameters.size());
@@ -224,19 +256,19 @@ namespace CNTK
             {
                 auto& p = parameters[i];
 
-                if (p.first.Value()->GetDataType() == DataType::Double)
-                    ResetBuffer<double>(i, p.first);
-                else if (p.first.Value()->GetDataType() == DataType::Float)
-                    ResetBuffer<float>(i, p.first);
+                if (p->GetDataType() == DataType::Double)
+                    ResetBuffer<double>(i, p);
+                else if (p->GetDataType() == DataType::Float)
+                    ResetBuffer<float>(i, p);
                 else
                     RuntimeError("Unsupported type.");
             }
         }
 
         template<class ElemType>
-        void ResetBuffer(size_t index, const Parameter& p)
+        void ResetBuffer(size_t index, const NDArrayViewPtr& p)
         {
-            auto data = p.Value()->GetMatrix<ElemType>();
+            auto data = p->GetMatrix<ElemType>();
             if (!m_blockLevelSmoothedGradient[index])
             {
                 // has not been initialized yet
@@ -261,7 +293,7 @@ namespace CNTK
         }
 
         template<class ElemType>
-        void SynchronizeModel(const std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues)
+        void SynchronizeModel(const std::vector<NDArrayViewPtr>& gradientValues)
         {
             ElemType blockMomentum = (ElemType)TimeConstant2Momentum(m_blockMomentumAsTimeConstantPerWorker, m_syncPeriodPerWorker);
 
@@ -272,7 +304,7 @@ namespace CNTK
             {
                 // Get current model
                 Matrix<ElemType>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<ElemType>();                  // prev model value
-                Matrix<ElemType>& currentWeight = *gradientValues[i].first.Value()->GetWritableMatrix<ElemType>();
+                Matrix<ElemType>& currentWeight = *gradientValues[i]->GetWritableMatrix<ElemType>();
 
                 // Subtract it from the previous model
                 auto blockGrad = std::make_shared<Matrix<ElemType>>(previousWeight, CPUDEVICE);
@@ -293,7 +325,7 @@ namespace CNTK
                 // 2 block gradient aggregation
                 // 2.1. get current model
                 Matrix<ElemType>& previousWeight = *m_prevParameters[i]->GetWritableMatrix<ElemType>();                  // prev model value
-                Matrix<ElemType>& currentWeight = *gradientValues[i].first.Value()->GetWritableMatrix<ElemType>();
+                Matrix<ElemType>& currentWeight = *gradientValues[i]->GetWritableMatrix<ElemType>();
                 auto blockGrad = aggregatedWeights[i];
                 // 2.2. model update 
                 {
@@ -352,5 +384,6 @@ namespace CNTK
         std::vector<NDArrayViewPtr> m_actionBuffer;
 
         bool m_endOfDataReached;
+        bool m_shutdown;
      };
 }
