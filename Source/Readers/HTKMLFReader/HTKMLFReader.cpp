@@ -63,6 +63,7 @@ template <class ConfigRecordType>
 void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
     m_truncated = readerConfig(L"truncated", false);
+    m_maxUtteranceLength = readerConfig(L"maxUtteranceLength", 10000);
     m_convertLabelsToTargets = false;
 
     intargvector numberOfuttsPerMinibatchForAllEpochs = readerConfig(L"nbruttsineachrecurrentiter", ConfigRecordType::Array(intargvector(vector<int>{1})));
@@ -1691,6 +1692,18 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
         const msra::dbn::matrixstripe featOri = m_mbiter->frames(id);
         size_t fdim = featOri.rows();
         const size_t actualmbsizeOri = featOri.cols();
+        if (m_truncated == false && m_frameMode == false && actualmbsizeOri > m_maxUtteranceLength)
+        {
+            (*m_mbiter)++;
+            if (!(*m_mbiter))
+            {
+                m_noData = true;
+            }
+            fprintf(stderr, "WARNING: Utterance has length longer "
+                "than the %zd, skipping it.\n",
+                m_maxUtteranceLength);
+            return ReNewBufferForMultiIO(i);
+        }
         m_featuresStartIndexMultiUtt[id + i * numOfFea] = totalFeatNum;
         totalFeatNum = fdim * actualmbsizeOri + m_featuresStartIndexMultiUtt[id + i * numOfFea];
     }
