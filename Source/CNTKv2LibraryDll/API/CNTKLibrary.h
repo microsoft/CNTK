@@ -120,7 +120,6 @@ namespace CNTK
 
     typedef FunctionPtr FuntionFactorPtr(const std::wstring& op,
                                          std::vector<Variable>& inputs,
-                                         std::vector<Variable>& outputs,
                                          Dictionary&& functionConfig,
                                          const std::wstring& functionName,
                                          const std::wstring& uid);
@@ -2190,6 +2189,45 @@ namespace CNTK
         Freeze,
     };
 
+    class UserDefinedFunctionHandler
+    {
+    public:
+        CNTK_API UserDefinedFunctionHandler() {}
+        CNTK_API virtual ~UserDefinedFunctionHandler() {}
+
+        template <class ElementType>
+        void Forward(
+            std::vector<ElementType>& out,
+            const std::vector<ElementType>& left,
+            const std::vector<ElementType>& right
+        )
+        {
+            if (typeid(out) == typeid(std::vector<float>&))
+            {
+                ForwardFloat((std::vector<float>&)out, (std::vector<float>&)left, (std::vector<float>&)right);
+                return;
+            }
+
+            assert(false);
+        }
+
+        CNTK_API virtual void ForwardFloat(
+            std::vector<float>& /*out*/,
+            const std::vector<float>& /*left*/,
+            const std::vector<float>& /*right*/
+        )
+        {
+            assert(false);
+        }
+
+        CNTK_API virtual void Backward()
+        {
+            assert(false);
+        }
+    };
+
+    typedef std::shared_ptr<UserDefinedFunctionHandler> UserDefinedFunctionHandlerPtr;
+
     ///
     /// Represents a function (optionally differentiable w.r.t. its inputs)
     /// A Function denotes a symbolic computation with zero or more input arguments and one or more outputs. 
@@ -2451,7 +2489,7 @@ namespace CNTK
         Dictionary m_attributes;
     };
 
-    CNTK_API FunctionPtr UserDefinedFuntion(std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid);
+    CNTK_API FunctionPtr UserDefinedFuntion(std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid, UserDefinedFunctionHandlerPtr target);
 
     ///
     /// Create an instance of the CNTK built-in elementwise negate operation with the specified input operand.

@@ -344,8 +344,7 @@ namespace CNTK
                     // act on a copy since we might get a nullptr in return.
                     auto primitiveFunctionConfigParametersCopy = primitiveFunctionConfigParameters;
 
-                    auto outputVars = PrimitiveFunction::GetOutputVariables(opType, inputVars, nullptr, primitiveFunctionConfigParameters, true, (functionName != L"" ? functionName : functionUid));
-                    primitiveFunction = functionFactory(PrimitiveOpTypeName(opType), inputVars, outputVars, std::move(primitiveFunctionConfigParametersCopy), functionName, functionUid);
+                    primitiveFunction = functionFactory(PrimitiveOpTypeName(opType), inputVars, std::move(primitiveFunctionConfigParametersCopy), functionName, functionUid);
                 }
 
                 if (primitiveFunction == nullptr)

@@ -23,6 +23,103 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+
+    // -----------------------------------------------------------------------
+    // UserDefinedBinaryNode (summand1, summand2)
+    // -----------------------------------------------------------------------
+
+    template <class ElemType>
+    class UserDefinedBinaryNode : public TimesNodeBase<ElemType, false>
+    {
+        typedef TimesNodeBase<ElemType, false> Base;
+        UsingComputationNodeMembersBoilerplate;
+        static const std::wstring TypeName() { return L"UserDefinedBinary"; }
+
+    public:
+        DeclareConstructorFromConfigWithNumInputs(UserDefinedBinaryNode);
+        UserDefinedBinaryNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = -1, UserDefinedFunctionHandlerPtr target = nullptr)
+            : m_outputRank(outputRank), m_inferInputRankToMap(inferInputRankToMap), m_interceptor(target), Base(deviceId, name)
+        {
+        }
+
+        UserDefinedFunctionHandlerPtr m_interceptor;
+
+        virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+        {
+            if (m_interceptor != nullptr)
+            {
+//                assert(false); // TODO: fix me fmegen
+                auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
+                auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
+                auto output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
+
+                auto input0data = std::vector<ElemType>(input0.GetSOB().Data(), input0.GetSOB().Data() + input0.GetSOB().GetNumElements());
+                auto input1data = std::vector<ElemType>(input1.GetSOB().Data(), input1.GetSOB().Data() + input1.GetSOB().GetNumElements());
+                auto outputdata = std::vector<ElemType>(output.GetSOB().Data(), output.GetSOB().Data() + output.GetSOB().GetNumElements());
+
+                m_interceptor->Forward(outputdata, input0data, input1data);
+
+    return;
+            }
+
+            Base::ForwardProp(fr);
+        }
+
+        virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+        {
+            if (m_interceptor != nullptr)
+            {
+//                assert(false); // TODO: fix me fmegen
+                m_interceptor->Backward();
+
+                // TODO                return;
+            }
+
+            Base::BackpropTo(inputIndex, fr);
+        }
+
+        virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+        {
+            Base::CopyTo(nodeP, newName, flags);
+            if (flags & CopyNodeFlags::copyNodeValue)
+            {
+                auto node = dynamic_pointer_cast<UserDefinedBinaryNode<ElemType>>(nodeP);
+                node->m_outputRank = m_outputRank;
+                node->m_inferInputRankToMap = m_inferInputRankToMap;
+            }
+        }
+
+        void Save(File& fstream) const
+        {
+            Base::Save(fstream);
+            fstream << m_outputRank;
+            fstream << m_inferInputRankToMap;
+        }
+
+        virtual void Load(File& fstream, size_t modelVersion) override
+        {
+            Base::Load(fstream, modelVersion);
+            if (modelVersion >= CNTK_MODEL_VERSION_3)
+                fstream >> m_outputRank;
+            else
+                m_outputRank = 1;
+            if (modelVersion >= CNTK_MODEL_VERSION_12)
+                fstream >> m_inferInputRankToMap;
+            else
+                m_inferInputRankToMap = -1;
+        }
+
+
+    private:
+        size_t m_outputRank;
+        int m_inferInputRankToMap;
+    };
+
+    template class UserDefinedBinaryNode<float>;
+    template class UserDefinedBinaryNode<double>;
+
+
+
     std::shared_ptr<std::vector<Variable>> Function::InputsImpl() const
     {
         const CompositeFunction* compositeFunction = dynamic_cast<const CompositeFunction*>(this);
@@ -1100,7 +1197,7 @@ namespace CNTK
             // act on a copy since we might get a nullptr in return.
             auto attributesCopy = attributes;
 
-      //      root = functionFactory(PrimitiveOpTypeName(op), inputs, PrimitiveFunction::GetOutputVariables(op, inputs, nullptr, attributesCopy, true, (name != L"" ? name : uid)), std::move(attributesCopy), name, uid);
+            root = functionFactory(PrimitiveOpTypeName(op), inputs, std::move(attributesCopy), name, uid);
         }
 
         if (root == nullptr)
@@ -1589,7 +1686,7 @@ namespace CNTK
                 //todo fixme fmegen            assert(false);
                 size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
                 auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
-                computationNodePtr = New<UserDefinedBinaryNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputRank, inferInputRankToMap);
+                computationNodePtr = New<UserDefinedBinaryNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputRank, inferInputRankToMap, primitiveFunction->m_interptTarget);
             }
             break;
         case PrimitiveOpType::Times:

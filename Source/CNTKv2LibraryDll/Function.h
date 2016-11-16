@@ -150,6 +150,7 @@ namespace CNTK
     class PrimitiveFunction final : public Function
     {
         friend class Function;
+        friend class CompositeFunction;
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
@@ -194,8 +195,8 @@ namespace CNTK
         static const std::wstring AttributeNameReductionOpName;
 
     public:
-        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
-            : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, GenerateUid(op))
+        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"", UserDefinedFunctionHandlerPtr target = nullptr)
+            : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, GenerateUid(op), target)
         {}
 
         virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& /*arguments*/,
@@ -234,11 +235,15 @@ namespace CNTK
         }
 
     private:
-        FunctionPtr m_interptTarget;
+        UserDefinedFunctionHandlerPtr m_interptTarget;
 
-        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
-            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig, true, (functionName != L"" ? functionName : uid)), std::move(functionConfig), functionName, uid), m_op(op)
-        {}
+        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid, UserDefinedFunctionHandlerPtr target = nullptr)
+            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig, true, (functionName != L"" ? functionName : uid)), std::move(functionConfig), functionName, uid), m_op(op), m_interptTarget(target)
+        {
+            // A user defined node must provide the intercept target.
+            assert((op != PrimitiveOpType::UserDefinedBinary && target == nullptr) ||
+                   (op == PrimitiveOpType::UserDefinedBinary && target != nullptr));
+        }
 
         // The following helper functions are used to determine the output shape for different 
         // types of primitive operations accounting for broadcasting and reductions where applicable.
@@ -622,9 +627,9 @@ namespace CNTK
     };
 
 
-    inline FunctionPtr UserDefinedFuntion(std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
+    inline FunctionPtr UserDefinedFuntion(std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid, UserDefinedFunctionHandlerPtr target)
     {
-        return MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::UserDefinedBinary, inputs, std::move(functionConfig), functionName, uid);
+        return MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::UserDefinedBinary, inputs, std::move(functionConfig), functionName, uid, target);
     }
 
     class CNTKBackPropState final : public BackPropState

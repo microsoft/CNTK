@@ -188,7 +188,6 @@ namespace CNTK
 
     typedef FunctionPtr FuntionFactorPtr(const std::wstring& op,
                                          std::vector<Variable>& inputs,
-                                         std::vector<Variable>& outputs,
                                          Dictionary&& functionConfig,
                                          const std::wstring& functionName,
                                          const std::wstring& uid);
@@ -204,6 +203,9 @@ namespace CNTK
 
     class DistributedTrainer;
     typedef std::shared_ptr<DistributedTrainer> DistributedTrainerPtr;
+
+    class UserDefinedFunctionHandler;
+    typedef std::shared_ptr<UserDefinedFunctionHandler> UserDefinedFunctionHandlerPtr;
 
     namespace Internal
     {
@@ -260,4 +262,5 @@ namespace CNTK
                              std::unordered_set<::CNTK::FunctionPtr>& allPrimitiveFunctions,
                              FuntionFactorPtr functionFactory);
     }
+
 }
