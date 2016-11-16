@@ -198,6 +198,7 @@ def has_seq_dim(var, data):
     '''
     num_dyn_axes = 0
     var_shape = var.shape
+    var_rank = len(var_shape)
 
     # Find the innermost data sample
     drill = [data]
@@ -217,7 +218,7 @@ def has_seq_dim(var, data):
             if isinstance(drill_data, Number):
                 # Calculate the shape of the data point that would correspond to the input
                 # variable's shape.
-                drill_shape = _as_tuple(np.asarray(drill[-len(var_shape)]).shape)
+                drill_shape = _as_tuple(np.asarray(drill[-var_rank]).shape)
                 drill.pop() 
 
                 if drill_shape == ():
@@ -227,13 +228,20 @@ def has_seq_dim(var, data):
     if isinstance(drill_data, np.ndarray):
         # In case a full sequence is put inside an numpy array, we have
         # to account for the real sample shape.
-        additional_dyn_axes = len(drill_shape) - len(var_shape)
+        additional_dyn_axes = len(drill_shape) - var_rank
         num_dyn_axes += additional_dyn_axes
         drill_shape = drill_shape[additional_dyn_axes:]
     elif sparse.issparse(drill_data):
-        # var_shape might be defined as e.g. (3,) or (1,3)
-        if len(drill_shape)==2 and drill_shape[0]==1 and len(var_shape)==1:
+        if len(drill_shape)==2 and drill_shape[0]==1 and var_rank==1:
+            # var_shape might be defined as e.g. (3,) or (1,3)
             drill_shape = (drill_shape[1],)
+        elif len(drill_shape) > var_rank:
+            # the sparse data might actually encode the full sequence so we
+            sub_shape = drill_shape[-var_rank:]
+            if sub_shape != var_shape:
+                raise ValueError('data and variable shape do not match')
+            num_dyn_axes += len(drill_shape) - var_rank
+            drill_shape = var_shape
 
     # In drill_shape we now have potential data_points per drill level. We go
     # now backwards until the shape matches var_shape, at which point we have
@@ -255,26 +263,6 @@ def has_seq_dim(var, data):
         raise ValueError(
         'data having %i axes is not compatible with the '
         'input variable having %i axes'%(num_dyn_axes,len(var_shape)))
-
-
-def is_seq_list_of_dense_arrays(var, data):
-    '''
-    Checks whether the data is a sequence with dense elements.
-
-    Args:
-        var (:class:`~cntk.ops.variables.Variable`): variable node for which the ``batch`` is
-         meant
-        data (sequence): input sequence
-
-    Returns:
-        whether ``data`` is a sequence of dense arrays
-    '''
-    if not isinstance(data, list) or len(data) == 0:
-        return False
-
-    sample = np.asarray(data[0])
-    sample_shape = sample.shape or (1,)
-    return sample_shape == var.shape
 
 
 def sanitize_shape(shape):
@@ -431,23 +419,33 @@ def pad_sparse_seq_to_max_len(batch, max_seq_len):
     Z = []
     data_point = sparse.csr_matrix(batch[0][0].shape)
     for seq in batch:
-        seq_len = len(seq)
+        seq_len = seq.shape[0] if hasattr(seq, 'shape') else len(seq) 
         if seq_len>max_seq_len:
             raise ValueError('sequence of length %i exceeds max '
                     'length of %i'%(seq_len, max_seq_len))
-        pad = (max_seq_len-seq_len)*[data_point]
-        Z.append(sparse.hstack(seq + pad, format='csr'))
+        elif max_seq_len > seq_len:
+            if isinstance(batch[0], list):
+                seq += (max_seq_len-seq_len)*[data_point]
+            else:
+                shape = list(seq.shape)
+                shape[0] = max_seq_len-seq_len
+                seq = [seq, sparse.csr_matrix(tuple(shape)).astype(seq.dtype)]
+                
+        if isinstance(seq, list):    
+            seq = sparse.vstack(seq, format='csr')
+
+        Z.append(seq)
     return Z
 
 def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     '''
-    Convert to :class:`~cntk.cntk_py.Value` with ``dtype``. If the samples in ``batch`` have
-    different sequence lengths, pad them to max sequence length and create a
-    mask.
+    Convert to :class:`Value` with ``dtype``. If the samples in
+    ``batch`` have different sequence lengths, pad them to max sequence length
+    and create a mask.
 
     Args:
-        var (:class:`~cntk.ops.variables.Variable`): variable node for which the ``batch`` is
-         meant
+        var (:class:`~cntk.ops.variables.Variable`): variable node for which
+         the ``batch`` is meant 
         batch (list of NumPy arrays): input
         seq_starts (list of bool or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
@@ -457,7 +455,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
          this value should be put on
 
     Returns:
-        :class:`~cntk.cntk_py.Value`: converted batch that can be passed to the
+        :class:`Value`: converted batch that can be passed to the
          core API
     '''
     if isinstance(batch, cntk_py.Value):
@@ -470,18 +468,35 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     batch_has_seq = has_seq_dim(var, batch)
 
     if isinstance(batch, list):
-        seq_lens = [len(seq) for seq in batch]
-
-        is_dense = isinstance(batch[0], np.ndarray) or \
-                batch_has_seq and is_seq_list_of_dense_arrays(var, batch[0]) or \
-                np.asarray(batch[0]).shape == var.shape
+        is_dense = True
+        b = batch
+        while isinstance(b, list):
+            b = b[0]
+            if sparse.issparse(b):
+                is_dense = False
+                break
 
         if is_dense:
+            seq_lens = [len(seq) for seq in batch]
+
             # If the input is a list of lists of dense values, all of the same
             # length, then we convert it into a NumPy array without requiring a
             # mask.
             if len(set(seq_lens)) == 1:
                 batch = np.asarray(batch)
+        else:
+            if isinstance(batch[0], list):
+                seq_lens = [len(seq) for seq in batch]
+            else:
+                seq_lens = [seq.shape[0] for seq in batch]
+
+        if batch_has_seq:
+            max_seq_len = max(seq_lens)
+    else:
+        # It is a sparse or dense NumPy array having all sequences being the
+        # same length, so we just calculate the sequence lengths
+        if batch_has_seq:
+            max_seq_len = batch.shape[1]
 
     if dtype is None:
         dtype = get_data_type(var)
@@ -502,22 +517,12 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
         if len(batch) == 0:
             raise ValueError('batch is empty')
 
-        # Use the mask, if we have additional dynamic axes besides the batch
-        # axis.
-        use_mask =  len(var.dynamic_axes) > 1
-
-        if not use_mask and seq_starts is not None:
+        if not batch_has_seq and seq_starts is not None:
             raise ValueError('specification of individual sequence begins does not'
                     ' make sense when not using the sequence axis')
 
-    else:
-        raise ValueError('batch type "%s" is not supported'%type(batch))
-
     # batch is now either a dense input that requires a mask, or it is sparse
-
-    max_seq_len = max(len(r) for r in batch)
-
-    if use_mask:
+    if batch_has_seq:
         mask = cntk_py.NDMask((max_seq_len, len(batch)), 
                 device or use_default_device())
         for idx, seq_len in enumerate(seq_lens):
@@ -528,7 +533,8 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
             # in the SWIG layer, we provide it here as row-major.
             mask.invalidate_section((seq_len, idx),
                                     (1, cntk_py.InferredDimension))
-
+    else:
+        mask = None
 
     if not var.is_sparse:
         batch = pad_dense_to_max_len(batch, max_seq_len)
@@ -540,17 +546,19 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     batch_is_sparse = sparse.issparse(batch) 
     if batch_is_sparse:
         sparse_tmp = batch
-    # 2. batch is given as a list of sparse arrays, each of which is a full 
-    #    sequence
-    batch_has_sparse_sequences = batch_is_sparse or sparse.issparse(batch[0])
-    if batch_has_sparse_sequences:
-        sparse_tmp = batch[0]
-    # 3. batch is given as a list of lists containing the sparse sequence
-    #    elements
-    batch_has_sparse_elements = batch_has_sparse_sequences or \
-            sparse.issparse(batch[0][0])
-    if batch_has_sparse_elements:
-        sparse_tmp = batch[0][0]
+    else:
+        # 2. batch is given as a list of sparse arrays, each of which is a full 
+        #    sequence
+        batch_has_sparse_sequences = batch_is_sparse or sparse.issparse(batch[0])
+        if batch_has_sparse_sequences:
+            sparse_tmp = batch[0]
+        else:
+            # 3. batch is given as a list of lists containing the sparse sequence
+            #    elements
+            batch_has_sparse_elements = batch_has_sparse_sequences or \
+                    sparse.issparse(batch[0][0])
+            if batch_has_sparse_elements:
+                sparse_tmp = batch[0][0]
 
     if not sparse.isspmatrix_csr(sparse_tmp):
         raise ValueError("only CSR is supported as of now. Please " 
@@ -562,7 +570,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     if batch_is_sparse or batch_has_sparse_sequences or \
             batch_has_sparse_elements:
 
-        batch_shape = (len(batch),)
+        batch_shape = batch.shape if hasattr(batch, 'shape') else (len(batch),)
         sample_shape = var.shape
 
         if not batch_is_sparse:
@@ -571,15 +579,13 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
             # 1. Batch has sequence axis: only 1d sparse vectors are allowed.
             # 2. Ohterwise, 1d or 2d sparse tensors are allowed
             if batch_has_seq:
-                if not isinstance(batch[0], list):
-                    raise ValueError('sequence data has to be provided ' 
-                            'as list of lists')
                 shape = batch[0][0].shape
                 if not (len(shape)==1 or len(shape)==2 and shape[0]==1):
                     raise ValueError('only 1D sparse vectors are supported in ' 
                             ' sequence data, you gave shape %s'%str(shape))
                 # Pad and stack the sparse vectors. 
-                batch = pad_sparse_seq_to_max_len(batch, max_seq_len)
+                if batch_has_seq:
+                    batch = pad_sparse_seq_to_max_len(batch, max_seq_len)
                 batch_shape += (max_seq_len,)
                 # We are actually 1D. If rank==2, then the first dim is 1.
                 sample_shape = sample_shape[-1]
@@ -588,10 +594,11 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
                 if len(sample_shape) not in [1,2]:
                     raise ValueError('only 1D or 2D sparse vectors are supported')
 
-        # Vertically stack sequences/samples
-        batch = sparse.vstack(batch, format='csr')
+            # Vertically stack sequences/samples
+            batch = sparse.vstack(batch, format='csr')
 
-        batch_shape += _as_tuple(sample_shape)
+            batch_shape += _as_tuple(sample_shape)
+
         ndav = cntk_py.NDArrayView(batch_shape, batch.data,
                 batch.indptr, batch.indices, device, False)
 
@@ -712,7 +719,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
         else:
             raise ValueError('non-dict argument (%s) is not supported for nodes with more than one input' % type(arguments).__name__)
 
-    sample_sizes = [len(v) for v in arguments.values()]
+    sample_sizes = [v.shape[0] if hasattr(v, 'shape') else len(v) for v in arguments.values()]
     if len(set(sample_sizes)) != 1:
         raise ValueError('not all inputs have the same number of samples: ' +
                          ", ".join([str(s) for s in sample_sizes]))

@@ -65,15 +65,41 @@ def test_output_to_retain():
     assert np.allclose(var_map[z_output], np.asarray(in1_value)+20)
 
 
-def test_eval_sparse(sparse_type):
+@pytest.mark.parametrize("index_data", [
+     [2,3],
+     [0,1,6],
+    ])
+def test_eval_sparse(index_data, device_id):
     from scipy.sparse import csr_matrix
     dim = 10
+    multiplier = 2
     in1 = input_variable(shape=(dim,), is_sparse=True)
-    z = times(1, in1 * 2)
-    value = np.eye(dim)
-    expected = value * 2
-    sparse_val = [csr_matrix(value)]
-    assert np.allclose(z.eval({in1: sparse_val}), expected)
+    z = times(in1, np.eye(dim).astype(np.float32))
+    z *= multiplier
+    batch = (np.eye(dim)[index_data]).astype(np.float32)
+    expected = batch * multiplier
+    sparse_val = csr_matrix(batch)
+    result = z.eval({in1: sparse_val}, device=cntk_device(device_id))
+    assert np.allclose(result, expected)
+
+@pytest.mark.parametrize("index_data", [
+     [[0]],
+     [[0,1],[6]],
+    ])
+def test_eval_sparse_seq(index_data, device_id):
+    from scipy.sparse import csr_matrix
+    dim = 10
+    multiplier = 2
+    in1 = input_variable(shape=(dim,), is_sparse=True)
+    z = times(in1, np.eye(dim).astype(np.float32))
+    z *= multiplier
+    batch = [(np.eye(dim)[seq_data]).astype(np.float32) for seq_data in index_data]
+    expected = [seq * multiplier for seq in batch]
+    sparse_val = [csr_matrix(seq) for seq in batch]
+    result = z.eval({in1: sparse_val}, device=cntk_device(device_id))
+    assert np.all(np.allclose(a,b) \
+            for a,b in zip(result, expected))
+
 
 @pytest.mark.parametrize("one_hot_batch", [
      ([[2,5],
@@ -81,20 +107,18 @@ def test_eval_sparse(sparse_type):
      ([[1],
       [1],[2],[3]]),
     ])
-def test_eval_one_hot(one_hot_batch, device_id):
+def test_eval_one_hot_seq(one_hot_batch, device_id):
     dim = 10
-    # Just so that we can detect some impact on the one-hot vectors
     multiplier = 2
-    in1 = input_variable(shape=dim)
+    in1 = input_variable(shape=(dim,), is_sparse=True)
     # Convert CNTK node value to dense so that we can compare it later
-    z = times(in1, 1) 
-    z = z * multiplier
+    z = times(in1, np.eye(dim).astype(np.float32))
+    z *= multiplier
     # Convert expectation to dense
-    eye = np.eye(dim)
-    expected = [eye[seq]*multiplier for seq in one_hot_batch]
+    expected = [np.eye(dim)[seq]*multiplier for seq in one_hot_batch]
     batch = one_hot(one_hot_batch, num_classes=dim, device=cntk_device(device_id))
     assert np.all(np.allclose(a,b) \
-            for a,b in zip(z.eval({in1: batch}), expected))
+            for a,b in zip(z.eval({in1: batch}, device=cntk_device(device_id)), expected))
 
 @pytest.mark.parametrize("one_hot_batch, dim", [
     ([[11]], 10),
@@ -104,7 +128,7 @@ def test_eval_one_hot(one_hot_batch, device_id):
 def _test_eval_one_hot_bad(one_hot_batch, dim, device_id):
     in1 = input_variable(shape=dim)
     # Convert CNTK node value to dense so that we can compare it later
-    z = times(in1, 1) 
+    z = times(in1, np.eye(dim).astype(np.float32))
     # Convert expectation to dense
     batch = one_hot(one_hot_batch, num_classes=dim, device=cntk_device(device_id))
     with pytest.raises(ValueError):
