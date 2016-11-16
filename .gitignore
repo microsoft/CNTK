@@ -155,8 +155,6 @@ ModelManifest.xml
 # Python
 *.pyc
 __pycache__/
-contrib/Python/doc/_build/*
-contrib/Python/_cntk_default/*
 
 # =========================
 # Windows detritus
