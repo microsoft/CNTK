@@ -119,7 +119,7 @@ declare -a libzipFiles=("libzip.so.4")
 declare -a cudaFiles=("libcudart.so.7.5" "libcublas.so.7.5" "libcurand.so.7.5" "libcusparse.so.7.5")
 
 # cuDNN
-declare -a cudnnFiles=("libcudnn.so.5")
+declare -a cudnnFiles=("libcudnn.so")
 
 # OpenBLAS (Needed by Kaldi)
 declare -a openblasFiles=("libopenblas.so.0")
