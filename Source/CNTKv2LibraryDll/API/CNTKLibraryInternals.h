@@ -186,6 +186,7 @@ namespace CNTK
     typedef std::shared_ptr<Learner> LearnerPtr;
 
     class Dictionary;
+    typedef std::shared_ptr<Dictionary> DictionaryPtr;
 
     class MinibatchSource;
     typedef std::shared_ptr<MinibatchSource> MinibatchSourcePtr;
@@ -206,9 +207,11 @@ namespace CNTK
         CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name = L"");
         CNTK_API FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand);
-        CNTK_API FunctionPtr Where(const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
-        CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
-        CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
         CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
 
@@ -236,16 +239,13 @@ namespace CNTK
 
         CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
 
-        CNTK_API void SetForwardValuesSharing(bool enableSharing);
+        CNTK_API void EnableForwardValuesSharing();
+        CNTK_API void EnableHyperMemoryCompress();
 
         CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
-
-        CNTK_API ::CNTK::FunctionPtr LoadLegacyModel(::CNTK::DataType dataType, const std::wstring& modelFile, const ::CNTK::DeviceDescriptor& computeDevice);
-
-        CNTK_API void SaveAsLegacyModel(const ::CNTK::FunctionPtr& rootFunction, const std::wstring& modelFile);
 
         template <typename ElementType>
         Variable GetVariable(const  Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,

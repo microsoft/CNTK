@@ -53,3 +53,27 @@ bool IsGPUAvailable()
 
     return isGPUDeviceAvailable;
 }
+
+bool Is1bitSGDAvailable()
+{
+    static bool is1bitSGDAvailable;
+    static bool isInitialized = false;
+
+    if (!isInitialized)
+    {
+        const char* p = getenv("TEST_1BIT_SGD");
+
+        // Check the environment variable TEST_1BIT_SGD to decide whether to run on a CPU-only device.
+        if (p != nullptr && 0 == strcmp(p, "0"))
+        {
+            is1bitSGDAvailable = false;
+        }
+        else
+        {
+            is1bitSGDAvailable = true;
+        }
+        isInitialized = true;
+    }
+
+    return is1bitSGDAvailable;
+}

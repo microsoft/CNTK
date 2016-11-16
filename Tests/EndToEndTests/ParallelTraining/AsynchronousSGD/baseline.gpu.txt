@@ -1,0 +1,1490 @@
+CNTK 2.0.beta3.0+ (qiwye/asgd-dev 6d139b, Nov 13 2016 14:31:29) on localhost at 2016/11/13 15:53:35
+
+/home/qiwye/git/CNTK/build/release/bin/cntk  configfile=03_ResNet-parallel.cntk  parallelTrain=true  devic
+eId=auto  minibatch=256  epochsize=10  configName=2gpu-take1  parallelizationMethod=DataParallelASGD  asyn
+cBuffer=false
+CNTK 2.0.beta3.0+ (qiwye/asgd-dev 6d139b, Nov 13 2016 14:31:29) on localhost at 2016/11/13 15:53:35
+
+/home/qiwye/git/CNTK/build/release/bin/cntk  configfile=03_ResNet-parallel.cntk  parallelTrain=true  devic
+eId=auto  minibatch=256  epochsize=10  configName=2gpu-take1  parallelizationMethod=DataParallelASGD  asyn
+cBuffer=false
+requestnodes [MPIWrapper]: using 2 out of 2 MPI nodes on a single host (2 requested); we (1) are in (parti
+cipating)
+requestnodes [MPIWrapper]: using 2 out of 2 MPI nodes on a single host (2 requested); we (0) are in (parti
+cipating)
+Redirecting stderr to file ./Output-2gpu-take1/03_ResNet
+Redirecting stderr to file ./Output-2gpu-take1/03_ResNet.rank1
+-------------------------------------------------------------------
+Build info: 
+
+        Built time: Nov 13 2016 14:31:29
+        Last modified date: Fri Nov 11 14:24:29 2016
+        Build type: release
+        Build target: GPU
+        With 1bit-SGD: yes
+        With ASGD: yes
+        Math lib: mkl
+        CUDA_PATH: /usr/local/cuda-7.5
+        CUB_PATH: /usr/local/cub-1.4.1
+        CUDNN_PATH: /usr/local/cudnn-5.1
+        Build Branch: qiwye/asgd-dev
+        Build SHA1: 6d139b9ebc0d0e531e93514ae3ba30f3ea003054
+        Built by Source/CNTK/buildinfo.h$$0 on msraml-tesla01
+        Build Path: /home/qiwye/git/CNTK
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+        Device[0]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[1]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[2]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[3]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[4]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[5]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[6]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[7]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+Build info: 
+
+        Built time: Nov 13 2016 14:31:29
+        Last modified date: Fri Nov 11 14:24:29 2016
+        Build type: release
+        Build target: GPU
+        With 1bit-SGD: yes
+        With ASGD: yes
+        Math lib: mkl
+        CUDA_PATH: /usr/local/cuda-7.5
+        CUB_PATH: /usr/local/cub-1.4.1
+        CUDNN_PATH: /usr/local/cudnn-5.1
+        Build Branch: qiwye/asgd-dev
+        Build SHA1: 6d139b9ebc0d0e531e93514ae3ba30f3ea003054
+        Built by Source/CNTK/buildinfo.h$$0 on msraml-tesla01
+        Build Path: /home/qiwye/git/CNTK
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+GPU info:
+
+        Device[0]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[1]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[2]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[3]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[4]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[5]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[6]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+        Device[7]: cores = 2880; computeCapability = 3.5; type = "Tesla K40m"; memory = 11439 MB
+-------------------------------------------------------------------
+MPI Rank 0: Configuration After Processing and Variable Resolution:
+MPI Rank 0: 
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:asyncBuffer=false
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:command=Train
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:ConfigDir=.
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:configName=2gpu-take1
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:DataDir=.
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:deviceId=auto
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:epochSize=10
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:imageLayout=cudnn
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:initOnCPUOnly=true
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:makeMode=true
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:minibatch=256
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:minibatchSize=128
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:ModelDir=./Output-2gpu-take1/Models
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:ndlMacros=./Macros.ndl
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:OutputDir=./Output-2gpu-take1
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:parallelizationMethod=DataParallelASGD
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:parallelTrain=true
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:precision=float
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:prefetch=true
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:Proj16to32Filename=./16to32.txt
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:Proj32to64Filename=./32to64.txt
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:RootDir=.
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:stderr=./Output-2gpu-take1/03_ResNet
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:Test=[
+MPI Rank 0:     action = "test"
+MPI Rank 0:     modelPath = "./Output-2gpu-take1/Models/03_ResNet"
+MPI Rank 0:     minibatchSize = 256
+MPI Rank 0:     reader = [
+MPI Rank 0:         readerType = "ImageReader"
+MPI Rank 0:         file = "./cifar-10-batches-py/test_map.txt"
+MPI Rank 0:         randomize = "none"
+MPI Rank 0:         features = [
+MPI Rank 0:             width = 32
+MPI Rank 0:             height = 32
+MPI Rank 0:             channels = 3
+MPI Rank 0:             cropType = "center"
+MPI Rank 0:             cropRatio = 1
+MPI Rank 0:             jitterType = "uniRatio"
+MPI Rank 0:             interpolations = "linear"
+MPI Rank 0:             meanFile = "./cifar-10-batches-py/CIFAR-10_mean.xml"
+MPI Rank 0:         ]
+MPI Rank 0:         labels = [
+MPI Rank 0:             labelDim = 10
+MPI Rank 0:         ]
+MPI Rank 0:     ]    
+MPI Rank 0: ]
+MPI Rank 0: 
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:traceLevel=1
+MPI Rank 0: configparameters: 03_ResNet-parallel.cntk:Train=[
+MPI Rank 0:     action = "train"
+MPI Rank 0:     modelPath = "./Output-2gpu-take1/Models/03_ResNet"
+MPI Rank 0:      NDLNetworkBuilder = [
+MPI Rank 0:         networkDescription = "./03_ResNet.ndl"
+MPI Rank 0:     ]
+MPI Rank 0:     SGD = [
+MPI Rank 0:         epochSize = 0
+MPI Rank 0:         minibatchSize = 256
+MPI Rank 0:         learningRatesPerSample = 0.004*80:0.0004*40:0.00004
+MPI Rank 0:         momentumPerMB = 0
+MPI Rank 0:         maxEpochs = 10
+MPI Rank 0:         L2RegWeight = 0.0001
+MPI Rank 0:         dropoutRate = 0
+MPI Rank 0:         perfTraceLevel = 0
+MPI Rank 0:         firstMBsToShowResult = 1
+MPI Rank 0:         numMBsToShowResult = 10
+MPI Rank 0:         ParallelTrain = [
+MPI Rank 0:             parallelizationMethod = DataParallelASGD
+MPI Rank 0:             distributedMBReading = "true"
+MPI Rank 0:             parallelizationStartEpoch = 1
+MPI Rank 0:             DataParallelSGD = [
+MPI Rank 0:                 gradientBits = 32
+MPI Rank 0:                 useBufferedAsyncGradientAggregation = false
+MPI Rank 0:             ]
+MPI Rank 0:             ModelAveragingSGD = [
+MPI Rank 0:                 blockSizePerWorker = 128
+MPI Rank 0:             ]
+MPI Rank 0:             DataParallelASGD = [
+MPI Rank 0:                 syncPeriod = 128
+MPI Rank 0:                 usePipeline = false
+MPI Rank 0:             ]
+MPI Rank 0:         ]
+MPI Rank 0:     ]
+MPI Rank 0:     reader = [
+MPI Rank 0:         readerType = "ImageReader"
+MPI Rank 0:         file = "./cifar-10-batches-py/train_map.txt"
+MPI Rank 0:         randomize = "auto"
+MPI Rank 0:         features = [
+MPI Rank 0:             width = 32
+MPI Rank 0:             height = 32
+MPI Rank 0:             channels = 3
+MPI Rank 0:             cropType = "random"
+MPI Rank 0:             cropRatio = 0.8
+MPI Rank 0:             jitterType = "uniRatio"
+MPI Rank 0:             interpolations = "linear"
+MPI Rank 0:             meanFile = "./cifar-10-batches-py/CIFAR-10_mean.xml"
+MPI Rank 0:         ]
+MPI Rank 0:         labels = [
+MPI Rank 0:             labelDim = 10
+MPI Rank 0:         ]
+MPI Rank 0:     ]
+MPI Rank 0:     cvReader = [
+MPI Rank 0:         readerType = "ImageReader"
+MPI Rank 0:         file = "./cifar-10-batches-py/test_map.txt"
+MPI Rank 0:         randomize = "none"
+MPI Rank 0:         features = [
+MPI Rank 0:             width = 32
+MPI Rank 0:             height = 32
+MPI Rank 0:             channels = 3
+MPI Rank 0:             cropType = "center"
+MPI Rank 0:             cropRatio = 1
+MPI Rank 0:             jitterType = "uniRatio"
+MPI Rank 0:             interpolations = "linear"
+MPI Rank 0:             meanFile = "./cifar-10-batches-py/CIFAR-10_mean.xml"
+MPI Rank 0:         ]
+MPI Rank 0:         labels = [
+MPI Rank 0:             labelDim = 10
+MPI Rank 0:         ]
+MPI Rank 0:     ]    
+MPI Rank 0: ]
+MPI Rank 0: 
+MPI Rank 0: Commands: Train
+MPI Rank 0: precision = "float"
+MPI Rank 0: 
+MPI Rank 0: ##############################################################################
+MPI Rank 0: #                                                                            #
+MPI Rank 0: # Train command (train action)                                               #
+MPI Rank 0: #                                                                            #
+MPI Rank 0: ##############################################################################
+MPI Rank 0: 
+MPI Rank 0: 
+MPI Rank 0: Creating virgin network.
+MPI Rank 0: NDLBuilder Using GPU 0
+MPI Rank 0: SetGaussianRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+MPI Rank 0: 
+MPI Rank 0: OutputNodes.t Times operation: For legacy compatibility, the sample layout of left input (OutputNodes.W LearnableParameter operation) was patched to [10 x 1 x 1 x 64] (from [10 x 64])
+MPI Rank 0: conv1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 16, Kernel: 3 x 3 x 3, Map: 1 x 1 x 16, Stride: 1 x 1 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn1_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn1_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn1_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn1_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn1_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn1_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn2_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 3 x 3 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn2_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn2_1.c_proj.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 1 x 1 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn2_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn2_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn2_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn2_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn3_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 3 x 3 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn3_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn3_1.c_proj.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 1 x 1 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn3_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn3_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn3_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: rn3_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: Using CNTK batch normalization engine.
+MPI Rank 0: pool: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 1 x 1 x 64, Kernel: 8 x 8 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+MPI Rank 0: 
+MPI Rank 0: Model has 184 nodes. Using GPU 0.
+MPI Rank 0: 
+MPI Rank 0: Training criterion:   CE = CrossEntropyWithSoftmax
+MPI Rank 0: Evaluation criterion: Err = ClassificationError
+MPI Rank 0: 
+MPI Rank 0: 
+MPI Rank 0: Allocating matrices for forward and/or backward propagation.
+MPI Rank 0: 
+MPI Rank 0: Memory Sharing: Out of 321 matrices, 160 are shared as 62, and 161 are not shared.
+MPI Rank 0: 
+MPI Rank 0:     { conv1.c.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       conv1.y : [32 x 32 x 16 x *] }
+MPI Rank 0:     { conv1.c.W : [16 x 27] (gradient)
+MPI Rank 0:       rn1_1.c1.c.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_1.c1.y : [32 x 32 x 16 x *] }
+MPI Rank 0:     { conv1.c.c.b : [16 x 1] (gradient)
+MPI Rank 0:       rn1_1.c2.c.c : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_1.c1.c.W : [16 x 144] (gradient)
+MPI Rank 0:       rn1_1.c2.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_1.p : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_1.c2.c.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_1.y : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_1.c2.W : [16 x 144] (gradient)
+MPI Rank 0:       rn1_2.c1.c.c.c : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_1.c2.c.sc : [16 x 1] (gradient)
+MPI Rank 0:       rn1_1.p : [32 x 32 x 16 x *] (gradient) }
+MPI Rank 0:     { conv1.c.c.sc : [16 x 1] (gradient)
+MPI Rank 0:       conv1.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_2.c1.c.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_2.c1.y : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_1.c2.c.b : [16 x 1] (gradient)
+MPI Rank 0:       rn1_2.c2.c.c : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_2.c1.c.W : [16 x 144] (gradient)
+MPI Rank 0:       rn1_2.c2.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_2.p : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_2.c2.c.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_2.y : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_2.c2.W : [16 x 144] (gradient)
+MPI Rank 0:       rn1_3.c1.c.c.c : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_2.c2.c.sc : [16 x 1] (gradient)
+MPI Rank 0:       rn1_2.p : [32 x 32 x 16 x *] (gradient) }
+MPI Rank 0:     { rn1_1.c1.c.c.sc : [16 x 1] (gradient)
+MPI Rank 0:       rn1_1.c1.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_1.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_3.c1.c.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_3.c1.y : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_2.c2.c.b : [16 x 1] (gradient)
+MPI Rank 0:       rn1_3.c2.c.c : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_3.c1.c.W : [16 x 144] (gradient)
+MPI Rank 0:       rn1_3.c2.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_3.p : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_3.c2.c.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_3.y : [32 x 32 x 16 x *] }
+MPI Rank 0:     { rn1_3.c2.W : [16 x 144] (gradient)
+MPI Rank 0:       rn2_1.c1.c.c.c : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn1_3.c2.c.sc : [16 x 1] (gradient)
+MPI Rank 0:       rn1_3.p : [32 x 32 x 16 x *] (gradient) }
+MPI Rank 0:     { rn1_2.c1.c.c.sc : [16 x 1] (gradient)
+MPI Rank 0:       rn1_2.c1.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_2.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn2_1.c1.c.c.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_1.c1.y : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn1_3.c2.c.b : [16 x 1] (gradient)
+MPI Rank 0:       rn2_1.c2.c.c : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_1.c2.c.sc : [32 x 1] (gradient)
+MPI Rank 0:       rn2_1.c_proj.c : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_1.c1.c.W : [32 x 144] (gradient)
+MPI Rank 0:       rn2_1.c2.c.c : [16 x 16 x 32 x *] (gradient) }
+MPI Rank 0:     { rn2_1.c2.c.b : [32 x 1] (gradient)
+MPI Rank 0:       rn2_1.c_proj.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_1.p : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_1.c2.c.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_1.y : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_1.c2.W : [32 x 288] (gradient)
+MPI Rank 0:       rn2_2.c1.c.c.c : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_1.c_proj.sc : [32 x 1] (gradient)
+MPI Rank 0:       rn2_1.p : [16 x 16 x 32 x *] (gradient) }
+MPI Rank 0:     { rn1_3.c1.c.c.sc : [16 x 1] (gradient)
+MPI Rank 0:       rn1_3.c1.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 0:       rn1_3.y : [32 x 32 x 16 x *] (gradient) }
+MPI Rank 0:     { rn2_1.c_proj.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_2.c1.c.c.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_2.c1.y : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_2.c1.c.W : [32 x 288] (gradient)
+MPI Rank 0:       rn2_2.c2.c.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_2.p : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_2.c2.c.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_2.y : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_2.c2.W : [32 x 288] (gradient)
+MPI Rank 0:       rn2_3.c1.c.c.c : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_2.c2.c.sc : [32 x 1] (gradient)
+MPI Rank 0:       rn2_2.p : [16 x 16 x 32 x *] (gradient) }
+MPI Rank 0:     { rn2_1.c1.c.c.sc : [32 x 1] (gradient)
+MPI Rank 0:       rn2_1.c1.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_1.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_3.c1.c.c.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_3.c1.y : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_2.c2.c.b : [32 x 1] (gradient)
+MPI Rank 0:       rn2_3.c2.c.c : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_3.c1.c.W : [32 x 288] (gradient)
+MPI Rank 0:       rn2_3.c2.c.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_3.p : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_3.c2.c.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_3.y : [16 x 16 x 32 x *] }
+MPI Rank 0:     { rn2_3.c2.W : [32 x 288] (gradient)
+MPI Rank 0:       rn3_1.c1.c.c.c : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn2_3.c2.c.sc : [32 x 1] (gradient)
+MPI Rank 0:       rn2_3.p : [16 x 16 x 32 x *] (gradient) }
+MPI Rank 0:     { rn2_2.c1.c.c.sc : [32 x 1] (gradient)
+MPI Rank 0:       rn2_2.c1.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_2.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn3_1.c1.c.c.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_1.c1.y : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn2_3.c2.c.b : [32 x 1] (gradient)
+MPI Rank 0:       rn3_1.c2.c.c : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_1.c2.c.sc : [64 x 1] (gradient)
+MPI Rank 0:       rn3_1.c_proj.c : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_1.c1.c.W : [64 x 288] (gradient)
+MPI Rank 0:       rn3_1.c2.c.c : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 0:     { rn3_1.c2.c.b : [64 x 1] (gradient)
+MPI Rank 0:       rn3_1.c_proj.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_1.p : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_1.c2.c.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_1.y : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_1.c2.W : [64 x 576] (gradient)
+MPI Rank 0:       rn3_2.c1.c.c.c : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_1.c_proj.sc : [64 x 1] (gradient)
+MPI Rank 0:       rn3_1.p : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 0:     { rn2_3.c1.c.c.sc : [32 x 1] (gradient)
+MPI Rank 0:       rn2_3.c1.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 0:       rn2_3.y : [16 x 16 x 32 x *] (gradient) }
+MPI Rank 0:     { rn3_1.c_proj.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_2.c1.c.c.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_2.c1.y : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_2.c1.c.W : [64 x 576] (gradient)
+MPI Rank 0:       rn3_2.c2.c.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_2.p : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_2.c2.c.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_2.y : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_2.c2.W : [64 x 576] (gradient)
+MPI Rank 0:       rn3_3.c1.c.c.c : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_2.c2.c.sc : [64 x 1] (gradient)
+MPI Rank 0:       rn3_2.p : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 0:     { rn3_1.c1.c.c.sc : [64 x 1] (gradient)
+MPI Rank 0:       rn3_1.c1.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_1.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_3.c1.c.c.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_3.c1.y : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_2.c2.c.b : [64 x 1] (gradient)
+MPI Rank 0:       rn3_3.c2.c.c : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_3.c1.c.W : [64 x 576] (gradient)
+MPI Rank 0:       rn3_3.c2.c.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_3.p : [8 x 8 x 64 x *] }
+MPI Rank 0:     { rn3_3.c2.c.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_3.y : [8 x 8 x 64 x *] }
+MPI Rank 0:     { pool : [1 x 1 x 64 x *]
+MPI Rank 0:       rn3_3.c2.c.sc : [64 x 1] (gradient)
+MPI Rank 0:       rn3_3.p : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 0:     { OutputNodes.t : [10 x *]
+MPI Rank 0:       rn3_3.c1.c.c.sc : [64 x 1] (gradient)
+MPI Rank 0:       rn3_3.c1.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_3.y : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 0:     { OutputNodes.W : [10 x 1 x 1 x 64] (gradient)
+MPI Rank 0:       OutputNodes.z : [10 x *] (gradient) }
+MPI Rank 0:     { OutputNodes.t : [10 x *] (gradient)
+MPI Rank 0:       rn3_2.c1.c.c.sc : [64 x 1] (gradient)
+MPI Rank 0:       rn3_2.c1.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 0:       rn3_2.y : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 0:     { pool : [1 x 1 x 64 x *] (gradient)
+MPI Rank 0:       rn3_3.c2.W : [64 x 576] (gradient) }
+MPI Rank 0: 
+MPI Rank 0: 
+MPI Rank 0: Training 269914 parameters in 63 out of 63 parameter tensors and 137 nodes with gradient:
+MPI Rank 0: 
+MPI Rank 0:     Node 'OutputNodes.W' (LearnableParameter operation) : [10 x 1 x 1 x 64]
+MPI Rank 0:     Node 'OutputNodes.b' (LearnableParameter operation) : [10]
+MPI Rank 0:     Node 'conv1.c.W' (LearnableParameter operation) : [16 x 27]
+MPI Rank 0:     Node 'conv1.c.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'conv1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_1.c1.c.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 0:     Node 'rn1_1.c1.c.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_1.c1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_1.c2.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 0:     Node 'rn1_1.c2.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_1.c2.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_2.c1.c.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 0:     Node 'rn1_2.c1.c.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_2.c1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_2.c2.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 0:     Node 'rn1_2.c2.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_2.c2.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_3.c1.c.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 0:     Node 'rn1_3.c1.c.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_3.c1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_3.c2.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 0:     Node 'rn1_3.c2.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn1_3.c2.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 0:     Node 'rn2_1.c1.c.W' (LearnableParameter operation) : [32 x 144]
+MPI Rank 0:     Node 'rn2_1.c1.c.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_1.c1.c.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_1.c2.W' (LearnableParameter operation) : [32 x 288]
+MPI Rank 0:     Node 'rn2_1.c2.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_1.c2.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_1.c_proj.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_1.c_proj.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_2.c1.c.W' (LearnableParameter operation) : [32 x 288]
+MPI Rank 0:     Node 'rn2_2.c1.c.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_2.c1.c.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_2.c2.W' (LearnableParameter operation) : [32 x 288]
+MPI Rank 0:     Node 'rn2_2.c2.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_2.c2.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_3.c1.c.W' (LearnableParameter operation) : [32 x 288]
+MPI Rank 0:     Node 'rn2_3.c1.c.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_3.c1.c.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_3.c2.W' (LearnableParameter operation) : [32 x 288]
+MPI Rank 0:     Node 'rn2_3.c2.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn2_3.c2.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 0:     Node 'rn3_1.c1.c.W' (LearnableParameter operation) : [64 x 288]
+MPI Rank 0:     Node 'rn3_1.c1.c.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_1.c1.c.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_1.c2.W' (LearnableParameter operation) : [64 x 576]
+MPI Rank 0:     Node 'rn3_1.c2.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_1.c2.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_1.c_proj.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_1.c_proj.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_2.c1.c.W' (LearnableParameter operation) : [64 x 576]
+MPI Rank 0:     Node 'rn3_2.c1.c.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_2.c1.c.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_2.c2.W' (LearnableParameter operation) : [64 x 576]
+MPI Rank 0:     Node 'rn3_2.c2.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_2.c2.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_3.c1.c.W' (LearnableParameter operation) : [64 x 576]
+MPI Rank 0:     Node 'rn3_3.c1.c.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_3.c1.c.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_3.c2.W' (LearnableParameter operation) : [64 x 576]
+MPI Rank 0:     Node 'rn3_3.c2.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0:     Node 'rn3_3.c2.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 0: 
+MPI Rank 0: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+MPI Rank 0: [INFO] [2016-11-13 15:53:53] multiverso MPI-Net is initialized under MPI_THREAD_SERIALIZED mode.
+MPI Rank 0: [INFO] [2016-11-13 15:53:53] All nodes registered. System contains 2 nodes. num_worker = 2, num_server = 2
+MPI Rank 0: [INFO] [2016-11-13 15:53:53] Create a async server
+MPI Rank 0: [INFO] [2016-11-13 15:53:53] Rank 0: Multiverso start successfully
+MPI Rank 0: multiverso initial model loaded.
+MPI Rank 0: 
+MPI Rank 0: Starting Epoch 1: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 0: 
+MPI Rank 0: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[   1-   1]: CE = 2.30386353 * 128; Err = 0.88281250 * 128; time = 2.6041s; samplesPerSecond = 49.2
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[   2-  10]: CE = 2.87607151 * 1152; Err = 0.87673611 * 1152; time = 0.9946s; samplesPerSecond = 1158.2
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[  11-  20]: CE = 2.28501740 * 1280; Err = 0.86484375 * 1280; time = 0.9320s; samplesPerSecond = 1373.4
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[  21-  30]: CE = 2.19817581 * 1280; Err = 0.82578125 * 1280; time = 0.8991s; samplesPerSecond = 1423.6
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[  31-  40]: CE = 2.09061813 * 1280; Err = 0.78437500 * 1280; time = 0.8992s; samplesPerSecond = 1423.5
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[  41-  50]: CE = 2.05228806 * 1280; Err = 0.77343750 * 1280; time = 0.8993s; samplesPerSecond = 1423.3
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[  51-  60]: CE = 1.92818222 * 1280; Err = 0.74375000 * 1280; time = 0.8989s; samplesPerSecond = 1423.9
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[  61-  70]: CE = 1.99120331 * 1280; Err = 0.74609375 * 1280; time = 0.8992s; samplesPerSecond = 1423.5
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[  71-  80]: CE = 1.92411957 * 1280; Err = 0.73046875 * 1280; time = 0.9031s; samplesPerSecond = 1417.4
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[  81-  90]: CE = 1.89163361 * 1280; Err = 0.71718750 * 1280; time = 0.9070s; samplesPerSecond = 1411.2
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[  91- 100]: CE = 1.79759827 * 1280; Err = 0.69609375 * 1280; time = 0.9058s; samplesPerSecond = 1413.1
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 101- 110]: CE = 1.80010681 * 1280; Err = 0.68750000 * 1280; time = 0.9023s; samplesPerSecond = 1418.5
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 111- 120]: CE = 1.77603149 * 1280; Err = 0.69062500 * 1280; time = 0.9140s; samplesPerSecond = 1400.4
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 121- 130]: CE = 1.78066864 * 1280; Err = 0.67187500 * 1280; time = 0.9089s; samplesPerSecond = 1408.3
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 131- 140]: CE = 1.75733643 * 1280; Err = 0.64765625 * 1280; time = 0.9020s; samplesPerSecond = 1419.1
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 141- 150]: CE = 1.73300171 * 1280; Err = 0.65937500 * 1280; time = 0.8986s; samplesPerSecond = 1424.5
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 151- 160]: CE = 1.73343201 * 1280; Err = 0.66484375 * 1280; time = 0.8996s; samplesPerSecond = 1422.8
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 161- 170]: CE = 1.67687683 * 1280; Err = 0.64531250 * 1280; time = 0.9043s; samplesPerSecond = 1415.4
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 171- 180]: CE = 1.71350708 * 1280; Err = 0.62968750 * 1280; time = 0.9077s; samplesPerSecond = 1410.1
+MPI Rank 0:  Epoch[ 1 of 10]-Minibatch[ 181- 190]: CE = 1.69491882 * 1280; Err = 0.65859375 * 1280; time = 0.9003s; samplesPerSecond = 1421.7
+MPI Rank 0: Finished Epoch[ 1 of 10]: [Training] CE = 1.92102656 * 25000; Err = 0.71928000 * 25000; totalSamplesSeen = 25000; learningRatePerSample = 0.0040000002; epochTime=20.3853s
+MPI Rank 0: Final Results: Minibatch[1-40]: CE = 1.70631991 * 10000; perplexity = 5.50865182; Err = 0.63590000 * 10000
+MPI Rank 0: Finished Epoch[ 1 of 10]: [Validate] CE = 1.70631991 * 10000; Err = 0.63590000 * 10000
+MPI Rank 0: SGD: Saving checkpoint model './Output-2gpu-take1/Models/03_ResNet.1'
+MPI Rank 0: 
+MPI Rank 0: Starting Epoch 2: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 0: 
+MPI Rank 0: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[   1-   1, 1.05%]: CE = 1.61416781 * 128; Err = 0.58593750 * 128; time = 0.1073s; samplesPerSecond = 1192.9
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[   2-  10, 10.53%]: CE = 1.66571812 * 1152; Err = 0.63107639 * 1152; time = 0.8088s; samplesPerSecond = 1424.4
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[  11-  20, 21.05%]: CE = 1.59798374 * 1280; Err = 0.60625000 * 1280; time = 0.8986s; samplesPerSecond = 1424.5
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[  21-  30, 31.58%]: CE = 1.66620941 * 1280; Err = 0.63437500 * 1280; time = 0.8990s; samplesPerSecond = 1423.7
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[  31-  40, 42.11%]: CE = 1.59669228 * 1280; Err = 0.60781250 * 1280; time = 0.8995s; samplesPerSecond = 1423.0
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[  41-  50, 52.63%]: CE = 1.55008087 * 1280; Err = 0.57343750 * 1280; time = 0.8986s; samplesPerSecond = 1424.5
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[  51-  60, 63.16%]: CE = 1.52645111 * 1280; Err = 0.57265625 * 1280; time = 0.9017s; samplesPerSecond = 1419.5
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[  61-  70, 73.68%]: CE = 1.55661774 * 1280; Err = 0.56875000 * 1280; time = 0.9021s; samplesPerSecond = 1419.0
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[  71-  80, 84.21%]: CE = 1.55541916 * 1280; Err = 0.60859375 * 1280; time = 0.8996s; samplesPerSecond = 1422.9
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[  81-  90, 94.74%]: CE = 1.49132843 * 1280; Err = 0.56640625 * 1280; time = 0.8989s; samplesPerSecond = 1423.9
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[  91- 100, 105.26%]: CE = 1.48524017 * 1280; Err = 0.56875000 * 1280; time = 0.9000s; samplesPerSecond = 1422.3
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 1.45314941 * 1280; Err = 0.53671875 * 1280; time = 0.9024s; samplesPerSecond = 1418.4
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 1.48193207 * 1280; Err = 0.55078125 * 1280; time = 0.8999s; samplesPerSecond = 1422.4
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 1.38818665 * 1280; Err = 0.51171875 * 1280; time = 0.9021s; samplesPerSecond = 1419.0
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 1.40151672 * 1280; Err = 0.51406250 * 1280; time = 0.8992s; samplesPerSecond = 1423.4
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 1.41116791 * 1280; Err = 0.52187500 * 1280; time = 0.8988s; samplesPerSecond = 1424.2
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 1.41049957 * 1280; Err = 0.52265625 * 1280; time = 0.9006s; samplesPerSecond = 1421.4
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 1.34099579 * 1280; Err = 0.49218750 * 1280; time = 0.9027s; samplesPerSecond = 1417.9
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 1.34223785 * 1280; Err = 0.50468750 * 1280; time = 0.9003s; samplesPerSecond = 1421.8
+MPI Rank 0:  Epoch[ 2 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 1.31177979 * 1280; Err = 0.47734375 * 1280; time = 0.9079s; samplesPerSecond = 1409.8
+MPI Rank 0: Finished Epoch[ 2 of 10]: [Training] CE = 1.48008922 * 25000; Err = 0.55372000 * 25000; totalSamplesSeen = 50000; learningRatePerSample = 0.0040000002; epochTime=17.6264s
+MPI Rank 0: Final Results: Minibatch[1-40]: CE = 1.75967352 * 10000; perplexity = 5.81054007; Err = 0.57560000 * 10000
+MPI Rank 0: Finished Epoch[ 2 of 10]: [Validate] CE = 1.75967352 * 10000; Err = 0.57560000 * 10000
+MPI Rank 0: SGD: Saving checkpoint model './Output-2gpu-take1/Models/03_ResNet.2'
+MPI Rank 0: 
+MPI Rank 0: Starting Epoch 3: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 0: 
+MPI Rank 0: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[   1-   1, 1.05%]: CE = 1.45922375 * 128; Err = 0.57812500 * 128; time = 0.1285s; samplesPerSecond = 995.8
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[   2-  10, 10.53%]: CE = 1.30970923 * 1152; Err = 0.48090278 * 1152; time = 0.8091s; samplesPerSecond = 1423.7
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[  11-  20, 21.05%]: CE = 1.29917316 * 1280; Err = 0.48593750 * 1280; time = 0.8986s; samplesPerSecond = 1424.5
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[  21-  30, 31.58%]: CE = 1.27859116 * 1280; Err = 0.47890625 * 1280; time = 0.8999s; samplesPerSecond = 1422.4
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[  31-  40, 42.11%]: CE = 1.25674706 * 1280; Err = 0.45156250 * 1280; time = 0.9052s; samplesPerSecond = 1414.1
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[  41-  50, 52.63%]: CE = 1.30088730 * 1280; Err = 0.47578125 * 1280; time = 0.8983s; samplesPerSecond = 1425.0
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[  51-  60, 63.16%]: CE = 1.25533600 * 1280; Err = 0.46093750 * 1280; time = 0.9106s; samplesPerSecond = 1405.7
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[  61-  70, 73.68%]: CE = 1.20699692 * 1280; Err = 0.43437500 * 1280; time = 0.8997s; samplesPerSecond = 1422.6
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[  71-  80, 84.21%]: CE = 1.15310898 * 1280; Err = 0.42343750 * 1280; time = 0.8997s; samplesPerSecond = 1422.7
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[  81-  90, 94.74%]: CE = 1.17823868 * 1280; Err = 0.41796875 * 1280; time = 0.9022s; samplesPerSecond = 1418.8
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[  91- 100, 105.26%]: CE = 1.22104874 * 1280; Err = 0.43906250 * 1280; time = 0.9026s; samplesPerSecond = 1418.1
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 1.26385880 * 1280; Err = 0.46328125 * 1280; time = 0.8994s; samplesPerSecond = 1423.2
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 1.15197296 * 1280; Err = 0.42187500 * 1280; time = 0.9006s; samplesPerSecond = 1421.2
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 1.11760712 * 1280; Err = 0.39218750 * 1280; time = 0.9003s; samplesPerSecond = 1421.8
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 1.10702057 * 1280; Err = 0.40390625 * 1280; time = 0.9008s; samplesPerSecond = 1420.9
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 1.14079132 * 1280; Err = 0.40703125 * 1280; time = 0.9040s; samplesPerSecond = 1415.9
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 1.04492950 * 1280; Err = 0.39375000 * 1280; time = 0.8996s; samplesPerSecond = 1422.8
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 1.14893646 * 1280; Err = 0.41093750 * 1280; time = 0.8996s; samplesPerSecond = 1422.8
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 1.09722900 * 1280; Err = 0.40781250 * 1280; time = 0.8998s; samplesPerSecond = 1422.6
+MPI Rank 0:  Epoch[ 3 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 1.09882202 * 1280; Err = 0.40078125 * 1280; time = 0.9011s; samplesPerSecond = 1420.5
+MPI Rank 0: Finished Epoch[ 3 of 10]: [Training] CE = 1.18816195 * 25000; Err = 0.43328000 * 25000; totalSamplesSeen = 75000; learningRatePerSample = 0.0040000002; epochTime=17.6596s
+MPI Rank 0: Final Results: Minibatch[1-40]: CE = 1.26510555 * 10000; perplexity = 3.54346672; Err = 0.43940000 * 10000
+MPI Rank 0: Finished Epoch[ 3 of 10]: [Validate] CE = 1.26510555 * 10000; Err = 0.43940000 * 10000
+MPI Rank 0: SGD: Saving checkpoint model './Output-2gpu-take1/Models/03_ResNet.3'
+MPI Rank 0: 
+MPI Rank 0: Starting Epoch 4: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 0: 
+MPI Rank 0: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[   1-   1, 1.05%]: CE = 1.26375139 * 128; Err = 0.44531250 * 128; time = 0.1106s; samplesPerSecond = 1157.6
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[   2-  10, 10.53%]: CE = 1.10721351 * 1152; Err = 0.39149306 * 1152; time = 0.8095s; samplesPerSecond = 1423.1
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[  11-  20, 21.05%]: CE = 1.06185999 * 1280; Err = 0.37500000 * 1280; time = 0.9016s; samplesPerSecond = 1419.7
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[  21-  30, 31.58%]: CE = 1.08488407 * 1280; Err = 0.37968750 * 1280; time = 0.9030s; samplesPerSecond = 1417.6
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[  31-  40, 42.11%]: CE = 1.03745575 * 1280; Err = 0.36718750 * 1280; time = 0.9017s; samplesPerSecond = 1419.5
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.98665733 * 1280; Err = 0.36093750 * 1280; time = 0.9031s; samplesPerSecond = 1417.4
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[  51-  60, 63.16%]: CE = 1.02331886 * 1280; Err = 0.36406250 * 1280; time = 0.9030s; samplesPerSecond = 1417.5
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[  61-  70, 73.68%]: CE = 1.00828018 * 1280; Err = 0.37500000 * 1280; time = 0.8999s; samplesPerSecond = 1422.4
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[  71-  80, 84.21%]: CE = 1.02169571 * 1280; Err = 0.34843750 * 1280; time = 0.8999s; samplesPerSecond = 1422.4
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.98333817 * 1280; Err = 0.38125000 * 1280; time = 0.9015s; samplesPerSecond = 1419.9
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[  91- 100, 105.26%]: CE = 1.04301453 * 1280; Err = 0.37343750 * 1280; time = 0.8993s; samplesPerSecond = 1423.4
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 1.00097656 * 1280; Err = 0.36718750 * 1280; time = 0.9034s; samplesPerSecond = 1416.9
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.98852921 * 1280; Err = 0.36015625 * 1280; time = 0.8995s; samplesPerSecond = 1423.0
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.96960220 * 1280; Err = 0.35078125 * 1280; time = 0.9010s; samplesPerSecond = 1420.6
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.97046814 * 1280; Err = 0.33671875 * 1280; time = 0.8991s; samplesPerSecond = 1423.7
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.93553009 * 1280; Err = 0.33046875 * 1280; time = 0.8999s; samplesPerSecond = 1422.3
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.90783997 * 1280; Err = 0.31796875 * 1280; time = 0.9056s; samplesPerSecond = 1413.5
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 1.04336548 * 1280; Err = 0.38359375 * 1280; time = 0.9041s; samplesPerSecond = 1415.9
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.94529419 * 1280; Err = 0.36171875 * 1280; time = 0.8997s; samplesPerSecond = 1422.6
+MPI Rank 0:  Epoch[ 4 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.96473694 * 1280; Err = 0.33281250 * 1280; time = 0.9053s; samplesPerSecond = 1413.9
+MPI Rank 0: Finished Epoch[ 4 of 10]: [Training] CE = 1.00345422 * 25000; Err = 0.35988000 * 25000; totalSamplesSeen = 100000; learningRatePerSample = 0.0040000002; epochTime=17.6493s
+MPI Rank 0: Final Results: Minibatch[1-40]: CE = 1.09677535 * 10000; perplexity = 2.99449423; Err = 0.37810000 * 10000
+MPI Rank 0: Finished Epoch[ 4 of 10]: [Validate] CE = 1.09677535 * 10000; Err = 0.37810000 * 10000
+MPI Rank 0: SGD: Saving checkpoint model './Output-2gpu-take1/Models/03_ResNet.4'
+MPI Rank 0: 
+MPI Rank 0: Starting Epoch 5: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 0: 
+MPI Rank 0: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.94094586 * 128; Err = 0.32031250 * 128; time = 0.1099s; samplesPerSecond = 1164.5
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.88708398 * 1152; Err = 0.31857639 * 1152; time = 0.8106s; samplesPerSecond = 1421.3
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.90718231 * 1280; Err = 0.33359375 * 1280; time = 0.8995s; samplesPerSecond = 1423.1
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.96285553 * 1280; Err = 0.33515625 * 1280; time = 0.8991s; samplesPerSecond = 1423.7
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.91300926 * 1280; Err = 0.32812500 * 1280; time = 0.8980s; samplesPerSecond = 1425.4
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.93531151 * 1280; Err = 0.33671875 * 1280; time = 0.8984s; samplesPerSecond = 1424.7
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.96518097 * 1280; Err = 0.34531250 * 1280; time = 0.8984s; samplesPerSecond = 1424.8
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.90287056 * 1280; Err = 0.32578125 * 1280; time = 0.8989s; samplesPerSecond = 1424.0
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.85223541 * 1280; Err = 0.31250000 * 1280; time = 0.8989s; samplesPerSecond = 1424.0
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.84952316 * 1280; Err = 0.31015625 * 1280; time = 0.8992s; samplesPerSecond = 1423.4
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.91974258 * 1280; Err = 0.33671875 * 1280; time = 0.9008s; samplesPerSecond = 1421.0
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.89745789 * 1280; Err = 0.31484375 * 1280; time = 0.8998s; samplesPerSecond = 1422.6
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.91424713 * 1280; Err = 0.31796875 * 1280; time = 0.9028s; samplesPerSecond = 1417.9
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.88076248 * 1280; Err = 0.32656250 * 1280; time = 0.9101s; samplesPerSecond = 1406.5
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.84916306 * 1280; Err = 0.29453125 * 1280; time = 0.9001s; samplesPerSecond = 1422.0
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.84968262 * 1280; Err = 0.29375000 * 1280; time = 0.9027s; samplesPerSecond = 1418.0
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.80158691 * 1280; Err = 0.29531250 * 1280; time = 0.8999s; samplesPerSecond = 1422.4
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.84919891 * 1280; Err = 0.31328125 * 1280; time = 0.9000s; samplesPerSecond = 1422.2
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.82428741 * 1280; Err = 0.29140625 * 1280; time = 0.8995s; samplesPerSecond = 1423.0
+MPI Rank 0:  Epoch[ 5 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.82636719 * 1280; Err = 0.29062500 * 1280; time = 0.9043s; samplesPerSecond = 1415.5
+MPI Rank 0: Finished Epoch[ 5 of 10]: [Training] CE = 0.88137734 * 25000; Err = 0.31624000 * 25000; totalSamplesSeen = 125000; learningRatePerSample = 0.0040000002; epochTime=17.6309s
+MPI Rank 0: Final Results: Minibatch[1-40]: CE = 0.92890245 * 10000; perplexity = 2.53172896; Err = 0.31940000 * 10000
+MPI Rank 0: Finished Epoch[ 5 of 10]: [Validate] CE = 0.92890245 * 10000; Err = 0.31940000 * 10000
+MPI Rank 0: SGD: Saving checkpoint model './Output-2gpu-take1/Models/03_ResNet.5'
+MPI Rank 0: 
+MPI Rank 0: Starting Epoch 6: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 0: 
+MPI Rank 0: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.64739609 * 128; Err = 0.25000000 * 128; time = 0.1096s; samplesPerSecond = 1167.7
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.83266205 * 1152; Err = 0.30381944 * 1152; time = 0.8090s; samplesPerSecond = 1423.9
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.78240042 * 1280; Err = 0.26406250 * 1280; time = 0.8985s; samplesPerSecond = 1424.6
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.82780857 * 1280; Err = 0.29062500 * 1280; time = 0.8985s; samplesPerSecond = 1424.6
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.78643284 * 1280; Err = 0.26953125 * 1280; time = 0.8979s; samplesPerSecond = 1425.6
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.78151207 * 1280; Err = 0.27343750 * 1280; time = 0.8979s; samplesPerSecond = 1425.5
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.75098763 * 1280; Err = 0.26875000 * 1280; time = 0.8990s; samplesPerSecond = 1423.8
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.76807213 * 1280; Err = 0.27890625 * 1280; time = 0.8988s; samplesPerSecond = 1424.1
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.73755112 * 1280; Err = 0.27343750 * 1280; time = 0.8985s; samplesPerSecond = 1424.6
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.76728630 * 1280; Err = 0.28437500 * 1280; time = 0.8991s; samplesPerSecond = 1423.7
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.78216476 * 1280; Err = 0.26796875 * 1280; time = 0.9004s; samplesPerSecond = 1421.6
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.79312363 * 1280; Err = 0.30078125 * 1280; time = 0.8998s; samplesPerSecond = 1422.5
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.78047104 * 1280; Err = 0.26562500 * 1280; time = 0.9046s; samplesPerSecond = 1415.0
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.76308441 * 1280; Err = 0.25859375 * 1280; time = 0.9007s; samplesPerSecond = 1421.2
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.76366119 * 1280; Err = 0.26406250 * 1280; time = 0.9007s; samplesPerSecond = 1421.2
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.73292236 * 1280; Err = 0.25312500 * 1280; time = 0.9049s; samplesPerSecond = 1414.5
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.75297470 * 1280; Err = 0.27265625 * 1280; time = 0.9025s; samplesPerSecond = 1418.3
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.74087982 * 1280; Err = 0.25625000 * 1280; time = 0.9005s; samplesPerSecond = 1421.4
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.72271118 * 1280; Err = 0.25468750 * 1280; time = 0.9091s; samplesPerSecond = 1408.0
+MPI Rank 0:  Epoch[ 6 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.77322998 * 1280; Err = 0.27031250 * 1280; time = 0.9069s; samplesPerSecond = 1411.4
+MPI Rank 0: Finished Epoch[ 6 of 10]: [Training] CE = 0.77084703 * 25000; Err = 0.27212000 * 25000; totalSamplesSeen = 150000; learningRatePerSample = 0.0040000002; epochTime=17.6421s
+MPI Rank 0: Final Results: Minibatch[1-40]: CE = 1.42578518 * 10000; perplexity = 4.16112377; Err = 0.47060000 * 10000
+MPI Rank 0: Finished Epoch[ 6 of 10]: [Validate] CE = 1.42578518 * 10000; Err = 0.47060000 * 10000
+MPI Rank 0: SGD: Saving checkpoint model './Output-2gpu-take1/Models/03_ResNet.6'
+MPI Rank 0: 
+MPI Rank 0: Starting Epoch 7: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 0: 
+MPI Rank 0: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.65814459 * 128; Err = 0.20312500 * 128; time = 0.1107s; samplesPerSecond = 1156.7
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.65430269 * 1152; Err = 0.23784722 * 1152; time = 0.8123s; samplesPerSecond = 1418.2
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.70979562 * 1280; Err = 0.24921875 * 1280; time = 0.9038s; samplesPerSecond = 1416.3
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.76755199 * 1280; Err = 0.27734375 * 1280; time = 0.9004s; samplesPerSecond = 1421.6
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.65689297 * 1280; Err = 0.22656250 * 1280; time = 0.8985s; samplesPerSecond = 1424.6
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.71960716 * 1280; Err = 0.24765625 * 1280; time = 0.9010s; samplesPerSecond = 1420.6
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.66131477 * 1280; Err = 0.22187500 * 1280; time = 0.9004s; samplesPerSecond = 1421.5
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.72152634 * 1280; Err = 0.24453125 * 1280; time = 0.9008s; samplesPerSecond = 1420.9
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.69762001 * 1280; Err = 0.24296875 * 1280; time = 0.9009s; samplesPerSecond = 1420.8
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.67566261 * 1280; Err = 0.23593750 * 1280; time = 0.9046s; samplesPerSecond = 1415.0
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.76702194 * 1280; Err = 0.27656250 * 1280; time = 0.8998s; samplesPerSecond = 1422.5
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.70402527 * 1280; Err = 0.23203125 * 1280; time = 0.9000s; samplesPerSecond = 1422.3
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.61740799 * 1280; Err = 0.21718750 * 1280; time = 0.9023s; samplesPerSecond = 1418.6
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.73512039 * 1280; Err = 0.24765625 * 1280; time = 0.9042s; samplesPerSecond = 1415.6
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.68067474 * 1280; Err = 0.24453125 * 1280; time = 0.9020s; samplesPerSecond = 1419.1
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.68076019 * 1280; Err = 0.22968750 * 1280; time = 0.9001s; samplesPerSecond = 1422.0
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.76368713 * 1280; Err = 0.25390625 * 1280; time = 0.9002s; samplesPerSecond = 1421.9
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.68400879 * 1280; Err = 0.24062500 * 1280; time = 0.9022s; samplesPerSecond = 1418.8
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.67315979 * 1280; Err = 0.24140625 * 1280; time = 0.8991s; samplesPerSecond = 1423.6
+MPI Rank 0:  Epoch[ 7 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.65708466 * 1280; Err = 0.23750000 * 1280; time = 0.9034s; samplesPerSecond = 1416.9
+MPI Rank 0: Finished Epoch[ 7 of 10]: [Training] CE = 0.69491492 * 25000; Err = 0.24156000 * 25000; totalSamplesSeen = 175000; learningRatePerSample = 0.0040000002; epochTime=17.6455s
+MPI Rank 0: Final Results: Minibatch[1-40]: CE = 0.92731318 * 10000; perplexity = 2.52770856; Err = 0.30800000 * 10000
+MPI Rank 0: Finished Epoch[ 7 of 10]: [Validate] CE = 0.92731318 * 10000; Err = 0.30800000 * 10000
+MPI Rank 0: SGD: Saving checkpoint model './Output-2gpu-take1/Models/03_ResNet.7'
+MPI Rank 0: 
+MPI Rank 0: Starting Epoch 8: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 0: 
+MPI Rank 0: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.61346477 * 128; Err = 0.23437500 * 128; time = 0.1101s; samplesPerSecond = 1163.1
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.64782191 * 1152; Err = 0.21788194 * 1152; time = 0.8153s; samplesPerSecond = 1413.0
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.62757254 * 1280; Err = 0.21328125 * 1280; time = 0.9039s; samplesPerSecond = 1416.0
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.58932838 * 1280; Err = 0.20078125 * 1280; time = 0.9033s; samplesPerSecond = 1417.0
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.70177250 * 1280; Err = 0.23671875 * 1280; time = 0.9018s; samplesPerSecond = 1419.4
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.66349220 * 1280; Err = 0.23593750 * 1280; time = 0.9029s; samplesPerSecond = 1417.6
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.60053711 * 1280; Err = 0.22187500 * 1280; time = 0.9002s; samplesPerSecond = 1421.9
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.66869202 * 1280; Err = 0.23125000 * 1280; time = 0.9011s; samplesPerSecond = 1420.4
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.64294319 * 1280; Err = 0.22109375 * 1280; time = 0.9027s; samplesPerSecond = 1418.0
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.68657532 * 1280; Err = 0.25390625 * 1280; time = 0.8987s; samplesPerSecond = 1424.4
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.61340675 * 1280; Err = 0.20859375 * 1280; time = 0.8996s; samplesPerSecond = 1422.9
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.64883804 * 1280; Err = 0.22968750 * 1280; time = 0.9004s; samplesPerSecond = 1421.6
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.61208267 * 1280; Err = 0.21484375 * 1280; time = 0.9019s; samplesPerSecond = 1419.3
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.66012573 * 1280; Err = 0.22890625 * 1280; time = 0.9052s; samplesPerSecond = 1414.0
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.61930695 * 1280; Err = 0.21171875 * 1280; time = 0.9021s; samplesPerSecond = 1418.9
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.63873749 * 1280; Err = 0.23515625 * 1280; time = 0.8996s; samplesPerSecond = 1422.9
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.65949402 * 1280; Err = 0.22421875 * 1280; time = 0.8987s; samplesPerSecond = 1424.3
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.64542465 * 1280; Err = 0.23359375 * 1280; time = 0.8994s; samplesPerSecond = 1423.1
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.67044983 * 1280; Err = 0.22578125 * 1280; time = 0.8996s; samplesPerSecond = 1422.8
+MPI Rank 0:  Epoch[ 8 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.63697891 * 1280; Err = 0.21718750 * 1280; time = 0.9011s; samplesPerSecond = 1420.5
+MPI Rank 0: Finished Epoch[ 8 of 10]: [Training] CE = 0.64186383 * 25000; Err = 0.22384000 * 25000; totalSamplesSeen = 200000; learningRatePerSample = 0.0040000002; epochTime=17.652s
+MPI Rank 0: Final Results: Minibatch[1-40]: CE = 0.71921944 * 10000; perplexity = 2.05283022; Err = 0.25180000 * 10000
+MPI Rank 0: Finished Epoch[ 8 of 10]: [Validate] CE = 0.71921944 * 10000; Err = 0.25180000 * 10000
+MPI Rank 0: SGD: Saving checkpoint model './Output-2gpu-take1/Models/03_ResNet.8'
+MPI Rank 0: 
+MPI Rank 0: Starting Epoch 9: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 0: 
+MPI Rank 0: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.65211046 * 128; Err = 0.26562500 * 128; time = 0.1065s; samplesPerSecond = 1201.5
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.62094944 * 1152; Err = 0.21354167 * 1152; time = 0.8134s; samplesPerSecond = 1416.3
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.59379773 * 1280; Err = 0.20312500 * 1280; time = 0.9030s; samplesPerSecond = 1417.5
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.60014019 * 1280; Err = 0.22890625 * 1280; time = 0.9014s; samplesPerSecond = 1420.0
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.58917027 * 1280; Err = 0.19375000 * 1280; time = 0.8997s; samplesPerSecond = 1422.6
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.63989620 * 1280; Err = 0.22578125 * 1280; time = 0.8989s; samplesPerSecond = 1424.0
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.59004898 * 1280; Err = 0.20468750 * 1280; time = 0.8982s; samplesPerSecond = 1425.1
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.65914421 * 1280; Err = 0.22109375 * 1280; time = 0.8992s; samplesPerSecond = 1423.4
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.63122025 * 1280; Err = 0.22500000 * 1280; time = 0.8990s; samplesPerSecond = 1423.7
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.62728615 * 1280; Err = 0.21484375 * 1280; time = 0.9008s; samplesPerSecond = 1421.0
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.63283768 * 1280; Err = 0.22656250 * 1280; time = 0.9002s; samplesPerSecond = 1421.9
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.58749123 * 1280; Err = 0.19609375 * 1280; time = 0.8998s; samplesPerSecond = 1422.6
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.59054413 * 1280; Err = 0.22421875 * 1280; time = 0.8994s; samplesPerSecond = 1423.2
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.57877274 * 1280; Err = 0.20468750 * 1280; time = 0.8994s; samplesPerSecond = 1423.2
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.56712265 * 1280; Err = 0.19453125 * 1280; time = 0.9031s; samplesPerSecond = 1417.3
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.57890244 * 1280; Err = 0.20234375 * 1280; time = 0.8998s; samplesPerSecond = 1422.6
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.59394913 * 1280; Err = 0.20937500 * 1280; time = 0.8998s; samplesPerSecond = 1422.5
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.62194901 * 1280; Err = 0.21953125 * 1280; time = 0.9094s; samplesPerSecond = 1407.6
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.57975006 * 1280; Err = 0.21406250 * 1280; time = 0.8996s; samplesPerSecond = 1422.9
+MPI Rank 0:  Epoch[ 9 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.57040024 * 1280; Err = 0.20078125 * 1280; time = 0.9014s; samplesPerSecond = 1420.1
+MPI Rank 0: Finished Epoch[ 9 of 10]: [Training] CE = 0.60383520 * 25000; Err = 0.21280000 * 25000; totalSamplesSeen = 225000; learningRatePerSample = 0.0040000002; epochTime=17.6313s
+MPI Rank 0: Final Results: Minibatch[1-40]: CE = 0.83475132 * 10000; perplexity = 2.30424097; Err = 0.27230000 * 10000
+MPI Rank 0: Finished Epoch[ 9 of 10]: [Validate] CE = 0.83475132 * 10000; Err = 0.27230000 * 10000
+MPI Rank 0: SGD: Saving checkpoint model './Output-2gpu-take1/Models/03_ResNet.9'
+MPI Rank 0: 
+MPI Rank 0: Starting Epoch 10: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 0: 
+MPI Rank 0: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.54820907 * 128; Err = 0.21093750 * 128; time = 0.1165s; samplesPerSecond = 1098.3
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.55176281 * 1152; Err = 0.18836806 * 1152; time = 0.8078s; samplesPerSecond = 1426.2
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.54479284 * 1280; Err = 0.19375000 * 1280; time = 0.8998s; samplesPerSecond = 1422.6
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.61544580 * 1280; Err = 0.21250000 * 1280; time = 0.9028s; samplesPerSecond = 1417.7
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.56909866 * 1280; Err = 0.20234375 * 1280; time = 0.9024s; samplesPerSecond = 1418.5
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.53713646 * 1280; Err = 0.19296875 * 1280; time = 0.9028s; samplesPerSecond = 1417.8
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.55514469 * 1280; Err = 0.19609375 * 1280; time = 0.9046s; samplesPerSecond = 1415.0
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.52753143 * 1280; Err = 0.18281250 * 1280; time = 0.9020s; samplesPerSecond = 1419.0
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.56150856 * 1280; Err = 0.19062500 * 1280; time = 0.8994s; samplesPerSecond = 1423.1
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.55710602 * 1280; Err = 0.18828125 * 1280; time = 0.8971s; samplesPerSecond = 1426.9
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.57058601 * 1280; Err = 0.21250000 * 1280; time = 0.8980s; samplesPerSecond = 1425.4
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.57791061 * 1280; Err = 0.19296875 * 1280; time = 0.8983s; samplesPerSecond = 1425.0
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.54903831 * 1280; Err = 0.19296875 * 1280; time = 0.8980s; samplesPerSecond = 1425.3
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.55847092 * 1280; Err = 0.20078125 * 1280; time = 0.8996s; samplesPerSecond = 1422.8
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.60494308 * 1280; Err = 0.21015625 * 1280; time = 0.9105s; samplesPerSecond = 1405.9
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.57451172 * 1280; Err = 0.18515625 * 1280; time = 0.9106s; samplesPerSecond = 1405.7
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.55127029 * 1280; Err = 0.18750000 * 1280; time = 0.9024s; samplesPerSecond = 1418.4
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.61046295 * 1280; Err = 0.20859375 * 1280; time = 0.9012s; samplesPerSecond = 1420.4
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.59216461 * 1280; Err = 0.21015625 * 1280; time = 0.9059s; samplesPerSecond = 1413.0
+MPI Rank 0:  Epoch[10 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.56078949 * 1280; Err = 0.20234375 * 1280; time = 0.9026s; samplesPerSecond = 1418.1
+MPI Rank 0: Finished Epoch[10 of 10]: [Training] CE = 0.56611602 * 25000; Err = 0.19692000 * 25000; totalSamplesSeen = 250000; learningRatePerSample = 0.0040000002; epochTime=17.6625s
+MPI Rank 0: Final Results: Minibatch[1-40]: CE = 0.98392740 * 10000; perplexity = 2.67494119; Err = 0.31590000 * 10000
+MPI Rank 0: Finished Epoch[10 of 10]: [Validate] CE = 0.98392740 * 10000; Err = 0.31590000 * 10000
+MPI Rank 0: SGD: Saving checkpoint model './Output-2gpu-take1/Models/03_ResNet'
+MPI Rank 0: ~MultiversoHelper
+MPI Rank 0: [INFO] [2016-11-13 15:57:13] Multiverso Shutdown successfully
+MPI Rank 0: 
+MPI Rank 0: Action "train" complete.
+MPI Rank 0: 
+MPI Rank 0: COMPLETED.
+MPI Rank 0: ~MPIWrapper
+MPI Rank 1: Configuration After Processing and Variable Resolution:
+MPI Rank 1: 
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:asyncBuffer=false
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:command=Train
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:ConfigDir=.
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:configName=2gpu-take1
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:DataDir=.
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:deviceId=auto
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:epochSize=10
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:imageLayout=cudnn
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:initOnCPUOnly=true
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:makeMode=true
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:minibatch=256
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:minibatchSize=128
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:ModelDir=./Output-2gpu-take1/Models
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:ndlMacros=./Macros.ndl
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:OutputDir=./Output-2gpu-take1
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:parallelizationMethod=DataParallelASGD
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:parallelTrain=true
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:precision=float
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:prefetch=true
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:Proj16to32Filename=./16to32.txt
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:Proj32to64Filename=./32to64.txt
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:RootDir=.
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:stderr=./Output-2gpu-take1/03_ResNet
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:Test=[
+MPI Rank 1:     action = "test"
+MPI Rank 1:     modelPath = "./Output-2gpu-take1/Models/03_ResNet"
+MPI Rank 1:     minibatchSize = 256
+MPI Rank 1:     reader = [
+MPI Rank 1:         readerType = "ImageReader"
+MPI Rank 1:         file = "./cifar-10-batches-py/test_map.txt"
+MPI Rank 1:         randomize = "none"
+MPI Rank 1:         features = [
+MPI Rank 1:             width = 32
+MPI Rank 1:             height = 32
+MPI Rank 1:             channels = 3
+MPI Rank 1:             cropType = "center"
+MPI Rank 1:             cropRatio = 1
+MPI Rank 1:             jitterType = "uniRatio"
+MPI Rank 1:             interpolations = "linear"
+MPI Rank 1:             meanFile = "./cifar-10-batches-py/CIFAR-10_mean.xml"
+MPI Rank 1:         ]
+MPI Rank 1:         labels = [
+MPI Rank 1:             labelDim = 10
+MPI Rank 1:         ]
+MPI Rank 1:     ]    
+MPI Rank 1: ]
+MPI Rank 1: 
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:traceLevel=1
+MPI Rank 1: configparameters: 03_ResNet-parallel.cntk:Train=[
+MPI Rank 1:     action = "train"
+MPI Rank 1:     modelPath = "./Output-2gpu-take1/Models/03_ResNet"
+MPI Rank 1:      NDLNetworkBuilder = [
+MPI Rank 1:         networkDescription = "./03_ResNet.ndl"
+MPI Rank 1:     ]
+MPI Rank 1:     SGD = [
+MPI Rank 1:         epochSize = 0
+MPI Rank 1:         minibatchSize = 256
+MPI Rank 1:         learningRatesPerSample = 0.004*80:0.0004*40:0.00004
+MPI Rank 1:         momentumPerMB = 0
+MPI Rank 1:         maxEpochs = 10
+MPI Rank 1:         L2RegWeight = 0.0001
+MPI Rank 1:         dropoutRate = 0
+MPI Rank 1:         perfTraceLevel = 0
+MPI Rank 1:         firstMBsToShowResult = 1
+MPI Rank 1:         numMBsToShowResult = 10
+MPI Rank 1:         ParallelTrain = [
+MPI Rank 1:             parallelizationMethod = DataParallelASGD
+MPI Rank 1:             distributedMBReading = "true"
+MPI Rank 1:             parallelizationStartEpoch = 1
+MPI Rank 1:             DataParallelSGD = [
+MPI Rank 1:                 gradientBits = 32
+MPI Rank 1:                 useBufferedAsyncGradientAggregation = false
+MPI Rank 1:             ]
+MPI Rank 1:             ModelAveragingSGD = [
+MPI Rank 1:                 blockSizePerWorker = 128
+MPI Rank 1:             ]
+MPI Rank 1:             DataParallelASGD = [
+MPI Rank 1:                 syncPeriod = 128
+MPI Rank 1:                 usePipeline = false
+MPI Rank 1:             ]
+MPI Rank 1:         ]
+MPI Rank 1:     ]
+MPI Rank 1:     reader = [
+MPI Rank 1:         readerType = "ImageReader"
+MPI Rank 1:         file = "./cifar-10-batches-py/train_map.txt"
+MPI Rank 1:         randomize = "auto"
+MPI Rank 1:         features = [
+MPI Rank 1:             width = 32
+MPI Rank 1:             height = 32
+MPI Rank 1:             channels = 3
+MPI Rank 1:             cropType = "random"
+MPI Rank 1:             cropRatio = 0.8
+MPI Rank 1:             jitterType = "uniRatio"
+MPI Rank 1:             interpolations = "linear"
+MPI Rank 1:             meanFile = "./cifar-10-batches-py/CIFAR-10_mean.xml"
+MPI Rank 1:         ]
+MPI Rank 1:         labels = [
+MPI Rank 1:             labelDim = 10
+MPI Rank 1:         ]
+MPI Rank 1:     ]
+MPI Rank 1:     cvReader = [
+MPI Rank 1:         readerType = "ImageReader"
+MPI Rank 1:         file = "./cifar-10-batches-py/test_map.txt"
+MPI Rank 1:         randomize = "none"
+MPI Rank 1:         features = [
+MPI Rank 1:             width = 32
+MPI Rank 1:             height = 32
+MPI Rank 1:             channels = 3
+MPI Rank 1:             cropType = "center"
+MPI Rank 1:             cropRatio = 1
+MPI Rank 1:             jitterType = "uniRatio"
+MPI Rank 1:             interpolations = "linear"
+MPI Rank 1:             meanFile = "./cifar-10-batches-py/CIFAR-10_mean.xml"
+MPI Rank 1:         ]
+MPI Rank 1:         labels = [
+MPI Rank 1:             labelDim = 10
+MPI Rank 1:         ]
+MPI Rank 1:     ]    
+MPI Rank 1: ]
+MPI Rank 1: 
+MPI Rank 1: Commands: Train
+MPI Rank 1: precision = "float"
+MPI Rank 1: 
+MPI Rank 1: ##############################################################################
+MPI Rank 1: #                                                                            #
+MPI Rank 1: # Train command (train action)                                               #
+MPI Rank 1: #                                                                            #
+MPI Rank 1: ##############################################################################
+MPI Rank 1: 
+MPI Rank 1: LockDevice: Failed to lock GPU 0 for exclusive use.
+MPI Rank 1: 
+MPI Rank 1: Creating virgin network.
+MPI Rank 1: NDLBuilder Using GPU 1
+MPI Rank 1: SetGaussianRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+MPI Rank 1: 
+MPI Rank 1: OutputNodes.t Times operation: For legacy compatibility, the sample layout of left input (OutputNodes.W LearnableParameter operation) was patched to [10 x 1 x 1 x 64] (from [10 x 64])
+MPI Rank 1: conv1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 16, Kernel: 3 x 3 x 3, Map: 1 x 1 x 16, Stride: 1 x 1 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn1_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn1_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn1_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn1_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn1_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn1_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 32 x 32 x 16, Kernel: 3 x 3 x 16, Map: 1 x 1 x 16, Stride: 1 x 1 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn2_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 3 x 3 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn2_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn2_1.c_proj.c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 16, Output: 16 x 16 x 32, Kernel: 1 x 1 x 16, Map: 1 x 1 x 32, Stride: 2 x 2 x 16, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn2_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn2_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn2_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn2_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 16 x 16 x 32, Kernel: 3 x 3 x 32, Map: 1 x 1 x 32, Stride: 1 x 1 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn3_1.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 3 x 3 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn3_1.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn3_1.c_proj.c: using cuDNN convolution engine for geometry: Input: 16 x 16 x 32, Output: 8 x 8 x 64, Kernel: 1 x 1 x 32, Map: 1 x 1 x 64, Stride: 2 x 2 x 32, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn3_2.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn3_2.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn3_3.c1.c.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: rn3_3.c2.c.c: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 8 x 8 x 64, Kernel: 3 x 3 x 64, Map: 1 x 1 x 64, Stride: 1 x 1 x 64, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: Using CNTK batch normalization engine.
+MPI Rank 1: pool: using cuDNN convolution engine for geometry: Input: 8 x 8 x 64, Output: 1 x 1 x 64, Kernel: 8 x 8 x 1, Map: 1, Stride: 1 x 1 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+MPI Rank 1: 
+MPI Rank 1: Model has 184 nodes. Using GPU 1.
+MPI Rank 1: 
+MPI Rank 1: Training criterion:   CE = CrossEntropyWithSoftmax
+MPI Rank 1: Evaluation criterion: Err = ClassificationError
+MPI Rank 1: 
+MPI Rank 1: 
+MPI Rank 1: Allocating matrices for forward and/or backward propagation.
+MPI Rank 1: 
+MPI Rank 1: Memory Sharing: Out of 321 matrices, 160 are shared as 62, and 161 are not shared.
+MPI Rank 1: 
+MPI Rank 1:     { conv1.c.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       conv1.y : [32 x 32 x 16 x *] }
+MPI Rank 1:     { conv1.c.W : [16 x 27] (gradient)
+MPI Rank 1:       rn1_1.c1.c.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_1.c1.y : [32 x 32 x 16 x *] }
+MPI Rank 1:     { conv1.c.c.b : [16 x 1] (gradient)
+MPI Rank 1:       rn1_1.c2.c.c : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_1.c1.c.W : [16 x 144] (gradient)
+MPI Rank 1:       rn1_1.c2.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_1.p : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_1.c2.c.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_1.y : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_1.c2.W : [16 x 144] (gradient)
+MPI Rank 1:       rn1_2.c1.c.c.c : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_1.c2.c.sc : [16 x 1] (gradient)
+MPI Rank 1:       rn1_1.p : [32 x 32 x 16 x *] (gradient) }
+MPI Rank 1:     { conv1.c.c.sc : [16 x 1] (gradient)
+MPI Rank 1:       conv1.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_2.c1.c.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_2.c1.y : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_1.c2.c.b : [16 x 1] (gradient)
+MPI Rank 1:       rn1_2.c2.c.c : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_2.c1.c.W : [16 x 144] (gradient)
+MPI Rank 1:       rn1_2.c2.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_2.p : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_2.c2.c.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_2.y : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_2.c2.W : [16 x 144] (gradient)
+MPI Rank 1:       rn1_3.c1.c.c.c : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_2.c2.c.sc : [16 x 1] (gradient)
+MPI Rank 1:       rn1_2.p : [32 x 32 x 16 x *] (gradient) }
+MPI Rank 1:     { rn1_1.c1.c.c.sc : [16 x 1] (gradient)
+MPI Rank 1:       rn1_1.c1.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_1.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_3.c1.c.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_3.c1.y : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_2.c2.c.b : [16 x 1] (gradient)
+MPI Rank 1:       rn1_3.c2.c.c : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_3.c1.c.W : [16 x 144] (gradient)
+MPI Rank 1:       rn1_3.c2.c.c : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_3.p : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_3.c2.c.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_3.y : [32 x 32 x 16 x *] }
+MPI Rank 1:     { rn1_3.c2.W : [16 x 144] (gradient)
+MPI Rank 1:       rn2_1.c1.c.c.c : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn1_3.c2.c.sc : [16 x 1] (gradient)
+MPI Rank 1:       rn1_3.p : [32 x 32 x 16 x *] (gradient) }
+MPI Rank 1:     { rn1_2.c1.c.c.sc : [16 x 1] (gradient)
+MPI Rank 1:       rn1_2.c1.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_2.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn2_1.c1.c.c.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_1.c1.y : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn1_3.c2.c.b : [16 x 1] (gradient)
+MPI Rank 1:       rn2_1.c2.c.c : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_1.c2.c.sc : [32 x 1] (gradient)
+MPI Rank 1:       rn2_1.c_proj.c : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_1.c1.c.W : [32 x 144] (gradient)
+MPI Rank 1:       rn2_1.c2.c.c : [16 x 16 x 32 x *] (gradient) }
+MPI Rank 1:     { rn2_1.c2.c.b : [32 x 1] (gradient)
+MPI Rank 1:       rn2_1.c_proj.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_1.p : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_1.c2.c.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_1.y : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_1.c2.W : [32 x 288] (gradient)
+MPI Rank 1:       rn2_2.c1.c.c.c : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_1.c_proj.sc : [32 x 1] (gradient)
+MPI Rank 1:       rn2_1.p : [16 x 16 x 32 x *] (gradient) }
+MPI Rank 1:     { rn1_3.c1.c.c.sc : [16 x 1] (gradient)
+MPI Rank 1:       rn1_3.c1.y : [32 x 32 x 16 x *] (gradient)
+MPI Rank 1:       rn1_3.y : [32 x 32 x 16 x *] (gradient) }
+MPI Rank 1:     { rn2_1.c_proj.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_2.c1.c.c.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_2.c1.y : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_2.c1.c.W : [32 x 288] (gradient)
+MPI Rank 1:       rn2_2.c2.c.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_2.p : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_2.c2.c.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_2.y : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_2.c2.W : [32 x 288] (gradient)
+MPI Rank 1:       rn2_3.c1.c.c.c : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_2.c2.c.sc : [32 x 1] (gradient)
+MPI Rank 1:       rn2_2.p : [16 x 16 x 32 x *] (gradient) }
+MPI Rank 1:     { rn2_1.c1.c.c.sc : [32 x 1] (gradient)
+MPI Rank 1:       rn2_1.c1.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_1.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_3.c1.c.c.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_3.c1.y : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_2.c2.c.b : [32 x 1] (gradient)
+MPI Rank 1:       rn2_3.c2.c.c : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_3.c1.c.W : [32 x 288] (gradient)
+MPI Rank 1:       rn2_3.c2.c.c : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_3.p : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_3.c2.c.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_3.y : [16 x 16 x 32 x *] }
+MPI Rank 1:     { rn2_3.c2.W : [32 x 288] (gradient)
+MPI Rank 1:       rn3_1.c1.c.c.c : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn2_3.c2.c.sc : [32 x 1] (gradient)
+MPI Rank 1:       rn2_3.p : [16 x 16 x 32 x *] (gradient) }
+MPI Rank 1:     { rn2_2.c1.c.c.sc : [32 x 1] (gradient)
+MPI Rank 1:       rn2_2.c1.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_2.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn3_1.c1.c.c.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_1.c1.y : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn2_3.c2.c.b : [32 x 1] (gradient)
+MPI Rank 1:       rn3_1.c2.c.c : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_1.c2.c.sc : [64 x 1] (gradient)
+MPI Rank 1:       rn3_1.c_proj.c : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_1.c1.c.W : [64 x 288] (gradient)
+MPI Rank 1:       rn3_1.c2.c.c : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 1:     { rn3_1.c2.c.b : [64 x 1] (gradient)
+MPI Rank 1:       rn3_1.c_proj.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_1.p : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_1.c2.c.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_1.y : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_1.c2.W : [64 x 576] (gradient)
+MPI Rank 1:       rn3_2.c1.c.c.c : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_1.c_proj.sc : [64 x 1] (gradient)
+MPI Rank 1:       rn3_1.p : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 1:     { rn2_3.c1.c.c.sc : [32 x 1] (gradient)
+MPI Rank 1:       rn2_3.c1.y : [16 x 16 x 32 x *] (gradient)
+MPI Rank 1:       rn2_3.y : [16 x 16 x 32 x *] (gradient) }
+MPI Rank 1:     { rn3_1.c_proj.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_2.c1.c.c.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_2.c1.y : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_2.c1.c.W : [64 x 576] (gradient)
+MPI Rank 1:       rn3_2.c2.c.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_2.p : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_2.c2.c.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_2.y : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_2.c2.W : [64 x 576] (gradient)
+MPI Rank 1:       rn3_3.c1.c.c.c : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_2.c2.c.sc : [64 x 1] (gradient)
+MPI Rank 1:       rn3_2.p : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 1:     { rn3_1.c1.c.c.sc : [64 x 1] (gradient)
+MPI Rank 1:       rn3_1.c1.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_1.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_3.c1.c.c.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_3.c1.y : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_2.c2.c.b : [64 x 1] (gradient)
+MPI Rank 1:       rn3_3.c2.c.c : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_3.c1.c.W : [64 x 576] (gradient)
+MPI Rank 1:       rn3_3.c2.c.c : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_3.p : [8 x 8 x 64 x *] }
+MPI Rank 1:     { rn3_3.c2.c.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_3.y : [8 x 8 x 64 x *] }
+MPI Rank 1:     { pool : [1 x 1 x 64 x *]
+MPI Rank 1:       rn3_3.c2.c.sc : [64 x 1] (gradient)
+MPI Rank 1:       rn3_3.p : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 1:     { OutputNodes.t : [10 x *]
+MPI Rank 1:       rn3_3.c1.c.c.sc : [64 x 1] (gradient)
+MPI Rank 1:       rn3_3.c1.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_3.y : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 1:     { OutputNodes.W : [10 x 1 x 1 x 64] (gradient)
+MPI Rank 1:       OutputNodes.z : [10 x *] (gradient) }
+MPI Rank 1:     { OutputNodes.t : [10 x *] (gradient)
+MPI Rank 1:       rn3_2.c1.c.c.sc : [64 x 1] (gradient)
+MPI Rank 1:       rn3_2.c1.y : [8 x 8 x 64 x *] (gradient)
+MPI Rank 1:       rn3_2.y : [8 x 8 x 64 x *] (gradient) }
+MPI Rank 1:     { pool : [1 x 1 x 64 x *] (gradient)
+MPI Rank 1:       rn3_3.c2.W : [64 x 576] (gradient) }
+MPI Rank 1: 
+MPI Rank 1: 
+MPI Rank 1: Training 269914 parameters in 63 out of 63 parameter tensors and 137 nodes with gradient:
+MPI Rank 1: 
+MPI Rank 1:     Node 'OutputNodes.W' (LearnableParameter operation) : [10 x 1 x 1 x 64]
+MPI Rank 1:     Node 'OutputNodes.b' (LearnableParameter operation) : [10]
+MPI Rank 1:     Node 'conv1.c.W' (LearnableParameter operation) : [16 x 27]
+MPI Rank 1:     Node 'conv1.c.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'conv1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_1.c1.c.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 1:     Node 'rn1_1.c1.c.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_1.c1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_1.c2.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 1:     Node 'rn1_1.c2.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_1.c2.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_2.c1.c.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 1:     Node 'rn1_2.c1.c.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_2.c1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_2.c2.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 1:     Node 'rn1_2.c2.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_2.c2.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_3.c1.c.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 1:     Node 'rn1_3.c1.c.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_3.c1.c.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_3.c2.W' (LearnableParameter operation) : [16 x 144]
+MPI Rank 1:     Node 'rn1_3.c2.c.b' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn1_3.c2.c.sc' (LearnableParameter operation) : [16 x 1]
+MPI Rank 1:     Node 'rn2_1.c1.c.W' (LearnableParameter operation) : [32 x 144]
+MPI Rank 1:     Node 'rn2_1.c1.c.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_1.c1.c.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_1.c2.W' (LearnableParameter operation) : [32 x 288]
+MPI Rank 1:     Node 'rn2_1.c2.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_1.c2.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_1.c_proj.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_1.c_proj.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_2.c1.c.W' (LearnableParameter operation) : [32 x 288]
+MPI Rank 1:     Node 'rn2_2.c1.c.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_2.c1.c.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_2.c2.W' (LearnableParameter operation) : [32 x 288]
+MPI Rank 1:     Node 'rn2_2.c2.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_2.c2.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_3.c1.c.W' (LearnableParameter operation) : [32 x 288]
+MPI Rank 1:     Node 'rn2_3.c1.c.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_3.c1.c.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_3.c2.W' (LearnableParameter operation) : [32 x 288]
+MPI Rank 1:     Node 'rn2_3.c2.c.b' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn2_3.c2.c.sc' (LearnableParameter operation) : [32 x 1]
+MPI Rank 1:     Node 'rn3_1.c1.c.W' (LearnableParameter operation) : [64 x 288]
+MPI Rank 1:     Node 'rn3_1.c1.c.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_1.c1.c.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_1.c2.W' (LearnableParameter operation) : [64 x 576]
+MPI Rank 1:     Node 'rn3_1.c2.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_1.c2.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_1.c_proj.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_1.c_proj.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_2.c1.c.W' (LearnableParameter operation) : [64 x 576]
+MPI Rank 1:     Node 'rn3_2.c1.c.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_2.c1.c.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_2.c2.W' (LearnableParameter operation) : [64 x 576]
+MPI Rank 1:     Node 'rn3_2.c2.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_2.c2.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_3.c1.c.W' (LearnableParameter operation) : [64 x 576]
+MPI Rank 1:     Node 'rn3_3.c1.c.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_3.c1.c.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_3.c2.W' (LearnableParameter operation) : [64 x 576]
+MPI Rank 1:     Node 'rn3_3.c2.c.b' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1:     Node 'rn3_3.c2.c.sc' (LearnableParameter operation) : [64 x 1]
+MPI Rank 1: 
+MPI Rank 1: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+MPI Rank 1: [INFO] [2016-11-13 15:53:53] multiverso MPI-Net is initialized under MPI_THREAD_SERIALIZED mode.
+MPI Rank 1: [INFO] [2016-11-13 15:53:53] Create a async server
+MPI Rank 1: [INFO] [2016-11-13 15:53:53] Rank 1: Multiverso start successfully
+MPI Rank 1: multiverso initial model loaded.
+MPI Rank 1: 
+MPI Rank 1: Starting Epoch 1: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 1: 
+MPI Rank 1: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[   1-   1]: CE = 2.29628372 * 128; Err = 0.91406250 * 128; time = 2.6960s; samplesPerSecond = 47.5
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[   2-  10]: CE = 2.82560094 * 1152; Err = 0.89496528 * 1152; time = 0.8917s; samplesPerSecond = 1291.9
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[  11-  20]: CE = 2.28490562 * 1280; Err = 0.86718750 * 1280; time = 0.9507s; samplesPerSecond = 1346.3
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[  21-  30]: CE = 2.18323250 * 1280; Err = 0.82812500 * 1280; time = 0.9057s; samplesPerSecond = 1413.3
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[  31-  40]: CE = 2.10514145 * 1280; Err = 0.81015625 * 1280; time = 0.9020s; samplesPerSecond = 1419.0
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[  41-  50]: CE = 2.03856659 * 1280; Err = 0.78125000 * 1280; time = 0.9021s; samplesPerSecond = 1419.0
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[  51-  60]: CE = 1.99862823 * 1280; Err = 0.74375000 * 1280; time = 0.9054s; samplesPerSecond = 1413.8
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[  61-  70]: CE = 1.99658813 * 1280; Err = 0.74843750 * 1280; time = 0.9123s; samplesPerSecond = 1403.0
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[  71-  80]: CE = 1.91999664 * 1280; Err = 0.73203125 * 1280; time = 0.9088s; samplesPerSecond = 1408.4
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[  81-  90]: CE = 1.88045044 * 1280; Err = 0.73046875 * 1280; time = 0.9109s; samplesPerSecond = 1405.2
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[  91- 100]: CE = 1.85848389 * 1280; Err = 0.72265625 * 1280; time = 0.9048s; samplesPerSecond = 1414.7
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 101- 110]: CE = 1.82370758 * 1280; Err = 0.69453125 * 1280; time = 0.9046s; samplesPerSecond = 1415.0
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 111- 120]: CE = 1.79923553 * 1280; Err = 0.70859375 * 1280; time = 0.9055s; samplesPerSecond = 1413.6
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 121- 130]: CE = 1.74462891 * 1280; Err = 0.67421875 * 1280; time = 0.9033s; samplesPerSecond = 1417.0
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 131- 140]: CE = 1.78443604 * 1280; Err = 0.68671875 * 1280; time = 0.9048s; samplesPerSecond = 1414.7
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 141- 150]: CE = 1.74446411 * 1280; Err = 0.65781250 * 1280; time = 0.9042s; samplesPerSecond = 1415.7
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 151- 160]: CE = 1.69321594 * 1280; Err = 0.64921875 * 1280; time = 0.9087s; samplesPerSecond = 1408.5
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 161- 170]: CE = 1.71094055 * 1280; Err = 0.65156250 * 1280; time = 0.9021s; samplesPerSecond = 1418.8
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 171- 180]: CE = 1.69659729 * 1280; Err = 0.66875000 * 1280; time = 0.9017s; samplesPerSecond = 1419.6
+MPI Rank 1:  Epoch[ 1 of 10]-Minibatch[ 181- 190]: CE = 1.66184387 * 1280; Err = 0.63671875 * 1280; time = 0.9004s; samplesPerSecond = 1421.6
+MPI Rank 1: Finished Epoch[ 1 of 10]: [Training] CE = 1.92207328 * 25000; Err = 0.72720000 * 25000; totalSamplesSeen = 25000; learningRatePerSample = 0.0040000002; epochTime=20.4311s
+MPI Rank 1: Final Results: Minibatch[1-40]: CE = 1.78174414 * 10000; perplexity = 5.94020792; Err = 0.66150000 * 10000
+MPI Rank 1: Finished Epoch[ 1 of 10]: [Validate] CE = 1.78174414 * 10000; Err = 0.66150000 * 10000
+MPI Rank 1: 
+MPI Rank 1: Starting Epoch 2: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 1: 
+MPI Rank 1: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[   1-   1, 1.05%]: CE = 1.53022802 * 128; Err = 0.63281250 * 128; time = 0.1107s; samplesPerSecond = 1156.4
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[   2-  10, 10.53%]: CE = 1.68233719 * 1152; Err = 0.62934028 * 1152; time = 0.8101s; samplesPerSecond = 1422.0
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[  11-  20, 21.05%]: CE = 1.58899822 * 1280; Err = 0.58359375 * 1280; time = 0.9007s; samplesPerSecond = 1421.1
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[  21-  30, 31.58%]: CE = 1.68261948 * 1280; Err = 0.62343750 * 1280; time = 0.9002s; samplesPerSecond = 1421.9
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[  31-  40, 42.11%]: CE = 1.58917351 * 1280; Err = 0.61015625 * 1280; time = 0.9018s; samplesPerSecond = 1419.4
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[  41-  50, 52.63%]: CE = 1.56744461 * 1280; Err = 0.57968750 * 1280; time = 0.9323s; samplesPerSecond = 1372.9
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[  51-  60, 63.16%]: CE = 1.54381638 * 1280; Err = 0.57421875 * 1280; time = 0.9021s; samplesPerSecond = 1418.9
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[  61-  70, 73.68%]: CE = 1.58919449 * 1280; Err = 0.58515625 * 1280; time = 0.9007s; samplesPerSecond = 1421.1
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[  71-  80, 84.21%]: CE = 1.54658127 * 1280; Err = 0.58203125 * 1280; time = 0.9008s; samplesPerSecond = 1420.9
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[  81-  90, 94.74%]: CE = 1.46068420 * 1280; Err = 0.54375000 * 1280; time = 0.9018s; samplesPerSecond = 1419.4
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[  91- 100, 105.26%]: CE = 1.45755615 * 1280; Err = 0.55468750 * 1280; time = 0.9010s; samplesPerSecond = 1420.6
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 1.49937286 * 1280; Err = 0.55703125 * 1280; time = 0.9007s; samplesPerSecond = 1421.1
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 1.52042236 * 1280; Err = 0.56328125 * 1280; time = 0.9005s; samplesPerSecond = 1421.4
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 1.47509766 * 1280; Err = 0.53750000 * 1280; time = 0.9004s; samplesPerSecond = 1421.7
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 1.40697327 * 1280; Err = 0.52187500 * 1280; time = 0.9007s; samplesPerSecond = 1421.1
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 1.37440033 * 1280; Err = 0.52265625 * 1280; time = 0.9008s; samplesPerSecond = 1421.0
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 1.36479492 * 1280; Err = 0.49453125 * 1280; time = 0.8996s; samplesPerSecond = 1422.9
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 1.38924866 * 1280; Err = 0.50156250 * 1280; time = 0.9001s; samplesPerSecond = 1422.1
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 1.29261780 * 1280; Err = 0.46796875 * 1280; time = 0.9029s; samplesPerSecond = 1417.6
+MPI Rank 1:  Epoch[ 2 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 1.30818787 * 1280; Err = 0.46796875 * 1280; time = 0.9054s; samplesPerSecond = 1413.7
+MPI Rank 1: Finished Epoch[ 2 of 10]: [Training] CE = 1.48388547 * 25000; Err = 0.55008000 * 25000; totalSamplesSeen = 50000; learningRatePerSample = 0.0040000002; epochTime=17.6776s
+MPI Rank 1: Final Results: Minibatch[1-40]: CE = 1.50964949 * 10000; perplexity = 4.52514439; Err = 0.52280000 * 10000
+MPI Rank 1: Finished Epoch[ 2 of 10]: [Validate] CE = 1.50964949 * 10000; Err = 0.52280000 * 10000
+MPI Rank 1: 
+MPI Rank 1: Starting Epoch 3: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 1: 
+MPI Rank 1: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[   1-   1, 1.05%]: CE = 1.38116586 * 128; Err = 0.50781250 * 128; time = 0.1362s; samplesPerSecond = 939.6
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[   2-  10, 10.53%]: CE = 1.20884478 * 1152; Err = 0.43315972 * 1152; time = 0.8103s; samplesPerSecond = 1421.8
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[  11-  20, 21.05%]: CE = 1.30516834 * 1280; Err = 0.48593750 * 1280; time = 0.8992s; samplesPerSecond = 1423.4
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[  21-  30, 31.58%]: CE = 1.27052784 * 1280; Err = 0.47421875 * 1280; time = 0.9003s; samplesPerSecond = 1421.8
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[  31-  40, 42.11%]: CE = 1.21171570 * 1280; Err = 0.44375000 * 1280; time = 0.9037s; samplesPerSecond = 1416.5
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[  41-  50, 52.63%]: CE = 1.23194885 * 1280; Err = 0.44453125 * 1280; time = 0.9020s; samplesPerSecond = 1419.1
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[  51-  60, 63.16%]: CE = 1.24846344 * 1280; Err = 0.45937500 * 1280; time = 0.9142s; samplesPerSecond = 1400.1
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[  61-  70, 73.68%]: CE = 1.20907669 * 1280; Err = 0.43515625 * 1280; time = 0.9319s; samplesPerSecond = 1373.5
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[  71-  80, 84.21%]: CE = 1.19456635 * 1280; Err = 0.42578125 * 1280; time = 0.9001s; samplesPerSecond = 1422.1
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[  81-  90, 94.74%]: CE = 1.19964752 * 1280; Err = 0.41562500 * 1280; time = 0.9012s; samplesPerSecond = 1420.3
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[  91- 100, 105.26%]: CE = 1.14305649 * 1280; Err = 0.41718750 * 1280; time = 0.9005s; samplesPerSecond = 1421.4
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 1.16510620 * 1280; Err = 0.42656250 * 1280; time = 0.9026s; samplesPerSecond = 1418.2
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 1.12051697 * 1280; Err = 0.40312500 * 1280; time = 0.9019s; samplesPerSecond = 1419.2
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 1.11624603 * 1280; Err = 0.40937500 * 1280; time = 0.8990s; samplesPerSecond = 1423.7
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 1.13333893 * 1280; Err = 0.41406250 * 1280; time = 0.9014s; samplesPerSecond = 1420.0
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 1.15561218 * 1280; Err = 0.40078125 * 1280; time = 0.9008s; samplesPerSecond = 1421.0
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 1.05560608 * 1280; Err = 0.37187500 * 1280; time = 0.9008s; samplesPerSecond = 1420.9
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 1.16946411 * 1280; Err = 0.41953125 * 1280; time = 0.9002s; samplesPerSecond = 1422.0
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 1.09919434 * 1280; Err = 0.39375000 * 1280; time = 0.9006s; samplesPerSecond = 1421.3
+MPI Rank 1:  Epoch[ 3 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 1.09936981 * 1280; Err = 0.38906250 * 1280; time = 0.8997s; samplesPerSecond = 1422.8
+MPI Rank 1: Finished Epoch[ 3 of 10]: [Training] CE = 1.17362531 * 25000; Err = 0.42388000 * 25000; totalSamplesSeen = 75000; learningRatePerSample = 0.0040000002; epochTime=17.7061s
+MPI Rank 1: Final Results: Minibatch[1-40]: CE = 1.52240544 * 10000; perplexity = 4.58323663; Err = 0.47880000 * 10000
+MPI Rank 1: Finished Epoch[ 3 of 10]: [Validate] CE = 1.52240544 * 10000; Err = 0.47880000 * 10000
+MPI Rank 1: 
+MPI Rank 1: Starting Epoch 4: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 1: 
+MPI Rank 1: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[   1-   1, 1.05%]: CE = 1.21269464 * 128; Err = 0.45312500 * 128; time = 0.1128s; samplesPerSecond = 1134.3
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[   2-  10, 10.53%]: CE = 1.05923880 * 1152; Err = 0.38628472 * 1152; time = 0.8099s; samplesPerSecond = 1422.5
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[  11-  20, 21.05%]: CE = 1.03024139 * 1280; Err = 0.37968750 * 1280; time = 0.8993s; samplesPerSecond = 1423.4
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[  21-  30, 31.58%]: CE = 1.03028126 * 1280; Err = 0.37734375 * 1280; time = 0.9029s; samplesPerSecond = 1417.7
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[  31-  40, 42.11%]: CE = 1.02652550 * 1280; Err = 0.36484375 * 1280; time = 0.9019s; samplesPerSecond = 1419.2
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[  41-  50, 52.63%]: CE = 1.01228485 * 1280; Err = 0.37187500 * 1280; time = 0.9028s; samplesPerSecond = 1417.7
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.99272194 * 1280; Err = 0.37265625 * 1280; time = 0.9032s; samplesPerSecond = 1417.2
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[  61-  70, 73.68%]: CE = 1.02615623 * 1280; Err = 0.36484375 * 1280; time = 0.9398s; samplesPerSecond = 1362.0
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[  71-  80, 84.21%]: CE = 1.04674606 * 1280; Err = 0.36171875 * 1280; time = 0.9009s; samplesPerSecond = 1420.8
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[  81-  90, 94.74%]: CE = 1.02758865 * 1280; Err = 0.37421875 * 1280; time = 0.9045s; samplesPerSecond = 1415.2
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[  91- 100, 105.26%]: CE = 1.00665207 * 1280; Err = 0.36093750 * 1280; time = 0.9024s; samplesPerSecond = 1418.4
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 1.02619019 * 1280; Err = 0.37500000 * 1280; time = 0.9005s; samplesPerSecond = 1421.5
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.99725266 * 1280; Err = 0.37187500 * 1280; time = 0.9024s; samplesPerSecond = 1418.5
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.96507645 * 1280; Err = 0.34843750 * 1280; time = 0.9016s; samplesPerSecond = 1419.8
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.94610443 * 1280; Err = 0.33828125 * 1280; time = 0.9003s; samplesPerSecond = 1421.7
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.93355103 * 1280; Err = 0.32890625 * 1280; time = 0.8996s; samplesPerSecond = 1422.8
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.98692017 * 1280; Err = 0.35156250 * 1280; time = 0.9011s; samplesPerSecond = 1420.5
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.95623322 * 1280; Err = 0.35703125 * 1280; time = 0.9047s; samplesPerSecond = 1414.8
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.92056122 * 1280; Err = 0.33984375 * 1280; time = 0.9037s; samplesPerSecond = 1416.4
+MPI Rank 1:  Epoch[ 4 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.98204956 * 1280; Err = 0.35312500 * 1280; time = 0.9002s; samplesPerSecond = 1422.0
+MPI Rank 1: Finished Epoch[ 4 of 10]: [Training] CE = 0.99953828 * 25000; Err = 0.36264000 * 25000; totalSamplesSeen = 100000; learningRatePerSample = 0.0040000002; epochTime=17.6928s
+MPI Rank 1: Final Results: Minibatch[1-40]: CE = 1.07268652 * 10000; perplexity = 2.92322227; Err = 0.37340000 * 10000
+MPI Rank 1: Finished Epoch[ 4 of 10]: [Validate] CE = 1.07268652 * 10000; Err = 0.37340000 * 10000
+MPI Rank 1: 
+MPI Rank 1: Starting Epoch 5: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 1: 
+MPI Rank 1: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.97016793 * 128; Err = 0.34375000 * 128; time = 0.1073s; samplesPerSecond = 1192.8
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.91010170 * 1152; Err = 0.32378472 * 1152; time = 0.8160s; samplesPerSecond = 1411.8
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.90355854 * 1280; Err = 0.33906250 * 1280; time = 0.8996s; samplesPerSecond = 1422.9
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.93747559 * 1280; Err = 0.33750000 * 1280; time = 0.8998s; samplesPerSecond = 1422.5
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.80983448 * 1280; Err = 0.28671875 * 1280; time = 0.9001s; samplesPerSecond = 1422.0
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.90883255 * 1280; Err = 0.32812500 * 1280; time = 0.9003s; samplesPerSecond = 1421.8
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.92373619 * 1280; Err = 0.31171875 * 1280; time = 0.8991s; samplesPerSecond = 1423.6
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.87971878 * 1280; Err = 0.30625000 * 1280; time = 0.9041s; samplesPerSecond = 1415.7
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.84867439 * 1280; Err = 0.30859375 * 1280; time = 0.9242s; samplesPerSecond = 1384.9
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.84161530 * 1280; Err = 0.30078125 * 1280; time = 0.9062s; samplesPerSecond = 1412.6
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.84885330 * 1280; Err = 0.28828125 * 1280; time = 0.9041s; samplesPerSecond = 1415.8
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.92828903 * 1280; Err = 0.32421875 * 1280; time = 0.9003s; samplesPerSecond = 1421.8
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.80276871 * 1280; Err = 0.29140625 * 1280; time = 0.9006s; samplesPerSecond = 1421.3
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.81277390 * 1280; Err = 0.28593750 * 1280; time = 0.9014s; samplesPerSecond = 1420.0
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.83096008 * 1280; Err = 0.29843750 * 1280; time = 0.9039s; samplesPerSecond = 1416.1
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.90133209 * 1280; Err = 0.32265625 * 1280; time = 0.9057s; samplesPerSecond = 1413.3
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.86068573 * 1280; Err = 0.29296875 * 1280; time = 0.9038s; samplesPerSecond = 1416.3
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.82008362 * 1280; Err = 0.29140625 * 1280; time = 0.9005s; samplesPerSecond = 1421.5
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.81259003 * 1280; Err = 0.29765625 * 1280; time = 0.8999s; samplesPerSecond = 1422.3
+MPI Rank 1:  Epoch[ 5 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.83847656 * 1280; Err = 0.29843750 * 1280; time = 0.9008s; samplesPerSecond = 1420.9
+MPI Rank 1: Finished Epoch[ 5 of 10]: [Training] CE = 0.86232672 * 25000; Err = 0.30596000 * 25000; totalSamplesSeen = 125000; learningRatePerSample = 0.0040000002; epochTime=17.6809s
+MPI Rank 1: Final Results: Minibatch[1-40]: CE = 0.90429219 * 10000; perplexity = 2.47018288; Err = 0.31050000 * 10000
+MPI Rank 1: Finished Epoch[ 5 of 10]: [Validate] CE = 0.90429219 * 10000; Err = 0.31050000 * 10000
+MPI Rank 1: 
+MPI Rank 1: Starting Epoch 6: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 1: 
+MPI Rank 1: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.74707961 * 128; Err = 0.21093750 * 128; time = 0.1118s; samplesPerSecond = 1144.8
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.81139016 * 1152; Err = 0.28819444 * 1152; time = 0.8093s; samplesPerSecond = 1423.4
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.79033833 * 1280; Err = 0.27031250 * 1280; time = 0.9001s; samplesPerSecond = 1422.0
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.79749432 * 1280; Err = 0.27421875 * 1280; time = 0.9022s; samplesPerSecond = 1418.8
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.83152657 * 1280; Err = 0.28515625 * 1280; time = 0.9010s; samplesPerSecond = 1420.6
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.82572136 * 1280; Err = 0.28359375 * 1280; time = 0.9009s; samplesPerSecond = 1420.8
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.83162498 * 1280; Err = 0.29375000 * 1280; time = 0.8988s; samplesPerSecond = 1424.1
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.77658653 * 1280; Err = 0.27421875 * 1280; time = 0.9072s; samplesPerSecond = 1411.0
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.75664673 * 1280; Err = 0.26406250 * 1280; time = 0.9194s; samplesPerSecond = 1392.2
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.80414124 * 1280; Err = 0.28203125 * 1280; time = 0.9027s; samplesPerSecond = 1417.9
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.75573730 * 1280; Err = 0.26953125 * 1280; time = 0.9004s; samplesPerSecond = 1421.6
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.73109436 * 1280; Err = 0.25859375 * 1280; time = 0.9032s; samplesPerSecond = 1417.2
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.77352676 * 1280; Err = 0.26328125 * 1280; time = 0.9014s; samplesPerSecond = 1420.0
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.74644012 * 1280; Err = 0.26093750 * 1280; time = 0.9041s; samplesPerSecond = 1415.8
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.73400040 * 1280; Err = 0.26093750 * 1280; time = 0.9005s; samplesPerSecond = 1421.5
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.75761337 * 1280; Err = 0.25312500 * 1280; time = 0.9005s; samplesPerSecond = 1421.5
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.72940521 * 1280; Err = 0.25703125 * 1280; time = 0.9013s; samplesPerSecond = 1420.2
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.68242187 * 1280; Err = 0.24375000 * 1280; time = 0.9080s; samplesPerSecond = 1409.8
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.76171570 * 1280; Err = 0.26796875 * 1280; time = 0.9080s; samplesPerSecond = 1409.6
+MPI Rank 1:  Epoch[ 6 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.72972107 * 1280; Err = 0.25312500 * 1280; time = 0.9059s; samplesPerSecond = 1412.9
+MPI Rank 1: Finished Epoch[ 6 of 10]: [Training] CE = 0.76888711 * 25000; Err = 0.26808000 * 25000; totalSamplesSeen = 150000; learningRatePerSample = 0.0040000002; epochTime=17.6874s
+MPI Rank 1: Final Results: Minibatch[1-40]: CE = 1.13905782 * 10000; perplexity = 3.12382378; Err = 0.40480000 * 10000
+MPI Rank 1: Finished Epoch[ 6 of 10]: [Validate] CE = 1.13905782 * 10000; Err = 0.40480000 * 10000
+MPI Rank 1: 
+MPI Rank 1: Starting Epoch 7: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 1: 
+MPI Rank 1: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.62288731 * 128; Err = 0.22656250 * 128; time = 0.1105s; samplesPerSecond = 1157.9
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.68568625 * 1152; Err = 0.23697917 * 1152; time = 0.8126s; samplesPerSecond = 1417.8
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.76085043 * 1280; Err = 0.27578125 * 1280; time = 0.9092s; samplesPerSecond = 1407.8
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.74795904 * 1280; Err = 0.27109375 * 1280; time = 0.9081s; samplesPerSecond = 1409.6
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.68485737 * 1280; Err = 0.24296875 * 1280; time = 0.9295s; samplesPerSecond = 1377.1
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.73190689 * 1280; Err = 0.24296875 * 1280; time = 0.9026s; samplesPerSecond = 1418.2
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.68475876 * 1280; Err = 0.24609375 * 1280; time = 0.9002s; samplesPerSecond = 1421.9
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.66818085 * 1280; Err = 0.23593750 * 1280; time = 0.9043s; samplesPerSecond = 1415.4
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.67999649 * 1280; Err = 0.23984375 * 1280; time = 0.9006s; samplesPerSecond = 1421.3
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.72810974 * 1280; Err = 0.25078125 * 1280; time = 0.9006s; samplesPerSecond = 1421.2
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.78073387 * 1280; Err = 0.26406250 * 1280; time = 0.9014s; samplesPerSecond = 1420.1
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.69750214 * 1280; Err = 0.24140625 * 1280; time = 0.9001s; samplesPerSecond = 1422.1
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.71637039 * 1280; Err = 0.23125000 * 1280; time = 0.9052s; samplesPerSecond = 1414.1
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.67235718 * 1280; Err = 0.23515625 * 1280; time = 0.9030s; samplesPerSecond = 1417.5
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.72464676 * 1280; Err = 0.24765625 * 1280; time = 0.9005s; samplesPerSecond = 1421.5
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.73132782 * 1280; Err = 0.25000000 * 1280; time = 0.9001s; samplesPerSecond = 1422.0
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.70079651 * 1280; Err = 0.24140625 * 1280; time = 0.9014s; samplesPerSecond = 1420.0
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.69394226 * 1280; Err = 0.25312500 * 1280; time = 0.9004s; samplesPerSecond = 1421.5
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.66590347 * 1280; Err = 0.23437500 * 1280; time = 0.9007s; samplesPerSecond = 1421.1
+MPI Rank 1:  Epoch[ 7 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.66903839 * 1280; Err = 0.22421875 * 1280; time = 0.9027s; samplesPerSecond = 1417.9
+MPI Rank 1: Finished Epoch[ 7 of 10]: [Training] CE = 0.70702133 * 25000; Err = 0.24568000 * 25000; totalSamplesSeen = 175000; learningRatePerSample = 0.0040000002; epochTime=17.6957s
+MPI Rank 1: Final Results: Minibatch[1-40]: CE = 1.09082157 * 10000; perplexity = 2.97671865; Err = 0.35760000 * 10000
+MPI Rank 1: Finished Epoch[ 7 of 10]: [Validate] CE = 1.09082157 * 10000; Err = 0.35760000 * 10000
+MPI Rank 1: 
+MPI Rank 1: Starting Epoch 8: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 1: 
+MPI Rank 1: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.60612369 * 128; Err = 0.18750000 * 128; time = 0.1099s; samplesPerSecond = 1164.2
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.69364964 * 1152; Err = 0.24565972 * 1152; time = 0.8154s; samplesPerSecond = 1412.8
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.62291002 * 1280; Err = 0.21718750 * 1280; time = 0.9040s; samplesPerSecond = 1415.9
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.64501333 * 1280; Err = 0.22421875 * 1280; time = 0.9035s; samplesPerSecond = 1416.6
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.62997684 * 1280; Err = 0.21953125 * 1280; time = 0.9019s; samplesPerSecond = 1419.2
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.66829796 * 1280; Err = 0.23671875 * 1280; time = 0.9027s; samplesPerSecond = 1417.9
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.67835312 * 1280; Err = 0.23359375 * 1280; time = 0.9351s; samplesPerSecond = 1368.8
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.64437485 * 1280; Err = 0.23750000 * 1280; time = 0.9001s; samplesPerSecond = 1422.0
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.64037476 * 1280; Err = 0.21328125 * 1280; time = 0.9018s; samplesPerSecond = 1419.4
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.62702637 * 1280; Err = 0.22265625 * 1280; time = 0.9095s; samplesPerSecond = 1407.3
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.63005943 * 1280; Err = 0.22578125 * 1280; time = 0.9011s; samplesPerSecond = 1420.5
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.63982010 * 1280; Err = 0.22890625 * 1280; time = 0.9005s; samplesPerSecond = 1421.4
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.62537003 * 1280; Err = 0.21796875 * 1280; time = 0.9011s; samplesPerSecond = 1420.4
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.62628403 * 1280; Err = 0.22578125 * 1280; time = 0.9014s; samplesPerSecond = 1420.1
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.62788467 * 1280; Err = 0.22968750 * 1280; time = 0.9020s; samplesPerSecond = 1419.1
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.60352325 * 1280; Err = 0.20859375 * 1280; time = 0.9004s; samplesPerSecond = 1421.6
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.68045197 * 1280; Err = 0.23593750 * 1280; time = 0.9008s; samplesPerSecond = 1420.9
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.65171661 * 1280; Err = 0.22343750 * 1280; time = 0.9060s; samplesPerSecond = 1412.8
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.65177689 * 1280; Err = 0.23750000 * 1280; time = 0.8996s; samplesPerSecond = 1422.9
+MPI Rank 1:  Epoch[ 8 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.67883224 * 1280; Err = 0.23828125 * 1280; time = 0.9008s; samplesPerSecond = 1420.9
+MPI Rank 1: Finished Epoch[ 8 of 10]: [Training] CE = 0.64432441 * 25000; Err = 0.22660000 * 25000; totalSamplesSeen = 200000; learningRatePerSample = 0.0040000002; epochTime=17.7064s
+MPI Rank 1: Final Results: Minibatch[1-40]: CE = 0.76288920 * 10000; perplexity = 2.14446306; Err = 0.27010000 * 10000
+MPI Rank 1: Finished Epoch[ 8 of 10]: [Validate] CE = 0.76288920 * 10000; Err = 0.27010000 * 10000
+MPI Rank 1: 
+MPI Rank 1: Starting Epoch 9: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 1: 
+MPI Rank 1: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.59773529 * 128; Err = 0.21875000 * 128; time = 0.1065s; samplesPerSecond = 1201.5
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.58771972 * 1152; Err = 0.21875000 * 1152; time = 0.8136s; samplesPerSecond = 1416.0
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.59538555 * 1280; Err = 0.20625000 * 1280; time = 0.9030s; samplesPerSecond = 1417.5
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.63351917 * 1280; Err = 0.22109375 * 1280; time = 0.9021s; samplesPerSecond = 1419.0
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.62504444 * 1280; Err = 0.20781250 * 1280; time = 0.9017s; samplesPerSecond = 1419.5
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.64852047 * 1280; Err = 0.22187500 * 1280; time = 0.9003s; samplesPerSecond = 1421.7
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.60715122 * 1280; Err = 0.22421875 * 1280; time = 0.9029s; samplesPerSecond = 1417.7
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.61629524 * 1280; Err = 0.20625000 * 1280; time = 0.9240s; samplesPerSecond = 1385.4
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.61733475 * 1280; Err = 0.21562500 * 1280; time = 0.9024s; samplesPerSecond = 1418.5
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.60011978 * 1280; Err = 0.20859375 * 1280; time = 0.9054s; samplesPerSecond = 1413.7
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.60212250 * 1280; Err = 0.20937500 * 1280; time = 0.9027s; samplesPerSecond = 1418.0
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.61935616 * 1280; Err = 0.21328125 * 1280; time = 0.9005s; samplesPerSecond = 1421.4
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.62340698 * 1280; Err = 0.20937500 * 1280; time = 0.9026s; samplesPerSecond = 1418.1
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.55415726 * 1280; Err = 0.19687500 * 1280; time = 0.9013s; samplesPerSecond = 1420.2
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.59896011 * 1280; Err = 0.20390625 * 1280; time = 0.9013s; samplesPerSecond = 1420.2
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.60199356 * 1280; Err = 0.22421875 * 1280; time = 0.9011s; samplesPerSecond = 1420.5
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.59892349 * 1280; Err = 0.21484375 * 1280; time = 0.9009s; samplesPerSecond = 1420.8
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.59495621 * 1280; Err = 0.21093750 * 1280; time = 0.9063s; samplesPerSecond = 1412.3
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.55690994 * 1280; Err = 0.19687500 * 1280; time = 0.9010s; samplesPerSecond = 1420.6
+MPI Rank 1:  Epoch[ 9 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.57528305 * 1280; Err = 0.19218750 * 1280; time = 0.9000s; samplesPerSecond = 1422.2
+MPI Rank 1: Finished Epoch[ 9 of 10]: [Training] CE = 0.60164965 * 25000; Err = 0.21004000 * 25000; totalSamplesSeen = 225000; learningRatePerSample = 0.0040000002; epochTime=17.6816s
+MPI Rank 1: Final Results: Minibatch[1-40]: CE = 1.00789370 * 10000; perplexity = 2.73982403; Err = 0.32080000 * 10000
+MPI Rank 1: Finished Epoch[ 9 of 10]: [Validate] CE = 1.00789370 * 10000; Err = 0.32080000 * 10000
+MPI Rank 1: 
+MPI Rank 1: Starting Epoch 10: learning rate per sample = 0.004000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+MPI Rank 1: 
+MPI Rank 1: Starting minibatch loop, distributed reading is ENABLED.
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[   1-   1, 1.05%]: CE = 0.50566846 * 128; Err = 0.20312500 * 128; time = 0.1102s; samplesPerSecond = 1161.7
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[   2-  10, 10.53%]: CE = 0.59314947 * 1152; Err = 0.19704861 * 1152; time = 0.8099s; samplesPerSecond = 1422.5
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[  11-  20, 21.05%]: CE = 0.59659390 * 1280; Err = 0.21171875 * 1280; time = 0.9005s; samplesPerSecond = 1421.4
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[  21-  30, 31.58%]: CE = 0.56112833 * 1280; Err = 0.19609375 * 1280; time = 0.9074s; samplesPerSecond = 1410.6
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[  31-  40, 42.11%]: CE = 0.55080986 * 1280; Err = 0.17812500 * 1280; time = 0.9015s; samplesPerSecond = 1419.8
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[  41-  50, 52.63%]: CE = 0.54522018 * 1280; Err = 0.19375000 * 1280; time = 0.9027s; samplesPerSecond = 1417.9
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[  51-  60, 63.16%]: CE = 0.55094738 * 1280; Err = 0.19687500 * 1280; time = 0.9047s; samplesPerSecond = 1414.8
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[  61-  70, 73.68%]: CE = 0.56125832 * 1280; Err = 0.18281250 * 1280; time = 0.9028s; samplesPerSecond = 1417.8
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[  71-  80, 84.21%]: CE = 0.60288773 * 1280; Err = 0.21093750 * 1280; time = 0.9006s; samplesPerSecond = 1421.3
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[  81-  90, 94.74%]: CE = 0.62666435 * 1280; Err = 0.23515625 * 1280; time = 0.9007s; samplesPerSecond = 1421.1
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[  91- 100, 105.26%]: CE = 0.59901733 * 1280; Err = 0.21015625 * 1280; time = 0.9008s; samplesPerSecond = 1421.0
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[ 101- 110, 115.79%]: CE = 0.55121651 * 1280; Err = 0.19375000 * 1280; time = 0.9135s; samplesPerSecond = 1401.1
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[ 111- 120, 126.32%]: CE = 0.62400818 * 1280; Err = 0.21171875 * 1280; time = 0.9045s; samplesPerSecond = 1415.2
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[ 121- 130, 136.84%]: CE = 0.58849106 * 1280; Err = 0.21640625 * 1280; time = 0.9149s; samplesPerSecond = 1399.1
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[ 131- 140, 147.37%]: CE = 0.56788559 * 1280; Err = 0.19375000 * 1280; time = 0.9167s; samplesPerSecond = 1396.4
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[ 141- 150, 157.89%]: CE = 0.58643646 * 1280; Err = 0.19765625 * 1280; time = 0.9059s; samplesPerSecond = 1413.0
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[ 151- 160, 168.42%]: CE = 0.52836456 * 1280; Err = 0.18515625 * 1280; time = 0.9061s; samplesPerSecond = 1412.6
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[ 161- 170, 178.95%]: CE = 0.56360550 * 1280; Err = 0.21484375 * 1280; time = 0.9004s; samplesPerSecond = 1421.5
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[ 171- 180, 189.47%]: CE = 0.58807068 * 1280; Err = 0.19140625 * 1280; time = 0.9055s; samplesPerSecond = 1413.6
+MPI Rank 1:  Epoch[10 of 10]-Minibatch[ 181- 190, 200.00%]: CE = 0.56271210 * 1280; Err = 0.19062500 * 1280; time = 0.9026s; samplesPerSecond = 1418.2
+MPI Rank 1: Finished Epoch[10 of 10]: [Training] CE = 0.57558359 * 25000; Err = 0.20016000 * 25000; totalSamplesSeen = 250000; learningRatePerSample = 0.0040000002; epochTime=17.7141s
+MPI Rank 1: Final Results: Minibatch[1-40]: CE = 0.73150774 * 10000; perplexity = 2.07821164; Err = 0.24640000 * 10000
+MPI Rank 1: Finished Epoch[10 of 10]: [Validate] CE = 0.73150774 * 10000; Err = 0.24640000 * 10000
+MPI Rank 1: ~MultiversoHelper
+MPI Rank 1: [INFO] [2016-11-13 15:57:13] Multiverso Shutdown successfully
+MPI Rank 1: 
+MPI Rank 1: Action "train" complete.
+MPI Rank 1: 
+MPI Rank 1: COMPLETED.
+MPI Rank 1: ~MPIWrapper

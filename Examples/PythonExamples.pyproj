@@ -1,0 +1,106 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{292ff4ee-d9dd-4ba7-85f7-6a22148d1e01}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile />
+    <SearchPath />
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId />
+    <InterpreterVersion />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+    <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="common\nn.py" />
+    <Compile Include="common\__init__.py" />
+    <Compile Include="Image\Classification\ConvNet\Python\CifarConvNet.py" />
+    <Compile Include="Image\Classification\ConvNet\Python\ConvNet_CIFAR10.py" />
+    <Compile Include="Image\Classification\ConvNet\Python\ConvNet_CIFAR10_DataAug.py" />
+    <Compile Include="Image\Classification\ConvNet\Python\ConvNet_MNIST.py" />
+    <Compile Include="Image\Classification\MLP\Python\SimpleMNIST.py" />
+    <Compile Include="Image\Classification\ResNet\Python\CifarResNet.py" />
+    <Compile Include="Image\Classification\ResNet\Python\CifarResNet_Distributed.py" />
+    <Compile Include="Image\Classification\ResNet\Python\resnet_models.py" />
+    <Compile Include="Image\Classification\ResNet\Python\run_Distributed.py" />
+    <Compile Include="Image\Classification\ResNet\Python\TrainResNet_CIFAR10.py" />
+    <Compile Include="Image\Detection\FastRCNN\A1_GenerateInputROIs.py" />
+    <Compile Include="Image\Detection\FastRCNN\A2_RunCntk.py" />
+    <Compile Include="Image\Detection\FastRCNN\A3_ParseAndEvaluateOutput.py" />
+    <Compile Include="Image\Detection\FastRCNN\B1_VisualizeInputROIs.py" />
+    <Compile Include="Image\Detection\FastRCNN\B2_EvaluateInputROIs.py" />
+    <Compile Include="Image\Detection\FastRCNN\B3_VisualizeOutputROIs.py" />
+    <Compile Include="Image\Detection\FastRCNN\C1_DrawBboxesOnImages.py" />
+    <Compile Include="Image\Detection\FastRCNN\C2_AssignLabelsToBboxes.py" />
+    <Compile Include="Image\Detection\FastRCNN\cntk_helpers.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\imdb.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\nms.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\pascal_voc.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\test.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\timer.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\train_svms.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\utils2_win64\__init__.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\voc_eval.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\__init__.py" />
+    <Compile Include="Image\Detection\FastRCNN\imdb_data.py" />
+    <Compile Include="Image\Detection\FastRCNN\install_fastrcnn.py" />
+    <Compile Include="Image\Detection\FastRCNN\PARAMETERS.py" />
+    <Compile Include="Image\Detection\FastRCNN\selectivesearch\selectivesearch.py" />
+    <Compile Include="Image\Detection\FastRCNN\selectivesearch\__init__.py" />
+    <Compile Include="LanguageUnderstanding\ATIS\Python\LanguageUnderstanding.py" />
+    <Compile Include="SequenceClassification\SimpleExample\Python\SequenceClassification.py" />
+    <Compile Include="SequenceToSequence\CMUDict\Python\Sequence2Sequence.py" />
+    <Compile Include="Speech\Miscellaneous\EndToEnd.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="SequenceToSequence\PennTreebank\AdditionalFiles\ExpectedResults.txt" />
+    <Content Include="SequenceToSequence\PennTreebank\AdditionalFiles\RNNLM\CPU\ExpectedOutputs.txt" />
+    <Content Include="SequenceToSequence\PennTreebank\AdditionalFiles\RNNLM\GPU\ExpectedOutputs.txt" />
+    <Content Include="Speech\Miscellaneous\TIMIT\CPU\LSTM_ExpectedOutputs.txt" />
+    <Content Include="Speech\Miscellaneous\TIMIT\GPU\DNN_ExpectedOutputs.txt" />
+    <Content Include="Speech\Miscellaneous\TIMIT\GPU\LSTM_ExpectedOutputs.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="common" />
+    <Folder Include="Image\" />
+    <Folder Include="Image\Classification\" />
+    <Folder Include="Image\Classification\ConvNet\" />
+    <Folder Include="Image\Classification\ConvNet\Python" />
+    <Folder Include="Image\Classification\MLP\" />
+    <Folder Include="Image\Classification\MLP\Python" />
+    <Folder Include="Image\Classification\ResNet\" />
+    <Folder Include="Image\Classification\ResNet\Python" />
+    <Folder Include="Image\Detection\" />
+    <Folder Include="Image\Detection\FastRCNN" />
+    <Folder Include="Image\Detection\FastRCNN\fastRCNN" />
+    <Folder Include="Image\Detection\FastRCNN\selectivesearch" />
+    <Folder Include="LanguageUnderstanding\" />
+    <Folder Include="LanguageUnderstanding\ATIS\" />
+    <Folder Include="LanguageUnderstanding\ATIS\Python" />
+    <Folder Include="SequenceClassification\" />
+    <Folder Include="SequenceClassification\SimpleExample\" />
+    <Folder Include="SequenceClassification\SimpleExample\Python" />
+    <Folder Include="SequenceToSequence\" />
+    <Folder Include="SequenceToSequence\CMUDict\" />
+    <Folder Include="SequenceToSequence\CMUDict\Python" />
+    <Folder Include="SequenceToSequence\PennTreebank\" />
+    <Folder Include="SequenceToSequence\PennTreebank\AdditionalFiles" />
+    <Folder Include="SequenceToSequence\PennTreebank\AdditionalFiles\RNNLM\" />
+    <Folder Include="SequenceToSequence\PennTreebank\AdditionalFiles\RNNLM\CPU" />
+    <Folder Include="SequenceToSequence\PennTreebank\AdditionalFiles\RNNLM\GPU" />
+    <Folder Include="SequenceToSequence\PennTreebank\Data" />
+    <Folder Include="Speech\" />
+    <Folder Include="Speech\Miscellaneous" />
+  </ItemGroup>
+  <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
+</Project>

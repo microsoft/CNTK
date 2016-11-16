@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+
 #pragma once
 
 #include "V2SimpleDistGradAggregator.h"
@@ -129,7 +130,7 @@ public:
                 actualMBSize = 0; // (undefined if !wasDataRead)
 
             if (actualMBSize > 0)
-        {
+            {
 
             size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*dataReader, *m_net, inputMatrices, numSubminibatchesNeeded);
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
@@ -167,7 +168,7 @@ public:
                     if (Globals::UseV2Aggregator())
                         m_distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/, ::CNTK::MPICommunicator());
                     else 
-                        m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/);
+                        m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/);
                 }
 
                 m_gradHeader->numEvalNode = evalNodes.size();

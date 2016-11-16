@@ -1,7 +1,5 @@
 FROM ubuntu:16.04
 
-ARG REPO_TAG
-
 # Set up fake user / sudo environment:
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -19,5 +17,5 @@ COPY BinaryDrop.tar.gz /home/testuser
 RUN chown -R testuser:testuser /home/testuser
 
 # TODO run repeated
-RUN su - testuser -c "./test_wrapper.sh BinaryDrop.tar.gz $REPO_TAG"
+RUN su - testuser -c "./test_wrapper.sh BinaryDrop.tar.gz"
 RUN /root/prep-run-test.sh

@@ -219,6 +219,26 @@ Simple = [
     ]
 ]
 
+Simple_single_stream = [
+    precision = "float"
+    reader = [
+        traceLevel = 0 # this will disable warnings triggered by the unknown input name.
+        readerType = "CNTKTextFormatReader"
+        file = "Simple_dense.txt"
+
+        randomize = false
+        
+        input = [
+
+             features = [
+                alias = "F"
+                dim = 2
+                format = "dense"
+            ]
+
+        ]
+    ]
+]
 
 50x20_jagged_sequences = [
     precision = "double"

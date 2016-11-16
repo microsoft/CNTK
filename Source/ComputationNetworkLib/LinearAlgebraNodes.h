@@ -395,7 +395,7 @@ public:
             // If input data is sparse, then gradient is block sparse.
             if (InputRef(1).Value().GetMatrixType() == SPARSE && InputRef(0).Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
             {
-                // We need a sparse matrix for the gradient. However, we should allocate a new one instead of switching the type in place
+                // We need a sparse matrix for the gradient. We allocate a new one instead of switching the type in place
                 // since switching in place may affect other nodes who share this matrix due to memory sharing
                 auto& currentInput0GradientMatrixRef = InputRef(0).Gradient();
                 auto newInput0SparseGradientMatrix = std::make_shared<Matrix<ElemType>>(currentInput0GradientMatrixRef.GetNumRows(),
@@ -556,7 +556,7 @@ public:
         {
             Input(0)->CreateGradientMatrixIfNull();
 
-            // We need a sparse matrix for the gradient. However, we should allocate a new one instead of switching the type in place
+            // We need a sparse matrix for the gradient. We allocate a new one instead of switching the type in place
             // since switching in place may affect other nodes who share this matrix due to memory sharing
             auto& currentInput0GradientMatrixRef = InputRef(0).Gradient();
             if (currentInput0GradientMatrixRef.GetMatrixType() != SPARSE)

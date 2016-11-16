@@ -2,7 +2,7 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
-ConfigDir=$TEST_DIR/../../../../../../Examples/Text/Miscellaneous/SLU
+ConfigDir=$TEST_DIR/Config
 
 NdlDir=$TEST_DIR 
 ExpDir=$TEST_RUN_DIR 

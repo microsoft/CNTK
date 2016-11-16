@@ -1,7 +1,14 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+
 #pragma once
 
 #include "IDistGradAggregator.h"
 #include "CUDAPageLockedMemAllocator.h"
+#include "NcclComm.h"
 #include <future>
 #include "GPUDataTransferer.h"
 #include "TimerUtility.h"
@@ -15,8 +22,8 @@ class SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
     UsingIDistGradAggregatorMembers;
 
 public:
-    SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int syncStatsTrace)
-        : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0)
+    SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace)
+        : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0), m_nccl(deviceId, mpi)
     {}
 
     ~SimpleDistGradAggregator()
@@ -136,7 +143,8 @@ private:
         {
             m_initialized = true;
             int deviceId = gradients[0]->GetDeviceId();
-            if (deviceId != CPUDEVICE)
+
+            if (!m_nccl.IsSupported() && deviceId != CPUDEVICE)
                 m_allocator.reset(new CUDAPageLockedMemAllocator(deviceId));
 
             for (size_t i = 0; i < gradients.size(); i++)
@@ -145,7 +153,7 @@ private:
                 if (gradients[i]->GetMatrixType() != DENSE)
                     RuntimeError("Gradient aggregation for sparse gradient matrices is currently unsupported!");
 
-                if (deviceId != CPUDEVICE)
+                if (!m_nccl.IsSupported() && deviceId != CPUDEVICE)
                 {
                     m_gpuDataTransferers.push_back(std::make_unique<GPUDataTransferer>(deviceId, m_useAsyncAggregation));
                     m_intermediateCPUBuffers.push_back(AllocateIntermediateBuffer(deviceId, gradients[i]->GetNumElements()));
@@ -216,7 +224,7 @@ private:
         }
 
         // Initiate transfer of the gradient matrices to the CPU if needed
-        if (deviceId >= 0)
+        if (!m_nccl.IsSupported() && deviceId >= 0)
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
                 m_gpuDataTransferers[i]->CopyGPUToCPUAsync(gradients[i]->Data(), gradients[i]->GetNumElements(), m_intermediateCPUBuffers[i].get());
@@ -239,20 +247,27 @@ private:
         if (!m_mpi->IsMainNode())
             MPI_Isend(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank(), numGradMatrices, m_mpi->Communicator(), &sendHeaderRequest) || MpiFail("MPI_Isend");
 
-        // Perform MPI async allreduce on the gradient data
+        // Perform async allreduce on the gradient data
         std::vector<MPI_Request> allReduceRequests(numGradMatrices);
-        for (size_t i = 0; i < numGradMatrices; ++i)
+        if (!m_nccl.IsSupported())
         {
-            ElemType* reductionBuffer = gradients[i]->Data();
-            if (deviceId >= 0)
+            for (size_t i = 0; i < numGradMatrices; ++i)
             {
-                m_gpuDataTransferers[i]->WaitForCopyGPUToCPUAsync();
-                reductionBuffer = m_intermediateCPUBuffers[i].get();
-            }
+                ElemType* reductionBuffer = gradients[i]->Data();
+                if (deviceId >= 0)
+                {
+                    m_gpuDataTransferers[i]->WaitForCopyGPUToCPUAsync();
+                    reductionBuffer = m_intermediateCPUBuffers[i].get();
+                }
 
-            // On Windows this async MPI_Iallreduce call requires MS MPI v7 or higher to be installed
-            MPI_Iallreduce(MPI_IN_PLACE, reductionBuffer, gradients[i]->GetNumElements(), MPIWrapper::GetDataType(reductionBuffer), MPI_SUM, m_mpi->Communicator(), &allReduceRequests[i]) || MpiFail("MPI_Iallreduce");
+                // On Windows this async MPI_Iallreduce call requires MS MPI v7 or higher to be installed
+                MPI_Iallreduce(MPI_IN_PLACE, reductionBuffer, gradients[i]->GetNumElements(),
+                               MPIWrapper::GetDataType(reductionBuffer), MPI_SUM,
+                               m_mpi->Communicator(), &allReduceRequests[i]) || MpiFail("MPI_Iallreduce");
+            }
         }
+        else
+            m_nccl.AllReduce(gradients);
 
         // On the main node wait for the headers to arrive and aggregate
         if (m_mpi->IsMainNode())
@@ -293,11 +308,14 @@ private:
         }
 
         // Wait for the allreduce operations to finish and initiate transfer back to the GPU if needed
-        for (size_t i = 0; i < numGradMatrices; ++i)
+        if (!m_nccl.IsSupported())
         {
-            MPI_Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
-            if (deviceId >= 0)
-                m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
+            for (size_t i = 0; i < numGradMatrices; ++i)
+            {
+                MPI_Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
+                if (deviceId >= 0)
+                    m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
+            }
         }
 
         // Wait to receive aggregate header
@@ -305,7 +323,9 @@ private:
             MPI_Wait(&recvAggHeaderRequest, MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
 
         // Wait for all the transfers to finish
-        if (deviceId >= 0)
+        if (m_nccl.IsSupported())
+            m_nccl.Sync();
+        else if (deviceId >= 0)
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
                 m_gpuDataTransferers[i]->WaitForCopyCPUToGPUAsync();
@@ -349,5 +369,7 @@ private:
     size_t m_iterationCount;
 
     bool m_initialized;
+
+    NcclComm m_nccl;
 };
 } } }

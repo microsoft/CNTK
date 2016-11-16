@@ -2397,7 +2397,12 @@ namespace CNTK
         ///
         /// Load a function from a model file
         ///
-        CNTK_API static FunctionPtr LoadModel(DataType dataType, const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+        CNTK_API static FunctionPtr LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// Prints the entire graph underlying this function to stderr
+        ///
+        CNTK_API void PrintGraph() const;
 
     private:
 
@@ -2695,6 +2700,16 @@ namespace CNTK
     }
 
     ///
+    /// Create an instance of the CNTK built-in operation to compute binary cross-entropy for specified input operands.
+    ///
+    CNTK_API FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operation to compute weighted binary cross-entropy for specified input operands.
+    ///
+    CNTK_API FunctionPtr WeightedBinaryCrossEntropy(const Variable& prediction, const Variable& targets, const Variable& weights, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in operation to compute squared-error for specified input operands.
     ///
     CNTK_API FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
@@ -2900,6 +2915,13 @@ namespace CNTK
         CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");
         CNTK_API FunctionPtr IsLast(const Variable& operand, const std::wstring& name = L"");
 
+        CNTK_API FunctionPtr Slice(const Variable& operand, int beginIndex, int endIndex, const std::wstring& name = L"");
+
+        ///
+        /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along the operands lone dynamic sequence axis
+        ///
+        CNTK_API FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name = L"");
+
         CNTK_API FunctionPtr First(const Variable& operand, const std::wstring& name = L"");
         CNTK_API FunctionPtr Last(const Variable& operand, const std::wstring& name = L"");
 
@@ -2942,14 +2964,14 @@ namespace CNTK
         ///
         /// Create a schedule with a constant parameter value.
         ///
-        CNTK_API TrainingParameterSchedule(T value, UnitType unit = UnitType::Sample);
+        CNTK_API TrainingParameterSchedule(T value, UnitType unit);
 
         ///
         /// Create a schedule where the parameter changes its value every 'epochSize' samples:
         /// schedule[0] is used for the first 'epochSize' samples, schedule[1] -- for the second,
         /// and so on. The last value is then used repeatedly until the end of training.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, size_t epochSize = 1, UnitType unit = UnitType::Sample);
+        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, UnitType unit, size_t epochSize = 1);
 
         ///
         /// Create a schedule using the list of key-value pairs, where the key specifies 
@@ -2960,7 +2982,7 @@ namespace CNTK
         /// the first 100 samples, then '0.1' is used for the second 200 samples, 
         /// after which the values is switched to '0.005'.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = 1, UnitType unit = UnitType::Sample);
+        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, UnitType unit, size_t epochSize = 1);
 
         ///
         /// Returns a value corresponding to the absolute sample (or sweep) 
@@ -3012,11 +3034,11 @@ namespace CNTK
         { }
         
         TrainingParameterPerUnitSchedule(const std::vector<double>& schedule, size_t epochSize = 1) 
-            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, epochSize, U)
+            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, U, epochSize)
         { }
         
         TrainingParameterPerUnitSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epochSize = 1) 
-            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, epochSize, U)
+            : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, U, epochSize)
         { }
 
 #ifdef SWIG // for Python interop (adds indexer)
@@ -3056,19 +3078,19 @@ namespace CNTK
     {
     public:
         MomentumAsTimeConstantSchedule(double value) 
-            : TrainingParameterSchedule<double>::TrainingParameterSchedule(value)
+            : TrainingParameterSchedule<double>::TrainingParameterSchedule(value, UnitType::Sample)
         { 
             ConvertToPerSampleValues();
         }
         
         MomentumAsTimeConstantSchedule(const std::vector<double>& schedule, size_t epochSize = 1) 
-            : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, epochSize) 
+            : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, UnitType::Sample, epochSize) 
         { 
             ConvertToPerSampleValues();
         }
         
         MomentumAsTimeConstantSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epochSize = 1) 
-            : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, epochSize)
+            : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, UnitType::Sample, epochSize)
         { 
             ConvertToPerSampleValues();
         }
@@ -3091,7 +3113,11 @@ namespace CNTK
     {
         double l1RegularizationWeight = 0.0;
         double l2RegularizationWeight = 0.0;
-        TrainingParameterSchedule<double> gaussianNoiseInjectionStdDev = 0.0;
+#ifdef SWIG //for python interop (swig does not fully support "using")
+        TrainingParameterPerUnitSchedule<double, TrainingParameterSchedule<double>::UnitType::Minibatch> gaussianNoiseInjectionStdDev = 0.0;
+#else
+        TrainingParameterPerMinibatchSchedule<double> gaussianNoiseInjectionStdDev = 0.0;
+#endif
         double gradientClippingThresholdPerSample = std::numeric_limits<double>::infinity();
         bool gradientClippingWithTruncation = true;
     };
@@ -3150,18 +3176,11 @@ namespace CNTK
         virtual void ResetSmoothedGradients() = 0;
 
         ///
-        /// Returns current (per-sample) learning rate.
+        /// Returns current learning rate.
         ///
-        virtual double LearningRate(size_t minibatchSize = 1) const
+        virtual double LearningRate() const
         {
-            auto learningRate = GetCurrentTrainingParameterValue<double>(m_learningRateSchedule);
-            if (m_learningRateSchedule.Unit() == LearningRateSchedule::UnitType::Minibatch)
-            {
-                // learning rate needs to be converted to the per-sample value.
-                return (minibatchSize == 0) ? 0.0 : learningRate / minibatchSize;
-            }
-
-            return learningRate;
+            return GetCurrentTrainingParameterValue<double>(m_learningRateSchedule);
         }
 
     protected:
@@ -3344,6 +3363,8 @@ namespace CNTK
         const std::vector<LearnerPtr>& ParameterLearners() const { return m_parameterLearners; }
 
     private:
+        void Save(const std::wstring& modelFilePath, bool usingLegacyModelFormat, const Dictionary& state);
+
         FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_model;
         FunctionPtr m_lossFunction;
@@ -3578,10 +3599,19 @@ namespace CNTK
         CNTK_API virtual DistributedCommunicatorPtr SubGroup(const std::unordered_set<DistributedWorkerDescriptor>& subGroupWorkers) const = 0;
 
         // A collective communication API to concatenate values across each worker of this communicator. The concatenated values are only sent to the specified workers; for all others the returned Values are null
-        // TODO: Add an async variant of the Concatenate method
         CNTK_API virtual void Concatenate(
             const std::vector<ValuePtr>& values,
             std::vector<ValuePtr>& outputValues,
+            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
+
+        CNTK_API virtual void Concatenate(
+            const std::vector<NDArrayViewPtr>& input,
+            std::vector<NDArrayViewPtr>& output,
+            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
+
+        CNTK_API virtual void Gather(
+            const Dictionary& input,
+            std::vector<DictionaryPtr>& output,
             const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
 
         // A collective communication API to aggregate values across each worker of this communicator. 
@@ -3647,6 +3677,7 @@ namespace CNTK
     /// A collection of additional information needed for the distributed trainer to aggregate the gradients
     struct MinibatchInfo
     {
+        bool atEndOfData;
         size_t numberOfSamples;
         NDArrayViewPtr trainingLossValue;
         NDArrayViewPtr evalCriterionValue;
@@ -3661,14 +3692,15 @@ namespace CNTK
         // Optional override that gets called before each minibatch during training
         CNTK_API virtual void PreMinibatchCallback(const Trainer& trainer) = 0;
 
-        // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
-        CNTK_API virtual void PreParameterUpdateCallback(const Trainer& trainer, std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info) = 0;
+        // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters.
+        CNTK_API virtual bool PreParameterUpdateCallback(const Trainer& trainer, std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info) = 0;
 
         // Optionally overridable method to get checkpoint state associated with this Distributed train method
-        CNTK_API virtual Dictionary GetCheckpointState() const = 0;
+        CNTK_API virtual Dictionary CreateCheckpoint(const Trainer& trainer, const Dictionary& localStateToShare) = 0;
 
         // Optionally overridable method to restore state pertaining this distributed training method from a previous checkpoint
-        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) = 0;
+        // Returns local state that corresponds to this worker.
+        CNTK_API virtual Dictionary RestoreFromCheckpoint(const Dictionary& checkpoint) = 0;
 
         // Return the distributed communicator used in the distributed trainer
         CNTK_API virtual DistributedCommunicatorPtr GetCommunicator() = 0;

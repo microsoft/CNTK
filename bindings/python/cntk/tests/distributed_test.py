@@ -40,9 +40,9 @@ def run_distributed_trainer(tmpdir, quantized):
     dist_trainer = distributed.data_parallel_distributed_trainer(communicator, False)
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
-
+    lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, ce, errs, \
-            momentum_sgd(z.parameters, 0.007, momentum_time_constant),
+            momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant),
             distributed_trainer=dist_trainer)
     in1_value = [[1],[2]]
     label_value = [[0], [1]]

@@ -1,0 +1,141 @@
+# This is a configuration for parallel training of a simple feed-forward neural network using data-parallel SGD.
+# The configuration is identical to the OneHidden.cntk except for the few additional parallelism related options.
+
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+RootDir = ".."
+
+ConfigDir = "$RootDir$/Config"
+DataDir = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+# deviceId = -1 for CPU, >= 0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
+deviceId = "auto"
+
+command = Multigpu_Demo_Train:Multigpu_Demo_Test
+
+precision = "float"
+traceLevel = 1
+modelPath = "$ModelDir$/multigpu.dnn"
+outputNodeNames = ScaledLogLikelihood
+
+# uncomment the following line to write logs to a file 
+# stderr = "$OutputDir$/DemoOut"
+parallelTrain = true
+
+#######################################
+#  TRAINING CONFIG                    #
+#######################################
+
+Multigpu_Demo_Train=[
+    action = "train"
+
+    # Notation xxx:yyy*n:zzz is equivalent to xxx, then yyy repeated n times, then zzz
+    # Example: 10:20*3:5 is equivalent to 10:20:20:20:5
+    SimpleNetworkBuilder = [
+        # 2 input, 2 50-element hidden, 2 output
+        layerSizes = 2:50*2:2
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ClassificationError"
+        layerTypes = "Sigmoid"
+        initValueScale = 1.0
+        applyMeanVarNorm = true
+        uniformInit = true
+        needPrior = true
+    ]
+
+    SGD = [
+        # epochSize = 0 means epochSize is the size of the training set 
+        epochSize = 0 
+        minibatchSize = 25  
+        learningRatesPerMB = 0.5:0.2*20:0.1
+        momentumPerMB = 0.9
+        dropoutRate = 0.0
+        maxEpochs = 10
+
+        # Additional optional parameters are: distributedMBReading
+        parallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            parallelizationStartEpoch = 2
+
+            # Additional optional parameters are: useZeroThresholdFor1BitQuantization
+            dataParallelSGD = [
+                gradientBits = 1
+            ]
+        ]
+    ]
+       
+    # Parameter values for the reader
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTrain_cntk_text.txt"
+        input = [
+            features = [
+                dim = 2        # two-dimensional input data
+                format = "dense"
+            ]
+            labels = [
+                dim = 2        # two-dimensional labels
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+########################################
+#  TEST RESULTS                        #
+#  (computes prediction error and      #
+#   perplexity on a test set and       #
+#   writes the output to the console.) #
+########################################
+
+Multigpu_Demo_Test=[
+    action = "test"
+
+    # Parameter values for the reader
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+                dim = 2        # two-dimensional input data
+                format = "dense"
+            ]
+            labels = [
+                dim = 2        # two-dimensional labels
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+########################################
+#  OUTPUT RESULTS                      #
+#  (Computes the labels for a test set #
+#   and writes the results to a file.) #
+########################################
+
+Multigpu_Demo_Output=[
+    action = "write"
+
+    # Parameter values for the reader
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+                dim = 2        # two-dimensional input data
+                format = "dense"
+            ]
+            labels = [
+                dim = 2        # two-dimensional labels
+                format = "dense"
+            ]
+        ]
+    ]
+
+    outputPath = "$OutputDir$/MultigpuOutput"    # Dump output as text
+]

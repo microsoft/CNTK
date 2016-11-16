@@ -13,14 +13,6 @@ testCases:
     patterns:
       - EvaluateModelMultipleLayers
 
-  Test case NetworkSingleLayer:
-    patterns:
-      - EvaluateNetworkSingleLayer
-      
-  Test case NetworkSingleLayerNoInput:
-    patterns:
-      - EvaluateNetworkSingleLayerNoInput
-      
   Test case ExtendedNetworkSingleLayerNoInput:
     patterns:
       - EvaluateExtendedNetworkSingleLayerNoInput

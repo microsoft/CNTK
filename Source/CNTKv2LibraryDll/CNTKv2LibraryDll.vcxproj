@@ -39,10 +39,6 @@
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
-  <PropertyGroup Condition="$(ReleaseBuild)" Label="Configuration">
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -55,7 +51,6 @@
     <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
-    <LinkIncremental>false</LinkIncremental>
     <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
   </PropertyGroup>
   <PropertyGroup>
@@ -100,9 +95,6 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>CNTKV2LIBRARYDLL;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <OpenMPSupport>false</OpenMPSupport>
@@ -114,10 +106,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; Common.lib; ReaderLib.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
-      <Profile>true</Profile>
       <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -145,8 +134,10 @@
     <ClInclude Include="API\CNTKLibrary.h" />
     <ClInclude Include="API\CNTKLibraryExperimental.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
+    <ClInclude Include="BackCompat.h" />
     <ClInclude Include="DataParallelDistributedTrainer.h" />
     <ClInclude Include="DistributedCommunicator.h" />
+    <ClInclude Include="DistributedTrainerBase.h" />
     <ClInclude Include="Function.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
@@ -163,13 +154,13 @@
     <ClCompile Include="ComputeInputStatistics.cpp" />
     <ClCompile Include="DataParallelDistributedTrainer.cpp" />
     <ClCompile Include="DistributedCommunicator.cpp" />
+    <ClCompile Include="DistributedTrainerBase.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeader>
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Function.cpp" />
-    <ClCompile Include="Globals.cpp" />
     <ClCompile Include="Learner.cpp" />
     <ClCompile Include="MinibatchSource.cpp" />
     <ClCompile Include="NDArrayView.cpp" />
@@ -185,7 +176,6 @@
     <ClCompile Include="Variable.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\bindings\python\cntk\PythonBindings.pyproj" />
     <None Include="proto\CNTK.proto" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

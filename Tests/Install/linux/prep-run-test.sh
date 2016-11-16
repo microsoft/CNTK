@@ -55,8 +55,8 @@ pytest --deviceid \$TEST_DEVICE
 # TODO actually do different device and syntax.
 
 # CNTK.wiki example:
-cd $CNTK_DROP/Examples/Other/Simple2d/Data
-cntk configFile=../Config/Simple.cntk deviceId=\$TEST_DEVICE_ID
+cd $CNTK_DROP/Tutorials/HelloWorld-LogisticRegression 
+cntk configFile=lr_bs.cntk deviceId=\$TEST_DEVICE_ID
 
 cd $CNTK_DROP/Examples/Image/DataSets/MNIST
 python install_mnist.py
