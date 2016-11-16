@@ -8,13 +8,13 @@ import os
 import math
 import numpy as np
 
-from cntk.blocks import default_options, Placeholder
+from cntk.blocks import default_options, Placeholder, identity
 from cntk.layers import Convolution, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense
 from cntk.models import Sequential, For
 from cntk.utils import *
-from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
+from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.initializer import glorot_uniform
-from cntk import Trainer
+from cntk import Trainer, Evaluator
 from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu
 from cntk.ops import input_variable, constant, parameter, element_times, combine
@@ -40,14 +40,14 @@ num_classes  = 10
 # define the reader    #
 ########################
 
-def create_reader(map_file, mean_file, train):
+def create_reader(map_file, mean_file, is_training):
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         raise RuntimeError("File '%s' or '%s' does not exist. Please run install_cifar10.py from Examples/Image/DataSets/CIFAR-10 to fetch them" %
                            (map_file, mean_file))
 
     # transformation pipeline for the features has jitter/crop only when training
     transforms = []
-    if train:
+    if is_training:
         transforms += [
             ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio') # train uses jitter
         ]
@@ -59,7 +59,7 @@ def create_reader(map_file, mean_file, train):
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
         features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
         labels   = StreamDef(field='label', shape=num_classes)      # and second as 'label'
-    )))
+    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
 
 ########################
 # define the model     #
@@ -108,12 +108,12 @@ def create_vgg9_model(num_classes):
 _1, _2 = (Placeholder(), Placeholder())
 _ = Placeholder()
 
-# compose model function and criterion primitives into a criterion function
+# compose model function (with optional input normalization) and criterion primitives into a criterion function
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
-# This function is generic and could be a stock function create_ce_classification_criter().
-def create_criterion_function(model):
-    z = model(_1)
+# This function is generic and could be a stock function create_ce_classification_criterion().
+def create_criterion_function(model, normalize=identity):
+    z = model(normalize(_1))
     ce   = cross_entropy_with_softmax(z, _2, name='_ce')
     errs = classification_error      (z, _2, name='_errs')
     return combine ([ce, errs]) # (features, labels) -> (loss, metric)
@@ -122,96 +122,64 @@ def create_criterion_function(model):
 # train & eval action  #
 ########################
 
-def train_and_evaluate(reader_train, reader_test, model, max_epochs):
+def train_and_evaluate(reader, reader_test, model, max_epochs):
 
     # declare the model's input dimension
     model.replace_placeholders({model.placeholders[0]: input_variable((num_channels, image_height, image_width))})
     # BUGBUG: ^^ Trainer requires this, although the criterion roots are not part of this.
 
-    # Normalize the input
-    feature_scale = 1.0 / 256.0 # BUGBUG: using 1/256 now leads to much poorer accuracy
-    #input_var_norm = element_times(feature_scale, input_var)
-    norm_function = element_times(feature_scale, _)
-
     # criterion function. This is what is being trained trained.
-    criterion = create_criterion_function(norm_function >> model)
-    #criterion = create_criterion_function(model)
+    # Model gets "sandwiched" between normalization (not part of model proper) and criterion.
+    criterion = create_criterion_function(model, normalize=element_times(1.0 / 256.0, _))
     criterion.replace_placeholders({criterion.placeholders[0]: input_variable((num_channels, image_height, image_width)), criterion.placeholders[1]: input_variable((num_classes))})
 
-    # old version, still the same bad result
-    #input_var = input_variable((num_channels, image_height, image_width))
-    #label_var = input_variable((num_classes))
-    #input_var_norm = element_times(feature_scale, input_var)
-    #z = model(input_var_norm)
-    #ce = cross_entropy_with_softmax(z, label_var)
-    #pe = classification_error      (z, label_var)
-    #criterion = combine ([ce, pe])
-
-    #
-    # Training action
-    #
-
-    # loss and metric
-    #ce = cross_entropy_with_softmax(model, label_var)
-    #pe = classification_error(model, label_var)
-
-    # training config
+    # iteration parameters
     epoch_size     = 50000
     minibatch_size = 64
     #epoch_size = 1000 ; max_epochs = 1 # for faster testing
 
     # learning parameters
-    lr_per_minibatch       = learning_rate_schedule([0.1]*10 + [0.03]*10 + [0.01], UnitType.minibatch, epoch_size)
-    momentum_time_constant = momentum_as_time_constant_schedule(-minibatch_size/np.log(0.9))
-    l2_reg_weight          = 0.0001
+    learner = momentum_sgd(model.parameters, 
+                           lr = learning_rate_schedule([0.1]*10 + [0.03]*10 + [0.01], UnitType.minibatch, epoch_size),
+                           momentum = momentum_as_time_constant_schedule(-minibatch_size/np.log(0.9)),
+                           l2_regularization_weight = 0.0001)
 
     # trainer object
-    learner     = momentum_sgd(model.parameters, 
-                               lr = lr_per_minibatch, momentum = momentum_time_constant,
-                               l2_regularization_weight = l2_reg_weight)
-    trainer     = Trainer(model, criterion.outputs[0], criterion.outputs[1], learner)
+    trainer = Trainer(model, criterion.outputs[0], criterion.outputs[1], learner)
 
+    # perform model training
     log_number_of_parameters(model) ; print()
     progress_printer = ProgressPrinter(tag='Training')
 
-    # perform model training
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
-            data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count)) # fetch minibatch.
-            #trainer.train_minibatch({ trainer.loss_function.arguments[0]: data[reader_train.streams.features], trainer.loss_function.arguments[1]: data[reader_train.streams.labels] }) # update model with it
+            mb = reader.next_minibatch(min(minibatch_size, epoch_size - sample_count)) # fetch minibatch.
+            #trainer.train_minibatch({ trainer.loss_function.arguments[0]: mb[reader.streams.features], trainer.loss_function.arguments[1]: mb[reader.streams.labels] }) # update model with it
             # BUGBUG: ^^ Fails with "Function::Forward: Required argument's () value that the requested output(s) depend on has not been provided"
-            trainer.train_minibatch({ criterion.arguments[0]: data[reader_train.streams.features], criterion.arguments[1]: data[reader_train.streams.labels] }) # update model with it
-            # TODO: We should just be able to say train_minibatch(data[reader_train.streams.features], data[reader_train.streams.labels])
-            sample_count += data[reader_train.streams.labels].num_samples                     # count samples processed so far
+            trainer.train_minibatch({ criterion.arguments[0]: mb[reader.streams.features], criterion.arguments[1]: mb[reader.streams.labels] }) # update model with it
+            # TODO: We should just be able to say train_minibatch(mb[reader.streams.features], mb[reader.streams.labels])
+            sample_count += mb[reader.streams.labels].num_samples                     # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
-    
-    #
-    # Evaluation action
-    #
+
+    #return metric_numer/metric_denom
+
+
+    # evaluate with current Trainer instance; just to make sure we save and load the model correctly and BN works now --TODO: delete once confirmed
     epoch_size     = 10000
     minibatch_size = 16
-
-    # process minibatches and evaluate the model
     metric_numer    = 0
     metric_denom    = 0
     sample_count    = 0
     minibatch_index = 0
 
-    #progress_printer = ProgressPrinter(freq=100, first=10, tag='Eval')
     while sample_count < epoch_size:
-        current_minibatch = min(minibatch_size, epoch_size - sample_count)
-
-        # Fetch next test min batch.
-        data = reader_test.next_minibatch(current_minibatch, input_map=input_map)
-
-        # minibatch data to be trained with
-        metric_numer += trainer.test_minibatch(data) * current_minibatch
-        metric_denom += current_minibatch
-
-        # Keep track of the number of samples processed so far.
-        sample_count += data[label_var].num_samples
+        mbsize = min(minibatch_size, epoch_size - sample_count)
+        mb = reader_test.next_minibatch(mbsize)
+        metric_numer += mbsize * trainer.test_minibatch({ criterion.arguments[0]: mb[reader_test.streams.features], criterion.arguments[1]: mb[reader_test.streams.labels] })
+        metric_denom += mbsize
+        sample_count += mb[reader_test.streams.labels].num_samples
         minibatch_index += 1
 
     print("")
@@ -219,51 +187,35 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
     print("")
 
     # return evaluation error.
-    return metric_numer/metric_denom
-    #return loss, metric # return values from last epoch
+    return loss, metric # return values from last epoch
 
 ########################
 # eval action          #
 ########################
 
 def evaluate(reader, model):
-    # Input variables denoting the features and label data
-    input_var = input_variable((num_channels, image_height, image_width))
-    label_var = input_variable((num_classes))
 
-    # apply model to input
-    #z = model(input_var)
-    input_var = model.arguments[0]  # workaround
-    z = model
-
-    # loss and metric
-    ce = cross_entropy_with_softmax(z, label_var)
-    pe = classification_error      (z, label_var)
-
-    # define mapping from reader streams to network inputs
-    input_map = {
-        input_var: reader.streams.features,
-        label_var: reader.streams.labels
-    }
+    # criterion function. This is what is being evaluated
+    criterion = create_criterion_function(model, normalize=element_times(1.0 / 256.0, _))
+    criterion.replace_placeholders({criterion.placeholders[0]: input_variable((num_channels, image_height, image_width)), criterion.placeholders[1]: input_variable((num_classes))})
 
     # process minibatches and perform evaluation
-    dummy_learner = momentum_sgd(z.parameters, 1, 0) # BUGBUG: should not be needed
-    evaluator = Trainer(z, ce, pe, [dummy_learner])
-    progress_printer = ProgressPrinter(freq=100, first=10, tag='Evaluation') # more detailed logging
-    #progress_printer = ProgressPrinter(tag='Evaluation')
+    evaluator = Evaluator(model, criterion.outputs[0], criterion.outputs[1])
+
+    progress_printer = ProgressPrinter(tag='Evaluation')
 
     while True:
         minibatch_size = 1000
-        data = reader.next_minibatch(minibatch_size, input_map=input_map) # fetch minibatch
-        if not data:                                                      # until we hit the end
+        mb = reader.next_minibatch(minibatch_size) # fetch minibatch
+        if not mb:                                                      # until we hit the end
             break
-        metric = evaluator.test_minibatch(data)                           # evaluate minibatch
-        progress_printer.update(0, data[slot_labels].num_samples, metric) # log progress
+        metric = evaluator.test_minibatch({ criterion.arguments[0]: mb[reader.streams.features], criterion.arguments[1]: mb[reader.streams.labels] }) # evaluate minibatch
+        progress_printer.update(0, mb[reader.streams.labels].num_samples, metric) # log progress
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric
 
-#############################
+############################# 
 # main function boilerplate #
 #############################
 
@@ -272,15 +224,15 @@ if __name__=='__main__':
     model = create_vgg9_model(10)
 
     # train
-    reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
+    reader = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'),  os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
-    train_and_evaluate(reader_train, reader_test, model, max_epochs=5)
-
-    # save and load (as an illustration)
+    train_and_evaluate(reader, reader_test, model, max_epochs=5)
+    #
+    ## save and load (as an illustration)
     path = data_path + "/model.cmf"
     save_model(model, path)
     model1 = load_model(path)
 
     # test
-    reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'),  os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
-    evaluate(reader_test, model1)
+    reader = create_reader(os.path.join(data_path, 'test_map.txt'),  os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
+    evaluate(reader, model1)

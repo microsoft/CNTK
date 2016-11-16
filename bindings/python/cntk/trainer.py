@@ -237,3 +237,11 @@ def create_trainer(model_function, criterion_function, parameter_learners, distr
     loss_function   = outputs[0]
     metric_function = outputs[1] if len(outputs) == 2 else None
     return Trainer(model_function, loss_function, metric_function, parameter_learners, distributed_trainer)
+
+# create an evaluator; that is really a Trainer object with dummy SGD parameters that we can call test_minibatch() on
+def Evaluator(model, loss, metric):
+    from .learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+    dummy_learner = momentum_sgd(model.parameters, 
+                                 lr = learning_rate_schedule(1, UnitType.minibatch),
+                                 momentum = momentum_as_time_constant_schedule(0))
+    return Trainer(model, loss, metric, dummy_learner)
