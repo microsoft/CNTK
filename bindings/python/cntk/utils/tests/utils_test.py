@@ -155,6 +155,13 @@ def test_pad_sparse_seq_to_max_len():
     assert batch[0].shape == (1,4)
     assert batch[1].shape == (1,4)
 
+def test_pad_sparse_seq_to_max_len_bad():
+    batch = [
+            [csr([1,0]), csr([2,3])],
+            [csr([5,6])]]
+    with pytest.raises(ValueError):
+        batch = pad_sparse_seq_to_max_len(batch, 1)
+
 def test_sanitize_batch_sparse():
     batch = [[csr([1,0,2]), csr([2,3,0])],
              [csr([5,0,1])]]

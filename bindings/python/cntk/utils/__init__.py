@@ -23,7 +23,7 @@ def sanitize_precision(precision):
     Converts precision to NumPy precision
 
     Args:
-        precision (``str`` or `np.float32` or `np.float64`): precision, if string
+        precision (str or `np.float32` or `np.float64`): precision, if string
          it can be one of 'float' 'float32, 'double', or 'float64'
 
     Returns:
@@ -71,7 +71,7 @@ def sparse_to_str(data):
 def tensors_to_text_format(sample_idx, alias_tensor_map):
     '''
     Converts a list of NumPy arrays representing tensors of inputs into a
-    format that is readable by ``CNTKTextReader``.
+    format that is readable by :class:`~cntk.io.CTFDeserializer`.
 
     Args:
         sample_idx (int): number of current sample
@@ -159,8 +159,6 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     such that the integer data in ``batch`` is interpreted as the indices
     representing one-hot vectors.
 
-    E.g., given an input with shape=5, 
-
     Args:
         batch (list (of lists, if sequence) of index data): batch input data
         num_classes (int): number of classes
@@ -169,8 +167,8 @@ def one_hot(batch, num_classes, dtype=None, device=None):
          this value should be put on
 
     Returns:
-        ``batch`` converted into a :class:`~cntk.cntk_py.Value` object that can
-        be passed to the forward or eval function.
+        ``batch`` converted into a :class:`~Value` object that can be passed to
+        the forward or eval function.
     '''
     if device is None:
         device = use_default_device()
@@ -343,10 +341,10 @@ def get_data_type(*args):
     inputs. Placeholders are ignored in the type determination.
 
     Args:
-        args (number, ``list``, NumPy array, :class:`cntk.ops.variables.Variable`, 
+        args (number, list, NumPy array, :class:`cntk.ops.variables.Variable`, 
          or :class:`cntk.ops.functions.Function`): input
     Returns:
-        ``np.float32``, ``np.float64``, or ``None``
+        np.float32, np.float64, or None
     """
     from ..ops.variables import Variable
 
@@ -433,7 +431,11 @@ def pad_sparse_seq_to_max_len(batch, max_seq_len):
     Z = []
     data_point = sparse.csr_matrix(batch[0][0].shape)
     for seq in batch:
-        pad = (max_seq_len-len(seq))*[data_point]
+        seq_len = len(seq)
+        if seq_len>max_seq_len:
+            raise ValueError('sequence of length %i exceeds max '
+                    'length of %i'%(seq_len, max_seq_len))
+        pad = (max_seq_len-seq_len)*[data_point]
         Z.append(sparse.hstack(seq + pad, format='csr'))
     return Z
 
@@ -447,7 +449,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
         var (:class:`~cntk.ops.variables.Variable`): variable node for which the ``batch`` is
          meant
         batch (list of NumPy arrays): input
-        seq_starts (list of bool or None): if `None`, every sequence is
+        seq_starts (list of bool or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
          continuation of the previous one (`False`)
@@ -672,8 +674,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          one (`True`) or a continuation of the previous one (`False`).
          Data should be either NumPy arrays or a
          :class:`cntk.io.MinibatchData` instance.
-        precision (`str` or `np.float32` or `np.float64`): if string it can be
-         one of 'float' 'float32, 'double', 'float64', or `None`
+        precision (str or `np.float32` or `np.float64`): if string it can be
+         one of 'float' 'float32, 'double', 'float64', or None
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
          this value should be put on
 
@@ -863,13 +865,13 @@ def sanitize_axis(axis):
     Sanitizes the axis.
 
     Args:
-        axis (:class:`cntk.axis.Axis` or ``int`` or ``None``): the axis to be used.
+        axis (:class:`cntk.axis.Axis` or int or None): the axis to be used.
 
           * :class:`cntk.axis.Axis`: use axis instance directly (will convert row- to
              col-major in case of static axis.
-          * ``int``: if positive, use it as static axis. If negative, count from
+          * int: if positive, use it as static axis. If negative, count from
             last to first axis
-          * ``None``: denote all available axes
+          * None: denote all available axes
     '''
     if axis is None:
         return Axis.all_static_axes()
@@ -959,10 +961,10 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
         op (:class:`Function`): operation to evaluate
         arguments: maps variables to their input data. The
          interpretation depends on the input type:
-           * `dict`: keys are input variable or names, and values are the input data.
+          * `dict`: keys are input variable or names, and values are the input data.
           * any other type: if node has an unique input, ``arguments`` is mapped to this input.
            For nodes with more than one input, only `dict` is allowed.
-         In both cases, every every sample in the data will be interpreted
+         In both cases, every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
          previous sequence, specify ``arguments`` as `tuple`: the
          first element will be used as ``arguments``, and the second one will
@@ -970,18 +972,18 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
          one (`True`) or a continuation of the previous one (`False`).
          Data should be either NumPy arrays or a
          :class:`cntk.io.MinibatchData` instance.
-        seq_starts (`list` of `bool`s or `None`): if `None`, every sequence is
+        seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
          continuation of the previous one (`False`)
-        precision (`str` or `None`): precision being 'float32', 'float64', or
-         `None`, in which case it will be determined by inspecting the operator
+        precision (str or None): precision being 'float32', 'float64', or
+         None, in which case it will be determined by inspecting the operator
          (costly)
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
          this value should be put on
         backward_pass (`bool`, optional): whether a backward pass is performed
-        expected_backward (`dict` or `None`): keys are variables for which to
-         compute a backward ouptut. By default (set to `None`) all entries from
+        expected_backward (`dict` or None): keys are variables for which to
+         compute a backward ouptut. By default (None) all entries from
          'arguments' are used
 
     Returns:
