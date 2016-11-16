@@ -218,7 +218,14 @@ def Placeholder(shape=None, name='placeholder'):
         print("new " + _node_description(p))
     return p
 
-SymbolicArgument = Placeholder  # Placeholder is too overloaded; we should use this instead everywhere
+# e.g.
+# x, y = Placeholders(2)
+def Placeholders(num_positional, *named_names):
+    args = [Placeholder() for i in range(num_positional)]
+    combined_args = combine(args) # create a compound that traverses in the defined order
+    return tuple([output for output in combined_args.outputs])
+
+#SymbolicArgument = Placeholder  # Placeholder is too overloaded; we should use this instead everywhere
 
 # If we have C++-side Function identity, in same pattern as e.g. sigmoid, then that would suffice.
 def _Identity(name='identity_arg'):

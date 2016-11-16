@@ -35,7 +35,6 @@ class Function(cntk_py.Function):
     will relay to its only output.
     '''
 
-
     def _get_arguments(self):
         return [arg for arg in self.inputs if arg.is_input or arg.is_placeholder]
 
@@ -66,6 +65,7 @@ class Function(cntk_py.Function):
 
 
     # call a function, i.e. clone with all placeholders/inputs replaced
+    # TODO: if all inputs are actual data, this should eval() instead
     def __call__(self, *args):
         if not isinstance(args, tuple):  # normalize single argument into tuple
             args = (args,)

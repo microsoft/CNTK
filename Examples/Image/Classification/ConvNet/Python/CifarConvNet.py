@@ -105,17 +105,15 @@ def create_vgg9_model(num_classes):
 # define the criteria  #
 ########################
 
-_1, _2 = (Placeholder(), Placeholder())
-_ = Placeholder()
-
 # compose model function (with optional input normalization) and criterion primitives into a criterion function
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
 # This function is generic and could be a stock function create_ce_classification_criterion().
 def create_criterion_function(model, normalize=identity):
-    z = model(normalize(_1))
-    ce   = cross_entropy_with_softmax(z, _2, name='_ce')
-    errs = classification_error      (z, _2, name='_errs')
+    x, y = Placeholders(2)
+    z = model(normalize(x))
+    ce   = cross_entropy_with_softmax(z, y)
+    errs = classification_error      (z, y)
     return combine ([ce, errs]) # (features, labels) -> (loss, metric)
 
 ########################
@@ -130,7 +128,7 @@ def train_and_evaluate(reader, reader_test, model, max_epochs):
 
     # criterion function. This is what is being trained trained.
     # Model gets "sandwiched" between normalization (not part of model proper) and criterion.
-    criterion = create_criterion_function(model, normalize=element_times(1.0 / 256.0, _))
+    criterion = create_criterion_function(model, normalize=element_times(1.0 / 256.0, Placeholder()))
     criterion.replace_placeholders({criterion.placeholders[0]: input_variable((num_channels, image_height, image_width)), criterion.placeholders[1]: input_variable((num_classes))})
 
     # iteration parameters
@@ -227,8 +225,8 @@ if __name__=='__main__':
     reader = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'),  os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
     train_and_evaluate(reader, reader_test, model, max_epochs=5)
-    #
-    ## save and load (as an illustration)
+
+    # save and load (as an illustration)
     path = data_path + "/model.cmf"
     save_model(model, path)
     model1 = load_model(path)
