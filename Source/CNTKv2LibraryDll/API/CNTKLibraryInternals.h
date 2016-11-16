@@ -188,6 +188,12 @@ namespace CNTK
     class Dictionary;
     typedef std::shared_ptr<Dictionary> DictionaryPtr;
 
+    typedef FunctionPtr FuntionFactorPtr(const std::wstring& op,
+                                         std::vector<Variable>& inputs,
+                                         Dictionary&& functionConfig,
+                                         const std::wstring& functionName,
+                                         const std::wstring& uid);
+
     class MinibatchSource;
     typedef std::shared_ptr<MinibatchSource> MinibatchSourcePtr;
 
@@ -199,6 +205,9 @@ namespace CNTK
 
     class DistributedTrainer;
     typedef std::shared_ptr<DistributedTrainer> DistributedTrainerPtr;
+
+    class UserDefinedFunctionHandler;
+    typedef std::shared_ptr<UserDefinedFunctionHandler> UserDefinedFunctionHandlerPtr;
 
     namespace Internal
     {
@@ -249,4 +258,5 @@ namespace CNTK
 
         class VariableResolver;
     }
+
 }
