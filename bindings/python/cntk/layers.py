@@ -194,7 +194,7 @@ def Pooling(op,      # PoolingType_Max or _Average
     return Block(apply_x, op_name)
 
 # MaxPooling
-def MaxPooling(tf_shape,  # e.g. (3,3)
+def MaxPooling(rf_shape,  # e.g. (3,3)
                strides=1,
                pad=False):
     return Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad)
@@ -204,6 +204,14 @@ def AveragePooling(rf_shape,  # e.g. (3,3)
                    strides=1,
                    pad=False):
     return Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad)
+
+# GlobalMaxPooling
+def GlobalMaxPooling():
+    return Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False)
+
+# GlobalAveragePooling
+def GlobalAveragePooling():
+    return Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False)
 
 # helper to get the initial_state or the default
 def _get_initial_state_or_default(initial_state):
@@ -215,14 +223,6 @@ def _get_initial_state_or_default(initial_state):
         return Constant(initial_state, shape=(1))
     else:
         return initial_state # already in good shape: return as is
-
-# GlobalMaxPooling
-def GlobalMaxPooling():
-    return Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False)
-
-# GlobalAveragePooling
-def GlobalAveragePooling():
-    return Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False)
 
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):

@@ -2001,10 +2001,10 @@ def constant(value=None, shape=None, dtype=None, device=None, name=''):
         if isinstance(value, np.ndarray) and dtype != value.dtype:
             value = np.array(value, dtype=dtype)
     else:
-    if isinstance(value, np.ndarray):
-        dtype = value.dtype
-    else:
-        dtype = np.float32
+        if isinstance(value, np.ndarray):
+            dtype = value.dtype
+        else:
+            dtype = np.float32
 
     return Constant(value, shape, dtype, device, name)
 

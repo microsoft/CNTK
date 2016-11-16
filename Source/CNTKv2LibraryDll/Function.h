@@ -65,7 +65,7 @@ namespace CNTK
         {PrimitiveOpType::Times, L"Times"},
         {PrimitiveOpType::TransposeTimes, L"TransposeTimes"},
         {PrimitiveOpType::Convolution, L"Convolution"},
-        { PrimitiveOpType::SquaredError, L"SquaredError" },
+        {PrimitiveOpType::SquaredError, L"SquaredError"},
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::PastValue, L"PastValue"},
@@ -79,7 +79,7 @@ namespace CNTK
         {PrimitiveOpType::RandomSample, L"RandomSample"},
         {PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency"},
         {PrimitiveOpType::ROIPooling, L"ROIPooling"},
-        { PrimitiveOpType::Logistic, L"Logistic" },
+        {PrimitiveOpType::Logistic, L"Logistic"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -567,6 +567,7 @@ namespace CNTK
                 // If the trailing axis dimensionality of the kernel shape is NDShape::InferredDimension, we reduce over it by 
                 // picking the corresponding operand shape dimensionality
                 // This is done by shrinking the filter rank and let the dimensions be inferred from the operand's shape
+                // BUGBUG: This fails if the dimensions are inferred a second time, e.g. the same node shared twice.
                 // TODO: Should we do this for all of the axes in kernelShape that have a dimensionailty of NDShape::InferredDimension?
                 if (kernelShape[filterRank - 1] == NDShape::InferredDimension)
                 {

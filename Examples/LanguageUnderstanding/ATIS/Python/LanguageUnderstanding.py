@@ -12,7 +12,7 @@ from cntk.models import *  # higher abstraction level, e.g. entire standard mode
 from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer
-from cntk.learner import adam_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
+from cntk.learner import adam_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.ops import cross_entropy_with_softmax, classification_error, splice
 from cntk.trainer import create_trainer
 from cntk.persist import load_model, save_model

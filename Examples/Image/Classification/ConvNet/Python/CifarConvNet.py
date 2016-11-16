@@ -105,17 +105,18 @@ def create_vgg9_model(num_classes):
 # define the criteria  #
 ########################
 
+_1, _2 = (Placeholder(), Placeholder())
+_ = Placeholder()
+
 # compose model function and criterion primitives into a criterion function
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
 # This function is generic and could be a stock function create_ce_classification_criter().
 def create_criterion_function(model):
-    _1, _2 = (Placeholder(), Placeholder())
     z = model(_1)
     ce   = cross_entropy_with_softmax(z, _2, name='_ce')
     errs = classification_error      (z, _2, name='_errs')
     return combine ([ce, errs]) # (features, labels) -> (loss, metric)
-
 
 ########################
 # train & eval action  #
@@ -127,19 +128,24 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
     model.replace_placeholders({model.placeholders[0]: input_variable((num_channels, image_height, image_width))})
     # BUGBUG: ^^ Trainer requires this, although the criterion roots are not part of this.
 
-    # Input variables denoting the features and label data
-    input_var = input_variable((num_channels, image_height, image_width))
-    label_var = input_variable((num_classes))
-
     # Normalize the input
-    feature_scale = 1.0 / 256.0
-    input_var_norm = element_times(feature_scale, input_var)
-    _ = Placeholder()
+    feature_scale = 1.0 / 256.0 # BUGBUG: using 1/256 now leads to much poorer accuracy
+    #input_var_norm = element_times(feature_scale, input_var)
     norm_function = element_times(feature_scale, _)
 
     # criterion function. This is what is being trained trained.
-    criterion = create_criterion_function(norm_function >> model)    #(input_var_norm))
-    criterion.replace_placeholders({criterion.placeholders[0]: input_var, criterion.placeholders[1]: label_var})
+    criterion = create_criterion_function(norm_function >> model)
+    #criterion = create_criterion_function(model)
+    criterion.replace_placeholders({criterion.placeholders[0]: input_variable((num_channels, image_height, image_width)), criterion.placeholders[1]: input_variable((num_classes))})
+
+    # old version, still the same bad result
+    #input_var = input_variable((num_channels, image_height, image_width))
+    #label_var = input_variable((num_classes))
+    #input_var_norm = element_times(feature_scale, input_var)
+    #z = model(input_var_norm)
+    #ce = cross_entropy_with_softmax(z, label_var)
+    #pe = classification_error      (z, label_var)
+    #criterion = combine ([ce, pe])
 
     #
     # Training action
@@ -154,8 +160,8 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
     minibatch_size = 64
     #epoch_size = 1000 ; max_epochs = 1 # for faster testing
 
-    # Set learning parameters
-    lr_per_minibatch       = learning_rate_schedule([0.01]*10 + [0.003]*10 + [0.001], UnitType.minibatch, epoch_size)
+    # learning parameters
+    lr_per_minibatch       = learning_rate_schedule([0.1]*10 + [0.03]*10 + [0.01], UnitType.minibatch, epoch_size)
     momentum_time_constant = momentum_as_time_constant_schedule(-minibatch_size/np.log(0.9))
     l2_reg_weight          = 0.0001
 
@@ -165,12 +171,6 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
                                l2_regularization_weight = l2_reg_weight)
     trainer     = Trainer(model, criterion.outputs[0], criterion.outputs[1], learner)
 
-    # define mapping from reader streams to network inputs
-    input_map = {
-        input_var: reader_train.streams.features,
-        label_var: reader_train.streams.labels
-    }
-
     log_number_of_parameters(model) ; print()
     progress_printer = ProgressPrinter(tag='Training')
 
@@ -178,10 +178,12 @@ def train_and_evaluate(reader_train, reader_test, model, max_epochs):
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
-            data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count), input_map=input_map) # fetch minibatch.
-            trainer.train_minibatch(data)                                   # update model with it
-
-            sample_count += data[label_var].num_samples                     # count samples processed so far
+            data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count)) # fetch minibatch.
+            #trainer.train_minibatch({ trainer.loss_function.arguments[0]: data[reader_train.streams.features], trainer.loss_function.arguments[1]: data[reader_train.streams.labels] }) # update model with it
+            # BUGBUG: ^^ Fails with "Function::Forward: Required argument's () value that the requested output(s) depend on has not been provided"
+            trainer.train_minibatch({ criterion.arguments[0]: data[reader_train.streams.features], criterion.arguments[1]: data[reader_train.streams.labels] }) # update model with it
+            # TODO: We should just be able to say train_minibatch(data[reader_train.streams.features], data[reader_train.streams.labels])
+            sample_count += data[reader_train.streams.labels].num_samples                     # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
     

@@ -1394,6 +1394,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNN", "RNN", "{6730F9BE-92A
 		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml
 	EndProjectSection
 EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "PythonExamples", "Examples\PythonExamples.pyproj", "{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|Any CPU = Debug_CpuOnly|Any CPU
@@ -2614,6 +2616,26 @@ Global
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release|Win32.ActiveCfg = Release|x64
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release|x64.ActiveCfg = Release|x64
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release|x64.Build.0 = Release|x64
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Debug_CpuOnly|Any CPU.ActiveCfg = Debug|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Debug_CpuOnly|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Debug_CpuOnly|Win32.ActiveCfg = Debug|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Debug_CpuOnly|x64.ActiveCfg = Debug|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_CpuOnly|Any CPU.ActiveCfg = Release|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_CpuOnly|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_CpuOnly|Win32.ActiveCfg = Release|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_CpuOnly|x64.ActiveCfg = Release|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_NoOpt|Any CPU.ActiveCfg = Release|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_NoOpt|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_NoOpt|Win32.ActiveCfg = Release|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_NoOpt|x64.ActiveCfg = Release|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release|Win32.ActiveCfg = Release|Any CPU
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release|x64.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2802,5 +2824,6 @@ Global
 		{80B83483-CCDC-4E59-AB54-B6495E967A11} = {77EAB92C-CDCB-40D2-BD19-6C8C6C876B51}
 		{784A839C-762F-4A85-9EF1-A1E00546AD6C} = {D30B34AF-3618-4C55-900E-8F60A9F39E66}
 		{6730F9BE-92AA-45F7-9F98-CD13E725CCA9} = {784A839C-762F-4A85-9EF1-A1E00546AD6C}
+		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01} = {47755F2E-D674-4175-9E38-8EA053455072}
 	EndGlobalSection
 EndGlobal

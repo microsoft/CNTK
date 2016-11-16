@@ -237,7 +237,7 @@ identity = _Identity()
 # This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
 def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_default_or_False):
     if _is_given(enable_self_stabilization):
-        raise NotImplementedError('Stagbilizer: enable_self_stabilization flag not implemented yet')
+        raise NotImplementedError('Stabilizer: enable_self_stabilization flag not implemented yet')
     #enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
     #if not enable_self_stabilization: # disabled (typically through global option)
     #    return identity
