@@ -1,0 +1,181 @@
+# Note: reader configuration comes from AlexNet.cntk or AlexNetComposite.cntk, depending on the test
+RootDir = "."
+
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+ndlMacros="$ConfigDir$/Macros.ndl"
+
+precision = "float"
+deviceId = "Auto"
+
+command = Test
+
+parallelTrain = "true"
+traceLevel = 1
+numMBsToShowResult = 500
+
+modelPath = "$ModelDir$/AlexNet"
+stderr = "$OutputDir$/AlexNet"
+
+################################
+Train = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        imageShape = 227:227:3
+        labelDim = 1000
+                
+        LRN {k, n, alpha, beta} = {
+            apply (x) = {
+                x2 = x .* x
+                x2s = SplitDimension(x2, 3, 1) 
+                W = ParameterTensor{(1:1:2*n+1:1), learningRateMultiplier = 0, initValue = alpha/(2*n+1)}
+                y = Convolution (W, x2s, (1:1:2*n+1), mapDims = 1, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose = false, maxTempMemSizeInSamples = 0)
+                b = FlattenDimensions(y, 3, 2)
+                den = Exp (beta .* Log(k + b)) 
+                r = x .* Reciprocal(den)
+            }.r
+        }.apply
+
+        model = Sequential (
+            ConvolutionalLayer {96, (11:11), stride=(4:4), pad = false} : ReLU : 
+            LRN {1.0, 2, 0.0001, 0.75}
+            MaxPoolingLayer    {(3:3), stride=(2:2)} :
+            ConvolutionalLayer {256, (5:5), pad = true, initBias=0.1} : ReLU : 
+            LRN {1.0, 2, 0.0001, 0.75}
+            MaxPoolingLayer    {(3:3), stride=(2:2)} :
+            ConvolutionalLayer {384, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {384, (3:3), pad = true, initBias=0.1} : ReLU : 
+            ConvolutionalLayer {256, (3:3), pad = true, initBias=0.1} : ReLU : 
+            MaxPoolingLayer    {(3:3), stride=(2:2)} :
+            DenseLayer         {4096, activation=ReLU, initBias=0.1} : Dropout :
+            DenseLayer         {4096, activation=ReLU, initBias=0.1} : Dropout :
+            LinearLayer        {labelDim}
+        )
+
+        # inputs
+        features = Input {imageShape}
+        featNorm = features - Constant(114)
+        labels = Input {labelDim}
+
+        # apply model to features
+        z = model (featNorm)
+
+        # loss and error computation
+        ce       = CrossEntropyWithSoftmax  (labels, z)
+        errs     = ClassificationError      (labels, z)
+        top5Errs = ClassificationError      (labels, z, topN=5)  # only used in Eval action
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    }
+    
+    SGD = {
+        epochSize = 0
+        minibatchSize = 128
+        learningRatesPerMB = 0.01*20:0.005*12:0.001*28:0.0003
+        momentumPerMB = 0.9
+        maxEpochs = 90
+        gradUpdateType = None
+        L2RegWeight = 0.0005
+        dropoutRate = 0*5:0.5
+        
+        # TODO: try less bits?
+        ParallelTrain = {
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = "true"
+            parallelizationStartEpoch = 3
+            DataParallelSGD = {
+                gradientBits = 32
+            }
+        }
+        
+        numMBsToShowResult = 100
+    }
+    
+    # Reader
+    reader = {
+        verbosity = 0
+        randomize = true
+        randomizationWindow = 1
+
+        deserializers = (
+        {   
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$DataDir$/train_map.txt"
+            input = {
+                features = {
+                    transforms = (
+                        {
+                            type = "Crop"
+                            cropType = "random"
+                            cropRatio = 0.88671875
+                            jitterType = "uniRatio"
+                        }:{
+                            type = "Scale"
+                            width = 227
+                            height = 227
+                            channels = 3
+                            interpolations = "linear"
+                        #}:{
+                        #    type = "Mean"
+                        #    meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
+                        }:{
+                            type = "Transpose"
+                        }
+                    )
+                }
+                labels = {
+                    labelDim = 1000
+                }
+            }
+        })
+    }    
+}
+
+################################
+Test = {
+    action=test
+    minibatchSize=128
+    evalNodeNames = errs:top5Errs  # also test top-5 error rate
+    
+    # Reader
+    reader = {
+        verbosity = 0
+        randomize = false
+
+        deserializers = (
+        {
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file="$DataDir$/val_map.txt"
+            input = {
+                features = {
+                    transforms = (
+                        {
+                            type = "Crop"
+                            cropType = "center"
+                            cropRatio = 0.88671875
+                        }:{
+                            type = "Scale"
+                            width = 227
+                            height = 227
+                            channels = 3
+                        }:{
+                            type = "Transpose"
+                        }
+                    )
+                }
+                labels = {
+                    labelDim = 1000
+                }
+            }
+        })
+    }        
+}

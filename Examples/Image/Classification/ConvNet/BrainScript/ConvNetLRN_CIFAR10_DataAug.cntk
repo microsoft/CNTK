@@ -7,8 +7,8 @@ precision = "float"; traceLevel = 1 ; deviceId = "auto"
 rootDir = "../../.." ; dataDir = "$rootDir$/DataSets/CIFAR-10" ;
 outputDir = "./Output" ;
 
-modelPath = "$outputDir$/Models/ConvNet_CIFAR10_DataAug"
-#stderr = "$outputDir$/ConvNet_CIFAR10_DataAug_bs_out"
+modelPath = "$outputDir$/Models/ConvNetLRN_CIFAR10_DataAug"
+#stderr = "$outputDir$/ConvNetLRN_CIFAR10_DataAug_bs_out"
 
 TrainConvNet = {
     action = "train"
@@ -20,14 +20,36 @@ TrainConvNet = {
         featScale = 1/256
         Normalize{f} = x => f .* x
 
+        # Local Response Normalization 
+        # k : bias 
+        # n : half radius 
+        # alpha: scale factor 
+        # beta: exponent 
+        LRN {k, n, alpha, beta} = {
+            apply (x) = {
+                x2 = x .* x
+                # reshape 
+                x2s = SplitDimension(x2, 3, 1) 
+                # 3D convolution 
+                W = ParameterTensor{(1:1:2*n+1:1), learningRateMultiplier = 0, initValue = alpha/(2*n+1)}
+                y = Convolution (W, x2s, (1:1:2*n+1), mapDims = 1, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose = false, maxTempMemSizeInSamples = 0)
+                # reshape back 
+                b = FlattenDimensions(y, 3, 2)
+                den = Exp (beta .* Log(k + b)) 
+                r = x .* Reciprocal(den)
+            }.r
+        }.apply
+
         model = Sequential (
             Normalize {featScale} :
             ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
             ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
-              MaxPoolingLayer {(3:3), stride = (2:2)} :
+            LRN {1.0, 4, 0.001, 0.75} : 
+            MaxPoolingLayer {(3:3), stride = (2:2)} :
             ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
             ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
-              MaxPoolingLayer {(3:3), stride = (2:2)} :
+            LRN {1.0, 4, 0.001, 0.75} : 
+            MaxPoolingLayer {(3:3), stride = (2:2)} :
             DenseLayer {256} : ReLU : Dropout : 
             DenseLayer {128} : ReLU : Dropout : 
             LinearLayer {labelDim}
