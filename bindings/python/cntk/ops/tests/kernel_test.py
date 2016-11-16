@@ -68,21 +68,18 @@ def test_op_convolution_without_padding(convolution_map, convolution_input, devi
                     expected_backward, device_id=device_id, precision=precision)
 
 AVG_POOLING_DATA = [
-    ([1, 2, 2, 4, 3],  # input_size
-     (1, 2, 2, 2, 1),  # pooling_window
-     (1, 2, 2, 2, 1),  # strides
-     [[[[[20.5,  21.5,  22.5],
-         [26.5,  27.5,  28.5]]]]]),  # result
-    ([1, 2, 4, 4, 4],
-     (1, 2, 2, 2, 2),
-     (1, 2, 2, 2, 2),
-     [[[[[43.5,  45.5],
-         [51.5,  53.5]],
-        [[75.5,  77.5],
-         [83.5,  85.5]]]]]),
+    ([1, 2, 2, 4 ,3], # input_size
+     (2, 2, 1), # pooling_window
+     (2, 2, 1), # strides
+     [[[[  8.5,   9.5,  10.5],
+        [ 14.5,  15.5,  16.5]]],
+      [[[ 32.5,  33.5,  34.5],
+        [ 38.5,  39.5,  40.5]]]]), # result
+    ([1, 1, 2, 2 ,4],
+     (2, 2, 1),
+     (2, 2, 1),
+     [[[[  7.,   8.,   9.,  10.]]]])
 ]
-
-
 @pytest.mark.parametrize("input_size, pooling_window, strides, result", AVG_POOLING_DATA)
 def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
@@ -92,8 +89,9 @@ def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, 
     total_size = np.prod(input_size)
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
+    print(input_operand)
 
-    a = I(shape=input_operand.shape,
+    a = I(shape=input_operand.shape[2:],
         dtype=sanitize_dtype_cntk(precision),
         needs_gradient=True,
         name='a')
@@ -105,25 +103,32 @@ def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, 
 
     forward_input = {a: input_operand}
 
-    expected_forward = AA([[result]])
-    expected_backward = {a: [[backward]]}
+    expected_forward = AA([result])
+    expected_backward = {a: backward}
 
     _test_unary_op(precision, device_id, pooling, input_operand, expected_forward, expected_backward, {
                    'pooling_type': AVG_POOLING, 'pooling_window_shape': pooling_window, 'strides': strides, 'auto_padding': [True]})
 
 MAX_POOLING_DATA = [
-    ([1, 2, 2, 4, 3],  # input_size
-     (1, 2, 2, 2, 1),  # pooling_window
-     (1, 2, 2, 2, 1),  # strides
-     [[[[[40.,  41.,  42.],
-         [46.,  47.,  48.]]]]]),  # result
-    ([1, 2, 4, 4, 4],
-     (1, 2, 2, 2, 2),
-     (1, 2, 2, 2, 2),
-     [[[[[86.,   88.],
-         [94.,   96.]],
-        [[118.,  120.],
-         [126.,  128.]]]]]),
+    ([1, 2, 2, 4 ,3], # input_size
+     (2, 2, 1), # pooling_window
+     (2, 2, 1), # strides
+     [[[[ 16.,  17.,  18.],
+         [ 22.,  23.,  24.]]],
+       [[[ 40.,  41.,  42.],
+         [ 46.,  47.,  48.]]]]), # result
+
+    ([1, 2, 4, 4 ,4],
+     (2, 2, 2),
+     (2, 2, 2),
+     [[[[  22.,   24.],
+        [  30.,   32.]],
+       [[  54.,   56.],
+        [  62.,   64.]]],
+      [[[  86.,   88.],
+        [  94.,   96.]],
+       [[ 118.,  120.],
+        [ 126.,  128.]]]]),
 ]
 
 
@@ -136,6 +141,11 @@ def test_op_max_pooling(input_size, pooling_window, strides, result, device_id, 
     total_size = np.prod(input_size)
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
+
+    a = I(shape=input_operand.shape[2:],
+        dtype=sanitize_dtype_cntk(precision),
+        needs_gradient=True,
+        name='a')
 
     result_array = np.asarray(result, dtype=dt)
     max_elements = result_array.reshape(result_array.size).tolist()
@@ -150,8 +160,8 @@ def test_op_max_pooling(input_size, pooling_window, strides, result, device_id, 
 
     forward_input = {a: input_operand}
 
-    expected_forward = AA([[result]])
-    expected_backward = {a: [[backward]]}
+    expected_forward = AA([result])
+    expected_backward = {a: backward}
 
     unittest_helper(input_op,
                 forward_input, expected_forward, expected_backward,
@@ -170,7 +180,7 @@ ROIPOOLING_OPERANDS = [
     ([[[1., 2., 3.],       # (1, 3, 3) input operand (conv feature map)
        [4., 5., 6.],
        [7., 8., 9.]]],
-     [.33, .33, .66, .66], # (4) input roi (x, y, w, h) relative to image width and height
+     [[.33, .33, .66, .66]], # (4) input roi (x, y, w, h) relative to image width and height
      [[[5., 6., 6.],       # (1, 3, 3) expected forward output
        [8., 9., 9.],
        [8., 9., 9.]]],
@@ -191,7 +201,7 @@ def test_op_roipooling(input_map, input_rois, expected_fwd, expected_bkwd, devic
     
     # adding batch, sequence and roi axis
     exp_fwd_value.shape  = (1,1,1) + exp_fwd_value.shape
-    exp_bkwd_value.shape = (1,1,1,1) + exp_bkwd_value.shape
+    exp_bkwd_value.shape = (1,1) + exp_bkwd_value.shape
 
     # I == define cntk input variables
     a = I(shape=conv_input.shape,
@@ -212,8 +222,9 @@ def test_op_roipooling(input_map, input_rois, expected_fwd, expected_bkwd, devic
     input_op = roipooling(a, b, (3,3))
 
     forward_input = {a: conv_input, b: roi_input}
-    expected_backward = {a: [exp_bkwd_value]}
+    expected_backward = {a: exp_bkwd_value}
 
+    # import ipdb;ipdb.set_trace()
     unittest_helper(input_op,
                     forward_input, exp_fwd_value, expected_backward,
-device_id=device_id, precision=precision)
+                    device_id=device_id, precision=precision)

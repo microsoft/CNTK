@@ -147,10 +147,10 @@ def test_pad_sparse_seq_to_max_len():
             [csr([1,0]), csr([2,3])],
             [csr([5,6])]]
     batch = pad_sparse_seq_to_max_len(batch, 2)
-    assert np.allclose(batch[0].todense(), [1,0, 2,3])
-    assert np.allclose(batch[1].todense(), [5,6, 0,0])
-    assert batch[0].shape == (1,4)
-    assert batch[1].shape == (1,4)
+    assert np.allclose(batch[0].todense(), [[1,0], [2,3]])
+    assert np.allclose(batch[1].todense(), [[5,6], [0,0]])
+    assert batch[0].shape == (2,2)
+    assert batch[1].shape == (2,2)
 
 def test_pad_sparse_seq_to_max_len_bad():
     batch = [
