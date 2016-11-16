@@ -19,71 +19,47 @@ extern "C"
 #include <b64/cencode.h>
 }
 
-class FpgaBaseFunction : public Function
+class FpgaFunction : public UserDefinedFunctionHandler
 {
 public:
 
-    FpgaBaseFunction(
+    FpgaFunction(
         std::vector<Variable>& inputs,
-        std::vector<Variable>& outputs,
         Dictionary&& functionConfig,
         const std::wstring& name,
-        const std::wstring& uid) :
-        Function(inputs, GetOutputVariables(outputs, this), std::move(functionConfig), name, uid)
+        const std::wstring& uid)
+        : _inputs(inputs), _functionConfig(functionConfig), _name(name), _uid(uid)
     {
     }
 
-    std::vector<Variable> GetOutputVariables(std::vector<Variable> outputs, Function *ownerFunction)
+    virtual /*BackPropStatePtr*/void ForwardFloat(
+        std::vector<float>& out,
+        const std::vector<float>& left,
+        const std::vector<float>& right
+    ) override
     {
-        std::vector<Variable> myOutputs;
+        fprintf(stderr, "FpgaFunction::Forward(...) called\n");
 
-        for (auto output : outputs)
+        for (auto n = 0; n < out.size(); n++)
         {
-            myOutputs.push_back(Variable(output.Shape(), VariableKind::Output, output.GetDataType(), ownerFunction, nullptr, output.NeedsGradient(), output.DynamicAxes(), output.IsSparse(), output.Name(), output.Uid()));
+            out[n] = n;
         }
-
-        return myOutputs;
     }
 
-    virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
-        std::unordered_map<Variable, ValuePtr>& outputs,
-        const DeviceDescriptor& /*computeDevice*/,
-        const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/) override
-    {
-        fprintf(stderr, "FpgaBaseFunction::Forward(...) called\n");
-
-        outputs.insert(arguments.begin(), arguments.end());
-        return nullptr;
-    }
-
-    virtual void Backward(const BackPropStatePtr& /*state*/,
-        const std::unordered_map<Variable, ValuePtr>& /*rootGradientValues*/,
-        std::unordered_map<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
+    virtual void Backward(
+        ////const BackPropStatePtr& /*state*/,
+        ////const std::unordered_map<Variable, ValuePtr>& /*rootGradientValues*/,
+        ////std::unordered_map<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/
+    ) override
     {
         NOT_IMPLEMENTED;
     }
 
-    virtual Dictionary Serialize() const override
-    {
-        return Dictionary();
-    }
-
-    virtual size_t CurrentVersion() const override
-    {
-        return 1;
-    }
-
-    static FunctionPtr Deserialize(const Dictionary& dictionary,
-        const std::unordered_map<std::wstring, Variable>& uidToVariableMap,
-        const CNTK::DeviceDescriptor& device)
-    {
-        NOT_IMPLEMENTED;
-    }
-
-    virtual const std::wstring& OpName() override
-    {
-        return L"fpga";
-    }
+private:
+    std::vector<Variable> _inputs;
+    Dictionary _functionConfig;
+    const std::wstring _name;
+    const std::wstring _uid;
 };
 
 
@@ -342,10 +318,6 @@ graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc, const DeviceDescriptor& 
         }
     });
 
-    std::string str;
-    auto serialized = google::protobuf::util::MessageToJsonString(graph, &str);
-    fprintf(stderr, "%s\n\n", str.c_str());
-
     fprintf(stderr, "\n\n");
     for (auto func : functions)
     {
@@ -363,7 +335,6 @@ CNTK::FunctionPtr GraphIrToCntkGraph(graphIR::Graph &graphIrPtr, CNTK::FunctionP
 FunctionPtr FpgaFunctionFactory(
     const std::wstring& op,
     std::vector<Variable>& inputs,
-    std::vector<Variable>& outputs,
     Dictionary&& functionConfig,
     const std::wstring& functionName,
     const std::wstring& uid)
@@ -373,7 +344,16 @@ FunctionPtr FpgaFunctionFactory(
     if (op == L"Times")
     {
         fprintf(stderr, "    OVERRIDING as fpga node.\n");
-        return UserDefinedFuntion(inputs, std::move(functionConfig), functionName, uid);
+
+        auto functionConfigCopy = functionConfig;
+        auto interceptTarget = std::make_shared<FpgaFunction>(inputs, std::move(functionConfigCopy), functionName, uid);
+
+        return UserDefinedFuntion(
+                inputs,
+                std::move(functionConfig),
+                functionName,
+                uid,
+                interceptTarget);
     }
 
     return nullptr;
@@ -382,7 +362,7 @@ FunctionPtr FpgaFunctionFactory(
 
 bool GetVariableByName(std::vector<Variable> variableLists, std::wstring varName, Variable& var)
 {
-    for (std::vector<Variable>::iterator it = variableLists.begin(); it != variableLists.end(); ++it)
+    for (auto it = variableLists.begin(); it != variableLists.end(); ++it)
     {
         if (it->Name().compare(varName) == 0)
         {
@@ -408,7 +388,6 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
     std::vector<std::wstring> inputNodeNames = { L"rawAnswer", L"rawContext", L"rawQuery"/*, L"contextSeqAxis", L"sourceSeqAxis"*/ };
 
     std::vector<Variable> inputVars;
-
     for (auto inputNodeName : inputNodeNames)
     {
         Variable inputVar;
@@ -429,6 +408,8 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
     srand(randSeed);
     for (size_t t = 0; t < iterationCount; ++t)
     {
+        printf("\n\n\n");
+
         std::unordered_map<Variable, ValuePtr> arguments;
 
         for (auto inputVar : inputVars)
@@ -507,7 +488,7 @@ void MultiThreadsEvaluation(bool isGPUAvailable)
     auto device = DeviceDescriptor::CPUDevice();
 
     // The model file will be trained and copied to the current runtime directory first.
-    auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, L"A:\\CNTK\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn", device, FpgaFunctionFactory);
+    auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, L"\\CNTK\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn", device, FpgaFunctionFactory);
 
     // convert cntk to graphir
     auto graphIrPtr = CntkGraphToGraphIr(modelFuncPtr, device);
