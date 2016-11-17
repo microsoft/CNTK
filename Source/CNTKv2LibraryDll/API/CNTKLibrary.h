@@ -2615,7 +2615,7 @@ namespace CNTK
         return Minus(leftOperand, rightOperand);
     }
 
-    /// Create an instance of the CNTK built-in elementwise tensor addition operation with the specified input operands.
+    /// Create an instance of the CNTK built-in elementwise tensor operation that computes the log of the sum of the exponentials of the specified input operands.
     ///
     CNTK_API FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 

@@ -52,7 +52,6 @@ OptimizedRNNStackNode<ElemType>::OptimizedRNNStackNode(DEVICEID_TYPE deviceId, c
     m_rnnAttributes(bidirectional, numLayers, hiddenSize, recurrentOp, -1),
     m_BackwardDataCalledYet(false)
 {
-//    AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
 }
 
 template<class ElemType>
