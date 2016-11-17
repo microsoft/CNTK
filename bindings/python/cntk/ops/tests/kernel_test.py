@@ -89,7 +89,6 @@ def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, 
     total_size = np.prod(input_size)
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
-    print(input_operand)
 
     a = I(shape=input_operand.shape[2:],
         dtype=sanitize_dtype_cntk(precision),
@@ -224,7 +223,6 @@ def test_op_roipooling(input_map, input_rois, expected_fwd, expected_bkwd, devic
     forward_input = {a: conv_input, b: roi_input}
     expected_backward = {a: exp_bkwd_value}
 
-    # import ipdb;ipdb.set_trace()
     unittest_helper(input_op,
                     forward_input, exp_fwd_value, expected_backward,
                     device_id=device_id, precision=precision)
