@@ -62,7 +62,7 @@ def test_op_convolution_without_padding(convolution_map, convolution_input, devi
     input_op = convolution(constant_map, a, auto_padding=[False])
 
     forward_input = {a: conv_input}
-    expected_backward = {a: [[backward]]}
+    expected_backward = {a: backward}
 
     unittest_helper(input_op, forward_input, expected_forward,
                     expected_backward, device_id=device_id, precision=precision)
@@ -105,8 +105,8 @@ def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, 
     expected_forward = AA([result])
     expected_backward = {a: backward}
 
-    _test_unary_op(precision, device_id, pooling, input_operand, expected_forward, expected_backward, {
-                   'pooling_type': AVG_POOLING, 'pooling_window_shape': pooling_window, 'strides': strides, 'auto_padding': [True]})
+    unittest_helper(input_op, forward_input, expected_forward,
+                expected_backward, device_id=device_id, precision=precision)
 
 MAX_POOLING_DATA = [
     ([1, 2, 2, 4 ,3], # input_size
