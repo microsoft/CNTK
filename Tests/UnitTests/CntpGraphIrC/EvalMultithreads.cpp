@@ -38,7 +38,7 @@ public:
         const std::vector<float>& right
     ) override
     {
-        fprintf(stderr, "FpgaFunction::Forward(...) called\n");
+        fprintf(stderr, "FpgaFunction::Forward(out %u, left %u, right %u) called\n", out.size(), left.size(), right.size());
 
         for (auto n = 0; n < out.size(); n++)
         {
