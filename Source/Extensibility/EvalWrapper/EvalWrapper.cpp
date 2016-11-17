@@ -146,8 +146,8 @@ public:
     }
 
     /// <summary>Evaluates the model using a single forward feed pass and retrieves the output layer data</summary>
-    /// <param name="outputKey"></param>
-    /// <param name="outputSize"></param>
+    /// <param name="outputKey">The output layer name</param>
+    /// <param name="outputSize">The dimension size of the output layer</param>
     /// <returns>Results for specified layer</returns>
     __declspec(deprecated) List<ElemType>^ Evaluate(String^ outputKey, int outputSize)
     {
@@ -177,8 +177,7 @@ public:
     }
 
     /// <summary>Evaluates the model using a single forward feed pass and retrieves the output layer data</summary>
-    /// <param name="outputKey"></param>
-    /// <param name="outputSize"></param>
+    /// <param name="outputKey">The output layer name</param>
     /// <returns>Results for specified layer</returns>
     List<ElemType>^ Evaluate(String^ outputKey)
     {
@@ -210,8 +209,8 @@ public:
     }
 
     /// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
-    /// <param name="inputs"></param>
-    /// <param name="outputs"></param>
+    /// <param name="inputs">The input nodes and their values</param>
+    /// <param name="outputs">The output nodes and their values</param>
     void Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, Dictionary<String^, List<ElemType>^>^ outputs)
     {
         if (m_eval == nullptr)
@@ -252,7 +251,7 @@ public:
                 throw GetCustomException(ex);
             }
 
-            WriteOutput(outputs, stdOutputs);
+            CopyOutput(outputs, stdOutputs);
         }
         catch (Exception^)
         {
@@ -261,9 +260,9 @@ public:
     }
 
     /// <summary>Evaluates the model against input data and retrieves the output layer data</summary>
-    /// <param name="inputs"></param>
-    /// <param name="outputKey"></param>
-    /// <param name="outputSize"></param>
+    /// <param name="inputs">The input nodes and their values</param>
+    /// <param name="outputKey">The output layer name</param>
+    /// <param name="outputSize">The dimension size of the output layer</param>
     /// <returns>Results for specified layer</returns>
     __declspec(deprecated) List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey, int outputSize)
     {
@@ -410,8 +409,8 @@ public:
     }
 
     /// <summary>Evaluates the model against input data and retrieves the desired output layer data</summary>
-    /// <param name="inputs"></param>
-    /// <param name="outputKey"></param>
+    /// <param name="inputs">The input nodes and their values</param>
+    /// <param name="outputKey">The output layer name</param>
     /// <returns>Results for requested layer</returns>
     List<ElemType>^ Evaluate(Dictionary<String^, List<ElemType>^>^ inputs, String^ outputKey)
     {
@@ -505,6 +504,9 @@ private:
         return lower;
     }
 
+    /// <summary>Evaluates the model using a single forward feed pass without input and retrieves the output layer data</summary>
+    /// <param name="outputs">The output nodes and output buffers</param>
+    /// <returns>none</returns>
     void Evaluate(Dictionary<String^, List<ElemType>^>^ outputs)
     {
         std::vector<shared_ptr<std::vector<ElemType>>> sharedOutputVectors;
@@ -527,15 +529,19 @@ private:
             throw GetCustomException(ex);
         }
 
-        WriteOutput(outputs, stdOutputs);
+        CopyOutput(outputs, stdOutputs);
     }
 
-    void WriteOutput(Dictionary<String^, List<ElemType>^>^ outputs, std::map<std::wstring, std::vector<ElemType>*>& stdOutputs)
+    /// <summary>Copy output data to the output buffer</summary>
+    /// <param name="outputs">The output nodes and output buffers</param>
+    /// <param name="outputData">The output data</param>
+    /// <returns>none</returns>
+    void CopyOutput(Dictionary<String^, List<ElemType>^>^ outputs, std::map<std::wstring, std::vector<ElemType>*>& outputData)
     {
         for each (auto item in outputs)
         {
             pin_ptr<const WCHAR> key = PtrToStringChars(item.Key);
-            std::vector<ElemType> *pVec = stdOutputs[key];
+            std::vector<ElemType> *pVec = outputData[key];
             if (pVec == nullptr)
             {
                 throw gcnew NullReferenceException("No output value available.");
