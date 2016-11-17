@@ -277,8 +277,9 @@ namespace CNTK
             {
                 // Initialize quantizer
                 aggregatedGradientStripeQuantizers = new MatrixQuantizer<ElemType>(GetMatrix<ElemType>(inResidual)->GetDeviceId(), true);
+                m_recvGradientStripesQuantized[index].resize(numWorkers - 1);
                 for (size_t j = 0; j < numWorkers - 1; ++j)
-                    m_recvGradientStripesQuantized[index].push_back(std::unique_ptr<QuantizedMatrix<ElemType>>(new QuantizedMatrix<ElemType>(v->GetNumRows(), stripe.m_numCols, m_numQuantizationBits, CPUDEVICE, m_allocator.get())));
+                    m_recvGradientStripesQuantized[index][j]= std::unique_ptr<QuantizedMatrix<ElemType>>(new QuantizedMatrix<ElemType>(v->GetNumRows(), stripe.m_numCols, m_numQuantizationBits, CPUDEVICE, m_allocator.get()));
             }
 
             m_aggregatedGradientStripeQuantizers[index] = std::unique_ptr<MatrixQuantizer<ElemType>>(aggregatedGradientStripeQuantizers);
