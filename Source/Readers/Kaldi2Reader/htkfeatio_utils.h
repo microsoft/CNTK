@@ -26,14 +26,14 @@ inline std::string fileToStr(std::string fname)
 inline std::string trimmed(std::string str)
 {
     auto found = str.find_first_not_of(" \t\n");
-    if (found == string::npos)
+    if (found == std::string::npos)
     {
         str.erase(0);
         return str;
     }
     str.erase(0, found);
     found = str.find_last_not_of(" \t\n");
-    if (found != string::npos)
+    if (found != std::string::npos)
         str.erase(found + 1);
 
     return str;

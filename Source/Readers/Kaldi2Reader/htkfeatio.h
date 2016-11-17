@@ -29,9 +29,9 @@ namespace msra { namespace asr {
 class FeatureSection
 {
 public:
-    wstring scpFile;
-    string rx;
-    string feature_transform;
+    std::wstring scpFile;
+    std::string rx;
+    std::string feature_transform;
 
 private:
     kaldi::RandomAccessBaseFloatMatrixReader *feature_reader;
@@ -40,7 +40,7 @@ private:
     kaldi::Matrix<kaldi::BaseFloat> buf;
 
 public:
-    FeatureSection(wstring scpFile, wstring rx_file, wstring feature_transform)
+    FeatureSection(std::wstring scpFile, std::wstring rx_file, std::wstring feature_transform)
     {
         this->scpFile = scpFile;
         this->rx = trimmed(fileToStr(toStr(rx_file)));
@@ -61,9 +61,9 @@ public:
         }
     }
 
-    kaldi::Matrix<kaldi::BaseFloat> &read(wstring wkey)
+    kaldi::Matrix<kaldi::BaseFloat> &read(std::wstring wkey)
     {
-        string key = toStr(wkey);
+        std::string key = toStr(wkey);
 
         if (!feature_reader->HasKey(key))
         {
@@ -151,7 +151,7 @@ class htkfeatwriter : protected htkfeatio
 {
 public:
     // open the file for writing
-    htkfeatwriter(wstring path, string kind, size_t dim, unsigned int period)
+    htkfeatwriter(std::wstring path, std::string kind, size_t dim, unsigned int period)
     {
     }
 
@@ -159,7 +159,7 @@ public:
     // Matrix type needs to have operator(i,j) and resize(n,m).
     // We write to a tmp file first to ensure we don't leave broken files that would confuse make mode.
     template <class MATRIX>
-    static void write(const wstring &path, const string &kindstr, unsigned int period, const MATRIX &feat)
+    static void write(const std::wstring &path, const std::string &kindstr, unsigned int period, const MATRIX &feat)
     {
         // std::wcout << __FILE__ << ":" << __FUNCTION__ << " not implemented" << std::endl;
         exit(1);
@@ -186,14 +186,14 @@ public:
         }
     }
     template <class MATRIX>
-    static void writeKaldi(const wstring &path, const string &kindstr, unsigned int period, const MATRIX &feat, const int precision)
+    static void writeKaldi(const std::wstring &path, const std::string &kindstr, unsigned int period, const MATRIX &feat, const int precision)
     {
         std::string path_utf8 = msra::strfun::utf8(path);
         std::ofstream os(path_utf8.c_str());
 
         if (!os.good())
         {
-            throw runtime_error("parsedpath: this mode requires an input script with start and end frames given");
+            throw std::runtime_error("parsedpath: this mode requires an input script with start and end frames given");
         }
         size_t featdim = feat.rows();
         size_t numframes = feat.cols();
@@ -210,7 +210,7 @@ public:
             WriteBasicType(os, binary, rows);
             WriteBasicType(os, binary, cols);
         }
-        vector<float> v(featdim);
+        std::vector<float> v(featdim);
         for (size_t i = 0; i < numframes; i++)
         {
             foreach_index (k, v)
@@ -228,10 +228,10 @@ public:
         {
         }
 
-        /* wstring tmppath = path + L"$$"; // tmp path for make-mode compliant
+        /* std::wstring tmppath = path + L"$$"; // tmp path for make-mode compliant
         unlinkOrDie (path);             // delete if old file is already there
         // write it out
-        vector<float> v (featdim);
+        std::vector<float> v (featdim);
         htkfeatwriter W (tmppath, kindstr, feat.rows(), period);
         for (size_t i = 0; i < numframes; i++)
         {
@@ -271,8 +271,8 @@ public:
         FeatureSection *featuresection;
 
     private:
-        wstring xpath;       // original full path specification as passed to constructor (for error messages)
-        wstring logicalpath; // sequence ID
+        std::wstring xpath;       // original full path specification as passed to constructor (for error messages)
+        std::wstring logicalpath; // sequence ID
         size_t num_frames;
 
         void malformed() const
@@ -281,9 +281,9 @@ public:
         }
 
         // consume and return up to 'delim'; remove from 'input' (we try to avoid C++0x here for VS 2008 compat)
-        wstring consume(wstring &input, const wchar_t *delim)
+        std::wstring consume(std::wstring &input, const wchar_t *delim)
         {
-            vector<wstring> parts = msra::strfun::split(input, delim); // (not very efficient, but does not matter here)
+            std::vector<std::wstring> parts = msra::strfun::split(input, delim); // (not very efficient, but does not matter here)
             if (parts.size() == 1)
                 input.clear(); // not found: consume to end
             else
@@ -294,7 +294,7 @@ public:
     public:
         // constructor parses a=b[s,e] syntax and fills in the file
         // Can be used implicitly e.g. by passing a string to open().
-        parsedpath(wstring xpath, FeatureSection *featuresection)
+        parsedpath(std::wstring xpath, FeatureSection *featuresection)
             : xpath(xpath), featuresection(featuresection)
         {
             logicalpath = consume(xpath, L" ");
@@ -305,7 +305,7 @@ public:
         }
 
         // casting to wstring yields the logical path
-        operator const wstring &() const
+        operator const std::wstring &() const
         {
             return logicalpath;
         }
@@ -324,7 +324,7 @@ public:
 
     // helper to create a parsed-path object
     // const auto path = parse (xpath)
-    parsedpath parse(const wstring &xpath, FeatureSection *featuresection)
+    parsedpath parse(const std::wstring &xpath, FeatureSection *featuresection)
     {
         return parsedpath(xpath, featuresection);
     }
@@ -338,7 +338,7 @@ public:
     // read an entire utterance into an already allocated matrix
     // Matrix type needs to have operator(i,j)
     template <class MATRIX>
-    void readNoAlloc(const parsedpath &ppath, const string &kindstr, const unsigned int period, MATRIX &feat)
+    void readNoAlloc(const parsedpath &ppath, const std::string &kindstr, const unsigned int period, MATRIX &feat)
     {
         // open the file and check dimensions
         size_t numframes = ppath.numframes();
@@ -356,7 +356,7 @@ public:
             copyKaldiToCntk(kaldifeat, feat);
 
 #if 0
-            std::wcout << (wstring)ppath << std::endl;
+            std::wcout << (std::wstring)ppath << std::endl;
             for (int c=0; c<10; c++) {
                 for (int r=0; r<10; r++) {
                     std::wcout << feat(r, c) << " ";
@@ -375,7 +375,7 @@ public:
     // read an entire utterance into a virgen, allocatable matrix
     // Matrix type needs to have operator(i,j) and resize(n,m)
     template <class MATRIX>
-    void readAlloc(const parsedpath &ppath, string &kindstr, unsigned int &period, MATRIX &feat)
+    void readAlloc(const parsedpath &ppath, std::string &kindstr, unsigned int &period, MATRIX &feat)
     {
         // get the file
         size_t numframes = ppath.numframes();
@@ -420,24 +420,24 @@ public:
 };
 
 template <class ENTRY, class WORDSEQUENCE>
-class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
+class htkmlfreader : public std::map<std::wstring, std::vector<ENTRY>> // [key][i] the data
 {
-    wstring curpath;                                      // for error messages
+    std::wstring curpath;                                      // for error messages
     std::unordered_map<std::string, size_t> statelistmap; // for state <=> index
 
-    void strtok(char *s, const char *delim, vector<char *> &toks)
+    void strtok(char *s, const char *delim, std::vector<char *> &toks)
     {
         toks.resize(0);
         char *context = nullptr;
         for (char *p = strtok_s(s, delim, &context); p; p = strtok_s(NULL, delim, &context))
             toks.push_back(p);
     }
-    void malformed(string what)
+    void malformed(std::string what)
     {
         throw std::runtime_error(msra::strfun::strprintf("htkmlfreader: %s in '%S'", what.c_str(), curpath.c_str()));
     }
 
-    vector<char *> readlines(const wstring &path, vector<char> &buffer)
+    std::vector<char *> readlines(const std::wstring &path, std::vector<char> &buffer)
     {
         // load it into RAM in one huge chunk
         auto_file_ptr f(fopenOrDie(path, L"rb"));
@@ -447,7 +447,7 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
         buffer.push_back(0); // this makes it a proper C string
 
         // parse into lines
-        vector<char *> lines;
+        std::vector<char *> lines;
         lines.reserve(len / 20);
         strtok(&buffer[0], "\r\n", lines);
         return lines;
@@ -455,12 +455,12 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
 
 public:
     // return if input statename is sil state (hard code to compared first 3 chars with "sil")
-    bool issilstate(const string &statename) const // (later use some configuration table)
+    bool issilstate(const std::string &statename) const // (later use some configuration table)
     {
         return (statename.size() > 3 && statename.at(0) == 's' && statename.at(1) == 'i' && statename.at(2) == 'l');
     }
 
-    vector<bool> issilstatetable; // [state index] => true if is sil state (cached)
+    std::vector<bool> issilstatetable; // [state index] => true if is sil state (cached)
 
     // return if input stateid represent sil state (by table lookup)
     bool issilstate(const size_t id) const
@@ -470,7 +470,7 @@ public:
     }
 
     // constructor reads multiple MLF files
-    htkmlfreader(const vector<wstring> &paths, const set<wstring> &restricttokeys, const wstring &stateListPath = L"", const double htkTimeToFrame = 100000.0, int targets_delay = 0)
+    htkmlfreader(const std::vector<std::wstring> &paths, const std::set<std::wstring> &restricttokeys, const std::wstring &stateListPath = L"", const double htkTimeToFrame = 100000.0, int targets_delay = 0)
     {
         // read state list
         if (stateListPath != L"")
@@ -482,7 +482,7 @@ public:
     }
 
     // note: this function is not designed to be pretty but to be fast
-    void read(const wstring &path, const set<wstring> &restricttokeys, const double htkTimeToFrame, int targets_delay)
+    void read(const std::wstring &path, const std::set<std::wstring> &restricttokeys, const double htkTimeToFrame, int targets_delay)
     {
         fprintf(stderr, "htkmlfreader: reading MLF file %S ...", path.c_str());
         curpath = path; // for error messages only
@@ -497,7 +497,7 @@ public:
             std::wstring key = toWStr(targets_reader.Key());
             const kaldi::Posterior p = targets_reader.Value();
 
-            vector<ENTRY> &entries = (*this)[key];
+            std::vector<ENTRY> &entries = (*this)[key];
             if (!entries.empty())
                 malformed(msra::strfun::strprintf("duplicate entry '%S'", key.c_str()));
 
@@ -551,12 +551,12 @@ public:
     }
 
     // read state list, index is from 0
-    void readstatelist(const wstring &stateListPath = L"")
+    void readstatelist(const std::wstring &stateListPath = L"")
     {
         if (stateListPath != L"")
         {
-            vector<char> buffer; // buffer owns the characters--don't release until done
-            vector<char *> lines = readlines(stateListPath, buffer);
+            std::vector<char> buffer; // buffer owns the characters--don't release until done
+            std::vector<char *> lines = readlines(stateListPath, buffer);
             size_t index;
             issilstatetable.reserve(lines.size());
             for (index = 0; index < lines.size(); index++)
@@ -578,7 +578,7 @@ public:
         return statelistmap.size();
     }
 
-    size_t getstateid(string statename) // added by Hang Su adaptation
+    size_t getstateid(std::string statename) // added by Hang Su adaptation
     {
         return statelistmap[statename];
     }

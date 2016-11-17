@@ -481,6 +481,75 @@ Example:
 
     p = MaxPooling((3,3), strides=(2,2))(c)
 
+GlobalMaxPooling(), GlobalAveragePooling()
+------------------------------
+
+Factory functions to create a global-max-pooling or global-average-pooling layer.
+
+::
+
+    GlobalMaxPooling()
+    GlobalAveragePooling()
+
+Return Value
+~~~~~~~~~~~~
+
+A function that implements the desired pooling layer.
+
+Description
+~~~~~~~~~~~
+
+Use this factory function to create a global pooling operation. Use
+``GlobalMaxPooling()`` to compute the maximum over all spatial data, 
+or ``GlobalAveragePooling()`` to take their average.
+
+The global pooling operation infer the pooling window shape from the input 
+tensor and create a pooling function with pooling window size that
+matches the input spatial dimension. It then computes either the 
+maximum or the average of all the values inside the inferred pooling
+window.
+
+Example:
+~~~~~~~~
+
+::
+
+    p = GlobalMaxPooling()(c)    
+
+Dropout()
+------------------------------
+
+Factory functions to create a dropout layer.
+
+::
+
+    Dropout(prob)
+
+Parameters
+~~~~~~~~~~
+
+-  ``prob``: a fraction between [0, 1) that specifies the probability by which
+   the dropout operation will randomly set elements of the input to zero. 0 mean 
+   select everything and close to 1 mean drop every element.
+
+Return Value
+~~~~~~~~~~~~
+
+A function that implements the desired dropout layer.
+
+Description
+~~~~~~~~~~~
+
+Use this factory function to create a dropout operation with a specific 
+dropout rate.
+
+Example:
+~~~~~~~~
+
+::
+
+    p = Dropout(0.5)(c)    
+
 .. _embedding:
 
 Embedding()

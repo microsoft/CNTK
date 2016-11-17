@@ -46,15 +46,18 @@ def test_cloning():
     res = p + i
 
     with pytest.raises(ValueError):
-        res.clone('freeze')
-
-    with pytest.raises(ValueError):
         res.clone(2)
 
     from ..functions import CloneMethod
 
     # Test freeze
     cloned = res.clone(CloneMethod.freeze)
+    assert cloned.inputs[0].name == 'p'
+    assert cloned.inputs[0].uid != p.uid
+    assert cloned.inputs[1].name == 'i'
+    assert cloned.inputs[1].uid != i.uid
+
+    cloned = res.clone('freeze')
     assert cloned.inputs[0].name == 'p'
     assert cloned.inputs[0].uid != p.uid
     assert cloned.inputs[1].name == 'i'

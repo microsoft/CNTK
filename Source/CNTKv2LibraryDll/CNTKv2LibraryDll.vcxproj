@@ -47,8 +47,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
-      <LinkIncremental>true</LinkIncremental>
-      <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
+    <LinkIncremental>true</LinkIncremental>
+    <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
     <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
@@ -134,8 +134,10 @@
     <ClInclude Include="API\CNTKLibrary.h" />
     <ClInclude Include="API\CNTKLibraryExperimental.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
+    <ClInclude Include="BackCompat.h" />
     <ClInclude Include="DataParallelDistributedTrainer.h" />
     <ClInclude Include="DistributedCommunicator.h" />
+    <ClInclude Include="DistributedTrainerBase.h" />
     <ClInclude Include="Function.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
@@ -152,6 +154,7 @@
     <ClCompile Include="ComputeInputStatistics.cpp" />
     <ClCompile Include="DataParallelDistributedTrainer.cpp" />
     <ClCompile Include="DistributedCommunicator.cpp" />
+    <ClCompile Include="DistributedTrainerBase.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeader>
@@ -173,7 +176,6 @@
     <ClCompile Include="Variable.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\bindings\python\cntk\PythonBindings.pyproj" />
     <None Include="proto\CNTK.proto" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

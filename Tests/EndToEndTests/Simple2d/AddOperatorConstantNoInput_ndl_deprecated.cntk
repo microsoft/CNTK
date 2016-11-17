@@ -1,0 +1,34 @@
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
+#       Please find updated samples on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+# deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
+deviceId = -1
+
+command = Add_Operator_Constant
+
+precision = "float"
+traceLevel = 1
+
+#######################################
+#  NETWORK CONFIG                     #
+#######################################
+
+run=NDLNetworkBuilder
+NDLNetworkBuilder=[
+          v1 = Constant(1)
+          v2 = Constant(2)
+          ol = Plus(v1, v2)
+
+# Although the FeatureNodes are NOT used during a Network Feed Forward Read
+# the NDL Parser still wants it there
+# Once the NDL Parser is updated, the following declaration, and this 
+# comment may be removed
+          FeatureNodes=(v1)
+
+          OutputNodes=(ol)
+	]
+    
+Add_Operator_Constant = [
+    action = "write"
+]

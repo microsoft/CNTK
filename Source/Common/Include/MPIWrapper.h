@@ -99,6 +99,7 @@ class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
 
             int argc = 0;
             char **argv = NULL;
+            // TODO(qiwye) Multiverso(parameter server) will benefit from MPI_THREAD_MULTIPLE .
             int requiredThreadLevelSupport = MPI_THREAD_SERIALIZED;
             int provided;
             int ret = MPI_Init_thread(&argc, &argv, requiredThreadLevelSupport, &provided);
@@ -445,15 +446,6 @@ public:
         AllReduce<ElemType>(static_cast<ElemType*>(MPI_IN_PLACE), sendData, numElements, op);
     }
 
-    template <class ElemType>
-    void AllReduce(ElemType *sendData, ElemType *receiveData, size_t numElements, MPI_Op op = MPI_SUM) const
-    {
-        if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
-        {
-            MPI_Allreduce(sendData, receiveData, (int) numElements, GetDataType(sendData), op, Communicator()) || MpiFail("AllReduce: MPI_Allreduce");
-        }
-    }
-
     template <class ElemType> 
     void AllReduceAsync(ElemType* sendData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const
     {
@@ -461,21 +453,39 @@ public:
     }
 
     template <class ElemType>
+    void AllGatherAsync(const ElemType *sendData, size_t numSendElements, ElemType *receiveData, size_t numRecvElements, MPI_Request* request) const
+    {
+        MPI_Iallgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallgather");
+    }
+
+    template <class ElemType>
     void AllReduceAsync(ElemType *sendData, ElemType *receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const
     {
-        if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
-        {
-            MPI_Iallreduce(sendData, receiveData, (int) numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
-        }
+        MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
+    }
+
+    template <class ElemType>
+    void AllReduce(ElemType *sendData, ElemType *receiveData, size_t numElements, MPI_Op op = MPI_SUM) const
+    {
+        MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("AllReduce: MPI_Allreduce");
+    }
+
+    template <class ElemType>
+    void Gather(const ElemType *sendData, size_t numSendElements, ElemType *receiveData, size_t numRecvElements, size_t rootRank) const
+    {
+        MPI_Gather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gather");
+    }
+
+    template <class ElemType>
+    void Gatherv(const ElemType *sendData, size_t numSendElements, ElemType *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+    {
+        MPI_Gatherv(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, recvCounts, offsets, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gatherv");
     }
 
     template <class ElemType>
     void Bcast(ElemType *pData, size_t nData, size_t srcRank)
     {
-        if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
-        {
-            MPI_Bcast(pData, (int) nData, GetDataType(pData), (int) srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
-        }
+        MPI_Bcast(pData, (int) nData, GetDataType(pData), (int) srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
     }
 
     // wait for an async request to finish
@@ -495,8 +505,10 @@ public:
         MPI_Barrier(m_currentComm) || MpiFail("waitall: MPI_Barrier");
     }
 
-
-    
+    void WaitAll(std::vector<MPI_Request>& requests)
+    {
+        MPI_Waitall((int)requests.size(), &requests[0], MPI_STATUSES_IGNORE) || MpiFail("waitall: MPI_Waitall");
+    }
 };
 
 }}}

@@ -126,7 +126,7 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
     }
 
     functionPtr->SaveModel(tempModelPath);
-    functionPtr = CNTK::Function::LoadModel(functionPtr->Outputs()[0].GetDataType(), tempModelPath, device);
+    functionPtr = CNTK::Function::LoadModel(tempModelPath, device);
 
     if (_wunlink(tempModelPath.c_str()) != 0)
          throw std::runtime_error("Error deleting temp model file 'feedForward.net'");

@@ -336,7 +336,7 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             fprintf(stderr, "\n");
             if (traceLevel > 0)
             {
-                LOGPRINTF(stderr, "Action \"%s\" complete.\n\n", thisAction.c_str());
+            LOGPRINTF(stderr, "Action \"%s\" complete.\n\n", thisAction.c_str());
             }
 
             NDLScript<ElemType> ndlScript;
@@ -372,6 +372,9 @@ void PrintBuiltInfo()
 #endif
 #ifdef _WITH_1BITSGD_
     LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
+#endif
+#ifdef _WITH_ASGD_
+    LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
 #endif
 #ifdef _MATHLIB_
     LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
@@ -718,9 +721,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         {
             for (int i = 0; i < command.size(); i++) // append all 'command' entries
             {
-                logpath += L"_";
+            logpath += L"_";
                 logpath += (wstring)command[i];
-            }
+        }
             logpath += L".log"; // append .log
         }
 
@@ -744,21 +747,21 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     if (traceLevel > 0)
     {
         PrintBuiltInfo();
-        PrintGpuInfo();
+    PrintGpuInfo();
     }
 
 #ifdef _DEBUG
     if (traceLevel > 0)
     {
-        // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
-        // and prints it.
+    // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
+    // and prints it.
         fprintf(stderr, "\nConfiguration, Raw:\n\n");
-        LOGPRINTF(stderr, "%s\n", rawConfigString.c_str());
+    LOGPRINTF(stderr, "%s\n", rawConfigString.c_str());
 
-        // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overridden at command line),
-        // All of these assignments will appear, even though only the last assignment matters.
+    // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overridden at command line),
+    // All of these assignments will appear, even though only the last assignment matters.
         fprintf(stderr, "\nConfiguration After Variable Resolution:\n\n");
-        LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
+    LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
     }
 #endif
 
@@ -769,12 +772,12 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     if (traceLevel > 0)
     {
         fprintf(stderr, "\nConfiguration After Processing and Variable Resolution:\n\n");
-        config.dumpWithResolvedVariables();
+    config.dumpWithResolvedVariables();
 
-        LOGPRINTF(stderr, "Commands:");
-        for (int i = 0; i < command.size(); i++)
-            fprintf(stderr, " %s", command[i].c_str());
-        fprintf(stderr, "\n");
+    LOGPRINTF(stderr, "Commands:");
+    for (int i = 0; i < command.size(); i++)
+        fprintf(stderr, " %s", command[i].c_str());
+    fprintf(stderr, "\n");
     }
 
     // run commands

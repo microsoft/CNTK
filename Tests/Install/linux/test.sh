@@ -3,26 +3,6 @@ set -x -e -o pipefail
 
 USAGE="Usage: $0 <drops-to-test>"
 
-REPO_TAG=v2.0.beta3.0
-
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --repo-tag)
-      REPO_TAG="$2"
-      [ -z "$REPO_TAG" ] && {
-        echo Missing value for --repo-tag option.
-        exit 1
-      }
-      shift # extra shift
-      ;;
-    *)
-      # Break on first non-option
-      break
-      ;;
-  esac
-  shift
-done
-
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
 if [ -z "$1" ]; then
@@ -65,7 +45,7 @@ for drop in $*; do
 
   IMAGE=cntk:installtest
   for base in Ubuntu16 Ubuntu14; do
-    docker build -t $IMAGE -f Dockerfile-$base-$DOCKERFILE_SUFFIX --build-arg REPO_TAG=$REPO_TAG .
+    docker build -t $IMAGE -f Dockerfile-$base-$DOCKERFILE_SUFFIX .
     $DOCKER_TO_RUN run --rm $IMAGE su - testuser -c "./run-test.sh $TEST_DEVICE"
     docker rmi $IMAGE
   done

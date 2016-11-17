@@ -192,7 +192,7 @@ def test_op_slice_sequence(input_data, slice_params, expected_result, device_id,
                     device_id=device_id, precision=precision)
 
 # FIXME once the overloads are in place, integrate test_op_slice_overload from
-# F:\CNTKv2\contrib\Python\cntk\ops\tests\reshaping_test.py
+# contrib\Python\cntk\ops\tests\reshaping_test.py (check Git history)
 
 SPLICE_TEST_CASES = [
     #(input_data1, input_data2, axis, expected_result)

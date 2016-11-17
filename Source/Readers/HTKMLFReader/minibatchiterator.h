@@ -37,12 +37,12 @@ public:
     virtual bool getbatch(const size_t globalts,
                           const size_t framesrequested, msra::dbn::matrix &feat, std::vector<size_t> &uids,
                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
-                          std::vector<shared_ptr<const latticesource::latticepair>> &lattices) = 0;
+                          std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices) = 0;
     // alternate (updated) definition for multiple inputs/outputs - read as a vector of feature matrixes or a vector of label strings
     virtual bool getbatch(const size_t globalts,
                           const size_t framesrequested, std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids,
                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
-                          std::vector<shared_ptr<const latticesource::latticepair>> &lattices, std::vector<std::vector<size_t>> &sentendmark,
+                          std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices, std::vector<std::vector<size_t>> &sentendmark,
                           std::vector<std::vector<size_t>> &phoneboundaries) = 0;
     // getbatch() overload to support subsetting of mini-batches for parallel training
     // Default implementation does not support subsetting and throws an exception on
@@ -51,7 +51,7 @@ public:
                           const size_t framesrequested, const size_t subsetnum, const size_t numsubsets, size_t &framesadvanced,
                           std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids,
                           std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
-                          std::vector<shared_ptr<const latticesource::latticepair>> &lattices, std::vector<std::vector<size_t>> &sentendmark,
+                          std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices, std::vector<std::vector<size_t>> &sentendmark,
                           std::vector<std::vector<size_t>> &phoneboundaries)
     {
         assert((subsetnum == 0) && (numsubsets == 1) && !supportsbatchsubsetting());
@@ -103,7 +103,7 @@ class minibatchiterator
     std::vector<msra::dbn::matrix> featbuf;                                                      // buffer for holding curernt minibatch's frames
     std::vector<std::vector<size_t>> uids;                                                       // buffer for storing current minibatch's frame-level label sequence
     std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> transcripts; // buffer for storing current minibatch's word-level label sequences (if available and used; empty otherwise)
-    std::vector<shared_ptr<const latticesource::latticepair>> lattices;                          // lattices of the utterances in current minibatch (empty in frame mode)
+    std::vector<std::shared_ptr<const latticesource::latticepair>> lattices;                          // lattices of the utterances in current minibatch (empty in frame mode)
 
     std::vector<std::vector<size_t>> sentendmark;     // buffer for storing current minibatch's utterance end
     std::vector<std::vector<size_t>> phoneboundaries; // buffer for storing phone boundaries
@@ -133,7 +133,7 @@ private:
         }
         // process one mini-batch (accumulation and update)
         assert(requestedmbframes > 0);
-        const size_t requestedframes = min(requestedmbframes, epochendframe - mbstartframe); // (< mbsize at end)
+        const size_t requestedframes = std::min(requestedmbframes, epochendframe - mbstartframe); // (< mbsize at end)
         assert(requestedframes > 0);
         source.getbatch(mbstartframe, requestedframes, subsetnum, numsubsets, mbframesadvanced, featbuf, uids, transcripts, lattices, sentendmark, phoneboundaries);
         timegetbatch = source.gettimegetbatch();
@@ -278,7 +278,7 @@ public:
     }
     std::pair<size_t, size_t> range() const
     {
-        return make_pair(epochstartframe, epochendframe);
+        return std::make_pair(epochstartframe, epochendframe);
     }
 
     // return the current minibatch frames as a matrix ref into the feature buffer
@@ -335,7 +335,7 @@ public:
     }
 
     // return a lattice for an utterance (caller should first get total through currentmblattices())
-    shared_ptr<const msra::dbn::latticepair> lattice(size_t uttindex) const
+    std::shared_ptr<const msra::dbn::latticepair> lattice(size_t uttindex) const
     {
         return lattices[uttindex];
     } // lattices making up the current

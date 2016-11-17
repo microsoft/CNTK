@@ -13,7 +13,7 @@
 #include "Utils.h"
 #include "ConvolveGeometry.h"
 #include "ConvolutionalNodes.h"
-
+#include "BackCompat.h"
 
 namespace std
 {

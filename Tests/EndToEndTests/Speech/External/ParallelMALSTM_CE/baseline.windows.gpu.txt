@@ -1,0 +1,197 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 24
+    Total Memory: 268381192 kB
+-------------------------------------------------------------------
++ [[ -d c:\Data\CNTKTestData ]]
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -aw 'c:\Data\CNTKTestData'
++ CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY='C:\Data\CNTKTestData'
++ ConfigDir='C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE'
++ [[ -d C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE ]]
++ LogFileName=stderr
++ Instances=3
+++ threadsPerInstance 3
++++ nproc
+++ local threads=8
+++ [[ 8 -eq 0 ]]
+++ echo 8
++ NumCPUThreads=8
++ cntkmpirun '-n 3' cntk.cntk 'numCPUThreads=8 ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]] traceLevel=0'
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -aw /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe
++ BinaryPath='C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe'
++ MPIMode=1
++ MPIArgs='-n 3'
++ cntkrun cntk.cntk 'numCPUThreads=8 ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]] traceLevel=0'
++ configFileName=cntk.cntk
++ additionalCNTKArgs='numCPUThreads=8 ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]] traceLevel=0'
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -aw 'C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE'
++ ConfigDir='C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE'
+++ cygpath -aw /cygdrive/c/Users/svcphil/AppData/Local/Temp/cntk-test-20161111133205.94943/Speech/External_ParallelMALSTM_CE@release_gpu
++ RunDir='C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu'
+++ cygpath -aw /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/Tests/EndToEndTests/Speech/Data
++ DataDir='C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data'
+++ cygpath -aw /cygdrive/c/Users/svcphil/AppData/Local/Temp/cntk-test-20161111133205.94943/Speech/External_ParallelMALSTM_CE@release_gpu
++ OutputDir='C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu'
++ CNTKArgs='configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu DeviceId=0 timestamping=true numCPUThreads=8 ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]] traceLevel=0'
++ '[' stderr '!=' '' ']'
++ CNTKArgs='configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu DeviceId=0 timestamping=true numCPUThreads=8 ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]] traceLevel=0 stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr'
++ modelsDir=/cygdrive/c/Users/svcphil/AppData/Local/Temp/cntk-test-20161111133205.94943/Speech/External_ParallelMALSTM_CE@release_gpu/Models
++ [[ 1 == 1 ]]
++ '[' -d /cygdrive/c/Users/svcphil/AppData/Local/Temp/cntk-test-20161111133205.94943/Speech/External_ParallelMALSTM_CE@release_gpu/Models ']'
++ mkdir -p /cygdrive/c/Users/svcphil/AppData/Local/Temp/cntk-test-20161111133205.94943/Speech/External_ParallelMALSTM_CE@release_gpu/Models
++ [[ 1 == 0 ]]
++ run 'C:\Program Files\Microsoft MPI\Bin\/mpiexec.exe' -n 3 'C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe' 'configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk' 'currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data' 'RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu' 'DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data' 'ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE' 'OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu' DeviceId=0 timestamping=true numCPUThreads=8 'ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE' 'speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]' traceLevel=0 'stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr'
++ cmd='C:\Program Files\Microsoft MPI\Bin\/mpiexec.exe'
++ shift
++ '[' '' == 1 ']'
++ echo === Running 'C:\Program Files\Microsoft MPI\Bin\/mpiexec.exe' -n 3 'C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe' 'configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk' 'currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data' 'RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu' 'DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data' 'ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE' 'OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu' DeviceId=0 timestamping=true numCPUThreads=8 'ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE' 'speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]' traceLevel=0 'stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr'
+=== Running C:\Program Files\Microsoft MPI\Bin\/mpiexec.exe -n 3 C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu DeviceId=0 timestamping=true numCPUThreads=8 ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]] traceLevel=0 stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr
++ 'C:\Program Files\Microsoft MPI\Bin\/mpiexec.exe' -n 3 'C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe' 'configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk' 'currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data' 'RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu' 'DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data' 'ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE' 'OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu' DeviceId=0 timestamping=true numCPUThreads=8 'ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE' 'speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]' traceLevel=0 'stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr'
++ return 0
++ local ExitCode=0
++ [[ 1 == 1 ]]
++ '[' -d /cygdrive/c/Users/svcphil/AppData/Local/Temp/cntk-test-20161111133205.94943/Speech/External_ParallelMALSTM_CE@release_gpu/Models ']'
++ rm -rf /cygdrive/c/Users/svcphil/AppData/Local/Temp/cntk-test-20161111133205.94943/Speech/External_ParallelMALSTM_CE@release_gpu/Models
++ return 0
++ return 0
++ [[ -d C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE ]]
++ ExitCode=0
++ sed 's/^/MPI Rank 0: /' /cygdrive/c/Users/svcphil/AppData/Local/Temp/cntk-test-20161111133205.94943/Speech/External_ParallelMALSTM_CE@release_gpu/stderr_speechTrain.logrank0
+MPI Rank 0: CNTK 2.0.beta2.0+ (HEAD c4232e, Nov 11 2016 13:20:31) on DPHAIM-25 at 2016/11/11 13:33:21
+MPI Rank 0: 
+MPI Rank 0: C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DeviceId=0  timestamping=true  numCPUThreads=8  ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  traceLevel=0  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr
+MPI Rank 0: Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+MPI Rank 0: 11/11/2016 13:33:24: Redirecting stderr to file C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr_speechTrain.logrank0
+MPI Rank 0: CNTK 2.0.beta2.0+ (HEAD c4232e, Nov 11 2016 13:20:31) on DPHAIM-25 at 2016/11/11 13:33:21
+MPI Rank 0: 
+MPI Rank 0: C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DeviceId=0  timestamping=true  numCPUThreads=8  ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  traceLevel=0  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr
+MPI Rank 0: 11/11/2016 13:33:24: Using 8 CPU threads.
+MPI Rank 0: 
+MPI Rank 0: 11/11/2016 13:33:24: ##############################################################################
+MPI Rank 0: 11/11/2016 13:33:24: #                                                                            #
+MPI Rank 0: 11/11/2016 13:33:24: # speechTrain command (train action)                                         #
+MPI Rank 0: 11/11/2016 13:33:24: #                                                                            #
+MPI Rank 0: 11/11/2016 13:33:24: ##############################################################################
+MPI Rank 0: 
+MPI Rank 0: WARNING: option syncFrequencyInFrames in ModelAveragingSGD is going to be deprecated. Please use blockSizePerWorker instead
+MPI Rank 0: NDLBuilder Using GPU 0
+MPI Rank 0: reading script file glob_0000.scp ... 948 entries
+MPI Rank 0: total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list
+MPI Rank 0: htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
+MPI Rank 0: ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+MPI Rank 0: label set 0: 129 classes
+MPI Rank 0: minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+MPI Rank 0: 11/11/2016 13:33:25: 
+MPI Rank 0: Model has 82 nodes. Using GPU 0.
+MPI Rank 0: 
+MPI Rank 0: 11/11/2016 13:33:25: Training criterion:   cr = CrossEntropyWithSoftmax
+MPI Rank 0: 11/11/2016 13:33:25: Evaluation criterion: Err = ClassificationError
+MPI Rank 0: 
+MPI Rank 0: 11/11/2016 13:33:25: Training 2619524 parameters in 20 parameter tensors.
+MPI Rank 0: 
+MPI Rank 0: Parallel training (3 workers) using ModelAveraging
+MPI Rank 0: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+MPI Rank 0: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+MPI Rank 0: 11/11/2016 13:33:32: Finished Epoch[ 1 of 3]: [Training] cr = 4.63162346 * 20480; Err = 0.87890625 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.00050000002; epochTime=5.6943s
+MPI Rank 0: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 3, with 1 datapasses
+MPI Rank 0: 		(model aggregation stats): 1-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+MPI Rank 0: 11/11/2016 13:33:34: Finished Epoch[ 2 of 3]: [Training] cr = 3.99509697 * 20480; Err = 0.86865234 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.00050000002; epochTime=1.50925s
+MPI Rank 0: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 3, with 1 datapasses
+MPI Rank 0: 		(model aggregation stats): 1-th sync point was hit, introducing a 0.15-seconds latency this time; accumulated time on sync point = 0.15 seconds , average latency = 0.15 seconds
+MPI Rank 0: 11/11/2016 13:33:35: Finished Epoch[ 3 of 3]: [Training] cr = 3.82314215 * 20480; Err = 0.86855469 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 0.00050000002; epochTime=0.926729s
+MPI Rank 0: 
+MPI Rank 0: 11/11/2016 13:33:36: __COMPLETED__
++ sed 's/^/MPI Rank 1: /' /cygdrive/c/Users/svcphil/AppData/Local/Temp/cntk-test-20161111133205.94943/Speech/External_ParallelMALSTM_CE@release_gpu/stderr_speechTrain.logrank1
+MPI Rank 1: CNTK 2.0.beta2.0+ (HEAD c4232e, Nov 11 2016 13:20:31) on DPHAIM-25 at 2016/11/11 13:33:21
+MPI Rank 1: 
+MPI Rank 1: C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DeviceId=0  timestamping=true  numCPUThreads=8  ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  traceLevel=0  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr
+MPI Rank 1: Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+MPI Rank 1: 11/11/2016 13:33:25: Redirecting stderr to file C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr_speechTrain.logrank1
+MPI Rank 1: CNTK 2.0.beta2.0+ (HEAD c4232e, Nov 11 2016 13:20:31) on DPHAIM-25 at 2016/11/11 13:33:21
+MPI Rank 1: 
+MPI Rank 1: C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DeviceId=0  timestamping=true  numCPUThreads=8  ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  traceLevel=0  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr
+MPI Rank 1: 11/11/2016 13:33:25: Using 8 CPU threads.
+MPI Rank 1: 
+MPI Rank 1: 11/11/2016 13:33:25: ##############################################################################
+MPI Rank 1: 11/11/2016 13:33:25: #                                                                            #
+MPI Rank 1: 11/11/2016 13:33:25: # speechTrain command (train action)                                         #
+MPI Rank 1: 11/11/2016 13:33:25: #                                                                            #
+MPI Rank 1: 11/11/2016 13:33:25: ##############################################################################
+MPI Rank 1: 
+MPI Rank 1: WARNING: option syncFrequencyInFrames in ModelAveragingSGD is going to be deprecated. Please use blockSizePerWorker instead
+MPI Rank 1: NDLBuilder Using GPU 0
+MPI Rank 1: reading script file glob_0000.scp ... 948 entries
+MPI Rank 1: total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list
+MPI Rank 1: htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
+MPI Rank 1: ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+MPI Rank 1: label set 0: 129 classes
+MPI Rank 1: minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+MPI Rank 1: 11/11/2016 13:33:26: 
+MPI Rank 1: Model has 82 nodes. Using GPU 0.
+MPI Rank 1: 
+MPI Rank 1: 11/11/2016 13:33:26: Training criterion:   cr = CrossEntropyWithSoftmax
+MPI Rank 1: 11/11/2016 13:33:26: Evaluation criterion: Err = ClassificationError
+MPI Rank 1: 
+MPI Rank 1: 11/11/2016 13:33:26: Training 2619524 parameters in 20 parameter tensors.
+MPI Rank 1: 
+MPI Rank 1: Parallel training (3 workers) using ModelAveraging
+MPI Rank 1: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+MPI Rank 1: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+MPI Rank 1: 11/11/2016 13:33:32: Finished Epoch[ 1 of 3]: [Training] cr = 4.63162346 * 20480; Err = 0.87890625 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.00050000002; epochTime=5.83327s
+MPI Rank 1: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 1 of 3, with 1 datapasses
+MPI Rank 1: 		(model aggregation stats): 1-th sync point was hit, introducing a 0.08-seconds latency this time; accumulated time on sync point = 0.08 seconds , average latency = 0.08 seconds
+MPI Rank 1: 11/11/2016 13:33:34: Finished Epoch[ 2 of 3]: [Training] cr = 3.99509697 * 20480; Err = 0.86865234 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.00050000002; epochTime=1.50924s
+MPI Rank 1: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 1 of 3, with 1 datapasses
+MPI Rank 1: 		(model aggregation stats): 1-th sync point was hit, introducing a 0.00-seconds latency this time; accumulated time on sync point = 0.00 seconds , average latency = 0.00 seconds
+MPI Rank 1: 11/11/2016 13:33:35: Finished Epoch[ 3 of 3]: [Training] cr = 3.82314215 * 20480; Err = 0.86855469 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 0.00050000002; epochTime=0.92673s
+MPI Rank 1: 
+MPI Rank 1: 11/11/2016 13:33:36: __COMPLETED__
++ sed 's/^/MPI Rank 2: /' /cygdrive/c/Users/svcphil/AppData/Local/Temp/cntk-test-20161111133205.94943/Speech/External_ParallelMALSTM_CE@release_gpu/stderr_speechTrain.logrank2
+MPI Rank 2: CNTK 2.0.beta2.0+ (HEAD c4232e, Nov 11 2016 13:20:31) on DPHAIM-25 at 2016/11/11 13:33:21
+MPI Rank 2: 
+MPI Rank 2: C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DeviceId=0  timestamping=true  numCPUThreads=8  ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  traceLevel=0  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr
+MPI Rank 2: Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+MPI Rank 2: 11/11/2016 13:33:25: Redirecting stderr to file C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr_speechTrain.logrank2
+MPI Rank 2: CNTK 2.0.beta2.0+ (HEAD c4232e, Nov 11 2016 13:20:31) on DPHAIM-25 at 2016/11/11 13:33:21
+MPI Rank 2: 
+MPI Rank 2: C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\Data\CNTKTestData\Speech\Models\MA_LSTM_CE  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu  DeviceId=0  timestamping=true  numCPUThreads=8  ConfigDir=C:\Data\CNTKTestData/Speech/Models/MA_LSTM_CE  speechTrain=[SGD=[ParallelTrain=[parallelizationStartEpoch=2]]]  traceLevel=0  stderr=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161111133205.94943\Speech\External_ParallelMALSTM_CE@release_gpu/stderr
+MPI Rank 2: 11/11/2016 13:33:25: Using 8 CPU threads.
+MPI Rank 2: 
+MPI Rank 2: 11/11/2016 13:33:25: ##############################################################################
+MPI Rank 2: 11/11/2016 13:33:25: #                                                                            #
+MPI Rank 2: 11/11/2016 13:33:25: # speechTrain command (train action)                                         #
+MPI Rank 2: 11/11/2016 13:33:25: #                                                                            #
+MPI Rank 2: 11/11/2016 13:33:25: ##############################################################################
+MPI Rank 2: 
+MPI Rank 2: WARNING: option syncFrequencyInFrames in ModelAveragingSGD is going to be deprecated. Please use blockSizePerWorker instead
+MPI Rank 2: NDLBuilder Using GPU 0
+MPI Rank 2: reading script file glob_0000.scp ... 948 entries
+MPI Rank 2: total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list
+MPI Rank 2: htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
+MPI Rank 2: ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+MPI Rank 2: label set 0: 129 classes
+MPI Rank 2: minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+MPI Rank 2: 11/11/2016 13:33:26: 
+MPI Rank 2: Model has 82 nodes. Using GPU 0.
+MPI Rank 2: 
+MPI Rank 2: 11/11/2016 13:33:26: Training criterion:   cr = CrossEntropyWithSoftmax
+MPI Rank 2: 11/11/2016 13:33:26: Evaluation criterion: Err = ClassificationError
+MPI Rank 2: 
+MPI Rank 2: 11/11/2016 13:33:26: Training 2619524 parameters in 20 parameter tensors.
+MPI Rank 2: 
+MPI Rank 2: Parallel training (3 workers) using ModelAveraging
+MPI Rank 2: minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+MPI Rank 2: requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+MPI Rank 2: 11/11/2016 13:33:32: Finished Epoch[ 1 of 3]: [Training] cr = 4.63162346 * 20480; Err = 0.87890625 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.00050000002; epochTime=5.73765s
+MPI Rank 2: minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 2 of 3, with 1 datapasses
+MPI Rank 2: 		(model aggregation stats): 1-th sync point was hit, introducing a 0.01-seconds latency this time; accumulated time on sync point = 0.01 seconds , average latency = 0.01 seconds
+MPI Rank 2: 11/11/2016 13:33:34: Finished Epoch[ 2 of 3]: [Training] cr = 3.99509697 * 20480; Err = 0.86865234 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.00050000002; epochTime=1.50927s
+MPI Rank 2: minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 2 of 3, with 1 datapasses
+MPI Rank 2: 		(model aggregation stats): 1-th sync point was hit, introducing a 0.06-seconds latency this time; accumulated time on sync point = 0.06 seconds , average latency = 0.06 seconds
+MPI Rank 2: 11/11/2016 13:33:35: Finished Epoch[ 3 of 3]: [Training] cr = 3.82314215 * 20480; Err = 0.86855469 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 0.00050000002; epochTime=0.926733s
+MPI Rank 2: 
+MPI Rank 2: 11/11/2016 13:33:36: __COMPLETED__
++ exit 0

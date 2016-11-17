@@ -106,6 +106,8 @@ void ComputationNetwork::Save(const wstring& fileName, const FileOptions fileFor
 void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptions fileFormat) const
 {
     File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
+    // Buffer writes in memory then flush to filesystem, which reduces number of small writes
+    fstream.Setvbuf();
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
     // model version
