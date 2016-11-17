@@ -76,8 +76,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             Console.WriteLine("\n====== EvaluateMultipleModels ========");
             EvaluateMultipleModels();
 
-            Console.WriteLine("\n====== EvaluateModelImageInput ========");
-            EvaluateImageClassificationModel();
+            Console.WriteLine("\n====== EvaluateImageClassificationModelUsingFeatureVector ========");
+            EvaluateImageClassificationModelUsingFeatureVector();
+
+            Console.WriteLine("\n====== EvaluateImageClassificationModelUsingImageApi ========");
+            EvaluateImageClassificationModelUsingImageApi();
 
             // This pattern is used by End2EndTests to check whether the program runs to complete.
             Console.WriteLine("\n====== Evaluation Complete ========");
@@ -373,9 +376,10 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         }
 
         /// <summary>
-        /// This method shows how to evaluate a trained image classification model
+        /// This method shows how to evaluate a trained image classification model, with
+        /// explicitly created feature vectors.
         /// </summary>
-        public static void EvaluateImageClassificationModel()
+        public static void EvaluateImageClassificationModelUsingFeatureVector()
         {
             try
             {
@@ -409,10 +413,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                     Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
                     var resized = bmp.Resize(224, 224, true);
-                    // Measure the time it takes to create the feature vector in
-                    // managed code, versus later in native.
-                    var s = new Stopwatch();
-                    s.Start();
 
                     var resizedCHW = resized.ParallelExtractCHW();
                     var inputs = new Dictionary<string, List<float>>() { {inDims.First().Key, resizedCHW } };
@@ -420,21 +420,67 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     // We can call the evaluate method and get back the results (single layer output)...
                     var outDims = model.GetNodeDimensions(NodeGroup.Output);
                     outputs = model.Evaluate(inputs, outDims.First().Key);
-                    var evalManaged = s.ElapsedMilliseconds;
-                    s.Restart();
+                }
+
+                // Retrieve the outcome index (so we can compare it with the expected index)
+                var max = outputs.Select((value, index) => new { Value = value, Index = index })
+                    .Aggregate((a, b) => (a.Value > b.Value) ? a : b)
+                    .Index;
+
+                Console.WriteLine("Outcome: {0}", max);
+            }
+            catch (CNTKException ex)
+            {
+                OnCNTKException(ex);
+            }
+            catch (Exception ex)
+            {
+                OnGeneralException(ex);
+            }
+        }
+
+        /// <summary>
+        /// This method shows how to evaluate a trained image classification model, where the 
+        /// creation of the CNTK feature vector is happening in native code inside the EvalWrapper.
+        /// </summary>
+        public static void EvaluateImageClassificationModelUsingImageApi()
+        {
+            try
+            {
+                // This example requires the RestNet_18 model.
+                // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
+                // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
+                // along with a sample image file named "zebra.jpg".
+                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Classification\ResNet");
+                Environment.CurrentDirectory = initialDirectory;
+
+                List<float> outputs;
+
+                using (var model = new IEvaluateModelManagedF())
+                {
+                    string modelFilePath = Path.Combine(workingDirectory, "ResNet_18.model");
+                    ThrowIfFileNotExist(modelFilePath,
+                        string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Classification\\ResNet.", modelFilePath));
+
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
+
+                    // Prepare input value in the appropriate structure and size
+                    var inDims = model.GetNodeDimensions(NodeGroup.Input);
+                    if (inDims.First().Value != 224 * 224 * 3)
+                    {
+                        throw new CNTKRuntimeException(string.Format("The input dimension for {0} is {1} which is not the expected size of {2}.", inDims.First(), inDims.First().Value, 224 * 224 * 3), string.Empty);
+                    }
+
+                    // Transform the image
+                    string imageFileName = Path.Combine(workingDirectory, "zebra.jpg");
+                    ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
+
+                    Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
+                    var resized = bmp.Resize(224, 224, true);
                     // Now evaluate using the alternative API, where we directly pass the
                     // native bitmap data to the unmanaged code.
-                    var outputs2 = model.EvaluateRgbImage(resized, outDims.First().Key);
-                    var evalNative = s.ElapsedMilliseconds;
-                    Console.WriteLine("Time spent in model.Evaluate: {0}ms", evalManaged);
-                    Console.WriteLine("Time spent in model.EvaluateRgbImage: {0}ms", evalNative);
-                    Console.WriteLine("Comparing returned node outputs");
-                    Console.WriteLine("Evaluate {0} elems, EvaluateRgbImage {1} elems", outputs.Count, outputs2.Count);
-                    var elems = Math.Min(outputs.Count, outputs2.Count);
-                    foreach (var i in Enumerable.Range(0, Math.Min(10, elems)))
-                    {
-                        Console.WriteLine("Evaluate[{0}]: {1}, EvaluateRgbImage[{0}]: {2}", i, outputs[i], outputs2[i]);
-                    }
+                    var outDims = model.GetNodeDimensions(NodeGroup.Output);
+                    outputs = model.EvaluateRgbImage(resized, outDims.First().Key);
                 }
 
                 // Retrieve the outcome index (so we can compare it with the expected index)

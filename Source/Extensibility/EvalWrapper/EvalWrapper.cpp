@@ -405,8 +405,13 @@ public:
         int numPixels = channelStride * numChannels;
         // A dictionary that contains the dimensions of each output node.
         auto outDims = GetNodeDimensions(NodeGroup::Output);
-        // The dimensions of the requested output node.
-        int outputSize = outDims[outputKey];
+		// The dimensions of the requested output node.
+		int outputSize;
+		if (!outDims->TryGetValue(outputKey, outputSize))
+		{
+			auto message = String::Format("The specified output key '{0}' is not an output node of the network", outputKey);
+			throw gcnew ArgumentException(message, "outputKey");
+		}
         // A dictionary that contains the names of input nodes, and their dimensionality.
         auto inDims = GetNodeDimensions(NodeGroup::Input);
         if (inDims->Count != 1)
