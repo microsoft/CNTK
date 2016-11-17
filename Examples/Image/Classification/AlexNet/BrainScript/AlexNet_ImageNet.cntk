@@ -11,7 +11,7 @@ ndlMacros="$ConfigDir$/Macros.ndl"
 precision = "float"
 deviceId = "Auto"
 
-command = Test
+command = Train:Test
 
 parallelTrain = "true"
 traceLevel = 1
@@ -28,12 +28,20 @@ Train = {
         imageShape = 227:227:3
         labelDim = 1000
                 
+        # Local Response Normalization 
+        # k : bias 
+        # n : half radius 
+        # alpha: scale factor 
+        # beta: exponent 
         LRN {k, n, alpha, beta} = {
             apply (x) = {
                 x2 = x .* x
+                # reshape to insert a fake singleton reduction dimension after the 3rd axis
                 x2s = SplitDimension(x2, 3, 1) 
+                # 3D convolution with a filter that has a non 1-size only in the 3rd axis, and does not reduce since the reduction dimension is fake and 1
                 W = ParameterTensor{(1:1:2*n+1:1), learningRateMultiplier = 0, initValue = alpha/(2*n+1)}
                 y = Convolution (W, x2s, (1:1:2*n+1), mapDims = 1, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose = false, maxTempMemSizeInSamples = 0)
+                # reshape back to remove the fake singleton reduction dimension
                 b = FlattenDimensions(y, 3, 2)
                 den = Exp (beta .* Log(k + b)) 
                 r = x .* Reciprocal(den)
@@ -42,10 +50,10 @@ Train = {
 
         model = Sequential (
             ConvolutionalLayer {96, (11:11), stride=(4:4), pad = false} : ReLU : 
-            LRN {1.0, 2, 0.0001, 0.75}
+            LRN {1.0, 2, 0.0001, 0.75} : 
             MaxPoolingLayer    {(3:3), stride=(2:2)} :
             ConvolutionalLayer {256, (5:5), pad = true, initBias=0.1} : ReLU : 
-            LRN {1.0, 2, 0.0001, 0.75}
+            LRN {1.0, 2, 0.0001, 0.75} : 
             MaxPoolingLayer    {(3:3), stride=(2:2)} :
             ConvolutionalLayer {384, (3:3), pad = true} : ReLU : 
             ConvolutionalLayer {384, (3:3), pad = true, initBias=0.1} : ReLU : 
@@ -58,7 +66,7 @@ Train = {
 
         # inputs
         features = Input {imageShape}
-        featNorm = features - Constant(114)
+        featNorm = features - 114
         labels = Input {labelDim}
 
         # apply model to features
@@ -79,7 +87,7 @@ Train = {
     
     SGD = {
         epochSize = 0
-        minibatchSize = 128
+        minibatchSize = 256
         learningRatesPerMB = 0.01*20:0.005*12:0.001*28:0.0003
         momentumPerMB = 0.9
         maxEpochs = 90

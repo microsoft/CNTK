@@ -551,6 +551,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{83BFF5BF
 		Tools\generate_build_info = Tools\generate_build_info
 		Tools\msvc_collect_coverage.py = Tools\msvc_collect_coverage.py
 		Tools\run_boost_unit_tests.py = Tools\run_boost_unit_tests.py
+		Scripts\uci2ctf.py = Scripts\uci2ctf.py
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Extensibility", "Extensibility", "{60F87E25-BC87-4782-8E20-1621AAEBB113}"
