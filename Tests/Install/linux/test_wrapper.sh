@@ -26,6 +26,6 @@ fi
 tar -xzf "$DROP_FILE"
 test -d cntk
 
-exec cntk/Scripts/linux/install-cntk.sh
+exec cntk/Scripts/install/linux/install-cntk.sh
 
 # vim:set expandtab shiftwidth=2 tabstop=2:
