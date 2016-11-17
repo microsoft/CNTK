@@ -59,6 +59,9 @@ namespace CNTK
         ROIPooling = 47,
         Logistic = 48,
         OptimizedRNNStack = 49,
+        ReconcileDynamicAxis = 50,
+        LogSoftmax = 51,
+        LogPlus = 52,
         // New op types should only be appended to the end of this list.
     };
 }

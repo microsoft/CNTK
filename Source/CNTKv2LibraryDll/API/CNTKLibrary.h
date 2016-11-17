@@ -2615,6 +2615,10 @@ namespace CNTK
         return Minus(leftOperand, rightOperand);
     }
 
+    /// Create an instance of the CNTK built-in elementwise tensor addition operation with the specified input operands.
+    ///
+    CNTK_API FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in elementwise multiplication operation on specified tensor input operands.
     ///
@@ -2883,7 +2887,7 @@ namespace CNTK
 
     /// Create an instance of the CNTK built-in OptimizedRNNStack operation on specified input operands
     ///
-    CNTK_API FunctionPtr OptimizedRNNStack(const Variable& weights, const Variable& operand, size_t hiddenSize, size_t numLayers, const std::wstring& name = L"");
+    CNTK_API FunctionPtr OptimizedRNNStack(const Variable& operand, const Variable& weights, size_t hiddenSize, size_t numLayers, bool bidirectional = false, const std::wstring& recurrentOp = L"lstm", const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise clip operation on the tensor operand

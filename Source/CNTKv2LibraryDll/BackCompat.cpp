@@ -16,6 +16,9 @@
 #include "EvaluationNodes.h"
 #include "TrainingNodes.h"
 #include "ReshapingNodes.h"
+#include "DeprecatedNodes.h"
+#include "RNNNodes.h"
+
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -176,6 +179,8 @@ namespace CNTK
                     opType = PrimitiveOpType::SumAll;
                 else if (node->OperationName() == OperationNameOf(PlusNode))
                     opType = PrimitiveOpType::Plus;
+                else if (node->OperationName() == OperationNameOf(LogPlusNode))
+                    opType = PrimitiveOpType::LogPlus;
                 else if (node->OperationName() == OperationNameOf(MinusNode))
                     opType = PrimitiveOpType::Minus;
                 else if (node->OperationName() == OperationNameOf(ElementTimesNode))
@@ -200,10 +205,16 @@ namespace CNTK
                     opType = PrimitiveOpType::ScatterPacked;
                 else if (node->OperationName() == OperationNameOf(TimesNode))
                 {
-                    auto timesNode = node->As<TimesNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = timesNode->OutputRank();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInferInputRankToMap] = timesNode->InferInputRankToMap();
-                    opType = PrimitiveOpType::Times;
+                    // Deal with abuse of * in legacy configs/models
+                    if (inputVars[0].Shape().Rank() == 0 || inputVars[1].Shape().Rank() == 0)
+                        opType = PrimitiveOpType::ElementTimes;
+                    else
+                    {
+                        auto timesNode = node->As<TimesNode<ElementType>>();
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = timesNode->OutputRank();
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInferInputRankToMap] = timesNode->InferInputRankToMap();
+                        opType = PrimitiveOpType::Times;
+                    }
                 }
                 else if (node->OperationName() == OperationNameOf(TransposeTimesNode))
                 {
@@ -334,6 +345,25 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(rowStackNode->GetSpliceDim());
 
                     opType = PrimitiveOpType::Splice;
+                }
+                else if (node->OperationName() == OperationNameOf(OptimizedRNNStackNode))
+                {
+                    auto optimizedRNNStackNode = node->As<OptimizedRNNStackNode<ElementType>>();
+                    auto attributes = optimizedRNNStackNode->Attributes();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBidirectional] = attributes.m_bidirectional;
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameHiddenSize] = attributes.m_hiddenSize;
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNumLayers] = attributes.m_numLayers;
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRecurrentOp] = attributes.m_recurrentOp;
+
+                    opType = PrimitiveOpType::OptimizedRNNStack;
+                }
+                else if (node->OperationName() == OperationNameOf(ReconcileDynamicAxisNode))
+                {
+                    opType = PrimitiveOpType::ReconcileDynamicAxis;
+                }
+                else if (node->OperationName() == OperationNameOf(LogSoftmaxNode))
+                {
+                    opType = PrimitiveOpType::LogSoftmax;
                 }
                 else
                     LogicError("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
