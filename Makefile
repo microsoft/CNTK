@@ -921,12 +921,15 @@ ifeq ("$(BUILDTYPE)","debug")
 MULTIVERSO_CMAKE_BUILDTYPE=Debug
 endif
 
+# TODO need to align Multiverso OpenMP with the one we use (libiomp). For now, disabled.
 $(MULTIVERSO_LIB): 
 	@echo "Build Multiverso lib"
 	@mkdir -p $(LIBDIR)
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build/$(BUILDTYPE)
 	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
+		-DOpenMP_CXX_FLAGS="" \
+		-DOpenMP_C_FLAGS="" \
 		-DBoost_NO_BOOST_CMAKE=TRUE \
 		-DBoost_NO_SYSTEM_PATHS=TRUE \
 		-DBOOST_ROOT:PATHNAME=$(BOOST_PATH) \
