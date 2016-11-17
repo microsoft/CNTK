@@ -3317,6 +3317,11 @@ namespace CNTK
         CNTK_API double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
+        /// Returns whether the trainer is running distributed (more than 1 MPI workers)
+        ///
+        CNTK_API bool IsRunningDistributed() const;
+
+        ///
         /// Checkpoint the model and other Trainer state at the specified file location
         ///
         CNTK_API void SaveCheckpoint(const std::wstring& filePath, bool usingLegacyModelFormat = true);
@@ -3365,6 +3370,8 @@ namespace CNTK
 
     private:
         void Save(const std::wstring& modelFilePath, bool usingLegacyModelFormat, const Dictionary& state);
+        bool UpdateLearners(const std::unordered_map<Parameter, NDArrayViewPtr>& gradients);
+        bool HandleEmptyMinibatch(bool atEndOfData);
 
         FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_model;
@@ -3379,6 +3386,8 @@ namespace CNTK
         std::vector<LearnerPtr> m_parameterLearners;
 
         size_t m_prevMinibatchNumSamples;
+        size_t m_totalSamplesSeen;
+        bool m_distributed;
         ValuePtr m_prevMinibatchAggregateTrainingLossValue;
         ValuePtr m_prevMinibatchAggregateEvalCriterionValue;
     };
@@ -3431,7 +3440,8 @@ namespace CNTK
     {
     public:
         static const size_t InfinitelyRepeat = SIZE_MAX;
-        static const size_t FullDataSweep = SIZE_MAX - 2; // An arbitrary sentinel value
+        static const size_t FullDataSweep    = SIZE_MAX - 2; // An arbitrary sentinel value
+        static const size_t InfiniteSamples  = SIZE_MAX;
 
     public:
         ///
@@ -3448,6 +3458,11 @@ namespace CNTK
         virtual const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(size_t minibatchSizeInSamples,
             size_t minibatchSizeInSequences,
             const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) = 0;
+
+        ///
+        /// Returns whether the MinibatchSource is running in distributed manner
+        ///
+        virtual bool IsDistributed() const = 0;
 
         ///
         /// Destruct this MinibatchSource.
@@ -3497,7 +3512,7 @@ namespace CNTK
     ///
     /// Instantiate the CNTK built-in composite minibatch source.
     ///
-    CNTK_API MinibatchSourcePtr CreateCompositeMinibatchSource(const Dictionary& configuration, DistributedCommunicatorPtr communicator = nullptr);
+    CNTK_API MinibatchSourcePtr CreateCompositeMinibatchSource(const Dictionary& configuration);
 
     struct StreamConfiguration
     {
@@ -3514,7 +3529,7 @@ namespace CNTK
     /// 
     /// Instantiate the CNTK built-in test format minibatch source
     ///
-    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true, DistributedCommunicatorPtr communicator = nullptr)
+    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true, size_t distributedAfterSampleCount = MinibatchSource::InfiniteSamples)
     {
         ::CNTK::Dictionary minibatchSourceConfiguration;
         minibatchSourceConfiguration[L"epochSize"] = epochSize;
@@ -3546,7 +3561,10 @@ namespace CNTK
         deserializerConfiguration[L"input"] = inputStreamsConfig;
         minibatchSourceConfiguration[L"deserializers"] = std::vector<::CNTK::DictionaryValue>({ deserializerConfiguration });
 
-        return CreateCompositeMinibatchSource(minibatchSourceConfiguration, communicator);
+        //TODO: change all these dictionary names to string constants
+        minibatchSourceConfiguration[L"distributedAfterSampleCount"] = distributedAfterSampleCount;
+
+        return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
     }
 
     ///
@@ -3710,12 +3728,27 @@ namespace CNTK
         // Return the distributed communicator used in the distributed trainer
         CNTK_API virtual DistributedCommunicatorPtr GetCommunicator() = 0;
 
+        // Return the distributed-after sample count
+        CNTK_API size_t GetDistributedAfterSampleCount() const
+        {
+            return m_distributedAfterSampleCount;
+        }
+
         virtual ~DistributedTrainer() {}
+
+    protected:
+        // Set the parallelization-start-after sample count
+        DistributedTrainer(size_t distributedAfterSampleCount) :
+            m_distributedAfterSampleCount(distributedAfterSampleCount)
+        {}
+
+    private:
+        size_t m_distributedAfterSampleCount;
     };
 
-    CNTK_API DistributedTrainerPtr CreateDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate);
+    CNTK_API DistributedTrainerPtr CreateDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t distributedAfterSampleCount = 0);
 
-    CNTK_API DistributedTrainerPtr CreateQuantizedDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate);
+    CNTK_API DistributedTrainerPtr CreateQuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t distributedAfterSampleCount);
 
     CNTK_API DistributedTrainerPtr CreateBlockMomentumDistributedTrainer(
         DistributedCommunicatorPtr communicator,
@@ -3723,14 +3756,16 @@ namespace CNTK
         double blockMomentumAsTimeConstant,
         bool useNestrovMomentum = true,
         bool resetSGDMomentumAfterAggregation = true,
-        double blockLearningRate = 1.0);
+        double blockLearningRate = 1.0,
+        size_t distributedAfterSampleCount = 0);
 
     CNTK_API DistributedTrainerPtr CreateBlockMomentumDistributedTrainer(
         DistributedCommunicatorPtr communicator,
         size_t blockSize,
         bool useNestrovMomentum = true,
         bool resetSGDMomentumAfterAggregation = true,
-        double blockLearningRate = 1.0);
+        double blockLearningRate = 1.0,
+        size_t distributedAfterSampleCount = 0);
 }
 
 

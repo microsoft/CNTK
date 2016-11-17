@@ -9,8 +9,9 @@
 
 namespace CNTK
 {
-    DistributedTrainerBase::DistributedTrainerBase(DistributedCommunicatorPtr communicator)
-        : m_communicator(communicator)
+    DistributedTrainerBase::DistributedTrainerBase(DistributedCommunicatorPtr communicator, size_t distributedAfterSampleCount)
+        : DistributedTrainer(distributedAfterSampleCount),
+          m_communicator(communicator)
     {
     }
 
@@ -51,5 +52,23 @@ namespace CNTK
         if (!checkpoint.Contains(key))
             RuntimeError("Cannot restore from the checkpoint, 0 rank is missing.");
         return checkpoint[key].Value<Dictionary>();
+    }
+
+    void DistributedTrainerBase::HandleEmptyMinibatch(std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info)
+    {
+        if (info.numberOfSamples == 0)
+        {
+            // Need to intialize gradients to 0 in case when it is an empty minibatch.
+            for (auto& g : gradientValues)
+            {
+                auto weights = g.first.Value();
+                g.second = MakeSharedObject<NDArrayView>(0, weights->GetDataType(), weights->Shape(), weights->Device());
+            }
+
+            // TODO: what if in the future the type is different?
+            auto dataType = gradientValues.front().first.GetDataType();
+            info.evalCriterionValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{ 1 }, DeviceDescriptor::CPUDevice());
+            info.trainingLossValue = MakeSharedObject<NDArrayView>(0, dataType, NDShape{ 1 }, DeviceDescriptor::CPUDevice());
+        }
     }
 }

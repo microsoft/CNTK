@@ -33,8 +33,10 @@ namespace CNTK
         }
 
     protected:
-        explicit DistributedTrainerBase(DistributedCommunicatorPtr communicator);
+        explicit DistributedTrainerBase(DistributedCommunicatorPtr communicator, size_t distributedAfterSampleCount);
         Dictionary CreateCheckpoint(const Dictionary& localStateToShare);
+
+        static void HandleEmptyMinibatch(std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info);
 
         DistributedCommunicatorPtr m_communicator;
     };

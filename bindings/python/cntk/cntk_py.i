@@ -340,6 +340,37 @@ fail:
 %eq_for(NDShape, NDShape_eq)
 %eq_for(DeviceDescriptor, DeviceDescriptor_eq)
 
+//
+// size_t converter and extend DictionaryValue constructor
+//
+
+// declare python type
+struct SizeTWrapper
+{
+public:
+    size_t value;
+    SizeTWrapper(int v) : value(static_cast<size_t>(v)) {}
+    SizeTWrapper(size_t v) : value(v) {}
+};
+
+//inject to c++
+%{
+struct SizeTWrapper
+{
+public:
+    size_t value;
+    SizeTWrapper(int v) : value(static_cast<size_t>(v)) {}
+    SizeTWrapper(size_t v) : value(v) {}
+};
+%}
+
+// extend constructor
+%extend CNTK::DictionaryValue {
+    DictionaryValue(const SizeTWrapper& w)
+    {
+        return new DictionaryValue(w.value);
+    }
+}
 
 %extend CNTK::Dictionary {
     CNTK::DictionaryValue __getitem__(const wchar_t* key) {
