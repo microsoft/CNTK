@@ -101,3 +101,11 @@ def test_learner_update():
     assert learner.learning_rate() == 0.2
     assert w.value < w_init
 
+def test_training_parameter_schedule():
+    training_parameter_schedule(0.01, unit='minibatch')
+    training_parameter_schedule(0.01, unit='sample')
+
+    with pytest.raises(ValueError):
+        training_parameter_schedule(0.01, unit='not_supported')
+    with pytest.raises(ValueError):
+        training_parameter_schedule(0.01, unit=5)
