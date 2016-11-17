@@ -119,6 +119,7 @@ declare -a libzipFiles=("libzip.so.4")
 declare -a cudaFiles=("libcudart.so.7.5" "libcublas.so.7.5" "libcurand.so.7.5" "libcusparse.so.7.5")
 
 # cuDNN
+# Note: can be only a single file currently, see copy below.
 declare -a cudnnFiles=("libcudnn.so")
 
 # OpenBLAS (Needed by Kaldi)
@@ -249,7 +250,7 @@ if [[ $targetConfig != "cpu" ]]; then
 
     # Copy cuDNN
     echo "Copying cuDNN..." >&3
-    CopyFilesFromList $cudnnPath cudnnFiles[@] $baseDependenciesPath
+    CopyFilesFromList $cudnnPath cudnnFiles[@] $baseDependenciesPath/libcudnn.so.5
 
 fi
 
