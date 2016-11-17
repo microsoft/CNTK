@@ -3361,6 +3361,8 @@ namespace CNTK
         ///
         const std::vector<LearnerPtr>& ParameterLearners() const { return m_parameterLearners; }
 
+        CNTK_API ~Trainer();
+
     private:
         void Save(const std::wstring& modelFilePath, bool usingLegacyModelFormat, const Dictionary& state);
 
@@ -3608,6 +3610,7 @@ namespace CNTK
             std::vector<NDArrayViewPtr>& output,
             const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) = 0;
 
+        // Gathers the inputs from a subset of workers on the main worker.
         CNTK_API virtual void Gather(
             const Dictionary& input,
             std::vector<DictionaryPtr>& output,
@@ -3696,6 +3699,9 @@ namespace CNTK
 
         // Optionally overridable method to get checkpoint state associated with this Distributed train method
         CNTK_API virtual Dictionary CreateCheckpoint(const Trainer& trainer, const Dictionary& localStateToShare) = 0;
+
+        // Optionally overridable method getting called at shutdown to do the last syncs if needed
+        CNTK_API virtual void Shutdown(const Trainer& trainer) = 0;
 
         // Optionally overridable method to restore state pertaining this distributed training method from a previous checkpoint
         // Returns local state that corresponds to this worker.

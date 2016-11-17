@@ -25,6 +25,8 @@ namespace CNTK
         // Restores the trainer from the state.
         Dictionary RestoreFromCheckpoint(const Dictionary& checkpoint) override;
 
+        void Shutdown(const Trainer&) override {}
+
         DistributedCommunicatorPtr GetCommunicator() override
         {
             return m_communicator;
@@ -32,6 +34,7 @@ namespace CNTK
 
     protected:
         explicit DistributedTrainerBase(DistributedCommunicatorPtr communicator);
+        Dictionary CreateCheckpoint(const Dictionary& localStateToShare);
 
         DistributedCommunicatorPtr m_communicator;
     };
