@@ -934,6 +934,17 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 fprintf(stderr, ", BufferedAsyncGradientAggregation is ENABLED");
         }
 
+        if (useAsyncGradientAggregation)
+        {
+            fprintf(stderr, ", DataParallelASGD training (myRank = %d, numNodes = %d, numGradientBits = %d, SamplesSyncToServer = %d)",
+                (int)m_mpi->CurrentNodeRank(), (int)m_mpi->NumNodesInUse(), (int) m_nSyncSamplesPerWorker[epochNumber]);
+
+            fprintf(stderr, ", Distributed Evaluation is DISABLED");
+
+            if (m_isAsyncBufferEnabled)
+                fprintf(stderr, ", BufferedAsyncGradientAggregation is ENABLED");
+        }
+
         if (useDistributedMBReading)
             fprintf(stderr, ", distributed reading is ENABLED");
 
@@ -1293,7 +1304,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 noMoreSamplesToProcess = !wasDataRead;
             }
 
-            if (nSamplesSinceLastModelSync >= m_nFramesBetweenASGDSync[epochNumber])
+            if (nSamplesSinceLastModelSync >= m_nSyncSamplesPerWorker[epochNumber])
             {
                 m_pASGDHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
                 nSamplesSinceLastModelSync = 0;
@@ -3006,7 +3017,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             InvalidArgument("DataParallelASGD is not enabled in this version.\n");
 #else
             const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
-            m_nFramesBetweenASGDSync = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
+            m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
             m_isAsyncBufferEnabled = configDataParallelASGD(L"UsePipeline", false);
             m_isSimulateMA = configDataParallelASGD(L"SimModelAverage", false); // using parameter server-based version of ModefAveragingSGD
             if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning")) // adjust learning rate per m_adjustNumInBatch minibatchs until to original one
