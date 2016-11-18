@@ -7,13 +7,13 @@ from . import cntk_py
 from . import trainer
 from .utils import typemap
 
-# Preload libmpi.so for non-Windows platform to work around MPI_Init failure bug
+# Preload libmpi.so.12 for non-Windows platform to work around MPI_Init failure bug
 # https://xrunhprof.wordpress.com/2014/11/04/an-openmpi-python-and-dlopen-issue/
 # If other OS has similar OpenMPI MPI_Init failure, add dll load to global here
 import platform
 import ctypes
 if platform.system() == 'Linux':
-    ctypes.CDLL("libmpi.so", mode=ctypes.RTLD_GLOBAL)
+    ctypes.CDLL("libmpi.so.12", mode=ctypes.RTLD_GLOBAL)
 
 __doc__= '''\
 Distributed trainers manage trainers in distributed environment.

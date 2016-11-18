@@ -28,6 +28,7 @@ class MPIWrapperMpi : public MPIWrapper
     std::wstring m_myName;
     int m_numMPINodes;
     size_t m_numNodesInUse;
+    bool m_multiHost;
 
     // MPI communicator that reflects the current subset selection
     MPI_Comm m_currentComm;
@@ -68,6 +69,7 @@ public:
     bool IsIdle() const;
     bool UsingAllNodes() const;
     size_t MainNodeRank() const;
+    bool IsMultiHost() const;
 
     // -----------------------------------------------------------------------
     // data-exchange functions (wrappers around MPI functions)
@@ -115,10 +117,31 @@ public:
     virtual void Bcast(double* sendData, size_t numElements, size_t srcRank);
     virtual void Bcast(float* sendData, size_t numElements, size_t srcRank);
 
+    virtual void AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const;
+    virtual void AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const;
+    virtual void AllGatherAsync(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, MPI_Request* request) const;
+    virtual void AllGatherAsync(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, MPI_Request* request) const;
+
+    virtual void AllGather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements) const;
+    virtual void AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const;
+    virtual void AllGather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements) const;
+    virtual void AllGather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements) const;
+
+    virtual void Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const;
+    virtual void Gather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, size_t rootRank) const;
+    virtual void Gather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, size_t rootRank) const;
+    virtual void Gather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, size_t rootRank) const;
+
+    virtual void Gatherv(const size_t *sendData, size_t numSendElements, size_t *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
+    virtual void Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
+    virtual void Gatherv(const float *sendData, size_t numSendElements, float *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
+    virtual void Gatherv(const double *sendData, size_t numSendElements, double *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
+
     // wait for all ranks to reach here
     virtual int WaitAll();
     virtual void WaitAny(MPI_Request* requests, int numRequests, int* index);
     virtual void Wait(MPI_Request* request);
+    virtual int WaitAll(std::vector<MPI_Request>& requests);
 };
 #endif
 
@@ -138,6 +161,7 @@ class MPIWrapperEmpty : public MPIWrapper
         bool IsIdle() const;
         bool UsingAllNodes() const;
         size_t MainNodeRank() const;
+        bool IsMultiHost() const;
 
         // -----------------------------------------------------------------------
         // data-exchange functions (wrappers around MPI functions)
@@ -185,11 +209,32 @@ class MPIWrapperEmpty : public MPIWrapper
         virtual void Bcast(double* sendData, size_t numElements, size_t srcRank);
         virtual void Bcast(float* sendData, size_t numElements, size_t srcRank);
 
+        virtual void AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const;
+        virtual void AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const;
+        virtual void AllGatherAsync(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, MPI_Request* request) const;
+        virtual void AllGatherAsync(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, MPI_Request* request) const;
+
+        virtual void AllGather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements) const;
+        virtual void AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const;
+        virtual void AllGather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements) const;
+        virtual void AllGather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements) const;
+
+        virtual void Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const;
+        virtual void Gather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, size_t rootRank) const;
+        virtual void Gather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, size_t rootRank) const;
+        virtual void Gather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, size_t rootRank) const;
+
+        virtual void Gatherv(const size_t *sendData, size_t numSendElements, size_t *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
+        virtual void Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
+        virtual void Gatherv(const float *sendData, size_t numSendElements, float *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
+        virtual void Gatherv(const double *sendData, size_t numSendElements, double *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
+
         // wait for all ranks to reach here
         virtual int WaitAll();
         virtual void WaitAny(MPI_Request* requests, int numRequests, int* index);
         virtual void Wait(MPI_Request* request);
-    };
+        virtual int WaitAll(std::vector<MPI_Request>& requests);
+};
 
 
 // -----------------------------------------------------------------------
@@ -355,8 +400,8 @@ MPIWrapperMpi::MPIWrapperMpi()
     MPI_Init_DL() || MpiFail("mpiaggregator: MPI_Init");
     MPI_Comm_rank(MPI_COMM_WORLD, &m_myRank);
     MPI_Comm_size(MPI_COMM_WORLD, &m_numMPINodes);
-
     m_numNodesInUse = m_numMPINodes;
+    m_multiHost = true;
 
     // Verify that the environment variable used by GetTotalNumberOfMPINodes()  
     // matches what the MPI API says. There're actually two possible cases:
@@ -433,6 +478,7 @@ int MPIWrapperMpi::MPI_Init_DL()
 
     int argc = 0;
     char **argv = NULL;
+    // TODO(qiwye) Multiverso(parameter server) will benefit from MPI_THREAD_MULTIPLE .
     int requiredThreadLevelSupport = MPI_THREAD_SERIALIZED;
     int provided;
     int ret = MPI_Init_thread(&argc, &argv, requiredThreadLevelSupport, &provided);
@@ -526,6 +572,40 @@ void MPIWrapperMpi::RequestNodes(const char *msg, size_t requestednodes /*defaul
         fflush(stderr);
     }
     Ping("requestnodes (after change)");
+
+    // If all ranks run on a single host, we can enable optimized communication
+    // paths (e.g. NCCL). To determine if a single machine is being used, we
+    // check that MPI_Get_processor_name matches for all ranks.
+    const int nameMax = MPI_MAX_PROCESSOR_NAME + 1;
+    char myName[nameMax] = { 0 };
+    int  myNameLen = 0;
+    MPI_Get_processor_name(myName, &myNameLen) || MpiFail("requestnodes: MPI_Get_processor_name");
+    myName[myNameLen] = '\0';
+
+    std::vector<char> nameBuffer(m_numNodesInUse * nameMax);
+    char* allNames = nameBuffer.data();
+    MPI_Allgather(myName, nameMax, MPI_CHAR, allNames, nameMax, MPI_CHAR, m_currentComm)
+        || MpiFail("requestnodes: MPI_Allgather");
+
+    m_multiHost = false;
+    for (size_t i = 1; i<m_numNodesInUse; i++)
+    {
+        if (strcmp(allNames, allNames + i*nameMax) != 0)
+        {
+            m_multiHost = true;
+            break;
+        }
+    }
+
+    fprintf(stderr, "requestnodes [%s]: using %d out of %d MPI nodes on %s (%d requested); we (%d) are %s\n",
+        msg, (int)m_numNodesInUse, (int)m_numMPINodes, m_multiHost ? "multiple hosts" : "a single host",
+        (int)requestednodes, (int)CurrentNodeRank(), IsIdle() ? "out (idle)" : "in (participating)");
+    fflush(stderr);
+}
+
+bool MPIWrapperMpi::IsMultiHost()
+{
+    return m_multiHost;
 }
 
 MPI_Comm MPIWrapperMpi::Communicator() const
@@ -547,6 +627,11 @@ int MPIWrapperMpi::WaitAll()
 int MPIWrapperMpi::Wait(MPI_Request* request, MPI_Status* status)
 {
     return MPI_Wait(request, status);
+}
+
+int MPIWrapperMpi::WaitAll(std::vector<MPI_Request>& requests)
+{
+    return MPI_Waitall((int)requests.size(), &requests[0], MPI_STATUSES_IGNORE) || MpiFail("waitall: MPI_Waitall");
 }
 
 int MPIWrapperMpi::Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status)
@@ -685,42 +770,27 @@ void MPIWrapperMpi::AllReduce(float* sendData, size_t numElements, MPI_Op op) co
 
 void MPIWrapperMpi::AllReduce(size_t* sendData, size_t* receiveData, size_t numElements, MPI_Op op) const
 {
-    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
-    {
-        MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
-    }
+    MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
 }
 
 void MPIWrapperMpi::AllReduce(int* sendData, int* receiveData, size_t numElements, MPI_Op op) const
 {
-    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
-    {
-        MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
-    }
+    MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
 }
 
 void MPIWrapperMpi::AllReduce(double* sendData, double* receiveData, size_t numElements, MPI_Op op) const
 {
-    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
-    {
-        MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
-    }
+    MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
 }
 
 void MPIWrapperMpi::AllReduce(float* sendData, float* receiveData, size_t numElements, MPI_Op op) const
 {
-    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
-    {
-        MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
-    }
+    MPI_Allreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator()) || MpiFail("Allreduce: MPI_Allreduce");
 }
 
 void MPIWrapperMpi::Bcast(size_t* sendData, size_t numElements, size_t srcRank)
 {
-    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
-    {
-        MPI_Bcast(sendData, (int)numElements, GetDataType(sendData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
-    }
+    MPI_Bcast(sendData, (int)numElements, GetDataType(sendData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
 }
 
 void MPIWrapperMpi::AllReduceAsync(size_t* sendData, size_t numElements, MPI_Request* request, MPI_Op op) const
@@ -745,49 +815,111 @@ void MPIWrapperMpi::AllReduceAsync(float* sendData, size_t numElements, MPI_Requ
 
 void MPIWrapperMpi::AllReduceAsync(size_t *sendData, size_t *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
 {
-    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
-    {
-        MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
-    }
+    MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
 }
 
 void MPIWrapperMpi::AllReduceAsync(int *sendData, int *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
 {
-    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
-    {
-        MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
-    }
+    MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
 }
 void MPIWrapperMpi::AllReduceAsync(double *sendData, double *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
 {
-    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
-    {
-        MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
-    }
+    MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
 }
 void MPIWrapperMpi::AllReduceAsync(float *sendData, float *receiveData, size_t numElements, MPI_Request* request, MPI_Op op) const
 {
-    if ((NumNodesInUse() > 1 && (Communicator() != MPI_COMM_NULL)))
-    {
-        MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
-    }
+    MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");
 }
 
 
 void MPIWrapperMpi::Bcast(double* sendData, size_t numElements, size_t srcRank)
 {
-    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
-    {
-        MPI_Bcast(sendData, (int)numElements, GetDataType(sendData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
-    }
+    MPI_Bcast(sendData, (int)numElements, GetDataType(sendData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
 }
 
 void MPIWrapperMpi::Bcast(float* sendData, size_t numElements, size_t srcRank)
 {
-    if ((NumNodesInUse() > 1) && (Communicator() != MPI_COMM_NULL))
-    {
-        MPI_Bcast(sendData, (int)numElements, GetDataType(sendData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
-    }
+    MPI_Bcast(sendData, (int)numElements, GetDataType(sendData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
+}
+
+void MPIWrapperMpi::AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const
+{
+    MPI_Iallgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallgather");
+}
+
+void MPIWrapperMpi::AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const
+{
+    MPI_Iallgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallgather");
+}
+
+void MPIWrapperMpi::AllGatherAsync(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, MPI_Request* request) const
+{
+    MPI_Iallgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallgather");
+}
+
+void MPIWrapperMpi::AllGatherAsync(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, MPI_Request* request) const
+{
+    MPI_Iallgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallgather");
+}
+
+void MPIWrapperMpi::AllGather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements) const
+{
+    MPI_Allgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator()) || MpiFail("AllReduceAsync: MPI_Allgather");
+}
+
+void MPIWrapperMpi::AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const
+{
+    MPI_Allgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator()) || MpiFail("AllReduceAsync: MPI_Allgather");
+}
+
+void MPIWrapperMpi::AllGather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements) const
+{
+    MPI_Allgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator()) || MpiFail("AllReduceAsync: MPI_Allgather");
+}
+
+void MPIWrapperMpi::AllGather(const double *sendData, size_t numSendElements, double*receiveData, size_t numRecvElements) const
+{
+    MPI_Allgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator()) || MpiFail("AllReduceAsync: MPI_Allgather");
+}
+
+void MPIWrapperMpi::Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const
+{
+    MPI_Gather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gather");
+}
+
+void MPIWrapperMpi::Gather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, size_t rootRank) const
+{
+    MPI_Gather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gather");
+}
+
+void MPIWrapperMpi::Gather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, size_t rootRank) const
+{
+    MPI_Gather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gather");
+}
+
+void MPIWrapperMpi::Gather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, size_t rootRank) const
+{
+    MPI_Gather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gather");
+}
+
+void MPIWrapperMpi::Gatherv(const size_t *sendData, size_t numSendElements, size_t *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+{
+    MPI_Gatherv(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, recvCounts, offsets, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gatherv");
+}
+
+void MPIWrapperMpi::Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+{
+    MPI_Gatherv(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, recvCounts, offsets, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gatherv");
+}
+
+void MPIWrapperMpi::Gatherv(const float *sendData, size_t numSendElements, float *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+{
+    MPI_Gatherv(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, recvCounts, offsets, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gatherv");
+}
+
+void MPIWrapperMpi::Gatherv(const double *sendData, size_t numSendElements, double *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+{
+    MPI_Gatherv(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, recvCounts, offsets, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gatherv");
 }
 
 // wait for an async request to finish
@@ -846,6 +978,11 @@ MPIWrapperEmpty::~MPIWrapperEmpty()
     }
 }
 
+bool MPIWrapperEmpty::IsMultiHost()
+{
+    return false;
+}
+
 int MPIWrapperEmpty::Finalize(void)
 {
     return MPI_UNDEFINED;
@@ -860,6 +997,12 @@ int MPIWrapperEmpty::Wait(MPI_Request* request, MPI_Status* status)
 {
     return MPI_UNDEFINED;
 }
+
+int MPIWrapperEmpty::WaitAll(std::vector<MPI_Request>& requests)
+{
+    return MPI_UNDEFINED;
+}
+
 
 int MPIWrapperEmpty::Waitany(int count, MPI_Request array_of_requests[], int* index, MPI_Status* status)
 {
@@ -1033,6 +1176,71 @@ void MPIWrapperEmpty::Bcast(double* sendData, size_t numElements, size_t srcRank
 void MPIWrapperEmpty::Bcast(float* sendData, size_t numElements, size_t srcRank)
 {
 }
+
+void MPIWrapperMpi::AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const
+{
+}
+
+void MPIWrapperMpi::AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const
+{
+}
+
+void MPIWrapperMpi::AllGatherAsync(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, MPI_Request* request) const
+{
+}
+
+void MPIWrapperMpi::AllGatherAsync(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, MPI_Request* request) const
+{
+}
+
+void MPIWrapperMpi::AllGather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements) const
+{
+}
+
+void MPIWrapperMpi::AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const
+{
+}
+
+void MPIWrapperMpi::AllGather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements) const
+{
+}
+
+void MPIWrapperMpi::AllGather(const double *sendData, size_t numSendElements, double*receiveData, size_t numRecvElements) const
+{
+}
+
+void MPIWrapperMpi::Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const
+{
+}
+
+void MPIWrapperMpi::Gather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, size_t rootRank) const
+{
+}
+
+void MPIWrapperMpi::Gather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, size_t rootRank) const
+{
+}
+
+void MPIWrapperMpi::Gather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, size_t rootRank) const
+{
+}
+
+void MPIWrapperMpi::Gatherv(const size_t *sendData, size_t numSendElements, size_t *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+{
+}
+
+void MPIWrapperMpi::Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+{
+}
+
+void MPIWrapperMpi::Gatherv(const float *sendData, size_t numSendElements, float *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+{
+}
+
+void MPIWrapperMpi::Gatherv(const double *sendData, size_t numSendElements, double *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+{
+}
+
 
 void MPIWrapperEmpty::Wait(MPI_Request* request)
 {

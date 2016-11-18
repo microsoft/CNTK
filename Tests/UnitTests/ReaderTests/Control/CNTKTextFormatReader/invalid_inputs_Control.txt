@@ -16,7 +16,7 @@ WARNING: Maximum per-input number of samples for sequence (id = 2) at offset 435
 INFO: Finished loading sequence (id = 2) at offset 435 in the input file (invalid_inputs.txt), successfully read 14 out of expected 14 rows.
 WARNING: Input name prefix ('|') is followed by an invalid character (' ') at offset 454 in the input file (invalid_inputs.txt).
 WARNING: Input name prefix ('|') is followed by an invalid character (' ') at offset 483 in the input file (invalid_inputs.txt).
-WARNING: Invalid input ('C') at offset 544 in the input file (invalid_inputs.txt). Input name 'C' was not specified in the reader config section.
+WARNING: Unknown input ('C') at offset 544 in the input file (invalid_inputs.txt). Input name 'C' was not specified in the reader config section.
 WARNING: Empty input row at offset 549 in the input file (invalid_inputs.txt).
 WARNING: Could not read a row (# 9) while loading sequence (id = 3) at offset 549 in the input file (invalid_inputs.txt).
 WARNING: Exhausted all input expected for the current sequence (id = 3) at offset 549 in the input file (invalid_inputs.txt), but only read 8 out of 9 expected rows.

@@ -135,6 +135,11 @@
     <ClInclude Include="Common.h" />
     <ClInclude Include="Image.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="data\future.dictionary.proto.bin" />
+    <None Include="data\past.dictionary.proto.bin" />
+    <None Include="data\v2.0.beta1.0.dictionary.proto.bin" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

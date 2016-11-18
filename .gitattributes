@@ -119,8 +119,8 @@ TIMIT*.statelist text
 TIMIT*.tfsa text
 TIMIT*.transitions text
 
-Examples/Text/ATIS/Data/ATIS.* text
-Examples/Text/ATIS/*.wl text
+Examples/LanguageUnderstanding/ATIS/Data/ATIS.* text
+Examples/LanguageUnderstanding/ATIS/BrainScript/*.wl text
 
 Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
 
@@ -138,3 +138,4 @@ Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
 *.zip binary
 *.dnn binary
 Examples/Image/Detection/FastRCNN/fastRCNN/*/*.pyd binary
+Tests/UnitTests/V2LibraryTests/data/*.bin binary

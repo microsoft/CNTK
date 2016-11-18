@@ -43,7 +43,7 @@ for subdir in subdirs:
                     assert (roi.max() <= max(imgWidth, imgHeight) and roi.max() >= 0)
                     overlap = bboxComputeOverlapVoc(gtBox, roi)
                     maxOverlap = max(maxOverlap, overlap)
-        overlaps.append(maxOverlap)
+            overlaps.append(maxOverlap)
 print ("Average number of rois per image " + str(1.0 * sum(roiCounts) / len(overlaps)))
 
 # compute recall at different overlaps

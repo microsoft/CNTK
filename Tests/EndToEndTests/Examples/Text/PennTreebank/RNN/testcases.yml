@@ -1,4 +1,4 @@
-dataDir: ../../../../../../Examples/Text/PennTreebank/Data
+dataDir: ../../../../../../Examples/SequenceToSequence/PennTreebank/Data
 
 tags:
     # the complete suite (2 flavours x 2 devices) takes around

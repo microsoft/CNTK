@@ -86,6 +86,7 @@ public:
     virtual bool IsIdle() const = 0;
     virtual bool UsingAllNodes() const = 0;
     virtual size_t MainNodeRank() const = 0;
+    virtual bool IsMultiHost() const = 0;
 
     // -----------------------------------------------------------------------
     // data-exchange functions (wrappers around MPI functions)
@@ -141,10 +142,31 @@ public:
     virtual void Bcast(double* sendData, size_t numElements, size_t srcRank) = 0;
     virtual void Bcast(float* sendData, size_t numElements, size_t srcRank) = 0;
 
+    virtual void AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const = 0;
+    virtual void AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const = 0;
+    virtual void AllGatherAsync(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, MPI_Request* request) const = 0;
+    virtual void AllGatherAsync(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, MPI_Request* request) const = 0;
+
+    virtual void AllGather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements) const = 0;
+    virtual void AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const = 0;
+    virtual void AllGather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements) const = 0;
+    virtual void AllGather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements) const = 0;
+
+    virtual void Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const = 0;
+    virtual void Gather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, size_t rootRank) const = 0;
+    virtual void Gather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, size_t rootRank) const = 0;
+    virtual void Gather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, size_t rootRank) const = 0;
+
+    virtual void Gatherv(const size_t *sendData, size_t numSendElements, size_t *receiveData, int recvCounts[], int offsets[], size_t rootRank) const = 0;
+    virtual void Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const = 0;
+    virtual void Gatherv(const float *sendData, size_t numSendElements, float *receiveData, int recvCounts[], int offsets[], size_t rootRank) const = 0;
+    virtual void Gatherv(const double *sendData, size_t numSendElements, double *receiveData, int recvCounts[], int offsets[], size_t rootRank) const = 0;
+
     // wait for all ranks to reach here
     virtual int WaitAll() = 0;
     virtual void WaitAny(MPI_Request* requests, int numRequests, int* index) = 0;
     virtual void Wait(MPI_Request* request) = 0;
+    virtual int WaitAll(std::vector<MPI_Request>& requests) = 0;
 };
 
 }}}

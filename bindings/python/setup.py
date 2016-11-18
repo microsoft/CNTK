@@ -71,8 +71,10 @@ def strip_ext(fn):
 if IS_WINDOWS:
     libname_rt_ext = '.dll'
 
-    link_libs = [strip_ext(strip_path(fn)) for fn in
-                 glob(os.path.join(CNTK_LIB_PATH, '*.lib'))]
+    link_libs = [
+        "CNTKLibrary-2.0",
+        "Math"
+    ]
 else:
     link_libs = [
         "cntklibrary-2.0",
@@ -114,7 +116,6 @@ if IS_WINDOWS:
         "/EHsc",
         "/DEBUG",
         "/Zi",
-        "/EHsc",
     ]
     runtime_library_dirs = []
 else:
@@ -166,7 +167,7 @@ else:
     kwargs = dict(package_data = package_data)
 
 setup(name="cntk",
-      version="2.0.beta1.0",
+      version="2.0.beta3.0",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

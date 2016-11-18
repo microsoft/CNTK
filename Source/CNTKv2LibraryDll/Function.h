@@ -13,7 +13,7 @@
 #include "Utils.h"
 #include "ConvolveGeometry.h"
 #include "ConvolutionalNodes.h"
-
+#include "BackCompat.h"
 
 namespace std
 {
@@ -51,6 +51,7 @@ namespace CNTK
         {PrimitiveOpType::Pooling, L"Pooling"},
         {PrimitiveOpType::SumAll, L"SumAll"},
         {PrimitiveOpType::Plus, L"Plus"},
+        {PrimitiveOpType::LogPlus, L"LogPlus"},
         {PrimitiveOpType::Minus, L"Minus"},
         {PrimitiveOpType::ElementTimes, L"ElementTimes"},
         {PrimitiveOpType::Equal, L"Equal"},
@@ -79,6 +80,10 @@ namespace CNTK
         {PrimitiveOpType::RandomSample, L"RandomSample"},
         {PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency"},
         {PrimitiveOpType::ROIPooling, L"ROIPooling"},
+        {PrimitiveOpType::Logistic, L"Logistic"},
+        {PrimitiveOpType::OptimizedRNNStack, L"OptimizedRNNStack"},
+        {PrimitiveOpType::ReconcileDynamicAxis, L"ReconcileDynamicAxis"},
+        {PrimitiveOpType::LogSoftmax, L"LogSoftmax"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -103,12 +108,22 @@ namespace CNTK
             if (numFunctionInputs > 2)
                 indexMap.insert({2, 2});
         }
-        else if ((op == PrimitiveOpType::CrossEntropyWithSoftmax) || (op == PrimitiveOpType::GatherPacked))
+        else if (op == PrimitiveOpType::Logistic)
+        {
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
+            if (numFunctionInputs > 2)
+                indexMap.insert({ 2, 2 });
+        }
+        else if (op == PrimitiveOpType::CrossEntropyWithSoftmax)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
+        else if (op == PrimitiveOpType::GatherPacked)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
         else if (op == PrimitiveOpType::ScatterPacked)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 2 }, { 1, 1 }, { 2, 0 } });
         else if (op == PrimitiveOpType::Clip)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 2 }, { 1, 0 }, { 2, 1 } });
+        else if (op == PrimitiveOpType::OptimizedRNNStack)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
         else
         {
             for (size_t i = 0; i < numFunctionInputs; ++i)
@@ -185,12 +200,17 @@ namespace CNTK
         static const std::wstring AttributeNameNormalizationTimeConstant;
         static const std::wstring AttributeNameBlendTimeConstant;
         static const std::wstring AttributeNameEpsilon;
-        static const std::wstring AttributeNameSamplesSeen;
         static const std::wstring AttributeNameUseCuDNNEngine;
         static const std::wstring AttributeNameNewDynamicAxes;
+        static const std::wstring AttributeNameNewSequenceAxisLengthScalingFactor;
+        static const std::wstring AttributeNameNewSequenceAxisLengthAdditiveFactor;
         static const std::wstring AttributeNameBeginIndex;
         static const std::wstring AttributeNameEndIndex;
         static const std::wstring AttributeNameReductionOpName;
+        static const std::wstring AttributeNameBidirectional;
+        static const std::wstring AttributeNameNumLayers;
+        static const std::wstring AttributeNameHiddenSize;
+        static const std::wstring AttributeNameRecurrentOp;
 
     public:
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
@@ -461,7 +481,9 @@ namespace CNTK
             //  [I x Inferred] * [W x H x C],                inferInputRankToMap=0   --> Inferred  := W x H x C, result is [I] (desired)
             //  [I x Inferred] * [W x H x C x R],            inferInputRankToMap=1   --> Inferred  := W x H x C, result is [I x R] (desired)
             // If W's shape is too short, it will be padded with 0 (i.e. inferred in a subsequent step).
-            if (inferInputRankToMap >= 0) // if given, we pad if needed
+            // (the second check below (dimsA.back() == 0) is required to infer dimensions correctly for fixed input tensors where a new dimension is added,
+            // e.g. when adding an ROI dimension to a pretrained weights tensor of a dense layer after ROI pooling)
+            if ((inferInputRankToMap >= 0) && (leftOperandShape[leftOperandShape.Rank() - 1] == NDShape::InferredDimension)) // if given, we pad if needed
             {
                 while ((numReductionAxes + (size_t)inferInputRankToMap) < rightOperand.Shape().Rank())
                 {
@@ -539,6 +561,15 @@ namespace CNTK
         {
             if (inferDimensions)
             {
+                size_t inputRank = operandShape.Rank();
+
+                // Unknown kernel shape valid only for pooling, however, the shape should have expanded before
+                // this call.
+                if (kernelShape == NDShape::Unknown)
+                {
+                    RuntimeError("Kernel shape can't be Unknown!");
+                }
+
                 // infer reduction dimensions if not given
                 // If kernel has a lower rank than the input then the remaining dimensions are to be reduced over.
                 size_t filterRank = kernelShape.Rank();
@@ -553,7 +584,6 @@ namespace CNTK
                     kernelShape = kernelShape.SubShape(0, filterRank);
                 }
 
-                size_t inputRank = operandShape.Rank();
                 NDShape fromShape;
                 if (op == PrimitiveOpType::Convolution)
                     fromShape = operandShape;
@@ -614,7 +644,9 @@ namespace CNTK
 
     private:
         PrimitiveOpType m_op;
-        static const size_t s_serializationVersion = 1;
+        // Increasing s_serializationVersion every time we add more ops allows us to print 
+        // a more meaningful message when trying to load a new model with a stale binary. 
+        static const size_t s_serializationVersion = 2;
     };
 
     class CNTKBackPropState final : public BackPropState
@@ -698,22 +730,11 @@ namespace CNTK
             return CompositeFunctionOpName;
         }
 
-    private:
-        virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                                std::unordered_set<const Function*>& visitedFunctions,
-                                                std::unordered_set<Variable>& replacedPlaceholders) override;
-
-        CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name, const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
-            : Function({}, rootFunction->Outputs(), Dictionary(), rootFunction, name, uid),
-            m_allPrimitiveFunctions(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
-        {}
-
         template <typename FunctionType>
-        void Traverse(const FunctionType& functor) const
+        static void Traverse(const FunctionPtr& rootFunction, const FunctionType& functor)
         {
-            const auto& root = RootFunction();
             std::unordered_set<FunctionPtr> visitedFunctions;
-            Traverse(root, visitedFunctions, functor);
+            Traverse(rootFunction, visitedFunctions, functor);
         }
 
         // Recursively traverses the Function graph underlying the 'rootFunction' invoking the provided functor for all visited nodes in the graph.
@@ -733,6 +754,16 @@ namespace CNTK
                 }
             }
         }
+
+    private:
+        virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                                std::unordered_set<const Function*>& visitedFunctions,
+                                                std::unordered_set<Variable>& replacedPlaceholders) override;
+
+        CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name, const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
+            : Function({}, rootFunction->Outputs(), Dictionary(), rootFunction, name, uid),
+            m_allPrimitiveFunctions(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
+        {}
 
         std::vector<Variable> DetermineInputs() const
         {

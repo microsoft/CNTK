@@ -55,9 +55,10 @@ makebuildinfo()
     local CUDA_PATH=$6
     local CUB_PATH=$7
     local WITH_1BITSGD=$8
-    local BUILDER=$9
-    local BUILDMACHINE=${10}
-    local BUILDPATH=${11}
+    local WITH_ASGD=$9
+    local BUILDER=$10
+    local BUILDMACHINE=${11}
+    local BUILDPATH=${12}
 
     (
         printf "#ifndef _BUILDINFO_H\n"
@@ -83,6 +84,11 @@ makebuildinfo()
             printf "#define _WITH_1BITSGD_ \"yes\"\n"
         else
             printf "#define _WITH_1BITSGD_ \"no\"\n"
+        fi
+        if [ ! -z "$WITH_ASGD" ]; then 
+            printf "#define _WITH_ASGD_ \"yes\"\n"
+        else
+            printf "#define _WITH_ASGD_ \"no\"\n"
         fi
         printf "#define _BUILDER_ \"%s\"\n"  "$BUILDER"
         printf "#define _BUILDMACHINE_ \"%s\"\n"  "$BUILDMACHINE"
@@ -152,6 +158,7 @@ makebuildinfo \
     "$CUDAPATH" \
     "$CUBPATH" \
     "$CNTK_ENABLE_1BitSGD" \
+    "$CNTK_ENABLE_ASGD" \
     "$BUILDER" \
     "$BUILDMACHINE" \
     "$BUILDPATH"
