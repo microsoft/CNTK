@@ -11,7 +11,7 @@ from cntk import Trainer, persist
 from cntk.utils import *
 from cntk.layers import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learner import momentum_sgd, learning_rate_schedule
+from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
 
 # Paths relative to current python file.
@@ -62,7 +62,7 @@ def convnet_mnist(debug_output=False):
 
     # Set learning parameters
     lr_per_sample          = [0.001]*10+[0.0005]*10+[0.0001]
-    lr_schedule            = learning_rate_schedule(lr_per_sample, epoch_size)
+    lr_schedule            = learning_rate_schedule(lr_per_sample, UnitType.sample, epoch_size)
     momentum_time_constant = [0]*5+[1024] 
 
     # Instantiate the trainer object to drive the model training

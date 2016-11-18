@@ -13,7 +13,7 @@ from cntk.models import Sequential, LayerStack
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 from cntk import Trainer, persist, cntk_py
-from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule
+from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
 from _cntk_py import set_computation_network_trace_level
 
 # Paths relative to current python file.
@@ -49,7 +49,7 @@ def create_reader(map_file, mean_file, train):
         labels   = StreamDef(field='label', shape=num_classes))))   # and second as 'label'
 
 # Train and evaluate the network.
-def convnet_cifar10_dataaug(reader_train, reader_test):
+def convnet_cifar10_dataaug(reader_train, reader_test, max_epochs = 80):
     set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
@@ -102,7 +102,6 @@ def convnet_cifar10_dataaug(reader_train, reader_test):
     progress_printer = ProgressPrinter(tag='Training')
 
     # perform model training
-    max_epochs = 80
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
