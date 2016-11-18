@@ -241,7 +241,6 @@ def train_and_evaluate(reader_train, reader_test, max_epochs, distributed_traine
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-q', '--quantize_bit', help='quantized bit', required=False, default='32')
-    parser.add_argument('-b', '--block_size', help='block momentum block size, quantized bit would be ignored if this is set', required=False)
     parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='160')
     parser.add_argument('-w', '--warm_start', help='number of samples to warm start before running distributed', required=False, default='50000')
     args = vars(parser.parse_args())
@@ -249,17 +248,10 @@ if __name__=='__main__':
     epochs = int(args['epochs'])
     distributed_after_samples = int(args['warm_start'])
     
-    if args['block_size']:
-        block_size = int(args['block_size'])
-        print("Start training:block_size = {}, epochs = {}, warm_start = {}".format(block_size, epochs, distributed_after_samples))
-        distributed_trainer = distributed.block_momentum_distributed_trainer(
-            block_size=block_size,
-            distributed_after=distributed_after_samples)
-    else:
-        print("Start training: quantize_bit = {}, epochs = {}, warm_start = {}".format(num_quantization_bits, epochs, distributed_after_samples))
-        distributed_trainer = distributed.data_parallel_distributed_trainer(
-            num_quantization_bits=num_quantization_bits,
-            distributed_after=distributed_after_samples)
+    print("Start training: quantize_bit = {}, epochs = {}, warm_start = {}".format(num_quantization_bits, epochs, distributed_after_samples))
+    distributed_trainer = distributed.data_parallel_distributed_trainer(
+        num_quantization_bits=num_quantization_bits,
+        distributed_after=distributed_after_samples)
 
     reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True, distributed_after_samples)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
