@@ -28,7 +28,7 @@ def test_replace_placeholders():
     res = p + 3
     res.replace_placeholders({p: i})
 
-    assert res.eval({i: [3]}) == [6]
+    assert res.eval({i: [[3]]}) == [6]
 
     if False:
         res2 = p + 2

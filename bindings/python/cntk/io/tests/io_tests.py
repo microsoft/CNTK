@@ -10,22 +10,25 @@ import numpy as np
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
-def _test_text_format():
+def test_text_format(tmpdir):
     from cntk.io import text_format_minibatch_source, StreamConfiguration, MinibatchSource
 
-    # 0	|x 560	|y 1 0 0 0 0
-    # 0	|x 0
-    # 0	|x 0
-    # 1	|x 560	|y 0 1 0 0 0
-    # 1	|x 0
-    # 1	|x 0
-    # 1	|x 424
-    path = os.path.join(abs_path, 'tf_data.txt')
+    mbdata = r'''0	|x 560:1	|y 1 0 0 0 0
+0	|x 0:1
+0	|x 0:1
+1	|x 560:1	|y 0 1 0 0 0
+1	|x 0:1
+1	|x 0:1
+1	|x 424:1
+'''
+    tmpfile = str(tmpdir/'mbdata.txt')
+    with open(tmpfile, 'w') as f:
+        f.write(mbdata)
 
     input_dim = 1000
     num_output_classes = 5
 
-    mb_source = text_format_minibatch_source(path, [
+    mb_source = text_format_minibatch_source(tmpfile, [
                     StreamConfiguration( 'features', input_dim, True, 'x' ),
                     StreamConfiguration( 'labels', num_output_classes, False, 'y')])
     assert isinstance(mb_source, MinibatchSource)
@@ -33,21 +36,25 @@ def _test_text_format():
     features_si = mb_source.stream_info('features')
     labels_si = mb_source.stream_info('labels')
 
-    mb = mb_source.get_next_minibatch(7)
+    mb = mb_source.next_minibatch(7)
 
-    features = mb[features_si].m_data
+    features = mb[features_si]
+    # 2 samples, max seq len 4, 1000 dim
+    assert features.shape == (2, 4, input_dim)
+    assert features.is_sparse
     # TODO features is sparse and cannot be accessed right now:
     # *** RuntimeError: DataBuffer/WritableDataBuffer methods can only be called for NDArrayiew objects with dense storage format
     # 2 samples, max seq len 4, 1000 dim
     #assert features.data().shape().dimensions() == (2, 4, input_dim)
     #assert features.data().is_sparse()
 
-    labels = mb[labels_si].m_data
+    labels = mb[labels_si]
     # 2 samples, max seq len 1, 5 dim
-    assert labels.data().shape().dimensions() == (2, 1, num_output_classes)
-    assert not labels.data().is_sparse()
+    assert labels.shape == (2, 1, num_output_classes)
+    assert not labels.is_sparse
 
-    assert np.allclose(np.asarray(labels),
+    label_data = np.asarray(labels)
+    assert np.allclose(label_data,
             np.asarray([
                 [[ 1.,  0.,  0.,  0.,  0.]],
                 [[ 0.,  1.,  0.,  0.,  0.]]

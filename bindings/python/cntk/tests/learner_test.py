@@ -59,7 +59,7 @@ def test_learner_init():
 
     res = i * w
 
-    learner = sgd(res.parameters, lr=learning_rate_schedule(0.1, UnitType.sample, 10000))
+    learner = sgd(res.parameters, lr=learning_rate_schedule(0.1, UnitType.sample))
     assert learner.learning_rate() == 0.1
     
     learner.reset_learning_rate(learning_rate_schedule([1,2,3], UnitType.minibatch));
@@ -101,3 +101,11 @@ def test_learner_update():
     assert learner.learning_rate() == 0.2
     assert w.value < w_init
 
+def test_training_parameter_schedule():
+    training_parameter_schedule(0.01, unit='minibatch')
+    training_parameter_schedule(0.01, unit='sample')
+
+    with pytest.raises(ValueError):
+        training_parameter_schedule(0.01, unit='not_supported')
+    with pytest.raises(ValueError):
+        training_parameter_schedule(0.01, unit=5)

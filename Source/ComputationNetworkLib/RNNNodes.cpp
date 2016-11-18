@@ -47,6 +47,14 @@ OptimizedRNNStackNode<ElemType>::OptimizedRNNStackNode(const ScriptableObjects::
 }
 
 template<class ElemType>
+OptimizedRNNStackNode<ElemType>::OptimizedRNNStackNode(DEVICEID_TYPE deviceId, const std::wstring& name, bool bidirectional, size_t numLayers, size_t hiddenSize, const std::wstring& recurrentOp)
+    : Base(deviceId, name),
+    m_rnnAttributes(bidirectional, numLayers, hiddenSize, recurrentOp, -1),
+    m_BackwardDataCalledYet(false)
+{
+}
+
+template<class ElemType>
 /*virtual*/ void OptimizedRNNStackNode<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const /*override*/
 {
     Base::CopyTo(nodeP, newName, flags);

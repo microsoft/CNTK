@@ -914,6 +914,8 @@ namespace CNTK
     ///
     class Axis final
     {
+        friend bool operator==(const Axis& first, const Axis& second);
+
         CNTK_API static const std::wstring StaticAxisNamePrefix;
 
         CNTK_API static const int SentinelStaticAxisIndexValueForDynamicAxes;
@@ -2615,6 +2617,10 @@ namespace CNTK
         return Minus(leftOperand, rightOperand);
     }
 
+    /// Create an instance of the CNTK built-in elementwise tensor operation that computes the log of the sum of the exponentials of the specified input operands.
+    ///
+    CNTK_API FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in elementwise multiplication operation on specified tensor input operands.
     ///
@@ -2880,6 +2886,10 @@ namespace CNTK
                                             double epsilon = 0.00001,
                                             bool useCuDNNEngine = false,
                                             const std::wstring& name = L"");
+
+    /// Create an instance of the CNTK built-in OptimizedRNNStack operation on specified input operands
+    ///
+    CNTK_API FunctionPtr OptimizedRNNStack(const Variable& operand, const Variable& weights, size_t hiddenSize, size_t numLayers, bool bidirectional = false, const std::wstring& recurrentOp = L"lstm", const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise clip operation on the tensor operand
