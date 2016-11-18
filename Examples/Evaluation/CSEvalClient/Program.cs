@@ -111,6 +111,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             {
                 Assert.AreEqual(outputs1[i], outputs2[i], 1e-5f, "Output value mismatch at position {0}", i);
             }
+            Console.WriteLine("Both image API calls returned the same output vector.");
         }
 
         /// <summary>
@@ -408,6 +409,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         /// </summary>
         public static List<float> EvaluateImageInputUsingFeatureVector()
         {
+            List<float> outputs = null;
+
             try
             {
                 // This example requires the RestNet_18 model.
@@ -415,8 +418,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
                 // along with a sample image file named "zebra.jpg".
                 Environment.CurrentDirectory = initialDirectory;
-
-                List<float> outputs;
 
                 using (var model = new IEvaluateModelManagedF())
                 {
@@ -447,7 +448,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     .Index;
 
                 Console.WriteLine("Outcome: {0}", max);
-                return outputs;
             }
             catch (CNTKException ex)
             {
@@ -457,6 +457,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             {
                 OnGeneralException(ex);
             }
+            return outputs;
         }
 
         /// <summary>
@@ -465,6 +466,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         /// </summary>
         public static List<float> EvaluateImageInputUsingImageApi()
         {
+            List<float> outputs = null;
+
             try
             {
                 // This example requires the RestNet_18 model.
@@ -472,8 +475,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
                 // along with a sample image file named "zebra.jpg".
                 Environment.CurrentDirectory = initialDirectory;
-
-                List<float> outputs;
 
                 using (var model = new IEvaluateModelManagedF())
                 {
@@ -492,7 +493,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     // Now evaluate using the alternative API, where we directly pass the
                     // native bitmap data to the unmanaged code.
                     var outDims = model.GetNodeDimensions(NodeGroup.Output);
-                    outputNodeName = outDims.First().Key;
+                    var outputNodeName = outDims.First().Key;
                     outputs = model.EvaluateRgbImage(resized, outputNodeName);
 
                     // This program also serves as a test suite for the image API.
@@ -506,7 +507,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     .Index;
 
                 Console.WriteLine("Outcome: {0}", max);
-                return outputs;
             }
             catch (CNTKException ex)
             {
@@ -516,6 +516,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             {
                 OnGeneralException(ex);
             }
+            return outputs;
         }
 
         private static void TestImageApiErrorHandling(IEvaluateModelManagedF model, Bitmap bmp, string outputNodeName)
