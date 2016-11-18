@@ -19,7 +19,9 @@ This example code is similiar to TrainResNet_CIFAR10.py, but it adds support for
 Note this example requires a multi-GPU machine or mpi hosts file to distribute to multiple machines
 
 Simple aggregation, resnet20, with a 2-GPU machine:
+
 `mpiexec -n 2 python TrainResNet_CIFAR10_Distributed.py -n resnet20 -q 32`
 
 Quantized 1-bit aggregation with 50000 samples before distributed, resnet 20, with a 2-GPU machine:
+
 `mpiexec -n 2 python TrainResNet_CIFAR10_Distributed.py -n resnet20 -q 1 -a 50000`
