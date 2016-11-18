@@ -737,7 +737,7 @@ Actual Values  : 2 - 3
 ====== EvaluateMultipleModels ========
 The file Test-28x28_cntk_text.txt was processed using 4 concurrent model(s) with an error rate of: 3.83 % (383 error(s) out of 10000 record(s)), and a throughput of 3,579.11 records/sec
 
-====== EvaluateModelImageInput ========
+====== EvaluateImageInputUsingFeatureVector ========
 NDLBuilder Using CPU
 
 
@@ -807,6 +807,80 @@ INFO: rn4_3.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count o
 INFO: rn4_3.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
       Statistics in further training may be biased; consider re-training instead.
 WARNING: conv1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+
+====== EvaluateImageInputUsingImageApi ========
+NDLBuilder Using CPU
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
+
+
+NDLBuilder Using CPU
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
+
+
+NDLBuilder Using CPU
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
+
+
+INFO: conv1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn1_1.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn1_1.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn1_2.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn1_2.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn2_1.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn2_1.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn2_1.c_proj.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn2_2.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn2_2.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn3_1.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn3_1.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn3_1.c_proj.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn3_2.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn3_2.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_1.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_1.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_1.c_proj.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_2.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_2.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_3.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_3.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+WARNING: conv1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+
+====== CompareImageApiResults ========
+Both image API calls returned the same output vector.
 
 ###### (64, 1) ######
 
