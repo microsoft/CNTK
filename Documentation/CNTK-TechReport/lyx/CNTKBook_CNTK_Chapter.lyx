@@ -623,8 +623,8 @@ initValueScale
 
 .
  If the model parameters are initialized using the Gaussian distribution,
- the standard deviation will be adjusted to 
-\begin_inset Formula $0.2\times initValueScale/\sqrt{fanout}$
+ the standard deviation will be adjusted to
+\begin_inset Formula $1.0\times initValueScale$
 \end_inset
 
 .

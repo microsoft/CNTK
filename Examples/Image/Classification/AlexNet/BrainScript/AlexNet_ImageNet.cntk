@@ -48,25 +48,26 @@ Train = {
             }.r
         }.apply
 
+        # initValueScale are determined to generate Gaussians with variance of 0.01 and 0.005 (for the two DenseLayers)
         model = Sequential (
-            ConvolutionalLayer {96, (11:11), stride=(4:4), pad = false} : ReLU : 
+            ConvolutionalLayer {96, (11:11), stride=(4:4), pad=false, init='gaussian', initValueScale=0.01} : ReLU : 
             LRN {1.0, 2, 0.0001, 0.75} : 
             MaxPoolingLayer    {(3:3), stride=(2:2)} :
-            ConvolutionalLayer {256, (5:5), pad = true, initBias=0.1} : ReLU : 
+            ConvolutionalLayer {192, (5:5), pad = true, init='gaussian', initValueScale=0.01, initBias=0.1} : ReLU : 
             LRN {1.0, 2, 0.0001, 0.75} : 
             MaxPoolingLayer    {(3:3), stride=(2:2)} :
-            ConvolutionalLayer {384, (3:3), pad = true} : ReLU : 
-            ConvolutionalLayer {384, (3:3), pad = true, initBias=0.1} : ReLU : 
-            ConvolutionalLayer {256, (3:3), pad = true, initBias=0.1} : ReLU : 
+            ConvolutionalLayer {384, (3:3), pad = true, init='gaussian', initValueScale=0.01} : ReLU : 
+            ConvolutionalLayer {384, (3:3), pad = true, init='gaussian', initValueScale=0.01, initBias=0.1} : ReLU : 
+            ConvolutionalLayer {256, (3:3), pad = true, init='gaussian', initValueScale=0.01, initBias=0.1} : ReLU : 
             MaxPoolingLayer    {(3:3), stride=(2:2)} :
-            DenseLayer         {4096, activation=ReLU, initBias=0.1} : Dropout :
-            DenseLayer         {4096, activation=ReLU, initBias=0.1} : Dropout :
-            LinearLayer        {labelDim}
+            DenseLayer         {4096, activation=ReLU, init='gaussian', initValueScale=0.005, initBias=0.1} : Dropout :
+            DenseLayer         {4096, activation=ReLU, init='gaussian', initValueScale=0.005, initBias=0.1} : Dropout :
+            LinearLayer        {labelDim, init='gaussian', initValueScale=0.01}
         )
 
         # inputs
         features = Input {imageShape}
-        featNorm = features - 114
+        featNorm = features - Constant(114)
         labels = Input {labelDim}
 
         # apply model to features
@@ -88,12 +89,12 @@ Train = {
     SGD = {
         epochSize = 0
         minibatchSize = 256
-        learningRatesPerMB = 0.01*20:0.005*12:0.001*28:0.0003
+        learningRatesPerMB = 0.01*25:0.001*25:0.0001*25:0.00001*25:0.000001
         momentumPerMB = 0.9
-        maxEpochs = 90
+        maxEpochs = 110
         gradUpdateType = None
         L2RegWeight = 0.0005
-        dropoutRate = 0*5:0.5
+        dropoutRate = 0.5
         
         # TODO: try less bits?
         ParallelTrain = {

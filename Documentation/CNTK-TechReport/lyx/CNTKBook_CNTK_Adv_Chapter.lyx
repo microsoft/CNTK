@@ -1704,7 +1704,7 @@ fromFile - No initialization is required, should only be used if the network
 \begin_layout Itemize
 uniform - Initializes the parameter matrix with uniform random numbers in
  the range of 
-\begin_inset Formula $\left[-0.05\times initValueScale,0.05\times initValueScale\right]$
+\begin_inset Formula $\left[-1.0\times initValueScale,1.0\times initValueScale\right]$
 \end_inset
 
 
@@ -1713,7 +1713,7 @@ uniform - Initializes the parameter matrix with uniform random numbers in
 \begin_layout Itemize
 gaussian - Initializes the parameter matrix with Gaussian random numbers
  with zero mean and standard deviation of 
-\begin_inset Formula $0.2\times initValueScale/\sqrt{cols}$
+\begin_inset Formula $1.0\times initValueScale$
 \end_inset
 
 
