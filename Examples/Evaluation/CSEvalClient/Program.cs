@@ -15,6 +15,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.MSR.CNTK.Extensibility.Managed;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 {
@@ -55,6 +56,10 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
     class Program
     {
         private static string initialDirectory;
+        /// The location of the Resnet model file that is required for the image API tests.
+        private static string resnetModelFilePath;
+        /// The location of the test image that is using in the image API tests.
+        private static string imageFileName;
 
         /// <summary>
         /// Program entry point
@@ -63,6 +68,16 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         private static void Main(string[] args)
         {
             initialDirectory = Environment.CurrentDirectory;
+            // The image tests require the Resnet model. 
+            // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
+            // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
+            // along with a sample image file named "zebra.jpg".
+            var resnetDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Classification\ResNet");
+            resnetModelFilePath = Path.Combine(resnetDirectory, "ResNet_18.model");
+            ThrowIfFileNotExist(resnetModelFilePath,
+                string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Classification\\ResNet.", resnetModelFilePath));
+            imageFileName = Path.Combine(resnetDirectory, "zebra.jpg");
+            ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
 
             Console.WriteLine("====== EvaluateModelSingleLayer ========");
             EvaluateModelSingleLayer();
@@ -76,14 +91,26 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             Console.WriteLine("\n====== EvaluateMultipleModels ========");
             EvaluateMultipleModels();
 
-            Console.WriteLine("\n====== EvaluateImageClassificationModelUsingFeatureVector ========");
-            EvaluateImageClassificationModelUsingFeatureVector();
+            Console.WriteLine("\n====== EvaluateImageInputUsingFeatureVector ========");
+            var outputs1 = EvaluateImageInputUsingFeatureVector();
 
-            Console.WriteLine("\n====== EvaluateImageClassificationModelUsingImageApi ========");
-            EvaluateImageClassificationModelUsingImageApi();
+            Console.WriteLine("\n====== EvaluateImageInputUsingImageApi ========");
+            var outputs2 = EvaluateImageInputUsingImageApi();
+
+            Console.WriteLine("\n====== CompareImageApiResults ========");
+            CompareImageApiResults(outputs1, outputs2);
 
             // This pattern is used by End2EndTests to check whether the program runs to complete.
             Console.WriteLine("\n====== Evaluation Complete ========");
+        }
+
+        private static void CompareImageApiResults(List<float> outputs1,List<float> outputs2)
+        {
+            Assert.AreEqual(outputs1.Count, outputs2.Count, "Both APIs must return the same number of output values");
+            foreach (var i in Enumerable.Range(0, outputs1.Count))
+            {
+                Assert.AreEqual(outputs1[i], outputs2[i], 1e-5f, "Output value mismatch at position {0}", i);
+            }
         }
 
         /// <summary>
@@ -379,7 +406,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         /// This method shows how to evaluate a trained image classification model, with
         /// explicitly created feature vectors.
         /// </summary>
-        public static void EvaluateImageClassificationModelUsingFeatureVector()
+        public static List<float> EvaluateImageInputUsingFeatureVector()
         {
             try
             {
@@ -387,18 +414,13 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
                 // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
                 // along with a sample image file named "zebra.jpg".
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Classification\ResNet");
                 Environment.CurrentDirectory = initialDirectory;
 
                 List<float> outputs;
 
                 using (var model = new IEvaluateModelManagedF())
                 {
-                    string modelFilePath = Path.Combine(workingDirectory, "ResNet_18.model");
-                    ThrowIfFileNotExist(modelFilePath, 
-                        string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Classification\\ResNet.", modelFilePath));
-                        
-                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", resnetModelFilePath), deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
@@ -408,9 +430,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     }
 
                     // Transform the image
-                    string imageFileName = Path.Combine(workingDirectory, "zebra.jpg");
-                    ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
-
                     Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
                     var resized = bmp.Resize(224, 224, true);
 
@@ -428,6 +447,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     .Index;
 
                 Console.WriteLine("Outcome: {0}", max);
+                return outputs;
             }
             catch (CNTKException ex)
             {
@@ -443,7 +463,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         /// This method shows how to evaluate a trained image classification model, where the 
         /// creation of the CNTK feature vector is happening in native code inside the EvalWrapper.
         /// </summary>
-        public static void EvaluateImageClassificationModelUsingImageApi()
+        public static List<float> EvaluateImageInputUsingImageApi()
         {
             try
             {
@@ -451,18 +471,13 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
                 // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
                 // along with a sample image file named "zebra.jpg".
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Classification\ResNet");
                 Environment.CurrentDirectory = initialDirectory;
 
                 List<float> outputs;
 
                 using (var model = new IEvaluateModelManagedF())
                 {
-                    string modelFilePath = Path.Combine(workingDirectory, "ResNet_18.model");
-                    ThrowIfFileNotExist(modelFilePath,
-                        string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Classification\\ResNet.", modelFilePath));
-
-                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", resnetModelFilePath), deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
@@ -472,15 +487,17 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     }
 
                     // Transform the image
-                    string imageFileName = Path.Combine(workingDirectory, "zebra.jpg");
-                    ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
-
                     Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
                     var resized = bmp.Resize(224, 224, true);
                     // Now evaluate using the alternative API, where we directly pass the
                     // native bitmap data to the unmanaged code.
                     var outDims = model.GetNodeDimensions(NodeGroup.Output);
-                    outputs = model.EvaluateRgbImage(resized, outDims.First().Key);
+                    outputNodeName = outDims.First().Key;
+                    outputs = model.EvaluateRgbImage(resized, outputNodeName);
+
+                    // This program also serves as a test suite for the image API.
+                    // Test whether all error handling triggers as expected.
+                    TestImageApiErrorHandling(model, resized, outputNodeName);
                 }
 
                 // Retrieve the outcome index (so we can compare it with the expected index)
@@ -489,6 +506,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     .Index;
 
                 Console.WriteLine("Outcome: {0}", max);
+                return outputs;
             }
             catch (CNTKException ex)
             {
@@ -497,6 +515,33 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             catch (Exception ex)
             {
                 OnGeneralException(ex);
+            }
+        }
+
+        private static void TestImageApiErrorHandling(IEvaluateModelManagedF model, Bitmap bmp, string outputNodeName)
+        {
+            bool exception1 = true;
+            try
+            {
+                model.EvaluateRgbImage(bmp, "No such output key");
+                exception1 = false;
+            }
+            catch { }
+            if (!exception1)
+            {
+                Assert.Fail("Providing a non-existing output node should fail.");
+            }
+            var wrongSize = bmp.Resize(100, 100, true);
+            bool exception2 = true;
+            try
+            {
+                model.EvaluateRgbImage(wrongSize, outputNodeName);
+                exception2 = false;
+            }
+            catch { }
+            if (!exception2)
+            {
+                Assert.Fail("Calling with a wrongly sized image should fail.");
             }
         }
 

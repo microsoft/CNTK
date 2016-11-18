@@ -21,9 +21,17 @@ testCases:
     patterns:
       - EvaluateMultipleModels
   
-  Test case ImageInput:
+  Test case ImageInputUsingFeatureVector:
     patterns:
-      - EvaluateModelImageInput
+      - EvaluateImageInputUsingFeatureVector
+      
+  Test case ImageInputUsingImageApi:
+    patterns:
+      - EvaluateImageInputUsingImageApi
+      
+  Test case CompareImageApiResults:
+    patterns:
+      - CompareImageApiResults
       
   Test run must be completed:
     patterns:
