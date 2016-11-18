@@ -133,6 +133,7 @@ public:
     virtual void Gather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, size_t rootRank) const;
 
     virtual void Gatherv(const size_t *sendData, size_t numSendElements, size_t *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
+    virtual void Gatherv(const char *sendData, size_t numSendElements, char *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
     virtual void Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
     virtual void Gatherv(const float *sendData, size_t numSendElements, float *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
     virtual void Gatherv(const double *sendData, size_t numSendElements, double *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
@@ -225,6 +226,7 @@ class MPIWrapperEmpty : public MPIWrapper
         virtual void Gather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, size_t rootRank) const;
 
         virtual void Gatherv(const size_t *sendData, size_t numSendElements, size_t *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
+        virtual void Gatherv(const char *sendData, size_t numSendElements, char *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
         virtual void Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
         virtual void Gatherv(const float *sendData, size_t numSendElements, float *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
         virtual void Gatherv(const double *sendData, size_t numSendElements, double *receiveData, int recvCounts[], int offsets[], size_t rootRank) const;
@@ -603,7 +605,7 @@ void MPIWrapperMpi::RequestNodes(const char *msg, size_t requestednodes /*defaul
     fflush(stderr);
 }
 
-bool MPIWrapperMpi::IsMultiHost()
+bool MPIWrapperMpi::IsMultiHost() const
 {
     return m_multiHost;
 }
@@ -907,6 +909,11 @@ void MPIWrapperMpi::Gatherv(const size_t *sendData, size_t numSendElements, size
     MPI_Gatherv(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, recvCounts, offsets, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gatherv");
 }
 
+void MPIWrapperMpi::Gatherv(const char *sendData, size_t numSendElements, char *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+{
+    MPI_Gatherv(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, recvCounts, offsets, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gatherv");
+}
+
 void MPIWrapperMpi::Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
 {
     MPI_Gatherv(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, recvCounts, offsets, GetDataType(receiveData), (int)rootRank, Communicator()) || MpiFail("AllReduceAsync: MPI_Gatherv");
@@ -978,7 +985,7 @@ MPIWrapperEmpty::~MPIWrapperEmpty()
     }
 }
 
-bool MPIWrapperEmpty::IsMultiHost()
+bool MPIWrapperEmpty::IsMultiHost() const
 {
     return false;
 }
@@ -1177,67 +1184,71 @@ void MPIWrapperEmpty::Bcast(float* sendData, size_t numElements, size_t srcRank)
 {
 }
 
-void MPIWrapperMpi::AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const
+void MPIWrapperEmpty::AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const
 {
 }
 
-void MPIWrapperMpi::AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const
+void MPIWrapperEmpty::AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const
 {
 }
 
-void MPIWrapperMpi::AllGatherAsync(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, MPI_Request* request) const
+void MPIWrapperEmpty::AllGatherAsync(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, MPI_Request* request) const
 {
 }
 
-void MPIWrapperMpi::AllGatherAsync(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, MPI_Request* request) const
+void MPIWrapperEmpty::AllGatherAsync(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, MPI_Request* request) const
 {
 }
 
-void MPIWrapperMpi::AllGather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements) const
+void MPIWrapperEmpty::AllGather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements) const
 {
 }
 
-void MPIWrapperMpi::AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const
+void MPIWrapperEmpty::AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const
 {
 }
 
-void MPIWrapperMpi::AllGather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements) const
+void MPIWrapperEmpty::AllGather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements) const
 {
 }
 
-void MPIWrapperMpi::AllGather(const double *sendData, size_t numSendElements, double*receiveData, size_t numRecvElements) const
+void MPIWrapperEmpty::AllGather(const double *sendData, size_t numSendElements, double*receiveData, size_t numRecvElements) const
 {
 }
 
-void MPIWrapperMpi::Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const
+void MPIWrapperEmpty::Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const
 {
 }
 
-void MPIWrapperMpi::Gather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, size_t rootRank) const
+void MPIWrapperEmpty::Gather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, size_t rootRank) const
 {
 }
 
-void MPIWrapperMpi::Gather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, size_t rootRank) const
+void MPIWrapperEmpty::Gather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, size_t rootRank) const
 {
 }
 
-void MPIWrapperMpi::Gather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, size_t rootRank) const
+void MPIWrapperEmpty::Gather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, size_t rootRank) const
 {
 }
 
-void MPIWrapperMpi::Gatherv(const size_t *sendData, size_t numSendElements, size_t *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+void MPIWrapperEmpty::Gatherv(const size_t *sendData, size_t numSendElements, size_t *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
 {
 }
 
-void MPIWrapperMpi::Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+void MPIWrapperEmpty::Gatherv(const char *sendData, size_t numSendElements, char *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
 {
 }
 
-void MPIWrapperMpi::Gatherv(const float *sendData, size_t numSendElements, float *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+void MPIWrapperEmpty::Gatherv(const int *sendData, size_t numSendElements, int *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
 {
 }
 
-void MPIWrapperMpi::Gatherv(const double *sendData, size_t numSendElements, double *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+void MPIWrapperEmpty::Gatherv(const float *sendData, size_t numSendElements, float *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
+{
+}
+
+void MPIWrapperEmpty::Gatherv(const double *sendData, size_t numSendElements, double *receiveData, int recvCounts[], int offsets[], size_t rootRank) const
 {
 }
 

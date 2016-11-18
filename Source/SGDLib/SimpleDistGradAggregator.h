@@ -263,7 +263,7 @@ private:
                 // On Windows this async MPI_Iallreduce call requires MS MPI v7 or higher to be installed
                 m_mpi->Iallreduce(MPI_IN_PLACE, reductionBuffer, gradients[i]->GetNumElements(),
                                MPIWrapper::GetDataType(reductionBuffer), MPI_SUM,
-                               m_mpi->Communicator(), &allReduceRequests[i]) || MpiFail("MPI_Iallreduce");
+                               &allReduceRequests[i]) || MpiFail("MPI_Iallreduce");
             }
         }
         else
