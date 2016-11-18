@@ -40,7 +40,7 @@ struct RnnAttributes
         const size_t numNetworks =
             (m_recurrentOp == L"lstm") ? 4 :
             (m_recurrentOp == L"gru" ) ? 3 :
-            /*else*/                     1;
+            /*else*/                     1 ;
         size_t total = 0;
         for (size_t i = 0; i < m_numLayers; i++)
         {
