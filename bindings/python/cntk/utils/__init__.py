@@ -336,7 +336,8 @@ def get_data_type(*args):
     """
     from ..ops.variables import Variable
 
-    dtypes = set()
+    cntk_dtypes = set()
+    numpy_dtypes = set()
     if len(args) == 1 and isinstance(args, cntk_py.Function):
         args = [args]
 
@@ -346,14 +347,14 @@ def get_data_type(*args):
         if isinstance(arg,
                       (cntk_py.Variable, cntk_py.Value, cntk_py.NDArrayView)):
             if cntk_py.DataType_Double == arg.get_data_type():
-                dtypes.add(np.float64)
+                cntk_dtypes.add(np.float64)
             elif cntk_py.DataType_Float == arg.get_data_type():
-                dtypes.add(np.float32)
+                cntk_dtypes.add(np.float32)
         elif isinstance(arg, np.ndarray):
             if arg.dtype not in (np.float32, np.float64):
                 raise ValueError(
                     'NumPy type "%s" is not supported' % arg.dtype)
-            dtypes.add(arg.dtype.type)
+            numpy_dtypes.add(arg.dtype.type)
         elif isinstance(arg, cntk_py.Function):
             var_outputs = arg.outputs
             if len(var_outputs) > 1:
@@ -362,25 +363,29 @@ def get_data_type(*args):
 
             var_type = var_outputs[0].get_data_type()
             if cntk_py.DataType_Double == var_type:
-                dtypes.add(np.float64)
+                cntk_dtypes.add(np.float64)
             else:
-                dtypes.add(np.float32)
+                cntk_dtypes.add(np.float32)
         else:
             # We don't know anything so we convert everything to float32. If it
             # works, we know the type.
             # TODO figure out a better/faster way.
             np.asarray(arg, dtype=np.float32)
-            dtypes.add(np.float32)
+            numpy_dtypes.add(np.float32)
 
-    if np.float64 in dtypes:
-        return np.float64
-    elif np.float32 in dtypes:
-        return np.float32
+    if cntk_dtypes:
+        if np.float64 in cntk_dtypes:
+            return np.float64
+        elif np.float32 in cntk_dtypes:
+            return np.float32
     else:
-        None
+        if np.float64 in numpy_dtypes:
+            return np.float64
+        elif np.float32 in numpy_dtypes:
+            return np.float32
 
 
-def pad_dense_to_max_len(batch, max_seq_len):
+def _pad_dense_to_max_len(var, batch, max_seq_len):
     """Appends the minimal required amount of zeroes at the end of each sample
     in the batch so that it becomes rectangular. ``batch`` is assumed to be
     row-major: first index is batch item, second is sequence item, then comes
@@ -411,7 +416,7 @@ def pad_dense_to_max_len(batch, max_seq_len):
         Z[idx, :len(seq)] += seq
     return Z
 
-def pad_sparse_seq_to_max_len(batch, max_seq_len):
+def _pad_sparse_seq_to_max_len(batch, max_seq_len):
     '''
     Appends sparse matrices of the same shape to every sequence so that they
     are of the same length.
@@ -429,13 +434,23 @@ def pad_sparse_seq_to_max_len(batch, max_seq_len):
             else:
                 shape = list(seq.shape)
                 shape[0] = max_seq_len-seq_len
-                seq = [seq, sparse.csr_matrix(tuple(shape)).astype(seq.dtype)]
+                seq = [seq, sparse.csr_matrix(tuple(shape))]
                 
         if isinstance(seq, list):    
             seq = sparse.vstack(seq, format='csr')
 
         Z.append(seq)
     return Z
+
+def _is_dense(batch):
+    is_dense = True
+    b = batch
+    while isinstance(b, list):
+        b = b[0]
+        if sparse.issparse(b):
+            return False
+
+    return True
 
 def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     '''
@@ -468,13 +483,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     batch_has_seq = has_seq_dim(var, batch)
 
     if isinstance(batch, list):
-        is_dense = True
-        b = batch
-        while isinstance(b, list):
-            b = b[0]
-            if sparse.issparse(b):
-                is_dense = False
-                break
+        is_dense = _is_dense(batch)
 
         if is_dense:
             seq_lens = [len(seq) for seq in batch]
@@ -493,6 +502,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
         if batch_has_seq:
             max_seq_len = max(seq_lens)
     else:
+        is_dense = isinstance(batch, np.ndarray)
         # It is a sparse or dense NumPy array having all sequences being the
         # same length, so we just calculate the sequence lengths
         if batch_has_seq:
@@ -506,7 +516,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
 
     if isinstance(batch, np.ndarray):
         if np.issubdtype(batch.dtype, int):
-            batch = batch.astype(np.float32)
+            batch = batch.astype(var.dtype)
         elif batch.dtype not in (np.float32, np.float64):
             raise ValueError('only float32 and float64 are supported')
 
@@ -523,11 +533,14 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
 
     # batch is now either a dense input that requires a mask, or it is sparse
     if batch_has_seq:
-        mask = cntk_py.NDMask((max_seq_len, len(batch)), 
+        mask = cntk_py.NDMask((len(batch), max_seq_len), 
                 device or use_default_device())
         for idx, seq_len in enumerate(seq_lens):
             if seq_starts is None or seq_starts[idx]:
                 mask.mark_sequence_begin((0, idx))
+            # The first parameter is provided as a vector of ints, and thus
+            # won't be automatically reversed to col-major, because of which we
+            # provide it as such.
             # The second parameter is specifying the rectangle of the mask that
             # is invalid. As C++ is taking an NDShape, and we reverse the shape
             # in the SWIG layer, we provide it here as row-major.
@@ -536,9 +549,9 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     else:
         mask = None
 
-    if not var.is_sparse:
-        batch = pad_dense_to_max_len(batch, max_seq_len)
-        ndav = create_NDArrayView_from_NumPy(batch, device)
+    if is_dense:
+        batch = _pad_dense_to_max_len(var, batch, max_seq_len)
+        ndav = create_NDArrayView_from_NumPy(batch.astype(dtype), device)
         return Value(data=ndav, mask=mask)
 
     # There are three possibilities of providing sparse batches:
@@ -564,9 +577,6 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
         raise ValueError("only CSR is supported as of now. Please " 
                 "convert your data using 'batch.tocsr()'")
 
-    if not var.is_sparse:
-        raise ValueError("given the data, the variable should have been sparse")
-
     if batch_is_sparse or batch_has_sparse_sequences or \
             batch_has_sparse_elements:
 
@@ -585,7 +595,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
                             ' sequence data, you gave shape %s'%str(shape))
                 # Pad and stack the sparse vectors. 
                 if batch_has_seq:
-                    batch = pad_sparse_seq_to_max_len(batch, max_seq_len)
+                    batch = _pad_sparse_seq_to_max_len(batch, max_seq_len)
                 batch_shape += (max_seq_len,)
                 # We are actually 1D. If rank==2, then the first dim is 1.
                 sample_shape = sample_shape[-1]
@@ -599,7 +609,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
 
             batch_shape += _as_tuple(sample_shape)
 
-        ndav = cntk_py.NDArrayView(batch_shape, batch.data,
+        ndav = cntk_py.NDArrayView(batch_shape, batch.data.astype(var.dtype),
                 batch.indptr, batch.indices, device, False)
 
         return Value(data=ndav, mask=mask)

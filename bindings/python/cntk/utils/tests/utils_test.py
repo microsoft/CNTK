@@ -85,21 +85,25 @@ def test_sanitize_input(data, dtype):
     assert inp.dtype == dtype
 
 def test_get_data_type():
-    pa = parameter(init=2)
+    pa32 = parameter(init=np.asarray(2, dtype=np.float32))
+    pa64 = parameter(init=np.asarray(2, dtype=np.float64))
     pl = placeholder_variable(shape=(2))
     c = constant(value=3.0)
     n32 = AA(1, dtype=np.float32)
     n64 = AA(1, dtype=np.float64)
 
-    assert get_data_type(pa) == np.float32
-    assert get_data_type(pa, n32) == np.float32
-    assert get_data_type(pa, n64) == np.float64
-    assert get_data_type(pa, pl, n64) == np.float64
+    assert get_data_type(pa32) == np.float32
+    assert get_data_type(pa32, n32) == np.float32
     assert get_data_type(n32, n32) == np.float32
     assert get_data_type(n32, n64) == np.float64
     assert get_data_type(pl, n64) == np.float64
     assert get_data_type(pl, n32) == np.float32
     assert get_data_type(pl, pl) == None
+    # variable's type shall take precedence over provided data
+    assert get_data_type(pa32, n64) == np.float32
+    assert get_data_type(pa64, n64) == np.float64
+    assert get_data_type(pa32, pl, n64) == np.float32
+    assert get_data_type(pa64, pl, n64) == np.float64
 
 @pytest.mark.parametrize("shape, batch, expected", [
     (1, [[1,2]], True),
@@ -141,23 +145,6 @@ def test_has_seq_dim_sparse(shape, batch, expected):
     else:
         with pytest.raises(expected):
             has_seq_dim(i1, batch)
-
-def test_pad_sparse_seq_to_max_len():
-    batch = [
-            [csr([1,0]), csr([2,3])],
-            [csr([5,6])]]
-    batch = pad_sparse_seq_to_max_len(batch, 2)
-    assert np.allclose(batch[0].todense(), [[1,0], [2,3]])
-    assert np.allclose(batch[1].todense(), [[5,6], [0,0]])
-    assert batch[0].shape == (2,2)
-    assert batch[1].shape == (2,2)
-
-def test_pad_sparse_seq_to_max_len_bad():
-    batch = [
-            [csr([1,0]), csr([2,3])],
-            [csr([5,6])]]
-    with pytest.raises(ValueError):
-        batch = pad_sparse_seq_to_max_len(batch, 1)
 
 def test_sanitize_batch_sparse():
     batch = [[csr([1,0,2]), csr([2,3,0])],
