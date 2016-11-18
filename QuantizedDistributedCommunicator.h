@@ -131,7 +131,23 @@ namespace CNTK
 
         void Barrier() override
         {
-            MPICommunicatorImpl::Barrier();
+            Base::Barrier();
+        }
+
+        virtual void Concatenate(
+            const std::vector<NDArrayViewPtr>& input,
+            std::vector<NDArrayViewPtr>& output,
+            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override
+        {
+            Base::Concatenate(input, output, sendToWorkers);
+        }
+
+        virtual void Gather(
+            const Dictionary& input,
+            std::vector<DictionaryPtr>& output,
+            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override
+        {
+            Base::Gather(input, output, sendToWorkers);
         }
 
     private:
