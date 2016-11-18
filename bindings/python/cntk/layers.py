@@ -31,7 +31,7 @@ def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_defa
           input_rank=None, map_rank=None,
           bias=bias_default_or_True, init_bias=init_bias_default_or_0):
     activation = _resolve_activation(activation)
-    bias       = bias if _is_given(bias) else _current_default_options.bias
+    bias       = bias if _is_given(bias) else _get_current_default_options().bias
     output_shape = _as_tuple(shape)
 
     if input_rank is not None and map_rank is not None:
@@ -217,7 +217,7 @@ def GlobalAveragePooling():
 def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
-    initial_state = initial_state if _is_given(initial_state) else _current_default_options.initial_state
+    initial_state = initial_state if _is_given(initial_state) else _get_current_default_options().initial_state
     # if initial state is given and a numeric constant, then turn it into a Constant() object
     if np.isscalar(initial_state):
         initial_state = Constant(initial_state, shape=(1)) # TODO: This should be automatically done inside the API.
