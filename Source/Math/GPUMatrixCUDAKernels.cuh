@@ -3098,13 +3098,14 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol(
     const ElemType alpha,
     const ElemType* lhsValues,
     const size_t numRowsLhs,
-    const size_t numColsRhs,
+    const size_t numColsRhs,                // The number of columns of rhs matrix before transpose. I.e. it is the 'conttacting' dimension in the matrix product to be computed.
     const ElemType* rhsNZValues,
-    const GPUSPARSE_INDEX_TYPE* rhsRows,
-    const GPUSPARSE_INDEX_TYPE* rhsCols,
-    const GPUSPARSE_INDEX_TYPE* rhsRowIdx,
-    ElemType* resultValues,
-    GPUSPARSE_INDEX_TYPE* resultBlockIds)
+    const GPUSPARSE_INDEX_TYPE* rhsRows,    // Mapping the ids of the non-zero values to their row index.
+    const GPUSPARSE_INDEX_TYPE* rhsCols,    // Start id of each column.
+    const GPUSPARSE_INDEX_TYPE* rhsRowIdx,  // Each non-zero row of the rhs sparse matrix get's an index (call it block-id). This array (size nnz) maps the nz-value row to the corresponding block-id.
+    ElemType* resultValues,                 // Modified on return to contain values of the product.
+    GPUSPARSE_INDEX_TYPE* blockId2Col       // Maps block-ids to column of the result matrix.
+    )
 {
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     const CUDA_LONG lhsCol = index / numRowsLhs; // rhsCol == lhsCol
@@ -3112,7 +3113,7 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol(
         return;
     const CUDA_LONG lhsRow = index - numRowsLhs * lhsCol; // resultRow == lhsRow
 
-    // each thread handles one [row, col] combination
+    // each thread handles one [row, col] combination of lhs
     ElemType lhsValue = alpha * lhsValues[IDX2C(lhsRow, lhsCol, numRowsLhs)];
 
     CUDA_LONG start = rhsCols[lhsCol]; // rhsCol == lhsCol
@@ -3122,11 +3123,11 @@ __global__ void _denseMulSparseCSCTransposeToSparseBlockCol(
     {
         CUDA_LONG rhsRow = rhsRows[p];
         ElemType rhsVal = rhsNZValues[p];
-        CUDA_LONG resultCol = rhsRowIdx[p]; // resultCol == rhsRow maps to columnid
-        resultBlockIds[resultCol] = rhsRow; // indicate which colmn it actually points to
+        CUDA_LONG blockId = rhsRowIdx[p]; // resultCol == blockId
+        blockId2Col[blockId] = rhsRow;    // indicate which colmn it actually points to
 
         // assume resultValues are 0-initialized
-        atomicAdd(&resultValues[IDX2C(lhsRow, resultCol, numRowsLhs)], lhsValue * rhsVal);
+        atomicAdd(&resultValues[IDX2C(lhsRow, blockId, numRowsLhs)], lhsValue * rhsVal);
     }
 }
 
