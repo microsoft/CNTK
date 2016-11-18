@@ -86,7 +86,7 @@ def simple_mnist(debug_output=False):
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(netout, ce, pe, sgd(netout.parameters, lr=0.003125))
 
-    train_writer = tf.train.SummaryWriter(logdir='/home/alona/tflogs/graph', graph=session.graph, flush_secs=30)
+    train_writer = tf.train.SummaryWriter(logdir='/home/alona/tflogs/graph1', graph=session.graph, flush_secs=30)
     # test_writer = tf.train.SummaryWriter('/home/alona/tflogs/SimpleMNIST/test')
 
     # Get minibatches of images to train with and perform model training
