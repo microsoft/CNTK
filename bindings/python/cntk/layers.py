@@ -20,7 +20,7 @@ from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-from cntk.blocks import _current_default_options, _is_given, _initializer_for, _resolve_activation, _INFERRED
+from cntk.blocks import _get_current_default_options, _is_given, _initializer_for, _resolve_activation, _INFERRED
 
 # Dense -- create a fully-connected linear projection layer with optional non-linear activation
 # Note: shape may describe a tensor as well.
@@ -135,8 +135,8 @@ def Convolution(filter_shape,        # e.g. (3,3)
                 max_temp_mem_size_in_samples=0):
     #UntestedBranchError("Convolution")
     activation = _resolve_activation(activation)
-    pad  = pad  if _is_given(pad ) else _current_default_options.pad
-    bias = bias if _is_given(bias) else _current_default_options.bias
+    pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
+    bias = bias if _is_given(bias) else _get_current_default_options().bias
     # TODO: there must be a Python trick to do this as a function call on locals or so
     if reduction_rank != 1:
         NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
