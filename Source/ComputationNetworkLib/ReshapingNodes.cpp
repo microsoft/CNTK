@@ -544,11 +544,16 @@ void CropNode<ElemType>::Validate(bool isFinalValidationPass)
     TensorShape inputShape1 = Input(1)->GetSampleLayout();
 
     SmallVector<size_t> inDims = inputShape0.GetDims();
-    SmallVector<size_t> outDims = inputShape1.GetDims();
+    SmallVector<size_t> inDimsCropped = inputShape1.GetDims();
 
     // We assume we have at least two dimensions (first two are to be cropped).
-    if (outDims.size() < 2)
+    if (inDims.size() < 2 || inDimsCropped.size() < 2)
         RuntimeError("Crop input samples must have at least two dimensions.");
+
+    // Output dimensions are equal to input dimensions with first two axis copied from cropped dimensions.
+    SmallVector<size_t> outDims = inDims;
+    outDims[0] = inDimsCropped[0];
+    outDims[1] = inDimsCropped[1];
 
     // Set output dimensions.
     SetDims(TensorShape(outDims), HasMBLayout());

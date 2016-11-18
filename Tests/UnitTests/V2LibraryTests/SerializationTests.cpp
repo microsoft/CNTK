@@ -312,7 +312,12 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::Combine) == 44 && 
                   static_cast<size_t>(PrimitiveOpType::RandomSample) == 45 && 
                   static_cast<size_t>(PrimitiveOpType::RandomSampleInclusionFrequency) == 46 && 
-                  static_cast<size_t>(PrimitiveOpType::ROIPooling) == 47,
+                  static_cast<size_t>(PrimitiveOpType::ROIPooling) == 47 &&
+                  static_cast<size_t>(PrimitiveOpType::Logistic) == 48 &&
+                  static_cast<size_t>(PrimitiveOpType::OptimizedRNNStack) == 49 &&
+                  static_cast<size_t>(PrimitiveOpType::ReconcileDynamicAxis) == 50 &&
+                  static_cast<size_t>(PrimitiveOpType::LogSoftmax) == 51 &&
+                  static_cast<size_t>(PrimitiveOpType::LogPlus) == 52,
                   "PrimitiveOpType enum value was modified.");
 }
 

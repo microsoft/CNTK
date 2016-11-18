@@ -18,6 +18,7 @@
 #include "RecurrentNodes.h"
 #include "Serialization.h"
 #include "Value.h"
+#include "RNNNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -583,6 +584,10 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBeginIndex = L"beginIndex";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameEndIndex = L"endIndex";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameReductionOpName = L"reductionOpName";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameBidirectional = L"bidirectional";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumLayers = L"numLayers";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameHiddenSize = L"hiddenSize";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRecurrentOp = L"recurrentOp";
 
     /*static*/ std::vector<Variable> PrimitiveFunction::GetOutputVariables(PrimitiveOpType op,
                                                                            std::vector<Variable>& inputs,
@@ -671,6 +676,8 @@ namespace CNTK
             outputDynamicAxes = inputs[2].DynamicAxes();
         else if ((op == PrimitiveOpType::PackedIndex) || (op == PrimitiveOpType::GatherPacked))
             outputDynamicAxes = inputs[1].DynamicAxes();
+        else if (op == PrimitiveOpType::ReconcileDynamicAxis)
+            outputDynamicAxes = inputs[1].DynamicAxes();
         else
         {
             auto allInputDynamicAxesEmpty = std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.DynamicAxes().empty(); }) == inputs.end();
@@ -716,6 +723,7 @@ namespace CNTK
             case PrimitiveOpType::Hardmax:
             case PrimitiveOpType::Dropout:
             case PrimitiveOpType::Where:
+            case PrimitiveOpType::LogSoftmax:
             {
                 assert(inputs.size() == 1);
                 outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
@@ -837,6 +845,7 @@ namespace CNTK
                 outputShape = {1};
                 break;
             case PrimitiveOpType::Plus:
+            case PrimitiveOpType::LogPlus:
             case PrimitiveOpType::Minus:
             case PrimitiveOpType::ElementTimes:
             case PrimitiveOpType::Equal:
@@ -1043,6 +1052,48 @@ namespace CNTK
                     outputShape = NDShape(dimensions);
                 }
 
+                break;
+            }
+            case PrimitiveOpType::OptimizedRNNStack:
+            {
+                assert(inputs.size() == 2);
+                auto operand = inputs[0];
+                auto parameter = inputs[1];
+                if (operand.Shape().Rank() != 1)
+                    InvalidArgument("OptimizedRNNStack: input must have rank 1; actual input rank is %lu", operand.Shape().Rank());
+                if (operand.DynamicAxes().empty())
+                    InvalidArgument("OptimizedRNNStack: input must have at least one dynamic axis");
+                auto numLayers = functionConfig[PrimitiveFunction::AttributeNameNumLayers].Value<size_t>();
+                if (numLayers == 0)
+                    InvalidArgument("Number of layers in OptimizedRNNStack operation should be positive");
+                auto bidirectional = functionConfig[PrimitiveFunction::AttributeNameBidirectional].Value<bool>();
+                auto hiddenSize = functionConfig[PrimitiveFunction::AttributeNameHiddenSize].Value<size_t>();
+
+                // output dims
+                outputShape = operand.Shape();
+                outputShape[0] = (bidirectional ? 2 : 1) * hiddenSize;
+                // infer input size
+                // Note: Output dim is second axis, so say initOutputRank=-1.
+                if (parameter.Shape().Rank() == 2)
+                {
+                    const auto recurrentOp = functionConfig[PrimitiveFunction::AttributeNameRecurrentOp].Value<std::wstring>();
+                    const auto attributes = RnnAttributes(bidirectional, numLayers, hiddenSize, recurrentOp, -1);
+                    const auto numParameters = attributes.GetNumParameters(operand.Shape().TotalSize());
+                    std::vector<std::pair<Variable, NDShape>> newOperandShapes = { { parameter, std::move(NDShape({ numParameters.first, numParameters.second })) } };
+                    UpdateOperandShapes(newOperandShapes);
+                }
+                break;
+            }
+            case PrimitiveOpType::ReconcileDynamicAxis:
+            {
+                assert(inputs.size() == 2);
+                auto operand = inputs[0];
+                auto layout  = inputs[1];
+                if (operand.DynamicAxes().empty())
+                    InvalidArgument("ReconcileDynamicAxis: input must have at least one dynamic axis");
+                if (layout.DynamicAxes().empty())
+                    InvalidArgument("ReconcileDynamicAxis: layout must have at least one dynamic axis");
+                outputShape = operand.Shape();
                 break;
             }
             default:
@@ -1574,6 +1625,9 @@ namespace CNTK
         case PrimitiveOpType::Plus:
             computationNodePtr = New<PlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
+        case PrimitiveOpType::LogPlus:
+            computationNodePtr = New<LogPlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
         case PrimitiveOpType::Minus:
             computationNodePtr = New<MinusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
@@ -1693,6 +1747,27 @@ namespace CNTK
         {
             Axis spliceAxis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
             computationNodePtr = New<RowStackNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKInternalAxisIdx(spliceAxis));
+            break;
+        }
+        case PrimitiveOpType::OptimizedRNNStack:
+        {
+            auto bidirectional = functionConfig[PrimitiveFunction::AttributeNameBidirectional].Value<bool>();
+            auto numLayers = functionConfig[PrimitiveFunction::AttributeNameNumLayers].Value<size_t>();
+            auto hiddenSize = functionConfig[PrimitiveFunction::AttributeNameHiddenSize].Value<size_t>();
+            auto recurrentOp = functionConfig[PrimitiveFunction::AttributeNameRecurrentOp].Value<std::wstring>();
+
+            computationNodePtr = New<OptimizedRNNStackNode<ElementType>>(network->GetDeviceId(), internalNodeName, bidirectional, numLayers, hiddenSize, recurrentOp);
+            break;
+        }
+        case PrimitiveOpType::ReconcileDynamicAxis:
+        {
+            computationNodePtr = New<ReconcileDynamicAxisNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
+        }
+        case PrimitiveOpType::LogSoftmax:
+        {
+            //This can be implemented as x => x - ReduceLogSum(x). How to do this here?
+            computationNodePtr = New<LogSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         }
         default:
@@ -2747,6 +2822,11 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::Plus, leftOperand, rightOperand, Dictionary(), name);
     }
 
+    FunctionPtr LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+    {
+        return BinaryOp(PrimitiveOpType::LogPlus, leftOperand, rightOperand, Dictionary(), name);
+    }
+
     FunctionPtr Minus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::Minus, leftOperand, rightOperand, Dictionary(), name);
@@ -3039,6 +3119,17 @@ namespace CNTK
         // TODO: This is a temporary and expensive hack until we have a real alias implementation
         // that does not waste memory and compute cycles
         return Plus(operand, Constant::Scalar(0.0f), name);
+    }
+
+    FunctionPtr OptimizedRNNStack(const Variable& operand, const Variable& weights, size_t hiddenSize, size_t numLayers, bool bidirectional, const std::wstring& recurrentOp, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameHiddenSize] = hiddenSize;
+        additionalProperties[PrimitiveFunction::AttributeNameNumLayers] = numLayers;
+        additionalProperties[PrimitiveFunction::AttributeNameBidirectional] = bidirectional;
+        additionalProperties[PrimitiveFunction::AttributeNameRecurrentOp] = recurrentOp;
+
+        return BinaryOp(PrimitiveOpType::OptimizedRNNStack, operand, weights, std::move(additionalProperties), name);
     }
 
     namespace Sequence

@@ -23,23 +23,6 @@ build/
 .run-*
 lib/
 bin/
-Examples/Image/DataSets/Pascal/VOC*
-Examples/Image/DataSets/Pascal/selective_search_data*
-Examples/Image/Detection/FastRCNN/proc/
-Examples/Image/DataSets/CIFAR-10/CIFAR-10_mean.xml
-Examples/Image/DataSets/CIFAR-10/Test_cntk_text.txt
-Examples/Image/DataSets/CIFAR-10/Train_cntk_text.txt
-Examples/Image/DataSets/CIFAR-10/cifar-10-batches-py/
-Examples/Image/DataSets/CIFAR-10/test/
-Examples/Image/DataSets/CIFAR-10/test_map.txt
-Examples/Image/DataSets/CIFAR-10/test_regrLabels.txt
-Examples/Image/DataSets/CIFAR-10/train/
-Examples/Image/DataSets/CIFAR-10/train_map.txt
-Examples/Image/DataSets/CIFAR-10/train_regrLabels.txt
-Examples/Image/DataSets/MNIST/Test-28x28_cntk_text.txt
-Examples/Image/DataSets/MNIST/Train-28x28_cntk_text.txt
-Examples/Image/DataSets/grocery/
-Examples/Image/PretrainedModels/
 
 
 # Enable "build/" folder in the NuGet Packages folder since NuGet packages use it for MSBuild targets
@@ -172,8 +155,6 @@ ModelManifest.xml
 # Python
 *.pyc
 __pycache__/
-contrib/Python/doc/_build/*
-contrib/Python/_cntk_default/*
 
 # =========================
 # Windows detritus
@@ -237,5 +218,31 @@ bindings/python/cntk/c_plus_c.mod
 bindings/python/cntk/i_plus_c_0.mod
 bindings/python/cntk/i_plus_i_0.mod
 
+# Examples and Tutorials
+Examples/Image/DataSets/Pascal/VOC*
+Examples/Image/DataSets/Pascal/selective_search_data*
+Examples/Image/Detection/FastRCNN/proc/
+Examples/Image/DataSets/CIFAR-10/CIFAR-10_mean.xml
+Examples/Image/DataSets/CIFAR-10/Test_cntk_text.txt
+Examples/Image/DataSets/CIFAR-10/Train_cntk_text.txt
+Examples/Image/DataSets/CIFAR-10/cifar-10-batches-py/
+Examples/Image/DataSets/CIFAR-10/test/
+Examples/Image/DataSets/CIFAR-10/test_map.txt
+Examples/Image/DataSets/CIFAR-10/test_regrLabels.txt
+Examples/Image/DataSets/CIFAR-10/train/
+Examples/Image/DataSets/CIFAR-10/train_map.txt
+Examples/Image/DataSets/CIFAR-10/train_regrLabels.txt
+Examples/Image/DataSets/MNIST/Test-28x28_cntk_text.txt
+Examples/Image/DataSets/MNIST/Train-28x28_cntk_text.txt
+Examples/Image/DataSets/grocery/
+Examples/Image/PretrainedModels/
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/
+Tutorials/.ipynb_checkpoints/
+Tutorials/atis.test.ctf
+Tutorials/atis.train.ctf
+Tutorials/data/
+Tutorials/dqn.mod
+Tutorials/pg.mod
+Tutorials/query.wl
+Tutorials/slots.wl
