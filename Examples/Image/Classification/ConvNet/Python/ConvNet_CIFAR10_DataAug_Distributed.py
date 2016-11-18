@@ -44,14 +44,16 @@ def create_reader(map_file, mean_file, train, distributed_after=INFINITE_SAMPLES
         ImageDeserializer.mean(mean_file)
     ]
     # deserializer
-    return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
-        features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-        labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+    return MinibatchSource(
+        ImageDeserializer(map_file, StreamDefs(
+            features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+            labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+        randomize = False,
         distributed_after = distributed_after)
 
 
 # Train and evaluate the network.
-def convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer):
+def convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer, max_epochs = 80):
     set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
@@ -104,7 +106,6 @@ def convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer):
     progress_printer = ProgressPrinter(tag='Training')
 
     # perform model training
-    max_epochs = 80
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
@@ -134,7 +135,7 @@ def convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer):
         metric_numer += trainer.test_minibatch(data) * current_minibatch
         metric_denom += current_minibatch
         # Keep track of the number of samples processed so far.
-        sample_count += data[label_var].num_samples
+        sample_count += trainer.previous_minibatch_sample_count
         minibatch_index += 1
 
     print("")
@@ -144,7 +145,7 @@ def convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer):
     return metric_numer/metric_denom
 
 if __name__=='__main__':
-    distributed_after_samples = 50000
+    distributed_after_samples = 0
     num_quantization_bits = 32
     distributed_trainer = distributed.data_parallel_distributed_trainer(
         num_quantization_bits=num_quantization_bits,
