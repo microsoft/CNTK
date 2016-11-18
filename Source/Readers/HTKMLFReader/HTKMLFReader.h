@@ -43,6 +43,7 @@ private:
     size_t m_mbMaxNumTimeSteps; // max time steps we take in a MB layout; any sentence longer than this max will be discarded (and a warning will be issued )
                                 // this is used to prevent CUDA out-of memory errors
 
+    size_t m_maxUtteranceLength;         // the maximum frame number in one utterance. the default vaule is 10000.
     vector<size_t> m_numFramesToProcess; // [seq index] number of frames available (left to return) in each parallel sequence
     vector<size_t> m_switchFrame;        // TODO: something like the position where a new sequence starts; still supported?
     vector<size_t> m_numValidFrames;     // [seq index] valid #frames in each parallel sequence. Frames (s, t) with t >= m_numValidFrames[s] are NoInput.

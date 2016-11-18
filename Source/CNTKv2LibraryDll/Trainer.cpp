@@ -74,7 +74,12 @@ namespace CNTK
         {
             InvalidArgument("Trainer ctor: Union of the parameters covered by the specified parameterLearners should match the specified model's parameters");
         }
-            
+    }
+
+    CNTK_API Trainer::~Trainer()
+    {
+        if (m_distributedTrainer && !std::uncaught_exception())
+            m_distributedTrainer->Shutdown(*this);
     }
 
     Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners)
