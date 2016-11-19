@@ -9,7 +9,7 @@ following examples in the [CNTK clone root]/Examples directory:
    images. (follow the instructions in
    Examples/Image/DataSets/MNIST/README.md)
 
--  `CifarResNet <https://github.com/Microsoft/CNTK/blob/v2.0.beta4.0/Examples/Image/Classification/ResNet/Python/CifarResNet.py>`__:
+-  `TrainResNet_CIFAR10 <https://github.com/Microsoft/CNTK/blob/v2.0.beta4.0/Examples/Image/Classification/ResNet/Python/TrainResNet_CIFAR10.py>`__:
    An image classification ResNet model for training on the CIFAR image
    dataset. (follow the instructions in
    Examples/Image/DataSets/CIFAR-10/README.md to get the CIFAR dataset
