@@ -46,7 +46,7 @@ def test_cifar_convnet_error(device_id):
     reader_test  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
 
     test_error = convnet_cifar10_dataaug(reader_train, reader_test, max_epochs=1)
-    expected_test_error = 0.482
+    expected_test_error = 0.617
 
     assert np.allclose(test_error, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)

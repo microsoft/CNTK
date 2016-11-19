@@ -50,8 +50,8 @@ def test_cifar_convnet_error(device_id):
         num_quantization_bits=num_quantization_bits,
         distributed_after=distributed_after_samples)
 
-    test_error = convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer, max_epochs=3)
-    expected_test_error = 0.482
+    test_error = convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer, max_epochs=1)
+    expected_test_error = 0.617
 
     assert np.allclose(test_error, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)
