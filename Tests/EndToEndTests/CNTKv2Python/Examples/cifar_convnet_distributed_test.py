@@ -13,6 +13,7 @@ from cntk.device import set_default_device
 from cntk.io import ReaderConfig, ImageDeserializer
 from cntk import distributed
 import pytest
+import platform
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python"))
@@ -21,6 +22,9 @@ from ConvNet_CIFAR10_DataAug_Distributed import convnet_cifar10_dataaug, create_
 TOLERANCE_ABSOLUTE = 2E-1
 
 def test_cifar_convnet_error(device_id):
+    if platform.system() == 'Windows':
+        pytest.skip('test skipped on Windows')
+
     set_default_device(cntk_device(device_id))
 
     try:
