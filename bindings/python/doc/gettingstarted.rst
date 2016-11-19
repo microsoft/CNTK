@@ -67,7 +67,7 @@ following contents::
 	import numpy as np
 	import cntk
 	import cntk.ops as C
-	from cntk.learner import sgd
+	from cntk.learner import sgd, learning_rate_schedule, UnitType
 	from cntk.utils import get_train_loss
 	from nn import fully_connected_classifier_net
 	from cntk.utils import ProgressPrinter
@@ -102,7 +102,8 @@ following contents::
 		pe = C.classification_error(z, label)
 
 		# Instantiate the trainer object to drive the model training
-		trainer = cntk.Trainer(z, ce, pe, [sgd(z.parameters, lr=0.005)])
+		lr_per_minibatch = learning_rate_schedule(0.125, UnitType.minibatch)
+		trainer = cntk.Trainer(z, ce, pe, [sgd(z.parameters, lr=lr_per_minibatch)])
 
 		# Get minibatches of training data and perform model training
 		minibatch_size = 25
