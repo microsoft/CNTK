@@ -135,7 +135,7 @@ def convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer, max_
         metric_numer += trainer.test_minibatch(data) * current_minibatch
         metric_denom += current_minibatch
         # Keep track of the number of samples processed so far.
-        sample_count += data[label_var].num_samples
+        sample_count += trainer.previous_minibatch_sample_count
         minibatch_index += 1
 
     print("")
