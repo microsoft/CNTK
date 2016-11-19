@@ -39,13 +39,13 @@ def sanitize_precision(precision):
 
 def cntk_device(device_id):
     '''
-    Converts the legacy device ID as it was used in CNTK 1 to a :class:`cntk.device.DeviceDescriptor` instance.
+    Converts the legacy device ID as it was used in CNTK 1 to a :class:`~cntk.device.DeviceDescriptor` instance.
 
     Args:
         device_id (int): device id, -1 for CPU, 0 or higher for GPU
 
     Returns:
-        :class:`cntk.device.DeviceDescriptor`
+        :class:`~cntk.device.DeviceDescriptor`
     '''
     if device_id == -1:
         return cpu()
@@ -72,7 +72,7 @@ def tensors_to_text_format(sample_idx, alias_tensor_map):
           are assumed to have dynamic axis.
 
     Returns:
-        String representation in CNTKTextReader format
+        String representation in `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
     '''
 
     max_seq_length = max(len(t) for t in alias_tensor_map.values())
@@ -151,6 +151,17 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     Converts ``batch`` into a :class:`Value` object of ``dtype``
     such that the integer data in ``batch`` is interpreted as the indices
     representing one-hot vectors.
+
+    Example:
+        >>> num_classes = 6
+        >>> sparse_indices = [[1,5],[4]]
+        >>> C.set_default_device(C.cpu())
+        >>> i0 = C.input_variable(shape=num_classes, is_sparse=True)
+        >>> z = C.times(i0, np.eye(num_classes))
+        >>> value = C.one_hot(sparse_indices, num_classes)
+        >>> z.eval({i0: value})
+        [array([[ 0.,  1.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32), array([[ 0.,  0.,  0.,  0.,  1.,  0.]], dtype=float32)]
 
     Args:
         batch (list (of lists, if sequence) of index data): batch input data
@@ -304,6 +315,9 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     if isinstance(arg, list) and not arg:
         raise ValueError('input is empty')
 
+    if isinstance(arg, (cntk_py.Value, cntk_py.NDArrayView)):
+        return constant(value=arg)
+    
     if not isinstance(arg, np.ndarray) or arg.dtype!=fallback_dtype:
         arg = np.asarray(arg, dtype=fallback_dtype)
         if arg.shape == ():
@@ -322,7 +336,7 @@ def get_data_type(*args):
     inputs. Placeholders are ignored in the type determination.
 
     Args:
-        args (number, list, NumPy array, :class:`cntk.ops.variables.Variable`, or :class:`cntk.ops.functions.Function`): input
+        args (number, list, NumPy array, :class:`~cntk.ops.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
     Returns:
         np.float32, np.float64, or None
     """
@@ -460,7 +474,10 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     Args:
         var (:class:`~cntk.ops.variables.Variable`): variable node for which
          the ``batch`` is meant 
-        batch (list of NumPy arrays): input
+        batch: batch input for `var`. It can be a pure Python structure (list
+         of lists, ...), a combination of lists of NumPy arrays or SciPy
+         sparse CSR matrices. Alternatively, it can also be the output of
+         :func:`one_hot`.
         seq_starts (list of bool or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
@@ -469,8 +486,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
          this value should be put on
 
     Returns:
-        :class:`Value`: converted batch that can be passed to the
-         core API
+        :class:`Value`: converted batch that can be passed to the core API
     '''
     if isinstance(batch, cntk_py.Value):
         return batch
@@ -659,12 +675,15 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                      device=None):
     '''
     Sanitizes a dictionary of `Variable` s to input data such that it can be
-    handed off to the evaluation methods (:meth:`cntk.ops.functions.Function.forward`, :meth:`cntk.ops.functions.Function.backward`, :meth:`cntk.Trainer.train_minibatch` and
-    :meth:`cntk.Trainer.test_minibatch`).
+    handed off to the evaluation methods
+    (:meth:`~cntk.ops.functions.Function.forward`,
+    :meth:`~cntk.ops.functions.Function.backward`, :meth:`~cntk.Trainer.train_minibatch` and
+    :meth:`~cntk.Trainer.test_minibatch`).
 
     Args:
-        op_arguments (:class:`cntk.ops.functions.Function`): arguments of the root function. In
-         :meth:`cntk.ops.functions.Function.forward` pass it is typically `op.arguments`, in :meth:`cntk.ops.functions.Function.backward` pass it is
+        op_arguments (:class:`~cntk.ops.functions.Function`): arguments of the root function. In
+         :meth:`~cntk.ops.functions.Function.forward` pass it is typically
+         `op.arguments`, in :meth:`~cntk.ops.functions.Function.backward` pass it is
          `op.outputs`
         arguments: maps variables to their
          input data. The interpretation depends on the input type:
@@ -678,7 +697,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          be used as a list of bools, denoting whether a sequence is a new
          one (`True`) or a continuation of the previous one (`False`).
          Data should be either NumPy arrays or a
-         :class:`cntk.io.MinibatchData` instance.
+         :class:`~cntk.io.MinibatchData` instance.
         precision (str or `np.float32` or `np.float64`): if string it can be
          one of 'float' 'float32, 'double', 'float64', or None
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
@@ -836,16 +855,14 @@ class Value(cntk_py.Value):
         elements describing the mask of the element:
          * 2: beginning of sequence (e.g. an LSTM would be reset)
          * 1: valid element
-         # 0: invalid element
+         * 0: invalid element
 
         Example:
-          A mask of 
-           ```[[2, 1, 1], [1, 1, 0]]
-           ```
-           describes a batch of two sequences. The first has three elements, of
-           which the first element signals the beginning of a sequence. The second
-           sequence has two elements, which are both continuations of the first
-           sequence.
+          A mask of ``[[2, 1, 1], [1, 1, 0]]`` describes a batch of two
+          sequences. The first has three elements, of which the first element
+          (2) signals the beginning of a sequence. The second sequence has two
+          elements (last element marked 'invalid' by '0'), which are both
+          continuations of the first sequence.
         '''
         return np.asarray(super(Value, self).mask())
     
@@ -891,10 +908,10 @@ def sanitize_axis(axis):
     Sanitizes the axis.
 
     Args:
-        axis (:class:`cntk.axis.Axis` or int or None): the axis to be used.
+        axis (:class:`~cntk.axis.Axis` or int or None): the axis to be used.
 
-          * :class:`cntk.axis.Axis`: use axis instance directly (will convert row- to
-             col-major in case of static axis.
+          * :class:`~cntk.axis.Axis`: use axis instance directly (will convert
+            row- to col-major in case of static axis).
           * int: if positive, use it as static axis. If negative, count from
             last to first axis
           * None: denote all available axes
@@ -923,7 +940,7 @@ def get_train_loss(trainer):
     Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
 
     Args:
-        trainer (:class:`Trainer`): the trainer used.
+        trainer (:class:`~cntk.trainer.Trainer`): the trainer used.
     Returns:
         the loss value
     '''
@@ -997,7 +1014,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
          be used as a list of bools, denoting whether a sequence is a new
          one (`True`) or a continuation of the previous one (`False`).
          Data should be either NumPy arrays or a
-         :class:`cntk.io.MinibatchData` instance.
+         :class:`~cntk.io.MinibatchData` instance.
         seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
