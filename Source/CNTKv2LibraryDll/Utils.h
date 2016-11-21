@@ -13,8 +13,6 @@
 #include "Reader.h"
 #include "ConvolutionEngine.h"
 
-#pragma warning(disable: 4457) // "declaration of '%$I' hides function parameter"
-
 namespace CNTK
 {
     // Forward declarations
