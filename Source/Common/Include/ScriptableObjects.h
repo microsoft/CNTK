@@ -671,7 +671,7 @@ public:
             valp.ResolveValue(); // resolve upon access
             if (!flatten || !valp.Is<ConfigArray>())
             {
-                ConfigValuePtr &type = valp;
+                const C &type = valp;
                 res.push_back(type);
             }
             else // special case: flatten nested vectors (only if 'flatten')
