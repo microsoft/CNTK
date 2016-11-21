@@ -43,7 +43,7 @@ def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicate
     weights = AA(weights);
 
     if raises_exception:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError):
             result = random_sample_inclusion_frequency(weights, num_samples, allow_duplicates)
             result.eval()
     else:

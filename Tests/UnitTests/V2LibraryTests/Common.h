@@ -157,7 +157,7 @@ inline CNTK::FunctionPtr FullyConnectedLinearLayer(CNTK::Variable input, size_t 
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
 
-    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(), device, L"timesParam");
+    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(CNTK::SentinelValueForInferParamInitRank, CNTK::SentinelValueForInferParamInitRank, CNTK::DefaultParamInitScale, 1), device, L"timesParam");
     auto timesFunction = CNTK::Times(timesParam, input, L"times");
 
     auto plusParam = CNTK::Parameter({ outputDim }, 0.0f, device, L"plusParam");
@@ -182,7 +182,7 @@ inline CNTK::FunctionPtr FullyConnectedFeedForwardClassifierNet(CNTK::Variable i
     for (size_t i = 1; i < numHiddenLayers; ++i)
         classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
 
-    auto outputTimesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, CNTK::SentinelValueForAutoSelectRandomSeed, device));
+    auto outputTimesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, 1, device));
     return Times(outputTimesParam, classifierRoot, 1, outputName);
 }
 

@@ -12,7 +12,7 @@ from cntk.utils import *
 from cntk.layers import *
 from cntk.models import Sequential, LayerStack
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule
+from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, minus, element_times, constant
 from _cntk_py import set_computation_network_trace_level
 
@@ -71,7 +71,7 @@ def convnet_cifar10(debug_output=False):
 
     # Set learning parameters
     lr_per_sample          = [0.0015625]*10+[0.00046875]*10+[0.00015625]
-    lr_schedule            = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size)
+    lr_schedule            = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
     momentum_time_constant = [0]*20+[-minibatch_size/np.log(0.9)]
     mm_schedule            = momentum_as_time_constant_schedule(momentum_time_constant, epoch_size=epoch_size)
     l2_reg_weight          = 0.002
@@ -96,7 +96,7 @@ def convnet_cifar10(debug_output=False):
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count), input_map=input_map) # fetch minibatch.
             trainer.train_minibatch(data)                                   # update model with it
-            sample_count += data[label_var].num_samples                     # count samples processed so far
+            sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
         persist.save_model(z, os.path.join(model_path, "ConvNet_CIFAR10_{}.dnn".format(epoch)))

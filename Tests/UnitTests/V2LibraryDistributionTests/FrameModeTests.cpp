@@ -126,7 +126,7 @@ void TestFrameMode()
 
     if (Is1bitSGDAvailable())
     {
-        trainers[L"1bitsgd"] = []() { return CreateQuantizedDataParallelDistributedTrainer(QuantizedMPICommunicator(true, true, 32), false); };
+        trainers[L"1bitsgd"] = []() { return CreateQuantizedDataParallelDistributedTrainer(QuantizedMPICommunicator(true, true, 32), false, 0); };
         trainers[L"blockmomentum"] = []() { return CreateBlockMomentumDistributedTrainer(MPICommunicator(), 1024); };
     }
 

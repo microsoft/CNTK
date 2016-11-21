@@ -16,10 +16,11 @@ namespace CNTK
 {
     class CompositeMinibatchSource final : public MinibatchSource
     {
-        static const std::wstring MinibatchSourcePositionAttributeName;
+        static const std::wstring PositionAttributeName;
+        static const std::wstring DistributedAfterSampleCountAttributeName;
 
     public:
-        CompositeMinibatchSource(const Dictionary& configuration, DistributedCommunicatorPtr communicator);
+        CompositeMinibatchSource(const Dictionary& configuration);
 
         virtual const std::unordered_set<StreamInformation>& StreamInfos() override { return m_streamInfos; }
 
@@ -29,6 +30,11 @@ namespace CNTK
 
         virtual Dictionary GetCheckpointState() const override;
         virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
+
+        virtual bool IsDistributed() const override
+        {
+            return m_shim->GetCurrentSamplePosition() >= m_distributedAfterSampleCount;
+        }
 
     private:
         static Microsoft::MSR::CNTK::InputStreamDescription GetInputStreamDescription(const StreamInformation& s, const DeviceDescriptor& device)
@@ -41,9 +47,12 @@ namespace CNTK
         }
 
     private: 
-        DistributedCommunicatorPtr m_communicator;
         std::unordered_set<StreamInformation> m_streamInfos;
         bool m_epochEndReached;
+        bool m_distributed;
+        size_t m_numWorkers;
+        size_t m_workerRank;
+        size_t m_distributedAfterSampleCount;
         size_t m_prevMinibatchSize;
         size_t m_epochSize;
         size_t m_truncationLength;

@@ -32,3 +32,10 @@ Run the example from the current folder using:
 `python ConvNet_CIFAR10_DataAug.py`
 
 We use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perform translation transform without scaling. The accuracy of the network on test data is around `14%`, which is a lot better than the previous model.
+
+### ConvNet_CIFAR10_DataAug_Distributed.py
+
+The fourth example uses the same CNN as ConvNet_CIFAR10_DataAug.py, but it adds support for distributed training with simple aggregation. For a reference on distributed training, please check [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines)
+Note that this example support CPU-only build.
+
+`mpiexec -n <#workers> python ConvNet_CIFAR10_DataAug_Distributed.py`
