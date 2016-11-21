@@ -19,6 +19,8 @@
 
 using namespace Microsoft::MSR::CNTK;
 
+#pragma warning(disable: 4459) // declaration of 'boost_scope_exit_aux_args' hides global declaration
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // A thin wrapper around CNTK text format reader

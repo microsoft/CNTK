@@ -24,6 +24,8 @@
 #include "simplesenonehmm.h"
 #include "Matrix.h"
 
+#pragma warning(disable: 4477)
+
 namespace msra { namespace math {
 
 class ssematrixbase;

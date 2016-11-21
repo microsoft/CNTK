@@ -13,6 +13,8 @@
 #include "Reader.h"
 #include "ConvolutionEngine.h"
 
+#pragma warning(disable: 4457)
+
 namespace CNTK
 {
     // Forward declarations

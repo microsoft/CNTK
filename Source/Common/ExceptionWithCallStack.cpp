@@ -8,6 +8,7 @@
 #include "ExceptionWithCallStack.h"
 #include "Basics.h"
 #ifdef _WIN32
+#pragma warning(disable: 4091)
 #include "DbgHelp.h"
 #include <WinBase.h>
 #endif

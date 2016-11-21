@@ -10,6 +10,8 @@
 #include <map>
 #include <set>
 
+#pragma warning(disable: 4458) // hiding another variable name in block
+
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
 using namespace std;

@@ -54,6 +54,7 @@ public:
     static_assert(sizeof(double) == sizeof(ValueType), "Quantized word size != size of ElemType=double");
 };
 
+#pragma warning(disable : 4334)
 template <class ElemType>
 class ValueQuantizer
 {

@@ -4,6 +4,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+#pragma warning(disable: 4477)
+
 template <class ElemType>
 QuantizedMatrix<ElemType>::QuantizedMatrix(const size_t numRows, const size_t numCols, const size_t nbits, DEVICEID_TYPE deviceId, MemAllocator* allocator /* = nullptr */)
     : m_numRows(numRows), m_numCols(numCols), m_numBits(nbits), m_allocator(allocator)

@@ -12,6 +12,9 @@
 using namespace std;
 
 #pragma warning(disable : 4996) // Caused by the TODO below (line ~1280)
+#pragma warning(disable : 4456)
+#pragma warning(disable : 4477)
+
 
 // helper for numeric parameter arguments for multiple layers
 // This parses arguments of the form a:b*n:c where b gets duplicated n times and c unlimited times.
