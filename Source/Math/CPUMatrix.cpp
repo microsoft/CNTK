@@ -36,7 +36,7 @@
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
 #pragma warning(disable : 4244) // unreachable code; triggered for unknown reasons
 #pragma warning(disable : 4702) // conversion from 'double' to 'float'
-#pragma warning(disable : 4477) // printf format issues
+#pragma warning(disable : 4477) // format string '%s' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
 
 
 #ifdef USE_MKL

@@ -24,7 +24,7 @@
 #include "simplesenonehmm.h"
 #include "Matrix.h"
 
-#pragma warning(disable: 4477) // 'fscanf_s' : format string '%s' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
+#pragma warning(disable: 4477) // format string '%s' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
 
 namespace msra { namespace math {
 

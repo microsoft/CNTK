@@ -13,7 +13,7 @@
 
 #pragma warning(disable: 4458) // declaration of '%$I' hides class member 
 #pragma warning(disable: 4456) // declaration of '%$I' hides previous local declaration
-#pragma warning(disable: 4477) // 'fscanf_s' : format string '%s' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
+#pragma warning(disable: 4477) // format string '%s' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
 
 #ifdef _MSC_VER
 // TODO: thread_local is supported in VS2015. Remove this macro when we uprade to VS2015

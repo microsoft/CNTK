@@ -15,7 +15,7 @@
 #include "simple_checked_arrays.h"
 #include "Basics.h" // for FormatWin32Error
 
-#pragma warning(disable: 4477)
+#pragma warning(disable : 4477) // format string '%s' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
 
 namespace msra { namespace numa {
 
