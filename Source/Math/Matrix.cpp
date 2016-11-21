@@ -31,7 +31,7 @@
 // 'MatrixPointerToSetFlag' is the output. If not null and its location is BOTH, we collapse it to one.
 #define DISPATCH_MATRIX_ON_FLAG(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
     {                                                                                                                   \
-        CurrentDataLocation curLocation2 = (MatrixPointerToCheck)->GetCurrentMatrixLocation();                           \
+        CurrentDataLocation curLocation = (MatrixPointerToCheck)->GetCurrentMatrixLocation();                           \
         if (curLocation2 == CurrentDataLocation::GPU || curLocation2 == CurrentDataLocation::BOTH)                        \
         {                                                                                                               \
             if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                          \
