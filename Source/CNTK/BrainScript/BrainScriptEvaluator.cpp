@@ -18,6 +18,8 @@
 #define let const auto
 #endif
 
+#pragma warning(disable: 4505)
+
 namespace Microsoft { namespace MSR { namespace BS {
 
 using namespace std;

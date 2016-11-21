@@ -15,6 +15,8 @@
 #include "simple_checked_arrays.h"
 #include "Basics.h" // for FormatWin32Error
 
+#pragma warning(disable: 4477)
+
 namespace msra { namespace numa {
 
 // ... TODO: this can be a 'static', as it should only be set during foreach_node but not outside

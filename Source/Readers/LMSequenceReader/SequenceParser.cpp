@@ -12,6 +12,8 @@
 #include "SequenceParser.h"
 #include "fileutil.h"
 
+#pragma warning(disable: 4458)
+
 using namespace Microsoft::MSR::CNTK;
 
 // SetState for a particular value
