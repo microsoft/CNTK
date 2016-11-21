@@ -78,7 +78,8 @@ namespace CNTK
           m_numWorkers(1),
           m_workerRank(0),
           m_distributed(false),
-          m_distributedAfterSampleCount(MinibatchSource::InfiniteSamples)
+          m_distributedAfterSampleCount(MinibatchSource::InfiniteSamples),
+          m_numOfSuccessiveEmptyMinibatches(0)
     {
         // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
         // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
