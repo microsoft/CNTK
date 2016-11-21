@@ -4,6 +4,3 @@
 [submodule "Source/Multiverso"]
 	path = Source/Multiverso
 	url = https://github.com/Microsoft/Multiverso
-[submodule "HyperTune"]
-	path = HyperTune
-	url = https://git01.codeplex.com/cntkhypertune
