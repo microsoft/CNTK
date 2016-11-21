@@ -15,11 +15,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="vsbuild.bat">
-      <Filter>Source Files</Filter>
-    </Text>
+    <CustomBuild Include="cntk_cs.i" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="cntk_cs.i" />
+    <ClCompile Include="cntk_cs_wrap.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cntk_cs_wrap.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
