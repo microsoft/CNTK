@@ -24,12 +24,10 @@ testCases:
   Test case ImageInputUsingFeatureVector:
     patterns:
       - EvaluateImageInputUsingFeatureVector
-      - "Outcome: 340"
       
   Test case ImageInputUsingImageApi:
     patterns:
       - EvaluateImageInputUsingImageApi
-      - "Outcome: 340"
       
   Test case CompareImageApiResults:
     patterns:
