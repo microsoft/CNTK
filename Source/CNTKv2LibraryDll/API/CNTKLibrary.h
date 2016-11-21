@@ -393,15 +393,10 @@ namespace CNTK
         friend class PackedValue;
         friend class MPICommunicatorImpl;
         friend class BlockMomentumDistributedTrainer;
+        friend class Internal::VariableResolver;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
-
-        template <typename ElementType>
-        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
 
     public:
         ///
@@ -635,6 +630,7 @@ namespace CNTK
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
     private:
+
         CNTK_API NDArrayView(::CNTK::DataType dataType, const DeviceDescriptor& device, ::CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
 
 
@@ -1599,11 +1595,7 @@ namespace CNTK
         template <typename T>
         friend struct std::hash;
 
-        template <typename ElementType>
-        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend class Internal::VariableResolver;
 
 #ifndef SWIG
     private:
@@ -1952,11 +1944,7 @@ private:
         template <typename T>
         friend struct std::hash;
 
-        template <typename ElementType>
-        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend class Internal::VariableResolver;
 
     public:
         ///
@@ -2037,11 +2025,7 @@ private:
         template <typename T>
         friend struct std::hash;
 
-        template <typename ElementType>
-        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend class Internal::VariableResolver;
 
     public:
         ///
