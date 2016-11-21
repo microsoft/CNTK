@@ -309,6 +309,15 @@ namespace CNTK
                 else
                     LogicError("Input data of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
             }
+
+            if (!hasData)
+            {
+                m_numOfSuccessiveEmptyMinibatches++;
+                if (m_numOfSuccessiveEmptyMinibatches > LimitOfEmptyMinibatches)
+                    RuntimeError("One of the workers is starving. Please increase minibatch size or decrease number of workers.");
+            }
+            else
+                m_numOfSuccessiveEmptyMinibatches = 0;
         }
 
         return m_minibatchData;

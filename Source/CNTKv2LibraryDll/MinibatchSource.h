@@ -46,7 +46,8 @@ namespace CNTK
             return Microsoft::MSR::CNTK::InputStreamDescription(s.m_name, CNTKdeviceId, CNTKMatrixType, CNTKMatrixFormat);
         }
 
-    private: 
+    private:
+        static const size_t LimitOfEmptyMinibatches = 10000;
         std::unordered_set<StreamInformation> m_streamInfos;
         bool m_epochEndReached;
         bool m_distributed;
@@ -65,5 +66,7 @@ namespace CNTK
         // Shim will be deleted in the future versions.
         std::shared_ptr<Microsoft::MSR::CNTK::ReaderShim<float>> m_shim;
         Microsoft::MSR::CNTK::StreamMinibatchInputs m_matrices;
+
+        size_t m_numOfSuccessiveEmptyMinibatches;
     };
 }
