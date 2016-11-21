@@ -15,7 +15,7 @@
 #include <algorithm> // for various sort() calls
 #include <math.h>
 
-#pragma warning(disable: 4457)
+#pragma warning(disable: 4457) //  "declaration of '%$I' hides function parameter"
 
 namespace msra { namespace lm {
 

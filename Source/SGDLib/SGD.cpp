@@ -34,7 +34,7 @@
 #include <map>
 #include <set>
 
-#pragma warning(disable: 4459)
+#pragma warning(disable: 4459) // "declaration of '%$I' hides global declaration"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

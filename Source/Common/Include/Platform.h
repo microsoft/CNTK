@@ -11,8 +11,8 @@
 #define __UNIX__
 #endif
 
-#pragma warning(disable: 4458) // hides variable
-#pragma warning(disable: 4456) // hides local variable
+#pragma warning(disable: 4458) // declaration of '%$I' hides class member 
+#pragma warning(disable: 4456) // declaration of '%$I' hides previous local declaration
 #pragma warning(disable: 4477) // 'fscanf_s' : format string '%s' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
 
 #ifdef _MSC_VER

@@ -14,7 +14,7 @@
 
 using namespace std;
 
-#pragma warning(disable: 4457)
+#pragma warning(disable: 4457) // "declaration of '%$I' hides function parameter"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 

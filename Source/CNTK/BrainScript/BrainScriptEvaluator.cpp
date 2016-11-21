@@ -18,7 +18,7 @@
 #define let const auto
 #endif
 
-#pragma warning(disable: 4505)
+#pragma warning(disable: 4505) // 'function' : unreferenced local function has been removed
 
 namespace Microsoft { namespace MSR { namespace BS {
 

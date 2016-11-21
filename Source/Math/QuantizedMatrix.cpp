@@ -4,7 +4,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-#pragma warning(disable: 4477)
+#pragma warning(disable: 4477) // 'fscanf_s' : format string '%s' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
 
 template <class ElemType>
 QuantizedMatrix<ElemType>::QuantizedMatrix(const size_t numRows, const size_t numCols, const size_t nbits, DEVICEID_TYPE deviceId, MemAllocator* allocator /* = nullptr */)

@@ -12,7 +12,7 @@
 #include "SequenceParser.h"
 #include "fileutil.h"
 
-#pragma warning(disable: 4458)
+#pragma warning(disable: 4458) // declaration of '%$I' hides class member
 
 using namespace Microsoft::MSR::CNTK;
 

@@ -8,7 +8,7 @@
 #include "ExceptionWithCallStack.h"
 #include "Basics.h"
 #ifdef _WIN32
-#pragma warning(disable: 4091)
+#pragma warning(disable: 4091) //  'typedef ': ignored on left of '' when no variable is declared
 #include "DbgHelp.h"
 #include <WinBase.h>
 #endif
