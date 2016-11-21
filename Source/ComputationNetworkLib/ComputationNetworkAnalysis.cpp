@@ -14,6 +14,8 @@
 
 using namespace std;
 
+#pragma warning(disable: 4457)
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------
