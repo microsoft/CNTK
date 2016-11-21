@@ -281,14 +281,19 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 run=NDLNetworkBuilder
                 NDLNetworkBuilder=[
                 i1 = Input({0}) # Network must have size expectedSize * expectedSize * 3, for 3 channels
-                o1 = Times(Constant(5, rows=1, cols={0}), i1, tag=""output"")
+                o1 = Times(Constant(1, rows=2, cols={0}), i1, tag=""output"")
                 FeatureNodes = (i1)
                 ]", inputVectorSize);
             using (var model = new IEvaluateModelManagedF())
             {
                 model.CreateNetwork(modelDefinition);
 
-                model.EvaluateRgbImage(correctBmp1, "o1");
+                var output = model.EvaluateRgbImage(correctBmp1, "o1");
+                // Network computes 2 simple dot products. 
+                Assert.AreEqual(2, output.Count, "Size of output vector");
+                // Input image is all zero, output should be too.
+                Assert.AreEqual(0.0f, output[0], "OutputVector[0]");
+                Assert.AreEqual(0.0f, output[1], "OutputVector[1]");
                 AssertArgumentException(model, 
                     correctBmp1, 
                     "No such output key", 
