@@ -456,7 +456,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     .Aggregate((a, b) => (a.Value > b.Value) ? a : b)
                     .Index;
 
-                Console.WriteLine("Outcome: {0}", max);
+                Console.WriteLine("EvaluateImageInputUsingFeatureVector: Outcome = {0}", max);
             }
             catch (CNTKException ex)
             {
@@ -510,7 +510,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     .Aggregate((a, b) => (a.Value > b.Value) ? a : b)
                     .Index;
 
-                Console.WriteLine("Outcome: {0}", max);
+                Console.WriteLine("EvaluateImageInputUsingImageApi: Outcome = {0}", max);
             }
             catch (CNTKException ex)
             {

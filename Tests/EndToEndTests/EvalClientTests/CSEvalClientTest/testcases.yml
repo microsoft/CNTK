@@ -25,9 +25,19 @@ testCases:
     patterns:
       - EvaluateImageInputUsingFeatureVector
       
+  Test result ImageInputUsingFeatureVector:
+    patterns:
+      - EvaluateImageInputUsingFeatureVector
+      - Outcome = {{integer}}
+      
   Test case ImageInputUsingImageApi:
     patterns:
       - EvaluateImageInputUsingImageApi
+      
+  Test result ImageInputUsingImageApi:
+    patterns:
+      - EvaluateImageInputUsingImageApi
+      - Outcome = {{integer}}
       
   Test case CompareImageApiResults:
     patterns:

@@ -14,7 +14,8 @@ Passed   EvalManagedScalarTimesTest
 Passed   EvalManagedSparseTimesTest
 Passed   EvalManagedScalarTimesDualOutputTest
 Passed   EvalManagedCrossAppDomainExceptionTest
+Passed   EvalManagedImageApiErrorHandling
 
-Total tests: 7. Passed: 7. Failed: 0. Skipped: 0.
+Total tests: 8. Passed: 8. Failed: 0. Skipped: 0.
 Test Run Successful.
-Test execution time: 0.4305 Seconds
+Test execution time: 0.3490 Seconds
