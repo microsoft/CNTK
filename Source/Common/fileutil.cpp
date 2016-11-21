@@ -547,7 +547,7 @@ uint64_t fgetpos(FILE* f)
 void fsetpos(FILE* f, uint64_t reqpos)
 {
 #ifdef _MSC_VER // standard does not allow to cast between fpos_t and integer numbers, and indeed it does not work on Linux (but on Windows and GCC)
-#ifdef _MSC_VER // special hack for VS CRT
+#ifdef _MSC_VER_VS2013 // special hack for VS CRT
     // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
     // the case in speech recognition tools. This requires a number of optimizations.
