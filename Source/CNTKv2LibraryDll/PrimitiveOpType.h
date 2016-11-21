@@ -7,7 +7,7 @@
 
 namespace CNTK
 {
-    CNTK_API enum class PrimitiveOpType : unsigned int
+    /*CNTK_API*/ enum class PrimitiveOpType : unsigned int
     {
         Negate = 0,
         Sigmoid = 1,
