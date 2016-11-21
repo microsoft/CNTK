@@ -670,7 +670,7 @@ public:
         {
             valp.ResolveValue(); // resolve upon access
             if (!flatten || !valp.Is<ConfigArray>())
-                res.push_back(valp);
+                res.push_back((ConfigValue)valp);
             else // special case: flatten nested vectors (only if 'flatten')
             {
                 std::vector<C> subVector = valp.AsRef<ConfigArray>().AsVector<C>(Fail, flatten);
