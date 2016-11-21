@@ -111,10 +111,13 @@ CONDA="$HOME/anaconda3/bin/conda"
 [ -x "$CONDA" ]
 PY_ACTIVATE="$HOME/anaconda3/bin/activate"
 [ -x "$PY_ACTIVATE" ]
+PY_DEACTIVATE="$HOME/anaconda3/bin/deactivate"
+[ -x "$PY_DEACTIVATE" ]
 
-CNTK_PY34_ENV_PREFIX="$ANACONDA_PREFIX/envs/cntk-py34"
+CNTK_PY34_ENV_NAME="cntk-py34"
+CNTK_PY34_ENV_PREFIX="$ANACONDA_PREFIX/envs/$CNTK_PY34_ENV_NAME"
 if [ -d "$CNTK_PY34_ENV_PREFIX" ]; then
-  "$CONDA" env update --file "$CNTK_PY34_ENV_FILE" --name "$CNTK_PY34_ENV_PREFIX" || {
+  "$CONDA" env update --file "$CNTK_PY34_ENV_FILE" --name "$CNTK_PY34_ENV_NAME" || {
     echo Updating Anaconda environment failed.
     exit 1
   }
@@ -134,6 +137,10 @@ source "$PY_ACTIVATE" "$CNTK_PY34_ENV_PREFIX"
 set -x
 
 pip install "$CNTK_WHEEL_PATH"
+
+set +x
+source "$PY_DEACTIVATE"
+set -x
 
 ###########################################
 # Create an activation script
