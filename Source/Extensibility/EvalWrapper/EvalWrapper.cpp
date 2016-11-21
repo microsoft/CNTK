@@ -393,7 +393,7 @@ public:
         }
         else
         {
-            throw gcnew ArgumentException("Pixel format of input bitmap is not recognized, must be one of { Format24bppRgb, Format32bppArgb}.");
+            throw gcnew ArgumentException("Pixel format of input bitmap is not recognized, must be one of { Format24bppRgb, Format32bppArgb}.", "image");
         }
         int imageWidth = image->Width;
         int imageHeight = image->Height;
@@ -429,7 +429,7 @@ public:
         {
             auto message = String::Format("Input image has invalid size. Expected an image with Width * Height = {0}, but got Width = {1}, Height = {2}",
                 inputSize / numChannels, imageWidth, imageHeight);
-            throw gcnew ArgumentException(message);
+            throw gcnew ArgumentException(message, "image");
         }
         // Get the native bitmap structure that is underlying the Bitmap object:
         // Need to lock the whole image into memory.

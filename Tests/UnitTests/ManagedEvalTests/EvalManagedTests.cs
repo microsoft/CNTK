@@ -8,7 +8,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Drawing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+// Re-use the Resize method defined in the CSEvalClientTest.exe assembly. 
+// Strictly speaking, those extensions should live in an assembly of their own.
+using Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient;
+using System.Drawing.Imaging;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
 {
@@ -229,5 +234,81 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             var instance = (CNTKException)domain.CreateInstanceFromAndUnwrap(path, t.FullName);
             Assert.AreNotEqual(null, instance);
         }
+
+        private void AssertArgumentException(IEvaluateModelManagedF model, 
+            Bitmap image, 
+            string outputKey, 
+            string expectedParameterName, 
+            string expectedMessageText,
+            string errorMessage)
+        {
+            bool exception = false;
+            try
+            {
+                model.EvaluateRgbImage(image, outputKey);
+            }
+            catch (ArgumentException ex)
+            {
+                if (ex.ParamName == expectedParameterName && ex.Message.Contains(expectedMessageText))
+                {
+                    exception = true;
+                }
+            }
+            catch { }
+            if (!exception)
+            {
+                throw new Exception(errorMessage);
+            }
+        }
+
+        [TestMethod]
+        public void EvalManagedImageApiErrorHandling()
+        {
+            // The width and height of the image that will be fed into the network.
+            var expectedSize = 10;
+            // Images with correct size and pixel format.
+            var correctBmp1 = new Bitmap(expectedSize, expectedSize, PixelFormat.Format24bppRgb);
+            var correctBmp2 = new Bitmap(expectedSize, expectedSize, PixelFormat.Format32bppRgb);
+            // Image with correct size, but wrong pixel format
+            var wrongPixelFormat = new Bitmap(expectedSize, expectedSize, PixelFormat.Format16bppRgb565);
+            // Image with wrong size, correct pixel format
+            var wrongSize = new Bitmap(expectedSize * 2, expectedSize, PixelFormat.Format24bppRgb);
+
+            var inputVectorSize = expectedSize * expectedSize * 3;
+            var modelDefinition = String.Format(@"deviceId = -1 
+                precision = ""float""
+                traceLevel = 1
+                run=NDLNetworkBuilder
+                NDLNetworkBuilder=[
+                i1 = Input({0}) # Network must have size expectedSize * expectedSize * 3, for 3 channels
+                o1 = Times(Constant(5, rows=1, cols={0}), i1, tag=""output"")
+                FeatureNodes = (i1)
+                ]", inputVectorSize);
+            using (var model = new IEvaluateModelManagedF())
+            {
+                model.CreateNetwork(modelDefinition);
+
+                model.EvaluateRgbImage(correctBmp1, "o1");
+                AssertArgumentException(model, 
+                    correctBmp1, 
+                    "No such output key", 
+                    "outputKey",
+                    "not an output node", 
+                    "Providing a non-existing output node should fail with an ArgumentException.");
+                AssertArgumentException(model,
+                    wrongPixelFormat,
+                    "o1",
+                    "image",
+                    "must be one of { Format24bppRgb, Format32bppArgb}",
+                    "Images with an unrecognized pixel format should fail with an ArgumentException.");
+                AssertArgumentException(model,
+                    wrongSize,
+                    "o1",
+                    "image",
+                    "invalid size",
+                    "Calling with a wrongly sized image should fail with an ArgumentException.");
+            }
+        }
+
     }
 }

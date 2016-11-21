@@ -15,7 +15,6 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.MSR.CNTK.Extensibility.Managed;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 {
@@ -60,6 +59,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         private static string resnetModelFilePath;
         /// The location of the test image that is using in the image API tests.
         private static string imageFileName;
+        // The width and height of the images that go into ResNet.
+        private static int resNetImageSize = 224;
+
 
         /// <summary>
         /// Program entry point
@@ -68,16 +70,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         private static void Main(string[] args)
         {
             initialDirectory = Environment.CurrentDirectory;
-            // The image tests require the Resnet model. 
-            // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
-            // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
-            // along with a sample image file named "zebra.jpg".
-            var resnetDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Classification\ResNet");
-            resnetModelFilePath = Path.Combine(resnetDirectory, "ResNet_18.model");
-            ThrowIfFileNotExist(resnetModelFilePath,
-                string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Classification\\ResNet.", resnetModelFilePath));
-            imageFileName = Path.Combine(resnetDirectory, "zebra.jpg");
-            ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
 
             Console.WriteLine("====== EvaluateModelSingleLayer ========");
             EvaluateModelSingleLayer();
@@ -90,6 +82,17 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             Console.WriteLine("\n====== EvaluateMultipleModels ========");
             EvaluateMultipleModels();
+
+            // The image tests require the Resnet model. 
+            // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
+            // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
+            // along with a sample image file named "zebra.jpg".
+            var resnetDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Classification\ResNet");
+            resnetModelFilePath = Path.Combine(resnetDirectory, "ResNet_18.model");
+            ThrowIfFileNotExist(resnetModelFilePath,
+                string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Classification\\ResNet.", resnetModelFilePath));
+            imageFileName = Path.Combine(resnetDirectory, "zebra.jpg");
+            ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
 
             Console.WriteLine("\n====== EvaluateImageInputUsingFeatureVector ========");
             var outputs1 = EvaluateImageInputUsingFeatureVector();
@@ -106,10 +109,16 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
         private static void CompareImageApiResults(List<float> outputs1,List<float> outputs2)
         {
-            Assert.AreEqual(outputs1.Count, outputs2.Count, "Both APIs must return the same number of output values");
+            if (outputs1.Count != outputs2.Count)
+            {
+                throw new Exception("Both APIs must return the same number of output values.");
+            }
             foreach (var i in Enumerable.Range(0, outputs1.Count))
             {
-                Assert.AreEqual(outputs1[i], outputs2[i], 1e-5f, "Output value mismatch at position {0}", i);
+                if (Math.Abs(outputs1[i] - outputs2[i]) > 1e-5f)
+                {
+                    throw new Exception(String.Format("Output value mismatch at position {0}", i));
+                }
             }
             Console.WriteLine("Both image API calls returned the same output vector.");
         }
@@ -425,14 +434,14 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                     // Prepare input value in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
-                    if (inDims.First().Value != 224 * 224 * 3)
+                    if (inDims.First().Value != resNetImageSize * resNetImageSize * 3)
                     {
                         throw new CNTKRuntimeException(string.Format("The input dimension for {0} is {1} which is not the expected size of {2}.", inDims.First(), inDims.First().Value, 224 * 224 * 3), string.Empty);
                     }
 
                     // Transform the image
                     Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
-                    var resized = bmp.Resize(224, 224, true);
+                    var resized = bmp.Resize(resNetImageSize, resNetImageSize, true);
 
                     var resizedCHW = resized.ParallelExtractCHW();
                     var inputs = new Dictionary<string, List<float>>() { {inDims.First().Key, resizedCHW } };
@@ -475,30 +484,25 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
                 // along with a sample image file named "zebra.jpg".
                 Environment.CurrentDirectory = initialDirectory;
-
                 using (var model = new IEvaluateModelManagedF())
                 {
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", resnetModelFilePath), deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
-                    if (inDims.First().Value != 224 * 224 * 3)
+                    if (inDims.First().Value != resNetImageSize * resNetImageSize * 3)
                     {
                         throw new CNTKRuntimeException(string.Format("The input dimension for {0} is {1} which is not the expected size of {2}.", inDims.First(), inDims.First().Value, 224 * 224 * 3), string.Empty);
                     }
 
                     // Transform the image
                     Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
-                    var resized = bmp.Resize(224, 224, true);
+                    var resized = bmp.Resize(resNetImageSize, resNetImageSize, true);
                     // Now evaluate using the alternative API, where we directly pass the
                     // native bitmap data to the unmanaged code.
                     var outDims = model.GetNodeDimensions(NodeGroup.Output);
                     var outputNodeName = outDims.First().Key;
                     outputs = model.EvaluateRgbImage(resized, outputNodeName);
-
-                    // This program also serves as a test suite for the image API.
-                    // Test whether all error handling triggers as expected.
-                    TestImageApiErrorHandling(model, resized, outputNodeName);
                 }
 
                 // Retrieve the outcome index (so we can compare it with the expected index)
@@ -517,33 +521,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 OnGeneralException(ex);
             }
             return outputs;
-        }
-
-        private static void TestImageApiErrorHandling(IEvaluateModelManagedF model, Bitmap bmp, string outputNodeName)
-        {
-            bool exception1 = true;
-            try
-            {
-                model.EvaluateRgbImage(bmp, "No such output key");
-                exception1 = false;
-            }
-            catch { }
-            if (!exception1)
-            {
-                Assert.Fail("Providing a non-existing output node should fail.");
-            }
-            var wrongSize = bmp.Resize(100, 100, true);
-            bool exception2 = true;
-            try
-            {
-                model.EvaluateRgbImage(wrongSize, outputNodeName);
-                exception2 = false;
-            }
-            catch { }
-            if (!exception2)
-            {
-                Assert.Fail("Calling with a wrongly sized image should fail.");
-            }
         }
 
         /// <summary>

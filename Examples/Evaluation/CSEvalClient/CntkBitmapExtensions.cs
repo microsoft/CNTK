@@ -179,13 +179,13 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             Parallel.For(0, 3, (int c) =>
             {
-                Parallel.For(0, imageHeight, (int h) =>
+                for (int h = 0; h < imageHeight; h++)
                 {
-                    Parallel.For(0, imageWidth, (int w) =>
+                    for (int w = 0; w < imageWidth; w++)
                     {
                         features[w * widthStride + h * 3 + c] = rgbValues[mapPixel(h, w, c)];
-                    });
-                });
+                    };
+                };
             });
 
             image.UnlockBits(bitmapData);

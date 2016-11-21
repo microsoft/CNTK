@@ -24,14 +24,16 @@ testCases:
   Test case ImageInputUsingFeatureVector:
     patterns:
       - EvaluateImageInputUsingFeatureVector
+      - Outcome: 340
       
   Test case ImageInputUsingImageApi:
     patterns:
       - EvaluateImageInputUsingImageApi
+      - Outcome: 340
       
   Test case CompareImageApiResults:
     patterns:
-      - CompareImageApiResults
+      - Both image API calls returned the same output vector
       
   Test run must be completed:
     patterns:
