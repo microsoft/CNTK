@@ -24,7 +24,7 @@ struct ReaderFixture
 #ifdef _WIN32
         BOOST_TEST_MESSAGE("Set two-digit format of exponent number");
         // Todo: According to MSDN, the following function is obsolete and not available in the CRT from VS2015. 
-        _set_output_format(_TWO_DIGIT_EXPONENT);
+//        _set_output_format(_TWO_DIGIT_EXPONENT);
 #endif
         m_initialWorkingPath = boost::filesystem::current_path().generic_string();
         BOOST_TEST_MESSAGE("Current working directory: " + m_initialWorkingPath);
