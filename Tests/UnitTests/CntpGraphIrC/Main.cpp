@@ -13,6 +13,8 @@
 #include <google/protobuf/util/json_util.h>
 #pragma warning(pop)
 
+#include "GraphIrExporter.h"
+
 #ifndef CPUONLY
 #error "must use CPU Only"
 #endif
@@ -28,15 +30,19 @@ extern void EvaluateGraph(FunctionPtr evalFunc, const DeviceDescriptor& device);
 int main()
 {
 	auto device = DeviceDescriptor::CPUDevice();
-	std::string filename = "\\CNTK\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn";
+	std::string filename = "\\BrainWaveCntk\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn";
+    std::wstring filenameW = std::wstring(filename.begin(), filename.end());
+
+//    CntkNetParser parser;
+//    BG_Graph *g = parser.Net2Bg(filenameW, stdout, nullptr, true);
 
 	// The model file will be trained and copied to the current runtime directory first.
-	auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, std::wstring(filename.begin(), filename.end()), device, LstmGraphNodeFactory);
+	auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, filenameW, device, LstmGraphNodeFactory);
 
 	EvaluateGraph(modelFuncPtr, device);
 
 	// convert cntk to graphir
-	auto graphIrPtr = CntkGraphToGraphIr(std::wstring(filename.begin(), filename.end()), modelFuncPtr);
+	auto graphIrPtr = CntkGraphToGraphIr(filenameW, modelFuncPtr);
 
 	// save it out to disk in json format.
 	std::string jsonstring;

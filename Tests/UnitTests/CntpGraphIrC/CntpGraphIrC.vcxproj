@@ -148,6 +148,7 @@
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GraphIrExporter.h" />
     <ClInclude Include="GraphIr\cpp\graphid.pb.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="LSTM\FixedPoint.hpp" />
