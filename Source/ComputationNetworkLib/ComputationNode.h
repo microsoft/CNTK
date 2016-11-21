@@ -1227,17 +1227,17 @@ public:
     // creation from configuration
     // Nodes with NumInputs<> should say DeclareConstructorFromConfigWithNumInputs(ClassName), and nodes without DeclareConstructorFromConfig(ClassName).
     // The macro will forward to the regular constructor of the node (which may do more than just calling the base constructor), and then attach the inputs from config.
-#define DeclareConstructorFromConfigWithNumInputs(C)                   \
-    C(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp)               \
-        : C(configp->Get(L"deviceId"), L"<placeholder>")               \
-    {                                                                  \
-        AttachInputsFromConfig(configp, this->GetExpectedNumInputs()); \
+#define DeclareConstructorFromConfigWithNumInputs(C)                     \
+    C(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp) \
+        : C(configp->Get(L"deviceId"), L"<placeholder>")                 \
+    {                                                                    \
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());   \
     }
-#define DeclareConstructorFromConfig(C)                            \
-    C(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp)           \
-        : C(configp->Get(L"deviceId"), L"<placeholder>")           \
-    {                                                              \
-        AttachInputsFromConfig(configp);                           \
+#define DeclareConstructorFromConfig(C)                                  \
+    C(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp) \
+        : C(configp->Get(L"deviceId"), L"<placeholder>")                 \
+    {                                                                    \
+        AttachInputsFromConfig(configp);                                 \
     }
 
     // helper to load m_value from a stream
