@@ -15,11 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="vsbuild.bat">
-      <Filter>Source Files</Filter>
-    </Text>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="cntk_cs.i" />
+    <CustomBuild Include="cntk_cs.i" />
   </ItemGroup>
 </Project>
