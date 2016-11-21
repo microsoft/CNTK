@@ -179,8 +179,10 @@ def create_tensorflow_graph(node,graph):
     visited = set()
     outputs = {}
     tf_ops = []
+    count = 100
 
-    while stack:
+    while (count!=0):
+        count-=1
         node = stack.pop()
         
         if node in visited:
@@ -190,19 +192,20 @@ def create_tensorflow_graph(node,graph):
         try:
             # Function node
             node = node.root_function
+            print(node.op_name)
             stack.extend(node.inputs)
 
             # add node's inputs
             for i in range(len(node.inputs)):
                 child = node.inputs[i]
 
-                try:
-                    tf_input = graph.get_operation_by_name(child.uid)
-
+                # try:
+                #     tf_input = graph.get_operation_by_name(child.uid).outputs[0]
+                #     for child_ou
                     
-                except  KeyError:
-                    shape = convert_shape(child.shape, child.is_parameter, node.op_name=="Times")
-                    tf_input = tf.placeholder(child.dtype, shape=shape, name=child.uid)
+                # except  KeyError:
+                shape = convert_shape(child.shape, child.is_parameter, node.op_name=="Times")
+                tf_input = tf.placeholder(child.dtype, shape=shape, name=child.uid)
                   
                 tf_inputs.append(tf_input)
                 
@@ -210,8 +213,10 @@ def create_tensorflow_graph(node,graph):
                 graph.create_op(compute_shapes=True,op_type=ops_dict[node.op_name], inputs=tf_inputs, 
                     dtypes=[node.outputs[0].dtype], name=node.outputs[0].uid)
             except Exception:
+                from tensorflow.core.framework import attr_value_pb2
+                from tensorflow.core.framework import tensor_shape_pb2
                 if (node.op_name=='Times'):
-                    from tensorflow.core.framework import attr_value_pb2
+                    
                     attr = attr_value_pb2.AttrValue()
                     attr.b = False
                     attrs = {"transpose_a": attr, "transpose_b": attr}
@@ -222,7 +227,20 @@ def create_tensorflow_graph(node,graph):
 
                         graph.create_op(op_type=ops_dict["ElementTimes"], inputs=tf_inputs, 
                             dtypes=[node.outputs[0].dtype], name=node.outputs[0].uid, attrs=attrs) 
-           
+                else:
+                    dimX = tensor_shape_pb2.TensorShapeProto.Dim(size=node.outputs[0].shape[0])
+                    try:
+                        dimY = tensor_shape_pb2.TensorShapeProto.Dim(size=node.outputs[0].shape[1])
+                    except IndexError:
+                        dimY = tensor_shape_pb2.TensorShapeProto.Dim(size=1)
+                    shape = tensor_shape_pb2.TensorShapeProto(dim=(dimX,dimY))
+                    attr = attr_value_pb2.AttrValue(shape=shape)
+                    attrs = {"shape": attr}
+                    op = graph.create_op("Placeholder", inputs =[],
+                                 dtypes=[node.outputs[0].dtype], attrs=attrs, 
+                                 name=node.outputs[0].uid)
+                    for input in tf_inputs:
+                        op._add_input(input)
         except AttributeError:
             # OutputVariable node
             try:

@@ -13,10 +13,19 @@ from cntk.device import cpu, set_default_device
 from cntk.learner import learning_rate_schedule, UnitType, momentum_sgd, momentum_as_time_constant_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, element_select, alias, hardmax
 from cntk.ops.functions import CloneMethod
+from cntk.graph import *
+import tensorflow as tf
+from tensorflow.core.framework import summary_pb2
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "common"))
 from nn import LSTMP_component_with_self_stabilization, stabilize, linear_layer, print_training_progress
+
+
+def summary_message(tag,value):
+    return summary_pb2.Summary(value=[summary_pb2.Summary.Value
+            (tag=tag,simple_value=value)])
+
 
 # Given a vocab and tensor, print the output
 def print_sequences(sequences, i2w):
@@ -69,11 +78,14 @@ def translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim, debug_ou
 
 def sequence_to_sequence_translator(debug_output=False, run_test=False):
 
+
+    session = tf.Session()
+
     input_vocab_dim = 69
     label_vocab_dim = 69
 
     # network complexity; initially low for faster testing
-    hidden_dim = 256
+    hidden_dim = 1
     num_layers = 1
 
     # Source and target inputs to the model
@@ -140,6 +152,8 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     # Softmax output layer
     z = linear_layer(stabilize(decoder_output), label_vocab_dim)
 
+    create_tensorflow_graph(z, session.graph)
+
     # Criterion nodes
     ce = cross_entropy_with_softmax(z, label_sequence)
     errs = classification_error(z, label_sequence)
@@ -185,7 +199,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     i = 0
     mbs = 0
     minibatch_size = 72
-    epoch_size = 908241
+    epoch_size = 100#908241
     max_epochs = 10
     training_progress_output_freq = 500
 
@@ -200,6 +214,8 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
             find_arg_by_name('raw_input',ng)  : valid_reader.streams.features,
             find_arg_by_name('raw_labels',ng) : valid_reader.streams.labels
         }
+
+    train_writer = tf.train.SummaryWriter(logdir='/home/alona/tflogs/s2s', graph=session.graph, flush_secs=30)
 
     for epoch in range(max_epochs):
         loss_numer = 0
@@ -227,6 +243,10 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
             i += mb_train[raw_labels].num_samples
             mbs += 1
 
+            train_writer.add_summary(summary_message("training_loss", trainer.previous_minibatch_loss_average), i)
+            train_writer.add_summary(summary_message("train_eval_criterion", trainer.previous_minibatch_evaluation_average), i)
+
+
         print("--- EPOCH %d DONE: loss = %f, errs = %f ---" % (epoch, loss_numer/denom, 100.0*(metric_numer/denom)))
 
 
@@ -245,6 +265,8 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     error2 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
 
     assert error1 == error2
+
+    train_writer.close()
 
     return error1
 
