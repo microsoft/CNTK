@@ -9,7 +9,6 @@
 #define _FILEUTIL_
 
 #include "Basics.h"
-#include <stdio.h>
 #ifdef __WINDOWS__
 #define NOMINMAX
 #include "Windows.h" // for mmreg.h and FILETIME
@@ -705,8 +704,9 @@ class auto_file_ptr
             bool readMode = false;
 
 #ifdef _WIN32
-            if ((f->_flag&_IOREAD) == _IOREAD)
-                readMode = true;
+            //TODO fixme if ((f->_flag&_IOREAD) == _IOREAD)
+                //readMode = true;
+            readMode = false; // fail in any case
 #else
             int mode = fcntl(fileno(f), F_GETFL);
             if ((mode & O_ACCMODE) == O_RDONLY)
