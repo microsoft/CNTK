@@ -216,7 +216,7 @@ namespace LSTM
             return true;
         }
 
-		LSTMInfo Info(const uint32_t p_dstIP) // TO-DO: query FPGA at runtime
+		LSTMInfo Info(const uint32_t /*p_dstIP*/) // TO-DO: query FPGA at runtime
 		{
 			LSTMInfo info;
 			info.inputDim = c_inputDim;

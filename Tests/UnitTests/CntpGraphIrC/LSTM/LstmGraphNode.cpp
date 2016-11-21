@@ -50,7 +50,7 @@ LstmGraphNode::~LstmGraphNode()
 	const size_t inVectorLen = 200,
 		outVectorLen = 500;
 
-    fprintf(stderr, "LstmGraphNode::Forward(out %u, left %u, right %u) called\n", out.size(), left.size(), right.size());
+    fprintf(stderr, "LstmGraphNode::Forward(out %lu, left %lu, right %lu) called\n", (unsigned long)out.size(), (unsigned long)left.size(), (unsigned long)right.size());
 
 	assert(lstmClient != nullptr);
 
@@ -82,7 +82,7 @@ LstmGraphNode::~LstmGraphNode()
 		}
 		else
 		{
-			out[n] = n;
+			out[n] = (float)n;
 		}
     }
 }
