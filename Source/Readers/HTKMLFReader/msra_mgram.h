@@ -15,6 +15,8 @@
 #include <algorithm> // for various sort() calls
 #include <math.h>
 
+#pragma warning(disable: 4457)
+
 namespace msra { namespace lm {
 
 // ===========================================================================
