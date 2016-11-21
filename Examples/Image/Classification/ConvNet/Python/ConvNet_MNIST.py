@@ -16,7 +16,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
-data_path  = os.path.join(abs_path, "..", "..", "..", "Datasets", "MNIST")
+data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "MNIST")
 model_path = os.path.join(abs_path, "Models")
 
 # Define the reader for both training and evaluation action.
