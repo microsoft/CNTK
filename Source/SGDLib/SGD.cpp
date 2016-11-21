@@ -34,6 +34,8 @@
 #include <map>
 #include <set>
 
+#pragma warning(disable: 4459)
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;

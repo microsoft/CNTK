@@ -21,6 +21,8 @@
 #include <assert.h>
 
 
+#pragma warning(disable: 4459)
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 vector<size_t> numSequencesForFrame;
