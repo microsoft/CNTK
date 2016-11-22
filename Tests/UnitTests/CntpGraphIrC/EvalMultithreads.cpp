@@ -8,59 +8,19 @@
 #include <thread>
 #include <iostream>
 #include "CNTKLibrary.h"
+#include "LSTM/LstmGraphNode.h"
 
 using namespace CNTK;
 
+#pragma warning(push, 0)
 #include <graphid.pb.h>
 #include <google/protobuf/util/json_util.h>
+#pragma warning(pop)
 
 extern "C"
 {
 #include <b64/cencode.h>
 }
-
-class FpgaFunction : public UserDefinedFunctionHandler
-{
-public:
-
-    FpgaFunction(
-        std::vector<Variable>& inputs,
-        Dictionary&& functionConfig,
-        const std::wstring& name,
-        const std::wstring& uid)
-        : _inputs(inputs), _functionConfig(functionConfig), _name(name), _uid(uid)
-    {
-    }
-
-    virtual /*BackPropStatePtr*/void ForwardFloat(
-        std::vector<float>& out,
-        const std::vector<float>& left,
-        const std::vector<float>& right
-    ) override
-    {
-        fprintf(stderr, "FpgaFunction::Forward(out %u, left %u, right %u) called\n", out.size(), left.size(), right.size());
-
-        for (auto n = 0; n < out.size(); n++)
-        {
-            out[n] = n;
-        }
-    }
-
-    virtual void Backward(
-        ////const BackPropStatePtr& /*state*/,
-        ////const std::unordered_map<Variable, ValuePtr>& /*rootGradientValues*/,
-        ////std::unordered_map<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/
-    ) override
-    {
-        NOT_IMPLEMENTED;
-    }
-
-private:
-    std::vector<Variable> _inputs;
-    Dictionary _functionConfig;
-    const std::wstring _name;
-    const std::wstring _uid;
-};
 
 
 template <typename FunctionType>
@@ -90,7 +50,7 @@ std::string ConstructUniqueName(const std::wstring& name)
     return std::string(name.begin(), name.end());
 }
 
-graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc, const DeviceDescriptor& device)
+graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc)
 {
     graphIR::Graph &graph = *(new graphIR::Graph());
 
@@ -126,26 +86,24 @@ graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc, const DeviceDescriptor& 
         auto where = strstr.tellp();
         auto str = strstr.str();
 
-        base64_encodestate state;
-        base64_init_encodestate(&state);
+		{
+			base64_encodestate state;
+			base64_init_encodestate(&state);
 
-        graphIR::InitArg initArg;
-        initArg.set_dbytes(4); // fp32 is 4 bytes per entry
-        char *sout = new char[str.length() * 2];
-        memset(sout, 0, str.length() * 2);
-        base64_encode_block((const char *)str.c_str(), str.length(), sout, &state);
-        base64_encode_blockend(sout, &state);
+			char *sout = new char[str.length() * 2];
+			memset(sout, 0, str.length() * 2);
+			base64_encode_block((const char *)str.c_str(), (int)str.length(), sout, &state);
+			base64_encode_blockend(sout, &state);
 
-        if (strlen(sout) > 100)
-        {
-            strcpy_s(sout + 90, str.length()*2 - 100, "...");
-        }
+			if (strlen(sout) > 100)
+			{
+				strcpy_s(sout + 90, str.length() * 2 - 100, "...");
+			}
 
-        (*node->mutable_ext_attrs())["##CNTK##NODE##"] = sout;
+			(*node->mutable_ext_attrs())["##CNTK##NODE##"] = sout;
 
-        delete[] sout;
-
-
+			delete[] sout;
+		}
 
         for (auto out : f->Placeholders())
         {
@@ -168,7 +126,7 @@ graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc, const DeviceDescriptor& 
             int rank = 0;
             for (auto dims : out.Shape().Dimensions())
             {
-                input->add_shape(dims);
+                input->add_shape((int)dims);
 
                 if (rank++ != 0) fprintf(stderr, ", ");
                 fprintf(stderr, "%d", dims);
@@ -195,7 +153,7 @@ graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc, const DeviceDescriptor& 
 
             char *sout = new char[rank * 4 * 2];
             memset(sout, 0, rank * 4 * 2);
-            base64_encode_block((char *)buf, rank * 4, sout, &state);
+            base64_encode_block((char *)buf, (int)(rank * 4), sout, &state);
             base64_encode_blockend(sout, &state);
 
             // TODO: remove this to export the entire data, not just
@@ -232,7 +190,7 @@ graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc, const DeviceDescriptor& 
 
             char *sout = new char[rank * 4 * 2];
             memset(sout, 0, rank * 4 * 2);
-            base64_encode_block((const char *)buf, rank * 4, sout, &state);
+            base64_encode_block((const char *)buf, (int)(rank * 4), sout, &state);
             base64_encode_blockend(sout, &state);
 
             if (strlen(sout) > 100)
@@ -307,7 +265,7 @@ graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc, const DeviceDescriptor& 
                 int rank = 0;
                 for (auto dims : out.Shape().Dimensions())
                 {
-                    output->add_shape(dims);
+                    output->add_shape((int)dims);
 
                     if (rank++ != 0) fprintf(stderr, ", ");
                     fprintf(stderr, "%d", dims);
@@ -327,38 +285,10 @@ graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc, const DeviceDescriptor& 
     return graph;
 }
 
-CNTK::FunctionPtr GraphIrToCntkGraph(graphIR::Graph &graphIrPtr, CNTK::FunctionPtr modelFuncPtr)
+CNTK::FunctionPtr GraphIrToCntkGraph(graphIR::Graph &/*graphIrPtr*/, CNTK::FunctionPtr /*modelFuncPtr*/)
 {
     return nullptr;
 }
-
-FunctionPtr FpgaFunctionFactory(
-    const std::wstring& op,
-    std::vector<Variable>& inputs,
-    Dictionary&& functionConfig,
-    const std::wstring& functionName,
-    const std::wstring& uid)
-{
-    fprintf(stderr, "Inspecting %-32S%S\n", uid.c_str(), functionName.c_str());
-
-    if (op == L"Times")
-    {
-        fprintf(stderr, "    OVERRIDING as fpga node.\n");
-
-        auto functionConfigCopy = functionConfig;
-        auto interceptTarget = std::make_shared<FpgaFunction>(inputs, std::move(functionConfigCopy), functionName, uid);
-
-        return UserDefinedFuntion(
-                inputs,
-                std::move(functionConfig),
-                functionName,
-                uid,
-                interceptTarget);
-    }
-
-    return nullptr;
-}
-
 
 bool GetVariableByName(std::vector<Variable> variableLists, std::wstring varName, Variable& var)
 {
@@ -482,15 +412,15 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
 }
 
 
-void MultiThreadsEvaluation(bool isGPUAvailable)
+void MultiThreadsEvaluation()
 {
     auto device = DeviceDescriptor::CPUDevice();
 
     // The model file will be trained and copied to the current runtime directory first.
-    auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, L"\\CNTK\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn", device, FpgaFunctionFactory);
+    auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, L"\\CNTK\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn", device, LstmGraphNodeFactory);
 
     // convert cntk to graphir
-    auto graphIrPtr = CntkGraphToGraphIr(modelFuncPtr, device);
+    auto graphIrPtr = CntkGraphToGraphIr(modelFuncPtr);
 
     RunEvaluationClassifier(modelFuncPtr, device);
 

@@ -7,17 +7,15 @@
 #include <functional>
 
 
-#include <BrainSliceClient.h>
-
 using namespace CNTK;
 
-void MultiThreadsEvaluation(bool);
+using namespace std;
+
+void MultiThreadsEvaluation();
+
 
 int main()
 {
-	auto bsClient = BrainSlice::Create(false);
-
-
 #ifndef CPUONLY
 #error "must use CPU Only"
 #else
@@ -28,7 +26,7 @@ int main()
     // which will have a silent performance degradation otherwise
     Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
 
-    MultiThreadsEvaluation(false);
+    MultiThreadsEvaluation();
 
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
     fflush(stderr);
