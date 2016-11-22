@@ -13,10 +13,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
                      element_select, alias, hardmax, placeholder_variable, combine
 from cntk.ops.functions import CloneMethod
 from cntk.graph import find_nodes_by_name
-
-#from cntk.blocks import LSTM, Stabilizer
-from localblocks import LSTM, Stabilizer
-
+from cntk.blocks import LSTM, Stabilizer
 from cntk.layers import Dense
 from cntk.utils import get_train_eval_criterion, get_train_loss
 from attention import create_attention_augment_hook
