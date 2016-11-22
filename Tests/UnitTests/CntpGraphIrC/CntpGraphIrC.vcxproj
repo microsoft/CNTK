@@ -149,6 +149,7 @@
   <ItemGroup>
     <ClInclude Include="GraphIr\cpp\graphid.pb.h" />
     <ClInclude Include="Image.h" />
+    <ClInclude Include="LSTM\FixedPoint.hpp" />
     <ClInclude Include="LSTM\LSTMClient.h" />
     <ClInclude Include="LSTM\LstmGraphNode.h" />
   </ItemGroup>
