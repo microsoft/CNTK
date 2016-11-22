@@ -109,67 +109,25 @@ public:
         m_originIndex = 0;
         for (int i = (int)dimCount - 1; i >= 0; i--)
         {
-            assert((m_outputShape[i] % GetMapCount(i)) == 0);
-            int outPerMap = (int)(m_outputShape[i] / GetMapCount(i));
-            // Number of cells between first and last "centers", inclusive.
-            int cells = (int)((outPerMap - 1) * GetStride(i) + 1);
-            assert(m_inputShape[i] >= cells);
-
-            // Extra cells, to the left and right of "cells".
-            int extra = (int)m_inputShape[i] - cells;
-            assert(extra >= 0);
-
-            // When LowerPad and/or UpperPad are specified, the Start[i] value is determined by those values.
-            int lo = GetAutoPad(i) ? 0 : (int)m_lowerPad[m_lowerPad.size() == 1 ? 0 : i];
-            int hi = GetAutoPad(i) ? 0 : (int)m_upperPad[m_upperPad.size() == 1 ? 0 : i];
-            if (lo != 0 || hi != 0)
-            {
-                assert(extra + lo + hi + 1 == m_kernelShape[i]);
-                // Compute the number of cells on the left and right parts of the kernel,
-                // not counting the "kernel-center" cell. If m_kernelShape[i] is even, the extra cell is
-                // placed on the right (the center is shifted to the left).
-                int right = (int)m_kernelShape[i] - 1;
-                int left = right / 2;
-                right -= left;
-                assert(left <= right);
-                assert(right <= left + 1);
-
-                assert(lo <= left);
-                assert(hi <= right);
-                m_start[i] = left - lo;
-                assert(m_start[i] + cells + right == m_inputShape[i] + hi);
-            }
+            bool padded = GetAutoPad(i); 
+            if (padded)
+                m_start[i] = 0; 
             else
             {
-                m_start[i] = extra / 2;
-#ifdef _DEBUG
-                // If we're padding then extra should be covered.
-                bool padded = GetAutoPad(i);
-                assert(!padded || extra + 1 <= m_kernelShape[i]);
-                // If we're not padding then, we should stay within the input dimension.
-                assert(padded || extra + 1 >= m_kernelShape[i]);
-
-                // Compute the number of cells on the left and right parts of the kernel,
-                // not counting the "kernel-center" cell. If m_kernelShape[i] is even, the extra cell is
-                // placed on the right (the center is shifted to the left).
-                int right = (int)m_kernelShape[i] - 1;
-                int left = right / 2;
-                right -= left;
-                assert(0 <= left);
-                assert(left <= right);
-                assert(right <= left + 1);
-
-                int min = m_start[i] - left;
-                int max = m_start[i] + (int)cells + right;
-                assert(!padded || min <= 0 && max >= m_inputShape[i]);
-                assert(padded || min >= 0 && max <= m_inputShape[i]);
-
-                int diff = min - ((int)m_inputShape[i] - max);
-                assert(std::abs(diff) <= 1);
-
-                UNUSED(padded);
-                UNUSED(diff);
-#endif
+                m_start[i] = ((int)m_kernelShape[i] - 1) / 2;
+                int lo = (int)m_lowerPad[m_lowerPad.size() == 1 ? 0 : i];
+                int hi = (int)m_upperPad[m_upperPad.size() == 1 ? 0 : i];
+                if (lo != 0 || hi != 0)
+                {
+                    m_start[i] -= lo;
+                    int outPerMap = (int)(m_outputShape[i] / GetMapCount(i));
+                    int cells = (int)((outPerMap - 1) * GetStride(i) + 1);
+                    if (cells > 0)  // dummy if, just to get rid of warning 
+                    {
+                        assert(m_inputShape[i] >= cells);
+                        assert(m_start[i] + cells + (int)m_kernelShape[i] - 1 == m_inputShape[i] + hi);
+                    }
+                }
             }
 
             m_startIndex = m_startIndex * (int)m_inputShape[i] + m_start[i];
