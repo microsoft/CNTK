@@ -120,6 +120,7 @@ public:
                 if (lo != 0 || hi != 0)
                 {
                     m_start[i] -= lo;
+                    assert(m_start[i] >= 0); 
                     int outPerMap = (int)(m_outputShape[i] / GetMapCount(i));
                     int cells = (int)((outPerMap - 1) * GetStride(i) + 1);
                     if (cells > 0)  // dummy if, just to get rid of warning 
