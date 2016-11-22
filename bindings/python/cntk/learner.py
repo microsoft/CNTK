@@ -15,12 +15,12 @@ class UnitType(Enum):
     per-minibatch basis.
     '''
 
-    sample = 1
+    sample = 'sample'
     '''
     Schedule contains per-sample values.
     '''
 
-    minibatch = 2
+    minibatch = 'minibatch'
     '''
     Schedule contains per-minibatch values (and need to be re-scaled by the learner
     using the actual minibatch size in samples).
@@ -169,10 +169,6 @@ def training_parameter_schedule(schedule, unit, epoch_size=1):
     See also:
         :func:`learning_rate_schedule`
     '''
-    if not isinstance(unit, UnitType):
-            raise ValueError('schedule unit "%s" is not supported' %
-                    str(method))
-
     if unit == UnitType.sample:
         if isinstance(schedule, cntk_py.training_parameter_per_sample_schedule):
             return schedule
@@ -181,13 +177,16 @@ def training_parameter_schedule(schedule, unit, epoch_size=1):
             return schedule
 
     if isinstance(schedule, (int, float)):
-        if unit is UnitType.sample:
+        if epoch_size != 1:
+            raise ValueError('when providing the schedule as a number,'
+                    ' epoch_size is ignored')
+        if UnitType(unit) is UnitType.sample:
             return cntk_py.training_parameter_per_sample_schedule(schedule)
         else:
             return cntk_py.training_parameter_per_minibatch_schedule(schedule)
 
     if isinstance(schedule, list):
-        if unit is UnitType.sample:
+        if UnitType(unit) is UnitType.sample:
             return cntk_py.training_parameter_per_sample_schedule(schedule, epoch_size)
         else:
             return cntk_py.training_parameter_per_minibatch_schedule(schedule, epoch_size)

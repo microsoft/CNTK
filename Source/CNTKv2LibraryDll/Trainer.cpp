@@ -13,12 +13,20 @@ namespace
 {
     const std::wstring learnersPropertyName = L"Learners";
     const std::wstring distributedLearnerPropertyName = L"DistributedLearner";
+    const std::wstring totalSeenSamplesPropertyName = L"TotalSeenSamples";
 }
 
 namespace CNTK
 {
     Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners, const DistributedTrainerPtr& distributedTrainer)
-        : m_model(model), m_lossFunction(lossFunction), m_evaluationFunction(evaluationFunction), m_parameterLearners(parameterLearners), m_prevMinibatchNumSamples(1), m_distributedTrainer(distributedTrainer)
+        : m_model(model),
+          m_lossFunction(lossFunction),
+          m_evaluationFunction(evaluationFunction),
+          m_parameterLearners(parameterLearners),
+          m_prevMinibatchNumSamples(1),
+          m_distributedTrainer(distributedTrainer),
+          m_totalSamplesSeen(0),
+          m_distributed(false)
     {
         std::vector<Variable> combinedFunctionArgs = { m_model, m_lossFunction };
         if (!m_lossFunction->Output().DynamicAxes().empty())
@@ -151,14 +159,36 @@ namespace CNTK
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
+        {
+            // TODO: We should reconsider the interface
+            // Probably passing the flag that the minibatch is the last, and empty arguments in case of empty minibatch.
+            bool emptyMinibatch = arguments.empty() || (arguments.begin()->second == nullptr);
+            if (emptyMinibatch)
+                return HandleEmptyMinibatch(arguments.empty());
+        }
+
         std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedLossFunction, nullptr }, { m_trainingSampleCountVar, nullptr } };
         if (m_aggregatedEvaluationFunction)
             outputs.insert({ m_aggregatedEvaluationFunction, nullptr });
 
         outputs.insert(outputsToFetch.begin(), outputsToFetch.end());
 
-        if (m_distributedTrainer)
+        bool wasDistributed = m_distributed;
+
+        // when distributed trainer exists, parallelization starts after specified number of samples seen
+        // before that, all workers run locally without aggregation (and minibatch source run locally as well)
+        // NOTE that this relies on determinism on reader for all workers to reach the same state
+        // TODO: pass the model/parameter from worker-0 to other workers when start parallelization
+
+        m_distributed = IsRunningDistributed();
+
+        if (m_distributed)
+        {
+            // when switching from not distributed, all workers needs to sync up before starting cooperation
+            if (!wasDistributed) m_distributedTrainer->GetCommunicator()->Barrier();
+
             m_distributedTrainer->PreMinibatchCallback(*this);
+        }
 
         auto backPropSate = m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice, { m_aggregatedLossFunction });
         m_prevMinibatchAggregateTrainingLossValue = outputs[m_aggregatedLossFunction];
@@ -184,19 +214,21 @@ namespace CNTK
             parameterGradients[parameter] = nullptr;
         }
 
+        // TODO: Why Backward signature does not take Parameter instead of Variable for gradients?
         m_combinedTrainingFunction->Backward(backPropSate, { { m_aggregatedLossFunction, rootGradientValue } }, parameterGradients);
 
         m_prevMinibatchNumSamples = GetSampleCount(m_trainingSampleCountVar, outputs[m_trainingSampleCountVar]);
+        m_totalSamplesSeen += m_prevMinibatchNumSamples;
+
+        // Aggregation should happen in the same order, the order of parmaters is guaranteed to be the same.
+        std::vector<std::pair<Parameter, NDArrayViewPtr>> gradients;
+        gradients.reserve(modelParameters.size());
+        for (const auto& parameter : modelParameters)
+            gradients.push_back(std::make_pair(parameter, parameterGradients[parameter]->Data()));
 
         bool endOfData = m_prevMinibatchNumSamples == 0;
-        if (m_distributedTrainer)
+        if (m_distributed)
         {
-            // Aggregation should happen in the same order, the order of parmaters is guaranteed to be the same.
-            std::vector<std::pair<Parameter, NDArrayViewPtr>> gradients;
-            gradients.reserve(modelParameters.size());
-            for (const auto& parameter : modelParameters)
-                gradients.push_back(std::make_pair(parameter, parameterGradients[parameter]->Data()));
-
             MinibatchInfo info
             {
                 arguments.empty(),
@@ -209,6 +241,11 @@ namespace CNTK
             m_prevMinibatchNumSamples = info.numberOfSamples;
         }
 
+        return UpdateLearners(std::unordered_map<Parameter, NDArrayViewPtr>(gradients.begin(), gradients.end())) && !endOfData;
+    }
+
+    bool Trainer::UpdateLearners(const std::unordered_map<Parameter, NDArrayViewPtr>& gradients)
+    {
         bool anyUpdatesPerformed = false;
         for (auto learner : m_parameterLearners)
         {
@@ -216,16 +253,55 @@ namespace CNTK
             const auto& learnerParameters = learner->Parameters();
             for (const auto& parameter : learnerParameters)
             {
-                learnerParameterGradients[parameter] = parameterGradients[parameter]->Data();
+                auto value = gradients.find(parameter);
+                if (value == gradients.end())
+                    LogicError("Learner contains parameter that does not exists in the model");
 
-                if (parameterGradients[parameter]->Mask())
-                    LogicError("The gradient value for a Parameter cannot have an associated mask!");
+                learnerParameterGradients[parameter] = value->second;
             }
 
             anyUpdatesPerformed |= learner->Update(learnerParameterGradients, m_prevMinibatchNumSamples);
         }
+        return anyUpdatesPerformed;
+    }
 
-        return anyUpdatesPerformed && !endOfData;
+    bool Trainer::HandleEmptyMinibatch(bool atEndOfData)
+    {
+        if (m_distributedTrainer == nullptr) return false;
+
+        m_prevMinibatchNumSamples = 0;
+
+        // Gradients are not existing.
+        std::vector<std::pair<Parameter, NDArrayViewPtr>> gradients;
+        auto modelParameters = m_combinedTrainingFunction->Parameters();
+        gradients.reserve(modelParameters.size());
+        for (const auto& parameter : modelParameters)
+            gradients.push_back(std::make_pair(parameter, nullptr));
+
+        MinibatchInfo info
+        {
+            atEndOfData,
+            0,
+            m_prevMinibatchAggregateTrainingLossValue->Data(),
+            m_prevMinibatchAggregateEvalCriterionValue->Data()
+        };
+
+        bool end = m_distributedTrainer->PreParameterUpdateCallback(*this, gradients, info);
+        m_prevMinibatchNumSamples = info.numberOfSamples;
+
+        bool anyUpdatesPerformed = false;
+        if (!m_prevMinibatchNumSamples)
+            anyUpdatesPerformed = UpdateLearners(std::unordered_map<Parameter, NDArrayViewPtr>(gradients.begin(), gradients.end()));
+        return anyUpdatesPerformed && !end;
+    }
+
+    bool Trainer::IsRunningDistributed() const
+    {
+        return m_distributedTrainer != nullptr &&
+            // TODO: only run distributed with more than 1-worker. 
+            // This is disabled now for V1 parity so that quantization would run for 1-worker
+            //m_distributedTrainer->GetCommunicator()->Workers().size() > 1 &&
+            m_totalSamplesSeen >= m_distributedTrainer->GetDistributedAfterSampleCount();
     }
 
     static std::wstring GetTrainerStateCheckpointFilePath(const std::wstring& modelFilePath)
@@ -258,14 +334,13 @@ namespace CNTK
         vector<DictionaryValue> learnerStates;
         for (const auto& learner : m_parameterLearners)
         {
-            // TODO: add DictionaryValue(T&&)
-            learnerStates.push_back(DictionaryValue(learner->Serialize()));
+            learnerStates.push_back(std::move(DictionaryValue(learner->Serialize())));
         }
 
-        // add DictionaryValue ctor that takes an rvalue!
         Dictionary state;
         state[learnersPropertyName] = learnerStates;
         state[distributedLearnerPropertyName] = distributedLearnerState;
+        state[totalSeenSamplesPropertyName] = m_totalSamplesSeen;
 
         m_combinedTrainingFunction->SaveModel(modelFilePath, usinglegacyModelFormat);
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
@@ -284,6 +359,7 @@ namespace CNTK
         Dictionary checkpoint;
         *ckpStream >> checkpoint;
 
+        m_totalSamplesSeen = checkpoint[totalSeenSamplesPropertyName].Value<size_t>();
         const DictionaryValue& learners = checkpoint[learnersPropertyName];
         const vector<DictionaryValue>& learnerStates = learners.Value<vector<DictionaryValue>>();
 

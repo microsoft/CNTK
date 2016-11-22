@@ -191,18 +191,11 @@ class Function(cntk_py.Function):
         the function whose ``is_input`` is `True`.
 
         Example:
-            >>> v = C.input_variable(shape=(1,3))
+            >>> v = C.input_variable(shape=(3,))
             >>> f = C.reciprocal(v)
             >>> _, fv = f.forward({v:[[1, 2, 4]]}, [f.output])
             >>> list(fv.values())[0]
-            array([[[[ 1.  ,  0.5 ,  0.25]]]], dtype=float32)
-
-        Example:
-            >>> v = C.input_variable(shape=(1,3))
-            >>> f = C.reciprocal(v)
-            >>> _, fv = f.forward({v:[[1, 2, 4]]}, [f.output])
-            >>> list(fv.values())[0]
-            array([[[[ 1.  ,  0.5 ,  0.25]]]], dtype=float32)
+            array([[[ 1.  ,  0.5 ,  0.25]]], dtype=float32)
 
         Args:
             arguments: maps variables to their
@@ -261,9 +254,9 @@ class Function(cntk_py.Function):
             >>> # compute the value and the derivative of the sigmoid at 0
             >>> v = C.input_variable(shape=(1,))
             >>> f = C.sigmoid(v)
-            >>> df, fv = f.forward({v:[0]}, [f.output], set([f.output]))
+            >>> df, fv = f.forward({v:[[0]]}, [f.output], set([f.output]))
             >>> value = list(fv.values())[0]
-            >>> grad  = f.backward(df, {f.output: np.ones_like(value)}, set([v]))
+            >>> grad = f.backward(df, {f.output: np.ones_like(value)}, set([v]))
             >>> value
             array([[[ 0.5]]], dtype=float32)
             >>> list(grad.values())[0]

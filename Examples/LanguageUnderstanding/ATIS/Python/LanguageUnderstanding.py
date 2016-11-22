@@ -105,7 +105,7 @@ def train(reader, model, max_epochs):
             # BUGBUG? The change of minibatch_size parameter vv has no effect.
             data = reader.next_minibatch(min(minibatch_size, epoch_end-t), input_map=input_map) # fetch minibatch
             trainer.train_minibatch(data)                                   # update model with it
-            t += data[slot_labels].num_samples                              # count samples processed so far
+            t += trainer.previous_minibatch_sample_count                    # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
             #def trace_node(name):
             #    nl = [n for n in z.parameters if n.name() == name]

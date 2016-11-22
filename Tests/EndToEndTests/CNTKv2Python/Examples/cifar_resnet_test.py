@@ -15,7 +15,7 @@ import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ResNet", "Python"))
-from CifarResNet import train_and_evaluate, create_reader
+from TrainResNet_CIFAR10 import train_and_evaluate, create_reader
 
 TOLERANCE_ABSOLUTE = 2E-1
 
@@ -45,7 +45,7 @@ def test_cifar_resnet_error(device_id):
     reader_train = create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
 
-    test_error = train_and_evaluate(reader_train, reader_test, max_epochs=5)
+    test_error = train_and_evaluate(reader_train, reader_test, 'resnet20', 5)
     expected_test_error = 0.282
 
     assert np.allclose(test_error, expected_test_error,

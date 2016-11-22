@@ -70,5 +70,5 @@ def test_constant_shape_inf():
     shape = (-1,4)
     c = constant(value=2, shape=shape)
     assert np.allclose(c.shape, shape)
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         c.value

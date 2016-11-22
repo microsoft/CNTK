@@ -17,8 +17,6 @@ def is_first(seq, name=''):
     first element of the sequence is 1 and all others are 0.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.is_first(x)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
@@ -44,8 +42,6 @@ def is_last(seq, name=''):
     last element of the sequence is 1 and all others are 0.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.is_last(x)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
@@ -92,8 +88,6 @@ def first(seq, name=''):
     Returns the first element of its symbolic input sequence ``seq``
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.first(x)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
@@ -119,8 +113,6 @@ def last(seq, name=''):
     Returns the last element of its symbolic input sequence ``seq``
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.last(x)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
@@ -148,16 +140,14 @@ def where(condition, name=''):
     a new sequence containing the indices for which the values were true.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
-        >>> z = C.greater(C.reduce_sum(x),60)
+        >>> z = C.greater(C.reduce_sum(x), 60)
+        >>> x0 = np.reshape(np.arange(24.0, dtype=np.float32), (4,3,2))
+        >>> z.eval({x:x0}).flatten()
+        array([ 0.,  0.,  1.,  1.], dtype=float32)
         >>> y = C.sequence.where(z)
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
-        >>> z.eval({x:x0})
-        array([[ 0.,  0.,  1.,  1.]], dtype=float32)
-        >>> y.eval({x:x0})
-        array([[ 2.,  3.]], dtype=float32)
+        >>> y.eval({x:x0}).flatten()
+        array([ 2.,  3.], dtype=float32)
 
     Args:
         condition: the symbolic sequence of booleans
@@ -218,8 +208,6 @@ def scatter(seq, condition, name=''):
     preserving their order.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> t = C.sequence.last(x)
         >>> b = C.sequence.is_first(x)
@@ -265,8 +253,6 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
     and broadcasting the value of the ``operand`` along those dynamic axes.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> t = C.sequence.last(x)
         >>> b = C.sequence.is_first(x)

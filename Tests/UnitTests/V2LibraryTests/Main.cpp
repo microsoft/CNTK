@@ -23,6 +23,7 @@ void TrainSequenceToSequenceTranslator();
 void TrainTruncatedLSTMAcousticModelClassifer();
 void DeviceSelectionTests();
 void MultiThreadsEvaluation(bool);
+void MinibatchSourceTests();
 
 int main()
 {
@@ -64,6 +65,8 @@ int main()
 
     TrainSequenceToSequenceTranslator();
     TrainTruncatedLSTMAcousticModelClassifer();
+
+    MinibatchSourceTests();
 
     MultiThreadsEvaluation(IsGPUAvailable());
 

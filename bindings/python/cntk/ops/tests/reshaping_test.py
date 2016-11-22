@@ -82,7 +82,7 @@ def test_op_reshape_bad_input():
 
 
 SLICE_TEST_CASES_STATIC = [
-    #(input_data, slice_params(beg_index, end_index,axis), expected_result)
+    #(input_data, slice_params(beg_index, end_index, axis), expected_result)
     ([[1, 2], [-3, 4]], (1, 2, 0), [[-3, 4]]),
     ([[1,2],[-3,4]], (1,2,1), [[2],[4]]),
 ]
@@ -155,7 +155,7 @@ SLICE_TEST_CASES_DYNAMIC = [
 
 @pytest.mark.parametrize("input_data, slice_params, expected_result",
                          SLICE_TEST_CASES_DYNAMIC)
-def test_op_slice_sequence(input_data, slice_params, expected_result, device_id, precision):
+def _test_op_slice_sequence(input_data, slice_params, expected_result, device_id, precision):
     input_data = AA(input_data, dtype=PRECISION_TO_TYPE[precision])
 
     t = Axis.new_unique_dynamic_axis('t')

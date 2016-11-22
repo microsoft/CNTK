@@ -27,6 +27,9 @@ template <class ElemType>
 class ReaderShim : public IDataReader
 {
     friend class ::CNTK::CompositeMinibatchSource;
+private:
+    ReaderShim();
+
 public:
     explicit ReaderShim(ReaderFactory factory);
     explicit ReaderShim(ReaderPtr reader);
@@ -88,15 +91,9 @@ public:
 
     virtual size_t GetCurrentSamplePosition() override;
 
-    void SetCurrentSamplePosition(size_t currentSamplePosition)
-    {
-        m_reader->SetCurrentSamplePosition(currentSamplePosition);
-    }
+    void SetCurrentSamplePosition(size_t currentSamplePosition);
 
-    void SetConfiguration(const ReaderConfiguration& config, const std::map<std::wstring, int>& inputDescriptions)
-    {
-        m_reader->SetConfiguration(config, inputDescriptions);
-    }
+    void SetConfiguration(const ReaderConfiguration& config, const std::map<std::wstring, int>& inputDescriptions);
 
     bool IsEndOfEpoch() const
     {

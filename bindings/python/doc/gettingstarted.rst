@@ -16,8 +16,8 @@ pass for that node using its inputs, and returns the result of the forward pass.
 more common case) is as follows:
 
     >>> import numpy as np
-    >>> x = cntk.input_variable((1, 2))
-    >>> y = cntk.input_variable((1, 2))
+    >>> x = cntk.input_variable(2)
+    >>> y = cntk.input_variable(2)
     >>> x0 = np.asarray([[2., 1.]], dtype=np.float32)
     >>> y0 = np.asarray([[4., 6.]], dtype=np.float32)
     >>> cntk.squared_error(x, y).eval({x:x0, y:y0})

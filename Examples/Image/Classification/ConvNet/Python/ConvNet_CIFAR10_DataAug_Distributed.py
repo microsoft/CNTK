@@ -5,18 +5,16 @@
 # ==============================================================================
 
 import os
-import argparse
 import math
 import numpy as np
-
 from cntk.utils import *
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
-from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-from cntk import Trainer, persist, cntk_py
-from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.layers import *
+from cntk.models import Sequential, LayerStack
+from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
+from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITE_SAMPLES
+from cntk import Trainer, persist, cntk_py, distributed
+from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
 from _cntk_py import set_computation_network_trace_level
-
-from resnet_models import *
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -30,7 +28,7 @@ num_channels = 3  # RGB
 num_classes  = 10
 
 # Define the reader for both training and evaluation action.
-def create_reader(map_file, mean_file, train):
+def create_reader(map_file, mean_file, train, distributed_after=INFINITE_SAMPLES):
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         raise RuntimeError("File '%s' or '%s' does not exist. Please run install_cifar10.py from DataSets/CIFAR-10 to fetch them" %
                            (map_file, mean_file))
@@ -46,49 +44,57 @@ def create_reader(map_file, mean_file, train):
         ImageDeserializer.mean(mean_file)
     ]
     # deserializer
-    return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
-        features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-        labels   = StreamDef(field='label', shape=num_classes))))   # and second as 'label'
+    return MinibatchSource(
+        ImageDeserializer(map_file, StreamDefs(
+            features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
+            labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+        randomize = False,
+        distributed_after = distributed_after)
 
 
 # Train and evaluate the network.
-def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
-
+def convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer, max_epochs = 80):
     set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
     input_var = input_variable((num_channels, image_height, image_width))
     label_var = input_variable((num_classes))
 
-    # create model, and configure learning parameters 
-    if network_name == 'resnet20': 
-        z = create_cifar10_model(input_var, 3, num_classes)
-        lr_per_mb = [1.0]*80+[0.1]*40+[0.01]
-    elif network_name == 'resnet110': 
-        z = create_cifar10_model(input_var, 18, num_classes)
-        lr_per_mb = [0.1]*1+[1.0]*80+[0.1]*40+[0.01]
-    else: 
-        return RuntimeError("Unknown model name!")
+    # apply model to input
+    scaled_input = element_times(constant(0.00390625), input_var)
+    with default_options (activation=relu, pad=True): 
+        z = Sequential([
+            LayerStack(2, lambda : [
+                Convolution((3,3), 64), 
+                Convolution((3,3), 64), 
+                MaxPooling((3,3), (2,2))
+            ]), 
+            LayerStack(2, lambda i: [
+                Dense([256,128][i]), 
+                Dropout(0.5)
+            ]), 
+            Dense(num_classes, activation=None)
+        ])(scaled_input)
 
     # loss and metric
     ce = cross_entropy_with_softmax(z, label_var)
     pe = classification_error(z, label_var)
 
-    # shared training parameters 
+    # training config
     epoch_size = 50000                    # for now we manually specify epoch size
-    minibatch_size = 128
-    momentum_time_constant = -minibatch_size/np.log(0.9)
-    l2_reg_weight = 0.0001
+    minibatch_size = 64
 
     # Set learning parameters
-    lr_per_sample = [lr/minibatch_size for lr in lr_per_mb]
-    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
-    mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
+    lr_per_sample          = [0.0015625]*20+[0.00046875]*20+[0.00015625]*20+[0.000046875]*10+[0.000015625]
+    lr_schedule            = learning_rate_schedule(lr_per_sample, unit=UnitType.sample, epoch_size=epoch_size)
+    momentum_time_constant = [0]*20+[600]*20+[1200]
+    mm_schedule            = momentum_as_time_constant_schedule(momentum_time_constant, epoch_size=epoch_size)
+    l2_reg_weight          = 0.002
     
     # trainer object
     learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
                                l2_regularization_weight = l2_reg_weight)
-    trainer     = Trainer(z, ce, pe, learner)
+    trainer     = Trainer(z, ce, pe, learner, distributed_trainer)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -108,9 +114,10 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
-        persist.save_model(z, os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
+        if distributed_trainer.communicator().current_worker().global_rank == 0:
+            persist.save_model(z, os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
     
-    # Evaluation parameters
+    ### Evaluation action
     epoch_size     = 10000
     minibatch_size = 16
 
@@ -128,7 +135,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
         metric_numer += trainer.test_minibatch(data) * current_minibatch
         metric_denom += current_minibatch
         # Keep track of the number of samples processed so far.
-        sample_count += data[label_var].num_samples
+        sample_count += trainer.previous_minibatch_sample_count
         minibatch_index += 1
 
     print("")
@@ -138,15 +145,14 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
     return metric_numer/metric_denom
 
 if __name__=='__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
-    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='160')
+    distributed_after_samples = 0
+    num_quantization_bits = 32
+    distributed_trainer = distributed.data_parallel_distributed_trainer(
+        num_quantization_bits=num_quantization_bits,
+        distributed_after=distributed_after_samples)
 
-    args = vars(parser.parse_args())
-    epochs = int(args['epochs'])
-    network_name = args['network']
-    
-    reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
+    reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True, distributed_after_samples)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 
-    train_and_evaluate(reader_train, reader_test, network_name, epochs)
+    convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer)
+    distributed.Communicator.finalize()

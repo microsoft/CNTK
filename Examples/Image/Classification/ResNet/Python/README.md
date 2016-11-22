@@ -8,7 +8,20 @@ This example code applies ResNet on the CIFAR-10 dataset. We strictly follow the
 
 We use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perform translation transform without scaling. Run the example from the current folder using:
 
-`python TrainResNet_CIFAR10.py resnet20`  
-`python TrainResNet_CIFAR10.py resnet110`
+`python TrainResNet_CIFAR10.py -n resnet20`  
+`python TrainResNet_CIFAR10.py -n resnet110`
 
 for ResNet20 and ResNet110, respectively. The ResNet20 network achieves an error rate of about `8.2%`, and the ResNet110 network achieves an error rate of about `6.3%`.
+
+### TrainResNet_CIFAR10_Distributed.py
+
+This example code is similiar to TrainResNet_CIFAR10.py, but it adds support for distributed training via [MPI](https://en.wikipedia.org/wiki/Message_Passing_Interface). Details can be found in [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines)
+Note this example requires a multi-GPU machine or mpi hosts file to distribute to multiple machines
+
+Simple aggregation, resnet20, with a 2-GPU machine:
+
+`mpiexec -n 2 python TrainResNet_CIFAR10_Distributed.py -n resnet20 -q 32`
+
+Quantized 1-bit aggregation with 50000 samples before distributed, resnet 20, with a 2-GPU machine:
+
+`mpiexec -n 2 python TrainResNet_CIFAR10_Distributed.py -n resnet20 -q 1 -a 50000`
