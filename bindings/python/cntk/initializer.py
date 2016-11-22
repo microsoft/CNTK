@@ -19,7 +19,7 @@ def uniform(scale=DefaultParamInitScale, seed=None):
 
     Returns:
         initializer for :class:`cntk.variables.Parameter`
-        initialized to uniform distribution between `scale*[-1, 1]`
+        initialized to uniform distribution between `scale*[-0.05, 0.05]`
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -38,7 +38,7 @@ def gaussian(output_rank=SentinelValueForInferParamInitRank, filter_rank=Sentine
 
     Returns:
         initializer for :class:`cntk.variables.Parameter`
-        initialized to Gaussian distribution with mean `0` and standard deviation `scale`. 
+        initialized to Gaussian distribution with mean `0` and standard deviation `scale*0.2/sqrt(fanIn))`. 
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
