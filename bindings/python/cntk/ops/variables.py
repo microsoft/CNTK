@@ -1,7 +1,7 @@
 import numpy as np
 from cntk import cntk_py, utils
 from ..tensor import TensorOpsMixin
-from ..utils import typemap, sanitize_precision, sanitize_value, sanitize_dtype_cntk
+from ..utils import typemap, sanitize_precision, sanitize_value, sanitize_dtype_cntk, _create_NDArrayView_from_NumPy
 
 class VariableMixin:
     '''
@@ -177,6 +177,17 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
         NumPy array of the value
         '''
         return super(Parameter, self).value().to_numpy()
+
+    @value.setter
+    def value(self, val):
+        if isinstance(val, np.ndarray):
+            ndarray = _create_NDArrayView_from_NumPy(val.astype(self.dtype))
+            super().set_value(ndarray)
+        elif isinstance(val, cntk_py.NDArrayView):
+            super().set_value(val)
+        else:
+            raise TypeError("Unsupported value type: %s", type(val))
+
 
 class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     '''

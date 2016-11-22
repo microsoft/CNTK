@@ -1704,6 +1704,7 @@ namespace CNTK
 
     protected:
         CNTK_API NDArrayViewPtr Value() const;
+        CNTK_API void SetValue(const NDArrayViewPtr& value);
 
     private:
 #ifdef SWIG
@@ -1996,6 +1997,16 @@ private:
         NDArrayViewPtr Value() const
         {
             return Variable::Value();
+        }
+
+        ///
+        /// Copies the contents of the 'value' NDArrayView into the view backing 'this' 
+        /// parameter's value. The shapes of both views must be identical.
+        ///
+        void SetValue(const NDArrayViewPtr& value)
+        {
+            Variable::SetValue(value);
+            RecordValueUpdate();
         }
 
         size_t CurrentValueTimeStamp() const { return m_dataFields->m_valueTimeStamp.load(); }

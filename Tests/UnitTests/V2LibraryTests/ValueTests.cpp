@@ -238,9 +238,50 @@ void ValueCreationOneHotWithNDMaskTest(const DeviceDescriptor device, bool readO
     CheckValue<ElementType>(testValue, {vocabSize, maxSeqLen, numberOfSequences}, vocabSize, data, seqLenList);
 }
 
+void TestSettingParameterValuesManually(const DeviceDescriptor& device)
+{
+    auto v1_1 = MakeSharedObject<NDArrayView>(0.5, NDShape({ 2, 2 }), device);
+    auto v1_2 = MakeSharedObject<NDArrayView>(0.4, NDShape({ 2, 2 }), device);
+
+    Parameter p1(v1_1);
+    auto value = p1.Value();
+
+    assert(!AreEqual(v1_1, v1_2) && !AreEqual(p1.Value(), v1_2));
+
+    p1.SetValue(v1_2);
+    if (!AreEqual(p1.Value(), v1_2))
+        throw std::runtime_error("Parameter value does match the expected value.");
+
+    Parameter p2(CNTK::NDArrayView::RandomUniform<float>({ 10 }, -0.05, 0.05, 1, device));
+    auto v2 = CNTK::NDArrayView::RandomUniform<float>({ 10 }, -0.05, 0.05, 2, device);
+    assert(!AreEqual(p2.Value(), v2));
+
+    p2.SetValue(v2);
+    if (!AreEqual(p2.Value(), v2))
+        throw std::runtime_error("Parameter value does match the expected value.");
+
+    Parameter p3(NDShape({ 3, 4 }), DataType::Float, GlorotUniformInitializer(), device, L"p3");
+    auto v3 = CNTK::NDArrayView::RandomUniform<float>({ 3, 4 }, -1, 1, 3, device);
+
+    p3.SetValue(v3);
+    if (!AreEqual(p3.Value(), v3))
+        throw std::runtime_error("Parameter value does match the expected value.");
+
+    Parameter p4({ 1 }, DataType::Double, Dictionary(), device, L"p4");
+    auto v4 = MakeSharedObject<NDArrayView>(1.0, NDShape{ 1 }, device);
+
+    // Since p4 initializer is an empty dictionary, lazy-initialization (triggered by the value getter: p4.Value())
+    // should fail. However, the setter will override the bogus initializer and init p4 by copying v4 content.
+    p4.SetValue(v4);
+    if (!AreEqual(p4.Value(), v4))
+        throw std::runtime_error("Parameter value does match the expected value.");
+}
+
 void ValueTests()
 {
     fprintf(stderr, "\nValueTests..\n");
+
+    TestSettingParameterValuesManually(DeviceDescriptor::CPUDevice());
 
     ValueCreationNoNDMaskTest<float>(DeviceDescriptor::CPUDevice(), false);
     ValueCreationNoNDMaskTest<double>(DeviceDescriptor::CPUDevice(), true);
@@ -250,8 +291,11 @@ void ValueTests()
     ValueCreationOneHotNoNDMaskTest<double>(DeviceDescriptor::CPUDevice(), true);
     ValueCreationOneHotWithNDMaskTest<double>(DeviceDescriptor::CPUDevice(), false);
     ValueCreationOneHotWithNDMaskTest<float>(DeviceDescriptor::CPUDevice(), true);
+
     if (IsGPUAvailable())
     {
+        TestSettingParameterValuesManually(DeviceDescriptor::GPUDevice(0));
+
         ValueCreationNoNDMaskTest<double>(DeviceDescriptor::GPUDevice(0), false);
         ValueCreationNoNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), true);
         ValueCreationWithNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), false);
