@@ -53,18 +53,11 @@ def cntk_device(device_id):
         return gpu(device_id)
 
 
-def is_string(value):
-    if sys.version_info.major < 3:
-        return isinstance(value, basestring)
-
-    return isinstance(value, str)
-
-
-def dense_to_str(data):
+def _dense_to_str(data):
     return ' '.join(data.ravel(order='C').astype(np.str))
 
 
-def sparse_to_str(data):
+def _sparse_to_str(data):
     return ' '.join('%s:%s' % (k, v) for k, v in sorted(data.items()))
 
 
@@ -96,12 +89,12 @@ def tensors_to_text_format(sample_idx, alias_tensor_map):
                 # for this alias there no more sequence elements
                 continue
 
-            if is_tensor(tensor):
+            if _is_tensor(tensor):
                 if not isinstance(tensor, np.ndarray):
                     tensor = np.asarray(tensor)
-                to_str = dense_to_str
+                to_str = _dense_to_str
             elif isinstance(tensor, list) and isinstance(tensor[0], dict):
-                to_str = sparse_to_str
+                to_str = _sparse_to_str
             else:
                 raise ValueError(
                     'expected a tensor (dense) or list of dicts (sparse), but got "%s"' % type(tensor))
@@ -113,7 +106,7 @@ def tensors_to_text_format(sample_idx, alias_tensor_map):
     return '\n'.join(lines)
 
 
-def is_tensor(data):
+def _is_tensor(data):
     '''
     Checks whether the data is a tensor, i.e. whether it is a NumPy array or a
     list of NumPy arrays.
@@ -179,7 +172,7 @@ def one_hot(batch, num_classes, dtype=None, device=None):
         value = cntk_py.Value.create_one_hot_double(num_classes, batch, device, False) 
     return value
 
-def has_seq_dim(var, data):
+def _has_seq_dim(var, data):
     '''
     Checks whether the data has a sequence dimensions or not. 
 
@@ -274,7 +267,7 @@ def sanitize_shape(shape):
 
 def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """
-    Convert to :class:`cntk.ops.variables.Variable` so that it can be passed as Variable to the
+    Convert to :class:`~cntk.ops.variables.Variable` so that it can be passed as Variable to the
     CNTK operators.
 
       * If ``arg`` is a NumPy array and its type is neither `np.float32` nor `np.float64`, it sets it to `np.float32`.
@@ -490,7 +483,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     # it is not enough to check whether the variable's dynamic axes include the
     # sequence axis, because the sequence axis might be omitted in the data if
     # it is not needed (CNTK core would then take care of this).
-    batch_has_seq = has_seq_dim(var, batch)
+    batch_has_seq = _has_seq_dim(var, batch)
 
     is_dense = _is_dense(batch)
 
@@ -537,7 +530,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
             batch = _pad_dense_to_max_len(var, batch, max_seq_len)
         if not isinstance(batch, np.ndarray):
             batch = np.asarray(batch)
-        ndav = create_NDArrayView_from_NumPy(batch.astype(dtype), device)
+        ndav = _create_NDArrayView_from_NumPy(batch.astype(dtype), device)
         return Value(data=ndav, mask=mask)
 
     if isinstance(batch, np.ndarray):
@@ -546,7 +539,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
         elif batch.dtype not in (np.float32, np.float64):
             raise ValueError('only float32 and float64 are supported')
 
-        ndav = create_NDArrayView_from_NumPy(batch.astype(dtype), device)
+        ndav = _create_NDArrayView_from_NumPy(batch.astype(dtype), device)
         return Value(data=ndav, mask=mask)
 
     # There are three possibilities of providing sparse batches:
@@ -633,7 +626,7 @@ def sanitize_value(shape, value, dtype, device):
         if shape is None:
             raise ValueError('you need to specify at least shape or value')
         cntk_dtype = sanitize_dtype_cntk(dtype)
-        ndav = create_NDArrayView(shape, cntk_dtype, device)
+        ndav = _create_NDArrayView(shape, cntk_dtype, device)
     else:
         np_dtype = sanitize_dtype_numpy(dtype)
         if not isinstance(value, np.ndarray) or value.dtype != np_dtype:
@@ -642,7 +635,7 @@ def sanitize_value(shape, value, dtype, device):
             else:
                 value = np.asarray(value, dtype=np_dtype)
 
-        ndav = create_NDArrayView_from_NumPy(value, device)
+        ndav = _create_NDArrayView_from_NumPy(value, device)
 
     return ndav
 
@@ -767,7 +760,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     return var_map
 
 
-def ones_like(batch, precision):
+def _ones_like(batch, precision):
     '''
     Returns a new batch, which has the same format as ``batch`` but all values
     set to 1.
@@ -778,7 +771,7 @@ def ones_like(batch, precision):
     return [np.ones_like(sample, dtype=sanitize_precision(precision)) for sample in batch]
 
 
-def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, device=None):
+def _create_NDArrayView(shape, data_type=cntk_py.DataType_Float, device=None):
     shape = sanitize_shape(shape)
     if device is None:
         device = use_default_device()
@@ -788,7 +781,7 @@ def create_NDArrayView(shape, data_type=cntk_py.DataType_Float, device=None):
     return view
 
 
-def create_NDArrayView_from_NumPy(nd, device=None):
+def _create_NDArrayView_from_NumPy(nd, device=None):
     if device is None:
         device = use_default_device()
 
@@ -814,11 +807,11 @@ class Value(cntk_py.Value):
             device = use_default_device()
 
         if shape and dtype:
-            ndav = create_NDArrayView(shape, dtype, device)
+            ndav = _create_NDArrayView(shape, dtype, device)
 
         elif data:
             if isinstance(data, np.ndarray):
-                ndav = create_NDArrayView_from_NumPy(data, device)
+                ndav = _create_NDArrayView_from_NumPy(data, device)
             else:
                 ndav = data
 
@@ -955,7 +948,7 @@ def ensure_dev(ndav, dev):
 
     if ndav.device() != dev:
 
-        ndav_on_target = create_NDArrayView(
+        ndav_on_target = _create_NDArrayView(
             ndav.shape().dimensions(), data_type=ndav.get_data_type(), dev=dev)
         ndav_on_target.copy_from(ndav)
         ndav = ndav_on_target
@@ -1029,7 +1022,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
     if backward_pass:
         if expected_backward is None:
             expected_backward = arguments
-        root_gradients = {v: ones_like(o, precision) for v, o in
+        root_gradients = {v: _ones_like(o, precision) for v, o in
                           forward_output.items()}
 
         backward_output = op.backward(state, root_gradients, expected_backward)
