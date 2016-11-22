@@ -3,7 +3,7 @@
 Highlights of this Release:
 * New ASGD/Hogwild! training using Microsoft’s Parameter Server ([Project Multiverso](https://github.com/Microsoft/multiverso))
 * Distributed Scenarios now supported in CNTK Python API
-* Introducing of [Memory compression](https://github.com/Microsoft/CNTK/wiki/Top-level-configurations#hypercompressmemory) optimizing memory usage, especially for GPU computation 
+* New [Memory Compression](https://github.com/Microsoft/CNTK/wiki/Top-level-configurations#hypercompressmemory) mode to reduce memory usage on GPU
 * CNTK Docker image with 1bit-SGD support
 * Stability Improvements and bug fixes
 
