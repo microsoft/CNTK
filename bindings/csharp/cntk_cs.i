@@ -10,19 +10,24 @@
 %include <windows.i>
 %include <attribute.i>
 
-%template() std::vector<size_t>;
-%template() std::vector<bool>;
+%{
+    #include "CNTKLibrary.h"
+%}
+
+
+%template(SizeTVector) std::vector<size_t>;
+%template(BoolVector) std::vector<bool>;
 %template(DoubleVector) std::vector<double>;
 %template(FloatVector) std::vector<float>;
-%template(SizeTVector) std::vector<std::vector<size_t>>;
+%template(SizeTVectorVector) std::vector<std::vector<size_t>>;
 %template(FloatVectorVector) std::vector<std::vector<float>>;
 %template(DoubleVectorVector) std::vector<std::vector<double>>;
-%template() std::vector<CNTK::Variable>;
-%template() std::vector<CNTK::Parameter>;
-%template() std::vector<CNTK::Constant>;
+%template(VariableVector) std::vector<CNTK::Variable>;
+//%template() std::vector<CNTK::Parameter>;
+//%template() std::vector<CNTK::Constant>;
 %template(AxisVector) std::vector<CNTK::Axis>;
-%template() std::vector<CNTK::DeviceDescriptor>;
-%template() std::vector<CNTK::StreamConfiguration>;
+%template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
+//%template() std::vector<CNTK::StreamConfiguration>;
 
 //%template() std::vector<CNTK::DictionaryValue>;
 
@@ -37,11 +42,13 @@
 %shared_ptr(CNTK::Value);
 %shared_ptr(CNTK::NDShape);
 %shared_ptr(CNTK::NDArrayView);
+%shared_ptr(CNTK::NDMask);
 %shared_ptr(std::vector<float>);
 
 %ignore CNTK::IDictionarySerializable;
 %ignore CNTK::DictionaryValue;
 %ignore CNTK::Dictionary;
+%ignore CNTK::ParameterInitializer;
 
 %ignore CNTK::Parameter;
 %ignore CNTK::Constant;
@@ -63,9 +70,6 @@
 %ignore CNTK::DistributedTrainer;
 
 
-%{
-    #include "CNTKLibrary.h"
-%}
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
