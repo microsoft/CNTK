@@ -6,12 +6,17 @@
 #include "CNTKLibrary.h"
 #include <functional>
 
+
+#include <BrainSliceClient.h>
+
 using namespace CNTK;
 
 void MultiThreadsEvaluation(bool);
 
 int main()
 {
+	auto bsClient = BrainSlice::Create(false);
+
 
 #ifndef CPUONLY
 #error "must use CPU Only"

@@ -59,7 +59,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\CNTKv2LibraryDll\;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\Readers\ReaderLib;\local\protobuf-3.1.0\include;graphir\cpp;graphir\libb64</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\CNTKv2LibraryDll\;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\Readers\ReaderLib;\local\protobuf-3.1.0\include;graphir\cpp;graphir\libb64;..\BrainSliceClientLib</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)$(Platform)\$(Configuration);\local\protobuf-3.1.0\lib</AdditionalLibraryDirectories>
@@ -130,7 +130,42 @@
     <ClInclude Include="GraphIr\cpp\graphid.pb.h" />
     <ClInclude Include="Image.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BrainSliceClientLib\BrainSliceClientLib.vcxproj">
+      <Project>{83039914-7d1a-4874-8c7e-422add1b1c91}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="..\..\..\packages\boost.1.62.0.0\build\native\boost.targets" Condition="Exists('..\..\..\packages\boost.1.62.0.0\build\native\boost.targets')" />
+    <Import Project="..\..\..\packages\boost_thread-vc120.1.62.0.0\build\native\boost_thread-vc120.targets" Condition="Exists('..\..\..\packages\boost_thread-vc120.1.62.0.0\build\native\boost_thread-vc120.targets')" />
+    <Import Project="..\..\..\packages\boost_filesystem-vc120.1.62.0.0\build\native\boost_filesystem-vc120.targets" Condition="Exists('..\..\..\packages\boost_filesystem-vc120.1.62.0.0\build\native\boost_filesystem-vc120.targets')" />
+    <Import Project="..\..\..\packages\boost_system-vc120.1.62.0.0\build\native\boost_system-vc120.targets" Condition="Exists('..\..\..\packages\boost_system-vc120.1.62.0.0\build\native\boost_system-vc120.targets')" />
+    <Import Project="..\..\..\packages\CatapultFpgaCoreLib.redist.3.58.428\build\native\CatapultFpgaCoreLib.redist.targets" Condition="Exists('..\..\..\packages\CatapultFpgaCoreLib.redist.3.58.428\build\native\CatapultFpgaCoreLib.redist.targets')" />
+    <Import Project="..\..\..\packages\CatapultFpgaCoreLib.3.58.428\build\native\CatapultFpgaCoreLib.targets" Condition="Exists('..\..\..\packages\CatapultFpgaCoreLib.3.58.428\build\native\CatapultFpgaCoreLib.targets')" />
+    <Import Project="..\..\..\packages\CatapultHaaSLibrary.redist.1.0.9\build\native\CatapultHaaSLibrary.redist.targets" Condition="Exists('..\..\..\packages\CatapultHaaSLibrary.redist.1.0.9\build\native\CatapultHaaSLibrary.redist.targets')" />
+    <Import Project="..\..\..\packages\CatapultHaaSLibrary.1.0.9\build\native\CatapultHaaSLibrary.targets" Condition="Exists('..\..\..\packages\CatapultHaaSLibrary.1.0.9\build\native\CatapultHaaSLibrary.targets')" />
+    <Import Project="..\..\..\packages\BrainSliceIOLib.redist.1.2.0\build\native\BrainSliceIOLib.redist.targets" Condition="Exists('..\..\..\packages\BrainSliceIOLib.redist.1.2.0\build\native\BrainSliceIOLib.redist.targets')" />
+    <Import Project="..\..\..\packages\BrainSliceIOLib.1.2.0\build\native\BrainSliceIOLib.targets" Condition="Exists('..\..\..\packages\BrainSliceIOLib.1.2.0\build\native\BrainSliceIOLib.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\..\packages\boost.1.62.0.0\build\native\boost.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\packages\boost.1.62.0.0\build\native\boost.targets'))" />
+    <Error Condition="!Exists('..\..\..\packages\boost_thread-vc120.1.62.0.0\build\native\boost_thread-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\packages\boost_thread-vc120.1.62.0.0\build\native\boost_thread-vc120.targets'))" />
+    <Error Condition="!Exists('..\..\..\packages\boost_filesystem-vc120.1.62.0.0\build\native\boost_filesystem-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\packages\boost_filesystem-vc120.1.62.0.0\build\native\boost_filesystem-vc120.targets'))" />
+    <Error Condition="!Exists('..\..\..\packages\boost_system-vc120.1.62.0.0\build\native\boost_system-vc120.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\packages\boost_system-vc120.1.62.0.0\build\native\boost_system-vc120.targets'))" />
+    <Error Condition="!Exists('..\..\..\packages\CatapultFpgaCoreLib.redist.3.58.428\build\native\CatapultFpgaCoreLib.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\CatapultFpgaCoreLib.redist.3.58.428\build\native\CatapultFpgaCoreLib.redist.targets'))" />
+    <Error Condition="!Exists('..\..\..\packages\CatapultFpgaCoreLib.3.58.428\build\native\CatapultFpgaCoreLib.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\CatapultFpgaCoreLib.3.58.428\build\native\CatapultFpgaCoreLib.targets'))" />
+    <Error Condition="!Exists('..\..\..\packages\CatapultHaaSLibrary.redist.1.0.9\build\native\CatapultHaaSLibrary.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\CatapultHaaSLibrary.redist.1.0.9\build\native\CatapultHaaSLibrary.redist.targets'))" />
+    <Error Condition="!Exists('..\..\..\packages\CatapultHaaSLibrary.1.0.9\build\native\CatapultHaaSLibrary.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\CatapultHaaSLibrary.1.0.9\build\native\CatapultHaaSLibrary.props'))" />
+    <Error Condition="!Exists('..\..\..\packages\CatapultHaaSLibrary.1.0.9\build\native\CatapultHaaSLibrary.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\CatapultHaaSLibrary.1.0.9\build\native\CatapultHaaSLibrary.targets'))" />
+    <Error Condition="!Exists('..\..\..\packages\BrainSliceIOLib.redist.1.2.0\build\native\BrainSliceIOLib.redist.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\BrainSliceIOLib.redist.1.2.0\build\native\BrainSliceIOLib.redist.targets'))" />
+    <Error Condition="!Exists('..\..\..\packages\BrainSliceIOLib.1.2.0\build\native\BrainSliceIOLib.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\BrainSliceIOLib.1.2.0\build\native\BrainSliceIOLib.props'))" />
+    <Error Condition="!Exists('..\..\..\packages\BrainSliceIOLib.1.2.0\build\native\BrainSliceIOLib.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\packages\BrainSliceIOLib.1.2.0\build\native\BrainSliceIOLib.targets'))" />
+  </Target>
 </Project>

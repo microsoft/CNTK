@@ -482,7 +482,6 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
 }
 
 
-
 void MultiThreadsEvaluation(bool isGPUAvailable)
 {
     auto device = DeviceDescriptor::CPUDevice();
