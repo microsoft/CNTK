@@ -299,9 +299,9 @@ def find_arg_by_name(name, expression):
 if __name__ == '__main__':
 
     # hook up data
-    train_reader = create_reader(data_dir + "cmudict-0.7b.train-dev-20-21.ctf", True)
-    valid_reader = create_reader("tiny.ctf", False)
-    vocab, i2w = get_vocab(data_dir + "cmudict-0.7b.mapping")
+    train_reader = create_reader(os.path.join(data_dir, "cmudict-0.7b.train-dev-20-21.ctf"), True)
+    valid_reader = create_reader(os.path.join(data_dir, "tiny.ctf"), False)
+    vocab, i2w = get_vocab(os.path.join(data_dir, "cmudict-0.7b.mapping"))
 
     # create model
     model = create_model()
