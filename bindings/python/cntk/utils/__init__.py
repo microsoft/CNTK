@@ -329,8 +329,7 @@ def get_data_type(*args):
     inputs. Placeholders are ignored in the type determination.
 
     Args:
-        args (number, list, NumPy array, :class:`cntk.ops.variables.Variable`, 
-         or :class:`cntk.ops.functions.Function`): input
+        args (number, list, NumPy array, :class:`cntk.ops.variables.Variable`, or :class:`cntk.ops.functions.Function`): input
     Returns:
         np.float32, np.float64, or None
     """
@@ -410,9 +409,10 @@ def _pad_dense_to_max_len(var, batch, max_seq_len):
     Z = np.zeros((len(batch), max_seq_len) +
                  (data_point.shape), dtype=data_point.dtype)
     for idx, seq in enumerate(batch):
-        if seq[0].shape != data_point.shape:
+        elem_shape = seq[0].shape if hasattr(seq, 'shape') else ()
+        if elem_shape != data_point.shape:
             raise ValueError('shape mismatch: expected %s but got %s'
-                             % (str(data_point.shape), str(seq[0].shape)))
+                             % (str(data_point.shape), str(elem_shape)))
         Z[idx, :len(seq)] += seq
     return Z
 
@@ -443,6 +443,11 @@ def _pad_sparse_seq_to_max_len(batch, max_seq_len):
     return Z
 
 def _is_dense(batch):
+    if isinstance(batch, np.ndarray):
+        return True
+    elif sparse.issparse(batch):
+        return False
+
     is_dense = True
     b = batch
     while isinstance(b, list):
@@ -452,6 +457,7 @@ def _is_dense(batch):
 
     return True
 
+@typemap
 def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     '''
     Convert to :class:`Value` with ``dtype``. If the samples in
@@ -476,37 +482,31 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     if isinstance(batch, cntk_py.Value):
         return batch
 
+    if isinstance(batch, list):
+        if len(batch) == 0:
+            raise ValueError('batch is empty')
+
     # We need to figure out whether the data has a sequence axis. Note that
     # it is not enough to check whether the variable's dynamic axes include the
     # sequence axis, because the sequence axis might be omitted in the data if
     # it is not needed (CNTK core would then take care of this).
     batch_has_seq = has_seq_dim(var, batch)
 
-    if isinstance(batch, list):
-        is_dense = _is_dense(batch)
+    is_dense = _is_dense(batch)
 
-        if is_dense:
+    if batch_has_seq or seq_starts:
+        if isinstance(batch[0], list):
             seq_lens = [len(seq) for seq in batch]
-
-            # If the input is a list of lists of dense values, all of the same
-            # length, then we convert it into a NumPy array without requiring a
-            # mask.
-            if len(set(seq_lens)) == 1:
-                batch = np.asarray(batch)
         else:
-            if isinstance(batch[0], list):
-                seq_lens = [len(seq) for seq in batch]
-            else:
-                seq_lens = [seq.shape[0] for seq in batch]
+            seq_lens = [seq.shape[0] for seq in batch]
 
-        if batch_has_seq:
-            max_seq_len = max(seq_lens)
-    else:
-        is_dense = isinstance(batch, np.ndarray)
-        # It is a sparse or dense NumPy array having all sequences being the
-        # same length, so we just calculate the sequence lengths
-        if batch_has_seq:
-            max_seq_len = batch.shape[1]
+        max_seq_len = max(seq_lens)
+
+        # If the input is a list of lists of dense values, all of the same
+        # length, we convert it into a NumPy array. 
+        if is_dense and len(set(seq_lens)) == 1:
+            batch_has_seq = False
+            batch = np.asarray(batch, dtype=var.dtype)
 
     if dtype is None:
         dtype = get_data_type(var)
@@ -514,25 +514,8 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     if device is None:
         device = use_default_device()
 
-    if isinstance(batch, np.ndarray):
-        if np.issubdtype(batch.dtype, int):
-            batch = batch.astype(var.dtype)
-        elif batch.dtype not in (np.float32, np.float64):
-            raise ValueError('only float32 and float64 are supported')
-
-        ndav = create_NDArrayView_from_NumPy(batch, device)
-        return Value(data=ndav)
-
-    if isinstance(batch, list):
-        if len(batch) == 0:
-            raise ValueError('batch is empty')
-
-        if not batch_has_seq and seq_starts is not None:
-            raise ValueError('specification of individual sequence begins does not'
-                    ' make sense when not using the sequence axis')
-
     # batch is now either a dense input that requires a mask, or it is sparse
-    if batch_has_seq:
+    if batch_has_seq or seq_starts:
         mask = cntk_py.NDMask((len(batch), max_seq_len), 
                 device or use_default_device())
         for idx, seq_len in enumerate(seq_lens):
@@ -550,7 +533,19 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
         mask = None
 
     if is_dense:
-        batch = _pad_dense_to_max_len(var, batch, max_seq_len)
+        if batch_has_seq:
+            batch = _pad_dense_to_max_len(var, batch, max_seq_len)
+        if not isinstance(batch, np.ndarray):
+            batch = np.asarray(batch)
+        ndav = create_NDArrayView_from_NumPy(batch.astype(dtype), device)
+        return Value(data=ndav, mask=mask)
+
+    if isinstance(batch, np.ndarray):
+        if np.issubdtype(batch.dtype, int):
+            batch = batch.astype(var.dtype)
+        elif batch.dtype not in (np.float32, np.float64):
+            raise ValueError('only float32 and float64 are supported')
+
         ndav = create_NDArrayView_from_NumPy(batch.astype(dtype), device)
         return Value(data=ndav, mask=mask)
 
@@ -841,6 +836,27 @@ class Value(cntk_py.Value):
         '''
         return super(Value, self).shape().dimensions()
 
+    @property
+    def mask(self):
+        '''
+        The mask matrix of this value. Each row denotes a sequence with its
+        elements describing the mask of the element:
+         * 2: beginning of sequence (e.g. an LSTM would be reset)
+         * 1: valid element
+         # 0: invalid element
+
+        Example:
+          A mask of 
+           ```[[2, 1, 1], [1, 1, 0]]
+           ```
+           describes a batch of two sequences. The first has three elements, of
+           which the first element signals the beginning of a sequence. The second
+           sequence has two elements, which are both continuations of the first
+           sequence.
+        '''
+        return np.asarray(super(Value, self).mask())
+    
+
     def __len__(self):
         '''
         Number of samples in this value object.
@@ -953,7 +969,7 @@ def value_to_seq(value):
     entries removed.
 
     Args:
-        value (`Value`): Value as it is returned by Swig
+        value (:class:`Value`): Value as it is returned by Swig
 
     Returns:
         a list of NumPy arrays

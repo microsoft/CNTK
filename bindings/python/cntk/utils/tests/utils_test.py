@@ -123,8 +123,6 @@ def test_get_data_type():
     # exception handling
     ((2,2), AA([[1,1],[2,2]]), ValueError),
     (1, [[[1,2]]], ValueError),
-    #(1, [AA([[40], [50]])], ValueError),
-    ((1,), [[[40], [50]]], ValueError),
 ])
 def test_has_seq_dim_dense(shape, batch, expected):
     i1 = input_variable(shape)
@@ -160,4 +158,20 @@ def test_sanitize_batch_sparse():
     # 2 sequences, with max seq len of 2 and dimension 3
     assert b.shape == (2,2,3)
 
+@pytest.mark.parametrize("batch, seq_starts, expected_mask", [
+    ([[5, 6, 7],
+       [8]],
+       [True, False],
+       [[2, 1, 1], [1, 0, 0]]),
+
+    ([[5],
+       [8]],
+       [True, False],
+       [[2], [1]]),
+])
+def test_mask(batch, seq_starts, expected_mask):
+    shape = (1,)
+    var = input_variable(shape)
+    s = sanitize_batch(var, batch, seq_starts)
+    assert np.allclose(s.mask, expected_mask)
 
