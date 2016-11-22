@@ -139,6 +139,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EvalMultithreads.cpp" />
+    <ClCompile Include="GraphIrExporter.cpp" />
     <ClCompile Include="GraphIrWrapper.cpp" />
     <ClCompile Include="GraphIr\libb64\cdecode.c" />
     <ClCompile Include="GraphIr\libb64\cencode.c" />
