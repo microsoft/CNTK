@@ -1416,6 +1416,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Python", "Python", "{CB4566F1-6C8F-4270-83EE-F6AED84EBB2B}"
 	ProjectSection(SolutionItems) = preProject
 		Examples\Video\GettingStarted\Python\Conv3D_UCF11.py = Examples\Video\GettingStarted\Python\Conv3D_UCF11.py
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKBinaryReader", "Source\Readers\CNTKBinaryReader\CNTKBinaryReader.vcxproj", "{7FE16CBE-B717-45C9-97FB-FA3191039568}"
+	ProjectSection(ProjectDependencies) = postProject
+		{60BDB847-D0C4-4FD3-A947-0C15C08BCDB5} = {60BDB847-D0C4-4FD3-A947-0C15C08BCDB5}
+		{F0A9637C-20DA-42F0-83D4-23B4704DE602} = {F0A9637C-20DA-42F0-83D4-23B4704DE602}
 	EndProjectSection
 EndProject
 Global
@@ -1824,6 +1828,36 @@ Global
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release|x64.ActiveCfg = Release|x64
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release|x64.Build.0 = Release|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug_CpuOnly|Any CPU.ActiveCfg = Debug_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug_CpuOnly|Mixed Platforms.ActiveCfg = Debug_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug_CpuOnly|Mixed Platforms.Build.0 = Debug_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug_CpuOnly|Win32.ActiveCfg = Debug_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug|Mixed Platforms.ActiveCfg = Debug|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug|Mixed Platforms.Build.0 = Debug|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug|Win32.ActiveCfg = Debug|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug|x64.ActiveCfg = Debug|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug|x64.Build.0 = Debug|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_CpuOnly|Any CPU.ActiveCfg = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_CpuOnly|Mixed Platforms.ActiveCfg = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_CpuOnly|Mixed Platforms.Build.0 = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_CpuOnly|Win32.ActiveCfg = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_NoOpt|Any CPU.ActiveCfg = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_NoOpt|Mixed Platforms.ActiveCfg = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_NoOpt|Mixed Platforms.Build.0 = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_NoOpt|Win32.ActiveCfg = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_NoOpt|x64.ActiveCfg = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_NoOpt|x64.Build.0 = Release_CpuOnly|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release|Any CPU.ActiveCfg = Release|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release|Mixed Platforms.ActiveCfg = Release|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release|Mixed Platforms.Build.0 = Release|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release|Win32.ActiveCfg = Release|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release|x64.ActiveCfg = Release|x64
+		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2017,5 +2051,6 @@ Global
 		{5EDBCD1A-4F07-4618-84C9-FC6905A438B4} = {FB604F98-008F-45CD-B06E-42C30E121F13}
 		{39C3C8CA-9A8A-4733-ADBB-3E19D0F52528} = {2A95B23C-D91E-4DF9-B8F0-5E997608AB65}
 		{CB4566F1-6C8F-4270-83EE-F6AED84EBB2B} = {39C3C8CA-9A8A-4733-ADBB-3E19D0F52528}
+		{7FE16CBE-B717-45C9-97FB-FA3191039568} = {33EBFE78-A1A8-4961-8938-92A271941F94}
 	EndGlobalSection
 EndGlobal
