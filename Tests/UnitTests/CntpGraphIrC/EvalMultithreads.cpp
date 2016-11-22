@@ -313,7 +313,7 @@ inline bool GetOutputVaraiableByName(FunctionPtr evalFunc, std::wstring varName,
     return GetVariableByName(evalFunc->Outputs(), varName, var);
 }
 
-void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& device)
+void EvaluateGraph(FunctionPtr evalFunc, const DeviceDescriptor& device)
 {
     std::vector<std::wstring> inputNodeNames = { L"rawAnswer", L"rawContext", L"rawQuery"/*, L"contextSeqAxis", L"sourceSeqAxis"*/ };
 
@@ -422,7 +422,7 @@ void MultiThreadsEvaluation()
     // convert cntk to graphir
     auto graphIrPtr = CntkGraphToGraphIr(modelFuncPtr);
 
-    RunEvaluationClassifier(modelFuncPtr, device);
+	EvaluateGraph(modelFuncPtr, device);
 
     // convert graphir back to cntk (with the original cntk model as template)
     auto modelImportFuncPtr = GraphIrToCntkGraph(graphIrPtr, modelFuncPtr);
