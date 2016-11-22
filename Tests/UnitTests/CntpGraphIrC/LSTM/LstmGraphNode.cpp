@@ -10,11 +10,12 @@
 #include <vector>
 #include <random>
 
-
 #include <CNTKLibrary.h>
 
 #include <BrainSliceClient.h>
+#include "FixedPoint.hpp"
 #include "LSTMClient.h"
+
 #include "LstmGraphNode.h"
 
 using namespace CNTK;
@@ -25,6 +26,7 @@ using namespace std;
 
 static LSTMClient * lstmClient = nullptr;
 
+typedef FixedPoint<LSTM::dword_t, 12> FixedWord;
 
 LstmGraphNode::LstmGraphNode(
         std::vector<Variable>& inputs,
@@ -44,11 +46,44 @@ LstmGraphNode::~LstmGraphNode()
         const std::vector<float>& left,
         const std::vector<float>& right)
 {
+	// TODO: these are hardcoded in the lstm client.
+	const size_t inVectorLen = 200,
+		outVectorLen = 500;
+
     fprintf(stderr, "LstmGraphNode::Forward(out %u, left %u, right %u) called\n", out.size(), left.size(), right.size());
+
+	assert(lstmClient != nullptr);
+
+	vector<vector<dword_t>> inputs;
+
+	// inputs
+	for (auto leftright : { left, right })
+	{
+		vector<dword_t> input(inVectorLen);
+		for (size_t n = 0; n < min(inVectorLen, leftright.size()); n++)
+		{
+			FixedWord number(leftright[n]);
+			input[n] = number.m_value;
+		}
+
+		inputs.push_back(input);
+	}
+
+	vector<dword_t> output(outVectorLen);
+
+	lstmClient->Evaluate(0, inputs, output);
 
     for (auto n = 0; n < out.size(); n++)
     {
-        out[n] = n;
+		if (n < output.size())
+		{
+			FixedWord number(output[n]);
+			out[n] = number.toFloat();
+		}
+		else
+		{
+			out[n] = n;
+		}
     }
 }
 
