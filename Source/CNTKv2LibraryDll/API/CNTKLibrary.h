@@ -1582,7 +1582,9 @@ namespace CNTK
     typedef Dictionary ParameterInitializer;
 
     // Forward declarations
+#ifndef SWIGCSHARP
     inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes());
+#endif
     inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
     inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"");
 
@@ -1826,7 +1828,6 @@ private:
         VariableFieldsPtr m_dataFields;
     };
 
-#ifndef SWIGCSHARP
     // TODO: Variable equality should be based on uids.
     inline bool operator==(const Variable& first, const Variable& second)
     {
@@ -1837,7 +1838,6 @@ private:
     {
         return !(first == second);
     }
-#endif
 
 #ifndef SWIGCSHARP
     ///

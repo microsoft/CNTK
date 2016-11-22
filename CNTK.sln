@@ -1398,6 +1398,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNN", "RNN", "{6730F9BE-92A
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CSharpBindings", "bindings\csharp\CSharpBindings.vcxproj", "{277EBD9D-2504-49FA-AC72-59D5515130C3}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CSharpBindings", "CSharpBindings", "{1526F027-B007-472D-82E2-5A91340F3B62}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|Any CPU = Debug_CpuOnly|Any CPU

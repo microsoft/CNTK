@@ -28,13 +28,13 @@
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -80,8 +80,16 @@
     </ClCompile>
     <Link />
     <ProjectReference>
-      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+      <LinkLibraryDependencies>true</LinkLibraryDependencies>
     </ProjectReference>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir);$(SolutionDir)$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CNTKLibrary-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Link>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">$(OutDir);$(SolutionDir)$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">CNTKLibrary-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
     <ClCompile>
@@ -100,6 +108,12 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">$(OutDir);$(SolutionDir)$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir);$(SolutionDir)$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">$(OutDir);$(SolutionDir)$(Platform)\$(Configuration)</AdditionalLibraryDirectories>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">CNTKLibrary-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CNTKLibrary-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">CNTKLibrary-2.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
@@ -113,8 +127,8 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SWIG_PATH)\swig.exe -c++ -csharp -DMSC_VER -I$(SolutionDir)Source\CNTKv2LibraryDll\API cntk_cs.i</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cntk_cs_wrap.cxx; cntk_cs_warp.h</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h</AdditionalInputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -I$(SolutionDir)\Source\CNTKv2LibraryDll\API cntk_cs.i</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cntk_cs_wrap.cxx cntk_cs_wrap.h</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">echo Invoking SWIG... echo on %(SWIG_PATH)swig.exe -c++ -csharp -D_MSC_VER -I$(SolutionDir)\Source\CNTKv2LibraryDll\API  "%(FullPath)"%40 echo off</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename)_wrap.cxx %(Filename)_wrap.h</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)\Source\CNTKv2LibraryDll\API\CNTKLibrary.h</AdditionalInputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -I$(SolutionDir)\Source\CNTKv2LibraryDll\API cntk_cs.i</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">cntk_cs_wrap.cxx cntk_cs_wrap.h</Outputs>
