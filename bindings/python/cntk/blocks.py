@@ -233,15 +233,12 @@ def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_
 
 def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
          init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,
-         enable_self_stabilization=enable_self_stabilization_default_or_False): # (x, (h, c))
+         enable_self_stabilization=enable_self_stabilization_default_or_False,
+         has_aux=False): # (x, (h, c))
 
     use_peepholes             = use_peepholes             if _is_given(use_peepholes)             else _current_default_options.use_peepholes
     enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
     has_projection = cell_shape is not None
-    has_aux = False
-
-    if has_aux:
-        UntestedBranchError("LSTM, has_aux option")
 
     shape = _as_tuple(shape)
 
@@ -280,6 +277,7 @@ def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
     # parameters to model function
     x = Placeholder(name='lstm_block_arg')
     prev_state = create_hc_placeholder()
+    aux = Placeholder(name='aux')
 
     # formula of model function
     dh, dc = prev_state
@@ -322,7 +320,7 @@ def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
     _name_node(c, 'c')
 
     # TODO: figure out how to do scoping, and also rename all the apply... to expression
-    apply_x_h_c = combine ([h, c])
+    apply_x_h_c = combine ([h, c, aux]) if has_aux else combine ([h, c])
     # return to caller a helper function to create placeholders for recurrence
     # Note that this function will only exist in the object returned here, but not any cloned version of it.
     apply_x_h_c.create_placeholder = create_hc_placeholder
