@@ -20,7 +20,7 @@
 %template() std::vector<CNTK::Variable>;
 %template() std::vector<CNTK::Parameter>;
 %template() std::vector<CNTK::Constant>;
-%template() std::vector<CNTK::Axis>;
+%template(AxisVector) std::vector<CNTK::Axis>;
 %template() std::vector<CNTK::DeviceDescriptor>;
 %template() std::vector<CNTK::StreamConfiguration>;
 
@@ -31,21 +31,18 @@
 %template() std::pair<size_t, double>;
 %template() std::vector<std::pair<size_t, double>>;
 
-%shared_ptr(BackPropState);
-%shared_ptr(Function);
-%shared_ptr(CompositeFunction);
-%shared_ptr(Value);
-%shared_ptr(NDShape);
+%shared_ptr(CNTK::BackPropState);
+%shared_ptr(CNTK::Function);
+%shared_ptr(CNTK::CompositeFunction);
+%shared_ptr(CNTK::Value);
+%shared_ptr(CNTK::NDShape);
+%shared_ptr(CNTK::NDArrayView);
 %shared_ptr(std::vector<float>);
 
 %ignore CNTK::IDictionarySerializable;
-%ignore CNTK::NDShape;
-%ignore CNTK::NDArrayView;
-%ignore CNTK::NDMask;
-%ignore CNTK::Axis;
 %ignore CNTK::DictionaryValue;
 %ignore CNTK::Dictionary;
-%ignore CNTK::VariableKind;
+
 %ignore CNTK::Parameter;
 %ignore CNTK::Constant;
 %ignore CNTK::PoolingType;
@@ -64,6 +61,7 @@
 %ignore CNTK::QuantizedDistributedCommunicator;
 %ignore CNTK::MinibatchInfo;
 %ignore CNTK::DistributedTrainer;
+
 
 %{
     #include "CNTKLibrary.h"
