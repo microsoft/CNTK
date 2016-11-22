@@ -64,6 +64,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Drawing" />
   </ItemGroup>
   <Choose>
     <When Condition="('$(VisualStudioVersion)' == '10.0' or '$(VisualStudioVersion)' == '') and '$(TargetFrameworkVersion)' == 'v3.5'">
@@ -85,6 +86,10 @@
     <ProjectReference Include="..\..\..\Source\Extensibility\EvalWrapper\EvalWrapper.vcxproj">
       <Project>{ef766cae-9cb1-494c-9153-0030631a6340}</Project>
       <Name>EvalWrapper</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\EndToEndTests\EvalClientTests\CSEvalClientTest\CSEvalClientTest.csproj">
+      <Project>{1c6e6c53-1aa7-4b69-913e-b97bb5a872cf}</Project>
+      <Name>CSEvalClientTest</Name>
     </ProjectReference>
   </ItemGroup>
   <Choose>
