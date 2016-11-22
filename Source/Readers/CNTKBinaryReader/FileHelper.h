@@ -29,9 +29,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// Implementation of the binary reader.
-// Effectively the class represents a factory for connecting the packer,
-// transformers and the deserializer together.
+// Implementation of a helper class for reading/writing to binary files
+// on Windows and Linux
 class CNTKBinaryFileHelper
 {
 public:
@@ -90,6 +89,7 @@ public:
         if (rc != count)
             RuntimeError("Error reading: %s.", strerror(errno));
     }
+
 private:
     CNTKBinaryFileHelper();
 };

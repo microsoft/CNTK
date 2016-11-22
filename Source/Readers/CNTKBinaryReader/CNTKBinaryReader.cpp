@@ -19,9 +19,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // TODO: This class should go away eventually.
 // TODO: The composition of packer + randomizer + different deserializers in a generic manner is done in the CompositeDataReader.
 // TODO: Currently preserving this for backward compatibility with current configs.
-CNTKBinaryReader::CNTKBinaryReader(//MemoryProviderPtr provider,
-    const ConfigParameters& config) //:
-    //m_provider(provider)
+CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config) 
 {
     BinaryConfigHelper configHelper(config);
 
@@ -58,10 +56,8 @@ CNTKBinaryReader::CNTKBinaryReader(//MemoryProviderPtr provider,
             m_sequenceEnumerator = std::make_shared<NoRandomizer>(m_deserializer);
         }
 
-        m_packer = std::make_shared<SequencePacker>(
-            //m_provider,
-            m_sequenceEnumerator,
-            ReaderBase::GetStreamDescriptions());
+        m_packer = std::make_shared<SequencePacker>( m_sequenceEnumerator,
+                                                     ReaderBase::GetStreamDescriptions());
     }
     catch (const std::runtime_error& e)
     {
@@ -70,27 +66,4 @@ CNTKBinaryReader::CNTKBinaryReader(//MemoryProviderPtr provider,
     fprintf(stderr, "\n");
 }
 
-/*
-std::vector<StreamDescriptionPtr> CNTKBinaryReader::GetStreamDescriptions()
-{
-    return m_deserializer->GetStreamDescriptions();
-}
-
-void CNTKBinaryReader::StartEpoch(const EpochConfiguration& config)
-{
-    if (config.m_totalEpochSizeInSamples == 0)
-    {
-        RuntimeError("Epoch size cannot be 0.");
-    }
-
-    m_randomizer->StartEpoch(config);
-    m_packer->StartEpoch(config);
-}
-
-Minibatch CNTKBinaryReader::ReadMinibatch()
-{
-    assert(m_packer != nullptr);
-    return m_packer->ReadMinibatch();
-}
-*/
 } } }

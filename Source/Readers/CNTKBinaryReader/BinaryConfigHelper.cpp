@@ -23,6 +23,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     BinaryConfigHelper::BinaryConfigHelper(const ConfigParameters& config)
     {
+        // If the config has an input section, then we need to see if people want to rename streams
+        // in the binary file to something else.
         if (config.ExistsCurrent(L"input"))
         {
             const ConfigParameters& input = config(L"input");
@@ -32,7 +34,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ConfigParameters input = section.second;
                 wstring name = msra::strfun::utf16(section.first);
 
-                // alias is optional
+                // If there is an option for "original", we will rename the stream with the "original"
+                // name to the target name.
                 if (input.ExistsCurrent(L"original"))
                 {
                     wstring original = msra::strfun::utf16(input(L"original"));
