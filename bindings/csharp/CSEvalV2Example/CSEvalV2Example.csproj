@@ -1,0 +1,186 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{3500A847-E024-4E7D-92DD-CC587C17460B}</ProjectGuid>
+    <IntermediateOutputPath>$(SolutionDir)\$(Platform)\.build\$(Configuration)\$(MSBuildProjectDirectory.Substring($(SolutionDir.Length)))\obj\</IntermediateOutputPath>
+    <BaseIntermediateOutputPath>$(SolutionDir)\$(Platform)\.build\$(Configuration)\$(MSBuildProjectDirectory.Substring($(SolutionDir.Length)))\obj\</BaseIntermediateOutputPath>
+    <OutputPath>$(SolutionDir)\$(Platform)\$(Configuration)\</OutputPath>
+    <OutputType>Exe</OutputType>
+    <PlatformTarget>x64</PlatformTarget>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>CSEvalV2Example</RootNamespace>
+    <AssemblyName>CSEvalV2Example</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug_CpuOnly|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_CpuOnly|x64'">
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_NoOpt|x64'">
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\SwigBinding\Axis.cs">
+      <Link>Axis.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\AxisVector.cs">
+      <Link>AxisVector.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\BackPropState.cs">
+      <Link>BackPropState.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\BoolVector.cs">
+      <Link>BoolVector.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\CSharpBindings.cs">
+      <Link>CSharpBindings.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\CSharpBindingsPINVOKE.cs">
+      <Link>CSharpBindingsPINVOKE.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\DataType.cs">
+      <Link>DataType.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\DeviceDescriptor.cs">
+      <Link>DeviceDescriptor.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\DeviceDescriptorVector.cs">
+      <Link>DeviceDescriptorVector.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\DeviceKind.cs">
+      <Link>DeviceKind.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\DoubleVector.cs">
+      <Link>DoubleVector.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\DoubleVectorVector.cs">
+      <Link>DoubleVectorVector.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\FloatVector.cs">
+      <Link>FloatVector.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\FloatVectorVector.cs">
+      <Link>FloatVectorVector.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\Function.cs">
+      <Link>Function.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\MaskKind.cs">
+      <Link>MaskKind.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\NDArrayView.cs">
+      <Link>NDArrayView.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\NDMask.cs">
+      <Link>NDMask.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\NDShape.cs">
+      <Link>NDShape.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\ParameterCloningMethod.cs">
+      <Link>ParameterCloningMethod.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\PrimitiveOpType.cs">
+      <Link>PrimitiveOpType.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\SizeTVector.cs">
+      <Link>SizeTVector.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\SizeTVectorVector.cs">
+      <Link>SizeTVectorVector.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\StorageFormat.cs">
+      <Link>StorageFormat.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\SWIGTYPE_p_CNTK__MaskKind.cs">
+      <Link>SWIGTYPE_p_CNTK__MaskKind.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__initializer_listT_size_t_t.cs">
+      <Link>SWIGTYPE_p_std__initializer_listT_size_t_t.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK__Variable_t.cs">
+      <Link>SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK__Variable_t.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_std__shared_ptrT_CNTK__Value_t_t.cs">
+      <Link>SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_std__shared_ptrT_CNTK__Value_t_t.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t.cs">
+      <Link>SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__wstring.cs">
+      <Link>SWIGTYPE_p_std__wstring.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\SWIGTYPE_p_void.cs">
+      <Link>SWIGTYPE_p_void.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\Value.cs">
+      <Link>Value.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\Variable.cs">
+      <Link>Variable.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\VariableKind.cs">
+      <Link>VariableKind.cs</Link>
+    </Compile>
+    <Compile Include="..\SwigBinding\VariableVector.cs">
+      <Link>VariableVector.cs</Link>
+    </Compile>
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
