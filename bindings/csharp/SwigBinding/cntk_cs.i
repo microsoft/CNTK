@@ -14,6 +14,7 @@
     #include "CNTKLibrary.h"
 %}
 
+%nspace CNTK;
 
 %template(SizeTVector) std::vector<size_t>;
 %template(BoolVector) std::vector<bool>;

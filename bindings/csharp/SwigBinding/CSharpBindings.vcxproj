@@ -127,17 +127,29 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SWIG_PATH)\swig.exe -c++ -csharp -DMSC_VER -I$(SolutionDir)Source\CNTKv2LibraryDll\API cntk_cs.i</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">cntk_cs_wrap.cxx; cntk_cs_warp.h</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h</AdditionalInputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">echo Invoking SWIG... echo on %(SWIG_PATH)swig.exe -c++ -csharp -D_MSC_VER -I$(SolutionDir)\Source\CNTKv2LibraryDll\API  "%(FullPath)"%40 echo off</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">echo Invoking $(SWIG_PATH)\swig.exe to process %(FullPath)  ... 
+echo on
+$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -I$(SolutionDir)\Source\CNTKv2LibraryDll\API  "%(FullPath)"
+ echo off</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename)_wrap.cxx %(Filename)_wrap.h</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)\Source\CNTKv2LibraryDll\API\CNTKLibrary.h</AdditionalInputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -I$(SolutionDir)\Source\CNTKv2LibraryDll\API cntk_cs.i</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">cntk_cs_wrap.cxx cntk_cs_wrap.h</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">echo Invoking $(SWIG_PATH)\swig.exe to process %(FullPath)  ... 
+echo on
+$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -I$(SolutionDir)\Source\CNTKv2LibraryDll\API  "%(FullPath)"
+ echo off</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">%(Filename)_wrap.cxx %(Filename)_wrap.h</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">$(SolutionDir)\Source\CNTKv2LibraryDll\API\CNTKLibrary.h</AdditionalInputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -I$(SolutionDir)\Source\CNTKv2LibraryDll\API cntk_cs.i</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">cntk_cs_wrap.cxx cntk_cs_wrap.h</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">echo Invoking $(SWIG_PATH)\swig.exe to process %(FullPath)  ... 
+echo on
+$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -I$(SolutionDir)\Source\CNTKv2LibraryDll\API  "%(FullPath)"
+ echo off</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">%(Filename)_wrap.cxx %(Filename)_wrap.h</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">$(SolutionDir)\Source\CNTKv2LibraryDll\API\CNTKLibrary.h</AdditionalInputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -I$(SolutionDir)\Source\CNTKv2LibraryDll\API cntk_cs.i</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">cntk_cs_wrap.cxx cntk_cs_wrap.h</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">echo Invoking $(SWIG_PATH)\swig.exe to process %(FullPath)  ... 
+echo on
+$(SWIG_PATH)\swig.exe -c++ -csharp -D_MSC_VER -I$(SolutionDir)\Source\CNTKv2LibraryDll\API  "%(FullPath)"
+ echo off</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">%(Filename)_wrap.cxx %(Filename)_wrap.h</Outputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">$(SolutionDir)\Source\CNTKv2LibraryDll\API\CNTKLibrary.h</AdditionalInputs>
     </CustomBuild>
   </ItemGroup>
