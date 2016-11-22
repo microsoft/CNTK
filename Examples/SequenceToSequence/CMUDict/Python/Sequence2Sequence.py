@@ -7,7 +7,7 @@
 import numpy as np
 import os
 from cntk import Trainer, Axis, save_model, load_model
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
                      element_select, alias, hardmax, placeholder_variable, combine
@@ -26,7 +26,7 @@ from attention import create_attention_augment_hook
 ########################
 
 data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data")
-model_dir = "./Models"
+model_dir = "."
 input_vocab_size = 69
 label_vocab_size = 69
 
@@ -162,9 +162,9 @@ def create_model():
 # train action         #
 ########################
 
-def train(train_reader, valid_reader, vocab, i2w, model, max_epochs):
+def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size):
     
-    # do some hooks that we won't need in the future
+    # do some hooks so that we can direct data to the right place
     label_sequence = find_nodes_by_name(model, 'label_sequence')[0]    
     decoder_history_hook = find_nodes_by_name(model, 'decoder_history_hook')[0]  
         
@@ -197,8 +197,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs):
     # Get minibatches of sequences to train with and perform model training
     i = 0
     mbs = 0
-    epoch_size = 908241
-    training_progress_output_freq = 100
+    training_progress_output_freq = 30
 
     # bind inputs to data from readers
     train_bind = {
@@ -268,6 +267,43 @@ def write(reader, model_filename, vocab, i2w):
         e = model.eval(mb)
         print_sequences(e, i2w)
 
+#######################
+# test action         #
+#######################
+
+def test(reader, model_filename):
+
+    z = load_model(model_filename)
+    
+    # we use the test_minibatch() function so need to setup a trainer
+    label_sequence = sequence.slice(find_arg_by_name('raw_labels', z), 1, 0)
+    lr = learning_rate_schedule(0.007, UnitType.sample)
+    momentum = momentum_as_time_constant_schedule(1100)
+    ce = cross_entropy_with_softmax(z, label_sequence)
+    errs = classification_error(z, label_sequence)
+    trainer = Trainer(z, ce, errs, [momentum_sgd(z.parameters, lr, momentum)])
+
+    test_bind = {
+        find_arg_by_name('raw_input' ,z) : reader.streams.features,
+        find_arg_by_name('raw_labels',z) : reader.streams.labels
+    }
+
+    test_minibatch_size = 1024
+
+    # Get minibatches of sequences to test and perform testing
+    i = 0
+    total_error = 0.0
+    while True:
+        mb = reader.next_minibatch(test_minibatch_size, input_map=test_bind)
+        if mb is None: break
+        mb_error = trainer.test_minibatch(mb)
+        total_error += mb_error
+        i += 1
+
+    # and return the test error
+    return total_error/i
+
+
 ########################
 # helper functions     #
 ########################
@@ -292,12 +328,36 @@ def find_arg_by_name(name, expression):
     return vars[0]
 
 
+###########################
+# automated test function #
+###########################
+
+def seq2seq_automated_test():
+    
+    # hook up data (train_reader gets False randomization to get consistent error)
+    train_reader = create_reader(os.path.join(data_dir, "cmudict-0.7b.train-dev-20-21.ctf"), False)
+    valid_reader = create_reader(os.path.join(data_dir, "tiny.ctf"), False)
+    test_reader  = create_reader(os.path.join(data_dir, "cmudict-0.7b.test.ctf"), False, FULL_DATA_SWEEP)
+    vocab, i2w = get_vocab(os.path.join(data_dir, "cmudict-0.7b.mapping"))
+
+    # create model
+    model = create_model()
+    
+    # train (with small numbers to finish in a reasonable amount of time)
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=1, epoch_size=5000)
+
+    # now test the model and print out test error (for automated test)
+    model_filename = os.path.join(model_dir, "model_epoch0.dnn")
+    error = test(test_reader, model_filename)
+    
+    return error    
+    
 #############################
 # main function boilerplate #
 #############################
     
 if __name__ == '__main__':
-
+       
     # hook up data
     train_reader = create_reader(os.path.join(data_dir, "cmudict-0.7b.train-dev-20-21.ctf"), True)
     valid_reader = create_reader(os.path.join(data_dir, "tiny.ctf"), False)
@@ -307,8 +367,6 @@ if __name__ == '__main__':
     model = create_model()
     
     # train
-    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10)
-
-
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
     #write(valid_reader, "g2p_epoch0.dnn", vocab, i2w)
