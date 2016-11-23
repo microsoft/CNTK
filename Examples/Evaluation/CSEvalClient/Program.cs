@@ -56,9 +56,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
     {
         private static string initialDirectory;
         /// The location of the Resnet model file that is required for the image API tests.
-        private static string resnetModelFilePath;
+        private static string resnetModelFilePath = null;
         /// The location of the test image that is using in the image API tests.
-        private static string imageFileName;
+        private static string imageFileName = null;
         // The width and height of the images that go into ResNet.
         private static int resNetImageSize = 224;
 
@@ -71,37 +71,37 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         {
             initialDirectory = Environment.CurrentDirectory;
 
-            Console.WriteLine("====== EvaluateModelSingleLayer ========");
-            EvaluateModelSingleLayer();
+            //Console.WriteLine("====== EvaluateModelSingleLayer ========");
+            //EvaluateModelSingleLayer();
 
             Console.WriteLine("\n====== EvaluateModelMultipleLayers ========");
             EvaluateModelMultipleLayers();
 
-            Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
-            EvaluateExtendedNetworkSingleLayerNoInput();
+            //Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
+            //EvaluateExtendedNetworkSingleLayerNoInput();
 
-            Console.WriteLine("\n====== EvaluateMultipleModels ========");
-            EvaluateMultipleModels();
+            //Console.WriteLine("\n====== EvaluateMultipleModels ========");
+            //EvaluateMultipleModels();
 
-            // The image tests require the Resnet model. 
-            // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
-            // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
-            // along with a sample image file named "zebra.jpg".
-            var resnetDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Classification\ResNet");
-            resnetModelFilePath = Path.Combine(resnetDirectory, "ResNet_18.model");
-            ThrowIfFileNotExist(resnetModelFilePath,
-                string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Classification\\ResNet.", resnetModelFilePath));
-            imageFileName = Path.Combine(resnetDirectory, "zebra.jpg");
-            ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
+            //// The image tests require the Resnet model. 
+            //// The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
+            //// The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
+            //// along with a sample image file named "zebra.jpg".
+            //var resnetDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Classification\ResNet");
+            //resnetModelFilePath = Path.Combine(resnetDirectory, "ResNet_18.model");
+            //ThrowIfFileNotExist(resnetModelFilePath,
+            //    string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Classification\\ResNet.", resnetModelFilePath));
+            //imageFileName = Path.Combine(resnetDirectory, "zebra.jpg");
+            //ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
 
-            Console.WriteLine("\n====== EvaluateImageInputUsingFeatureVector ========");
-            var outputs1 = EvaluateImageInputUsingFeatureVector();
+            //Console.WriteLine("\n====== EvaluateImageInputUsingFeatureVector ========");
+            //var outputs1 = EvaluateImageInputUsingFeatureVector();
 
-            Console.WriteLine("\n====== EvaluateImageInputUsingImageApi ========");
-            var outputs2 = EvaluateImageInputUsingImageApi();
+            //Console.WriteLine("\n====== EvaluateImageInputUsingImageApi ========");
+            //var outputs2 = EvaluateImageInputUsingImageApi();
 
-            Console.WriteLine("\n====== CompareImageApiResults ========");
-            CompareImageApiResults(outputs1, outputs2);
+            //Console.WriteLine("\n====== CompareImageApiResults ========");
+            //CompareImageApiResults(outputs1, outputs2);
 
             // This pattern is used by End2EndTests to check whether the program runs to complete.
             Console.WriteLine("\n====== Evaluation Complete ========");
@@ -223,23 +223,23 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             {
                 // The examples assume the executable is running from the data folder
                 // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-                Environment.CurrentDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\GettingStarted");
+                // Environment.CurrentDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\GettingStarted");
 
                 Dictionary<string, List<float>> outputs;
 
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Desired output layers
-                    const string hiddenLayerName = "out.h1";
-                    const string outputLayerName = "out.z";
+                    //const string hiddenLayerName = "out.h1";
+                    const string outputLayerName = "__v2libuid__Plus2069__v2libname__Plus2060"; //"out.z";
 
                     // Load model
-                    string modelFilePath = Path.Combine(Environment.CurrentDirectory, @".\Output\Models\01_OneHidden");
+                    string modelFilePath = @".\z.model"; // Path.Combine(Environment.CurrentDirectory, @".\Output\Models\01_OneHidden");
                     ThrowIfFileNotExist(modelFilePath,
                         string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/GettingStarted to create the model.", modelFilePath));
 
-                    var desiredOutputLayers = new List<string>() { hiddenLayerName, outputLayerName };
-                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1, outputNodeNames: desiredOutputLayers);
+                    var desiredOutputLayers = new List<string>() { outputLayerName };
+                    model.CreateNetwork(string.Format("traceLevel=1\nmodelPath=\"{0}\"", modelFilePath), deviceId: -1, outputNodeNames: desiredOutputLayers);
 
                     // Generate random input values in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
@@ -251,8 +251,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     // We can preallocate the output structure and pass it in (multiple output layers)
                     outputs = new Dictionary<string, List<float>>()
                     {
-                        { hiddenLayerName, GetFloatArray(outDims[hiddenLayerName], 1) },    
-                        { outputLayerName, GetFloatArray(outDims[outputLayerName], 1) }
+                        { outputLayerName, GetFloatArray(outDims[outputLayerName], 1) },                           
                     };
                     model.Evaluate(inputs, outputs);
                 }
