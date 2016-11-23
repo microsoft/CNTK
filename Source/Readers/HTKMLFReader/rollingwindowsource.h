@@ -181,7 +181,7 @@ public:
         // finish off last block
         flushlastblock();
         fflushOrDie(f);
-        fprintf(stderr, "biggrowablevectorarray: disk backup store created, %d frames, %lu bytes\n", (int) n, fgetpos(f));
+        fprintf(stderr, "biggrowablevectorarray: disk backup store created, %d frames, %lu bytes\n", (int) n, (unsigned long)fgetpos(f));
         fclose(f);
         foreach_index (i, blocks)
             assert(!blocks[i]);         // ensure we flushed

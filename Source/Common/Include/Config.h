@@ -13,7 +13,6 @@ using namespace std;
 
 #pragma warning(disable : 4996) // Caused by the TODO below (line ~1280)
 #pragma warning(disable : 4456) // "declaration of '%$I' hides previous local declaration
-#pragma warning(disable : 4477) // format string '%s' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
 
 // helper for numeric parameter arguments for multiple layers
 // This parses arguments of the form a:b*n:c where b gets duplicated n times and c unlimited times.

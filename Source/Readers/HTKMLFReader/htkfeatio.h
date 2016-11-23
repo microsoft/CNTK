@@ -934,7 +934,7 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
         if (filename.length() < 3 || filename[0] != '"' || filename[filename.length() - 1] != '"')
         {
             fprintf(stderr, "warning: filename entry (%s)\n", filename.c_str());
-            fprintf(stderr, "skip current mlf entry from line (%lu) until line (%lu).\n", line + idx, line + lines.size());
+            fprintf(stderr, "skip current mlf entry from line (%lu) until line (%lu).\n", (unsigned long)(line + idx), (unsigned long)(line + lines.size()));
             return;
         }
 
@@ -1174,7 +1174,7 @@ public:
             malformed("unexpected end in mid-utterance");
 
         curpath.clear();
-        fprintf(stderr, " total %lu entries\n", this->size());
+        fprintf(stderr, " total %lu entries\n", (unsigned long)this->size());
     }
 
     // read state list, index is from 0
@@ -1195,7 +1195,7 @@ public:
                 RuntimeError("readstatelist: lines (%d) not equal to statelistmap size (%d)", (int) index, (int) statelistmap.size());
             if (statelistmap.size() != issilstatetable.size())
                 RuntimeError("readstatelist: size of statelookuparray (%d) not equal to statelistmap size (%d)", (int) issilstatetable.size(), (int) statelistmap.size());
-            fprintf(stderr, "total %lu state names in state list %ls\n", statelistmap.size(), stateListPath.c_str());
+            fprintf(stderr, "total %lu state names in state list %ls\n", (unsigned long)statelistmap.size(), stateListPath.c_str());
         }
     }
 

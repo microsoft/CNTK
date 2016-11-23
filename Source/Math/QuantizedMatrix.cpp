@@ -4,8 +4,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-#pragma warning(disable: 4477) // format string '%s' requires an argument of type 'unsigned int', but variadic argument 2 has type 'unsigned __int64'
-
 template <class ElemType>
 QuantizedMatrix<ElemType>::QuantizedMatrix(const size_t numRows, const size_t numCols, const size_t nbits, DEVICEID_TYPE deviceId, MemAllocator* allocator /* = nullptr */)
     : m_numRows(numRows), m_numCols(numCols), m_numBits(nbits), m_allocator(allocator)
@@ -129,11 +127,11 @@ void QuantizedMatrix<ElemType>::Print(const char* matrixName, size_t rowStart, s
     }
 
     if (matrixName != nullptr)
-        fprintf(stderr, "\n###### %s (%lu, %lu) ######\n", matrixName, GetNumRows(), GetNumCols());
+        fprintf(stderr, "\n###### %s (%lu, %lu) ######\n", matrixName, (unsigned long)GetNumRows(), (unsigned long)GetNumCols());
     else
-        fprintf(stderr, "\n###### Unnamed Matrix (%lu, %lu) ######\n", GetNumRows(), GetNumCols());
+        fprintf(stderr, "\n###### Unnamed Matrix (%lu, %lu) ######\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols());
 
-    fprintf(stderr, "\n------ Print Range (%lu:%lu, %lu:%lu) ------\n", rowStart, rowEnd, colStart, colEnd);
+    fprintf(stderr, "\n------ Print Range (%lu:%lu, %lu:%lu) ------\n", (unsigned long)rowStart, (unsigned long)rowEnd, (unsigned long)colStart, (unsigned long)colEnd);
 
     for (size_t j = colStart; j <= colEnd; j++)
     {
