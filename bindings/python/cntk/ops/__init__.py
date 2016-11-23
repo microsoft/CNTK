@@ -250,7 +250,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     >>> x = C.input_variable(img.shape)
     >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
     >>> kernel = C.constant(value = filter)
-    >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]})
+    >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}) # doctest: +SKIP
     array([[[[[  6.,   8.,  10.,  12.],
               [ 16.,  18.,  20.,  22.],
               [ 26.,  28.,  30.,  32.],
