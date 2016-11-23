@@ -73,17 +73,17 @@ std::string EncodeBase64(const char *buf, int len)
 	return result;
 }
 
-graphIR::Graph CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
+graphIR::Graph* CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
 {
-    graphIR::GraphInfo graphInfo;
-    graphInfo.set_framework_name("CNTK");
-    graphInfo.set_framework_version("2.0beta3.0"); // TODO: call cntk function to retrieve version string
-    graphInfo.set_graph_version("0.1");
-    graphInfo.set_description("Exported by the Graph Ir Exporter from CNTK");
-    graphInfo.set_model_name(std::string(filename.begin(), filename.end()));
+	auto graphInfo = new graphIR::GraphInfo();
+    graphInfo->set_framework_name("CNTK");
+    graphInfo->set_framework_version("2.0beta3.0"); // TODO: call cntk function to retrieve version string
+    graphInfo->set_graph_version("0.1");
+    graphInfo->set_description("Exported by the Graph Ir Exporter from CNTK");
+    graphInfo->set_model_name(std::string(filename.begin(), filename.end()));
 
-	graphIR::Graph graph;
-	graph.set_allocated_graph_info(&graphInfo);
+	auto graph = new graphIR::Graph();
+	graph->set_allocated_graph_info(graphInfo);
 
 	std::unordered_set<FunctionPtr> functions;
 	Traverse(evalFunc->RootFunction(), functions,
@@ -91,7 +91,7 @@ graphIR::Graph CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
 	{
 		fprintf(stderr, "now at %S opcode %S\n", f->Uid().c_str(), f->OpName().c_str());
 
-		graphIR::Node *node = graph.add_nodes();
+		graphIR::Node *node = graph->add_nodes();
 
 		node->set_name(ConstructUniqueName(f->Uid(), f->Name()));
 
@@ -257,7 +257,7 @@ graphIR::Graph CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
     return graph;
 }
 
-CNTK::FunctionPtr GraphIrToCntkGraph(graphIR::Graph &/*graphIrPtr*/, CNTK::FunctionPtr /*modelFuncPtr*/)
+CNTK::FunctionPtr GraphIrToCntkGraph(graphIR::Graph */*graphIrPtr*/, CNTK::FunctionPtr /*modelFuncPtr*/)
 {
     return nullptr;
 }

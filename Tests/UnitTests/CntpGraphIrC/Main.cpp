@@ -21,8 +21,8 @@ using namespace CNTK;
 using namespace std;
 
 
-extern FunctionPtr GraphIrToCntkGraph(graphIR::Graph &/*graphIrPtr*/, FunctionPtr /*modelFuncPtr*/);
-extern graphIR::Graph CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc);
+extern FunctionPtr GraphIrToCntkGraph(graphIR::Graph */*graphIrPtr*/, FunctionPtr /*modelFuncPtr*/);
+extern graphIR::Graph* CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc);
 extern void EvaluateGraph(FunctionPtr evalFunc, const DeviceDescriptor& device);
 
 int main()
@@ -40,7 +40,7 @@ int main()
 
 	// save it out to disk in json format.
 	std::string jsonstring;
-	auto serialized = google::protobuf::util::MessageToJsonString(graphIrPtr, &jsonstring);
+	auto serialized = google::protobuf::util::MessageToJsonString(*graphIrPtr, &jsonstring);
 	auto fp = fopen((filename + std::string(".pb.json")).c_str(), "w+");
 	auto written = fwrite(jsonstring.c_str(), sizeof(char), jsonstring.length(), fp);
 	fclose(fp);
