@@ -12,11 +12,6 @@
 
 using namespace CNTK;
 
-#pragma warning(push, 0)
-#include <graphid.pb.h>
-#include <google/protobuf/util/json_util.h>
-#pragma warning(pop)
-
 
 bool GetVariableByName(std::vector<Variable> variableLists, std::wstring varName, Variable& var)
 {
