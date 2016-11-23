@@ -679,7 +679,7 @@ long UCIParser<NumType, LabelType>::Parse(size_t recordsRequested, std::vector<N
     long TickDelta = TickStop - TickStart;
 
     if (m_traceLevel > 2)
-        fprintf(stderr, "\n%ld ms, %ld numbers parsed\n\n", TickDelta, m_totalNumbersConverted);
+        fprintf(stderr, "\n%ld ms, %ld numbers parsed\n\n", TickDelta, (long)m_totalNumbersConverted);
     return recordCount;
 }
 

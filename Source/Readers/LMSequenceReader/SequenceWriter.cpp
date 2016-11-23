@@ -88,7 +88,7 @@ void LMSequenceWriter<ElemType>::ReadLabelInfo(const wstring& vocfile,
     b = 0;
     while (!feof(vin))
     {
-        fscanf_s(vin, "%s\n", stmp, _countof(stmp));
+        fscanf_s(vin, "%s\n", stmp, (unsigned int)_countof(stmp));
         word4idx[stmp] = b;
         idx4word[b++] = stmp;
     }

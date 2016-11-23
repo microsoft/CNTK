@@ -362,7 +362,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
             n++;
         }
 
-        fprintf(stderr, " %lu entries\n", n);
+        fprintf(stderr, " %lu entries\n", (unsigned long)n);
 
         if (i == 0)
             numFiles = n;

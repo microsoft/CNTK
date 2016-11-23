@@ -24,8 +24,6 @@
 #include "simplesenonehmm.h"
 #include "Matrix.h"
 
-#pragma warning(disable: 4477)
-
 namespace msra { namespace math {
 
 class ssematrixbase;
@@ -876,7 +874,7 @@ public:
     template <typename HMMLOOKUPFUNCTION>
     void dump(FILE* f, const HMMLOOKUPFUNCTION& gethmmname) const // dump a lattice in HTK-like format
     {
-        fprintf(f, "N=%lu L=%lu\n", nodes.size(), edges.size());
+        fprintf(f, "N=%lu L=%lu\n", (unsigned long)nodes.size(), (unsigned long)edges.size());
         // foreach_index (i, nodes)
         //    fprintf (f, "I=%d\tt=%.2f\n", i, nodes[i].t * 0.01f);
         foreach_index (j, edges)
@@ -1283,7 +1281,7 @@ public:
             char c;
             uint64_t offset;
 #ifdef _WIN32
-            if (sscanf_s(q, "[%I64u]%c", &offset, &c, sizeof(c)) != 1)
+            if (sscanf_s(q, "[%I64u]%c", &offset, &c, (unsigned int)sizeof(c)) != 1)
 #else
 
             if (sscanf(q, "[%" PRIu64 "]%c", &offset, &c) != 1)

@@ -15,8 +15,6 @@
 #include "simple_checked_arrays.h"
 #include "Basics.h" // for FormatWin32Error
 
-#pragma warning(disable: 4477)
-
 namespace msra { namespace numa {
 
 // ... TODO: this can be a 'static', as it should only be set during foreach_node but not outside
@@ -139,7 +137,7 @@ static inline void *malloc(size_t n, size_t align)
         p = VirtualAllocEx(GetCurrentProcess(), NULL, n, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     }
     if (p == NULL)
-        fprintf(stderr, "numa::malloc: failed allocating %d bytes with alignment %d\n", n, align);
+        fprintf(stderr, "numa::malloc: failed allocating %lu bytes with alignment %lu\n", (unsigned long)n, (unsigned long)align);
     if (((size_t) p) % align != 0)
         LogicError("VirtualAllocExNuma() returned an address that does not match the alignment requirement");
     return p;
@@ -163,9 +161,9 @@ static inline void showavailablememory(const char *what)
         BOOL rc = GetNumaAvailableMemoryNode((UCHAR) i, &availbytes);
         const double availmb = availbytes / (1024.0 * 1024.0);
         if (rc)
-            fprintf(stderr, "%s: %8.2f MB available on NUMA node %d\n", what, availmb, i);
+            fprintf(stderr, "%s: %8.2f MB available on NUMA node %lu\n", what, availmb, (unsigned long)i);
         else
-            fprintf(stderr, "%s: error for getting available memory on NUMA node %d\n", what, i);
+            fprintf(stderr, "%s: error for getting available memory on NUMA node %lu\n", what, (unsigned long)i);
     }
 }
 
