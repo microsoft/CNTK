@@ -56,7 +56,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <PreprocessorDefinitions>SWIG;SWIGCSHARP</PreprocessorDefinitions>
+      <!--PreprocessorDefinitions>SWIG;SWIGCSHARP;%(PreprocessorDefinitions)</PreprocessorDefinitions-->
       <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>

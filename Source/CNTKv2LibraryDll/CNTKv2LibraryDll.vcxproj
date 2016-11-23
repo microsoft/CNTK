@@ -113,6 +113,9 @@
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">false</PreprocessToFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'" />
+      <PrecompiledHeaderOutputFile Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'" />
     </ClCompile>
     <Link>
       <DelayLoadDLLs>Math.dll</DelayLoadDLLs>
