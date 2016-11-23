@@ -1920,7 +1920,7 @@ from cntk.axis import Axis
 
 
 @typemap
-def input_variable(shape, dtype=np.float32, needs_gradient=True, is_sparse=False,
+def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
                    dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
     '''
     It creates an input node.
@@ -1928,7 +1928,7 @@ def input_variable(shape, dtype=np.float32, needs_gradient=True, is_sparse=False
     Args:
         shape (tuple or int): the shape of the input tensor
         dtype (type, optional): np.float32 (default) or np.float64
-        needs_gradients (bool, optional): whether to back-propagates to it or not. True by default.
+        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
         name (str, optional): the name of the Function instance in the network
