@@ -31,6 +31,7 @@ namespace CNTK
         {
             std::unordered_map<Variable, Variable> m_placeholderReplacements;
             std::unordered_map<ComputationNodeBasePtr, Variable> m_nodeToVariableMap;
+            std::unordered_set<FunctionPtr> m_allPrimitiveFunctions;
 
         public:
             const std::unordered_map<Variable, Variable>& GetPlaceHolders() const
@@ -398,6 +399,7 @@ namespace CNTK
                 std::tie(functionUid, functionName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), opType);
 
                 FunctionPtr primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), functionName, functionUid);
+                m_allPrimitiveFunctions.insert(primitiveFunction);
                 return primitiveFunction->Output();
             }
         };
@@ -450,7 +452,6 @@ namespace CNTK
 
             auto rootComposite = Combine(rootVariables);
             rootComposite->ReplacePlaceholders(resolver.GetPlaceHolders());
-
             return rootComposite;
         }
 
