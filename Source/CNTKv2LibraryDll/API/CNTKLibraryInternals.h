@@ -200,8 +200,12 @@ namespace CNTK
     class DistributedTrainer;
     typedef std::shared_ptr<DistributedTrainer> DistributedTrainerPtr;
 
+
+
     namespace Internal
     {
+#ifndef SWIGCSHARP
+
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
         CNTK_API FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
         CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
@@ -214,9 +218,10 @@ namespace CNTK
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
         CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
-
+#endif
         CNTK_API size_t NewUniqueId();
 
+#ifndef SWIGCSHARP
         // Internal hooks for testing and higher-level bindings
         // These should not be directly called by C++ API users
         CNTK_API void EnableReversingTensorShapesInErrorMessages();
@@ -252,5 +257,6 @@ namespace CNTK
                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, ::CNTK::Variable>& nodeToVariableMap,
                              std::unordered_map<::CNTK::Variable, ::CNTK::Variable>& placeholderReplacements,
                              std::unordered_set<::CNTK::FunctionPtr>& allPrimitiveFunctions);
+#endif
     }
 }
