@@ -523,7 +523,7 @@ void DoTopologyPlot(const ConfigParameters& config)
         outputDotFile = modelPath + L".dot";
 
     ComputationNetwork net(CPUDEVICE);
-    net.Load<ElemType>(modelPath);
+    size_t modelVersion = net.Load<ElemType>(modelPath);
 
     net.PlotNetworkTopology(outputDotFile);
     fprintf(stderr, "Created network description in dot format: %ls\n", outputDotFile.c_str());

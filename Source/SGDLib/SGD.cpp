@@ -654,7 +654,9 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                     // roll back
                     auto bestModelPath = GetModelNameForEpoch(i - m_learnRateAdjustInterval);
                     LOGPRINTF(stderr, "Loading (rolling back to) previous model with best training-criterion value: %ls.\n", bestModelPath.c_str());
-                    net->RereadPersistableParameters<ElemType>(bestModelPath);
+                    size_t modelVersion = net->RereadPersistableParameters<ElemType>(bestModelPath);
+                    if (m_traceLevel > 0)
+                        fprintf(stderr, "Model version %i\n", modelVersion);
                     LoadCheckPointInfo(i - m_learnRateAdjustInterval,
                                        /*out*/ totalTrainingSamplesSeen,
                                        /*out*/ learnRatePerSample,
@@ -1632,8 +1634,9 @@ double SGD<ElemType>::SearchForBestLearnRate(ComputationNetworkPtr net,
     }
 
     int baseModelEpoch = epochNumber - 1;
-    net->RereadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
-
+    size_t modelVersion = net->RereadPersistableParameters<ElemType>(GetModelNameForEpoch(baseModelEpoch));
+    if (m_traceLevel > 0)
+        LOGPRINTF(stderr, "Model version %i\n", modelVersion);
     double learnRate = learnRatePerSample;
     size_t dummyMinibatchSize;            // (not used)
     size_t dummyTotalTrainingSamplesSeen; // (not used)
@@ -2011,8 +2014,9 @@ void SGD<ElemType>::TrainOneMiniEpochAndReloadModel(ComputationNetworkPtr net,
     int baseModelEpoch = epochNumber - 1;
     let path = GetModelNameForEpoch(baseModelEpoch);
     //fprintf(stderr, "Reverting parameters back to %ls\n", path.c_str());
-    net->RereadPersistableParameters<ElemType>(path);
-
+    size_t modelVersion = net->RereadPersistableParameters<ElemType>(path);
+    if (m_traceLevel > 0)
+        LOGPRINTF(stderr, "Model version %i\n", modelVersion);
     double dummyLearnRate;
     double dummyPrevCriterion;
     size_t dummyTotalTrainingSamplesSeen; // (not used)

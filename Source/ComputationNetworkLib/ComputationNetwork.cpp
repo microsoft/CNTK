@@ -200,7 +200,7 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
 // This is also used for reloading a model without recreating it, e.g. during training.
 // TODO: Why not just reload it? Because SGD::Train() holds pointers to the parameters directly? That should be fixed.
 template <class ElemType> // ElemType is the default for models prior to CNTK_MODEL_VERSION_7; after that, it is serialized, and ElemType is ignored
-void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
+size_t ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
 {
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
@@ -259,18 +259,20 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
     }
 
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ENodeList");
+
+    return modelVersion;
 }
 
 // deserialize the model
 // This does not post-process the model (CompileNetwork()). Use Load() instead.
 template <class ElemType> // for ReadPersistableParameters()
-void ComputationNetwork::Read(const wstring& fileName)
+size_t ComputationNetwork::Read(const wstring& fileName)
 {
     ClearNetwork();
 
     File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
 
-    ReadPersistableParameters<ElemType>(fstream, true);
+    size_t modelVersion = ReadPersistableParameters<ElemType>(fstream, true);
 
     size_t numNodes = m_nameToNodeMap.size();
 
@@ -389,6 +391,8 @@ void ComputationNetwork::Read(const wstring& fileName)
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ERootNodes");
 
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"ECN");
+
+    return modelVersion;
 }
 
 // -----------------------------------------------------------------------
@@ -1503,8 +1507,8 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
 }
 
 template void ComputationNetwork::InitLearnableParametersWithBilinearFill<float>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
-template void ComputationNetwork::Read<float>(const wstring& fileName);
-template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
+template size_t ComputationNetwork::Read<float>(const wstring& fileName);
+template size_t ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
 template /*static*/ void ComputationNetwork::SetIRngUserSeed<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
@@ -1514,8 +1518,8 @@ template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, 
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
 template void ComputationNetwork::InitLearnableParametersWithBilinearFill<double>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
-template void ComputationNetwork::Read<double>(const wstring& fileName);
-template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
+template size_t ComputationNetwork::Read<double>(const wstring& fileName);
+template size_t ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
 template /*static*/ void ComputationNetwork::SetIRngUserSeed<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);

@@ -90,22 +90,25 @@ public:
     // -----------------------------------------------------------------------
 
     template <class ElemType>
-    void ReadPersistableParameters(File& fstream, bool create);
+    size_t ReadPersistableParameters(File& fstream, bool create);
     // reload node content only, e.g. used by SGD::Train() when going back to an older model that had better training objective
     template <class ElemType>
-    void RereadPersistableParameters(const std::wstring& fileName)
+    size_t RereadPersistableParameters(const std::wstring& fileName)
     {
         File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
-        ReadPersistableParameters<ElemType>(fstream, false);
+        size_t modelVersion = ReadPersistableParameters<ElemType>(fstream, false);
+        return modelVersion;
     }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
-    template <class ElemType> void Read(const std::wstring& fileName);
-    template <class ElemType> void Load(const std::wstring& fileName)
+    template <class ElemType> size_t Read(const std::wstring& fileName);
+    template <class ElemType> size_t Load(const std::wstring& fileName)
     {
-        Read<ElemType>(fileName);
+        size_t modelVerion = Read<ElemType>(fileName);
         // perform all further post-processing, caching, etc.
         CompileNetwork();
+
+        return modelVerion;
     }
 
     // static helper to instantiate a network from a file
