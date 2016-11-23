@@ -281,6 +281,9 @@ public:
                           configp->Get(L"transpose"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
+        // If the image layout is legacy (aka HWC), set m_convolution2D to true for CDSSM
+        if (m_imageLayout == ImageLayoutKind::HWC)
+            m_convolution2D = true;
     }
 
 public:
