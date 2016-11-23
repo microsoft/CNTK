@@ -20,8 +20,8 @@ namespace CNTK
     class QuantizedDataParallelDistributedTrainer : public DistributedTrainerBase
     {
     public:
-        QuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate)
-            : DistributedTrainerBase(communicator)
+        QuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t distributedAfterSampleCount)
+            : DistributedTrainerBase(communicator, distributedAfterSampleCount)
         {
             if (useAsyncBufferedParameterUpdate)
                 LogicError("Asynchronous parameter update is not yet supported.");
@@ -30,6 +30,8 @@ namespace CNTK
         // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
         bool PreParameterUpdateCallback(const Trainer& /*trainer*/, std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info) override
         {
+            HandleEmptyMinibatch(gradientValues, info);
+
             std::vector<NDArrayViewPtr> headerToAggregate;
             headerToAggregate.push_back(info.evalCriterionValue);
             headerToAggregate.push_back(info.trainingLossValue);
@@ -44,11 +46,14 @@ namespace CNTK
             std::vector<NDArrayViewPtr> gradients;
             for (const auto& i : gradientValues)
                 gradients.push_back(i.second);
-            m_communicator->QuantizedAggregateInPlace(
+
+            dynamic_cast<QuantizedDistributedCommunicator*>(m_communicator.get())->QuantizedAggregateInPlace(
                 gradients,
                 m_residuals,
                 m_stripeResiduals,
                 m_communicator->Workers());
+
+            return info.numberOfSamples == 0;
         }
 
         // Optionally overridable method to get checkpoint state associated with this Distributed train method
@@ -73,8 +78,6 @@ namespace CNTK
         }
 
     private:
-        QuantizedDistributedCommunicatorPtr m_communicator;
-
         // Residuals of quantized gradients.
         std::vector<NDArrayViewPtr> m_residuals;
         // Residuals of quantized aggregated stripes this node is responsible for.

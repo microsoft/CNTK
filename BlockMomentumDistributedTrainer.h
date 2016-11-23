@@ -27,14 +27,16 @@ namespace CNTK
             size_t globalModelAggregationBlockSize,
             bool useNesterovMomentum,
             bool resetSGDMomentumAfterAggregation,
-            double blockLearningRate)
+            double blockLearningRate,
+            size_t distributedAfterSampleCount)
             : BlockMomentumDistributedTrainer(
                   communicator, 
                   globalModelAggregationBlockSize,
                   useNesterovMomentum,
                   resetSGDMomentumAfterAggregation,
                   blockLearningRate,
-                  Momentum2TimeConstant(1.0 - 1.0 / (double)communicator->Workers().size(), globalModelAggregationBlockSize))
+                  Momentum2TimeConstant(1.0 - 1.0 / (double)communicator->Workers().size(), globalModelAggregationBlockSize),
+                  distributedAfterSampleCount)
         {}
 
         BlockMomentumDistributedTrainer(
@@ -43,8 +45,9 @@ namespace CNTK
             bool useNesterovMomentum,
             bool resetSGDMomentumAfterAggregation,
             double blockLearningRate,
-            double blockMomentumAsTimeConstant)
-            : DistributedTrainerBase(communicator),
+            double blockMomentumAsTimeConstant,
+            size_t distributedAfterSampleCount)
+            : DistributedTrainerBase(communicator, distributedAfterSampleCount),
             m_useNesterovMomentum(useNesterovMomentum),
             m_resetSGDMomentumAfterAggregation(resetSGDMomentumAfterAggregation),
             m_blockLearningRate(blockLearningRate),
