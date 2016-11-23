@@ -38,7 +38,7 @@ hidden_dim = 300
 def create_reader(path, is_training):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         query         = StreamDef(field='S0', shape=vocab_size,  is_sparse=True),
-        intent_unused = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # BUGBUG: unused, and should infer dim
+        intent_labels = StreamDef(field='S1', shape=num_intents, is_sparse=True),  # (used for intent classification variant)
         slot_labels   = StreamDef(field='S2', shape=num_labels,  is_sparse=True)
     )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
 
@@ -47,11 +47,14 @@ def create_reader(path, is_training):
 ########################
 
 def create_model_function():
+  from cntk.ops.sequence import last
   with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
         Embedding(emb_dim),
         Recurrence(LSTM(hidden_dim), go_backwards=False),
         Dense(num_labels)
+        #last,
+        #Dense(num_intents)
     ])
 
 ########################
@@ -113,25 +116,36 @@ def train(reader, model, max_epochs):
     #   here  (query, slot_labels) -> (ce, errs)
     criterion = create_criterion_function(model)
 
-    # declare argument types
-    #criterion.set_signature(variable_type_of(source.streams.query), variable_type_of(source.streams.slot_labels))
-    criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_labels, is_sparse=True))
+    # TODO: num_intents --> get from reader?
+    labels = reader.streams.slot_labels
+    #labels = reader.streams.intent_labels
+    #labels.m_sampleLayout # .shape BUGBUG: both fail with unknwon attribute
 
-    # iteration config  --needed here because learner schedule needs it
+    # declare argument types
+    criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_labels, is_sparse=True))
+    #criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
+
+    #features = input_variable(shape=vocab_size, is_sparse=False)
+    #label = input_variable(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()])
+    #criterion.set_signature(features, label)
+    # BUGBUG: ^^ Fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
+    #criterion = criterion(features, label) # Workaround: This uses clone().
+    # BUGBUG: ^^ Fails with mixed-up argment order "The 1 leading dimensions of the right operand with shape [943] do not match the left operand's trailing dimensions with shape [26]"
+    #criterion = criterion(label, features) # Workaround: This uses clone(). Note reversed
+    # BUGBUG: ^^ This passes validation but then fails exection with "RuntimeError: AsMatrix: Flattened [943 x 5] matrix has an offset or width that is not a multiple of the storage object's row dimension."
+
+    # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
     minibatch_size = 70
     #epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
 
-    momentum_time_constant = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9))  # TODO: Change to round number. This is 664.39. 700?
-
-    lr_schedule = [0.003]*2+[0.0015]*12+[0.0003] # LR schedule over epochs (we don't run that many epochs, but if we did, these are good values)
-
-    # trainer object
-    lr_per_sample = learning_rate_schedule(lr_schedule, UnitType.sample, epoch_size)
+    # SGD parameters
     learner = adam_sgd(criterion.parameters,
-                       lr=lr_per_sample, momentum=momentum_time_constant,
-                       low_memory=True,
-                       gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
+                       lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
+                       momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
+                       low_memory = True,
+                       gradient_clipping_threshold_per_sample = 15,
+                       gradient_clipping_with_truncation = True)
 
     # trainer
     trainer = create_trainer(model, criterion, learner)
@@ -147,8 +161,8 @@ def train(reader, model, max_epochs):
         while t < epoch_end:               # loop over minibatches on the epoch
             # BUGBUG? The change of minibatch_size parameter vv has no effect.
             data = reader.next_minibatch(min(minibatch_size, epoch_end-t))     # fetch minibatch
-            trainer.train_minibatch_from_data(criterion, data[reader.streams.query], data[reader.streams.slot_labels])  # update model with it
-            t += data[reader.streams.slot_labels].num_samples                  # count samples processed so far
+            trainer.train_minibatch_from_data(criterion, data[reader.streams.query], data[labels])  # update model with it
+            t += data[labels].num_samples                  # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
