@@ -40,10 +40,10 @@ def combine(operands, name=''):
 def alias(x, name=''):
     '''
      Create a new Function instance which just aliases the specified 'x' Function/Variable
-     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified 
+     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified
      'x' Function/Variable, and has the newly specified name.
      The purpose of this operator is to create a new distinct reference to a symbolic
-     computation which is different from the original Function/Variable that it aliases and can 
+     computation which is different from the original Function/Variable that it aliases and can
      be used for e.g. to substitute a specific instance of the aliased Function/Variable in the
      computation graph instead of substituting all usages of the aliased Function/Variable.
 
@@ -617,7 +617,7 @@ def minus(left, right, name=''):
 def element_times(left, right, name=''):
     '''
     The output of this operation is the element-wise product of the two input
-    tensors. It supports broadcasting. 
+    tensors. It supports broadcasting.
 
     Example:
         >>> C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
@@ -644,7 +644,7 @@ def element_times(left, right, name=''):
 def element_divide(left, right, name=''):
     '''
     The output of this operation is the element-wise division of the two input
-    tensors. It supports broadcasting. 
+    tensors. It supports broadcasting.
 
     Example:
         >>> C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
@@ -669,11 +669,11 @@ def element_divide(left, right, name=''):
 @typemap
 def log_add_exp(left, right, name=''):
     '''
-    The output of this operation is the log of the sum of the exponentials
+    Calculates the log of the sum of the exponentials
     of the two input tensors. It supports broadcasting.
 
     Example:
-    >>> a=np.arange(3,dtype=np.float32)
+    >>> a = np.arange(3,dtype=np.float32)
     >>> np.exp(C.log_add_exp(np.log(1+a), np.log(1+a*a)).eval())
     array([ 2.,  4.,  8.], dtype=float32)
     >>> np.exp(C.log_add_exp(np.log(1+a), [0.]).eval())
@@ -1402,7 +1402,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         weights: parameter tensor that holds the learned weights.
         hidden_size (int): number of hidden units in each layer (and in each direction).
         num_layers (int): number of layers in the stack.
-        bidirectional(bool, optional): whether each layer should compute both in forward
+        bidirectional(bool, default False): whether each layer should compute both in forward
          and separately in backward mode and concatenate the results
          (if True the output is twice the hidden_size). The default is
          False which means the recurrence is only computed in the forward direction.
@@ -1425,7 +1425,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
     operand = sanitize_input(operand)
     if recurrent_op not in set(['lstm','gru','relu','tanh']):
         raise(ValueError('unsupported recurrent_op value "%s"'%recurrent_op))
-    return optimized_rnnstack(operand, weights, hidden_size, num_layers, 
+    return optimized_rnnstack(operand, weights, hidden_size, num_layers,
                        bidirectional, recurrent_op, name)
 
 ##########################################################################

@@ -153,7 +153,7 @@ def is_tensor(data):
     return True
 
 @typemap
-def one_hot(batch, num_classes, dtype=None, device=None): 
+def one_hot(batch, num_classes, dtype=None, device=None):
     '''
     Converts ``batch`` into a :class:`Value` object of ``dtype``
     such that the integer data in ``batch`` is interpreted as the indices
@@ -173,20 +173,20 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     if device is None:
         device = use_default_device()
 
-    if dtype in [np.float32, None]: 
-        value = cntk_py.Value.create_one_hot_float(num_classes, batch, device, False) 
-    elif dtype == np.float64: 
-        value = cntk_py.Value.create_one_hot_double(num_classes, batch, device, False) 
+    if dtype in [np.float32, None]:
+        value = cntk_py.Value.create_one_hot_float(num_classes, batch, device, False)
+    elif dtype == np.float64:
+        value = cntk_py.Value.create_one_hot_double(num_classes, batch, device, False)
     return value
 
 def has_seq_dim(var, data):
     '''
-    Checks whether the data has a sequence dimensions or not. 
+    Checks whether the data has a sequence dimensions or not.
 
     By default, :func:`~cntk.ops.input_variable` sets up the input variable to
     have two dynamic axes, the batch and the sequence axis. When providing the
     data, the sequence axis can be left out, if the batch doesn't make use of
-    sequences, and will be implicitly added during forward or backward pass. 
+    sequences, and will be implicitly added during forward or backward pass.
 
     Args:
         var (:class:`~cntk.ops.variables.Variable`): variable node for which
@@ -219,7 +219,7 @@ def has_seq_dim(var, data):
                 # Calculate the shape of the data point that would correspond to the input
                 # variable's shape.
                 drill_shape = _as_tuple(np.asarray(drill[-var_rank]).shape)
-                drill.pop() 
+                drill.pop()
 
                 if drill_shape == ():
                     drill_shape = (1,)
@@ -231,6 +231,10 @@ def has_seq_dim(var, data):
         additional_dyn_axes = len(drill_shape) - var_rank
         num_dyn_axes += additional_dyn_axes
         drill_shape = drill_shape[additional_dyn_axes:]
+        # We also should make sure that the array is C contiguous
+        if not drill_data.flags.c_contiguous:
+            raise ValueError('supplied array is not C contiguous; use '
+                'np.ascontiguousarray (slow) or rearrange your data/computation')
     elif sparse.issparse(drill_data):
         if len(drill_shape)==2 and drill_shape[0]==1 and var_rank==1:
             # var_shape might be defined as e.g. (3,) or (1,3)
@@ -329,7 +333,7 @@ def get_data_type(*args):
     inputs. Placeholders are ignored in the type determination.
 
     Args:
-        args (number, list, NumPy array, :class:`cntk.ops.variables.Variable`, 
+        args (number, list, NumPy array, :class:`cntk.ops.variables.Variable`,
          or :class:`cntk.ops.functions.Function`): input
     Returns:
         np.float32, np.float64, or None
@@ -424,7 +428,7 @@ def _pad_sparse_seq_to_max_len(batch, max_seq_len):
     Z = []
     data_point = sparse.csr_matrix(batch[0][0].shape)
     for seq in batch:
-        seq_len = seq.shape[0] if hasattr(seq, 'shape') else len(seq) 
+        seq_len = seq.shape[0] if hasattr(seq, 'shape') else len(seq)
         if seq_len>max_seq_len:
             raise ValueError('sequence of length %i exceeds max '
                     'length of %i'%(seq_len, max_seq_len))
@@ -435,8 +439,8 @@ def _pad_sparse_seq_to_max_len(batch, max_seq_len):
                 shape = list(seq.shape)
                 shape[0] = max_seq_len-seq_len
                 seq = [seq, sparse.csr_matrix(tuple(shape))]
-                
-        if isinstance(seq, list):    
+
+        if isinstance(seq, list):
             seq = sparse.vstack(seq, format='csr')
 
         Z.append(seq)
@@ -460,7 +464,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
 
     Args:
         var (:class:`~cntk.ops.variables.Variable`): variable node for which
-         the ``batch`` is meant 
+         the ``batch`` is meant
         batch (list of NumPy arrays): input
         seq_starts (list of bool or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
@@ -533,7 +537,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
 
     # batch is now either a dense input that requires a mask, or it is sparse
     if batch_has_seq:
-        mask = cntk_py.NDMask((len(batch), max_seq_len), 
+        mask = cntk_py.NDMask((len(batch), max_seq_len),
                 device or use_default_device())
         for idx, seq_len in enumerate(seq_lens):
             if seq_starts is None or seq_starts[idx]:
@@ -556,11 +560,11 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
 
     # There are three possibilities of providing sparse batches:
     # 1. batch is given as one big sparse array
-    batch_is_sparse = sparse.issparse(batch) 
+    batch_is_sparse = sparse.issparse(batch)
     if batch_is_sparse:
         sparse_tmp = batch
     else:
-        # 2. batch is given as a list of sparse arrays, each of which is a full 
+        # 2. batch is given as a list of sparse arrays, each of which is a full
         #    sequence
         batch_has_sparse_sequences = batch_is_sparse or sparse.issparse(batch[0])
         if batch_has_sparse_sequences:
@@ -574,7 +578,7 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
                 sparse_tmp = batch[0][0]
 
     if not sparse.isspmatrix_csr(sparse_tmp):
-        raise ValueError("only CSR is supported as of now. Please " 
+        raise ValueError("only CSR is supported as of now. Please "
                 "convert your data using 'batch.tocsr()'")
 
     if batch_is_sparse or batch_has_sparse_sequences or \
@@ -591,9 +595,9 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
             if batch_has_seq:
                 shape = batch[0][0].shape
                 if not (len(shape)==1 or len(shape)==2 and shape[0]==1):
-                    raise ValueError('only 1D sparse vectors are supported in ' 
+                    raise ValueError('only 1D sparse vectors are supported in '
                             ' sequence data, you gave shape %s'%str(shape))
-                # Pad and stack the sparse vectors. 
+                # Pad and stack the sparse vectors.
                 if batch_has_seq:
                     batch = _pad_sparse_seq_to_max_len(batch, max_seq_len)
                 batch_shape += (max_seq_len,)
@@ -867,7 +871,7 @@ def sanitize_dtype_cntk(dtype):
         return dtype
     if dtype is None:
         return cntk_py.DataType_Unknown
-    
+
     dtype = sanitize_dtype_numpy(dtype)
     if dtype == np.float32:
         return cntk_py.DataType_Float
@@ -1007,10 +1011,10 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
         mapping of output variables to their values.
     '''
 
-    state, forward_output = op.forward(arguments, op.outputs, op.outputs,
+    if backward_pass:
+        state, forward_output = op.forward(arguments, op.outputs, op.outputs,
             device=device)
 
-    if backward_pass:
         if expected_backward is None:
             expected_backward = arguments
         root_gradients = {v: ones_like(o, precision) for v, o in
@@ -1021,6 +1025,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
         return forward_output, backward_output
 
     else:
+        state, forward_output = op.forward(arguments, op.outputs, None, device=device)
         return forward_output, None
 
 # helper to convert a dictionary into a Python class, so that the dict looks like an immutable record

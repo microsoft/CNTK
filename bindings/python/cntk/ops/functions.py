@@ -1,6 +1,8 @@
 from cntk import cntk_py
 from ..utils import typemap, sanitize_var_map, value_to_seq
 from enum import Enum, unique
+import numpy as np
+
 
 @unique
 class CloneMethod(Enum):
@@ -248,7 +250,9 @@ class Function(cntk_py.Function):
         '''
         Backpropagates supplied ``root_gradients`` for one or more of the output
         variables of the Function, to calculate gradients with respect to
-        ``variables``.
+        ``variables``. Formally, multiplies the values of ``root_gradients`` by
+        the Jacobian of the Function and returns the subset of the output that
+        corresponds to ``variables``.
 
         Example:
             >>> # compute the value and the derivative of the sigmoid at 0
@@ -283,6 +287,50 @@ class Function(cntk_py.Function):
             var_gradients[var] = value_to_seq(value)
 
         return var_gradients
+
+    @typemap
+    def grad(self, at, wrt=None, device=None):
+        '''
+        Computes the gradient of this Function at location ``at`` with respect to ``wrt``.
+        The Function must have a single output.
+
+        Example:
+            >>> x = C.input_variable(shape=(1,))
+            >>> y = C.sqrt(x)
+            >>> a = np.asarray([1,4,16],dtype=np.float32).reshape(3,1,1)
+            >>> y.grad({x:a})
+            [array([[[ 0.5  ]],
+            <BLANKLINE>
+                   [[ 0.25 ]],
+            <BLANKLINE>
+                   [[ 0.125]]], dtype=float32)]
+
+        Args:
+            at (dict) : mapping of the Function's arguments to values
+            wrt (list optional): list of Variables with respect to which the
+             gradient will be computed. If ommited the gradients with
+             respect to all arguments will be computed. If a variable
+             is repeated in this list, the gradient will be repeated
+             in the output as a shallow copy.
+
+        Returns:
+            list: arrays containing the gradients in the same order as
+            the variables in ``wrt``. The arrays have the same shape as
+            ``wrt`` including dynamic axes (such as the minibatch axis).
+        '''
+
+        if len(self.outputs) != 1 :
+            raise InvalidArgumentException('function must return a single tensor')
+
+        if wrt is None:
+            wrt = self.arguments
+
+        unique_wrt = set(wrt)
+        output = [self.output]
+        df, f = self.forward(at, output, set(output), device)
+        ones = {self.output: np.ones_like(f.values()[0])}
+        grad_dict = self.backward(df, ones, unique_wrt)
+        return [grad_dict[v] for v in wrt]
 
     @property
     @typemap
@@ -361,7 +409,7 @@ class Function(cntk_py.Function):
 
         Args:
             substitution (:class:`~cntk.ops.variables.Variable`): the variable
-             that will replace the placeholder 
+             that will replace the placeholder
 
         Returns:
             :class:`Function`: itself
@@ -388,7 +436,7 @@ class Function(cntk_py.Function):
         Restore the models parameters from a saved model file
 
         Args:
-            filename (str): saved model path 
+            filename (str): saved model path
 
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file
