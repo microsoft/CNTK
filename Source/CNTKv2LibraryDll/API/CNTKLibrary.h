@@ -2278,7 +2278,7 @@ namespace CNTK
         /// The 'state' parameter is an instance of an BackPropState instance obtained from a previous call to the Forward method on 'this; Function for the 
         /// computation that this gradient backpropagation corresponds to.
         ///
-        virtual void Backward(const std::wstring& state,
+        virtual void Backward(const BackPropStatePtr& state,
                               const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                               std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
 #endif 
