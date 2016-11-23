@@ -72,6 +72,10 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
         m_epochSize = config.m_totalEpochSizeInSamples;
     }
 
+    // Sanity check, too big values can cause invalid behavior due to overflow.
+    if (m_epochSize > std::numeric_limits<size_t>::max() / 2)
+        InvalidArgument("Too big epoch size can cause bit overflow");
+
     SetCurrentSamplePosition(m_epochSize * config.m_epochIndex);
     if (m_verbosity >= Notification)
     {

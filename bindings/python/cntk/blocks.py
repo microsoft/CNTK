@@ -115,6 +115,10 @@ def default_options_for(layer_subset, **kwargs):
         layer_subset = [layer_subset]
     return _OptionsStack(layer_subset, **kwargs)
 
+# return the up-to-date default option.
+def _get_current_default_options():
+    return _current_default_options
+
 # resolve activation option against current default
 def _resolve_activation(activation):
     # if none is passed to caller then use the default

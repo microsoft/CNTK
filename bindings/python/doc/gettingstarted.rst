@@ -16,8 +16,8 @@ pass for that node using its inputs, and returns the result of the forward pass.
 more common case) is as follows:
 
     >>> import numpy as np
-    >>> x = cntk.input_variable((1, 2))
-    >>> y = cntk.input_variable((1, 2))
+    >>> x = cntk.input_variable(2)
+    >>> y = cntk.input_variable(2)
     >>> x0 = np.asarray([[2., 1.]], dtype=np.float32)
     >>> y0 = np.asarray([[4., 6.]], dtype=np.float32)
     >>> cntk.squared_error(x, y).eval({x:x0, y:y0})
@@ -60,16 +60,16 @@ can be vastly improved. To explicitly set the device to GPU, set the target devi
     set_default_device(gpu(0))
 
 Now let's setup a network that will learn a classifier based on the example fully connected classifier network 
-(``examples.common.nn.fully_connected_classifier_net``). This is defined, along with several other simple and more complex DNN building blocks in 
-``bindings/python/examples/common/nn.py``. Go to the ``[CNTK root]/bindings/python`` directory and create a ``simplenet.py`` file with the 
+(``nn.fully_connected_classifier_net``). This is defined, along with several other simple and more complex DNN building blocks in 
+``Examples/common/nn.py``. Go to the ``[CNTK root]/Examples/common/`` directory and create a ``simplenet.py`` file with the 
 following contents::
 
 	import numpy as np
 	import cntk
 	import cntk.ops as C
-	from cntk.learner import sgd
+	from cntk.learner import sgd, learning_rate_schedule, UnitType
 	from cntk.utils import get_train_loss
-	from examples.common.nn import fully_connected_classifier_net
+	from nn import fully_connected_classifier_net
 	from cntk.utils import ProgressPrinter
 
 	def generate_random_data(sample_size, feature_dim, num_classes):
@@ -102,7 +102,8 @@ following contents::
 		pe = C.classification_error(z, label)
 
 		# Instantiate the trainer object to drive the model training
-		trainer = cntk.Trainer(z, ce, pe, [sgd(z.parameters, lr=0.005)])
+		lr_per_minibatch = learning_rate_schedule(0.125, UnitType.minibatch)
+		trainer = cntk.Trainer(z, ce, pe, [sgd(z.parameters, lr=lr_per_minibatch)])
 
 		# Get minibatches of training data and perform model training
 		minibatch_size = 25
@@ -155,7 +156,7 @@ as easy as that!
 
 Now that we've seen some of the basics of setting up and training a network using the CNTK Python API, let's look at a more interesting deep 
 learning problem in more detail (for the full example above along with the function to generate random data, please see 
-``bindings/python/examples/NumpyInterop/FeedForwardNet.py``).
+``Tutorials/NumpyInterop/FeedForwardNet.py``).
 
 
 Sequence classification
@@ -227,7 +228,7 @@ sequence classification. We can think of the network as adding a series of layer
 2. LSTM layer (allow each word to depend on previous words)
 3. Softmax layer (an additional set of parameters and output probabilities per class)
 
-This network is defined as part of the example at ``bindings/python/examples/SequenceClassification/SequenceClassification.py``. Let's go through some 
+This network is defined as part of the example at ``Examples/SequenceClassification/SimpleExample/Python/SequenceClassification.py``. Let's go through some 
 key parts of the code::
 
     # model

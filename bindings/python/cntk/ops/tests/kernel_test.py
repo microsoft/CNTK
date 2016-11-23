@@ -1,5 +1,4 @@
 # Copyright (c) Microsoft. All rights reserved.
-
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
@@ -41,10 +40,6 @@ def test_op_convolution_without_padding(convolution_map, convolution_input, devi
     conv_map = AA(convolution_map, dtype=dt)
     conv_input = AA(convolution_input, dtype=dt)
 
-    # adding batch and channel axis
-    conv_input.shape = (1, 1) + conv_input.shape
-    conv_map.shape = (1, 1) + conv_map.shape
-
     flipped_conv_map = conv_map[..., ::-1, ::-1]
 
     from scipy import signal
@@ -58,33 +53,33 @@ def test_op_convolution_without_padding(convolution_map, convolution_input, devi
         needs_gradient=True,
         name='a')
 
+    conv_input.shape = (1,1) + conv_input.shape # adding batch and channel axis
+    conv_map.shape = (1,1) + conv_map.shape
+
     constant_map = constant(value=conv_map)
 
     from cntk import convolution
     input_op = convolution(constant_map, a, auto_padding=[False])
 
     forward_input = {a: conv_input}
-    expected_backward = {a: [[backward]]}
+    expected_backward = {a: backward}
 
     unittest_helper(input_op, forward_input, expected_forward,
                     expected_backward, device_id=device_id, precision=precision)
 
 AVG_POOLING_DATA = [
-    ([1, 2, 2, 4, 3],  # input_size
-     (1, 2, 2, 2, 1),  # pooling_window
-     (1, 2, 2, 2, 1),  # strides
-     [[[[[20.5,  21.5,  22.5],
-         [26.5,  27.5,  28.5]]]]]),  # result
-    ([1, 2, 4, 4, 4],
-     (1, 2, 2, 2, 2),
-     (1, 2, 2, 2, 2),
-     [[[[[43.5,  45.5],
-         [51.5,  53.5]],
-        [[75.5,  77.5],
-         [83.5,  85.5]]]]]),
+    ([1, 2, 2, 4 ,3], # input_size
+     (2, 2, 1), # pooling_window
+     (2, 2, 1), # strides
+     [[[[  8.5,   9.5,  10.5],
+        [ 14.5,  15.5,  16.5]]],
+      [[[ 32.5,  33.5,  34.5],
+        [ 38.5,  39.5,  40.5]]]]), # result
+    ([1, 1, 2, 2 ,4],
+     (2, 2, 1),
+     (2, 2, 1),
+     [[[[  7.,   8.,   9.,  10.]]]])
 ]
-
-
 @pytest.mark.parametrize("input_size, pooling_window, strides, result", AVG_POOLING_DATA)
 def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
@@ -95,32 +90,44 @@ def test_op_avg_pooling(input_size, pooling_window, strides, result, device_id, 
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
-    expected_forward = AA([[result]])
+    a = I(shape=input_operand.shape[2:],
+        dtype=sanitize_dtype_cntk(precision),
+        needs_gradient=True,
+        name='a')
 
     backward = (1 / np.prod(pooling_window)) * np.ones_like(input_operand)
 
-    expected_backward = {
-        'arg': [[backward]]
-    }
-
     from cntk import pooling
+    input_op = pooling(a, AVG_POOLING, pooling_window, strides, auto_padding=[True])
 
-    _test_unary_op(precision, device_id, pooling, input_operand, expected_forward, expected_backward, {
-                   'pooling_type': AVG_POOLING, 'pooling_window_shape': pooling_window, 'strides': strides, 'auto_padding': [True]})
+    forward_input = {a: input_operand}
+
+    expected_forward = AA([result])
+    expected_backward = {a: backward}
+
+    unittest_helper(input_op, forward_input, expected_forward,
+                expected_backward, device_id=device_id, precision=precision)
 
 MAX_POOLING_DATA = [
-    ([1, 2, 2, 4, 3],  # input_size
-     (1, 2, 2, 2, 1),  # pooling_window
-     (1, 2, 2, 2, 1),  # strides
-     [[[[[40.,  41.,  42.],
-         [46.,  47.,  48.]]]]]),  # result
-    ([1, 2, 4, 4, 4],
-     (1, 2, 2, 2, 2),
-     (1, 2, 2, 2, 2),
-     [[[[[86.,   88.],
-         [94.,   96.]],
-        [[118.,  120.],
-         [126.,  128.]]]]]),
+    ([1, 2, 2, 4 ,3], # input_size
+     (2, 2, 1), # pooling_window
+     (2, 2, 1), # strides
+     [[[[ 16.,  17.,  18.],
+         [ 22.,  23.,  24.]]],
+       [[[ 40.,  41.,  42.],
+         [ 46.,  47.,  48.]]]]), # result
+
+    ([1, 2, 4, 4 ,4],
+     (2, 2, 2),
+     (2, 2, 2),
+     [[[[  22.,   24.],
+        [  30.,   32.]],
+       [[  54.,   56.],
+        [  62.,   64.]]],
+      [[[  86.,   88.],
+        [  94.,   96.]],
+       [[ 118.,  120.],
+        [ 126.,  128.]]]]),
 ]
 
 
@@ -134,6 +141,11 @@ def test_op_max_pooling(input_size, pooling_window, strides, result, device_id, 
     x = np.arange(1, total_size + 1, 1, dtype=dt)
     input_operand = x.reshape(input_size)
 
+    a = I(shape=input_operand.shape[2:],
+        dtype=sanitize_dtype_cntk(precision),
+        needs_gradient=True,
+        name='a')
+
     result_array = np.asarray(result, dtype=dt)
     max_elements = result_array.reshape(result_array.size).tolist()
 
@@ -142,104 +154,75 @@ def test_op_max_pooling(input_size, pooling_window, strides, result, device_id, 
     for element in max_elements:
         backward += np.asarray(input_operand == element)
 
-    expected_forward = AA([[result]])
-
-    expected_backward = {
-        'arg': [[backward]]
-    }
-
     from cntk import pooling
-    _test_unary_op(precision, device_id, pooling, input_operand, expected_forward, expected_backward, {
-                   'pooling_type': MAX_POOLING, 'pooling_window_shape': pooling_window, 'strides': strides})
+    input_op = pooling(a, MAX_POOLING, pooling_window, strides)
 
-CONV_WITH_PADDING_OPERANDS = [
-    ([[[1., 2., 3.],  # (3, 2, 3) map
-       [3., 4., 3.]],
-      [[1., 2., 3.],
-       [3., 4., 3.]],
-      [[1., 2., 3.],
-       [3., 4., 3.]]],
-     [[[1., 2., 3.],  # (3, 2, 3) input operand
-       [3., 4., 6.]],
-      [[5., 6., 7.],
-       [7., 8., 9.]],
-      [[9., 10., 11.],
-       [11., 12., 12.]]],
-     [[[[[112.,  175.,  124.],  # (3, 2, 3) expected_forward
-         [56.,   79.,   42.]],
-        [[240.,  354.,  240.],
-         [114.,  150.,   78.]],
-        [[208.,  297.,  196.],
-         [96.,  121.,   62.]]]]],
-     [[[[[6.,  12.,  10.],  # (3, 2, 3) expected_backward
-         [20.,  32.,  24.]],
-        [[9.,  18.,  15.],
-         [30.,  48.,  36.]],
-        [[6.,  12.,  10.],
-         [20.,  32.,  24.]]]]]
-     )
+    forward_input = {a: input_operand}
+
+    expected_forward = AA([result])
+    expected_backward = {a: backward}
+
+    unittest_helper(input_op,
+                forward_input, expected_forward, expected_backward,
+                device_id=device_id, precision=precision)
+
+# ROI pooling test setup
+# --- forward ---
+# input convFeatureMap 3x3 map, values [[1,2,3][4,5,6][7,8,9]]
+# input rois 4x1, values (x, y, w, h) = (1/3, 1/3, 2/3, 2/3)
+# roiOutputShape 3 x 3
+# expected output 3x3 map, values [[5,6,6][8,9,9][8,9,9]]
+# --- backward ---
+# gradient 3x3 map, values [[1,1,1][1,1,1][1,1,1]]
+# expected output gradient 3x3 map, values [[0,0,0][0,1,2][0,2,4]]
+ROIPOOLING_OPERANDS = [
+    ([[[1., 2., 3.],       # (1, 3, 3) input operand (conv feature map)
+       [4., 5., 6.],
+       [7., 8., 9.]]],
+     [[.33, .33, .66, .66]], # (4) input roi (x, y, w, h) relative to image width and height
+     [[[5., 6., 6.],       # (1, 3, 3) expected forward output
+       [8., 9., 9.],
+       [8., 9., 9.]]],
+     [[[0., 0., 0.],       # (1, 3, 3) expected backward output (gradient input is all 1s)
+       [0., 1., 2.],
+       [0., 2., 4.]]])
 ]
 
-
-@pytest.mark.parametrize("convolution_map, convolution_input, forward, backward", CONV_WITH_PADDING_OPERANDS)
-def test_op_convolution_with_padding(convolution_map, convolution_input, forward, backward, device_id, precision):
+@pytest.mark.parametrize("input_map, input_rois, expected_fwd, expected_bkwd", ROIPOOLING_OPERANDS)
+def test_op_roipooling(input_map, input_rois, expected_fwd, expected_bkwd, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
-    conv_map = AA(convolution_map, dtype=dt)
-    conv_input = AA(convolution_input, dtype=dt)
+    # AA == as numpy array
+    conv_input        = AA(input_map, dtype=dt)
+    roi_input         = AA(input_rois, dtype=dt)
+    exp_fwd_value     = AA(expected_fwd, dtype=dt)
+    exp_bkwd_value    = AA(expected_bkwd, dtype=dt)
+    
+    # adding batch, sequence and roi axis
+    exp_fwd_value.shape  = (1,1,1) + exp_fwd_value.shape
+    exp_bkwd_value.shape = (1,1) + exp_bkwd_value.shape
 
-    # adding batch and channel axis
-    conv_input.shape = (1, 1) + conv_input.shape
-    conv_map.shape = (1, 1) + conv_map.shape
-
-    expected_forward = AA([[forward]], dtype=dt)
-
+    # I == define cntk input variables
     a = I(shape=conv_input.shape,
-          dtype=sanitize_dtype_cntk(precision),
-          needs_gradient=True,
-          name='a')
+        dtype=sanitize_dtype_cntk(precision),
+        needs_gradient=True,
+        name='a')
 
-    constant_map = constant(value=conv_map)
+    b = I(shape=roi_input.shape,
+        dtype=sanitize_dtype_cntk(precision),
+        needs_gradient=False,
+        name='b')
 
-    from cntk import convolution
-    input_op = convolution(constant_map, a, auto_padding=[True])
+    # adding batch and sequence axis
+    conv_input.shape     = (1,1) + conv_input.shape
+    roi_input.shape      = (1,1) + roi_input.shape
+    
+    from cntk import roipooling
+    input_op = roipooling(a, b, (3,3))
 
-    forward_input = {a: conv_input}
-    expected_backward = {a: AA([[backward]], dtype=dt)}
+    forward_input = {a: conv_input, b: roi_input}
+    expected_backward = {a: exp_bkwd_value}
 
-    unittest_helper(input_op, forward_input, expected_forward,
-                    expected_backward, device_id=device_id, precision=precision)
-
-AVG_POOLING_DATA_WITH_STRIDES = [
-    ([1, 2, 2, 4, 3],  # input size
-     (1, 2, 2, 2, 1),  # pooling window size
-     (1, 2, 2, 1, 1),  # strides
-     [[[[[20.5,  21.5,  22.5],  # expected forward
-         [23.5,  24.5,  25.5],
-         [26.5,  27.5,  28.5]]]]],
-     np.tile([[0.125,  0.125,  0.125],  # expected backward
-              [0.25,  0.25,  0.25],
-              [0.25,  0.25,  0.25],
-              [0.125,  0.125,  0.125]], (1, 2, 2, 1, 1))),
-]
-
-
-@pytest.mark.parametrize("input_size, pooling_window, strides, forward, backward", AVG_POOLING_DATA_WITH_STRIDES)
-def test_op_avg_pooling_with_different_strides(input_size, pooling_window, strides, forward, backward, device_id, precision):
-    dt = PRECISION_TO_TYPE[precision]
-
-    # fill input operand with a sequence 1,2,3,... til total size and then
-    # resize to input_size
-    total_size = np.prod(input_size)
-    x = np.arange(1, total_size + 1, 1, dtype=dt)
-    input_operand = x.reshape(input_size)
-
-    expected_forward = AA([[forward]], dtype=dt)
-
-    expected_backward = {
-        'arg': [[backward]]
-    }
-
-    from cntk import pooling
-    _test_unary_op(precision, device_id, pooling, input_operand, expected_forward, expected_backward, {
-                   'pooling_type': AVG_POOLING, 'pooling_window_shape': pooling_window, 'strides': strides})
+    unittest_helper(input_op,
+                    forward_input, exp_fwd_value, expected_backward,
+                    device_id=device_id, precision=precision)

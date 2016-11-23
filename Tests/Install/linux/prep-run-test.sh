@@ -36,15 +36,6 @@ cd "$CNTK_DROP/Examples/Image/DataSets/CIFAR-10"
 python install_cifar10.py
 
 # TODO run some examples
-# TODO CifarResNet/CifarResNet.py
-# TODO LanguageUnderstanding/LanguageUnderstanding.py
-# TODO MNIST/SimpleMNIST.py
-# TODO NumpyInterop/FeedForwardNet.py
-# TODO Sequence2Sequence/Sequence2Sequence.py
-# TODO SequenceClassification/SequenceClassification.py
-# TODO untested elsewhere: CifarConvNet/CifarConvNet.py
-# TODO untested elsewhere: Distributed/CifarResNet_Distributed.py
-# TODO untested elsewhere: Distributed/run.py
 
 # TODO actually do different device and syntax.
 

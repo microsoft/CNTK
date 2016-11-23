@@ -117,11 +117,13 @@ if IS_WINDOWS:
         "/DEBUG",
         "/Zi",
     ]
+    extra_link_args = ['/DEBUG']
     runtime_library_dirs = []
 else:
     extra_compile_args += [
         '--std=c++11',
     ]
+    extra_link_args = []
 
     # Expecting the dependent libs (libcntklibrary-2.0.so, etc.) inside
     # site-packages/cntk/libs.
@@ -148,7 +150,7 @@ cntk_module = Extension(
     ],
 
     extra_compile_args=extra_compile_args,
-
+    extra_link_args=extra_link_args,
     language="c++",
 )
 
@@ -167,7 +169,7 @@ else:
     kwargs = dict(package_data = package_data)
 
 setup(name="cntk",
-      version="2.0.beta3.0",
+      version="2.0.beta4.0",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,
