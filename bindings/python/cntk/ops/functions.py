@@ -308,7 +308,7 @@ class Function(cntk_py.Function):
         Args:
             at (dict) : mapping of the Function's arguments to values
             wrt (list optional): list of Variables with respect to which the
-             gradient will be computed. If ommited the gradients with
+             gradient will be computed. If omitted the gradients with
              respect to all arguments will be computed. If a variable
              is repeated in this list, the gradient will be repeated
              in the output as a shallow copy.
