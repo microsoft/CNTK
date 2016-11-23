@@ -3,44 +3,41 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#define _CRT_SECURE_NO_WARNINGS
 #include "CNTKLibrary.h"
 #include <functional>
 #include "LSTM/LstmGraphNode.h"
-
-using namespace CNTK;
 
 #pragma warning(push, 0)
 #include <graphid.pb.h>
 #include <google/protobuf/util/json_util.h>
 #pragma warning(pop)
 
+#ifndef CPUONLY
+#error "must use CPU Only"
+#endif
+
+using namespace CNTK;
 using namespace std;
 
+
 extern FunctionPtr GraphIrToCntkGraph(graphIR::Graph &/*graphIrPtr*/, FunctionPtr /*modelFuncPtr*/);
-extern graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc);
+extern graphIR::Graph CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc);
 extern void EvaluateGraph(FunctionPtr evalFunc, const DeviceDescriptor& device);
 
 int main()
 {
 	auto device = DeviceDescriptor::CPUDevice();
-
-#ifndef CPUONLY
-#error "must use CPU Only"
-#else
-    fprintf(stderr, "Run tests using CPU-only build.\n");
-#endif
-
-    // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking 
-    // which will have a silent performance degradation otherwise
-    Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
+	std::string filename = "\\CNTK\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn";
 
 	// The model file will be trained and copied to the current runtime directory first.
-	auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, L"\\CNTK\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn", device, LstmGraphNodeFactory);
+	auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, std::wstring(filename.begin(), filename.end()), device, LstmGraphNodeFactory);
 
 	EvaluateGraph(modelFuncPtr, device);
 
 	// convert cntk to graphir
-	auto graphIrPtr = CntkGraphToGraphIr(modelFuncPtr);
+	auto graphIrPtr = CntkGraphToGraphIr(std::wstring(filename.begin(), filename.end()), modelFuncPtr);
+
 	// save it out to disk in json format.
 	std::string jsonstring;
 	auto serialized = google::protobuf::util::MessageToJsonString(graphIrPtr, &jsonstring);

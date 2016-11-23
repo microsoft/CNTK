@@ -10,17 +10,16 @@
 #include "CNTKLibrary.h"
 #include "LSTM/LstmGraphNode.h"
 
-using namespace CNTK;
-
 #pragma warning(push, 0)
 #include <graphid.pb.h>
-#include <google/protobuf/util/json_util.h>
 #pragma warning(pop)
 
 extern "C"
 {
 #include <b64/cencode.h>
 }
+
+using namespace CNTK;
 
 
 template <typename FunctionType>
@@ -50,231 +49,204 @@ std::string ConstructUniqueName(const std::wstring& name)
     return std::string(name.begin(), name.end());
 }
 
-graphIR::Graph CntkGraphToGraphIr(FunctionPtr evalFunc)
+std::string EncodeBase64(const char *buf, int len)
 {
-    graphIR::Graph &graph = *(new graphIR::Graph());
+	base64_encodestate state;
 
+	char *sout = new char[len * 2];
+	memset(sout, 0, len * 2);
+
+	base64_init_encodestate(&state);
+	base64_encode_block(buf, len, sout, &state);
+	base64_encode_blockend(sout, &state);
+
+	// TODO: remove once we export everything.
+	if (strlen(sout) > 100)
+	{
+		strcpy_s(sout + 90, len * 2 - 100, "...");
+	}
+
+	auto result = std::string(sout);
+
+	delete[] sout;
+
+	return result;
+}
+
+graphIR::Graph CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
+{
     graphIR::GraphInfo graphInfo;
-    graphInfo.set_description("my description");
-    graphInfo.set_framework_name("cntk-2.0beta1.0");
-    graphInfo.set_framework_version("2.0beta1.0");
-    graphInfo.set_graph_version("1.0");
-    graphInfo.set_model_name("my-sluhandson.cntk");
+    graphInfo.set_framework_name("CNTK");
+    graphInfo.set_framework_version("2.0beta3.0"); // TODO: call cntk function to retrieve version string
+    graphInfo.set_graph_version("0.1");
+    graphInfo.set_description("Exported by the Graph Ir Exporter from CNTK");
+    graphInfo.set_model_name(std::string(filename.begin(), filename.end()));
 
-    graph.set_allocated_graph_info(&graphInfo);
+	graphIR::Graph graph;
+	graph.set_allocated_graph_info(&graphInfo);
 
-    auto serilized = evalFunc->Serialize();
+	std::unordered_set<FunctionPtr> functions;
+	Traverse(evalFunc->RootFunction(), functions,
+		[&graph](const FunctionPtr& f)
+	{
+		fprintf(stderr, "now at %S opcode %S\n", f->Uid().c_str(), f->OpName().c_str());
 
-    {
-        evalFunc->SaveModel(L"00_fvm.log", false);
-    }
+		graphIR::Node *node = graph.add_nodes();
 
-    std::unordered_set<FunctionPtr> functions;
-    Traverse(evalFunc->RootFunction(), functions, [&graph](const FunctionPtr& f){
-        fprintf(stderr, "now at %S opcode %S\n", f->Uid().c_str(), f->OpName().c_str());
-        
-        graphIR::Node *node = graph.add_nodes();
+		node->set_name(ConstructUniqueName(f->Uid(), f->Name()));
 
-        node->set_name(ConstructUniqueName(f->Uid(), f->Name()));
+		auto name = f->OpName();
+		node->set_op(std::string(name.begin(), name.end()));
 
-        auto name = f->OpName();
-        node->set_op(std::string(name.begin(), name.end()));
+		auto d = f->Attributes();
+		std::stringstream strstr(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+		strstr << d;
+		auto where = strstr.tellp();
+		auto str = strstr.str();
 
-        auto d = f->Attributes();
-        std::stringstream strstr(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
-        strstr << d;
-        auto where = strstr.tellp();
-        auto str = strstr.str();
+		graphIR::InitArg initArg;
+		initArg.set_dbytes(4); // fp32 is 4 bytes per entry
 
+		(*node->mutable_ext_attrs())["##CNTK##NODE##"] = EncodeBase64(str.c_str(), str.length());
+
+		for (auto out : f->Placeholders())
 		{
-			base64_encodestate state;
-			base64_init_encodestate(&state);
-
-			char *sout = new char[str.length() * 2];
-			memset(sout, 0, str.length() * 2);
-			base64_encode_block((const char *)str.c_str(), (int)str.length(), sout, &state);
-			base64_encode_blockend(sout, &state);
-
-			if (strlen(sout) > 100)
-			{
-				strcpy_s(sout + 90, str.length() * 2 - 100, "...");
-			}
-
-			(*node->mutable_ext_attrs())["##CNTK##NODE##"] = sout;
-
-			delete[] sout;
+			fprintf(stderr, "Placeholder not expected: %S\n", out.Name().c_str());
 		}
 
-        for (auto out : f->Placeholders())
-        {
-            fprintf(stderr, "oops\n");
-        }
+		for (auto out : f->Inputs())
+		{
+			auto input = node->add_inputs();
 
-        for (auto out : f->Inputs())
-        {
-            auto input = node->add_inputs();
+			input->set_name(ConstructUniqueName(out.Uid(), out.Name()));
 
-            input->set_name(ConstructUniqueName(out.Uid(), out.Name()));
+			name = L"fp32";
+			input->set_dtype(std::string(name.begin(), name.end()));
 
-            name = L"fp32";
-            input->set_dtype(std::string(name.begin(), name.end()));
+			input->set_dbytes(4); // fp32 is 4 bytes per entry
 
-            input->set_dbytes(4); // fp32 is 4 bytes per entry
+			fprintf(stderr, "    <= %S type %d [", out.Name().c_str(), out.GetDataType());
 
-            fprintf(stderr, "    <= %S type %d [", out.Name().c_str(), out.GetDataType());
+			int rank = 0;
+			for (auto dims : out.Shape().Dimensions())
+			{
+				input->add_shape(dims);
 
-            int rank = 0;
-            for (auto dims : out.Shape().Dimensions())
-            {
-                input->add_shape((int)dims);
+				if (rank++ != 0) fprintf(stderr, ", ");
+				fprintf(stderr, "%d", dims);
+			}
 
-                if (rank++ != 0) fprintf(stderr, ", ");
-                fprintf(stderr, "%d", dims);
-            }
+			fprintf(stderr, "]\n");
+		}
 
-            fprintf(stderr, "]\n");
-        }
+		for (auto out : f->Parameters())
+		{
+			const auto& buf = out.Value()->DataBuffer<float>();
 
-        for (auto out : f->Parameters())
-        {
-            const auto& buf = out.Value()->DataBuffer<float>();
+			size_t rank = 1;
+			for (auto dims : out.Shape().Dimensions())
+			{
+				rank *= dims;
+			}
 
-            size_t rank = 1;
-            for (auto dims : out.Shape().Dimensions())
-            {
-                rank *= dims;
-            }
+			graphIR::InitArg initArg;
+			initArg.set_dbytes(4); // fp32 is 4 bytes per entry
+			initArg.set_data_base64(EncodeBase64((char*)buf, rank * 4));
 
-            graphIR::InitArg initArg;
-            initArg.set_dbytes(4); // fp32 is 4 bytes per entry
+			(*node->mutable_init_attrs())[ConstructUniqueName(out.Uid(), out.Name())] = initArg;
 
-            base64_encodestate state;
-            base64_init_encodestate(&state);
+			fprintf(stderr, "    == %S type %d value %f\n", out.Name().c_str(), out.GetDataType(), buf[0]);
+		}
 
-            char *sout = new char[rank * 4 * 2];
-            memset(sout, 0, rank * 4 * 2);
-            base64_encode_block((char *)buf, (int)(rank * 4), sout, &state);
-            base64_encode_blockend(sout, &state);
+		for (auto out : f->Constants())
+		{
+			const auto& buf = out.Value()->DataBuffer<float>();
 
-            // TODO: remove this to export the entire data, not just
-            //       the first 120bytes...
-            if (strlen(sout) > 100)
-            {
-                strcpy_s(sout + 90, rank * 4 * 2 -100, "...");
-            }
+			size_t rank = 1;
+			for (auto dims : out.Shape().Dimensions())
+			{
+				rank *= dims;
+			}
 
-            initArg.set_data_base64(sout);
-            delete [] sout;
-            
-            (*node->mutable_init_attrs())[ConstructUniqueName(out.Uid(), out.Name())] = initArg;
+			graphIR::InitArg initArg;
+			initArg.set_dbytes(4); // fp32 is 4 bytes per entry
+			initArg.set_data_base64(EncodeBase64((char *)buf, rank * 4));
 
-            fprintf(stderr, "    == %S type %d value %f\n", out.Name().c_str(), out.GetDataType(), buf[0]);
-        }
+			(*node->mutable_init_attrs())[ConstructUniqueName(out.Uid(), out.Name())] = initArg;
 
-        for (auto out : f->Constants())
-        {
-            const auto& buf = out.Value()->DataBuffer<float>();
+			fprintf(stderr, "    == %S type %d value %f\n", out.Name().c_str(), out.GetDataType(), buf[0]);
+		}
 
-            size_t rank = 1;
-            for (auto dims : out.Shape().Dimensions())
-            {
-                rank *= dims;
-            }
-
-            graphIR::InitArg initArg;
-            initArg.set_dbytes(4); // fp32 is 4 bytes per entry
+		for (auto &iter = f->Attributes().begin(); iter != f->Attributes().end(); iter++)
+		{
+			DictionaryValue value = iter->second;
 
 
-            base64_encodestate state;
-            base64_init_encodestate(&state);
+			std::wstring resultValue = L"";
 
-            char *sout = new char[rank * 4 * 2];
-            memset(sout, 0, rank * 4 * 2);
-            base64_encode_block((const char *)buf, (int)(rank * 4), sout, &state);
-            base64_encode_blockend(sout, &state);
+			switch (value.ValueType())
+			{
+			case DictionaryValue::Type::Bool:
+				resultValue = std::to_wstring(iter->second.Value<bool>());
+				break;
 
-            if (strlen(sout) > 100)
-            {
-                strcpy_s(sout + 90, rank * 4 * 2 - 100, "...");
-            }
+			case DictionaryValue::Type::Int:
+				resultValue = std::to_wstring(iter->second.Value<int>());
+				break;
 
-            initArg.set_data_base64(sout);
-            delete[] sout;
+			case DictionaryValue::Type::SizeT:
+				resultValue = std::to_wstring(iter->second.Value<size_t>());
+				break;
 
-            (*node->mutable_init_attrs())[ConstructUniqueName(out.Uid(), out.Name())] = initArg;
+			case DictionaryValue::Type::Double:
+				resultValue = std::to_wstring(iter->second.Value<double>());
+				break;
 
-            fprintf(stderr, "    == %S type %d value %f\n", out.Name().c_str(), out.GetDataType(), buf[0]);
-        }
+			case DictionaryValue::Type::String:
+				resultValue = iter->second.Value<std::wstring>();
+				break;
 
-        for (auto &iter = f->Attributes().begin(); iter != f->Attributes().end(); iter++)
-        {
-            DictionaryValue value = iter->second;
+			case DictionaryValue::Type::Float:
+				resultValue = std::to_wstring(iter->second.Value<float>());
+				break;
 
+			default:
+				resultValue = std::wstring(L"<<unsupported>>");
+				break;
+			}
 
-            std::wstring resultValue = L"";
+			(*node->mutable_ext_attrs())[ConstructUniqueName(iter->first)] = std::string(resultValue.begin(), resultValue.end());
+		}
 
-            switch (value.ValueType())
-            {
-            case DictionaryValue::Type::Bool:
-                resultValue = std::to_wstring(iter->second.Value<bool>());
-                break;
+		// Combine nodes are special, they just reflect their input to their output
+		if (f->OpName() != L"Combine")
+		{
+			for (auto out : f->Outputs())
+			{
+				auto output = node->add_outputs();
+				output->set_name(ConstructUniqueName(out.Uid(), out.Name()));
 
-            case DictionaryValue::Type::Int:
-                resultValue = std::to_wstring(iter->second.Value<int>());
-                break;
+				name = L"fp32";
+				output->set_dtype(std::string(name.begin(), name.end()));
 
-            case DictionaryValue::Type::SizeT:
-                resultValue = std::to_wstring(iter->second.Value<size_t>());
-                break;
+				output->set_dbytes(4); // fp32 is 4 bytes per entry
 
-            case DictionaryValue::Type::Double:
-                resultValue = std::to_wstring(iter->second.Value<double>());
-                break;
+				fprintf(stderr, "    => %S type %d [", out.Name().c_str(), out.GetDataType());
 
-            case DictionaryValue::Type::String:
-                resultValue = iter->second.Value<std::wstring>();
-                break;
+				int rank = 0;
+				for (auto dims : out.Shape().Dimensions())
+				{
+					output->add_shape(dims);
 
-            case DictionaryValue::Type::Float:
-                resultValue = std::to_wstring(iter->second.Value<float>());
-                break;
+					if (rank++ != 0) fprintf(stderr, ", ");
+					fprintf(stderr, "%d", dims);
+				}
 
-            default:
-                resultValue = std::wstring(L"<<unsupported>>");
-                break;
-            }
+				fprintf(stderr, "]\n");
+			}
+		}
+	});
 
-            (*node->mutable_ext_attrs())[ConstructUniqueName(iter->first)] = std::string(resultValue.begin(), resultValue.end());
-        }
-
-        // Combine nodes are special, they just reflect their input to their output
-        if (f->OpName() != L"Combine")
-        {
-            for (auto out : f->Outputs())
-            {
-                auto output = node->add_outputs();
-                output->set_name(ConstructUniqueName(out.Uid(), out.Name()));
-
-                name = L"fp32";
-                output->set_dtype(std::string(name.begin(), name.end()));
-
-                output->set_dbytes(4); // fp32 is 4 bytes per entry
-
-                fprintf(stderr, "    => %S type %d [", out.Name().c_str(), out.GetDataType());
-
-                int rank = 0;
-                for (auto dims : out.Shape().Dimensions())
-                {
-                    output->add_shape((int)dims);
-
-                    if (rank++ != 0) fprintf(stderr, ", ");
-                    fprintf(stderr, "%d", dims);
-                }
-
-                fprintf(stderr, "]\n");
-            }
-        }
-    });
 
     fprintf(stderr, "\n\n");
     for (auto func : functions)
