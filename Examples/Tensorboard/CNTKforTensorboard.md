@@ -24,24 +24,29 @@ tensorboard --logdir mnist_log --port 6006
 
 ## Enabling Tensorboard for CNTK models
 1. Import necessary modules
+
 	```python
 	import tensorflow as tf
 	from Examples.common.tf_helpers import *
 	```
 2. Create TF session for tensorboard logging
+
 	```python
 	session = tf.Session()
 	```
 3. Using CNTK network create TF graph
+
 	```python
 	netout = fully_connected_classifier_net(...)
 	create_tensorflow_graph(netout, session.graph)
 	```
 4. Instantiate a TF summary writer
+
 	```python
 	train_writer = tf.train.SummaryWriter(logdir="/path/to/log-directory", graph=session.graph, flush_secs=30)
 	```
 5. In the training loop add scalar summaries to the summary writer
+
 	```python
 	for i in range(0, int(num_minibatches_to_train)):
 	        mb = reader_train.next_minibatch(minibatch_size, input_map=input_map)
@@ -56,10 +61,12 @@ tensorboard --logdir mnist_log --port 6006
 	        train_writer.add_summary(eval_summary, i)
 	```
 6. Close the summary writer after the training is done
+
 	```python
 	train_writer.close()
 	```
 7. Launch Tensorboard
+
 	```
 	tensorboard --logdir=path/to/log-directory --port 6006
 	```
