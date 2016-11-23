@@ -25,13 +25,18 @@ namespace CNTK
         // Restores the trainer from the state.
         Dictionary RestoreFromCheckpoint(const Dictionary& checkpoint) override;
 
+        void Shutdown(const Trainer&) override {}
+
         DistributedCommunicatorPtr GetCommunicator() override
         {
             return m_communicator;
         }
 
     protected:
-        explicit DistributedTrainerBase(DistributedCommunicatorPtr communicator);
+        explicit DistributedTrainerBase(DistributedCommunicatorPtr communicator, size_t distributedAfterSampleCount);
+        Dictionary CreateCheckpoint(const Dictionary& localStateToShare);
+
+        static void HandleEmptyMinibatch(std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info);
 
         DistributedCommunicatorPtr m_communicator;
     };

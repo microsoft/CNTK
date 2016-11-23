@@ -60,8 +60,8 @@ SEQ_TENSOR_PAIRS = [
     ([[[30.]], [[40], [50]]],  # first batch with two sequences
      [[[3.]], [[4], [5]]]),  # second batch with two sequences
 
-    ([[[30.,   0]], [[40,   1], [50,   2]]],  # first batch with two sequences
-     [[[3., -10]], [[4, -20], [5, -30]]]),  # second batch with two sequences
+    #([[[30.,   0]], [[40,   1], [50,   2]]],  # first batch with two sequences
+     #[[[3., -10]], [[4, -20], [5, -30]]]),  # second batch with two sequences
 ]
 
 
@@ -98,8 +98,9 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
     input_op_input = plus(a, b)
     forward_input = {a: left_value, b: right_value}
     backward_input = {a: None, b: None}
-    expected_backward = {a: expected_backward[
-        'left'], b: expected_backward['right'], }
+    expected_backward = {
+            a: expected_backward['left'], 
+            b: expected_backward['right'], }
     unittest_helper(input_op_input,
                     forward_input, expected_forward,
                     expected_backward,

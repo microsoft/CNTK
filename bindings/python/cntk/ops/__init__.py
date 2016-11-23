@@ -250,7 +250,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     >>> x = C.input_variable(img.shape)
     >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
     >>> kernel = C.constant(value = filter)
-    >>> C.convolution(kernel , x, auto_padding = [False]).eval({x: img})
+    >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]})
     array([[[[[  6.,   8.,  10.,  12.],
               [ 16.,  18.,  20.,  22.],
               [ 26.,  28.,  30.,  32.],
@@ -329,10 +329,10 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     Example:
     >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
     >>> x = C.input_variable(img.shape)
-    >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : img})
+    >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
     array([[[[[  2.5,   4.5],
               [ 10.5,  12.5]]]]], dtype=float32)
-    >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : img})
+    >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : [img]})
     array([[[[[  5.,   7.],
               [ 13.,  15.]]]]], dtype=float32)
 
@@ -665,6 +665,32 @@ def element_divide(left, right, name=''):
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
     return element_divide(left, right, name)
+
+@typemap
+def log_add_exp(left, right, name=''):
+    '''
+    The output of this operation is the log of the sum of the exponentials
+    of the two input tensors. It supports broadcasting.
+
+    Example:
+    >>> a=np.arange(3,dtype=np.float32)
+    >>> np.exp(C.log_add_exp(np.log(1+a), np.log(1+a*a)).eval())
+    array([ 2.,  4.,  8.], dtype=float32)
+    >>> np.exp(C.log_add_exp(np.log(1+a), [0.]).eval())
+    array([ 2.,  3.,  4.], dtype=float32)
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import log_add_exp
+    dtype = get_data_type(left, right)
+    left = sanitize_input(left, dtype)
+    right = sanitize_input(right, dtype)
+    return log_add_exp(left, right, name)
 
 
 @typemap
@@ -1364,6 +1390,44 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     x = sanitize_input(x)
     return past_value(x, initial_state, time_step, name)
 
+@typemap
+def optimized_rnnstack(operand, weights, hidden_size, num_layers,
+                       bidirectional=False, recurrent_op='lstm', name=''):
+    '''
+    An RNN implementation that uses the primitives in cuDNN.
+    If cuDNN is not available it fails.
+
+    Args:
+        operand: input of the optimized RNN stack.
+        weights: parameter tensor that holds the learned weights.
+        hidden_size (int): number of hidden units in each layer (and in each direction).
+        num_layers (int): number of layers in the stack.
+        bidirectional(bool, optional): whether each layer should compute both in forward
+         and separately in backward mode and concatenate the results
+         (if True the output is twice the hidden_size). The default is
+         False which means the recurrence is only computed in the forward direction.
+        recurrent_op (str, optional): one of 'lstm', 'gru', 'relu', or 'tanh'.
+        name (str, optional): the name of the Function instance in the network
+
+    Example:
+        >>> from _cntk_py import InferredDimension, constant_initializer
+        >>> W = C.parameter((InferredDimension,4), constant_initializer(0.1))
+        >>> x = C.input_variable(shape=(4,))
+        >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))
+        >>> f = C.optimized_rnnstack(x, W, 8, 2)
+        >>> f.eval({x:s}).shape
+        (1, 5, 8)
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import optimized_rnnstack
+    operand = sanitize_input(operand)
+    if recurrent_op not in set(['lstm','gru','relu','tanh']):
+        raise(ValueError('unsupported recurrent_op value "%s"'%recurrent_op))
+    return optimized_rnnstack(operand, weights, hidden_size, num_layers, 
+                       bidirectional, recurrent_op, name)
+
 ##########################################################################
 # reshaping ops
 ##########################################################################
@@ -1596,11 +1660,11 @@ def reduce_log_sum(x, axis=None, name=''):
 
     Examples:
         >>> x = C.input_variable(shape=(3,2))
-        >>> x0 = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
+        >>> val = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
         >>> lse = C.reduce_log_sum(x)
-        >>> lse.eval({x:x0})
+        >>> lse.eval({x:[val]})
         array([[ 5.456193]], dtype=float32)
-        >>> np.log(np.sum(np.exp(x0)))
+        >>> np.log(np.sum(np.exp(val)))
         5.4561934
 
     Args:

@@ -51,6 +51,7 @@ namespace CNTK
         {PrimitiveOpType::Pooling, L"Pooling"},
         {PrimitiveOpType::SumAll, L"SumAll"},
         {PrimitiveOpType::Plus, L"Plus"},
+        {PrimitiveOpType::LogPlus, L"LogPlus"},
         {PrimitiveOpType::Minus, L"Minus"},
         {PrimitiveOpType::ElementTimes, L"ElementTimes"},
         {PrimitiveOpType::Equal, L"Equal"},
@@ -65,7 +66,7 @@ namespace CNTK
         {PrimitiveOpType::Times, L"Times"},
         {PrimitiveOpType::TransposeTimes, L"TransposeTimes"},
         {PrimitiveOpType::Convolution, L"Convolution"},
-        { PrimitiveOpType::SquaredError, L"SquaredError" },
+        {PrimitiveOpType::SquaredError, L"SquaredError"},
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::PastValue, L"PastValue"},
@@ -79,7 +80,10 @@ namespace CNTK
         {PrimitiveOpType::RandomSample, L"RandomSample"},
         {PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency"},
         {PrimitiveOpType::ROIPooling, L"ROIPooling"},
-        { PrimitiveOpType::Logistic, L"Logistic" },
+        {PrimitiveOpType::Logistic, L"Logistic"},
+        {PrimitiveOpType::OptimizedRNNStack, L"OptimizedRNNStack"},
+        {PrimitiveOpType::ReconcileDynamicAxis, L"ReconcileDynamicAxis"},
+        {PrimitiveOpType::LogSoftmax, L"LogSoftmax"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -118,6 +122,8 @@ namespace CNTK
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 2 }, { 1, 1 }, { 2, 0 } });
         else if (op == PrimitiveOpType::Clip)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 2 }, { 1, 0 }, { 2, 1 } });
+        else if (op == PrimitiveOpType::OptimizedRNNStack)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
         else
         {
             for (size_t i = 0; i < numFunctionInputs; ++i)
@@ -201,6 +207,10 @@ namespace CNTK
         static const std::wstring AttributeNameBeginIndex;
         static const std::wstring AttributeNameEndIndex;
         static const std::wstring AttributeNameReductionOpName;
+        static const std::wstring AttributeNameBidirectional;
+        static const std::wstring AttributeNameNumLayers;
+        static const std::wstring AttributeNameHiddenSize;
+        static const std::wstring AttributeNameRecurrentOp;
 
     public:
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
@@ -634,7 +644,9 @@ namespace CNTK
 
     private:
         PrimitiveOpType m_op;
-        static const size_t s_serializationVersion = 1;
+        // Increasing s_serializationVersion every time we add more ops allows us to print 
+        // a more meaningful message when trying to load a new model with a stale binary. 
+        static const size_t s_serializationVersion = 2;
     };
 
     class CNTKBackPropState final : public BackPropState

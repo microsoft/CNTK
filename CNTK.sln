@@ -1096,9 +1096,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AlexNet", "AlexNet", "{BB20
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Python", "Python", "{1527C5BC-8F18-44E5-823B-4E8136F5F45E}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Image\Classification\ConvNet\Python\CifarConvNet.py = Examples\Image\Classification\ConvNet\Python\CifarConvNet.py
 		Examples\Image\Classification\ConvNet\Python\ConvNet_CIFAR10.py = Examples\Image\Classification\ConvNet\Python\ConvNet_CIFAR10.py
 		Examples\Image\Classification\ConvNet\Python\ConvNet_CIFAR10_DataAug.py = Examples\Image\Classification\ConvNet\Python\ConvNet_CIFAR10_DataAug.py
+		Examples\Image\Classification\ConvNet\Python\ConvNet_CIFAR10_DataAug_Distributed.py = Examples\Image\Classification\ConvNet\Python\ConvNet_CIFAR10_DataAug_Distributed.py
 		Examples\Image\Classification\ConvNet\Python\ConvNet_MNIST.py = Examples\Image\Classification\ConvNet\Python\ConvNet_MNIST.py
 		Examples\Image\Classification\ConvNet\Python\README.md = Examples\Image\Classification\ConvNet\Python\README.md
 	EndProjectSection
@@ -1123,12 +1123,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BrainScript", "BrainScript"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Python", "Python", "{58902BBC-C210-47FE-9699-695E762F7B48}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Image\Classification\ResNet\Python\CifarResNet.py = Examples\Image\Classification\ResNet\Python\CifarResNet.py
-		Examples\Image\Classification\ResNet\Python\CifarResNet_Distributed.py = Examples\Image\Classification\ResNet\Python\CifarResNet_Distributed.py
 		Examples\Image\Classification\ResNet\Python\README.md = Examples\Image\Classification\ResNet\Python\README.md
 		Examples\Image\Classification\ResNet\Python\resnet_models.py = Examples\Image\Classification\ResNet\Python\resnet_models.py
 		Examples\Image\Classification\ResNet\Python\run_Distributed.py = Examples\Image\Classification\ResNet\Python\run_Distributed.py
 		Examples\Image\Classification\ResNet\Python\TrainResNet_CIFAR10.py = Examples\Image\Classification\ResNet\Python\TrainResNet_CIFAR10.py
+		Examples\Image\Classification\ResNet\Python\TrainResNet_CIFAR10_Distributed.py = Examples\Image\Classification\ResNet\Python\TrainResNet_CIFAR10_Distributed.py
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BrainScript", "BrainScript", "{D495B2B4-8765-42CB-9037-A75B645F46C6}"

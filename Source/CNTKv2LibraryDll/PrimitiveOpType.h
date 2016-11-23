@@ -58,6 +58,12 @@ namespace CNTK
         RandomSampleInclusionFrequency = 46,
         ROIPooling = 47,
         Logistic = 48,
+        OptimizedRNNStack = 49,
+        ReconcileDynamicAxis = 50,
+        LogSoftmax = 51,
+        LogPlus = 52,
         // New op types should only be appended to the end of this list.
+        // If you append here also add checks in SerializationTests (CheckEnumValuesNotModified)
+        // and bump up PrimitiveFunction::s_serializationVersion
     };
 }
