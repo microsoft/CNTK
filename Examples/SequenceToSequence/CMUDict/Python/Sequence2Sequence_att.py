@@ -8,16 +8,16 @@ import numpy as np
 import os
 import argparse
 import time
-import cntk as C
 
 from cntk import Trainer, Axis, save_model, load_model, distributed, persist
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, INFINITE_SAMPLES
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, slice, past_value, future_value, \
+from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
                      element_select, alias, hardmax, placeholder_variable, combine, parameter, plus, times, reduce_log_sum, exp, \
                      splice, constant, reshape, element_times, log, tanh
 from cntk.ops.functions import CloneMethod
 from cntk.graph import find_nodes_by_name
+from cntk.device import cpu, gpu, set_default_device, best
 
 from localblocks import LSTM, Stabilizer
 
@@ -42,7 +42,7 @@ hidden_dim = 128
 num_layers = 1
 attention_dim = 128
 attention_span = 20
-use_attention = True
+use_attention = False
 
 # stabilizer
 stabilize = Stabilizer()
@@ -319,7 +319,7 @@ def train(distributed_trainer, train_reader, valid_reader, vocab, i2w, model, ma
         while i < (epoch+1) * epoch_size:
             # get next minibatch of training data
             mb_train = train_reader.next_minibatch(minibatch_size, input_map=train_bind)
-            import ipdb;ipdb.set_trace()  
+            #import ipdb;ipdb.set_trace()  
             trainer.train_minibatch(mb_train)
 
             # collect epoch-wide stats
@@ -339,7 +339,7 @@ def train(distributed_trainer, train_reader, valid_reader, vocab, i2w, model, ma
                  mb_valid = valid_reader.next_minibatch(minibatch_size, input_map=valid_bind)
                 
                  e = new_model.eval(mb_valid)
-                 print_sequences(e, i2w)
+                 #print_sequences(e, i2w)
 
             i += mb_train[find_arg_by_name('raw_labels', model)].num_samples
             mbs += 1
@@ -405,10 +405,10 @@ def write(reader, model_filename, vocab, i2w):
     
 if __name__ == '__main__':
 
-    C.set_default_device(best())
+    set_default_device(best())
 
     # hook up data
-    train_reader = create_reader(data_dir + "cmudict-0.7b.train-dev-1-21.ctf", False)
+    train_reader = create_reader(data_dir + "cmudict-0.7b.train-dev-1-21.ctf", True)
     valid_reader = create_reader(data_dir + "tiny.ctf", False)
     
     vocab, i2w = get_vocab(data_dir + "cmudict-0.7b.mapping")
@@ -434,7 +434,9 @@ if __name__ == '__main__':
         distributed_trainer = distributed.data_parallel_distributed_trainer(
             num_quantization_bits=num_quantization_bits,
             distributed_after=distributed_after_samples) 
-    
+   
+
+    #print("rank is ", distributed_trainer.communicator().current_worker().global_rank) 
     # create model
     model = create_model()
     
