@@ -41,6 +41,12 @@ int main()
 
 	// convert cntk to graphir
 	auto graphIrPtr = CntkGraphToGraphIr(modelFuncPtr);
+	// save it out to disk in json format.
+	std::string jsonstring;
+	auto serialized = google::protobuf::util::MessageToJsonString(graphIrPtr, &jsonstring);
+	auto fp = fopen((filename + std::string(".pb.json")).c_str(), "w+");
+	auto written = fwrite(jsonstring.c_str(), sizeof(char), jsonstring.length(), fp);
+	fclose(fp);
 
 	// convert graphir back to cntk (with the original cntk model as template)
 	auto modelImportFuncPtr = GraphIrToCntkGraph(graphIrPtr, modelFuncPtr);
