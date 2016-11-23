@@ -13,7 +13,8 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
                      element_select, alias, hardmax, placeholder_variable, combine
 from cntk.ops.functions import CloneMethod
 from cntk.graph import find_nodes_by_name
-from cntk.blocks import LSTM, Stabilizer
+#from cntk.blocks import LSTM, Stabilizer
+from localblocks import LSTM, Stabilizer
 from cntk.layers import Dense
 from cntk.utils import get_train_eval_criterion, get_train_loss
 from attention import create_attention_augment_hook
@@ -24,12 +25,10 @@ from attention import create_attention_augment_hook
 
 data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data")
 model_dir = "."
-input_vocab_size = 69
-label_vocab_size = 69
 
 # model dimensions
-input_vocab_dim  = input_vocab_size
-label_vocab_dim  = label_vocab_size
+input_vocab_dim  = 69
+label_vocab_dim  = 69
 hidden_dim = 128
 num_layers = 1
 attention_dim = 128

@@ -20,5 +20,5 @@ def test_sequence_to_sequence(device_id):
 
     error = seq2seq_automated_test()
 
-    expected_error =  0.850571
+    expected_error =  0.85
     assert np.allclose(error, expected_error, atol=TOLERANCE_ABSOLUTE)

@@ -8,18 +8,18 @@
 # attention implementation for seq2seq #
 ########################################
 
-from cntk.ops import plus, times, constant, past_value, reshape, sequence, splice, \
-                     reduce_log_sum, exp, parameter, element_times, tanh, log, alias
+from cntk.ops import times, constant, past_value, reshape, sequence, splice, \
+                     softmax, parameter, element_times, tanh, log
 from cntk.initializer import glorot_uniform
 from cntk.blocks import Stabilizer
 
 # create a past value window that returns two records: a value, shape=(N,dim), and a valid window, shape=(1,dim)
 def past_value_window(N, input, axis=0):
 
-    ones_like_input = plus(times(input, constant(0, shape=(input.shape[0],1))), constant(1, shape=(1)))
+    ones_like_input = times(input, constant(0, shape=(input.shape[0],1))) + 1
         
-    last_value=[]
-    last_valid=[]
+    last_value = []
+    last_valid = []
     value = None
     valid = None
 
@@ -45,15 +45,7 @@ def past_value_window(N, input, axis=0):
     # value[t] = value of t steps in the past; valid[t] = true if there was a value t steps in the past
     return value, valid
 
-def my_softmax(z, axis):
-    Z = reduce_log_sum(z, axis=axis) # reduce along axis
-    P = exp(z - Z)
-    
-    return P
-
 def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic_axis, encoder_outputH):
-
-    stabilize = Stabilizer()
 
     # useful var
     encoder_output_dim = encoder_outputH.shape[0]
@@ -65,7 +57,7 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
     def projected_attention_window_broadcast():
         W = parameter(shape=(attention_dim, encoder_output_dim), init=glorot_uniform())
 
-        projected_value = sequence.broadcast_as(times(stabilize(element_times(aw_value, aw_valid)), W), 
+        projected_value = sequence.broadcast_as(times(Stabilizer()(element_times(aw_value, aw_valid)), W), 
                                                           decoder_dynamic_axis)
         value           = sequence.broadcast_as(aw_value, decoder_dynamic_axis)
         valid           = sequence.broadcast_as(aw_valid, decoder_dynamic_axis)
@@ -78,24 +70,24 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
         output_dim = prev_state.shape[0]
         W = parameter(shape=(output_dim, attention_dim), init=glorot_uniform())
 
-        projectedH = times(stabilize(prev_state), W, output_rank=1)
+        projectedH = times(Stabilizer()(prev_state), W, output_rank=1)
 
         tanh_out = tanh(projectedH + projected_attention_window_broadcast()[0])  # (attention_span, attention_dim)
         
         # u = v * tanh(W1h + W2d)
         v = parameter(shape=(attention_dim, 1))
                
-        u = times(stabilize(element_times(tanh_out, projected_attention_window_broadcast()[2])), v) # (attention_span, 1)
-        u_valid = plus(u, log(projected_attention_window_broadcast()[2]), name='u_valid')
+        u = times(Stabilizer()(element_times(tanh_out, projected_attention_window_broadcast()[2])), v) # (attention_span, 1)
+        u_valid = u + log(projected_attention_window_broadcast()[2])
 
-        attention_weights = alias(my_softmax(u_valid, 0), name='attention_weights')
+        attention_weights = softmax(u_valid, name='attention_weights')
         # the window should be shape=(attention_span, output_dim)
         weighted_attention_window = element_times(projected_attention_window_broadcast()[1], attention_weights, 
                                                   name='weighted_attention_window')
 
         ones = constant(value=1, shape=(attention_span))
         # weighted_attention_avg should be shape=(output_dim)
-        weighted_attention_avg = times(ones, stabilize(weighted_attention_window), output_rank=1, 
+        weighted_attention_avg = times(ones, Stabilizer()(weighted_attention_window), output_rank=1, 
                                        name='weighted_attention_avg')
 
         return weighted_attention_avg

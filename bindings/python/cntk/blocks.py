@@ -234,7 +234,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_
 def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
          init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,
          enable_self_stabilization=enable_self_stabilization_default_or_False,
-         has_aux=False): # (x, (h, c))
+         has_aux=False): # (x, (h, c), aux)
 
     use_peepholes             = use_peepholes             if _is_given(use_peepholes)             else _current_default_options.use_peepholes
     enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
