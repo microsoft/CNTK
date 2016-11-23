@@ -12,19 +12,24 @@ from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learn
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
                      element_select, alias, hardmax, placeholder_variable, combine
 from cntk.ops.functions import CloneMethod
+from cntk.ops.sequence import broadcast_as
 from cntk.graph import find_nodes_by_name
 #from cntk.blocks import LSTM, Stabilizer
 from localblocks import LSTM, Stabilizer
 from cntk.layers import Dense
-from cntk.utils import get_train_eval_criterion, get_train_loss
+from cntk.utils import log_number_of_parameters, ProgressPrinter
 from attention import create_attention_augment_hook
 
 ########################
 # variables and stuff  #
 ########################
 
-data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data")
-model_dir = "."
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data")
+MODEL_DIR = "."
+TRAINING_DATA = "cmudict-0.7b.train-dev-20-21.ctf"
+TESTING_DATA = "cmudict-0.7b.test.ctf"
+VALIDATION_DATA = "tiny.ctf"
+VOCAB_FILE = "cmudict-0.7b.mapping"
 
 # model dimensions
 input_vocab_dim  = 69
@@ -35,18 +40,15 @@ attention_dim = 128
 attention_span = 20
 use_attention = True
 
-# stabilizer
-stabilize = Stabilizer()
-
 ########################
 # define the reader    #
 ########################
 
-def create_reader(path, randomize, size=INFINITELY_REPEAT):
+def create_reader(path, is_training):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         features = StreamDef(field='S0', shape=input_vocab_dim, is_sparse=True),
         labels   = StreamDef(field='S1', shape=label_vocab_dim, is_sparse=True)
-    )), randomize=randomize, epoch_size=size)
+    )), randomize = is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
 
 ########################
 # define the model     #
@@ -108,9 +110,10 @@ def create_model():
     label_sentence_start_scattered = sequence.scatter(
         label_sentence_start, is_first_label)
 
-    # Encoder
-    encoder_output_h = stabilize(input_sequence)
-    for i in range(0, num_layers):
+    # Encoder: create multiple layers of LSTMs by passing the output of the i-th layer
+    # to the (i+1)th layer as its input
+    encoder_output_h = Stabilizer()(input_sequence)
+    for layer_index in range(0, num_layers):
         (encoder_output_h, encoder_output_c) = LSTM_layer(
             encoder_output_h.output, hidden_dim, future_value, future_value)
 
@@ -118,14 +121,17 @@ def create_model():
     thought_vector_h = sequence.first(encoder_output_h)
     thought_vector_c = sequence.first(encoder_output_c)
 
-    thought_vector_broadcast_h = sequence.broadcast_as(
-        thought_vector_h, label_sequence)
-    thought_vector_broadcast_c = sequence.broadcast_as(
-        thought_vector_c, label_sequence)
+    # Here we broadcast the single-time-step thought vector along the dynamic axis of the decoder
+    thought_vector_broadcast_h = broadcast_as(thought_vector_h, label_sequence)
+    thought_vector_broadcast_c = broadcast_as(thought_vector_c, label_sequence)
 
-    # Decoder
+    # Decoder: during training we use the ground truth as input to the decoder. During model execution,
+    # we need to redirect the output of the network back in as the input to the decoder. We do this by
+    # setting up a 'hook' whose output will be changed during model execution
     decoder_history_hook = alias(label_sequence, name='decoder_history_hook') # copy label_sequence
 
+    # The input to the decoder always starts with the special label sentence start token.
+    # Then, use the previous value of the label sequence (for training) or the output (for execution)
     decoder_input = element_select(is_first_label, label_sentence_start_scattered, past_value(
         decoder_history_hook))
 
@@ -134,15 +140,17 @@ def create_model():
         augment_input_hook = create_attention_augment_hook(attention_dim, attention_span, 
                                                            label_sequence, encoder_output_h)
 
-    decoder_output_h = stabilize(decoder_input)
-    for i in range(0, num_layers):
-        if (i > 0) or use_attention:
+    decoder_output_h = Stabilizer()(decoder_input)
+    for layer_index in range(0, num_layers):
+        if (layer_index > 0) or use_attention:
             recurrence_hook_h = past_value
             recurrence_hook_c = past_value
         else:
-            recurrence_hook_h = lambda operand: element_select(
-                is_first_label, thought_vector_broadcast_h, past_value(operand))
-            recurrence_hook_c = lambda operand: element_select(
+            def recurrence_hook_h(operand):
+                return element_select(
+                is_first_label, thought_vector_broadcast_h, past_value(operand))            
+            def recurrence_hook_c(operand): 
+                return element_select(
                 is_first_label, thought_vector_broadcast_c, past_value(operand))
 
         (decoder_output_h, decoder_output_c) = LSTM_layer(
@@ -150,7 +158,7 @@ def create_model():
             augment_input_hook)
 
     # dense Linear output layer    
-    z = Dense(label_vocab_dim) (stabilize(decoder_output_h))    
+    z = Dense(label_vocab_dim) (Stabilizer()(decoder_output_h))    
     
     return z
 
@@ -175,8 +183,8 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
         # make a clone of the graph where the ground truth is replaced by the network output
         return model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
 
-    # get a new model that uses the past network output as input to the decoder
-    new_model = clone_and_hook()
+    # get a new model that uses the network output as input to the decoder
+    decoder_output_model = clone_and_hook()
 
     # Instantiate the trainer object to drive the model training
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
@@ -193,55 +201,43 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     # Get minibatches of sequences to train with and perform model training
     i = 0
     mbs = 0
-    training_progress_output_freq = 30
+    sample_freq = 30
 
-    # bind inputs to data from readers
-    train_bind = {
-        find_arg_by_name('raw_input' , model) : train_reader.streams.features,
-        find_arg_by_name('raw_labels', model) : train_reader.streams.labels
-    }
-    valid_bind = {
-        find_arg_by_name('raw_input' , new_model) : valid_reader.streams.features,
-        find_arg_by_name('raw_labels', new_model) : valid_reader.streams.labels
-    }
+    # print out some useful training information
+    log_number_of_parameters(model) ; print()
+    progress_printer = ProgressPrinter(freq=30, tag='Training')
 
     for epoch in range(max_epochs):
-        loss_numer = 0
-        metric_numer = 0
-        denom = 0
 
         while i < (epoch+1) * epoch_size:
             # get next minibatch of training data
-            mb_train = train_reader.next_minibatch(minibatch_size, input_map=train_bind)
-            trainer.train_minibatch(mb_train)
+            mb_train = train_reader.next_minibatch(minibatch_size)
+            trainer.train_minibatch({find_arg_by_name('raw_input' , model) : mb_train[train_reader.streams.features], 
+                                     find_arg_by_name('raw_labels', model) : mb_train[train_reader.streams.labels]})
 
-            # collect epoch-wide stats
-            samples = trainer.previous_minibatch_sample_count
-            loss_numer += trainer.previous_minibatch_loss_average * samples
-            metric_numer += trainer.previous_minibatch_evaluation_average * samples
-            denom += samples
+            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
-            # every N MBs evaluate on a test sequence to visually show how we're doing; also print training stats
-            if mbs % training_progress_output_freq == 0:
+            # every N MBs evaluate on a test sequence to visually show how we're doing
+            if mbs % sample_freq == 0:
+                mb_valid = valid_reader.next_minibatch(minibatch_size)
                 
-                print("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(mbs, 
-                      get_train_loss(trainer), get_train_eval_criterion(trainer)))
-                
-                mb_valid = valid_reader.next_minibatch(minibatch_size, input_map=valid_bind)
-                
-                e = new_model.eval(mb_valid)
+                # run an eval on the decoder output model (i.e. don't use the groundtruth)
+                e = decoder_output_model.eval({find_arg_by_name('raw_input' , decoder_output_model) : 
+                                               mb_valid[valid_reader.streams.features], 
+                                               find_arg_by_name('raw_labels', decoder_output_model) : 
+                                               mb_valid[valid_reader.streams.labels]})
                 print_sequences(e, i2w)
 
-            i += mb_train[find_arg_by_name('raw_labels', model)].num_samples
+            i += mb_train[train_reader.streams.labels].num_samples
             mbs += 1
 
-        print("--- EPOCH %d DONE: loss = %f, errs = %f ---" % (epoch, loss_numer/denom, 100.0*(metric_numer/denom)))
-
-        if save_model:
-            # save the model every epoch
-            model_filename = os.path.join(model_dir, "model_epoch%d.dnn" % epoch)
-            save_model(new_model, model_filename)
-            print("Saved model to '%s'" % model_filename)
+        # log a summary of the stats for the epoch
+        progress_printer.epoch_summary(with_metric=True)
+        
+        # save the model every epoch
+        model_filename = os.path.join(MODEL_DIR, "model_epoch%d.cmf" % epoch)
+        save_model(decoder_output_model, model_filename)
+        print("Saved model to '%s'" % model_filename)
 
 ########################
 # write action         #
@@ -251,17 +247,19 @@ def write(reader, model_filename, vocab, i2w):
     
     model = load_model(model_filename)
     
-    binder = {
-        find_arg_by_name('raw_input' , model) : reader.streams.features,
-        find_arg_by_name('raw_labels', model) : reader.streams.labels
-    }
-
-    for i in range(1):
+    minibatch_size = 1024
+    progress_printer = ProgressPrinter(tag='Evaluation')
+    
+    while True:
         # get next minibatch of data
-        mb = reader.next_minibatch(1, input_map=binder)
+        mb = reader.next_minibatch(minibatch_size)
+        if mb is None: break
                 
-        e = model.eval(mb)
+        e = model.eval({find_arg_by_name('raw_input' , model) : mb[reader.streams.features], 
+                        find_arg_by_name('raw_labels', model) : mb[reader.streams.labels]})
         print_sequences(e, i2w)
+        
+        progress_printer.update(0, mb[reader.streams.labels].num_samples, None)
 
 #######################
 # test action         #
@@ -279,20 +277,16 @@ def test(reader, model_filename):
     errs = classification_error(z, label_sequence)
     trainer = Trainer(z, ce, errs, [momentum_sgd(z.parameters, lr, momentum)])
 
-    test_bind = {
-        find_arg_by_name('raw_input' ,z) : reader.streams.features,
-        find_arg_by_name('raw_labels',z) : reader.streams.labels
-    }
-
     test_minibatch_size = 1024
 
     # Get minibatches of sequences to test and perform testing
     i = 0
     total_error = 0.0
     while True:
-        mb = reader.next_minibatch(test_minibatch_size, input_map=test_bind)
+        mb = reader.next_minibatch(test_minibatch_size)
         if mb is None: break
-        mb_error = trainer.test_minibatch(mb)
+        mb_error = trainer.test_minibatch({find_arg_by_name('raw_input' , z) : mb[reader.streams.features], 
+                                           find_arg_by_name('raw_labels', z) : mb[reader.streams.labels]})
         total_error += mb_error
         i += 1
 
@@ -323,41 +317,17 @@ def find_arg_by_name(name, expression):
     assert len(vars) == 1
     return vars[0]
 
-
-###########################
-# automated test function #
-###########################
-
-def seq2seq_automated_test():
-    
-    # hook up data (train_reader gets False randomization to get consistent error)
-    train_reader = create_reader(os.path.join(data_dir, "cmudict-0.7b.train-dev-20-21.ctf"), False)
-    valid_reader = create_reader(os.path.join(data_dir, "tiny.ctf"), False)
-    test_reader  = create_reader(os.path.join(data_dir, "cmudict-0.7b.test.ctf"), False, FULL_DATA_SWEEP)
-    vocab, i2w = get_vocab(os.path.join(data_dir, "cmudict-0.7b.mapping"))
-
-    # create model
-    model = create_model()
-    
-    # train (with small numbers to finish in a reasonable amount of time)
-    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=1, epoch_size=5000)
-
-    # now test the model and print out test error (for automated test)
-    model_filename = os.path.join(model_dir, "model_epoch0.dnn")
-    error = test(test_reader, model_filename)
-    
-    return error    
-    
+   
 #############################
 # main function boilerplate #
 #############################
     
 if __name__ == '__main__':
-       
+             
     # hook up data
-    train_reader = create_reader(os.path.join(data_dir, "cmudict-0.7b.train-dev-20-21.ctf"), True)
-    valid_reader = create_reader(os.path.join(data_dir, "tiny.ctf"), False)
-    vocab, i2w = get_vocab(os.path.join(data_dir, "cmudict-0.7b.mapping"))
+    train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
+    valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
+    vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create model
     model = create_model()
@@ -365,4 +335,4 @@ if __name__ == '__main__':
     # train
     train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
-    #write(valid_reader, "g2p_epoch0.dnn", vocab, i2w)
+    #write(valid_reader, "model_epoch0.cmf", vocab, i2w)

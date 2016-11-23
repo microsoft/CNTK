@@ -231,10 +231,11 @@ def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_
     apply_x = beta * x
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
-def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
+# This creates an LSTM block function that can be used in a Recurrence. If it will accept an auxiliary input (e.g. for attention), 
+# then set auxiliary_input to True which will make the returned function require 4 parameters instead of 3.
+def LSTM(shape, cell_shape=None, auxiliary_input=False, use_peepholes=use_peepholes_default_or_False,
          init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,
-         enable_self_stabilization=enable_self_stabilization_default_or_False,
-         has_aux=False): # (x, (h, c), aux)
+         enable_self_stabilization=enable_self_stabilization_default_or_False): # (x, (h, c), aux)
 
     use_peepholes             = use_peepholes             if _is_given(use_peepholes)             else _current_default_options.use_peepholes
     enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
@@ -257,7 +258,7 @@ def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
     # parameters
     b  = Parameter(            cell_shape_stacked, init=init_bias, name='b')                              # a bias
     W  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='W')                              # input
-    A  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='A') if has_aux else None         # aux input (optional)
+    A  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='A') if auxiliary_input else None # aux input (optional)
     H  = Parameter(shape     + cell_shape_stacked, init=init,      name='H')                              # hidden-to-hidden
     Ci = Parameter(            cell_shape,         init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
     Cf = Parameter(            cell_shape,         init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
@@ -287,7 +288,7 @@ def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
     # note: input does not get a stabilizer here, user is meant to do that outside
 
     # projected contribution from input(s), hidden, and bias
-    proj4 = b + times(x, W) + times(dhs, H) + times(aux, A) if has_aux else \
+    proj4 = b + times(x, W) + times(dhs, H) + times(aux, A) if auxiliary_input else \
             b + times(x, W) + times(dhs, H)
 
     it_proj  = slice (proj4, stack_axis, 0*stacked_dim, 1*stacked_dim)  # split along stack_axis
@@ -320,7 +321,7 @@ def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
     _name_node(c, 'c')
 
     # TODO: figure out how to do scoping, and also rename all the apply... to expression
-    apply_x_h_c = combine ([h, c, aux]) if has_aux else combine ([h, c])
+    apply_x_h_c = combine ([h, c, aux]) if auxiliary_input else combine ([h, c])
     # return to caller a helper function to create placeholders for recurrence
     # Note that this function will only exist in the object returned here, but not any cloned version of it.
     apply_x_h_c.create_placeholder = create_hc_placeholder

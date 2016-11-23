@@ -10,15 +10,30 @@ from cntk.device import set_default_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "SequenceToSequence", "CMUDict", "Python"))
-from Sequence2Sequence import seq2seq_automated_test
+from Sequence2Sequence import create_reader, DATA_DIR, MODEL_DIR, TRAINING_DATA, VALIDATION_DATA, TESTING_DATA, \
+                              VOCAB_FILE, get_vocab, create_model, train, test
 
 TOLERANCE_ABSOLUTE = 1E-1
 
 def test_sequence_to_sequence(device_id):
     from cntk.utils import cntk_device
     set_default_device(cntk_device(device_id))
+    
+    # hook up data (train_reader gets False randomization to get consistent error)
+    train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), False)
+    valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
+    test_reader  = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
+    vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
-    error = seq2seq_automated_test()
+    # create model
+    model = create_model()
+    
+    # train (with small numbers to finish in a reasonable amount of time)
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=1, epoch_size=5000)
 
-    expected_error =  0.85
+    # now test the model and print out test error (for automated test)
+    model_filename = os.path.join(MODEL_DIR, "model_epoch0.cmf")
+    error = test(test_reader, model_filename)
+
+    expected_error =  0.850571
     assert np.allclose(error, expected_error, atol=TOLERANCE_ABSOLUTE)

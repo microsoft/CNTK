@@ -8,12 +8,15 @@
 # attention implementation for seq2seq #
 ########################################
 
-from cntk.ops import times, constant, past_value, reshape, sequence, splice, \
+from cntk.ops import times, constant, past_value, reshape, splice, \
                      softmax, parameter, element_times, tanh, log
+from cntk.ops.sequence import last, broadcast_as
 from cntk.initializer import glorot_uniform
-from cntk.blocks import Stabilizer
+from cntk.blocks import Stabilizer, _INFERRED
+from cntk.utils import _as_tuple
 
-# create a past value window that returns two records: a value, shape=(N,dim), and a valid window, shape=(1,dim)
+# Create a static, maskable view for N past steps over a sequence 'input' along the given 'axis'.
+# It returns two records: a value matrix, shape=(N,dim), and a valid window, shape=(1,dim)
 def past_value_window(N, input, axis=0):
 
     ones_like_input = times(input, constant(0, shape=(input.shape[0],1))) + 1
@@ -29,10 +32,10 @@ def past_value_window(N, input, axis=0):
             valid = ones_like_input
         else:
             value = past_value(input, time_step=t)
-            valid = past_value(ones_like_input, time_step=t)     
+            valid = past_value(ones_like_input, time_step=t) 
         
-        last_value.append(sequence.last(value))
-        last_valid.append(sequence.last(valid))
+        last_value.append(last(value))
+        last_valid.append(last(valid))
 
     # can't get splice to stack rows 'beside' each other, so stack on top and then reshape...
     value_a = splice(last_value, axis=axis)
@@ -43,24 +46,30 @@ def past_value_window(N, input, axis=0):
     valid = reshape(valid_a, shape=(N, 1))
 
     # value[t] = value of t steps in the past; valid[t] = true if there was a value t steps in the past
-    return value, valid
+    return (value, valid)
 
-def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic_axis, encoder_outputH):
-
-    # useful var
-    encoder_output_dim = encoder_outputH.shape[0]
+# This function creates a function to be passed to an RNN layer; it uses the input and hidden state of the 
+# RNN to return an auxiliary input based on an attention over the hidden states.
+def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic_axis, encoder_output_h):
+   
+    # inferred parameter shapes
+    output_shape = _as_tuple(attention_dim)
+    input_shape = _INFERRED
 
     # create the attention window
-    (aw_value, aw_valid) = past_value_window(attention_span, encoder_outputH, axis=0)
-
+    (aw_value, aw_valid) = past_value_window(attention_span, encoder_output_h, axis=0)
+    
     # setup the projection of the attention window to go into the tanh()
     def projected_attention_window_broadcast():
-        W = parameter(shape=(attention_dim, encoder_output_dim), init=glorot_uniform())
+        W = parameter(shape=input_shape + output_shape, init=glorot_uniform())
 
-        projected_value = sequence.broadcast_as(times(Stabilizer()(element_times(aw_value, aw_valid)), W), 
+        # We need to set up these 'broadcasted' versions so that these static-axis values can be properly 
+        # broadcast to all of the steps along the dynamic axis that the decoder uses when we're calculating
+        # the attention weights in the augment_input_hook function below
+        projected_value = broadcast_as(times(Stabilizer()(element_times(aw_value, aw_valid)), W), 
                                                           decoder_dynamic_axis)
-        value           = sequence.broadcast_as(aw_value, decoder_dynamic_axis)
-        valid           = sequence.broadcast_as(aw_valid, decoder_dynamic_axis)
+        value           = broadcast_as(aw_value, decoder_dynamic_axis)
+        valid           = broadcast_as(aw_valid, decoder_dynamic_axis)
 
         # should be shape=(attention_span, attention_dim)
         return projected_value, value, valid
