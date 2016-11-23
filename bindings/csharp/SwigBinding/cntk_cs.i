@@ -1,4 +1,4 @@
-%module(directors="1") cntk_cs
+%module(directors="1") CSharpBindings
 //%feature("autodoc", "1");
 
 %include <stl.i>
