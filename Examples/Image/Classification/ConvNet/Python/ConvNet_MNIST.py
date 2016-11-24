@@ -11,7 +11,7 @@ from cntk import Trainer, persist
 from cntk.utils import *
 from cntk.layers import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, UnitType
+from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
 
 # Paths relative to current python file.
@@ -63,11 +63,11 @@ def convnet_mnist(debug_output=False):
     # Set learning parameters
     lr_per_sample          = [0.001]*10+[0.0005]*10+[0.0001]
     lr_schedule            = learning_rate_schedule(lr_per_sample, UnitType.sample, epoch_size)
-    momentum_time_constant = [0]*5+[1024]
-    mn_schedule = momentum_schedule(momentum_time_constant, epoch_size)
+    mm_time_constant       = [0]*5+[1024]
+    mm_schedule            = momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
 
     # Instantiate the trainer object to drive the model training
-    learner     = momentum_sgd(z.parameters, lr_schedule, mn_schedule)
+    learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule)
     trainer     = Trainer(z, ce, pe, learner)
 
     # define mapping from reader streams to network inputs

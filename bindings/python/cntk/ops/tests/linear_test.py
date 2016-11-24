@@ -13,7 +13,7 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
-from ...utils import sanitize_dtype_cntk, ones_like, eval
+from ...utils import sanitize_dtype_cntk, _ones_like, eval
 
 TENSOR_PAIRS = [
     ([30.], [10.]),
@@ -74,8 +74,8 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
                         for i in range(len(left_batch))]
 
     expected_backward = {
-        'left': ones_like(left_batch, PRECISION_TO_TYPE[precision]),
-        'right': ones_like(right_batch, PRECISION_TO_TYPE[precision])
+        'left': _ones_like(left_batch, PRECISION_TO_TYPE[precision]),
+        'right': _ones_like(right_batch, PRECISION_TO_TYPE[precision])
     }
 
     left_value = [AA(sample, dtype=PRECISION_TO_TYPE[precision])

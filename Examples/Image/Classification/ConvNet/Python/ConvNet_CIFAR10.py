@@ -13,6 +13,7 @@ from cntk.layers import *
 from cntk.models import Sequential, LayerStack
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, minus, element_times, constant
 from _cntk_py import set_computation_network_trace_level
 
@@ -71,9 +72,9 @@ def convnet_cifar10(debug_output=False):
 
     # Set learning parameters
     lr_per_sample          = [0.0015625]*10+[0.00046875]*10+[0.00015625]
-    lr_schedule            = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
-    momentum_time_constant = [0]*20+[-minibatch_size/np.log(0.9)]
-    mm_schedule            = momentum_as_time_constant_schedule(momentum_time_constant, epoch_size=epoch_size)
+    lr_schedule            = learning_rate_schedule(lr_per_sample, UnitType.sample, epoch_size)
+    mm_time_constant       = [0]*20+[-minibatch_size/np.log(0.9)]
+    mm_schedule            = momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
     l2_reg_weight          = 0.002
 
     # Instantiate the trainer object to drive the model training

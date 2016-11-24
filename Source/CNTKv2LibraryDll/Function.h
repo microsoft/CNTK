@@ -652,8 +652,8 @@ namespace CNTK
     class CNTKBackPropState final : public BackPropState
     {
     public:
-        CNTKBackPropState(const FunctionPtr& function, const std::pair<Variable, int64_t>& evalTimeStamp)
-            : BackPropState(function), m_evalTimeStamp(evalTimeStamp)
+        CNTKBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, const std::pair<Variable, int64_t>& evalTimeStamp)
+            : BackPropState(function, computeDevice), m_evalTimeStamp(evalTimeStamp)
         {}
 
         std::pair<Variable, int64_t> EvalTimeStamp() const

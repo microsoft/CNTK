@@ -13,6 +13,7 @@ from cntk.device import default
 from cntk.tests.test_utils import precision, PRECISION_TO_TYPE
 from cntk.ops import *
 from cntk.utils import *
+from cntk.utils import _has_seq_dim, _is_tensor
 
 # Keeping things short
 AA = np.asarray
@@ -58,7 +59,7 @@ def test_tensor_conversion_dense(idx, alias_tensor_map, expected):
     ([AA([1, 2]), AA([])], False),
 ])
 def test_is_tensor(data, expected):
-    assert is_tensor(data) == expected
+    assert _is_tensor(data) == expected
 
 
 def test_sanitize_dtype_numpy():
@@ -123,16 +124,14 @@ def test_get_data_type():
     # exception handling
     ((2,2), AA([[1,1],[2,2]]), ValueError),
     (1, [[[1,2]]], ValueError),
-    #(1, [AA([[40], [50]])], ValueError),
-    ((1,), [[[40], [50]]], ValueError),
 ])
 def test_has_seq_dim_dense(shape, batch, expected):
     i1 = input_variable(shape)
     if expected in [False, True]:
-        assert has_seq_dim(i1, batch) == expected
+        assert _has_seq_dim(i1, batch) == expected
     else:
         with pytest.raises(expected):
-            has_seq_dim(i1, batch)
+            _has_seq_dim(i1, batch)
 
 @pytest.mark.parametrize("shape, batch, expected", [
     ((1,2), [csr([1,0]), csr([2,3]), csr([5,6])], False),
@@ -141,10 +140,10 @@ def test_has_seq_dim_dense(shape, batch, expected):
 def test_has_seq_dim_sparse(shape, batch, expected):
     i1 = input_variable(shape, is_sparse=True)
     if expected in [False, True]:
-        assert has_seq_dim(i1, batch) == expected
+        assert _has_seq_dim(i1, batch) == expected
     else:
         with pytest.raises(expected):
-            has_seq_dim(i1, batch)
+            _has_seq_dim(i1, batch)
 
 def test_sanitize_batch_sparse():
     batch = [[csr([1,0,2]), csr([2,3,0])],
@@ -160,4 +159,20 @@ def test_sanitize_batch_sparse():
     # 2 sequences, with max seq len of 2 and dimension 3
     assert b.shape == (2,2,3)
 
+@pytest.mark.parametrize("batch, seq_starts, expected_mask", [
+    ([[5, 6, 7],
+       [8]],
+       [True, False],
+       [[2, 1, 1], [1, 0, 0]]),
+
+    ([[5],
+       [8]],
+       [True, False],
+       [[2], [1]]),
+])
+def test_mask(batch, seq_starts, expected_mask):
+    shape = (1,)
+    var = input_variable(shape)
+    s = sanitize_batch(var, batch, seq_starts)
+    assert np.allclose(s.mask, expected_mask)
 

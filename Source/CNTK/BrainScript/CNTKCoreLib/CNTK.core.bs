@@ -512,7 +512,7 @@ CNTK2 = [
 # Parameter{} can do several forms of initialization.
 #  - initValue=scalar, value=array --> initialize from this value  --array form not implemented yet
 #  - initFromFilePath="..." --> read from a data file
-#  - init="uniform|gaussian" (random init scaled by initValueScale). Warning: This has magic scaling factors. TODO: document them here
+#  - init="uniform|gaussian" (random init scaled by initValueScale). 
 #  - init="zero"
 # deprecated:
 #  - initFromLiteral="..." (deprecated) --> parse a string literal (obsolete with value=array form)

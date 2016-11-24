@@ -247,10 +247,6 @@ namespace CNTK
 
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
 
-        template <typename ElementType>
-        Variable GetVariable(const  Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                             std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, ::CNTK::Variable>& nodeToVariableMap,
-                             std::unordered_map<::CNTK::Variable, ::CNTK::Variable>& placeholderReplacements,
-                             std::unordered_set<::CNTK::FunctionPtr>& allPrimitiveFunctions);
+        class VariableResolver;
     }
 }

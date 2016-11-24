@@ -31,4 +31,12 @@ Run the example from the current folder using:
 
 `cntk configFile=ConvNet_CIFAR10_DataAug.cntk`
 
-As seen in the CNTK configuration file [ConvNet_CIFAR10_DataAug.cntk](./ConvNet_CIFAR10_DataAug.cntk), we use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perform translation transform without scaling. The accuracy of the network on test data is around `14%`, which is a lot better than the previous model.
+As seen in the CNTK configuration file [ConvNet_CIFAR10_DataAug.cntk](./ConvNet_CIFAR10_DataAug.cntk), we use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perform translation transform without scaling. The accuracy of the network on test data is around `14.2%`, which is a lot better than the previous model.
+
+### ConvNetLRN_CIFAR10_DataAug.cntk
+
+The fourth example added local response normalization (LRN) to the previous example. LRN is implemented as a BrainScript function using 3D convolution with a constant kernel. You may run the example from the current folder using:
+
+`cntk configFile=ConvNetLRN_CIFAR10_DataAug.cntk`
+
+This model achieves slightly better accuracy of `13.8%`, which demonstrates the effectiveness of LRN. Nevertheless, as mentioned earlier, LRN is now rarely used by state-of-the-art deep networks.
