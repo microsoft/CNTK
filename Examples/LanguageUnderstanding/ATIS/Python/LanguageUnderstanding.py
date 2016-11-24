@@ -125,15 +125,6 @@ def train(reader, model, max_epochs):
     #criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_labels, is_sparse=True))
     criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
-    #features = input_variable(shape=vocab_size, is_sparse=False)
-    #label = input_variable(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()])
-    #criterion.set_signature(features, label)
-    # BUGBUG: ^^ Fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
-    #criterion = criterion(features, label) # Workaround: This uses clone().
-    # BUGBUG: ^^ Fails with mixed-up argment order "The 1 leading dimensions of the right operand with shape [943] do not match the left operand's trailing dimensions with shape [26]"
-    #criterion = criterion(label, features) # Workaround: This uses clone(). Note reversed
-    # BUGBUG: ^^ This passes validation but then fails exection with "RuntimeError: AsMatrix: Flattened [943 x 5] matrix has an offset or width that is not a multiple of the storage object's row dimension."
-
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
     minibatch_size = 70
@@ -201,7 +192,7 @@ if __name__=='__main__':
     # TODO: leave these in for now as debugging aids; remove for beta
     # TODO: try cntk_py without _ (feedback from Willi)
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    #set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
+    set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     force_deterministic_algorithms()
 
