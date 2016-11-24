@@ -97,17 +97,18 @@ class VideoReader(object):
             raise ValueError('Sequence length {} is larger then the total number of frames {} in {}.'.format(self.sequence_length, num_frames, video_file))
 
         # select which sequence frames to use.
-        seq_start = randint(0, num_frames - self.sequence_length)
-        frame_range = [seq_start, seq_start + self.sequence_length - 1]
+        if num_frames > 2*self.sequence_length:
+            seq_start = int(num_frames/2) - self.sequence_length
+            frame_range = [seq_start + 2*i for i in range(self.sequence_length)]
+        else:
+            seq_start = randint(0, num_frames - self.sequence_length)
+            frame_range = [seq_start + i for i in range(self.sequence_length)]            
 
-        video_frames = None
+        video_frames = []
         for frame_index in frame_range:
-            video_frame = self._read_frame(video_reader.get_data(frame_index))
-            if video_frames is None:
-                video_frames = video_frame
-            else:
-                video_frames = np.stack((video_frames, video_frame), axis=1)
-        video_frames
+            video_frames.append(self._read_frame(video_reader.get_data(frame_index)))
+        
+        return np.stack(video_frames, axis=1)
 
     def _read_frame(self, data):
         '''
@@ -116,7 +117,8 @@ class VideoReader(object):
         crop.
         '''
         image = Image.fromarray(data)
-        image.thumbnail((128, 171), Image.ANTIALIAS)
+        image.thumbnail((171, 128), Image.ANTIALIAS)
+        n_image = np.array(image, dtype=np.float32)
         
         center_w = image.size[0] / 2
         center_h = image.size[1] / 2
@@ -130,7 +132,8 @@ class VideoReader(object):
         norm_image -= 128.0
         norm_image /= 128.0
 
-        return norm_image
+        # (channel, height, width)
+        return np.ascontiguousarray(np.transpose(norm_image, (2, 0, 1)))
 
 # Creates and trains a feedforward classification model for UCF11 action videos
 def conv3d_ucf11(debug_output=False):
@@ -170,16 +173,17 @@ def conv3d_ucf11(debug_output=False):
 
     # training config
     epoch_size = 1322                  # for now we manually specify epoch size
-    minibatch_size = 4
+    minibatch_size = 8
 
     # Set learning parameters
-    lr_per_sample          = [0.001]*10+[0.001]*10+[0.0001]
+    lr_per_sample          = [0.001]*10+[0.0001]
     lr_schedule            = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
     momentum_time_constant = 4096
     mm_schedule            = momentum_as_time_constant_schedule(momentum_time_constant, epoch_size=epoch_size)
 
     # Instantiate the trainer object to drive the model training
-    learner     = sgd(z.parameters, lr_schedule)
+    learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule)
+    # learner     = sgd(z.parameters, lr_schedule)
     trainer     = Trainer(z, ce, pe, learner)
 
     log_number_of_parameters(z) ; print()
