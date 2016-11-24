@@ -97,10 +97,8 @@ class VideoReader(object):
             raise ValueError('Sequence length {} is larger then the total number of frames {} in {}.'.format(self.sequence_length, num_frames, video_file))
 
         # select which sequence frames to use.
-        num_seq = int(num_frames / self.sequence_length)
-        #seq_idx = randint(0, num_seq - 1)
-        seq_idx = int(num_frames / 2) - int(self.sequence_length / 2)
-        frame_range = [seq_idx, seq_idx + self.sequence_length - 1]
+        seq_start = randint(0, num_frames - self.sequence_length)
+        frame_range = [seq_start, seq_start + self.sequence_length - 1]
 
         video_frames = None
         for frame_index in frame_range:
@@ -134,9 +132,9 @@ class VideoReader(object):
 
         return norm_image
 
-# Creates and trains a feedforward classification model for MNIST images
+# Creates and trains a feedforward classification model for UCF11 action videos
 def conv3d_ucf11(debug_output=False):
-    set_computation_network_trace_level(1)
+    set_computation_network_trace_level(0)
 
     train_reader = VideoReader(os.path.join(data_path, 'train_map.csv'), 11, True)
 
@@ -175,7 +173,7 @@ def conv3d_ucf11(debug_output=False):
     minibatch_size = 4
 
     # Set learning parameters
-    lr_per_sample          = [0.01]*10+[0.001]*10+[0.0001]
+    lr_per_sample          = [0.001]*10+[0.001]*10+[0.0001]
     lr_schedule            = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
     momentum_time_constant = 4096
     mm_schedule            = momentum_as_time_constant_schedule(momentum_time_constant, epoch_size=epoch_size)
