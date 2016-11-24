@@ -14,8 +14,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.ops.functions import CloneMethod
 from cntk.ops.sequence import broadcast_as
 from cntk.graph import find_nodes_by_name
-#from cntk.blocks import LSTM, Stabilizer
-from localblocks import LSTM, Stabilizer
+from cntk.blocks import LSTM, Stabilizer
 from cntk.layers import Dense
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 from attention import create_attention_augment_hook
@@ -294,12 +293,10 @@ def test(reader, model_filename):
     return total_error/i
 
 ########################
-# test string          #
+# translate string     #
 ########################
 
-def test_string(input_string, vocab, i2w, model):
-
-    max_label_length = 20
+def translate_string(input_string, model, vocab, i2w, max_label_length=20):
 
     vdict = {vocab[i]:i for i in range(len(vocab))}
     w = [vdict["<s>"]] + [vdict[w] for w in input_string] + [vdict["</s>"]]
@@ -315,8 +312,12 @@ def test_string(input_string, vocab, i2w, model):
     
     pred = model.eval({find_arg_by_name('raw_input' , model) : [features], 
                        find_arg_by_name('raw_labels', model) : [labels]})
-      
-    print([i2w[w] for w in np.argmax(pred, axis=2)[0]])
+     
+    # print out translation and stop at the sequence-end tag
+    for i in np.argmax(pred, axis=2)[0]:
+        phoneme = i2w[i]
+        if phoneme == "</s>": break
+        print(phoneme, end=' ')
 
 ########################
 # helper functions     #
@@ -352,12 +353,6 @@ if __name__ == '__main__':
     valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
     vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
-    #model_filename = "model_epoch0.cmf"
-    #model = load_model(model_filename)
-    #test_string("HELLO", vocab, i2w, model)
-    #import sys
-    #sys.exit(1)
-
     # create model
     model = create_model()
     
@@ -366,5 +361,7 @@ if __name__ == '__main__':
 
     #write(valid_reader, "model_epoch0.cmf", vocab, i2w)
     
-    # test
-    #test_string("HELLO", vocab, i2w, model_filename)
+    # test the model out
+    #model_filename = "model_epoch1.cmf"
+    #model = load_model(model_filename)
+    #translate_string("HELLO", model, vocab, i2w)
