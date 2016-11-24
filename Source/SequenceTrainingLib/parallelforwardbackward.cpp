@@ -253,8 +253,8 @@ static double emulateforwardbackwardlattice(const size_t* batchsizeforward, cons
     size_t startindex = 0;
     for (size_t i = 0; i < numlaunchforward; i++)
     {
-        dim3 b((unsigned int) ((batchsizeforward[i] + tpb - 1) / tpb));
-        emulatecuda(b, t, [&]()
+        dim3 b2((unsigned int) ((batchsizeforward[i] + tpb - 1) / tpb));
+        emulatecuda(b2, t, [&]()
                     {
                         forwardlatticej(batchsizeforward[i], startindex, edgeacscores, spalignunitid, silalignunitid, edges, nodes, aligns, alignments, alignoffsets,
                                         logalphas, lmf, wp, amf, boostingfactor, uids, senone2classmap, returnEframescorrect, logframescorrectedge, logaccalphas);
@@ -273,8 +273,8 @@ static double emulateforwardbackwardlattice(const size_t* batchsizeforward, cons
     startindex = edges.size();
     for (size_t i = 0; i < numlaunchbackward; i++)
     {
-        dim3 b((unsigned int) ((batchsizebackward[i] + tpb - 1) / tpb));
-        emulatecuda(b, t, [&]()
+        dim3 b3((unsigned int) ((batchsizebackward[i] + tpb - 1) / tpb));
+        emulatecuda(b3, t, [&]()
                     {
                         backwardlatticej(batchsizebackward[i], startindex - batchsizebackward[i], edgeacscores,
                                          spalignunitid, silalignunitid, edges, nodes, aligns,

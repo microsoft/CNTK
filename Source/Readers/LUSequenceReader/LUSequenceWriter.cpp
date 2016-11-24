@@ -55,8 +55,8 @@ void LUSequenceWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerCo
 
 template <class ElemType>
 void LUSequenceWriter<ElemType>::ReadLabelInfo(const wstring& vocfile,
-                                               map<string, int>& word4idx,
-                                               map<int, string>& idx4word)
+                                               map<string, int>& word4idx2,
+                                               map<int, string>& idx4word2)
 {
     char stmp[MAX_STRING];
     int b;
@@ -71,8 +71,8 @@ void LUSequenceWriter<ElemType>::ReadLabelInfo(const wstring& vocfile,
     while (!feof(vin))
     {
         fscanf_s(vin, "%s\n", stmp, (int)_countof(stmp));
-        word4idx[stmp] = b;
-        idx4word[b++] = stmp;
+        word4idx2[stmp] = b;
+        idx4word2[b++] = stmp;
     }
     fclose(vin);
 }

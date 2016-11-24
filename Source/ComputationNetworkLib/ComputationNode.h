@@ -1310,9 +1310,9 @@ protected:
                 auto* val = configp->Find(L"inputs");
                 if (!val) // if there is no 'inputs' then get the first item of this config record for a Fail() function
                 {
-                    auto members = configp->GetMemberIds();
-                    if (members.size() > 0)
-                        val = configp->Find(members.front());
+                    auto members2 = configp->GetMemberIds();
+                    if (members2.size() > 0)
+                        val = configp->Find(members2.front());
                 }
                 if (val)
                     val->Fail(msra::strfun::wstrprintf(L"Expected %d inputs, but %d were given.", (int) expectedNumInputs, (int) inputs.size()));
