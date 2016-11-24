@@ -203,6 +203,14 @@ class Trainer(cntk_py.Trainer):
         '''
         return super(Trainer, self).previous_minibatch_sample_count()
 
+    @property
+    def is_running_distributed(self):
+        '''
+        Whether the trainer is running distributed
+        '''
+        return super(Trainer, self).is_running_distributed()
+
+    # TODO: anything below are attempts, and will likely not survive this way.
     # BUGBUG: Should not need to take 'criterion', Trainer should know.
     def train_minibatch_from_data(self, criterion, *stream_values):
         def get_args(crit, stream_values):

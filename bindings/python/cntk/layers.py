@@ -254,6 +254,7 @@ def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_
 # Delay -- delay input
 # TODO: This does not really have bound parameters. Should it still be a layer?
 def Delay(T=1, initial_state=None):
+    # TODO: change initial_state to a per-function default
     initial_state = _get_initial_state_or_default(initial_state)
     UntestedBranchError("Delay")
 
@@ -299,7 +300,7 @@ def BatchNormalization(map_rank=None,  # if given then normalize only over this 
     return Block(apply_x, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
 # LayerNormalization -- create a layer-normalization layer
-# TODO: add an epsilon
+# TODO: add an epsilon [CR comment by Nikos]
 def LayerNormalization(initial_scale=1, initial_bias=0):
     UntestedBranchError("LayerNormalization")
 

@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from cntk.ops import *
-from .. import load_model, save_model
+from cntk.persist import load_model, save_model
 
 
 def test_load_save_constant(tmpdir):

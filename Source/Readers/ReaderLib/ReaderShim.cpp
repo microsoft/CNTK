@@ -22,15 +22,29 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
-ReaderShim<ElemType>::ReaderShim(ReaderFactory factory)
-    : m_factory(factory), m_deviceId(CPUDEVICE), m_dataTransferers(2, DataTransfererPtr()), m_currentDataTransferIndex(0), m_endOfEpoch(false)
+ReaderShim<ElemType>::ReaderShim() :
+    m_deviceId(CPUDEVICE),
+    m_dataTransferers(2, DataTransfererPtr()),
+    m_currentDataTransferIndex(0),
+    m_endOfEpoch(false),
+    m_currentSamplePosition(0),
+    m_reader(nullptr),
+    m_factory(nullptr)
 {
 }
 
 template <class ElemType>
-ReaderShim<ElemType>::ReaderShim(ReaderPtr reader)
-    : m_deviceId(CPUDEVICE), m_dataTransferers(2, DataTransfererPtr()), m_currentDataTransferIndex(0), m_reader(reader), m_factory(nullptr), m_endOfEpoch(false)
+ReaderShim<ElemType>::ReaderShim(ReaderFactory factory) :
+    ReaderShim()
 {
+    m_factory = factory;
+}
+
+template <class ElemType>
+ReaderShim<ElemType>::ReaderShim(ReaderPtr reader) :
+    ReaderShim()
+{
+    m_reader = reader;
 }
 
 template <class ElemType>
@@ -79,6 +93,61 @@ void ReaderShim<ElemType>::StartDistributedMinibatchLoop(
     config.m_epochIndex = epoch;
 
     StartEpoch(config, inputs);
+}
+
+template <class ElemType>
+void ReaderShim<ElemType>::SetCurrentSamplePosition(size_t currentSamplePosition)
+{
+    // Make sure there are no outstanding reads.
+    if (m_prefetchTask.valid())
+        m_prefetchTask.wait();
+
+    // Let's check that there is no outstanding copies.
+    // Wait on all events if there are any pending copy operations in flight.
+    if (m_dataTransferers[m_currentDataTransferIndex])
+        m_dataTransferers[m_currentDataTransferIndex]->WaitForCopyCPUToGPU();
+
+    // Set current position.
+    m_reader->SetCurrentSamplePosition(currentSamplePosition);
+    m_currentSamplePosition = m_reader->GetCurrentSamplePosition();
+
+    // Start prefetch.
+    auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
+    // Starting the prefetch task. There is always a single async read in flight.
+    // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
+    // and kick off the new prefetch.
+    m_prefetchTask = std::async(m_launchType,
+        [this, localCurrentDataTransferIndex]()
+    {
+        return PrefetchMinibatch(localCurrentDataTransferIndex);
+    });
+}
+
+template <class ElemType>
+void ReaderShim<ElemType>::SetConfiguration(const ReaderConfiguration& config, const std::map<std::wstring, int>& inputDescriptions)
+{
+    // Make sure there are no outstanding reads.
+    if (m_prefetchTask.valid())
+        m_prefetchTask.wait();
+
+    // Let's check that there is no outstanding copies.
+    // Wait on all events if there are any pending copy operations in flight.
+    if (m_dataTransferers[m_currentDataTransferIndex])
+        m_dataTransferers[m_currentDataTransferIndex]->WaitForCopyCPUToGPU();
+
+    m_reader->SetConfiguration(config, inputDescriptions);
+    m_reader->SetCurrentSamplePosition(m_currentSamplePosition);
+
+    // Start prefetch.
+    auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
+    // Starting the prefetch task. There is always a single async read in flight.
+    // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
+    // and kick off the new prefetch.
+    m_prefetchTask = std::async(m_launchType,
+        [this, localCurrentDataTransferIndex]()
+    {
+        return PrefetchMinibatch(localCurrentDataTransferIndex);
+    });
 }
 
 template <class ElemType>

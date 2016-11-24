@@ -15,7 +15,7 @@ import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python"))
-from CifarConvNet import train_and_evaluate, create_reader
+from ConvNet_CIFAR10_DataAug import convnet_cifar10_dataaug, create_reader
 
 TOLERANCE_ABSOLUTE = 2E-1
 
@@ -46,8 +46,8 @@ def test_cifar_convnet_error(device_id):
     reader_train = create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
 
-    test_error = train_and_evaluate(reader_train, reader_test, max_epochs=5)
-    expected_test_error = 0.463
+    test_error = convnet_cifar10_dataaug(reader_train, reader_test, max_epochs=1)
+    expected_test_error = 0.617
 
     assert np.allclose(test_error, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)

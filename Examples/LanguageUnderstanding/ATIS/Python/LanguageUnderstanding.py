@@ -189,7 +189,7 @@ def evaluate(reader, model):
             break
         metric = evaluator.test_minibatch({ criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[reader.streams.slot_labels] })
         progress_printer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
-    loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
+        loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric
 

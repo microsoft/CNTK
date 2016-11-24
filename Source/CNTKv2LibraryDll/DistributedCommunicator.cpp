@@ -184,21 +184,31 @@ namespace CNTK
         dict << input;
         std::string encoded = dict.str();
 
-        // Exchange sizes.
+        // Exchange data sizes.
         int encodedSizeInBytes = (int)encoded.size();
         std::vector<int> othersSize;
         othersSize.resize(m_mpi->NumNodesInUse());
         m_mpi->Gather(&encodedSizeInBytes, 1, &othersSize[0], 1, 0);
 
-        output.resize(m_mpi->NumNodesInUse());
+        output.resize(m_mpi->NumNodesInUse(), std::make_shared<Dictionary>());
+
         int totalSizeInBytes = std::accumulate(othersSize.begin(), othersSize.end(), 0);
 
-        // Exchange actual data.
+        // Exchange actual data
         std::vector<char> gathered;
-        gathered.resize(totalSizeInBytes);
+        gathered.resize(std::max(totalSizeInBytes, 1)); // buffer should be at least of size 1.
         std::vector<int> offsets;
         offsets.resize(m_mpi->NumNodesInUse());
+        int currentOffset = 0;
+        for (size_t i = 0; i < offsets.size(); ++i)
+        {
+            offsets[i] = currentOffset;
+            currentOffset += othersSize[i];
+        }
+
         m_mpi->Gatherv(&encoded[0], encoded.size(), &gathered[0], &othersSize[0], &offsets[0], 0);
+        if (CurrentWorker().m_globalRank != 0)
+            return;
 
         offsets.push_back(totalSizeInBytes);
         output.resize(m_workers.size());

@@ -508,7 +508,9 @@ public:
             //  [I x Inferred] * [W x H x C],                inferInputRankToMap=0   --> Inferred  := W x H x C, result is [I] (desired)
             //  [I x Inferred] * [W x H x C x R],            inferInputRankToMap=1   --> Inferred  := W x H x C, result is [I x R] (desired)
             // If W's shape is too short, it will be padded with 0 (i.e. inferred in a subsequent step).
-            if (m_inferInputRankToMap >= 0) // if given, we pad if needed
+            // (the second check below (dimsA.back() == 0) is required to infer dimensions correctly for fixed input tensors where a new dimension is added,
+            // e.g. when adding an ROI dimension to a pretrained weights tensor of a dense layer after ROI pooling)
+            if (m_inferInputRankToMap >= 0 && dimsA.back() == 0) // if given, we pad if needed
             {
                 if ((size_t)m_inferInputRankToMap >= dimsB.size() && isFinalValidationPass) // at least one axis must be left to reduce over
                     InvalidArgument("%ls %ls operation: 'inferInputRankToMap' argument %d must be less than rank of second operand [%s].", NodeName().c_str(), OperationName().c_str(), m_inferInputRankToMap, dimsBstring.c_str());

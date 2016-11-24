@@ -16,7 +16,7 @@ namespace CNTK
     class DataParallelDistributedTrainer : public DistributedTrainerBase
     {
     public:
-        DataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate);
+        DataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t distributedAfterSampleCount);
 
         // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
         bool PreParameterUpdateCallback(const Trainer& trainer, std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info) override;

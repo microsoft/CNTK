@@ -421,9 +421,10 @@ public:
                     TracingGPUMemoryAllocator::Free<ElemType>(m_computeDevice, m_pArray, true);
                 m_pArray = nullptr;
 
-                if (m_rowToId != nullptr)
-                    TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_rowToId, true);
-                m_rowToId = nullptr;
+                if (m_tempDeviceBuffer != nullptr)
+                    TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(m_computeDevice, m_tempDeviceBuffer, true);
+                m_tempDeviceBuffer = nullptr;
+                m_tempDeviceBufferSize = 0;
 #endif
 
                 delete[](byte*) m_tempHostBuffer;
@@ -463,8 +464,17 @@ protected:
     size_t GetBlockSize() const { return m_blockSize; }
     void SetBlockSize(size_t blockSize) { m_blockSize = blockSize; }
 
-    GPUSPARSE_INDEX_TYPE* GetRowToIdMap() const { return m_rowToId; }
-    void SetRowToIdMap(GPUSPARSE_INDEX_TYPE* parray) { m_rowToId = parray; }
+    GPUSPARSE_INDEX_TYPE* GetTempDeviceBuffer() const { return m_tempDeviceBuffer; }
+    void ReserveTempDeviceBuffer(const size_t minSize) const
+    { 
+        BaseMatrixStorage<ElemType>* nonConstThis = const_cast<BaseMatrixStorage<ElemType>*>(this);
+        if (minSize > m_tempDeviceBufferSize)
+        {
+            TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(GetComputeDeviceId(), nonConstThis->m_tempDeviceBuffer);
+            nonConstThis->m_tempDeviceBuffer = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(GetComputeDeviceId(), minSize);
+            nonConstThis->m_tempDeviceBufferSize = minSize;
+        }
+    }
 
     void* GetTempHostBuffer() const { return m_tempHostBuffer; }
     void SetTempHostBuffer(void* buffer) const { m_tempHostBuffer = buffer; }
@@ -504,7 +514,8 @@ protected:
         m_elemSizeAllocated        = 0;
         m_totalBufferSizeAllocated = 0;
         m_blockSize                = 0; // block size
-        m_rowToId                  = nullptr; // the id showing the order row number is observed in the nnz values.
+        m_tempDeviceBuffer         = nullptr;
+        m_tempDeviceBufferSize     = 0;
         m_tempHostBuffer           = nullptr; // used to copy values.
         m_tempHostBufferSize       = 0;
         m_colIdx                   = 0; // used to SetValue()
@@ -538,7 +549,8 @@ protected:
 
     // used by the blockCol and blockRow format
     size_t m_blockSize;                      // block size
-    mutable GPUSPARSE_INDEX_TYPE* m_rowToId; // the id showing the order row number is observed in the nnz values.
+    mutable GPUSPARSE_INDEX_TYPE* m_tempDeviceBuffer;
+    mutable size_t m_tempDeviceBufferSize;
 
     mutable void* m_tempHostBuffer; // used to copy values.
     mutable size_t m_tempHostBufferSize;
@@ -653,8 +665,8 @@ protected:
     size_t GetBlockSize() const { return m_sob->GetBlockSize(); }
     void SetBlockSize(size_t blockSize) { m_sob->SetBlockSize(blockSize); }
 
-    GPUSPARSE_INDEX_TYPE* GetRowToIdMap() const { return m_sob->GetRowToIdMap(); }
-    void SetRowToIdMap(GPUSPARSE_INDEX_TYPE* parray) { m_sob->SetRowToIdMap(parray); }
+    GPUSPARSE_INDEX_TYPE* GetTempDeviceBuffer() const { return m_sob->GetTempDeviceBuffer(); }
+    void ReserveTempDeviceBuffer(const size_t minSize) const { m_sob->ReserveTempDeviceBuffer(minSize); }
 
     void* GetTempHostBuffer() const { return m_sob->GetTempHostBuffer(); }
     void SetTempHostBuffer(void* buffer) const { m_sob->SetTempHostBuffer(buffer); };

@@ -17,6 +17,8 @@
 #include "EvaluationNodes.h"
 #include "TrainingNodes.h"
 #include "ReshapingNodes.h"
+#include "DeprecatedNodes.h"
+#include "RNNNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -24,21 +26,61 @@ namespace CNTK
 {
     namespace Internal
     {
-        template <typename ElementType>
-        Variable GetVariable(const ComputationNodeBasePtr& node,
-                             std::unordered_map<ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                             std::unordered_map<Variable, Variable>& placeholderReplacements,
-                             std::unordered_set<FunctionPtr>& allPrimitiveFunctions)
+        // Helper class to resolve variables in the model.
+        class VariableResolver final
         {
-            auto iter = nodeToVariableMap.find(node);
-            if (iter != nodeToVariableMap.end())
-                return iter->second;
+            std::unordered_map<Variable, Variable> m_placeholderReplacements;
+            std::unordered_map<ComputationNodeBasePtr, Variable> m_nodeToVariableMap;
+            std::unordered_set<FunctionPtr> m_allPrimitiveFunctions;
 
-            Variable var;
-            NDShape varShape = AsNDShape(node->GetSampleLayout());
-
-            if (node->IsLeaf())
+        public:
+            const std::unordered_map<Variable, Variable>& GetPlaceHolders() const
             {
+                return m_placeholderReplacements;
+            }
+
+            template<class ElementType>
+            Variable GetVariable(const ComputationNodeBasePtr& node)
+            {
+                auto iter = m_nodeToVariableMap.find(node);
+                if (iter != m_nodeToVariableMap.end())
+                    return iter->second;
+
+                Variable var;
+                if (node->IsLeaf())
+                {
+                    var = ResolveLeaf<ElementType>(node);
+                }
+                else
+                {
+                    // This is a non-leaf node and maps to a primitive Function
+                    NDShape varShape = AsNDShape(node->GetSampleLayout());
+                    auto placeholderVar = PlaceholderVariable(varShape);
+                    m_nodeToVariableMap[node] = placeholderVar;
+
+                    std::vector<Variable> inputVars(node->GetNumInputs());
+                    for (size_t i = 0; i < inputVars.size(); ++i)
+                    {
+                        inputVars[i] = GetVariable<ElementType>(node->Input(i));
+                        if (inputVars[i].IsPlaceholder())
+                            m_placeholderReplacements[inputVars[i]] = Variable();
+                    }
+
+                    var = ResolveFunction<ElementType>(node, inputVars);
+
+                    if (m_placeholderReplacements.find(placeholderVar) != m_placeholderReplacements.end())
+                        m_placeholderReplacements[placeholderVar] = var;
+                }
+
+                m_nodeToVariableMap[node] = var;
+                return var;
+            }
+
+        private:
+            template<class ElementType>
+            Variable ResolveLeaf(const ComputationNodeBasePtr& node)
+            {
+                NDShape variableShape = AsNDShape(node->GetSampleLayout());
                 std::wstring varUid, varName;
                 if (node->Is<InputValueBase<ElementType>>())
                 {
@@ -51,48 +93,32 @@ namespace CNTK
                         auto inputNodeInternalDynamicAxisName = node->As<InputValueBase<ElementType>>()->GetRequestedDynamicAxis();
                         std::vector<Axis> inputVarDynamicAxes = DynamicAxesFromInternalDynamicAxisName(inputNodeInternalDynamicAxisName);
 
-                        var = Variable(varShape, isSparse, AsDataType<ElementType>(), node->GetLearningRateMultiplier() != 0, varName, inputVarDynamicAxes, varUid);
+                        return Variable(variableShape, isSparse, AsDataType<ElementType>(), node->GetLearningRateMultiplier() != 0, varName, inputVarDynamicAxes, varUid);
                     }
-                    else
-                    {
-                        // TODO: Allow creating inputs without a dynamic axis
-                        LogicError("Found InputNode with no dynamic axes which is currently unsupported");
-                    }
+
+                    // TODO: Allow creating inputs without a dynamic axis
+                    LogicError("Found InputNode with no dynamic axes which is currently unsupported");
                 }
-                else if (node->Is<LearnableParameter<ElementType>>())
+
+                if (node->Is<LearnableParameter<ElementType>>())
                 {
                     bool isConstant = (node->GetLearningRateMultiplier() == 0);
                     auto& matrix = node->As<ComputationNode<ElementType>>()->Value();
                     auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorViewShape(node->GetSampleLayout()));
-                    NDArrayViewPtr value = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), varShape, false, tensorView);
-                    if (isConstant)
-                    {
-                        std::tie(varUid, varName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), VariableKind::Constant);
-                        var = Constant(value, varName, varUid);
-                    }
-                    else
-                    {
-                        std::tie(varUid, varName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), VariableKind::Parameter);
-                        var = Parameter(value, varName, varUid);
-                    }
+                    NDArrayViewPtr value = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), variableShape, false, tensorView);
+
+                    auto kind = isConstant ? VariableKind::Constant : VariableKind::Parameter;
+                    std::tie(varUid, varName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), kind);
+                    return isConstant ? (Variable)Constant(value, varName, varUid) : Parameter(value, varName, varUid);
                 }
-                else
-                    LogicError("CNTK::LoadLegacyModel: Unsupported legacy CNTK node named '%S'", node->NodeName().c_str());
+
+                LogicError("CNTK::LoadLegacyModel: Unsupported legacy CNTK node named '%S'", node->NodeName().c_str());
+                return Variable();// make compiler happy.
             }
-            else
+
+            template<class ElementType>
+            Variable ResolveFunction(const ComputationNodeBasePtr& node, std::vector<Variable>& inputVars)
             {
-                // This is a non-leaf node and maps to a primitive Function
-                auto placeholderVar = PlaceholderVariable(varShape);
-                nodeToVariableMap[node] = placeholderVar;
-
-                std::vector<Variable> inputVars(node->GetNumInputs());
-                for (size_t i = 0; i < inputVars.size(); ++i)
-                {
-                    inputVars[i] = GetVariable<ElementType>(node->Input(i), nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions);
-                    if (inputVars[i].IsPlaceholder())
-                        placeholderReplacements[inputVars[i]] = Variable();
-                }
-
                 PrimitiveOpType opType;
                 Dictionary primitiveFunctionConfigParameters;
                 if (node->OperationName() == OperationNameOf(NegateNode))
@@ -177,6 +203,8 @@ namespace CNTK
                     opType = PrimitiveOpType::SumAll;
                 else if (node->OperationName() == OperationNameOf(PlusNode))
                     opType = PrimitiveOpType::Plus;
+                else if (node->OperationName() == OperationNameOf(LogPlusNode))
+                    opType = PrimitiveOpType::LogPlus;
                 else if (node->OperationName() == OperationNameOf(MinusNode))
                     opType = PrimitiveOpType::Minus;
                 else if (node->OperationName() == OperationNameOf(ElementTimesNode))
@@ -201,10 +229,16 @@ namespace CNTK
                     opType = PrimitiveOpType::ScatterPacked;
                 else if (node->OperationName() == OperationNameOf(TimesNode))
                 {
-                    auto timesNode = node->As<TimesNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = timesNode->OutputRank();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInferInputRankToMap] = timesNode->InferInputRankToMap();
-                    opType = PrimitiveOpType::Times;
+                    // Deal with abuse of * in legacy configs/models
+                    if (inputVars[0].Shape().Rank() == 0 || inputVars[1].Shape().Rank() == 0)
+                        opType = PrimitiveOpType::ElementTimes;
+                    else
+                    {
+                        auto timesNode = node->As<TimesNode<ElementType>>();
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputRank] = timesNode->OutputRank();
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInferInputRankToMap] = timesNode->InferInputRankToMap();
+                        opType = PrimitiveOpType::Times;
+                    }
                 }
                 else if (node->OperationName() == OperationNameOf(TransposeTimesNode))
                 {
@@ -246,6 +280,13 @@ namespace CNTK
                     auto reduceElementsNode = node->As<ReduceElementsNode<ElementType>>();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(reduceElementsNode->ReductionAxis());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameReductionOpName] = reduceElementsNode->ReductionOpName();
+
+                    opType = PrimitiveOpType::ReduceElements;
+                }
+                else if (node->OperationName() == OperationNameOf(SumColumnElementsNode))
+                {
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = Axis(0);
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameReductionOpName] = PrimitiveFunction::InternalSumReductionOpName;
 
                     opType = PrimitiveOpType::ReduceElements;
                 }
@@ -329,6 +370,25 @@ namespace CNTK
 
                     opType = PrimitiveOpType::Splice;
                 }
+                else if (node->OperationName() == OperationNameOf(OptimizedRNNStackNode))
+                {
+                    auto optimizedRNNStackNode = node->As<OptimizedRNNStackNode<ElementType>>();
+                    auto attributes = optimizedRNNStackNode->Attributes();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBidirectional] = attributes.m_bidirectional;
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameHiddenSize] = attributes.m_hiddenSize;
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameNumLayers] = attributes.m_numLayers;
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRecurrentOp] = attributes.m_recurrentOp;
+
+                    opType = PrimitiveOpType::OptimizedRNNStack;
+                }
+                else if (node->OperationName() == OperationNameOf(ReconcileDynamicAxisNode))
+                {
+                    opType = PrimitiveOpType::ReconcileDynamicAxis;
+                }
+                else if (node->OperationName() == OperationNameOf(LogSoftmaxNode))
+                {
+                    opType = PrimitiveOpType::LogSoftmax;
+                }
                 else
                     LogicError("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
 
@@ -339,15 +399,10 @@ namespace CNTK
                 std::tie(functionUid, functionName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), opType);
 
                 FunctionPtr primitiveFunction = MakeSharedObject<PrimitiveFunction>(opType, inputVars, std::move(primitiveFunctionConfigParameters), functionName, functionUid);
-                allPrimitiveFunctions.insert(primitiveFunction);
-                var = primitiveFunction->Output();
-                if (placeholderReplacements.find(placeholderVar) != placeholderReplacements.end())
-                    placeholderReplacements[placeholderVar] = var;
+                m_allPrimitiveFunctions.insert(primitiveFunction);
+                return primitiveFunction->Output();
             }
-
-            nodeToVariableMap[node] = var;
-            return var;
-        }
+        };
 
         FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
         {
@@ -373,8 +428,8 @@ namespace CNTK
             // Now traverse the model and construct the Function graph
             std::unordered_map<ComputationNodeBasePtr, Variable> nodeToVariableMap;
             std::unordered_map<Variable, Variable> placeholderReplacements;
-            std::unordered_set<FunctionPtr> allPrimitiveFunctions;
             std::vector<Variable> rootVariables;
+            VariableResolver resolver;
             auto& networkRoots = net->RootNodes();
             for (auto& rootNode : networkRoots)
             {
@@ -383,11 +438,11 @@ namespace CNTK
 
                 if (ComputationNetwork::IsNodePtr<ComputationNode<float>>(rootNode))
                 {
-                    rootVariables.push_back(Internal::GetVariable<float>(rootNode, nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions).Owner());
+                    rootVariables.push_back(resolver.GetVariable<float>(rootNode).Owner());
                 }
                 else if (ComputationNetwork::IsNodePtr<ComputationNode<double>>(rootNode))
                 {
-                    rootVariables.push_back(Internal::GetVariable<double>(rootNode, nodeToVariableMap, placeholderReplacements, allPrimitiveFunctions).Owner());
+                    rootVariables.push_back(resolver.GetVariable<double>(rootNode).Owner());
                 }
                 else
                 {
@@ -396,8 +451,7 @@ namespace CNTK
             }
 
             auto rootComposite = Combine(rootVariables);
-            rootComposite->ReplacePlaceholders(placeholderReplacements);
-
+            rootComposite->ReplacePlaceholders(resolver.GetPlaceHolders());
             return rootComposite;
         }
 

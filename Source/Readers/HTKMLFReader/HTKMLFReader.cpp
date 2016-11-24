@@ -63,6 +63,7 @@ template <class ConfigRecordType>
 void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
     m_truncated = readerConfig(L"truncated", false);
+    m_maxUtteranceLength = readerConfig(L"maxUtteranceLength", 10000);
     m_convertLabelsToTargets = false;
 
     intargvector numberOfuttsPerMinibatchForAllEpochs = readerConfig(L"nbruttsineachrecurrentiter", ConfigRecordType::Array(intargvector(vector<int>{1})));
@@ -521,7 +522,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, m_featDims, m_labelDims,
                                                                          numContextLeft, numContextRight, randomize, 
                                                                          *m_lattices, m_latticeMap, m_frameMode, 
-                                                                         m_expandToUtt));
+                                                                         m_expandToUtt, m_maxUtteranceLength, m_truncated));
         m_frameSource->setverbosity(m_verbosity);
     }
     else if (EqualCI(readMethod, L"rollingWindow"))

@@ -51,6 +51,7 @@ namespace CNTK
         {PrimitiveOpType::Pooling, L"Pooling"},
         {PrimitiveOpType::SumAll, L"SumAll"},
         {PrimitiveOpType::Plus, L"Plus"},
+        {PrimitiveOpType::LogPlus, L"LogPlus"},
         {PrimitiveOpType::Minus, L"Minus"},
         {PrimitiveOpType::ElementTimes, L"ElementTimes"},
         {PrimitiveOpType::Equal, L"Equal"},
@@ -80,6 +81,9 @@ namespace CNTK
         {PrimitiveOpType::RandomSampleInclusionFrequency, L"RandomSampleInclusionFrequency"},
         {PrimitiveOpType::ROIPooling, L"ROIPooling"},
         {PrimitiveOpType::Logistic, L"Logistic"},
+        {PrimitiveOpType::OptimizedRNNStack, L"OptimizedRNNStack"},
+        {PrimitiveOpType::ReconcileDynamicAxis, L"ReconcileDynamicAxis"},
+        {PrimitiveOpType::LogSoftmax, L"LogSoftmax"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -118,6 +122,8 @@ namespace CNTK
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 2 }, { 1, 1 }, { 2, 0 } });
         else if (op == PrimitiveOpType::Clip)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 2 }, { 1, 0 }, { 2, 1 } });
+        else if (op == PrimitiveOpType::OptimizedRNNStack)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
         else
         {
             for (size_t i = 0; i < numFunctionInputs; ++i)
@@ -201,6 +207,10 @@ namespace CNTK
         static const std::wstring AttributeNameBeginIndex;
         static const std::wstring AttributeNameEndIndex;
         static const std::wstring AttributeNameReductionOpName;
+        static const std::wstring AttributeNameBidirectional;
+        static const std::wstring AttributeNameNumLayers;
+        static const std::wstring AttributeNameHiddenSize;
+        static const std::wstring AttributeNameRecurrentOp;
 
     public:
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
@@ -567,7 +577,6 @@ namespace CNTK
                 // If the trailing axis dimensionality of the kernel shape is NDShape::InferredDimension, we reduce over it by 
                 // picking the corresponding operand shape dimensionality
                 // This is done by shrinking the filter rank and let the dimensions be inferred from the operand's shape
-                // BUGBUG: This fails if the dimensions are inferred a second time, e.g. the same node shared twice.
                 // TODO: Should we do this for all of the axes in kernelShape that have a dimensionailty of NDShape::InferredDimension?
                 if (kernelShape[filterRank - 1] == NDShape::InferredDimension)
                 {
@@ -608,20 +617,20 @@ namespace CNTK
                 auto paramShape = operands[i].Shape();
                 if (i < operands.size() - 1)
                 {
-                if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasInferredDimension())
-                {
-                    size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
-                    paramShape[0] = total;
-                    std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
-                    UpdateOperandShapes(newParamShape);
+                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasInferredDimension())
+                    {
+                        size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
+                        paramShape[0] = total;
+                        std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
+                        UpdateOperandShapes(newParamShape);
+                    }
+               
+                    if (!paramShape.HasInferredDimension() && !operands[1].Shape().HasInferredDimension() && (paramShape != operands[1].Shape()))
+                        InvalidArgument("BatchNormalization: Input[%d] has a shape (%S) different from Input[1] (%S), but they must be identical.", 
+                                        (int)i,
+                                        AsStringForErrorReporting(paramShape).c_str(),
+                                        AsStringForErrorReporting(operands[1].Shape()).c_str());
                 }
-
-                if (!paramShape.HasInferredDimension() && !operands[1].Shape().HasInferredDimension() && (paramShape != operands[1].Shape()))
-                    InvalidArgument("BatchNormalization: Input[%d] has a shape (%S) different from Input[1] (%S), but they must be identical.", 
-                                    (int)i,
-                                    AsStringForErrorReporting(paramShape).c_str(),
-                                    AsStringForErrorReporting(operands[1].Shape()).c_str());
-            }
                 else if (paramShape != NDShape(std::vector<size_t>{ 1 })) // last arguments is count, must be a 1-dim vector
                 {
                     InvalidArgument("BatchNormalization: Input[%d] must be a 1-dimensional vector.", (int)i);
@@ -642,7 +651,9 @@ namespace CNTK
 
     private:
         PrimitiveOpType m_op;
-        static const size_t s_serializationVersion = 1;
+        // Increasing s_serializationVersion every time we add more ops allows us to print 
+        // a more meaningful message when trying to load a new model with a stale binary. 
+        static const size_t s_serializationVersion = 2;
     };
 
     class CNTKBackPropState final : public BackPropState
