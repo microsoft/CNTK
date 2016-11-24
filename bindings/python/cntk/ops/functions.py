@@ -273,7 +273,9 @@ class Function(cntk_py.Function):
         Returns:
             dict: mapping of ``variables`` to NumPy arrays
         '''
-        root_gradients = sanitize_var_map(self.outputs, root_gradients)
+        device = state.device()
+        root_gradients = sanitize_var_map(self.outputs, root_gradients,
+                                          None, device)
 
         var_gradients = dict((var, None) for var in variables)
 
