@@ -23,6 +23,8 @@ using namespace Microsoft::MSR::CNTK;
 template<typename ElemType>
 using GetEvalProc = void(*)(IEvaluateModelExtended<ElemType>**);
 
+std::string outputName = "__v2libuid__Plus2069__v2libname__Plus2060";
+
 std::unordered_map<std::string, size_t> buildVocab(std::string filePath)
 {
     std::ifstream ifs(filePath);
@@ -214,7 +216,7 @@ int main(int argc, char* argv[])
 #endif
     const std::string modelWorkingDirectory = modelBaseDir + "work/";
 
-    const std::string modelFilePath = modelWorkingDirectory + "ATIS.slot.lstm";
+    const std::string modelFilePath = "../../../../x64/Debug_CpuOnly/z.model";  // modelWorkingDirectory + "ATIS.slot.lstm";
 
     try
     {
@@ -226,7 +228,8 @@ int main(int argc, char* argv[])
         }
 
         std::string networkConfiguration;
-        networkConfiguration += "modelPath=\"" + modelFilePath + "\"";
+        
+        networkConfiguration += "outputNodeNames=\"" + outputName + "\"\n deviceId=-1\n" + "modelPath=\"" + modelFilePath + "\"";
 
         VariableSchema inputLayouts;
         VariableSchema outputLayouts;
@@ -247,33 +250,42 @@ int main(int argc, char* argv[])
             outputBufferSize.push_back(outputLayouts[i].m_numElements);
         }
 
-        // Build source word vocab to id 
-        const::string sourceVocab = modelBaseDir + "/../Data/ATIS.vocab";
-        if (stat(sourceVocab.c_str(), &statBuf) != 0)
-        {
-            fprintf(stderr, "Error: The file '%s' does not exist.\n", sourceVocab.c_str());
-            return(1);
-        }
-        std::unordered_map<std::string, size_t> word2idxVocab = buildVocab(sourceVocab);
+        //// Build source word vocab to id 
+        //const::string sourceVocab = modelBaseDir + "/../Data/ATIS.vocab";
+        //if (stat(sourceVocab.c_str(), &statBuf) != 0)
+        //{
+        //    fprintf(stderr, "Error: The file '%s' does not exist.\n", sourceVocab.c_str());
+        //    return(1);
+        //}
+        //std::unordered_map<std::string, size_t> word2idxVocab = buildVocab(sourceVocab);
 
-        // Build id to target word vocab
-        const::string targetVocab = modelBaseDir + "/../Data/ATIS.label";
-        if (stat(targetVocab.c_str(), &statBuf) != 0)
-        {
-            fprintf(stderr, "Error: The file '%s' does not exist.\n", targetVocab.c_str());
-            return(1);
-        }
-        std::unordered_map<size_t, std::string> idx2wordVocab = buildInvVocab(targetVocab);
+        //// Build id to target word vocab
+        //const::string targetVocab = modelBaseDir + "/../Data/ATIS.label";
+        //if (stat(targetVocab.c_str(), &statBuf) != 0)
+        //{
+        //    fprintf(stderr, "Error: The file '%s' does not exist.\n", targetVocab.c_str());
+        //    return(1);
+        //}
+        //std::unordered_map<size_t, std::string> idx2wordVocab = buildInvVocab(targetVocab);
 
-        // Use the following sentence as input example.
-        // One single space is used as word sperator. 
-        std::string inputSequences = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
+        //// Use the following sentence as input example.
+        //// One single space is used as word sperator. 
+        //std::string inputSequences = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
 
         Values<float> inputBuffers = inputLayouts.CreateBuffers<float>(inputBufferSize);
         Values<float> outputBuffers = outputLayouts.CreateBuffers<float>(outputBufferSize);
 
-        // Feed input sequence vectors to network
-        std::vector<std::string> words = feedInputVectors(inputSequences, word2idxVocab, inputBuffers, inputLayouts);
+        for (size_t i = 0; i < inputBuffers.size(); i++)
+        {
+            size_t inputDim = inputLayouts[i].m_numElements;
+            for (size_t j = 0; j < inputDim; j++)
+            {
+                inputBuffers[i].m_buffer.push_back(1);
+            }
+        }
+
+        //// Feed input sequence vectors to network
+        //std::vector<std::string> words = feedInputVectors(inputSequences, word2idxVocab, inputBuffers, inputLayouts);
 
         // Forward propagation
         eval->ForwardPass(inputBuffers, outputBuffers);
@@ -282,26 +294,28 @@ int main(int argc, char* argv[])
         auto buf = outputBuffers[0].m_buffer;
         size_t bufSize = outputBuffers[0].m_buffer.size();
 
-        std::vector<std::string> outputs;
         size_t outputDim = outputLayouts[0].m_numElements;
         size_t outputStep = bufSize / outputDim;
 
+        fprintf(stdout, "Number of output elements: %d\n", outputStep);
         auto iter = buf.begin();
         for (size_t i = 0; i < outputStep; i++)
         {
-            auto max_iter = std::max_element(iter, iter + outputDim);
-            auto index = max_iter - iter;
-            outputs.push_back(idx2word(index, idx2wordVocab));
-            iter += outputDim;
+            fprintf(stdout, "Element %d:", i);
+            for (size_t j = 0; j < outputDim; j++, iter++)
+            {
+                fprintf(stdout, "%f, ", *iter);
+            }
+            fprintf(stdout, "\n");
         }
 
-        words.erase(words.begin());
+        /* words.erase(words.begin());
         words.pop_back();
         fprintf(stdout, "Slot tag for sentence \"%s\" is as follows:\n", inputSequences.c_str());
         for (size_t i = 0; i < outputs.size(); i++)
         {
             fprintf(stdout, "%10s -- %s\n", words[i].c_str(), outputs[i].c_str());
-        }
+        }*/
 
         eval->Destroy();
        
