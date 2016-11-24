@@ -163,6 +163,11 @@ RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/inst
 
 ENV PATH /root/anaconda3/envs/cntk-py34/bin:$PATH
 
+# NCCL
+RUN git clone --depth=1 -b master https://github.com/NVIDIA/nccl.git && \
+    cd nccl && \
+    make CUDA_HOME=/usr/local/cuda PREFIX=/usr/local install
+
 WORKDIR /cntk
 
 # Build CNTK
@@ -174,7 +179,9 @@ RUN git clone --depth=1 --recursive -b master https://github.com/Microsoft/CNTK.
       --with-gdk-nvml-lib=/usr/local/cuda/lib64/stubs \
       --with-kaldi=${KALDI_PATH} \
       --with-py34-path=/root/anaconda3/envs/cntk-py34 \
-      --with-cudnn=/usr/local/cudnn" && \
+      --with-cudnn=/usr/local/cudnn \
+      --with-nccl=/usr/local" && \
+    git submodule update --init Source/Multiverso && \
     mkdir -p build/gpu/release && \
     cd build/gpu/release && \
     ../../../configure $CONFIGURE_OPTS --with-openblas=/usr/local/openblas && \
