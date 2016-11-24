@@ -19,19 +19,19 @@
 
 // SetState for a particular value
 template <typename NumType, typename LabelType>
-void UCIParser<NumType, LabelType>::SetState(int value, ParseState m_current_state, ParseState next_state)
+void UCIParser<NumType, LabelType>::SetState(int value, ParseState current_state, ParseState next_state)
 {
     DWORD ul = (DWORD) next_state;
-    int range_shift = ((int) m_current_state) << 8;
+    int range_shift = ((int) current_state) << 8;
     m_stateTable[range_shift + value] = ul;
 }
 
 // SetStateRange - set states transitions for a range of values
 template <typename NumType, typename LabelType>
-void UCIParser<NumType, LabelType>::SetStateRange(int value1, int value2, ParseState m_current_state, ParseState next_state)
+void UCIParser<NumType, LabelType>::SetStateRange(int value1, int value2, ParseState current_state, ParseState next_state)
 {
     DWORD ul = (DWORD) next_state;
-    int range_shift = ((int) m_current_state) << 8;
+    int range_shift = ((int) current_state) << 8;
     for (int value = value1; value <= value2; value++)
     {
         m_stateTable[range_shift + value] = ul;

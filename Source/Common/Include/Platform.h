@@ -11,8 +11,6 @@
 #define __UNIX__
 #endif
 
-#pragma warning(disable: 4458) // hides variable
-#pragma warning(disable: 4456) // hides local variable
 
 #ifdef _MSC_VER
 // TODO: thread_local is supported in VS2015. Remove this macro when we uprade to VS2015

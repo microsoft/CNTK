@@ -882,9 +882,9 @@ public:
             const auto& e = edges[j];
             fprintf(f, "J=%d\tS=%d\tE=%d\tts=%.2f\tte=%.2f\ta=%.3f\tl=%.8f\td=:",
                     (int) j, (int) e.S, (int) e.E, (float) nodes[e.S].t * 0.01f, (float) nodes[e.E].t * 0.01f, (float) e.a, (float) e.l);
-            const auto align = getaligninfo(j);
-            foreach_index (k, align) // e.g. d=:aa:m-ih:s+t:e,0.03:ow:e-t:m+sil,0.03:sil,0.21:
-                fprintf(f, "%s,%.2f:", gethmmname(align[k].unit), align[k].frames * 0.01f);
+            const auto align2 = getaligninfo(j);
+            foreach_index (k, align2) // e.g. d=:aa:m-ih:s+t:e,0.03:ow:e-t:m+sil,0.03:sil,0.21:
+                fprintf(f, "%s,%.2f:", gethmmname(align2[k].unit), align2[k].frames * 0.01f);
             fprintf(f, "\n");
         }
     }

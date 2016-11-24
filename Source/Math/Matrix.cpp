@@ -28,10 +28,11 @@
 // Helper to dispath matrix calls to the 4 underlying matrix libraries (CPU,GPU) x (DENSE,SPARSE)
 // 'MatrixPointerToCheck' determines where the operation takes place.
 // 'MatrixPointerToSetFlag' is the output. If not null and its location is BOTH, we collapse it to one.
+#pragma warning(disable : 4456) // declaration of curLocation2 hides previous local declaration
 #define DISPATCH_MATRIX_ON_FLAG(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
     {                                                                                                                   \
-        CurrentDataLocation curLocation = (MatrixPointerToCheck)->GetCurrentMatrixLocation();                           \
-        if (curLocation == CurrentDataLocation::GPU || curLocation == CurrentDataLocation::BOTH)                        \
+        CurrentDataLocation curLocation2 = (MatrixPointerToCheck)->GetCurrentMatrixLocation();                          \
+        if (curLocation2 == CurrentDataLocation::GPU || curLocation2 == CurrentDataLocation::BOTH)                      \
         {                                                                                                               \
             if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                          \
             {                                                                                                           \
@@ -46,7 +47,7 @@
                     ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::SPARSE);  \
             }                                                                                                           \
         }                                                                                                               \
-        else if (curLocation == CurrentDataLocation::CPU)                                                               \
+        else if (curLocation2 == CurrentDataLocation::CPU)                                                              \
         {                                                                                                               \
             if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                          \
             {                                                                                                           \
@@ -70,8 +71,8 @@
 // version of dispatch macro that prefers the CPU if the 'MatrixPointerToCheck' location is BOTH
 #define DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(MatrixPointerToCheck, MatrixPointerToSetFlag, CPUDense, GPUDense, CPUSparse, GPUSparse) \
     {                                                                                                                                \
-        CurrentDataLocation curLocation = (MatrixPointerToCheck)->GetCurrentMatrixLocation();                                        \
-        if (curLocation == CurrentDataLocation::GPU)                                                                                 \
+        CurrentDataLocation curLocation2 = (MatrixPointerToCheck)->GetCurrentMatrixLocation();                                       \
+        if (curLocation2 == CurrentDataLocation::GPU)                                                                                \
         {                                                                                                                            \
             if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                                       \
             {                                                                                                                        \
@@ -86,7 +87,7 @@
                     ((Matrix*) MatrixPointerToSetFlag)->SetDataLocation(CurrentDataLocation::GPU, MatrixType::SPARSE);               \
             }                                                                                                                        \
         }                                                                                                                            \
-        else if (curLocation == CurrentDataLocation::CPU || curLocation == CurrentDataLocation::BOTH)                                \
+        else if (curLocation2 == CurrentDataLocation::CPU || curLocation2 == CurrentDataLocation::BOTH)                              \
         {                                                                                                                            \
             if ((MatrixPointerToCheck)->GetMatrixType() != MatrixType::SPARSE)                                                       \
             {                                                                                                                        \
@@ -110,13 +111,13 @@
 // version of helper macro that executes both CPU and GPU macros if 'matrixPointer' location is BOTH
 #define DISPATCH_MATRIX_ON_FLAG_USEBOTH_4BOTH(matrixPointer, CPUDense, GPUDense, CPUSparse, GPUSparse)  \
     {                                                                                                   \
-        auto curLocation = (matrixPointer)->GetCurrentMatrixLocation();                                 \
+        auto curLocation2 = (matrixPointer)->GetCurrentMatrixLocation();                                \
         auto curMatrixType = (matrixPointer)->GetMatrixType();                                          \
-        if (curLocation == CurrentDataLocation::NONE)                                                   \
+        if (curLocation2 == CurrentDataLocation::NONE)                                                  \
             LogicError("Matrices do not exist in either CPU or GPU.");                                  \
         if (curMatrixType == MatrixType::UNDETERMINED)                                                  \
             LogicError("Matrices must be SPARSE or DENSE.");                                            \
-        if (curLocation != CurrentDataLocation::CPU) /*GPU or BOTH*/                                    \
+        if (curLocation2 != CurrentDataLocation::CPU) /*GPU or BOTH*/                                   \
         {                                                                                               \
             if (curMatrixType == MatrixType::DENSE)                                                     \
             {                                                                                           \
@@ -127,7 +128,7 @@
                 GPUSparse;                                                                              \
             }                                                                                           \
         }                                                                                               \
-        if (curLocation != CurrentDataLocation::GPU) /*CPU or BOTH*/                                    \
+        if (curLocation2 != CurrentDataLocation::GPU) /*CPU or BOTH*/                                   \
         {                                                                                               \
             if (curMatrixType == MatrixType::DENSE)                                                     \
             {                                                                                           \

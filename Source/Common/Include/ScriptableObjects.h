@@ -10,7 +10,6 @@
 #include <map>
 #include <set>
 
-#pragma warning(disable: 4458) // hiding another variable name in block
 
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
@@ -735,11 +734,11 @@ public:
             const auto valuei = namedArgs.find(id); // was such parameter passed?
             if (valuei == namedArgs.end())          // named parameter not passed
             {                                       // if not given then fall back to default
-                auto f = [&namedParam]()            // we pass a lambda that resolves it upon first use, in our original location
+                auto f2 = [&namedParam]()            // we pass a lambda that resolves it upon first use, in our original location
                 {
                     return namedParam.second.ResolveValue();
                 };
-                actualNamedArgs[id] = move(ConfigValuePtr::MakeThunk(f, namedParam.second.GetFailFn(), exprName));
+                actualNamedArgs[id] = move(ConfigValuePtr::MakeThunk(f2, namedParam.second.GetFailFn(), exprName));
             }
             else                                            // named parameter was passed
                 actualNamedArgs[id] = move(valuei->second); // move it, possibly remaining unresolved

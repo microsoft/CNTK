@@ -337,17 +337,17 @@ void lattice::merge(const lattice &other, const msra::asr::simplesenonehmm &hset
     align.insert(align.end(), other.align.begin(), other.align.end());
 
     // map existing edges' S and E fields, and also 'firstalign'
-    foreach_index (j, edges)
+    foreach_index (j2, edges)
     {
-        edges[j].S = nodemap[edges[j].S];
-        edges[j].E = nodemap[edges[j].E];
+        edges[j2].S = nodemap[edges[j2].S];
+        edges[j2].E = nodemap[edges[j2].E];
     }
     auto otheredges = other.edges;
-    foreach_index (j, otheredges)
+    foreach_index (j3, otheredges)
     {
-        otheredges[j].S = othernodemap[otheredges[j].S];
-        otheredges[j].E = othernodemap[otheredges[j].E];
-        otheredges[j].firstalign += alignoffset; // that's where they are now
+        otheredges[j3].S = othernodemap[otheredges[j3].S];
+        otheredges[j3].E = othernodemap[otheredges[j3].E];
+        otheredges[j3].firstalign += alignoffset; // that's where they are now
     }
 
     // at this point, a new 'nodes' array exists, and the edges already are w.r.t. the new node space and align space
@@ -358,8 +358,8 @@ void lattice::merge(const lattice &other, const msra::asr::simplesenonehmm &hset
     // remove acoustic scores --they are likely not identical if they come from different decoders
     // If we don't do that, this will break the sorting in builduniquealignments()
     info.hasacscores = 0;
-    foreach_index (j, edges)
-        edges[j].a = 0.0f;
+    foreach_index (j4, edges)
+        edges[j4].a = 0.0f;
 
     // Note: we have NOT sorted or de-duplicated yet. That is best done after conversion to the uniq'ed format.
 }
@@ -650,19 +650,19 @@ void lattice::fromhtklattice(const wstring &path, const std::unordered_map<std::
 
 // construct a numerator lattice from an MLF entry
 // The lattice is expected to be freshly constructed (I did not bother to check).
-void lattice::frommlf(const wstring &key, const std::unordered_map<std::string, size_t> &unitmap,
+void lattice::frommlf(const wstring &key2, const std::unordered_map<std::string, size_t> &unitmap,
                       const msra::asr::htkmlfreader<msra::asr::htkmlfentry, lattice::htkmlfwordsequence> &labels,
                       const msra::lm::CMGramLM &unigram, const msra::lm::CSymbolSet &unigramsymbols)
 {
     const auto &transcripts = labels.allwordtranscripts(); // (TODO: we could just pass the transcripts map--does not really matter)
 
     // get the labels (state and word)
-    auto iter = transcripts.find(key);
+    auto iter = transcripts.find(key2);
     if (iter == transcripts.end())
-        RuntimeError("frommlf: no reference word sequence in MLF for lattice with key %ls", key.c_str());
+        RuntimeError("frommlf: no reference word sequence in MLF for lattice with key %ls", key2.c_str());
     const auto &transcript = iter->second;
     if (transcript.words.size() == 0)
-        RuntimeError("frommlf: empty reference word sequence for lattice with key %ls", key.c_str());
+        RuntimeError("frommlf: empty reference word sequence for lattice with key %ls", key2.c_str());
 
     // determine unigram scores for all words
     vector<float> lmscores(transcript.words.size());
@@ -685,7 +685,7 @@ void lattice::frommlf(const wstring &key, const std::unordered_map<std::string, 
         e.S = j;
         e.E = j + 1;
         if (e.E != j + 1)
-            RuntimeError("frommlf: too many tokens to be represented as edgeinfo::E in label set: %ls", key.c_str());
+            RuntimeError("frommlf: too many tokens to be represented as edgeinfo::E in label set: %ls", key2.c_str());
         e.a = 0.0f; // no ac score
 
         // LM score
@@ -715,7 +715,7 @@ void lattice::frommlf(const wstring &key, const std::unordered_map<std::string, 
     }
     nodes[transcript.words.size()].t = (unsigned short) numframes;
     if (nodes[transcript.words.size()].t != numframes)
-        RuntimeError("frommlf: too many frames to be represented as nodeinfo::t in label set: %ls", key.c_str());
+        RuntimeError("frommlf: too many frames to be represented as nodeinfo::t in label set: %ls", key2.c_str());
     info.lmf = -1.0f; // indicates not set
     info.wp = 0.0f;   // not set indicated by lmf < 0
     info.numedges = edges.size();
