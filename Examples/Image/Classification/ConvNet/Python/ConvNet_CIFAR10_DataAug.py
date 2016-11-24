@@ -70,7 +70,7 @@ def create_reader(map_file, mean_file, is_training):
 def create_convnet_cifar10_model(num_classes):
     set_computation_network_trace_level(1)  # TODO: Does not seem to do anything.
 
-    with default_options(activation=relu):
+    with default_options(activation=relu, pad=True):
         return Sequential([
             For(range(2), lambda : [
                 Convolution((3,3), 64),
