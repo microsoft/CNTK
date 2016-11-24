@@ -116,6 +116,7 @@
     </ClCompile>
     <Link>
       <DelayLoadDLLs>Math.dll</DelayLoadDLLs>
+      <OptimizeReferences Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">false</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">

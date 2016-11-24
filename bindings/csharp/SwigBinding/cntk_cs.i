@@ -9,9 +9,11 @@
 %include <std_shared_ptr.i>
 %include <windows.i>
 %include <attribute.i>
+%include "std_unordered_map.i"
 
 %{
     #include "CNTKLibrary.h"
+    #pragma warning(disable : 4100)
 %}
 
 %nspace CNTK;
@@ -45,6 +47,10 @@
 %shared_ptr(CNTK::NDArrayView);
 %shared_ptr(CNTK::NDMask);
 %shared_ptr(std::vector<float>);
+
+// SWIG does not understand ValuePtr here.
+%template(UnorderedMapVariableValuePtr) std::unordered_map<CNTK::Variable, std::shared_ptr<CNTK::Value>>;
+%template(UnorderedMapVariableVariable) std::unordered_map<CNTK::Variable, CNTK::Variable>;
 
 %ignore CNTK::IDictionarySerializable;
 %ignore CNTK::DictionaryValue;

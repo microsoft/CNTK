@@ -262,12 +262,14 @@ namespace CNTK
             : m_shapeDims(dimensions)
         {}
 
+#ifndef SWIGCSHARP
         ///
         /// Construct a NDShape instance with specified dimensions.
         ///
         NDShape(const std::initializer_list<size_t>& dimensions)
             : m_shapeDims(dimensions)
         {}
+#endif
 
         ///
         /// Returns the dimensions of 'this' shape as a std::vector<size_t>
@@ -399,6 +401,8 @@ namespace CNTK
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
     public:
+
+#ifndef SWIGCSHARP
         ///
         /// Construct a NDArrayView with the specified 'dataBuffer' as the backing storage.
         /// The 'dataBuffer' must have been allocated on the specified 'device', must be at least
@@ -414,13 +418,14 @@ namespace CNTK
             : NDArrayView(dataType, viewShape, const_cast<void*>(dataBuffer), bufferSizeInBytes, device, /*readOnly =*/ true)
         {}
 
-#ifndef SWIGCSHARP
         ///
         /// Construct a NDArrayView with newly allocated sparse storage in SparseCSC format on the specified 'device' and initialize its contents
         // with the specified Sparse CSC format data.
         ///
         template <typename ElementType>
         CNTK_API NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false);
+
+#endif
 
         ///
         /// Construct a NDArrayView over newly allocated storage in the specified format on the specified 'device'.
@@ -434,6 +439,7 @@ namespace CNTK
             : NDArrayView(dataType, StorageFormat::Dense, viewShape, device)
         {}
 
+#ifndef SWIGCSHARP
         ///
         /// Construct a NDArrayView with the specified 'dataBuffer' as the backing storage.
         /// The 'dataBuffer' must have been allocated on the specified 'device', must be at least
@@ -489,6 +495,8 @@ namespace CNTK
             m_isReadOnly = readOnly;
         }
 
+#endif
+
         ///
         /// Construct a NDArrayView over newly allocated dense storage on the specified device and assign the specified value to each element of the view.
         /// The specified value is cast to the specified DataType.
@@ -512,7 +520,6 @@ namespace CNTK
             m_isReadOnly = readOnly;
         }
 
-#endif
         ///
         /// Destruct 'this' NDArrayView object
         ///
@@ -735,10 +742,12 @@ namespace CNTK
         ///
         const NDShape& Shape() const { return m_maskShape; }
 
+#ifndef SWIGCSHARP
         ///
         /// Returns a read-only pointer to the data buffer underlying 'this' Mask object
         /// 
         CNTK_API const MaskKind* DataBuffer() const;
+#endif
 
         ///
         /// Creates a new NDArrayView with newly allocated storage on the specified device and copies 'this' view's contents into the newly allocated view.
@@ -1557,10 +1566,12 @@ namespace CNTK
 
     namespace Internal
     {
+#ifndef SWIGCSHARP
         inline std::wstring GenerateUid(std::wstring&& prefix)
         {
             return prefix + std::to_wstring(Internal::NewUniqueId());
         }
+
 
         inline std::wstring GenerateUid(VariableKind varKind)
         {
@@ -1571,6 +1582,7 @@ namespace CNTK
         {
             return GenerateUid(std::wstring(prefix));
         }
+#endif
     }
 
     typedef Dictionary ParameterInitializer;
@@ -1578,10 +1590,10 @@ namespace CNTK
     // Forward declarations
 #ifndef SWIGCSHARP
     inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes());
-#endif
+
     inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
     inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"");
-
+#endif
     ///
     /// Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
     /// A Variable is symbolic and does not represent the actual values.
@@ -1726,6 +1738,7 @@ namespace CNTK
         CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
 
 private:
+#ifndef SWIGCSHARP
         Variable Clone() const
         {
             Variable clonedVariable;
@@ -1733,6 +1746,7 @@ private:
 
             return clonedVariable;
         }
+#endif
 
         CNTK_API virtual Dictionary Serialize() const override;
 
@@ -1779,6 +1793,8 @@ private:
                 }
             }
 
+#ifndef SWIGCSHARP
+
             std::shared_ptr<VariableFields> Clone() const
             {
                 if (m_ownerFunction != nullptr)
@@ -1800,6 +1816,7 @@ private:
 
                 return clone;
             }
+#endif
 
             CNTK_API void SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device);
 
@@ -1856,6 +1873,8 @@ private:
         return PlaceholderVariable(NDShape::Unknown, name, Axis::UnknownDynamicAxes());
     }
 #endif
+
+#ifndef SWIGCSHARP
     ///
     /// Create an 'Input' Variable denoting sparse data and specify if gradients are to be computed for this input
     ///
@@ -1927,6 +1946,7 @@ private:
     {
         return Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, /*needsGradient =*/ false, dynamicAxes, /*isSparse =*/ false, name, Internal::GenerateUid(VariableKind::Output));
     }
+#endif
 
     static const int SentinelValueForInferParamInitRank = std::numeric_limits<int>::max();
     static const int DefaultParamInitScale = 1;
@@ -2232,6 +2252,8 @@ namespace CNTK
 #endif
 
     public:
+
+#ifndef SWIGCSHARP
         ///
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values corresponding
         /// to each leaf variable of the function of VariableKind 'Input'.
@@ -2250,8 +2272,6 @@ namespace CNTK
                                          std::unordered_map<Variable, ValuePtr>& outputs,
                                          const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
                                          const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
-
-#ifndef SWIGCSHARP
 
         ///
         /// Backpropagates supplied 'rootGradientValues' for one or more of the output variables of the Function, to produce gradient Values
@@ -2286,6 +2306,15 @@ namespace CNTK
         /// any variable replacements requested are applied in the cloned Function instance.
         ///
         CNTK_API FunctionPtr Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Clone, const std::unordered_map<Variable, Variable>& replacements = {}) const;
+
+        ///
+        /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values corresponding
+        /// to each leaf variable of the function of VariableKind 'Input'.
+        /// The function does not return any variables that needed for backpropagation of gradients.
+        ///
+        CNTK_API void Evaluate(const std::unordered_map<Variable, ValuePtr>& arguments,
+                      std::unordered_map<Variable, ValuePtr>& outputs,
+                      const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
 #ifndef SWIGCSHARP
 
@@ -2464,7 +2493,10 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
+
     protected:
+
+#ifndef SWIGCSHARP
         ///
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
         ///
@@ -2475,6 +2507,7 @@ namespace CNTK
         /// Restores the state of the 'this' function in place using the provided dictionary.
         /// Structurally, 'this' function graph has to be identical to the state captured in the dictionary.
         CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& dictionary);
+#endif
 
     private:
 
@@ -2487,6 +2520,7 @@ namespace CNTK
         std::wstring m_name;
         std::wstring m_uid;
         Dictionary m_attributes;
+
     };
 
 #ifndef SWIGCSHARP // Not needed for SWIG C# Eval Binding

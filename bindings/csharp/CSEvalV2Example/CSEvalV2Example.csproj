@@ -65,109 +65,94 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\SwigBinding\Axis.cs">
-      <Link>Axis.cs</Link>
+      <Link>GeneratedFiles\Axis.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\AxisVector.cs">
-      <Link>AxisVector.cs</Link>
+      <Link>GeneratedFiles\AxisVector.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\BackPropState.cs">
-      <Link>BackPropState.cs</Link>
+      <Link>GeneratedFiles\BackPropState.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\BoolVector.cs">
-      <Link>BoolVector.cs</Link>
+      <Link>GeneratedFiles\BoolVector.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\CSharpBindings.cs">
-      <Link>CSharpBindings.cs</Link>
+      <Link>GeneratedFiles\CSharpBindings.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\CSharpBindingsPINVOKE.cs">
-      <Link>CSharpBindingsPINVOKE.cs</Link>
+      <Link>GeneratedFiles\CSharpBindingsPINVOKE.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\DataType.cs">
-      <Link>DataType.cs</Link>
+      <Link>GeneratedFiles\DataType.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\DeviceDescriptor.cs">
-      <Link>DeviceDescriptor.cs</Link>
+      <Link>GeneratedFiles\DeviceDescriptor.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\DeviceDescriptorVector.cs">
-      <Link>DeviceDescriptorVector.cs</Link>
+      <Link>GeneratedFiles\DeviceDescriptorVector.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\DeviceKind.cs">
-      <Link>DeviceKind.cs</Link>
+      <Link>GeneratedFiles\DeviceKind.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\DoubleVector.cs">
-      <Link>DoubleVector.cs</Link>
+      <Link>GeneratedFiles\DoubleVector.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\DoubleVectorVector.cs">
-      <Link>DoubleVectorVector.cs</Link>
+      <Link>GeneratedFiles\DoubleVectorVector.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\FloatVector.cs">
-      <Link>FloatVector.cs</Link>
+      <Link>GeneratedFiles\FloatVector.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\FloatVectorVector.cs">
-      <Link>FloatVectorVector.cs</Link>
+      <Link>GeneratedFiles\FloatVectorVector.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\Function.cs">
-      <Link>Function.cs</Link>
+      <Link>GeneratedFiles\Function.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\MaskKind.cs">
-      <Link>MaskKind.cs</Link>
+      <Link>GeneratedFiles\MaskKind.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\NDArrayView.cs">
-      <Link>NDArrayView.cs</Link>
+      <Link>GeneratedFiles\NDArrayView.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\NDMask.cs">
-      <Link>NDMask.cs</Link>
+      <Link>GeneratedFiles\NDMask.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\NDShape.cs">
-      <Link>NDShape.cs</Link>
+      <Link>GeneratedFiles\NDShape.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\ParameterCloningMethod.cs">
-      <Link>ParameterCloningMethod.cs</Link>
+      <Link>GeneratedFiles\ParameterCloningMethod.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\PrimitiveOpType.cs">
-      <Link>PrimitiveOpType.cs</Link>
+      <Link>GeneratedFiles\PrimitiveOpType.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\SizeTVector.cs">
-      <Link>SizeTVector.cs</Link>
+      <Link>GeneratedFiles\SizeTVector.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\SizeTVectorVector.cs">
-      <Link>SizeTVectorVector.cs</Link>
+      <Link>GeneratedFiles\SizeTVectorVector.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\StorageFormat.cs">
-      <Link>StorageFormat.cs</Link>
+      <Link>GeneratedFiles\StorageFormat.cs</Link>
     </Compile>
-    <Compile Include="..\SwigBinding\SWIGTYPE_p_CNTK__MaskKind.cs">
-      <Link>SWIGTYPE_p_CNTK__MaskKind.cs</Link>
+    <Compile Include="..\SwigBinding\UnorderedMapVariableValuePtr.cs">
+      <Link>GeneratedFiles\UnorderedMapVariableValuePtr.cs</Link>
     </Compile>
-    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__initializer_listT_size_t_t.cs">
-      <Link>SWIGTYPE_p_std__initializer_listT_size_t_t.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK__Variable_t.cs">
-      <Link>SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_CNTK__Variable_t.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_std__shared_ptrT_CNTK__Value_t_t.cs">
-      <Link>SWIGTYPE_p_std__unordered_mapT_CNTK__Variable_std__shared_ptrT_CNTK__Value_t_t.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t.cs">
-      <Link>SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__wstring.cs">
-      <Link>SWIGTYPE_p_std__wstring.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\SWIGTYPE_p_void.cs">
-      <Link>SWIGTYPE_p_void.cs</Link>
+    <Compile Include="..\SwigBinding\UnorderedMapVariableVariable.cs">
+      <Link>GeneratedFiles\UnorderedMapVariableVariable.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\Value.cs">
-      <Link>Value.cs</Link>
+      <Link>GeneratedFiles\Value.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\Variable.cs">
-      <Link>Variable.cs</Link>
+      <Link>GeneratedFiles\Variable.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\VariableKind.cs">
-      <Link>VariableKind.cs</Link>
+      <Link>GeneratedFiles\VariableKind.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\VariableVector.cs">
-      <Link>VariableVector.cs</Link>
+      <Link>GeneratedFiles\VariableVector.cs</Link>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -175,6 +160,7 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
