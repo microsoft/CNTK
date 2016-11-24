@@ -216,7 +216,7 @@ int main(int argc, char* argv[])
 #endif
     const std::string modelWorkingDirectory = modelBaseDir + "work/";
 
-    const std::string modelFilePath = "../../../../x64/Debug_CpuOnly/z.model";  // modelWorkingDirectory + "ATIS.slot.lstm";
+    const std::string modelFilePath = "../../../../x64/Debug_CpuOnly/trainer.checkpoint";  //"../../../../x64/Debug_CpuOnly/z.model";  // modelWorkingDirectory + "ATIS.slot.lstm";
 
     try
     {
