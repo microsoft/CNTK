@@ -230,16 +230,22 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Desired output layers
-                    //const string hiddenLayerName = "out.h1";
-                    const string outputLayerName = "__v2libuid__Plus2069__v2libname__Plus2060"; //"out.z";
+                    // const string hiddenLayerName = "out.h1";
+                    const string outputLayerName = "out.z"; // "__v2libuid__Plus2069__v2libname__Plus2060"; //"out.z";
 
                     // Load model
-                    string modelFilePath = @"trainer.checkpoint"; // @".\z.model"; // Path.Combine(Environment.CurrentDirectory, @".\Output\Models\01_OneHidden");
+                    string modelFilePath = @"01_OneHidden"; // @"trainer.checkpoint"; // @".\z.model"; // Path.Combine(Environment.CurrentDirectory, @".\Output\Models\01_OneHidden");
                     ThrowIfFileNotExist(modelFilePath,
                         string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/GettingStarted to create the model.", modelFilePath));
 
                     var desiredOutputLayers = new List<string>() { outputLayerName };
-                    model.CreateNetwork(string.Format("traceLevel=1\nmodelPath=\"{0}\"", modelFilePath), deviceId: -1, outputNodeNames: desiredOutputLayers);
+                    // string networkDes = "traceLevel=1\nBrainScriptNetworkBuilder={featureNodes=(__v2libuid__Input2__v2libname__)}";
+                    // string networkDes = "traceLevel=1";
+                    string networkDes = "traceLevel=1\nBrainScriptNetworkBuilder={featureNodes=(features)}";
+
+                    // "__v2libuid__Input2__v2libname__"
+
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\" \n{1}", modelFilePath, networkDes), deviceId: -1, outputNodeNames: desiredOutputLayers);
 
                     // Generate random input values in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
