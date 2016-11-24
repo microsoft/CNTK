@@ -1514,6 +1514,17 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPExtensibilityExamplesLib
 		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SaveBestModelPerCriterion", "SaveBestModelPerCriterion", "{C1189678-4FFA-4258-971F-3262B44FCA99}"
+	ProjectSection(SolutionItems) = preProject
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.cpu.txt = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.cpu.txt
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.gpu.txt = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.gpu.txt
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.windows.cpu.txt = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.windows.cpu.txt
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.windows.gpu.txt = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\baseline.windows.gpu.txt
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\cntkcv.cntk = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\cntkcv.cntk
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\run-test = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\run-test
+		Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\testcases.yml = Tests\EndToEndTests\Speech\DNN\SaveBestModelPerCriterion\testcases.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -2215,5 +2226,6 @@ Global
 		{40A8CC31-8C08-4156-AE08-E8C0FADC3509} = {7A27E076-296E-41A8-BA76-164071251372}
 		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01} = {47755F2E-D674-4175-9E38-8EA053455072}
 		{4CF94A50-0D17-432A-8B5A-8458E91C44A6} = {7A27E076-296E-41A8-BA76-164071251372}
+		{C1189678-4FFA-4258-971F-3262B44FCA99} = {6994C86D-A672-4254-824A-51F4DFEB807F}
 	EndGlobalSection
 EndGlobal
