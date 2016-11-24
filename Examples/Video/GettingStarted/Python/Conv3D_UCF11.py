@@ -17,7 +17,7 @@ from cntk import Trainer
 from cntk.utils import *
 from cntk.layers import *
 from cntk.models import Sequential, LayerStack
-from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.learner import sgd, momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, minus, element_times, constant
 from _cntk_py import set_computation_network_trace_level
 
@@ -76,7 +76,7 @@ class VideoReader(object):
         if current_batch_size < 0:
             raise Exception('Reach the end of the training data.')
 
-        inputs  = np.empty(shape=(current_batch_size, self.channel_count, self.height, self.width, self.sequence_length), dtype=np.float32)
+        inputs  = np.empty(shape=(current_batch_size, self.channel_count, self.sequence_length, self.height, self.width), dtype=np.float32)
         targets = np.empty(shape=(current_batch_size, self.label_count), dtype=np.float32)
         for idx in range(self.batch_start, batch_end):
             index = self.indices[idx]
@@ -108,7 +108,7 @@ class VideoReader(object):
             if video_frames is None:
                 video_frames = video_frame
             else:
-                video_frames = np.stack((video_frames, video_frame), axis=-1)
+                video_frames = np.stack((video_frames, video_frame), axis=1)
         video_frames
 
     def _read_frame(self, data):
@@ -136,7 +136,7 @@ class VideoReader(object):
 
 # Creates and trains a feedforward classification model for MNIST images
 def conv3d_ucf11(debug_output=False):
-    set_computation_network_trace_level(0)
+    set_computation_network_trace_level(1)
 
     train_reader = VideoReader(os.path.join(data_path, 'train_map.csv'), 11, True)
 
@@ -147,22 +147,23 @@ def conv3d_ucf11(debug_output=False):
     num_output_classes = train_reader.label_count
 
     # Input variables denoting the features and label data
-    input_var = input_variable((num_channels, image_height, image_width, sequence_length), np.float32)
+    input_var = input_variable((num_channels, sequence_length, image_height, image_width), np.float32)
     label_var = input_variable(num_output_classes, np.float32)
 
     # Instantiate the feedforward classification model
     with default_options (activation=relu):
         z = Sequential([
             Convolution((3,3,3), 64, pad=True),
-            MaxPooling((4,4,2), (4,4,2)),
-            Convolution((3,3,3), 96, pad=True),
-            Convolution((3,3,3), 96, pad=True),
-            MaxPooling((2,2,2), (2,2,2)),
-            Convolution((3,3,3), 128, pad=True),
-            Convolution((3,3,3), 128, pad=True),
-            MaxPooling((2,2,2), strides=(2,2,2)),
-            Dense(1024),
-            Dense(1024),
+            MaxPooling((1,2,2), (1,2,2)),
+            LayerStack(3, lambda i: [
+                Convolution((3,3,3), [96, 128, 128][i], pad=True),
+                Convolution((3,3,3), [96, 128, 128][i], pad=True),
+                MaxPooling((2,2,2), (2,2,2))
+            ]),
+            LayerStack(2, lambda : [
+                Dense(1024), 
+                Dropout(0.5)
+            ]),
             Dense(num_output_classes, activation=None)
         ])(input_var)
     
@@ -174,13 +175,13 @@ def conv3d_ucf11(debug_output=False):
     minibatch_size = 4
 
     # Set learning parameters
-    lr_per_sample          = [0.5]*10+[0.05]*10+[0.005]
+    lr_per_sample          = [0.01]*10+[0.001]*10+[0.0001]
     lr_schedule            = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
     momentum_time_constant = 4096
     mm_schedule            = momentum_as_time_constant_schedule(momentum_time_constant, epoch_size=epoch_size)
 
     # Instantiate the trainer object to drive the model training
-    learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule)
+    learner     = sgd(z.parameters, lr_schedule)
     trainer     = Trainer(z, ce, pe, learner)
 
     log_number_of_parameters(z) ; print()
@@ -202,7 +203,7 @@ def conv3d_ucf11(debug_output=False):
     test_reader = VideoReader(os.path.join(data_path, 'test_map.csv'), num_output_classes, False)
 
     # Test data for trained model
-    epoch_size = 332
+    epoch_size     = 332
     minibatch_size = 2
 
     # process minibatches and evaluate the model

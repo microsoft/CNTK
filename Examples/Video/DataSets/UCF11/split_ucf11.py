@@ -51,6 +51,7 @@ def split_data(groups, file_ext):
         for video_file in video_files:
             video_file_path = os.path.join(group[0], video_file)
             if os.path.isfile(video_file_path):
+                video_file_path = os.path.abspath(video_file_path)
                 ext = os.path.splitext(video_file_path)[1]
                 if (ext == file_ext):
                     # make sure we have enough frames and the file isn't corrupt
@@ -64,6 +65,7 @@ def split_data(groups, file_ext):
         for video_file in video_files:
             video_file_path = os.path.join(group[0], video_file)
             if os.path.isfile(video_file_path):
+                video_file_path = os.path.abspath(video_file_path)
                 ext = os.path.splitext(video_file_path)[1]
                 if (ext == file_ext):
                     # make sure we have enough frames and the file isn't corrupt
