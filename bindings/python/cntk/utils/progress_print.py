@@ -109,9 +109,9 @@ class ProgressPrinter:
                 speed = samples / time_delta
                 self.epoch_start_time = epoch_end_time
             if with_metric:
-                print("Finished Epoch [{}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {} {:0.3f}s ({:5.1f} samples per second)".format(self.epochs, self.tag, avg_loss, samples, avg_metric*100.0, samples, time_delta, speed))
+                print("Finished Epoch [{}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {} {:0.3f}s ({:5.1f} samples/s)".format(self.epochs, self.tag, avg_loss, samples, avg_metric*100.0, samples, time_delta, speed))
             else:
-                print("Finished Epoch [{}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second)".format(self.epochs, self.tag, avg_loss, samples, time_delta, speed))
+                print("Finished Epoch [{}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s)".format(self.epochs, self.tag, avg_loss, samples, time_delta, speed))
             return avg_loss, avg_metric, samples  # BUGBUG: for freq=0, we don't return anything here
 
     def update(self, loss, minibatch_size, metric=None):

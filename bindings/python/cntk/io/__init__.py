@@ -243,7 +243,7 @@ def minibatch_source(config):
         :class:`MinibatchSource`
     '''
     cntk_dict = _py_dict_to_cntk_dict(config)
-        return cntk_py.create_composite_minibatch_source(cntk_dict)
+    return cntk_py.create_composite_minibatch_source(cntk_dict)
 
 # TODO: This should be a private class.
 class ReaderConfig(dict):
