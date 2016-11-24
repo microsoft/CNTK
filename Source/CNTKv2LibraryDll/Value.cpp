@@ -10,9 +10,9 @@
 #endif
 
 #include "CNTKLibrary.h"
+#include "CompositeFunction.h"
 #include "Utils.h"
 #include "Value.h"
-#include "Function.h"
 
 namespace CNTK
 {
