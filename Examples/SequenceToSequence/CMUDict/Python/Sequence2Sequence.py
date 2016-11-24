@@ -61,10 +61,10 @@ def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_
     aux_input = None
     has_aux   = False
     if augment_input_hook != None:
-        aux_input = augment_input_hook(input, dh)
+        aux_input = augment_input_hook(dh)
         has_aux = True
        
-    LSTM_cell = LSTM(output_dim, enable_self_stabilization=True, has_aux=has_aux)
+    LSTM_cell = LSTM(output_dim, auxiliary_input=has_aux, enable_self_stabilization=True)
     if has_aux:    
         f_x_h_c = LSTM_cell(input, (dh, dc), aux_input)
     else:
@@ -253,7 +253,7 @@ def write(reader, model_filename, vocab, i2w):
     while True:
         # get next minibatch of data
         mb = reader.next_minibatch(minibatch_size)
-        if mb is None: break
+        if not mb: break
                 
         e = model.eval({find_arg_by_name('raw_input' , model) : mb[reader.streams.features], 
                         find_arg_by_name('raw_labels', model) : mb[reader.streams.labels]})
@@ -284,7 +284,7 @@ def test(reader, model_filename):
     total_error = 0.0
     while True:
         mb = reader.next_minibatch(test_minibatch_size)
-        if mb is None: break
+        if not mb: break
         mb_error = trainer.test_minibatch({find_arg_by_name('raw_input' , z) : mb[reader.streams.features], 
                                            find_arg_by_name('raw_labels', z) : mb[reader.streams.labels]})
         total_error += mb_error
@@ -293,6 +293,30 @@ def test(reader, model_filename):
     # and return the test error
     return total_error/i
 
+########################
+# test string          #
+########################
+
+def test_string(input_string, vocab, i2w, model):
+
+    max_label_length = 20
+
+    vdict = {vocab[i]:i for i in range(len(vocab))}
+    w = [vdict["<s>"]] + [vdict[w] for w in input_string] + [vdict["</s>"]]
+    
+    features = np.zeros([len(w),len(vdict)], np.float32)
+    for t in range(len(w)):
+        features[t,w[t]] = 1    
+    
+    l = [vdict["<s>"]] + [0 for i in range(max_label_length)]
+    labels = np.zeros([len(l),len(vdict)], np.float32)
+    for t in range(len(l)):
+        labels[t,l[t]] = 1
+    
+    pred = model.eval({find_arg_by_name('raw_input' , model) : [features], 
+                       find_arg_by_name('raw_labels', model) : [labels]})
+      
+    print([i2w[w] for w in np.argmax(pred, axis=2)[0]])
 
 ########################
 # helper functions     #
@@ -317,17 +341,22 @@ def find_arg_by_name(name, expression):
     assert len(vars) == 1
     return vars[0]
 
-   
 #############################
 # main function boilerplate #
 #############################
     
 if __name__ == '__main__':
-             
+
     # hook up data
     train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
     valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
     vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
+
+    #model_filename = "model_epoch0.cmf"
+    #model = load_model(model_filename)
+    #test_string("HELLO", vocab, i2w, model)
+    #import sys
+    #sys.exit(1)
 
     # create model
     model = create_model()
@@ -336,3 +365,6 @@ if __name__ == '__main__':
     train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
     #write(valid_reader, "model_epoch0.cmf", vocab, i2w)
+    
+    # test
+    #test_string("HELLO", vocab, i2w, model_filename)
