@@ -52,9 +52,9 @@ def create_model_function():
     return Sequential([
         Embedding(emb_dim),
         Recurrence(LSTM(hidden_dim), go_backwards=False),
-        Dense(num_labels)
-        #last,
-        #Dense(num_intents)
+        #Dense(num_labels)
+        last,
+        Dense(num_intents)
     ])
 
 ########################
@@ -117,13 +117,13 @@ def train(reader, model, max_epochs):
     criterion = create_criterion_function(model)
 
     # TODO: num_intents --> get from reader?
-    labels = reader.streams.slot_labels
-    #labels = reader.streams.intent_labels
+    #labels = reader.streams.slot_labels
+    labels = reader.streams.intent_labels
     #labels.m_sampleLayout # .shape BUGBUG: both fail with unknwon attribute
 
     # declare argument types
-    criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_labels, is_sparse=True))
-    #criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
+    #criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_labels, is_sparse=True))
+    criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
     #features = input_variable(shape=vocab_size, is_sparse=False)
     #label = input_variable(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()])
