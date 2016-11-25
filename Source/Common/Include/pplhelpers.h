@@ -95,7 +95,8 @@ void foreach_index_block(size_t n, size_t targetstep, size_t targetalignment, co
     // execute it!
     parallel_for(0, n, nfwd, [&](size_t j0)
                  {
-                     body(j0, (j0 + nfwd < n) ? j0 + nfwd : n);
+                    // Take the min(j0+nfwd, n)
+                    body(j0, (j0 + nfwd < n) ? j0 + nfwd : n);
                  });
 }
 };

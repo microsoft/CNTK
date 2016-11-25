@@ -2470,11 +2470,11 @@ template <class ElemType>
 bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
                                   const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                  int npos2)
+                                  int npos)
 {
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
-    net->StartEvaluateMinibatchLoop(criterionNodes[npos2]);
+    net->StartEvaluateMinibatchLoop(criterionNodes[npos]);
 
     vector<string> errMsgs; // TODO: These are created but actually not returned, only their count is checked.
 
@@ -2500,8 +2500,8 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
 
             node->BumpEvalTimeStamp();
 
-            net->ForwardProp(criterionNodes[npos2]);
-            net->Backprop(criterionNodes[npos2]);
+            net->ForwardProp(criterionNodes[npos]);
+            net->Backprop(criterionNodes[npos]);
 
             if (node->Gradient().GetMatrixType() == MatrixType::SPARSE)
             {
@@ -2511,7 +2511,7 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
             // double mbEvalCri =
             // criterionNode should be a scalar
             // TODO: why is this value not used?
-            criterionNodes[npos2]->Get00Element();
+            criterionNodes[npos]->Get00Element();
             double eGradErr = node->Gradient()(irow, icol);
             node->Gradient().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
@@ -2522,19 +2522,19 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
             node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
             node->BumpEvalTimeStamp();
-            net->ForwardProp(criterionNodes[npos2]);
+            net->ForwardProp(criterionNodes[npos]);
             // criterionNode should be a scalar
 
-            double mbEvalCriPos = criterionNodes[npos2]->Get00Element(); // TODO: make Get00Element() a function of ComputationNodeBase
+            double mbEvalCriPos = criterionNodes[npos]->Get00Element(); // TODO: make Get00Element() a function of ComputationNodeBase
 
             node->Value()(irow, icol) = (ElemType) eNeg;
             node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
             node->BumpEvalTimeStamp();
-            net->ForwardProp(criterionNodes[npos2]);
+            net->ForwardProp(criterionNodes[npos]);
 
             // criterionNode should be a scalar
-            double mbEvalCriNeg = criterionNodes[npos2]->Get00Element();
+            double mbEvalCriNeg = criterionNodes[npos]->Get00Element();
 
             // back to its original parameter value
             node->Value()(irow, icol) = (ElemType) eOrg;
