@@ -22,7 +22,7 @@
 using namespace CNTK;
 using namespace std;
 
-extern FunctionPtr GraphIrToCntkGraph(graphIR::Graph */*graphIrPtr*/, FunctionPtr /*modelFuncPtr*/);
+extern FunctionPtr GraphIrToCntkGraph(graphIR::Graph* /*graphIrPtr*/, FunctionPtr /*modelFuncPtr*/);
 extern graphIR::Graph* CntkGraphToGraphIr(wstring filename, FunctionPtr evalFunc);
 
 extern void RetrieveInputBuffers(
@@ -61,17 +61,15 @@ int main()
             inputData[i] = ((float)rand()) / RAND_MAX;
         }
 
-        fprintf(stderr, "Input  %S #%lu elements.\n", inputTuple.first.c_str(), inputTuple.second.size());
+        fprintf(stderr, "Input  %S #%lu elements.\n", inputTuple.first.c_str(), (unsigned long)inputTuple.second.size());
     }
 
     ExecuteModel(modelFuncPtr, inputs, outputs);
 
     for (auto outputTuple : outputs)
     {
-        auto& outputData = outputTuple.second;
-
-        // add some random data to the input vector
-        fprintf(stderr, "Output %S #%lu elements.\n", outputTuple.first.c_str(), outputTuple.second.size());
+        // tell the user what we received.
+        fprintf(stderr, "Output %S #%lu elements.\n", outputTuple.first.c_str(), (unsigned long)outputTuple.second.size());
     }
 
 	// convert cntk to graphir
@@ -82,6 +80,8 @@ int main()
 	auto serialized = google::protobuf::util::MessageToJsonString(*graphIrPtr, &jsonstring);
 	auto fp = fopen((filename + string(".pb.json")).c_str(), "w+");
 	auto written = fwrite(jsonstring.c_str(), sizeof(char), jsonstring.length(), fp);
+
+    assert(written == jsonstring.length());
 	fclose(fp);
 
 	// convert graphir back to cntk (with the original cntk model as template)

@@ -35,7 +35,7 @@ void ExecuteModel(
         // Todo: add convenience APIs to simplify data preparation here.
         ValuePtr value = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(input.Shape(), inputs[input.Name()], true /* isReadOnly */));
 
-        fprintf(stderr, "  input: %S %S (#%lu elements)\n", input.Name().c_str(), value->Shape().AsString().c_str(), inputs[input.Name()].size());
+        fprintf(stderr, "  input: %S %S (#%lu elements)\n", input.Name().c_str(), value->Shape().AsString().c_str(), (unsigned long)inputs[input.Name()].size());
         inputsVars[input] = value;
     }
 
@@ -58,7 +58,7 @@ void ExecuteModel(
         // TODO: add convenience APIs to simplify data retrieval here.
         vector<float> outputData(value->Data()->DataBuffer<float>(), value->Data()->DataBuffer<float>() + value->Data()->Shape().TotalSize());
 
-        fprintf(stderr, "  output: %S %S (#%lu elements)\n", output.first.Name().c_str(), value->Shape().AsString().c_str(), outputData.size());
+        fprintf(stderr, "  output: %S %S (#%lu elements)\n", output.first.Name().c_str(), value->Shape().AsString().c_str(), (unsigned long)outputData.size());
         outputs[output.first.Name()] = outputData;
     }
 }
