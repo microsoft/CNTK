@@ -98,8 +98,8 @@ class Learner(cntk_py.Learner):
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
         '''
-        from .utils import create_NDArrayView_from_NumPy
-        var_nd_map = { var:create_NDArrayView_from_NumPy(val) for var, val in
+        from .utils import _create_NDArrayView_from_NumPy
+        var_nd_map = { var: _create_NDArrayView_from_NumPy(val) for var, val in
                 gradient_values.items() }
 
         return super(Learner, self).update(var_nd_map, training_sample_count)

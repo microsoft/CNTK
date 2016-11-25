@@ -15,7 +15,7 @@ for ResNet20 and ResNet110, respectively. The ResNet20 network achieves an error
 
 ### TrainResNet_CIFAR10_Distributed.py
 
-This example code is similar to TrainResNet_CIFAR10.py, but it adds support for distributed training via [MPI](https://en.wikipedia.org/wiki/Message_Passing_Interface). Details can be found in [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines)
+[This example](./TrainResNet_CIFAR10_Distributed.py) is similar to TrainResNet_CIFAR10.py, but it adds support for distributed training via [MPI](https://en.wikipedia.org/wiki/Message_Passing_Interface). Details can be found in [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines).
 Note this example requires a multi-GPU machine or mpi hosts file to distribute to multiple machines.
 
 Simple aggregation, ResNet20, with a 2-GPU machine:
@@ -25,3 +25,7 @@ Simple aggregation, ResNet20, with a 2-GPU machine:
 Quantized 1-bit aggregation with 50000 samples before distributed, ResNet20, with a 2-GPU machine:
 
 `mpiexec -n 2 python TrainResNet_CIFAR10_Distributed.py -n resnet20 -q 1 -a 50000`
+
+To run with maximum parallelization with minibatch size scaled according to #workers for 3 epochs:
+
+`mpiexec -n 2 python TrainResNet_CIFAR10_Distributed.py -s True -e 3`
