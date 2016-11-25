@@ -44,7 +44,7 @@ int main()
 //    BG_Graph *g = parser.Net2Bg(filenameW, stdout, nullptr, true);
 
 	// The model file will be trained and copied to the current runtime directory first.
-	auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, filenameW, device/*, LstmGraphNodeFactory*/);
+	auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, filenameW, device, LstmGraphNodeFactory);
 
     unordered_map<wstring, vector<float>> inputs;
     unordered_map<wstring, vector<float>> outputs;
