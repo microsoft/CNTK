@@ -701,19 +701,8 @@ class auto_file_ptr
     {
         if (f && f != stdin && f != stdout && f != stderr)
         {
-            bool readMode = false;
-
-#ifdef _WIN32
-            //TODO fixme if ((f->_flag&_IOREAD) == _IOREAD)
-                //readMode = true;
-            readMode = false; // fail in any case
-#else
-            int mode = fcntl(fileno(f), F_GETFL);
-            if ((mode & O_ACCMODE) == O_RDONLY)
-                readMode = true;
-#endif
             int rc = ::fclose(f);
-            if (!readMode && (rc != FCLOSE_SUCCESS) && !std::uncaught_exception())
+            if ((rc != FCLOSE_SUCCESS) && !std::uncaught_exception())
                 RuntimeError("auto_file_ptr: failed to close file: %s", strerror(errno));
 
             f = NULL;

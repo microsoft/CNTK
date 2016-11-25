@@ -547,7 +547,7 @@ uint64_t fgetpos(FILE* f)
 void fsetpos(FILE* f, uint64_t reqpos)
 {
 #ifdef _MSC_VER // standard does not allow to cast between fpos_t and integer numbers, and indeed it does not work on Linux (but on Windows and GCC)
-#ifdef _MSC_VER_VS2013 // special hack for VS CRT
+#if (_MSC_VER <= 1800) // Note: this does not trigger if loaded in vs2013 mode in vs2015!
     // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
     // the case in speech recognition tools. This requires a number of optimizations.
@@ -562,7 +562,7 @@ void fsetpos(FILE* f, uint64_t reqpos)
 
         // if we seek within the existing buffer, then just move to the position by dummy reads
         char buf[65536];
-        size_t n = min((size_t) reqpos - (size_t) curpos, _countof(buf));
+        size_t n = min((size_t)reqpos - (size_t)curpos, _countof(buf));
         fread(buf, sizeof(buf[0]), n, f); // (this may fail, but really shouldn't)
         curpos += n;
 
@@ -570,11 +570,39 @@ void fsetpos(FILE* f, uint64_t reqpos)
         if (curpos != fgetpos(f) || curpos + f->_cnt != cureob)
             break; // oops
     }
+#else
+    // special hack for VS CRT (for VS2015)
+    // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
+    // we generally read linearly but skip a few bytes or KB occasionally, as is
+    // the case in speech recognition tools. This requires a number of optimizations.
+#define MAX_FREAD_SKIP 65536
+
+    // forward seeks up to 64KiB are simulated
+    // through a dummy read instead of fsetpos to
+    // the new position.
+    uint64_t curpos = fgetpos(f);
+    size_t n = min((size_t)reqpos - (size_t)curpos, (size_t)MAX_FREAD_SKIP);
+
+    // TODO: if we only skip a limited number of bytes, fread() them
+    //       instead of fsetpos() to the new position since the vs2013
+    //       libraries drop the internal buffer and thus have to re-read
+    //       from the new position, somthing that costs performance.
+    if (n < MAX_FREAD_SKIP)
+    {
+        // in case we  stay in the internal buffer, no fileio is needed for this operation.
+        char buf[MAX_FREAD_SKIP];
+        fread(buf, sizeof(buf[0]), n, f); // (this may fail, but really shouldn't)
+
+        // if we made it then do not call fsetpos()
+        if (reqpos == fgetpos(f))
+            return;
+    }
 #endif // end special hack for VS CRT
 
     // actually perform the seek
     fpos_t post = reqpos;
     int rc = ::fsetpos(f, &post);
+#undef MAX_FREAD_SKIP
 #else // assuming __unix__
     off_t post = (off_t) reqpos;
     static_assert(sizeof(off_t) >= sizeof(reqpos), "64-bit file offsets not enabled");
