@@ -857,27 +857,26 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     {
         fprintf(stderr, "\n");
         err.PrintError(ProgressTracing::GetTimeStampPrefix() + L"EXCEPTION occurred.");
-        return EXIT_FAILURE;
     }
     catch (const IExceptionWithCallStackBase& err)
     {
         fprintf(stderr, "\n");
         fprintf(stderr, "%s", err.CallStack());
         LOGPRINTF(stderr, "EXCEPTION occurred: %s\n", dynamic_cast<const std::exception&>(err).what());
-        return EXIT_FAILURE;
     }
     catch (const std::exception& err)
     {
         fprintf(stderr, "\n");
         LOGPRINTF(stderr, "EXCEPTION occurred: %s\n", err.what());
-        return EXIT_FAILURE;
     }
     catch (...)
     {
         fprintf(stderr, "\n");
         LOGPRINTF(stderr, "Unknown ERROR occurred.\n");
-        return EXIT_FAILURE;
     }
+
+    fflush(stderr);
+    return EXIT_FAILURE;
 }
 
 #ifdef __WINDOWS__

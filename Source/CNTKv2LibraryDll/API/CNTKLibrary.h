@@ -2159,13 +2159,17 @@ namespace CNTK
         /// Returns the Function that 'this' BackPropState belongs to
         ///
         FunctionPtr Function() const { return m_function; }
+        DeviceDescriptor Device() const { return m_forwardComputeDevice; }
         virtual ~BackPropState() {}
 
     protected:
-        BackPropState(const FunctionPtr& function) : m_function(function) {}
+        BackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice) 
+            : m_function(function), m_forwardComputeDevice(computeDevice)
+        {}
 
     protected:
         FunctionPtr m_function;
+        DeviceDescriptor m_forwardComputeDevice;
     };
     typedef std::shared_ptr<BackPropState> BackPropStatePtr;
 

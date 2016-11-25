@@ -250,7 +250,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     >>> x = C.input_variable(img.shape)
     >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
     >>> kernel = C.constant(value = filter)
-    >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]})
+    >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}) # doctest: +SKIP
     array([[[[[  6.,   8.,  10.,  12.],
               [ 16.,  18.,  20.,  22.],
               [ 26.,  28.,  30.,  32.],
@@ -338,7 +338,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
     Args:
         operand: pooling input
-        pooling_type: one of :const:`cntk.ops.MAX_POOLING` or :const:`cntk.ops.AVG_POOLING`
+        pooling_type: one of :const:`~cntk.ops.MAX_POOLING` or :const:`~cntk.ops.AVG_POOLING`
         pooling_window_shape: dimensions of the pooling window
         strides (default 1): strides.
         auto_padding: automatic padding flags for each input dimension.
@@ -1071,7 +1071,7 @@ def softmax(x, name=''):
     '''
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
-    return softmax(x)
+    return softmax(x, name)
 
 
 @typemap
@@ -1095,7 +1095,7 @@ def hardmax(x, name=''):
     '''
     from cntk.cntk_py import hardmax
     x = sanitize_input(x)
-    return hardmax(x)
+    return hardmax(x, name)
 
 
 @typemap
@@ -1688,15 +1688,15 @@ def reduce_mean(x, axis=None, name=''):
 
     Examples:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]
+        >>> data = [[5, 20],[30, 40],[55, 60]]
 
         >>> C.reduce_mean(data, 0).eval()
         array([[ 30.,  40.]], dtype=float32)
 
         >>> C.reduce_mean(data, 1).eval()
-        array([[ 15.],
-               [ 35.],
-               [ 55.]], dtype=float32)
+        array([[ 12.5],
+               [ 35. ],
+               [ 57.5]], dtype=float32)
 
     Args:
         x: input tensor

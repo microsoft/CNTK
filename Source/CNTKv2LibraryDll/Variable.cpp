@@ -5,8 +5,8 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
+#include "CompositeFunction.h"
 #include "Serialization.h"
-#include "Function.h"
 #include "InputAndParamNodes.h"
 
 namespace CNTK
