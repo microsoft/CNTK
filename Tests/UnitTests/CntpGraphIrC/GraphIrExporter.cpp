@@ -50,14 +50,14 @@ std::string ConstructUniqueName(const std::wstring& name)
     return std::string(name.begin(), name.end());
 }
 
-static std::string EncodeBase64(const char *buf, int len)
+static std::string EncodeBase64(const char *buf, size_t len)
 {
 	base64_encodestate state;
 	char *sout = new char[len * 2];
 	memset(sout, 0, len * 2);
 
 	base64_init_encodestate(&state);
-	base64_encode_block(buf, len, sout, &state);
+	base64_encode_block(buf, (int)len, sout, &state);
 	base64_encode_blockend(sout, &state);
 
 	// TODO: remove once we export everything.
@@ -131,10 +131,10 @@ graphIR::Graph* CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
 			int rank = 0;
 			for (auto dims : out.Shape().Dimensions())
 			{
-				input->add_shape(dims);
+				input->add_shape((int)dims);
 
 				if (rank++ != 0) fprintf(stderr, ", ");
-				fprintf(stderr, "%d", dims);
+				fprintf(stderr, "%lu", (unsigned long)dims);
 			}
 
 			fprintf(stderr, "]\n");
@@ -150,11 +150,11 @@ graphIR::Graph* CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
 				rank *= dims;
 			}
 
-			graphIR::InitArg initArg;
-			initArg.set_dbytes(4); // fp32 is 4 bytes per entry
-			initArg.set_data_base64(EncodeBase64((char*)buf, rank * 4));
+			graphIR::InitArg initArg2;
+			initArg2.set_dbytes(4); // fp32 is 4 bytes per entry
+			initArg2.set_data_base64(EncodeBase64((char*)buf, rank * 4));
 
-			(*node->mutable_init_attrs())[ConstructUniqueName(out.Uid(), out.Name())] = initArg;
+			(*node->mutable_init_attrs())[ConstructUniqueName(out.Uid(), out.Name())] = initArg2;
 
 			fprintf(stderr, "    == %S type %d value %f\n", out.Name().c_str(), out.GetDataType(), buf[0]);
 		}
@@ -169,16 +169,16 @@ graphIR::Graph* CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
 				rank *= dims;
 			}
 
-			graphIR::InitArg initArg;
-			initArg.set_dbytes(4); // fp32 is 4 bytes per entry
-			initArg.set_data_base64(EncodeBase64((char *)buf, rank * 4));
+			graphIR::InitArg initArg3;
+			initArg3.set_dbytes(4); // fp32 is 4 bytes per entry
+			initArg3.set_data_base64(EncodeBase64((char *)buf, rank * 4));
 
-			(*node->mutable_init_attrs())[ConstructUniqueName(out.Uid(), out.Name())] = initArg;
+			(*node->mutable_init_attrs())[ConstructUniqueName(out.Uid(), out.Name())] = initArg3;
 
 			fprintf(stderr, "    == %S type %d value %f\n", out.Name().c_str(), out.GetDataType(), buf[0]);
 		}
 
-		for (auto &iter = f->Attributes().begin(); iter != f->Attributes().end(); iter++)
+		for (auto iter = f->Attributes().begin(); iter != f->Attributes().end(); iter++)
 		{
 			DictionaryValue value = iter->second;
 
@@ -237,10 +237,10 @@ graphIR::Graph* CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
 				int rank = 0;
 				for (auto dims : out.Shape().Dimensions())
 				{
-					output->add_shape(dims);
+					output->add_shape((int)dims);
 
 					if (rank++ != 0) fprintf(stderr, ", ");
-					fprintf(stderr, "%d", dims);
+					fprintf(stderr, "%lu", (unsigned long)dims);
 				}
 
 				fprintf(stderr, "]\n");
@@ -258,7 +258,7 @@ graphIR::Graph* CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
     return graph;
 }
 
-CNTK::FunctionPtr GraphIrToCntkGraph(graphIR::Graph */*graphIrPtr*/, CNTK::FunctionPtr /*modelFuncPtr*/)
+CNTK::FunctionPtr GraphIrToCntkGraph(graphIR::Graph* /*graphIrPtr*/, CNTK::FunctionPtr /*modelFuncPtr*/)
 {
     return nullptr;
 }
@@ -286,9 +286,9 @@ BG_Node::BG_Node(const std::wstring& name2)
     name = name2;
 }
 
-bool BG_Node::SetAttribute(const std::wstring& name, const std::wstring& value)
+bool BG_Node::SetAttribute(const std::wstring& attrib, const std::wstring& value)
 {
-    attribs[name] = value;
+    attribs[attrib] = value;
     return true;
 }
 
@@ -392,7 +392,7 @@ bool BG_Graph::AddModelInfo(const std::wstring& name, const std::wstring& value)
     return true;
 }
 
-bool BG_Graph::Serialize(FILE* fOut)
+bool BG_Graph::Serialize(FILE* /*fOut*/)
 {
     return true;
 }
@@ -487,7 +487,7 @@ char * CntkNetParser::CheckInt64(char *data, int64_t value)
         goto bad;
     return (char *)(p + 1);
 bad:
-    printf("Missing value64 %u\n", value);
+    printf("Missing value64 %lu\n", (unsigned long)value);
     return 0;
 }
 
@@ -561,8 +561,6 @@ bad:
 
 bool CntkNetParser::SerializeData(BG_Node *node, const uint8_t *source, size_t nBytes)
 {
-    bool ok = false;
-
     // Create a blob for it
     BG_DataBlob *b = new BG_DataBlob((void*)source, nBytes, nBytes, L"binary");
     if (!b) {
@@ -588,7 +586,7 @@ bool CntkNetParser::SerializeData(BG_Node *node, const uint8_t *source, size_t n
 #define CHECK(x) {x;if (p==0) goto done;}
 
 // ComputationNode::LoadValue -> Matrix::Read
-char *CntkNetParser::GetMatrix(char *data, BG_Node *node, bool verbose)
+char *CntkNetParser::GetMatrix(char *data, BG_Node *node, bool /*verbose*/)
 {
     char *p = (char*)data;
     char typeByte;
@@ -614,8 +612,9 @@ char *CntkNetParser::GetMatrix(char *data, BG_Node *node, bool verbose)
     CHECK(p = GetInt32(p, mFormat));
     MatrixFormat format = (MatrixFormat)mFormat;
     node->SetAttribute(L"matrixFormat", BuildMatrixFormat(format));
-    bool isRowMajor = ((format == matrixFormatSparseBlockRow) ||
-        (format & matrixFormatRowMajor));
+
+    //bool isRowMajor = ((format == matrixFormatSparseBlockRow) ||
+    //    (format & matrixFormatRowMajor));
 
     uint64_t numRows, numCols;
     CHECK(p = GetUint64(p, numRows));
@@ -728,7 +727,7 @@ bool CntkNetParser::Sanitize(wchar_t *badName)
 }
 
 // Translate the CNTK model file format into XML:BrainGraph format.
-BG_Graph *CntkNetParser::Net2Bg(std::wstring filename, FILE *fOut, wchar_t **modelInfo, bool verbose)
+BG_Graph *CntkNetParser::Net2Bg(std::wstring filename, FILE* /*fOut*/, wchar_t **modelInfo, bool verbose)
 {
     // Read the whole file in
     FILE *fIn = 0;
@@ -770,7 +769,7 @@ BG_Graph *CntkNetParser::Net2Bg(std::wstring filename, FILE *fOut, wchar_t **mod
     CHECK(p = GetUint64(p, versionFound));
     if (versionFound > CNTK_MAXIMUM_VERSION_SUPPORTED)
     {
-        printf("Saved CNTK model version %u is not supported.\n", versionFound);
+        printf("Saved CNTK model version %lu is not supported.\n", (unsigned long)versionFound);
         goto done;
     }
 
@@ -821,10 +820,10 @@ BG_Graph *CntkNetParser::Net2Bg(std::wstring filename, FILE *fOut, wchar_t **mod
                         goto Malformed;
                 }
 
-                wchar_t *p = value;
-                for (; *p; p++)
+                wchar_t *p2 = value;
+                for (; *p2; p2++)
                 {
-                    if ((*p == L'"') && (p[-1] != L'\\'))
+                    if ((*p2 == L'"') && (p2[-1] != L'\\'))
                         goto Malformed;
                 }
             }
