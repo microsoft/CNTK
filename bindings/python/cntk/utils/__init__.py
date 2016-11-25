@@ -155,7 +155,6 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     Example:
         >>> num_classes = 6
         >>> sparse_indices = [[1,5],[4]]
-        >>> C.set_default_device(C.cpu())
         >>> i0 = C.input_variable(shape=num_classes, is_sparse=True)
         >>> z = C.times(i0, np.eye(num_classes))
         >>> value = C.one_hot(sparse_indices, num_classes)
