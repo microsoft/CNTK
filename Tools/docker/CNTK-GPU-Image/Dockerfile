@@ -145,9 +145,9 @@ RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/inst
 ENV PATH /root/anaconda3/envs/cntk-py34/bin:$PATH
 
 # NCCL
-ENV NCCL_VERSION=v1.3.0-1
-ENV NCCL_PATH /usr/local/nccl-$NCCL_VERSION
-RUN git clone --depth=1 -b $NCCL_VERSION https://github.com/NVIDIA/nccl.git && \
+ENV NCCL_VERSION=1.3.0-1
+ENV NCCL_PATH /usr/local/nccl-${NCCL_VERSION}
+RUN git clone --depth=1 -b v${NCCL_VERSION} https://github.com/NVIDIA/nccl.git && \
     cd nccl && \
     make CUDA_HOME=/usr/local/cuda PREFIX=$NCCL_PATH install && \
     rm -rf /nccl
