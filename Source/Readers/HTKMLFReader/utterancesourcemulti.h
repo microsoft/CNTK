@@ -605,7 +605,7 @@ class minibatchutterancesourcemulti : public minibatchsource
                 // The condition is that a randomized frame may not be moved out of its associated chunk window.
                 foreach_index(t2, m_randomizedframerefs)
                 {
-                    const size_t positionchunkindex = ttochunk[t2];               // position 't2' lies within this chunk (relationship is monotonous, not random)
+                    const size_t positionchunkindex = ttochunk[t2]; // position 't2' lies within this chunk (relationship is monotonous, not random)
                     const auto &chunk = m_randomizedChunks[0][positionchunkindex]; // for window
 
                     // get in-RAM chunk range for this frame position (shared across all frame positions within the same chunk)
