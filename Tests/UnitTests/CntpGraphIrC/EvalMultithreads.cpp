@@ -8,55 +8,56 @@
 
 using namespace CNTK;
 
-
-void EvaluateGraph(FunctionPtr evalFunc, const DeviceDescriptor& device)
+void RetrieveInputBuffers(
+    FunctionPtr evalFunc,
+    std::unordered_map<std::wstring, std::vector<float>>& inputs)
 {
-    fprintf(stderr, "input  count #%lu\n", (unsigned long)evalFunc->Arguments().size());
-    fprintf(stderr, "output count #%lu\n", (unsigned long)evalFunc->Outputs().size());
-
-    // TODO remove once we get rid of random input data
-    srand(2);
-
-    // Prepare inputs
-    std::unordered_map<Variable, ValuePtr> inputs;
     for (auto& input : evalFunc->Arguments())
     {
-        // TODO: HERE is out INPUT VECTOR
+        // TODO: HERE is our INPUT VECTOR
         std::vector<float> inputData(input.Shape().TotalSize());
+        inputs[input.Name()] = inputData;
+    }
+}
 
-        // add some random data to the input vector
-        for (size_t i = 0; i < inputData.size(); ++i)
-        {
-            inputData[i] = ((float)rand()) / RAND_MAX;
-        }
+void ExecuteModel(
+    FunctionPtr evalFunc,
+    std::unordered_map<std::wstring, std::vector<float>>& inputs,
+    std::unordered_map<std::wstring, std::vector<float>>& outputs)
+{
+    auto device = DeviceDescriptor::CPUDevice();
 
+    // Prepare inputs
+    std::unordered_map<Variable, ValuePtr> inputsVars;
+    for (auto& input : evalFunc->Arguments())
+    {
         // Todo: add convenience APIs to simplify data preparation here.
-        ValuePtr value = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(input.Shape(), inputData, true /* isReadOnly */));
+        ValuePtr value = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(input.Shape(), inputs[input.Name()], true /* isReadOnly */));
 
-        fprintf(stderr, "  input: %S %S (#%lu elements)\n", input.Name().c_str(), value->Shape().AsString().c_str(), inputData.size());
-        inputs[input] = value;
+        fprintf(stderr, "  input: %S %S (#%lu elements)\n", input.Name().c_str(), value->Shape().AsString().c_str(), inputs[input.Name()].size());
+        inputsVars[input] = value;
     }
 
     // Prepare outputs.
-    std::unordered_map<Variable, ValuePtr> outputs;
+    std::unordered_map<Variable, ValuePtr> outputsVars;
     for (auto output : evalFunc->Outputs())
     {
-        outputs[output] = nullptr; // actual value will be filled by evaluating the model.
+        outputsVars[output] = nullptr; // actual value will be filled by evaluating the model.
     }
 
     // Compute outputs by evaluating the model
-    evalFunc->Forward(inputs, outputs, device);
-    fprintf(stderr, "\n");
+    evalFunc->Forward(inputsVars, outputsVars, device);
 
     // Show results by printing the outputs
-    for (auto& output : outputs)
+    for (auto& output : outputsVars)
     {
         ValuePtr value = output.second;
 
-        // TODO: HERE is out OUTPUT VECTOR
+        // TODO: HERE is our OUTPUT VECTOR
         // TODO: add convenience APIs to simplify data retrieval here.
         std::vector<float> outputData(value->Data()->DataBuffer<float>(), value->Data()->DataBuffer<float>() + value->Data()->Shape().TotalSize());
 
         fprintf(stderr, "  output: %S %S (#%lu elements)\n", output.first.Name().c_str(), value->Shape().AsString().c_str(), outputData.size());
+        outputs[output.first.Name()] = outputData;
     }
 }

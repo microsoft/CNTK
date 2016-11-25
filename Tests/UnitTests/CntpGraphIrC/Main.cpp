@@ -25,7 +25,15 @@ using namespace std;
 
 extern FunctionPtr GraphIrToCntkGraph(graphIR::Graph */*graphIrPtr*/, FunctionPtr /*modelFuncPtr*/);
 extern graphIR::Graph* CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc);
-extern void EvaluateGraph(FunctionPtr evalFunc, const DeviceDescriptor& device);
+
+extern void RetrieveInputBuffers(
+    FunctionPtr evalFunc,
+    std::unordered_map<std::wstring, std::vector<float>>& inputs);
+
+extern void ExecuteModel(
+    FunctionPtr evalFunc,
+    std::unordered_map<std::wstring, std::vector<float>>& inputs,
+    std::unordered_map<std::wstring, std::vector<float>>& outputs);
 
 int main()
 {
@@ -37,9 +45,35 @@ int main()
 //    BG_Graph *g = parser.Net2Bg(filenameW, stdout, nullptr, true);
 
 	// The model file will be trained and copied to the current runtime directory first.
-	auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, filenameW, device, LstmGraphNodeFactory);
+	auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, filenameW, device/*, LstmGraphNodeFactory*/);
 
-	EvaluateGraph(modelFuncPtr, device);
+    std::unordered_map<std::wstring, std::vector<float>> inputs;
+    std::unordered_map<std::wstring, std::vector<float>> outputs;
+
+    RetrieveInputBuffers(modelFuncPtr, inputs);
+
+    for (auto inputTuple : inputs)
+    {
+        auto& inputData = inputTuple.second;
+
+        // add some random data to the input vector
+        for (size_t i = 0; i < inputData.size(); ++i)
+        {
+            inputData[i] = ((float)rand()) / RAND_MAX;
+        }
+
+        fprintf(stderr, "Input  %S #%lu elements.\n", inputTuple.first.c_str(), inputTuple.second.size());
+    }
+
+    ExecuteModel(modelFuncPtr, inputs, outputs);
+
+    for (auto outputTuple : outputs)
+    {
+        auto& outputData = outputTuple.second;
+
+        // add some random data to the input vector
+        fprintf(stderr, "Output %S #%lu elements.\n", outputTuple.first.c_str(), outputTuple.second.size());
+    }
 
 	// convert cntk to graphir
 	auto graphIrPtr = CntkGraphToGraphIr(filenameW, modelFuncPtr);
