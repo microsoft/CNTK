@@ -366,6 +366,41 @@ class Test:
       fullPath = os.path.join(self.testDir, candidateName)
       return fullPath
 
+  # Baseline filename fragments to match for GPU device, decreasing priority.
+  gpuBaselinePatternList = []
+
+  def getGpuBaselinePatternList(self):
+    if not self.gpuBaselinePatternList:
+      self.gpuBaselinePatternList = [".gpu", ""]
+      if windows:
+        nvidiaSmiPath = '/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi.exe'
+      else:
+        nvidiaSmiPath = 'nvidia-smi'
+      ccMajorByCard = {
+        'GeForce GTX 780 Ti': 3,
+        'GeForce GTX 960': 5,
+        'Quadro M2000M': 5,
+        'Quadro M4000': 5,
+      }
+      cc = sys.maxint
+      try:
+        gpuList = subprocess.check_output([nvidiaSmiPath, '-L'])
+        for line in gpuList.split('\n'):
+          m = re.match(r"GPU (?P<id>\d+): (?P<type>[^(]*) \(UUID: (?P<guid>GPU-.*)\)\r?$", line)
+          if m:
+            try:
+              current = ccMajorByCard[m.group('type')]
+              if current < cc:
+                cc = current
+            except KeyError:
+              pass
+      except OSError:
+        pass
+      if cc != sys.maxint:
+        self.gpuBaselinePatternList.insert(0, ".gpu.cc" + str(cc))
+
+    return self.gpuBaselinePatternList
+
   # Finds a location of a baseline file by probing different names in the following order:
   #   baseline.$os.$flavor.$device.txt
   #   baseline.$os.$flavor.txt
@@ -376,9 +411,14 @@ class Test:
   #   baseline.$device.txt
   #   baseline.txt
   def findBaselineFile(self, flavor, device):
+    if device == 'gpu':
+      deviceList = self.getGpuBaselinePatternList()
+    else:
+      deviceList = ["." + device.lower(), ""]
+
     for o in ["." + ("windows" if windows else "linux"), ""]:
       for f in ["." + flavor.lower(), ""]:
-        for d in ["." + device.lower(), ""]:
+        for d in deviceList:
           candidateName = "baseline" + o + f + d + ".txt"
           fullPath = cygpath(os.path.join(self.testDir, candidateName), relative=True)
           if os.path.isfile(fullPath):

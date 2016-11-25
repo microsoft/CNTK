@@ -1688,15 +1688,15 @@ def reduce_mean(x, axis=None, name=''):
 
     Examples:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]
+        >>> data = [[5, 20],[30, 40],[55, 60]]
 
         >>> C.reduce_mean(data, 0).eval()
         array([[ 30.,  40.]], dtype=float32)
 
         >>> C.reduce_mean(data, 1).eval()
-        array([[ 15.],
-               [ 35.],
-               [ 55.]], dtype=float32)
+        array([[ 12.5],
+               [ 35. ],
+               [ 57.5]], dtype=float32)
 
     Args:
         x: input tensor
