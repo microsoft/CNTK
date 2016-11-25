@@ -27,11 +27,17 @@ from attention import create_attention_augment_hook
 # variables and stuff  #
 ########################
 
-cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../../../"    # data resides in the CNTK folder
-data_dir = cntk_dir + "Examples/SequenceToSequence/CMUDict/Data/"  # under Examples/SequenceToSequence
+#cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../../../"    # data resides in the CNTK folder
+#data_dir = cntk_dir + "Examples/SequenceToSequence/CMUDict/Data/"  # under Examples/SequenceToSequence
+data_dir = "/data/aayushg/"
 model_dir = "./Models"
-input_vocab_size = 69
-label_vocab_size = 69
+input_vocab_size = 100000
+label_vocab_size = 100000
+
+training_read = "150M-Q-T-Conv.ctf"
+valid_read = "test-Q-T.ctf"
+vocab = "vocab.txt"
+epoch_size = 908241
 
 # model dimensions
 input_vocab_dim  = input_vocab_size
@@ -49,11 +55,11 @@ stabilize = Stabilizer()
 # define the reader    #
 ########################
 
-def create_reader(path, randomize, size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES):
+def create_reader(path, randomize, randomize_window=100, size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         features  = StreamDef(field='S0', shape=input_vocab_dim, is_sparse=True),
         labels    = StreamDef(field='S1', shape=label_vocab_dim, is_sparse=True)
-    )), randomize=randomize, epoch_size = size, distributed_after = distributed_after)
+    )), randomize=randomize, randomization_window = randomize_window, epoch_size = size, distributed_after = distributed_after)
 
 
 
@@ -189,7 +195,7 @@ def train(distributed_trainer, train_reader, valid_reader, vocab, i2w, model, ma
 
     # Instantiate the trainer object to drive the model training
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    minibatch_size = 72
+    minibatch_size = 820 # 72
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
@@ -223,6 +229,7 @@ def train(distributed_trainer, train_reader, valid_reader, vocab, i2w, model, ma
 
         while i < (epoch+1) * epoch_size:
             # get next minibatch of training data
+            print("Training next minibatch")
             mb_train = train_reader.next_minibatch(minibatch_size, input_map=train_bind)
             #import ipdb;ipdb.set_trace()  
             trainer.train_minibatch(mb_train)
@@ -347,10 +354,10 @@ def find_arg_by_name(name, expression):
 def seq2seq_automated_test():
     
     # hook up data (train_reader gets False randomization to get consistent error)
-    train_reader = create_reader(os.path.join(data_dir, "cmudict-0.7b.train-dev-20-21.ctf"), False)
-    valid_reader = create_reader(os.path.join(data_dir, "tiny.ctf"), False)
-    test_reader  = create_reader(os.path.join(data_dir, "cmudict-0.7b.test.ctf"), False, FULL_DATA_SWEEP)
-    vocab, i2w = get_vocab(os.path.join(data_dir, "cmudict-0.7b.mapping"))
+    train_reader = create_reader(os.path.join(data_dir, training_read), False)
+    valid_reader = create_reader(os.path.join(data_dir, valid_read), False)
+    test_reader  = create_reader(os.path.join(data_dir, valid_read), False, FULL_DATA_SWEEP)
+    vocab, i2w = get_vocab(os.path.join(data_dir, vocab))
 
     # create model
     model = create_model()
@@ -370,11 +377,13 @@ def seq2seq_automated_test():
     
 if __name__ == '__main__':
     set_default_device(best())
-
+    randomize_window = 1500
+    #import pdb;pdb.set_trace()
     # hook up data
-    train_reader = create_reader(data_dir + "cmudict-0.7b.train-dev-1-21.ctf", True)
-    valid_reader = create_reader(data_dir + "tiny.ctf", False)
-    vocab, i2w = get_vocab(data_dir + "cmudict-0.7b.mapping")
+    train_reader = create_reader(data_dir + valid_read, False)
+    #create_reader(data_dir + training_read, False, randomize_window=randomize_window, size=epoch_size, distributed_after=epoch_size)
+    valid_reader = create_reader(data_dir + valid_read, False)
+    vocab, i2w = get_vocab(data_dir + vocab)
     
     parser = argparse.ArgumentParser()
     parser.add_argument('-q', '--quantize_bit', help='quantized bit', required=False, default='32')
@@ -401,6 +410,7 @@ if __name__ == '__main__':
 
     #print("rank is ", distributed_trainer.communicator().current_worker().global_rank) 
     # create model
+    #pdb.set_trace()
     model = create_model()
     
     # train
