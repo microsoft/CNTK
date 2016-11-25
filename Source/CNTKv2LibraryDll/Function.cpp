@@ -277,13 +277,6 @@ namespace CNTK
         }
     }
 
-    void Function::Evaluate(const std::unordered_map<Variable, ValuePtr>& arguments,
-                            std::unordered_map<Variable, ValuePtr>& outputs,
-                            const DeviceDescriptor& computeDevice)
-    {
-        Forward(arguments, outputs, computeDevice, {});
-    }
-
     static Variable GetCorrespondingOutputVariableFromClone(const Variable& cloneeOutput, const FunctionPtr& cloneeFunction, const FunctionPtr& clonedFunction)
     {
         size_t outputVarIndex = 0;

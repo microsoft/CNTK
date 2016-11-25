@@ -401,8 +401,6 @@ namespace CNTK
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
     public:
-
-#ifndef SWIGCSHARP
         ///
         /// Construct a NDArrayView with the specified 'dataBuffer' as the backing storage.
         /// The 'dataBuffer' must have been allocated on the specified 'device', must be at least
@@ -425,8 +423,6 @@ namespace CNTK
         template <typename ElementType>
         CNTK_API NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly = false);
 
-#endif
-
         ///
         /// Construct a NDArrayView over newly allocated storage in the specified format on the specified 'device'.
         ///
@@ -439,7 +435,6 @@ namespace CNTK
             : NDArrayView(dataType, StorageFormat::Dense, viewShape, device)
         {}
 
-#ifndef SWIGCSHARP
         ///
         /// Construct a NDArrayView with the specified 'dataBuffer' as the backing storage.
         /// The 'dataBuffer' must have been allocated on the specified 'device', must be at least
@@ -494,8 +489,6 @@ namespace CNTK
             SetValue(value);
             m_isReadOnly = readOnly;
         }
-
-#endif
 
         ///
         /// Construct a NDArrayView over newly allocated dense storage on the specified device and assign the specified value to each element of the view.
@@ -639,10 +632,9 @@ namespace CNTK
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
     private:
-
         CNTK_API NDArrayView(::CNTK::DataType dataType, const DeviceDescriptor& device, ::CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
 
-
+    private:
         template <typename ElementType>
         static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>* tensorView, size_t rowColSplitPoint);
 
@@ -2252,8 +2244,6 @@ namespace CNTK
 #endif
 
     public:
-
-#ifndef SWIGCSHARP
         ///
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values corresponding
         /// to each leaf variable of the function of VariableKind 'Input'.
@@ -2273,6 +2263,7 @@ namespace CNTK
                                          const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
                                          const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
 
+#ifndef SWIGCSHARP
         ///
         /// Backpropagates supplied 'rootGradientValues' for one or more of the output variables of the Function, to produce gradient Values
         /// corresponding to the specified set of input variables in 'backPropagatedGradientValuesForInputs'.
@@ -2306,15 +2297,6 @@ namespace CNTK
         /// any variable replacements requested are applied in the cloned Function instance.
         ///
         CNTK_API FunctionPtr Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Clone, const std::unordered_map<Variable, Variable>& replacements = {}) const;
-
-        ///
-        /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values corresponding
-        /// to each leaf variable of the function of VariableKind 'Input'.
-        /// The function does not return any variables that needed for backpropagation of gradients.
-        ///
-        CNTK_API void Evaluate(const std::unordered_map<Variable, ValuePtr>& arguments,
-                      std::unordered_map<Variable, ValuePtr>& outputs,
-                      const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
 #ifndef SWIGCSHARP
 

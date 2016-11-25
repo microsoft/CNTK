@@ -252,7 +252,8 @@ namespace CNTK
 
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
 
-        class VariableResolver;
 #endif
+        class VariableResolver;
+
     }
 }

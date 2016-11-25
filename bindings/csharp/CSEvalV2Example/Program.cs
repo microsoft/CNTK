@@ -58,6 +58,8 @@ namespace CSEvalV2Example
 
             myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice());
 
+            outputNDArrayView = outputValue.Data();
+
         }
     }
 }
