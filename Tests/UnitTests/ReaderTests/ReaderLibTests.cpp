@@ -690,9 +690,40 @@ BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)
 
     string randomKey(10, (char)distr(rng));
 
-    CorpusDescriptor corpus;
+    CorpusDescriptor corpus(false);
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded(randomKey));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded(""));
+}
+
+BOOST_AUTO_TEST_CASE(NumericCorpusDescriptor)
+{
+    const int seed = 13;
+    std::mt19937 rng(seed);
+    boost::random::uniform_int_distribution<size_t> distr;
+
+    CorpusDescriptor corpus(true);
+    for (int i = 0; i < 10; ++i)
+    {
+        auto value = distr(rng);
+        BOOST_CHECK_EQUAL(value, corpus.KeyToId(std::to_string(value)));
+    }
+    BOOST_CHECK_EXCEPTION(
+        corpus.KeyToId("not a number"),
+        std::exception, 
+        [](const std::exception& e) { return e.what() == std::string("Invalid numeric sequence id 'not a number'"); });
+}
+
+BOOST_AUTO_TEST_CASE(LiteralCorpusDescriptor)
+{
+    const int seed = 13;
+    std::mt19937 rng(seed);
+    boost::random::uniform_int_distribution<int> distr(50, 60);
+
+    string randomKey(10, (char)distr(rng));
+
+    CorpusDescriptor corpus(false);
+    BOOST_CHECK(100 != corpus.KeyToId("100"));
+    BOOST_CHECK_NO_THROW(corpus.KeyToId("not a number"));
 }
 
 BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
@@ -703,7 +734,7 @@ BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
     fwrite("4\n", sizeof(char), 2, test);
     fclose(test);
 
-    CorpusDescriptor corpus(L"test.tmp");
+    CorpusDescriptor corpus(L"test.tmp", true);
     BOOST_CHECK_EQUAL(false, corpus.IsIncluded("0"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded("1"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded("2"));

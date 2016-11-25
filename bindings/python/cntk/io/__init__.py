@@ -51,7 +51,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
     def mask(self):
         '''
         The mask object of the minibatch. In it, `2` marks the beginning of a
-        sequence, `1` marks a sequence element as valid, and `0` markse it as
+        sequence, `1` marks a sequence element as valid, and `0` marks it as
         invalid.
         '''
         return self.m_data.mask().to_numpy()
@@ -81,15 +81,17 @@ class MinibatchSource(cntk_py.MinibatchSource):
         randomize (bool, default True): randomize images before every epoch
         epoch_size (int): epoch size
         distributed_after (int): sample count after which minibatch source becomes distributed
+        multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES):
+    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
         reader_config = ReaderConfig(
             deserializers=deserializers,
             randomize=randomize,
             epoch_size=epoch_size,
-            distributed_after=distributed_after)
+            distributed_after=distributed_after,
+            multithreaded_deserializer=multithreaded_deserializer)
         source = minibatch_source(reader_config)
         # transplant into this class instance
         self.__dict__ = source.__dict__
@@ -240,8 +242,9 @@ class ReaderConfig(dict):
         randomize (bool, default True): randomize images before every epoch
         epoch_size (int): epoch size
         distributed_after (int): sample count after which reader becomes distributed
+        multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES):
+    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
 
         self['epochSize'] = cntk_py.SizeTWrapper(epoch_size) # force to store in size_t
         if not isinstance(deserializers, (list, tuple)):
@@ -249,6 +252,8 @@ class ReaderConfig(dict):
         self['deserializers'] = self.deserializers = deserializers or []
         self['randomize'] = randomize
         self['distributedAfterSampleCount'] = cntk_py.SizeTWrapper(distributed_after)
+        if multithreaded_deserializer != None:
+            self['multiThreadedDeserialization'] = multithreaded_deserializer
 
     @typemap
     def minibatch_source(self):
@@ -275,6 +280,7 @@ class Deserializer(dict):
     Deserializer type          Description
     ========================== ============
     :class:`ImageDeserializer` Deserializer for images that uses OpenCV
+    :class:`CTFDeserializer`   Deserializer for text of the `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
     ========================== ============
 
     Args:
@@ -291,16 +297,19 @@ class Deserializer(dict):
 class ImageDeserializer(Deserializer):
     '''
     This class configures the image reader that reads images and corresponding
-    labels from a file of the form
+    labels from a file of the form::
 
-         <full path to image><tab><numerical label (0-based class id)>
+         <full path to image> <tab> <numerical label (0-based class id)>
+    or::
+
+        sequenceId <tab> path <tab> label
 
     Args:
         filename (str): file name of the map file that associates images to
          classes
 
     See also:
-        https://github.com/microsoft/cntk/wiki/Image-reader
+        `Image reader definition <https://github.com/microsoft/cntk/wiki/Image-reader>`_
     '''
 
     def __init__(self, filename, streams=None):
@@ -426,24 +435,23 @@ class ImageDeserializer(Deserializer):
 
     # TODO color transpose
 
-#
-# CNTKTextFormatReader
-# TODO get away from cntk_py.text_format_minibatch_source and set it up
-# similarly to ImageDeserializer
-#
 
-
-#class TextFormatDeserializer(Deserializer): # TODO: either call it CNTKTextFormat or CTF. TextFormat is confusable with plain text
 class CTFDeserializer(Deserializer):
     '''
-    This class configures the text reader that reads text-encoded files from a file with lines of the form
-         [Sequence_Id](Sample)+
-        where
-         Sample=|Input_Name (Value )*
+    This class configures the text reader that reads text-encoded files from a
+    file with lines of the form::
+
+        [Sequence_Id](Sample)+
+
+    where::
+
+        Sample=|Input_Name (Value )*
+
     Args:
         filename (str): file name containing the text input
+
     See also:
-        https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
+        `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
     '''
 
     def __init__(self, filename, streams=None):
@@ -462,8 +470,11 @@ class CTFDeserializer(Deserializer):
         '''
         Maps node (either node instance or node name) to a part of the text input,
         either specified by the node name or the alias in the text file.
-        Example: for node name 'Apples' an input line could look like this:
-        |Apples 0 1 2 3 4 5 6 7 8 9
+
+        Example: for node name 'input0' an input line could look like this::
+
+          |input0 3 7 1 0 2
+
         Args:
             node (str or input node): node or its name
             dim (int): specifies the dimension of the input value vector
@@ -472,7 +483,7 @@ class CTFDeserializer(Deserializer):
             format (str, default 'dense'): 'dense' or 'sparse'. Specifies the input type.
             alias (str, default None): None or alias name. Optional abbreviated name that
              is used in the text file to avoid repeating long input names. For details please
-             see https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
+             see `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
         '''
         if not isinstance(node, str):
             node = node.name()

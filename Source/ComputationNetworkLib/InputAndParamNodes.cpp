@@ -614,7 +614,7 @@ template <class ElemType>
         Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
         char str[4096];
-        sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
+        sprintf(str, "[%lu,%lu]  ", (unsigned long)GetAsMatrixNumRows(), (unsigned long)GetAsMatrixNumCols());
         fstream << string(str);
         sprintf(str, "learningRateMultiplier=%f  NeedsGradient=%s", m_learningRateMultiplier, m_learningRateMultiplier>0 ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
         fstream << string(str);

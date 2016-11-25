@@ -1,4 +1,17 @@
+**The [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) has all information on CNTK including [setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine ), [examples](https://github.com/Microsoft/CNTK/wiki/Examples ), etc.**
+
 # Latest news
+*2016-11-25.* V 2.0 Beta 5 Release  
+Highlights of this Release:
+* The Windows binary packages are now created using the NVIDIA CUDA 8 toolkit, see the [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_5_Release_Notes) for details. The CNTK-Linux binary packages are still built with CUDA 7.5. The Linux support for Cuda8 will follow shortly!
+* Performance enhancements for evaluation of bitmap images through the new `EvaluateRgbImage` function in the [managed Eval API](https://github.com/Microsoft/CNTK/wiki/Managed-EvalDLL-API).
+* A new version of the [CNTK Nuget package](https://github.com/Microsoft/CNTK/wiki/NuGet-Package) is available. 
+* Stability Improvements and bug fixes, i.e. decreased memory footprint in CNTK Text Format deserializer. 
+* We continue to improve documentation and tutorials on an ongoing basis, in this release we added a [Sequence-to-Sequence tutorial](https://github.com/Microsoft/CNTK/blob/v2.0.beta5.0/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb).
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_5_Release_Notes)  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
+
 *2016-11-21.* V 2.0 Beta 4 Release  
 Highlights of this Release:
 * New ASGD/Hogwild! training using Microsoft’s Parameter Server ([Project Multiverso](https://github.com/Microsoft/multiverso))
@@ -46,14 +59,6 @@ Highlights of this Release:
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_1_Release_Notes). You will find there links to the materials about the new features.  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
-
-*2016-10-03.* V 1.7.2 Binary release  
-**This is a Hot Fix Release. It affects all users of Model Evaluation Library**
-
-If you are NOT using Model Evaluation Library you may skip this release.  
-If you ARE using Model Evaluation Library we **strongly recommend** installing version 1.7.2 instead of **any** previous version you might be using.
-
-See [Release Notes](https://github.com/Microsoft/CNTk/wiki/CNTK_1_7_2_Release_Notes) for details.
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
