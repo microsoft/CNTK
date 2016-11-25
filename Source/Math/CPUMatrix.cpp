@@ -3435,10 +3435,10 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
                                  });
                 // REVIEW alexeyk: the following produces warning (see SCL_SECURE_NO_WARNINGS) so use loop instead.
                 // std::transform(indices.begin(), indices.begin() + topK, curIdx, [](const int& a) { return static_cast<ElemType>(a); });
-                for (int i = 0; i < topK; i++)
+                for (int i2 = 0; i2 < topK; i2++)
                 {
-                    curIdx[i] = static_cast<ElemType>(indices[i]);
-                    curMax[i] = curVal[indices[i]];
+                    curIdx[i2] = static_cast<ElemType>(indices[i2]);
+                    curMax[i2] = curVal[indices[i2]];
                 }
             }
         }
@@ -3611,9 +3611,9 @@ void CPUMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t rowFirst, ptrd
     fprintf(stderr, "\n###### ");
     if (matrixName != nullptr)
         fprintf(stderr, "%s ", matrixName);
-    fprintf(stderr, "(%lu, %lu)", GetNumRows(), GetNumCols());
+    fprintf(stderr, "(%lu, %lu)", (unsigned long)GetNumRows(), (unsigned long)GetNumCols());
     if (rowFirst != 0 || colFirst != 0 || (size_t)(rowLast + 1) != GetNumRows() || (size_t)(colLast + 1) != GetNumCols())
-        fprintf(stderr, " [%ld:%ld, %ld:%ld]", rowFirst, rowLast, colFirst, colLast);
+        fprintf(stderr, " [%ld:%ld, %ld:%ld]", (long)rowFirst, (long)rowLast, (long)colFirst, (long)colLast);
     fprintf(stderr, " ######\n\n");
 
     if (IsEmpty())
