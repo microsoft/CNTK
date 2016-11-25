@@ -282,10 +282,10 @@ public:
     {
         resize(n, m);
     }
-    void resize(size_t n, size_t m)
+    void resize(size_t n2, size_t m)
     {
         numcols = m;
-        fixed_vector<T>::resize(n * m);
+        fixed_vector<T>::resize(n2 * m);
     }
     size_t cols() const
     {

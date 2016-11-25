@@ -1849,20 +1849,20 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
             // generate the output label token
             if (labelOut.type != labelNone)
             {
-                const auto& labelValue = m_labelTemp[pos];
+                const auto& labelValue2 = m_labelTemp[pos];
                 LabelIdType labelId;
                 if (labelOut.type == labelCategory)
                 {
                     pos++; // consume it   --TODO: value is not used after this
-                    labelId = GetIdFromLabel(labelValue, labelOut);
+                    labelId = GetIdFromLabel(labelValue2, labelOut);
                 }
                 else if (nextWord)
                 {
                     // this is the next word (pos was already incremented above when reading out labelValue)
-                    if (EqualCI(labelValue, labelIn.endSequence)) // end symbol may differ between input and output
+                    if (EqualCI(labelValue2, labelIn.endSequence)) // end symbol may differ between input and output
                         labelId = GetIdFromLabel(labelIn.endSequence, labelIn);
                     else
-                        labelId = GetIdFromLabel(labelValue, labelIn);
+                        labelId = GetIdFromLabel(labelValue2, labelIn);
                 }
                 else
                     LogicError("Unexpected output label type."); // should never get here

@@ -643,16 +643,16 @@ private:
         for (let& clonedNodesKV : clonedNodes)
         {
             let& node = clonedNodesKV.second;
-            let& inputs = node->GetInputs();
-            for (size_t i = 0; i < inputs.size(); i++)
+            let& inputs2 = node->GetInputs();
+            for (size_t i = 0; i < inputs2.size(); i++)
             {
-                fprintf(stderr, "%ls.inputs[%d] = %ls (%d)", node->NodeName().c_str(), (int)i, inputs[i]->NodeName().c_str(), (int)inputs[i]->m_uniqueNumericId);
-                let iter = clonedNodes.find(inputs[i]);
+                fprintf(stderr, "%ls.inputs[%d] = %ls (%d)", node->NodeName().c_str(), (int)i, inputs2[i]->NodeName().c_str(), (int)inputs2[i]->m_uniqueNumericId);
+                let iter = clonedNodes.find(inputs2[i]);
                 if (iter == clonedNodes.end())
                     continue;
                 // input is also a cloned node: relink
                 node->SetInput(i, iter->second);
-                fprintf(stderr, " ==>  %ls (%d)\n", inputs[i]->NodeName().c_str(), (int)inputs[i]->m_uniqueNumericId);
+                fprintf(stderr, " ==>  %ls (%d)\n", inputs2[i]->NodeName().c_str(), (int)inputs2[i]->m_uniqueNumericId);
                 numRelinks++;
             }
         }
