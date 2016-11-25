@@ -22,24 +22,23 @@
 using namespace CNTK;
 using namespace std;
 
-
 extern FunctionPtr GraphIrToCntkGraph(graphIR::Graph */*graphIrPtr*/, FunctionPtr /*modelFuncPtr*/);
-extern graphIR::Graph* CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc);
+extern graphIR::Graph* CntkGraphToGraphIr(wstring filename, FunctionPtr evalFunc);
 
 extern void RetrieveInputBuffers(
     FunctionPtr evalFunc,
-    std::unordered_map<std::wstring, std::vector<float>>& inputs);
+    unordered_map<wstring, vector<float>>& inputs);
 
 extern void ExecuteModel(
     FunctionPtr evalFunc,
-    std::unordered_map<std::wstring, std::vector<float>>& inputs,
-    std::unordered_map<std::wstring, std::vector<float>>& outputs);
+    unordered_map<wstring, vector<float>>& inputs,
+    unordered_map<wstring, vector<float>>& outputs);
 
 int main()
 {
 	auto device = DeviceDescriptor::CPUDevice();
-	std::string filename = "\\BrainWaveCntk\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn";
-    std::wstring filenameW = std::wstring(filename.begin(), filename.end());
+	string filename = "\\BrainWaveCntk\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn";
+    wstring filenameW = wstring(filename.begin(), filename.end());
 
 //    CntkNetParser parser;
 //    BG_Graph *g = parser.Net2Bg(filenameW, stdout, nullptr, true);
@@ -47,8 +46,8 @@ int main()
 	// The model file will be trained and copied to the current runtime directory first.
 	auto modelFuncPtr = CNTK::Function::LoadModel(DataType::Float, filenameW, device/*, LstmGraphNodeFactory*/);
 
-    std::unordered_map<std::wstring, std::vector<float>> inputs;
-    std::unordered_map<std::wstring, std::vector<float>> outputs;
+    unordered_map<wstring, vector<float>> inputs;
+    unordered_map<wstring, vector<float>> outputs;
 
     RetrieveInputBuffers(modelFuncPtr, inputs);
 
@@ -79,9 +78,9 @@ int main()
 	auto graphIrPtr = CntkGraphToGraphIr(filenameW, modelFuncPtr);
 
 	// save it out to disk in json format.
-	std::string jsonstring;
+	string jsonstring;
 	auto serialized = google::protobuf::util::MessageToJsonString(*graphIrPtr, &jsonstring);
-	auto fp = fopen((filename + std::string(".pb.json")).c_str(), "w+");
+	auto fp = fopen((filename + string(".pb.json")).c_str(), "w+");
 	auto written = fwrite(jsonstring.c_str(), sizeof(char), jsonstring.length(), fp);
 	fclose(fp);
 

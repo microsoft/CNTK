@@ -7,28 +7,29 @@
 #include "CNTKLibrary.h"
 
 using namespace CNTK;
+using namespace std;
 
 void RetrieveInputBuffers(
     FunctionPtr evalFunc,
-    std::unordered_map<std::wstring, std::vector<float>>& inputs)
+    unordered_map<wstring, vector<float>>& inputs)
 {
     for (auto& input : evalFunc->Arguments())
     {
         // TODO: HERE is our INPUT VECTOR
-        std::vector<float> inputData(input.Shape().TotalSize());
+        vector<float> inputData(input.Shape().TotalSize());
         inputs[input.Name()] = inputData;
     }
 }
 
 void ExecuteModel(
     FunctionPtr evalFunc,
-    std::unordered_map<std::wstring, std::vector<float>>& inputs,
-    std::unordered_map<std::wstring, std::vector<float>>& outputs)
+    unordered_map<wstring, vector<float>>& inputs,
+    unordered_map<wstring, vector<float>>& outputs)
 {
     auto device = DeviceDescriptor::CPUDevice();
 
     // Prepare inputs
-    std::unordered_map<Variable, ValuePtr> inputsVars;
+    unordered_map<Variable, ValuePtr> inputsVars;
     for (auto& input : evalFunc->Arguments())
     {
         // Todo: add convenience APIs to simplify data preparation here.
@@ -39,7 +40,7 @@ void ExecuteModel(
     }
 
     // Prepare outputs.
-    std::unordered_map<Variable, ValuePtr> outputsVars;
+    unordered_map<Variable, ValuePtr> outputsVars;
     for (auto output : evalFunc->Outputs())
     {
         outputsVars[output] = nullptr; // actual value will be filled by evaluating the model.
@@ -55,7 +56,7 @@ void ExecuteModel(
 
         // TODO: HERE is our OUTPUT VECTOR
         // TODO: add convenience APIs to simplify data retrieval here.
-        std::vector<float> outputData(value->Data()->DataBuffer<float>(), value->Data()->DataBuffer<float>() + value->Data()->Shape().TotalSize());
+        vector<float> outputData(value->Data()->DataBuffer<float>(), value->Data()->DataBuffer<float>() + value->Data()->Shape().TotalSize());
 
         fprintf(stderr, "  output: %S %S (#%lu elements)\n", output.first.Name().c_str(), value->Shape().AsString().c_str(), outputData.size());
         outputs[output.first.Name()] = outputData;
