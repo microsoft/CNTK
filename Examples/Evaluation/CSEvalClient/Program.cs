@@ -241,11 +241,17 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     var desiredOutputLayers = new List<string>() { outputLayerName };
                     // string networkDes = "traceLevel=1\nBrainScriptNetworkBuilder={featureNodes=(__v2libuid__Input2__v2libname__)}";
                     // string networkDes = "traceLevel=1";
-                    string networkDes = "traceLevel=1\nBrainScriptNetworkBuilder={featureNodes=(features)}";
+                    // string networkDes = "traceLevel=1\nBrainScriptNetworkBuilder={featureNodes=(features)}";
 
-                    // "__v2libuid__Input2__v2libname__"
+                    string inputNodes = "features"; //"__v2libuid__Input2__v2libname__";
+                    // featureNodes = ({1}) \n
+                    // outputNodes = ({2}) \n
+                   //  string modelDefinition = "traceLevel = 1\nBrainScriptNetworkBuilder={{\nNetwork = BS.Network.Load(\"{0}\")\noutputNodes = (out.z)\n }}";
+                    string modelDefinition = "traceLevel = 1\nBrainScriptNetworkBuilder=(new ComputationNetwork {{\n network = BS.Network.Load(\"{0}\")\noutputNodes = (out.z)\n}})";
+                   //  string modelDefinition = "traceLevel = 1\nBrainScriptNetworkBuilder=(new ComputationNetwork {{\n network = BS.Network.Load(\"{0}\")\n}})";
 
-                    model.CreateNetwork(string.Format("modelPath=\"{0}\" \n{1}", modelFilePath, networkDes), deviceId: -1, outputNodeNames: desiredOutputLayers);
+                    var str = string.Format(modelDefinition, modelFilePath, inputNodes, outputLayerName);
+                    model.CreateNetwork(str, deviceId: -1);
 
                     // Generate random input values in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
