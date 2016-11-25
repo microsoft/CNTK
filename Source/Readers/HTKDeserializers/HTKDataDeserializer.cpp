@@ -123,7 +123,6 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
     vector<wstring> paths = config.GetSequencePaths();
     vector<UtteranceDescription> utterances;
     utterances.reserve(paths.size());
-    auto& stringRegistry = m_corpus->GetStringRegistry();
     size_t allUtterances = 0, allFrames = 0;
 
     for (const auto& u : paths)
@@ -151,7 +150,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         // No need to store key, releasing it.
         description.ClearLogicalPath();
 
-        size_t id = stringRegistry[key];
+        size_t id = m_corpus->KeyToId(key);
         description.SetId(id);
         utterances.push_back(description);
         m_totalNumberOfFrames += numberOfFrames;

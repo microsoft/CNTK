@@ -32,7 +32,7 @@ public:
 
     CNTKTextFormatReaderTestRunner(const string& filename,
         const vector<StreamDescriptor>& streams, unsigned int maxErrors) :
-        m_parser(std::make_shared<CorpusDescriptor>(), wstring(filename.begin(), filename.end()), streams)
+        m_parser(std::make_shared<CorpusDescriptor>(true), wstring(filename.begin(), filename.end()), streams, true)
     {
         m_parser.SetMaxAllowedErrors(maxErrors);
         m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Info);
