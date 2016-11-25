@@ -562,7 +562,7 @@ void fsetpos(FILE* f, uint64_t reqpos)
 
         // if we seek within the existing buffer, then just move to the position by dummy reads
         char buf[65536];
-        size_t n = min((size_t)reqpos - (size_t)curpos, _countof(buf));
+        size_t n = min((size_t) reqpos - (size_t) curpos, _countof(buf));
         fread(buf, sizeof(buf[0]), n, f); // (this may fail, but really shouldn't)
         curpos += n;
 
@@ -584,8 +584,8 @@ void fsetpos(FILE* f, uint64_t reqpos)
     size_t n = min((size_t)reqpos - (size_t)curpos, (size_t)MAX_FREAD_SKIP);
 
     // TODO: if we only skip a limited number of bytes, fread() them
-    //       instead of fsetpos() to the new position since the vs2013
-    //       libraries drop the internal buffer and thus have to re-read
+    //       instead of fsetpos() to the new position since the vs2015
+    //       libraries might drop the internal buffer and thus have to re-read
     //       from the new position, somthing that costs performance.
     if (n < MAX_FREAD_SKIP)
     {
@@ -597,12 +597,12 @@ void fsetpos(FILE* f, uint64_t reqpos)
         if (reqpos == fgetpos(f))
             return;
     }
+#undef MAX_FREAD_SKIP
 #endif // end special hack for VS CRT
 
     // actually perform the seek
     fpos_t post = reqpos;
     int rc = ::fsetpos(f, &post);
-#undef MAX_FREAD_SKIP
 #else // assuming __unix__
     off_t post = (off_t) reqpos;
     static_assert(sizeof(off_t) >= sizeof(reqpos), "64-bit file offsets not enabled");
