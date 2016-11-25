@@ -14,7 +14,6 @@
 
 using namespace std;
 
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // -----------------------------------------------------------------------

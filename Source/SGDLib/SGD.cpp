@@ -34,7 +34,6 @@
 #include <map>
 #include <set>
 
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 using namespace std;

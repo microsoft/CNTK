@@ -12,7 +12,6 @@
 #include "SequenceParser.h"
 #include "fileutil.h"
 
-
 using namespace Microsoft::MSR::CNTK;
 
 // SetState for a particular value

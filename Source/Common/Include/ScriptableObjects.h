@@ -10,7 +10,6 @@
 #include <map>
 #include <set>
 
-
 namespace Microsoft { namespace MSR { namespace ScriptableObjects {
 
 using namespace std;

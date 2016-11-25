@@ -11,7 +11,6 @@
 #define __UNIX__
 #endif
 
-
 #ifdef _MSC_VER
 // TODO: thread_local is supported in VS2015. Remove this macro when we uprade to VS2015
 #define THREAD_LOCAL __declspec(thread)

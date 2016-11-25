@@ -20,8 +20,6 @@
 #include <utility>
 #include <assert.h>
 
-
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 vector<size_t> numSequencesForFrame;

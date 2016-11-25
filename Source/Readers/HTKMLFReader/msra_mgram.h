@@ -15,7 +15,6 @@
 #include <algorithm> // for various sort() calls
 #include <math.h>
 
-
 namespace msra { namespace lm {
 
 // ===========================================================================

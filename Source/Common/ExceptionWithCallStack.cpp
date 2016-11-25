@@ -9,7 +9,7 @@
 #include "Basics.h"
 #ifdef _WIN32
 #pragma warning(push)
-#pragma warning(disable: 4091) //  'typedef ': ignored on left of '' when no variable is declared
+#pragma warning(disable: 4091) // 'typedef ': ignored on left of '' when no variable is declared
 #include "DbgHelp.h"
 #pragma warning(pop)
 #include <WinBase.h>
