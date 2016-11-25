@@ -140,7 +140,7 @@
   <ItemGroup>
     <ClCompile Include="EvalMultithreads.cpp" />
     <ClCompile Include="GraphIrExporter.cpp" />
-    <ClCompile Include="GraphIrWrapper.cpp" />
+    <ClCompile Include="GraphIr\cpp\GraphIrWrapper.cpp" />
     <ClCompile Include="GraphIr\libb64\cdecode.c" />
     <ClCompile Include="GraphIr\libb64\cencode.c" />
     <ClCompile Include="LSTM\LSTMClientImpl.cpp" />
@@ -150,6 +150,10 @@
   <ItemGroup>
     <ClInclude Include="GraphIrExporter.h" />
     <ClInclude Include="GraphIr\cpp\graphid.pb.h" />
+    <ClInclude Include="GraphIr\libb64\b64\cdecode.h" />
+    <ClInclude Include="GraphIr\libb64\b64\cencode.h" />
+    <ClInclude Include="GraphIr\libb64\b64\decode.h" />
+    <ClInclude Include="GraphIr\libb64\b64\encode.h" />
     <ClInclude Include="Image.h" />
     <ClInclude Include="LSTM\FixedPoint.hpp" />
     <ClInclude Include="LSTM\LSTMClient.h" />
@@ -161,6 +165,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="GraphIr\graphid.proto" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
