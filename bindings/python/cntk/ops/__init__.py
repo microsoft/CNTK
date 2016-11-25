@@ -338,7 +338,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
     Args:
         operand: pooling input
-        pooling_type: one of :const:`cntk.ops.MAX_POOLING` or :const:`cntk.ops.AVG_POOLING`
+        pooling_type: one of :const:`~cntk.ops.MAX_POOLING` or :const:`~cntk.ops.AVG_POOLING`
         pooling_window_shape: dimensions of the pooling window
         strides (default 1): strides.
         auto_padding: automatic padding flags for each input dimension.
@@ -1071,7 +1071,7 @@ def softmax(x, name=''):
     '''
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
-    return softmax(x)
+    return softmax(x, name)
 
 
 @typemap
@@ -1095,7 +1095,7 @@ def hardmax(x, name=''):
     '''
     from cntk.cntk_py import hardmax
     x = sanitize_input(x)
-    return hardmax(x)
+    return hardmax(x, name)
 
 
 @typemap

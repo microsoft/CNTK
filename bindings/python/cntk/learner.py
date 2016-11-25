@@ -369,7 +369,8 @@ def momentum_sgd(parameters, lr, momentum,
          with truncation
 
     Returns:
-        Instance of a :class:`cntk.learner.Learner` that can be passed to the :class:`cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learner.Learner` that can be passed to the
+        :class:`~cntk.trainer.Trainer`
     '''
     _verify_learning_rate_type(lr)
     _verify_momentum_type(momentum)

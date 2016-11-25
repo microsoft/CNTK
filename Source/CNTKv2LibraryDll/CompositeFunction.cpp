@@ -1408,7 +1408,7 @@ namespace CNTK
         {
             // Ensure that only a subset of this function's outputs are being asked to be evaluated
             if (functionOutputs.find(outputVarValuePair.first) == functionOutputs.end())
-                InvalidArgument("Requested output is not an Ouptut of the Function");
+                InvalidArgument("Requested output is not an Output of the Function");
 
             auto& requiredArgumentsForCurrentOutput = GetArgumentDependencies(outputVarValuePair.first);
             requiredArguments.insert(requiredArgumentsForCurrentOutput.begin(), requiredArgumentsForCurrentOutput.end());
