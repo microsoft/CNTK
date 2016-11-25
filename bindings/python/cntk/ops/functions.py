@@ -256,7 +256,7 @@ class Function(cntk_py.Function):
 
         Example:
             >>> # compute the value and the derivative of the sigmoid at 0
-            >>> v = C.input_variable(shape=(1,))
+            >>> v = C.input_variable(shape=(1,), needs_gradient=True)
             >>> f = C.sigmoid(v)
             >>> df, fv = f.forward({v:[[0]]}, [f.output], set([f.output]))
             >>> value = list(fv.values())[0]
@@ -297,7 +297,7 @@ class Function(cntk_py.Function):
         The Function must have a single output.
 
         Example:
-            >>> x = C.input_variable(shape=(1,))
+            >>> x = C.input_variable(shape=(1,), needs_gradient=True)
             >>> y = C.sqrt(x)
             >>> a = np.asarray([1,4,16],dtype=np.float32).reshape(3,1,1)
             >>> y.grad({x:a})
@@ -330,7 +330,7 @@ class Function(cntk_py.Function):
         unique_wrt = set(wrt)
         output = [self.output]
         df, f = self.forward(at, output, set(output), device)
-        ones = {self.output: np.ones_like(f.values()[0])}
+        ones = {self.output: np.ones_like(v) for v in f.values()}
         grad_dict = self.backward(df, ones, unique_wrt)
         return [grad_dict[v] for v in wrt]
 
