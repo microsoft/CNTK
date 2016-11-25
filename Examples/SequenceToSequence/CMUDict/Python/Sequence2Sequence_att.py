@@ -229,7 +229,7 @@ def train(distributed_trainer, train_reader, valid_reader, vocab, i2w, model, ma
 
         while i < (epoch+1) * epoch_size:
             # get next minibatch of training data
-            print("Training next minibatch")
+            print("Training next minibatch: %d" % mbs)
             mb_train = train_reader.next_minibatch(minibatch_size, input_map=train_bind)
             #import ipdb;ipdb.set_trace()  
             trainer.train_minibatch(mb_train)
@@ -378,11 +378,16 @@ def seq2seq_automated_test():
 if __name__ == '__main__':
     set_default_device(best())
     randomize_window = 1500
-    #import pdb;pdb.set_trace()
+    
     # hook up data
-    train_reader = create_reader(data_dir + valid_read, False)
-    #create_reader(data_dir + training_read, False, randomize_window=randomize_window, size=epoch_size, distributed_after=epoch_size)
+    st = time.time()
+    print("Starting reading train/valid data")
+    train_reader = create_reader(data_dir + training_read, False, randomize_window=randomize_window, size=epoch_size, distributed_after=epoch_size)
+    #train_reader = create_reader(data_dir + valid_read, False)
     valid_reader = create_reader(data_dir + valid_read, False)
+    et = time.time()
+    print("Finished reading the training data, %.2f seconds" % (et-st))
+   
     vocab, i2w = get_vocab(data_dir + vocab)
     
     parser = argparse.ArgumentParser()
