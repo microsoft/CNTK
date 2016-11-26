@@ -528,6 +528,9 @@ namespace CNTK
             computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose, ImageLayoutKind::CHW, maxTempMemSizeInSamples);
             break;
         }
+        case PrimitiveOpType::CosDistance:
+            computationNodePtr = New<CosDistanceNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
         case PrimitiveOpType::Logistic:
             computationNodePtr = New<LogisticNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;

@@ -81,6 +81,7 @@ namespace CNTK
         {PrimitiveOpType::OptimizedRNNStack, L"OptimizedRNNStack"},
         {PrimitiveOpType::ReconcileDynamicAxis, L"ReconcileDynamicAxis"},
         {PrimitiveOpType::LogSoftmax, L"LogSoftmax"},
+        {PrimitiveOpType::CosDistance, L"CosDistance"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)

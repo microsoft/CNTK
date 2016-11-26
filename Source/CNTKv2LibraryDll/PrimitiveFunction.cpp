@@ -114,7 +114,8 @@ namespace CNTK
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::ClassificationError) ||
-            (op == PrimitiveOpType::Logistic))
+            (op == PrimitiveOpType::Logistic) ||
+            (op == PrimitiveOpType::CosDistance))
         {
             outputDynamicAxes = std::vector<Axis>({});
         }
@@ -409,6 +410,7 @@ namespace CNTK
                 functionConfig[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
                 break;
             }
+            case PrimitiveOpType::CosDistance:
             case PrimitiveOpType::Logistic:
             case PrimitiveOpType::SquaredError:
             case PrimitiveOpType::CrossEntropyWithSoftmax:

@@ -268,6 +268,8 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOffset] = (size_t)node->As<FutureValueNode<ElementType>>()->TimeStep();
                     opType = PrimitiveOpType::FutureValue;
                 }
+                else if (node->OperationName() == OperationNameOf(CosDistanceNode))
+                    opType = PrimitiveOpType::CosDistance;
                 else if (node->OperationName() == OperationNameOf(LogisticNode))
                     opType = PrimitiveOpType::Logistic;
                 else if (node->OperationName() == OperationNameOf(SquareErrorNode))

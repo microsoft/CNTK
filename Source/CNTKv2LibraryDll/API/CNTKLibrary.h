@@ -2693,6 +2693,12 @@ namespace CNTK
         return TransposeTimes(leftOperand, rightOperand, /*outputRank =*/ 1, name);
     }
 
+
+    ///
+    /// Create an instance of the CNTK built-in operation to compute the cosine distance for the specified input operands.
+    ///
+    CNTK_API FunctionPtr CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in operation to compute binary cross-entropy for specified input operands.
     ///
