@@ -149,23 +149,26 @@ namespace CNTK
             vector<FunctionPtr> functions;
             std::vector<Variable> inputs;
             std::unordered_set<Variable> uniqueInputs;
-            Traverse(rootFunction, visitedFunctions, [&inputs, &uniqueInputs](const FunctionPtr& f){ 
-                    std::vector<Variable> functionInputs = f->Inputs();
-                    for (auto input : functionInputs)
-            {
-                        if (!input.IsOutput() && uniqueInputs.find(input) == uniqueInputs.end()) 
+            Traverse(rootFunction, visitedFunctions, [&inputs, &uniqueInputs](const FunctionPtr& f) { 
+                std::vector<Variable> functionInputs = f->Inputs();
+                for (auto input : functionInputs)
                 {
-                            inputs.push_back(input);
-                            uniqueInputs.insert(input);
+                    if (!input.IsOutput() && uniqueInputs.find(input) == uniqueInputs.end()) 
+                    {
+                        inputs.push_back(input);
+                        uniqueInputs.insert(input);
+                    }
                 }
-            }
-                });
+            });
 
             return inputs;
         }
 
         template <typename ElementType>
-        Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device, const std::unordered_set<Variable>& backpropRoots, bool allocateNetworkMatrices);
+        Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device,
+                                                                          const std::unordered_set<Variable>& backpropRoots,
+                                                                          const std::unordered_set<Variable>& outputs,
+                                                                          bool allocateNetworkMatrices);
 
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr CreateComputationNode(const Variable& variable,
@@ -228,6 +231,13 @@ namespace CNTK
         // states from the previos Forward call to be able to backpropagate gradients backwards from in
         // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;
+
+        // The outputs specified in the most recent 'Forward' call on 'this' Function/
+        // This indicates which outputs has the memory sharing structure of the cached
+        // computation network object being setup for. Asking for outputs in subsequent
+        // 'Forward' calls that do not belong to the current set required redoing the 
+        // network memory sharing structure.
+        std::unordered_set<Variable> m_currentOutputs;
 
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 
