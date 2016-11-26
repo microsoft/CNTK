@@ -766,8 +766,7 @@ namespace CNTK
 
     FunctionPtr CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
-        std::vector<Variable> operands = { leftOperand, rightOperand };
-        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::CosDistance, operands, Dictionary(), name), name);
+        return BinaryOp(PrimitiveOpType::CosDistance, leftOperand, rightOperand, Dictionary(), name);
     }
 
     FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name)
