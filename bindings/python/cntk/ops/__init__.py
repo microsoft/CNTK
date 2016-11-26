@@ -63,9 +63,36 @@ def alias(x, name=''):
 ##########################################################################
 
 @typemap
+def cosine_distance(x, y, name=''):
+    '''
+    Computes the cosine distance between ``x`` and ``y``:
+
+    Example:
+        >>> a = np.asarray([-1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]).reshape(3,2,2)
+        >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
+        >>> x = C.input_variable(shape=(2,))
+        >>> y = C.input_variable(shape=(2,))
+        >>> C.cosine_distance(x,y).eval({x:a,y:b})
+        array([[-0.99999982,  0.99999982],
+               [ 0.99999982,  0.        ],
+               [ 0.        , -0.99999982]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import cosine_distance
+    dtype = get_data_type(x, y)
+    x = sanitize_input(x, dtype)
+    y = sanitize_input(y, dtype)
+    return cosine_distance(x, y, name)
+
+@typemap
 def binary_cross_entropy(output, target, name=''):
     r'''
-    This operation computes the binary cross entropy between the ``output`` and ``target``.
+    Computes the binary cross entropy between the ``output`` and ``target``.
 
     Example:
         TBA
@@ -1040,6 +1067,50 @@ def tanh(x, name=''):
     from cntk.cntk_py import tanh
     x = sanitize_input(x)
     return tanh(x, name)
+
+@typemap
+def sin(x, name=''):
+    '''
+    Computes the element-wise sine of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.sin([[0,np.pi/2],[np.pi,3*np.pi/2]]).eval()
+        array([[ 0.,  1.],
+               [ 0., -1.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sin
+    x = sanitize_input(x)
+    return sin(x, name)
+
+@typemap
+def cos(x, name=''):
+    '''
+    Computes the element-wise cosine of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.cos([[0,np.pi/2],[np.pi,3*np.pi/2]]).eval()
+        array([[ 1.,  0.],
+               [-1., -0.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import cos
+    x = sanitize_input(x)
+    return cos(x, name)
 
 
 @typemap
