@@ -200,12 +200,9 @@ namespace CNTK
     class DistributedTrainer;
     typedef std::shared_ptr<DistributedTrainer> DistributedTrainerPtr;
 
-
-
     namespace Internal
     {
 #ifndef SWIGCSHARP
-
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
         CNTK_API FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
         CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
@@ -251,8 +248,8 @@ namespace CNTK
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
-
 #endif
+
         class VariableResolver;
 
     }

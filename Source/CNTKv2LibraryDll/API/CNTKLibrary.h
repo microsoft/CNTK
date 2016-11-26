@@ -634,7 +634,6 @@ namespace CNTK
     private:
         CNTK_API NDArrayView(::CNTK::DataType dataType, const DeviceDescriptor& device, ::CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
 
-    private:
         template <typename ElementType>
         static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>* tensorView, size_t rowColSplitPoint);
 
@@ -1607,7 +1606,7 @@ namespace CNTK
         friend struct std::hash;
 
         friend class Internal::VariableResolver;
- 
+
 #ifndef SWIG
     private:
         friend inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes);
@@ -1786,7 +1785,6 @@ private:
             }
 
 #ifndef SWIGCSHARP
-
             std::shared_ptr<VariableFields> Clone() const
             {
                 if (m_ownerFunction != nullptr)
@@ -1959,7 +1957,6 @@ private:
 #endif
 
 #ifndef SWIGCSHARP
-
     ///
     /// Denotes Parameter inputs of a Function.
     ///
@@ -2155,7 +2152,6 @@ namespace std {
     };
 
 #ifndef SWIGCSHARP
-
     template <> struct hash<::CNTK::Parameter>
     {
         size_t operator()(const ::CNTK::Parameter& x) const
@@ -2238,7 +2234,6 @@ namespace CNTK
     class Function : public std::enable_shared_from_this<Function>, public IDictionarySerializable
     {
 #ifndef SWIGCSHARP
-
         friend class CompositeFunction;
         friend class Trainer;
 #endif
@@ -2299,7 +2294,6 @@ namespace CNTK
         CNTK_API FunctionPtr Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Clone, const std::unordered_map<Variable, Variable>& replacements = {}) const;
 
 #ifndef SWIGCSHARP
-
         ///
         /// Generates a dictionary that captures the state of the Function graph underlying this Function.
         ///
@@ -2311,8 +2305,8 @@ namespace CNTK
         /// user-defined op-codes with custom functionality.
         ///
         CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
-
 #endif 
+
     public:
         ///
         /// Returns the name of 'this' function.
@@ -2368,7 +2362,6 @@ namespace CNTK
         }
 
 #ifndef SWIGCSHARP
-
         ///
         /// Returns the set of all Parameter variables of 'this' Function.
         ///
@@ -2414,8 +2407,8 @@ namespace CNTK
         /// Throws an exception if 'this' Function has multiple placeholders
         ///
         CNTK_API FunctionPtr ReplacePlaceholder(const Variable& placeholderReplacement);
-
 #endif
+
         ///
         /// Save this function graph into a model file
         ///
@@ -2477,7 +2470,6 @@ namespace CNTK
 
 
     protected:
-
 #ifndef SWIGCSHARP
         ///
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
@@ -3479,7 +3471,6 @@ namespace CNTK
 }
 
 #ifndef SWIGCSHARP // Not need for SWIG C# Eval Binding
-
 namespace std {
     template <> struct hash<::CNTK::StreamInformation>
     {

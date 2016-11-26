@@ -9,6 +9,9 @@
 %include <std_shared_ptr.i>
 %include <windows.i>
 %include <attribute.i>
+%include <arrays_csharp.i>
+
+// include the unordered_map.i
 %include "std_unordered_map.i"
 
 %{
@@ -76,7 +79,9 @@
 %ignore CNTK::MinibatchInfo;
 %ignore CNTK::DistributedTrainer;
 
-
+// map the point to array
+%apply float INPUT[]  { float *dataBuffer }
+%apply double INPUT[]  { double *dataBuffer }
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
@@ -110,7 +115,6 @@
 // NDArryView
 //
 %extend CNTK::NDArrayView {
-    // shall we use const float *dataBuffer
     NDArrayView(const NDShape& viewShape, float *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
     {
         return new CNTK::NDArrayView(CNTK::DataType::Float, viewShape, dataBuffer, numBufferElements * sizeof(float), device, readOnly);
