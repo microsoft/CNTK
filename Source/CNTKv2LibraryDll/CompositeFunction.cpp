@@ -371,6 +371,12 @@ namespace CNTK
         case PrimitiveOpType::Tanh:
             computationNodePtr = New<TanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
+        case PrimitiveOpType::Cos:
+            computationNodePtr = New<CosineNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
+        case PrimitiveOpType::Sin:
+            computationNodePtr = New<SinNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
         case PrimitiveOpType::ReLU:
             computationNodePtr = New<RectifiedLinearNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
@@ -622,6 +628,9 @@ namespace CNTK
             computationNodePtr = New<LogSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         }
+        case PrimitiveOpType::Pass:
+            computationNodePtr = New<PassNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
         default:
             LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
             break;

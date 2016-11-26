@@ -2482,6 +2482,16 @@ namespace CNTK
     CNTK_API FunctionPtr Tanh(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise sine operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Sin(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise cosine operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Cos(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise linear rectifier operation with the specified input operand.
     ///
     CNTK_API FunctionPtr ReLU(const Variable& operand, const std::wstring& name = L"");

@@ -317,7 +317,11 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::OptimizedRNNStack) == 49 &&
                   static_cast<size_t>(PrimitiveOpType::ReconcileDynamicAxis) == 50 &&
                   static_cast<size_t>(PrimitiveOpType::LogSoftmax) == 51 &&
-                  static_cast<size_t>(PrimitiveOpType::LogPlus) == 52,
+                  static_cast<size_t>(PrimitiveOpType::LogPlus) == 52 &&
+                  static_cast<size_t>(PrimitiveOpType::CosDistance) == 53 &&
+                  static_cast<size_t>(PrimitiveOpType::Sin) == 54 &&
+                  static_cast<size_t>(PrimitiveOpType::Cos) == 55 &&
+                  static_cast<size_t>(PrimitiveOpType::Pass) == 56,
                   "PrimitiveOpType enum value was modified.");
 }
 

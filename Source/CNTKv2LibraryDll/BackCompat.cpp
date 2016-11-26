@@ -128,6 +128,12 @@ namespace CNTK
                     opType = PrimitiveOpType::Sigmoid;
                 else if (node->OperationName() == OperationNameOf(TanhNode))
                     opType = PrimitiveOpType::Tanh;
+                else if (node->OperationName() == OperationNameOf(CosineNode))
+                    opType = PrimitiveOpType::Cos;
+                else if (node->OperationName() == OperationNameOf(SinNode))
+                    opType = PrimitiveOpType::Sin;
+                else if (node->OperationName() == OperationNameOf(PassNode))
+                    opType = PrimitiveOpType::Pass;
                 else if (node->OperationName() == OperationNameOf(RectifiedLinearNode))
                     opType = PrimitiveOpType::ReLU;
                 else if (node->OperationName() == OperationNameOf(ExpNode))

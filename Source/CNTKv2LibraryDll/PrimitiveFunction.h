@@ -82,6 +82,9 @@ namespace CNTK
         {PrimitiveOpType::ReconcileDynamicAxis, L"ReconcileDynamicAxis"},
         {PrimitiveOpType::LogSoftmax, L"LogSoftmax"},
         {PrimitiveOpType::CosDistance, L"CosDistance"},
+        {PrimitiveOpType::Sin, L"Sin"},
+        {PrimitiveOpType::Cos, L"Cos"},
+        {PrimitiveOpType::Cos, L"Pass"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)

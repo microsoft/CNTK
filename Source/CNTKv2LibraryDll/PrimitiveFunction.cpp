@@ -202,6 +202,9 @@ namespace CNTK
             case PrimitiveOpType::Dropout:
             case PrimitiveOpType::Where:
             case PrimitiveOpType::LogSoftmax:
+            case PrimitiveOpType::Sin:
+            case PrimitiveOpType::Cos:
+            case PrimitiveOpType::Pass:
             {
                 assert(inputs.size() == 1);
                 outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
