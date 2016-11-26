@@ -234,7 +234,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     const string outputLayerName = "out.z"; // "__v2libuid__Plus2069__v2libname__Plus2060"; //"out.z";
 
                     // Load model
-                    string modelFilePath = @"01_OneHidden"; // @"trainer.checkpoint"; // @".\z.model"; // Path.Combine(Environment.CurrentDirectory, @".\Output\Models\01_OneHidden");
+                    string modelFilePath = @"01_OneHidden"; // @"01_OneHidden"; // @"trainer.checkpoint"; // @".\z.model"; // Path.Combine(Environment.CurrentDirectory, @".\Output\Models\01_OneHidden");
                     ThrowIfFileNotExist(modelFilePath,
                         string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/GettingStarted to create the model.", modelFilePath));
 
@@ -243,12 +243,13 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     // string networkDes = "traceLevel=1";
                     // string networkDes = "traceLevel=1\nBrainScriptNetworkBuilder={featureNodes=(features)}";
 
-                    string inputNodes = "features"; //"__v2libuid__Input2__v2libname__";
+                    string inputNodes = "__v2libuid__Input2__v2libname__"; // "features"; //"__v2libuid__Input2__v2libname__";
                     // featureNodes = ({1}) \n
                     // outputNodes = ({2}) \n
                    //  string modelDefinition = "traceLevel = 1\nBrainScriptNetworkBuilder={{\nNetwork = BS.Network.Load(\"{0}\")\noutputNodes = (out.z)\n }}";
-                    string modelDefinition = "traceLevel = 1\nBrainScriptNetworkBuilder=(new ComputationNetwork {{\n network = BS.Network.Load(\"{0}\")\noutputNodes = (out.z)\n}})";
-                   //  string modelDefinition = "traceLevel = 1\nBrainScriptNetworkBuilder=(new ComputationNetwork {{\n network = BS.Network.Load(\"{0}\")\n}})";
+                   string modelDefinition = "traceLevel = 1\nBrainScriptNetworkBuilder=(new ComputationNetwork {{\n mynetwork = BS.Network.Load(\"{0}\")\n featureNodes = (mynetwork.features)\n outputNodes = (mynetwork.out_z)\n }})";
+                   // string modelDefinition = "traceLevel = 1\nBrainScriptNetworkBuilder=(new ComputationNetwork {{\n mynetwork = BS.Network.Load(\"{0}\")\n featureNodes = (mynetwork.__v2libuid__Input2__v2libname__)\n outputNodes = (mynetwork.__v2libuid__Plus2069__v2libname__Plus2060)\n }})";
+                   // string modelDefinition = "traceLevel = 1\nBrainScriptNetworkBuilder=(new ComputationNetwork {{\n network = BS.Network.Load(\"{0}\")\n}})";
 
                     var str = string.Format(modelDefinition, modelFilePath, inputNodes, outputLayerName);
                     model.CreateNetwork(str, deviceId: -1);
