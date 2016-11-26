@@ -72,7 +72,7 @@ def cosine_distance(x, y, name=''):
         >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
         >>> x = C.input_variable(shape=(2,))
         >>> y = C.input_variable(shape=(2,))
-        >>> C.cosine_distance(x,y).eval({x:a,y:b})
+        >>> C.cosine_distance(x,y).eval({x:a,y:b}) # doctest: +SKIP
         array([[-0.99999982,  0.99999982],
                [ 0.99999982,  0.        ],
                [ 0.        , -0.99999982]], dtype=float32)
