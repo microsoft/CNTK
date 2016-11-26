@@ -318,9 +318,6 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     if isinstance(arg, list) and not arg:
         raise ValueError('input is empty')
 
-    if isinstance(arg, (cntk_py.Value, cntk_py.NDArrayView)):
-        return constant(value=arg)
-
     if not isinstance(arg, np.ndarray) or arg.dtype!=fallback_dtype:
         arg = np.asarray(arg, dtype=fallback_dtype)
         if arg.shape == ():
