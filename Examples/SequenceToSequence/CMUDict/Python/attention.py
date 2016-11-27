@@ -8,8 +8,8 @@
 # attention implementation for seq2seq #
 ########################################
 
-from cntk.ops import times, constant, past_value, splice, softmax, \
-                     parameter, element_times, tanh, log
+from cntk.ops import times, constant, past_value, splice, softmax, reshape, \
+                     parameter, element_times, tanh, log, alias
 from cntk.ops.sequence import last, broadcast_as
 from cntk.initializer import glorot_uniform
 from cntk.blocks import Stabilizer, _INFERRED
@@ -84,11 +84,15 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
         v = parameter(shape=(attention_dim, 1))
         
         u = times(Stabilizer()(element_times(tanh_out, projected_attention_window_broadcast()[2])), v) # (attention_span, 1)
+                
         u_valid = u + log(projected_attention_window_broadcast()[2])
 
-        attention_weights = softmax(u_valid, name='attention_weights')
+        # we do two reshapes (20,1)->(20) and then (20)->(20,1) so that we can use the built-in softmax()
+        attention_weights = alias(softmax(reshape(u_valid, shape=(attention_span))), name='attention_weights')
+        
         # the window should be shape=(attention_span, output_dim)
-        weighted_attention_window = element_times(projected_attention_window_broadcast()[1], attention_weights, 
+        weighted_attention_window = element_times(projected_attention_window_broadcast()[1], 
+                                                  reshape(attention_weights, shape=(attention_span,1)), 
                                                   name='weighted_attention_window')
 
         ones = constant(value=1, shape=(attention_span))

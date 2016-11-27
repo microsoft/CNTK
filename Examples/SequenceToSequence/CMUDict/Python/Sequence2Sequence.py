@@ -14,7 +14,8 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.ops.functions import CloneMethod
 from cntk.ops.sequence import broadcast_as
 from cntk.graph import find_nodes_by_name
-from cntk.blocks import LSTM, Stabilizer
+#from cntk.blocks import LSTM, Stabilizer
+from localblocks import LSTM, Stabilizer
 from cntk.layers import Dense
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 from attention import create_attention_augment_hook
@@ -293,10 +294,10 @@ def test(reader, model_filename):
     return total_error/i
 
 ########################
-# translate string     #
+# interactive session  #
 ########################
 
-def translate_string(input_string, model, vocab, i2w, max_label_length=20):
+def translate_string(input_string, model, vocab, i2w, show_attention=False, max_label_length=20):
 
     vdict = {vocab[i]:i for i in range(len(vocab))}
     w = [vdict["<s>"]] + [vdict[w] for w in input_string] + [vdict["</s>"]]
@@ -312,12 +313,50 @@ def translate_string(input_string, model, vocab, i2w, max_label_length=20):
     
     pred = model.eval({find_arg_by_name('raw_input' , model) : [features], 
                        find_arg_by_name('raw_labels', model) : [labels]})
-     
+    
     # print out translation and stop at the sequence-end tag
     for i in np.argmax(pred, axis=2)[0]:
         phoneme = i2w[i]
         if phoneme == "</s>": break
         print(phoneme, end=' ')
+    print()
+    
+    # show attention window
+    if show_attention:
+    
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        import pandas as pd
+    
+        att = find_nodes_by_name(model, 'attention_weights')[0]
+        q = combine([decoder_output_model, att])
+        cur = q.forward({find_arg_by_name('raw_input' , model) : [features], 
+                         find_arg_by_name('raw_labels', model) : [labels]},
+                         att.outputs)
+            
+        columns = ['~AH', '~B', '~AE', '~D', '~IY', '</s>']
+        index = ['<s>', 'A', 'B', 'A', 'D', 'I', '</s>']
+ 
+        att_key = list(output[1].keys())[0]
+        att_value = output[1][att_key]
+    
+        X = att_value[0,:,:7]
+
+        dframe = pd.DataFrame(data=X.T, columns=columns, index=index)
+    
+        sns.heatmap(dframe)
+        plt.show()
+
+def interactive_session(model, vocab, i2w, show_attention=False):
+
+    import sys
+
+    while True:
+        user_input = input("> ").upper()
+        if user_input == "QUIT":
+            break
+        translate_string(user_input, model, vocab, i2w, show_attention=True)
+        sys.stdout.flush()
 
 ########################
 # helper functions     #
@@ -361,7 +400,8 @@ if __name__ == '__main__':
 
     #write(valid_reader, "model_epoch0.cmf", vocab, i2w)
     
-    # test the model out
-    #model_filename = "model_epoch1.cmf"
+    # test the model out in an interactive session
+    #print('loading model...')
+    #model_filename = "model_epoch0.cmf"
     #model = load_model(model_filename)
-    #translate_string("HELLO", model, vocab, i2w)
+    #interactive_session(model, vocab, i2w, show_attention=True)
