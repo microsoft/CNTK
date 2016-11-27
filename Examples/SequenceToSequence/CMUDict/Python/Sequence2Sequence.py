@@ -14,8 +14,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.ops.functions import CloneMethod
 from cntk.ops.sequence import broadcast_as
 from cntk.graph import find_nodes_by_name
-#from cntk.blocks import LSTM, Stabilizer
-from localblocks import LSTM, Stabilizer
+from cntk.blocks import LSTM, Stabilizer
 from cntk.layers import Dense
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 from attention import create_attention_augment_hook
@@ -318,9 +317,12 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
                        find_arg_by_name('raw_labels', model) : [labels]})
     
     # print out translation and stop at the sequence-end tag
-    for i in np.argmax(pred, axis=2)[0]:
+    tlen = 1 # length of the output sequence
+    prediction = np.argmax(pred, axis=2)[0]
+    for i in prediction:
         phoneme = i2w[i]
         if phoneme == "</s>": break
+        tlen += 1
         print(phoneme, end=' ')
     print()
     
@@ -336,21 +338,21 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
         output = q.forward({find_arg_by_name('raw_input' , model) : [features], 
                          find_arg_by_name('raw_labels', model) : [labels]},
                          att.outputs)
-            
-        columns = ['~AH', '~B', '~AE', '~D', '~IY', '</s>']
-        index = ['<s>', 'A', 'B', 'A', 'D', 'I', '</s>']
+                         
+        # set up the actual words/letters for the heatmap axis labels
+        columns = [i2w[ww] for ww in prediction[:tlen]]
+        index = [i2w[ww] for ww in w]
  
         att_key = list(output[1].keys())[0]
         att_value = output[1][att_key]
+        
+        # grad the attention data up to the length of the output (subset of the full window)
+        X = att_value[0,:tlen,:len(w)]
+        dframe = pd.DataFrame(data=np.fliplr(X.T), columns=columns, index=index)
     
-        import pdb; pdb.set_trace()
-        X = att_value[0,:6,:7]
-        print(X)
-
-        dframe = pd.DataFrame(data=X.T, columns=columns, index=index)
-    
-        #sns.heatmap(dframe)
-        #plt.show()
+        # show the attention weight heatmap
+        sns.heatmap(dframe)
+        plt.show()
 
 def interactive_session(model, vocab, i2w, show_attention=False):
 
@@ -413,15 +415,15 @@ if __name__ == '__main__':
     vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create model
-    model = create_model()
+    #model = create_model()
     
     # train
-    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    #train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
     #write(valid_reader, "model_epoch0.cmf", vocab, i2w)
     
     # test the model out in an interactive session
-    #print('loading model...')
-    #model_filename = "model_epoch0.cmf"
-    #model = load_model(model_filename)
-    #interactive_session(model, vocab, i2w, show_attention=True)
+    print('loading model...')
+    model_filename = "model_epoch0.cmf"
+    model = load_model(model_filename)
+    interactive_session(model, vocab, i2w, show_attention=True)
