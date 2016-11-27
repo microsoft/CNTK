@@ -73,25 +73,27 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
 
     # the function that gets passed to the LSTM function as the augment_input_hook parameter
     def augment_input_hook(prev_state):
+        
+        # get projected values
+        projected_value, value, valid = projected_attention_window_broadcast()
+        
         output_dim = prev_state.shape[0]
         W = parameter(shape=(output_dim, attention_dim), init=glorot_uniform())
 
         projectedH = times(Stabilizer()(prev_state), W, output_rank=1)        
 
-        tanh_out = tanh(projectedH + projected_attention_window_broadcast()[0])  # (attention_span, attention_dim)
+        tanh_out = tanh(projectedH + projected_value)  # (attention_span, attention_dim)
         
         # u = v * tanh(W1h + W2d)
         v = parameter(shape=(attention_dim, 1))
         
-        u = times(Stabilizer()(element_times(tanh_out, projected_attention_window_broadcast()[2])), v) # (attention_span, 1)
-                
-        u_valid = u + log(projected_attention_window_broadcast()[2])
-
+        u = times(Stabilizer()(element_times(tanh_out, valid)), v) # (attention_span, 1)
+         
         # we do two reshapes (20,1)->(20) and then (20)->(20,1) so that we can use the built-in softmax()
-        attention_weights = alias(softmax(reshape(u_valid, shape=(attention_span))), name='attention_weights')
+        attention_weights = alias(softmax(reshape(u, shape=(attention_span))), name='attention_weights')
         
         # the window should be shape=(attention_span, output_dim)
-        weighted_attention_window = element_times(projected_attention_window_broadcast()[1], 
+        weighted_attention_window = element_times(value, 
                                                   reshape(attention_weights, shape=(attention_span,1)), 
                                                   name='weighted_attention_window')
 

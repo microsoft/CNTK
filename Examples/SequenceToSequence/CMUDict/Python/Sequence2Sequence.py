@@ -227,6 +227,9 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
                                                find_arg_by_name('raw_labels', decoder_output_model) : 
                                                mb_valid[valid_reader.streams.labels]})
                 print_sequences(e, i2w)
+                
+                # debugging attention (uncomment to print out current attention window on validation sequence)
+                #debug_attention(decoder_output_model, mb_valid, valid_reader)                
 
             i += mb_train[train_reader.streams.labels].num_samples
             mbs += 1
@@ -329,8 +332,8 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
         import pandas as pd
     
         att = find_nodes_by_name(model, 'attention_weights')[0]
-        q = combine([decoder_output_model, att])
-        cur = q.forward({find_arg_by_name('raw_input' , model) : [features], 
+        q = combine([model, att])
+        output = q.forward({find_arg_by_name('raw_input' , model) : [features], 
                          find_arg_by_name('raw_labels', model) : [labels]},
                          att.outputs)
             
@@ -340,12 +343,14 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
         att_key = list(output[1].keys())[0]
         att_value = output[1][att_key]
     
-        X = att_value[0,:,:7]
+        import pdb; pdb.set_trace()
+        X = att_value[0,:6,:7]
+        print(X)
 
         dframe = pd.DataFrame(data=X.T, columns=columns, index=index)
     
-        sns.heatmap(dframe)
-        plt.show()
+        #sns.heatmap(dframe)
+        #plt.show()
 
 def interactive_session(model, vocab, i2w, show_attention=False):
 
@@ -380,6 +385,21 @@ def find_arg_by_name(name, expression):
     vars = [i for i in expression.arguments if i.name == name]
     assert len(vars) == 1
     return vars[0]
+
+# to help debug the attention window
+def debug_attention(model, mb, reader):
+    att = find_nodes_by_name(model, 'attention_weights')[0]
+    q = combine([model, att])
+    output = q.forward({find_arg_by_name('raw_input' , model) : 
+                         mb[reader.streams.features], 
+                         find_arg_by_name('raw_labels', model) : 
+                         mb[reader.streams.labels]},
+                         att.outputs)
+
+    att_key = list(output[1].keys())[0]
+    att_value = output[1][att_key]
+    print(att_value[0,0,:])
+
 
 #############################
 # main function boilerplate #
