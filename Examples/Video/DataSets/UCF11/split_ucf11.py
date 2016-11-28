@@ -79,6 +79,11 @@ def write_to_csv(items, file_path):
     '''
     Write file path and its target pair in a CSV file format.
     '''
+    
+    # Don't override existing file.
+    if os.path.exists(file_path):
+        return
+        
     if sys.version_info[0] < 3:
         with open(file_path, 'wb') as csv_file:
             writer = csv.writer(csv_file, delimiter=',')
