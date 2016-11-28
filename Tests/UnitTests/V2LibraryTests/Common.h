@@ -383,7 +383,7 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
 
 inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
 {
-    if ((minibatchIdx % outputFrequencyInMinibatches) == 0)
+    if ((minibatchIdx % outputFrequencyInMinibatches) == 0 && trainer.PreviousMinibatchSampleCount() != 0)
     {
         double trainLossValue = trainer.PreviousMinibatchLossAverage();
         double evaluationValue = trainer.PreviousMinibatchEvaluationAverage();
