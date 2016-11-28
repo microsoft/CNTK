@@ -145,6 +145,7 @@
     <ClCompile Include="MatrixSparseDenseInteractionsTests.cpp" />
     <ClCompile Include="MatrixTests.cpp" />
     <ClCompile Include="QuantizersTests.cpp" />
+    <ClCompile Include="QuantizedOperationsTests.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
