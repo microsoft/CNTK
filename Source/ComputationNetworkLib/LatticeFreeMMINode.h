@@ -105,8 +105,7 @@ public:
                 Matrix<ElemType> posteriorDenBackup(m_posteriorsDen->GetNumRows(), m_posteriorsDen->GetNumCols(), m_posteriorsDen->GetDeviceId());
                 posteriorDenBackup.SetValue(*m_posteriorsDen);
                 //m_posteriorsDen->Print("den");
-                fprintf(stderr, "frame dropping thresh %f\n", m_frameDropThresh);
-
+                
             // k * (1-alpha) * r_DEN + alpha * P_net - (k * (1-alpha) + alpha) * r_NUM + c * y
             if (m_ceweight != 0)
             {
