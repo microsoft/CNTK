@@ -20,7 +20,7 @@ from resnet_models import *
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
-data_path  = os.path.join(abs_path, "..", "..", "..", "Datasets", "CIFAR-10")
+data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
 
 # model dimensions
@@ -50,12 +50,12 @@ def create_reader(map_file, mean_file, train, distributed_after=INFINITE_SAMPLES
         ImageDeserializer(map_file, StreamDefs(
             features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
             labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
-        randomize = False,
+        multithreaded_deserializer = False,  # turn off omp as CIFAR-10 is not heavy for deserializer
         distributed_after = distributed_after)
 
 
 # Train and evaluate the network.
-def train_and_evaluate(reader_train, reader_test, network_name, max_epochs, distributed_trainer):
+def train_and_evaluate(reader_train, reader_test, network_name, max_epochs, distributed_trainer, scale_up=False):
 
     set_computation_network_trace_level(0)
 
@@ -79,7 +79,13 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs, dist
 
     # shared training parameters 
     epoch_size = 50000                    # for now we manually specify epoch size
-    minibatch_size = 128
+    
+    # NOTE: scaling up minibatch_size increases sample throughput. In 8-GPU machine,
+    # ResNet110 samples-per-second is ~7x of single GPU, comparing to ~3x without scaling
+    # up. However, bigger minimatch size on the same number of samples means less updates, 
+    # thus leads to higher training error. This is a trade-off of speed and accuracy
+    minibatch_size = 128 * (len(distributed_trainer.communicator().workers()) if scale_up else 1)
+    
     momentum_time_constant = -minibatch_size/np.log(0.9)
     l2_reg_weight = 0.0001
 
@@ -145,15 +151,17 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs, dist
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
-    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='160')
-    parser.add_argument('-q', '--quantize_bit', help='quantized bit', required=False, default='32')
-    parser.add_argument('-a', '--distributed_after', help='number of samples to train with before running distributed', required=False, default='0')
+    parser.add_argument('-e', '--epochs', help='total epochs', type=int, required=False, default='160')
+    parser.add_argument('-q', '--quantize_bit', help='quantized bit', type=int, required=False, default='32')
+    parser.add_argument('-s', '--scale_up', help='scale up minibatch size with #workers for better parallelism', type=bool, required=False, default='False')
+    parser.add_argument('-a', '--distributed_after', help='number of samples to train with before running distributed', type=int, required=False, default='0')
 
     args = vars(parser.parse_args())
     num_quantization_bits = int(args['quantize_bit'])
     epochs = int(args['epochs'])
     distributed_after_samples = int(args['distributed_after'])
     network_name = args['network']
+    scale_up = bool(args['scale_up'])
 
     # Create distributed trainer
     print("Start training: quantize_bit = {}, epochs = {}, distributed_after = {}".format(num_quantization_bits, epochs, distributed_after_samples))
@@ -164,7 +172,7 @@ if __name__=='__main__':
     reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True, distributed_after_samples)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
     
-    train_and_evaluate(reader_train, reader_test, network_name, epochs, distributed_trainer)
+    train_and_evaluate(reader_train, reader_test, network_name, epochs, distributed_trainer, scale_up)
     
     # Must call MPI finalize when process exit
     distributed.Communicator.finalize()

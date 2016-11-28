@@ -28,8 +28,8 @@ TrainConvNet = {
             ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
             ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
               MaxPoolingLayer {(3:3), stride = (2:2)} :
-            DenseLayer {256} : Dropout : ReLU : 
-            DenseLayer {128} : Dropout : ReLU : 
+            DenseLayer {256} : ReLU : Dropout : 
+            DenseLayer {128} : ReLU : Dropout : 
             LinearLayer {labelDim}
         )
 

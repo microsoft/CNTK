@@ -14,11 +14,12 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 from cntk import Trainer, persist, cntk_py
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from _cntk_py import set_computation_network_trace_level
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
-data_path  = os.path.join(abs_path, "..", "..", "..", "Datasets", "CIFAR-10")
+data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
 
 # model dimensions
@@ -83,8 +84,8 @@ def convnet_cifar10_dataaug(reader_train, reader_test, max_epochs = 80):
     # Set learning parameters
     lr_per_sample          = [0.0015625]*20+[0.00046875]*20+[0.00015625]*20+[0.000046875]*10+[0.000015625]
     lr_schedule            = learning_rate_schedule(lr_per_sample, unit=UnitType.sample, epoch_size=epoch_size)
-    momentum_time_constant = [0]*20+[600]*20+[1200]
-    mm_schedule            = momentum_as_time_constant_schedule(momentum_time_constant, epoch_size=epoch_size)
+    mm_time_constant       = [0]*20+[600]*20+[1200]
+    mm_schedule            = momentum_as_time_constant_schedule(mm_time_constant, epoch_size=epoch_size)
     l2_reg_weight          = 0.002
     
     # trainer object

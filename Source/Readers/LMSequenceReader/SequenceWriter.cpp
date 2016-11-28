@@ -67,8 +67,8 @@ void LMSequenceWriter<ElemType>::InitFromConfig(const ConfigRecordType& writerCo
 
 template <class ElemType>
 void LMSequenceWriter<ElemType>::ReadLabelInfo(const wstring& vocfile,
-                                               map<string, int>& word4idx,
-                                               map<int, string>& idx4word)
+                                               map<string, int>& word4idx2,
+                                               map<int, string>& idx4word2)
 {
     char strFileName[MAX_STRING];
     char stmp[MAX_STRING];
@@ -88,9 +88,9 @@ void LMSequenceWriter<ElemType>::ReadLabelInfo(const wstring& vocfile,
     b = 0;
     while (!feof(vin))
     {
-        fscanf_s(vin, "%s\n", stmp, _countof(stmp));
-        word4idx[stmp] = b;
-        idx4word[b++] = stmp;
+        fscanf_s(vin, "%s\n", stmp, (unsigned int)_countof(stmp));
+        word4idx2[stmp] = b;
+        idx4word2[b++] = stmp;
     }
     fclose(vin);
 }

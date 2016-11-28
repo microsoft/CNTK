@@ -352,7 +352,7 @@ shared_ptr<Matrix<ElemType>> TensorView<ElemType>::AsMatrix() const
 }
 
 template <class ElemType>
-void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha)
+void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier)
 {
     // determine integration dimension offset
     auto shapeA = a.m_shape;
@@ -383,9 +383,9 @@ void TensorView<ElemType>::DoMatrixProductOf(ElemType beta, bool transC, const T
     auto C =   Reshaped(shapeC).AsMatrix();
     // and go
     if (!transC)
-        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *A, transA, *B, transB, beta, *C);
+        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *A, transA, *B, transB, beta, *C, pQuantizedMultiplier);
     else // C' = A * B  <==>  C = (A * B)' = B' * A'
-        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *B, !transB, *A, !transA, beta, *C);
+        Matrix<ElemType>::MultiplyAndWeightedAdd(alpha, *B, !transB, *A, !transA, beta, *C, pQuantizedMultiplier);
 }
 
 template class TensorView<float>;

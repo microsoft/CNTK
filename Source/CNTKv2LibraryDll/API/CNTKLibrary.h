@@ -393,15 +393,10 @@ namespace CNTK
         friend class PackedValue;
         friend class MPICommunicatorImpl;
         friend class BlockMomentumDistributedTrainer;
+        friend class Internal::VariableResolver;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
-
-        template <typename ElementType>
-        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
 
     public:
         ///
@@ -635,6 +630,7 @@ namespace CNTK
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
     private:
+
         CNTK_API NDArrayView(::CNTK::DataType dataType, const DeviceDescriptor& device, ::CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
 
 
@@ -1599,11 +1595,7 @@ namespace CNTK
         template <typename T>
         friend struct std::hash;
 
-        template <typename ElementType>
-        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend class Internal::VariableResolver;
 
 #ifndef SWIG
     private:
@@ -1952,11 +1944,7 @@ private:
         template <typename T>
         friend struct std::hash;
 
-        template <typename ElementType>
-        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend class Internal::VariableResolver;
 
     public:
         ///
@@ -2037,11 +2025,7 @@ private:
         template <typename T>
         friend struct std::hash;
 
-        template <typename ElementType>
-        friend Variable Internal::GetVariable(const Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                                              std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, Variable>& nodeToVariableMap,
-                                              std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                              std::unordered_set<FunctionPtr>& allPrimitiveFunctions);
+        friend class Internal::VariableResolver;
 
     public:
         ///
@@ -2175,13 +2159,17 @@ namespace CNTK
         /// Returns the Function that 'this' BackPropState belongs to
         ///
         FunctionPtr Function() const { return m_function; }
+        DeviceDescriptor Device() const { return m_forwardComputeDevice; }
         virtual ~BackPropState() {}
 
     protected:
-        BackPropState(const FunctionPtr& function) : m_function(function) {}
+        BackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice) 
+            : m_function(function), m_forwardComputeDevice(computeDevice)
+        {}
 
     protected:
         FunctionPtr m_function;
+        DeviceDescriptor m_forwardComputeDevice;
     };
     typedef std::shared_ptr<BackPropState> BackPropStatePtr;
 
@@ -2494,6 +2482,16 @@ namespace CNTK
     CNTK_API FunctionPtr Tanh(const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise sine operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Sin(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise cosine operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Cos(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in elementwise linear rectifier operation with the specified input operand.
     ///
     CNTK_API FunctionPtr ReLU(const Variable& operand, const std::wstring& name = L"");
@@ -2704,6 +2702,12 @@ namespace CNTK
     {
         return TransposeTimes(leftOperand, rightOperand, /*outputRank =*/ 1, name);
     }
+
+
+    ///
+    /// Create an instance of the CNTK built-in operation to compute the cosine distance for the specified input operands.
+    ///
+    CNTK_API FunctionPtr CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation to compute binary cross-entropy for specified input operands.

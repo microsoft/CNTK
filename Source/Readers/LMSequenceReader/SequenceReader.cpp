@@ -983,7 +983,7 @@ bool SequenceReader<ElemType>::SentenceEnd()
 /// the fourth row is the ending index + 1 of the class for this word
 template <class ElemType>
 void SequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matrices,
-                                              size_t m_mbStartSample, size_t actualmbsize)
+                                              size_t mbStartSample, size_t actualmbsize)
 {
     FailBecauseDeprecated(__FUNCTION__);    // DEPRECATED CLASS, SHOULD NOT BE USED ANYMORE
 
@@ -1000,7 +1000,7 @@ void SequenceReader<ElemType>::GetLabelOutput(StreamMinibatchInputs& matrices,
     else if (readerMode == ReaderMode::Softmax)
         labels.Resize(1, actualmbsize);
 
-    for (size_t jSample = m_mbStartSample; j < actualmbsize; ++j, ++jSample)
+    for (size_t jSample = mbStartSample; j < actualmbsize; ++j, ++jSample)
     {
         // pick the right sample with randomization if desired
         size_t jRand = jSample;
@@ -1849,20 +1849,20 @@ bool BatchSequenceReader<ElemType>::GetMinibatchData(size_t& /*out*/ firstPosInS
             // generate the output label token
             if (labelOut.type != labelNone)
             {
-                const auto& labelValue = m_labelTemp[pos];
+                const auto& labelValue2 = m_labelTemp[pos];
                 LabelIdType labelId;
                 if (labelOut.type == labelCategory)
                 {
                     pos++; // consume it   --TODO: value is not used after this
-                    labelId = GetIdFromLabel(labelValue, labelOut);
+                    labelId = GetIdFromLabel(labelValue2, labelOut);
                 }
                 else if (nextWord)
                 {
                     // this is the next word (pos was already incremented above when reading out labelValue)
-                    if (EqualCI(labelValue, labelIn.endSequence)) // end symbol may differ between input and output
+                    if (EqualCI(labelValue2, labelIn.endSequence)) // end symbol may differ between input and output
                         labelId = GetIdFromLabel(labelIn.endSequence, labelIn);
                     else
-                        labelId = GetIdFromLabel(labelValue, labelIn);
+                        labelId = GetIdFromLabel(labelValue2, labelIn);
                 }
                 else
                     LogicError("Unexpected output label type."); // should never get here

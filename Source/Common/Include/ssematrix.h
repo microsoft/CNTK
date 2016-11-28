@@ -1177,13 +1177,13 @@ public:
     // Does this really make sense?? Should be rather done during computation.
     void prefetch() const
     {
-        const msra::math::float4 *p = (msra::math::float4 *) this->p;
+        const msra::math::float4 *p2 = (msra::math::float4 *) this->p;
         size_t numfloat4s = cols() * colstride / 4;
-        const msra::math::float4 *q = p + numfloat4s;
+        const msra::math::float4 *q = p2 + numfloat4s;
         const size_t cacherowbytes = 64; // or what?
-        const size_t cacherowfloat4s = cacherowbytes / sizeof(*p);
-        for (; p < q; p += cacherowfloat4s)
-            msra::math::float4::prefetch(p);
+        const size_t cacherowfloat4s = cacherowbytes / sizeof(*p2);
+        for (; p2 < q; p2 += cacherowfloat4s)
+            msra::math::float4::prefetch(p2);
     }
 
     // diagnostics helper to check if matrix has a NaN

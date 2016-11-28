@@ -18,7 +18,9 @@ public:
         rangeMax = std::numeric_limits<QuantizedType>::max();
     }
     virtual void Quantize(const ArrayRef<RawType>& input, ArrayRef<QuantizedType>& output) = 0;
-    virtual void Dequantize(const ArrayRef<QuantizedType>& input, ArrayRef<RawType>& output) = 0;
+    virtual void Dequantize(const ArrayRef<RawType>& input, ArrayRef<RawType>& output) = 0;
+    virtual void Dequantize(const RawType* input, RawType* output, size_t size) = 0;
+
 
 protected:
     QuantizedType rangeMax;
@@ -27,56 +29,68 @@ protected:
 // Symmetric quantizer. 
 // Quantization is achieved by 
 //    1. Finding the absolute max of values to be quantized.
-//    2. Adjusting the absolute max with extraBits parameter.
-//    3. Scaling all values in the collection to be within the symmetric range of the QuantizedType
+//    2. Adjusting the max with bit shifting specified with the bitShift parameter (see comment at the declaration of the parameter)
+//    3. Scaling all values in the collection to be within the symmetric range of the signed integer (QuantizedType)
 template <class RawType, class QuantizedType>
 class SymmetricQuantizer : public QuantizerBase<RawType, QuantizedType>
 {
     RawType m_quantizeFactor;
     RawType m_inverseQuantizerFactor;
-    RawType m_absMax;
+
+    // Decreases the maximum range of quantziation by 2^bitShift to prevent integer overflow during BLAS routines.
+    // bitShift=0 doesn't change the range; higher bitShift will decrease precision of quantization, but will make BLAS routines less prone to overflow.
+    // For quantization with shorts, recommended value of bitShift is from 1 to 3, but it's model and feature dependent and should be experimented with for optimal results
+    size_t m_bitShift; 
 public:
     // elements - collection to be quantized
-    // extraBits decreases the quantization normalizer to prevent integer overflow during BLAS routines.
-    //     Higher extraBits will decrease precision of quantization, but will make BLAS routines less prone to overflow.
-    //     For quantization with shorts, recommended value of extraBits is 1-3.
-    // This constructor accepts the collection of RawType to initialize internal quantizer
-    // and then apply this quantizer to collections with similar range as the one it was initialized with.
-    SymmetricQuantizer(const ArrayRef<RawType>& input, size_t extraBits)
+    // bitShift - see comment above
+    SymmetricQuantizer(size_t bitShift) : m_bitShift(bitShift)
     {
-        m_absMax = FindAbsMax(input);
-        Initialize(m_absMax, extraBits);
-    }
-
-    // absoluteMax - the range of the quantizer (normally represents maximum absolute value of the values in the collection to be quantized).
-    // extraBits - see comment in another ctor
-    SymmetricQuantizer(RawType absoluteMax, size_t extraBits)
-    {
-        Initialize(absoluteMax, extraBits);
     }
 
     // Perform quantization of the input collection, put result into pre-allocated output collection
     virtual void Quantize(const ArrayRef<RawType>& input, ArrayRef<QuantizedType>& output)
     {
+        if (input.size() == 0)
+            return;
         assert(input.size() == output.size());
+
+        RawType absoluteMax = FindAbsMax(input);
+
+        RawType shiftedMax = absoluteMax * (1 << m_bitShift);
+        if (shiftedMax == 0)
+        {
+            // Whole input collection is 0's
+            // Turn output collection to 0's as well
+            m_quantizeFactor = 0;
+            m_inverseQuantizerFactor = 0;
+        }
+        else
+        {
+            m_quantizeFactor = this->rangeMax / shiftedMax;
+            m_inverseQuantizerFactor = 1 / m_quantizeFactor;
+        }
 
         for (size_t i = 0; i < input.size(); i++)
         {
-#ifdef _DEBUG
-            assert(abs(input[i]) <= m_absMax);
-#endif
-            output[i] = (QuantizedType) round((input[i] * m_quantizeFactor));
+            output[i] = (QuantizedType)round(input[i] * m_quantizeFactor);
         }
     }
 
     // Accept quantized collection as input, put de-quantization result into pre-allocated output collection.
-    virtual void Dequantize(const ArrayRef<QuantizedType>& input, ArrayRef<RawType>& output)
+    virtual void Dequantize(const ArrayRef<RawType>& input, ArrayRef<RawType>& output)
     {
         assert(input.size() == output.size());
 
-        for (size_t i = 0; i < input.size(); i++)
+        Dequantize(input.data(), output.data(), input.size());
+    }
+
+    // Accept quantized collection as input, put de-quantization result into pre-allocated output collection.
+    virtual void Dequantize(const RawType* input, RawType* output, size_t size)
+    {
+        for (size_t i = 0; i < size; i++)
         {
-            output[i] = (RawType)(input[i] * m_inverseQuantizerFactor);
+            output[i] = input[i] * m_inverseQuantizerFactor;
         }
     }
 
@@ -84,22 +98,9 @@ private:
     // Find absolute maximum value
     RawType FindAbsMax(const ArrayRef<RawType>& arrayRef)
     {
-        RawType maxElem = *std::max_element(arrayRef.begin(), arrayRef.end());
-        RawType minElem = *std::min_element(arrayRef.begin(), arrayRef.end());
+        auto minMaxPair = std::minmax_element(arrayRef.begin(), arrayRef.end());
 
-        return std::max(maxElem, std::abs(minElem));
-    }
-
-    void Initialize(RawType absoluteMax, size_t extraBits)
-    {
-        RawType shiftedMax = absoluteMax * (1 << extraBits);
-        if (shiftedMax == 0)
-        {
-            LogicError("The absolute max element in the sequence to be quantized is 0.");
-        }
-        m_absMax = absoluteMax;
-        m_quantizeFactor = this->rangeMax / shiftedMax;
-        m_inverseQuantizerFactor = 1 / m_quantizeFactor;
+        return std::max(arrayRef[minMaxPair.second - arrayRef.begin()], std::abs(arrayRef[minMaxPair.first - arrayRef.begin()]));
     }
 };
 

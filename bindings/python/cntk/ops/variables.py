@@ -206,7 +206,6 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
             ndav = sanitize_value(shape, value, dtype, device)
             super().__init__(ndav, name)
 
-
     @property
     def value(self):
         '''

@@ -98,8 +98,8 @@ class Learner(cntk_py.Learner):
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
         '''
-        from .utils import create_NDArrayView_from_NumPy
-        var_nd_map = { var:create_NDArrayView_from_NumPy(val) for var, val in
+        from .utils import _create_NDArrayView_from_NumPy
+        var_nd_map = { var: _create_NDArrayView_from_NumPy(val) for var, val in
                 gradient_values.items() }
 
         return super(Learner, self).update(var_nd_map, training_sample_count)
@@ -369,7 +369,8 @@ def momentum_sgd(parameters, lr, momentum,
          with truncation
 
     Returns:
-        Instance of a :class:`cntk.learner.Learner` that can be passed to the :class:`cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learner.Learner` that can be passed to the
+        :class:`~cntk.trainer.Trainer`
     '''
     _verify_learning_rate_type(lr)
     _verify_momentum_type(momentum)
