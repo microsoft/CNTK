@@ -147,13 +147,13 @@ void TestSimpleRecurrence(size_t inputDim,
     plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
 
     auto reducedOutput = ReduceSum(plusOutput, L"sum");
-    auto rootFunc = Combine({ reducedOutput, plusOutput });
 
     if (testSaveAndReLoad)
     {
         Variable plusOutputVar = plusOutput;
         Variable reducedOutputVar = reducedOutput;
 
+        auto rootFunc = Combine({ reducedOutput, plusOutput });
         SaveAndReloadModel<ElementType>(rootFunc, { &inputVar, &timesParam, &plusParam, &plusOutputVar, &reducedOutputVar }, device);
 
         plusOutput = plusOutputVar;
@@ -242,7 +242,7 @@ void TestSimpleRecurrence(size_t inputDim,
         ValuePtr plusOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), MakeSharedObject<NDMask>(inputValue->Mask()->Shape()));
 
         std::unordered_map<Variable, ValuePtr> outputs = { { reducedOutput, reducedOutputValue }, { plusOutput, plusOutputValue } };
-        auto backpropState = rootFunc->Forward({ { inputVar, inputValue } }, outputs, device, { plusOutput });
+        auto backpropState = reducedOutput->Forward({ { inputVar, inputValue } }, outputs, device, { plusOutput });
 
         // Perform backprop
         std::vector<ElementType> rootGradientsData(plusOutputShape.TotalSize(), std::numeric_limits<ElementType>::quiet_NaN());
@@ -269,7 +269,7 @@ void TestSimpleRecurrence(size_t inputDim,
         ValuePtr inputGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputGradientData.data(), inputGradientData.size(), DeviceDescriptor::CPUDevice(), false), inputValue->Mask()->DeepClone());
 
         std::unordered_map<Variable, ValuePtr> outGradients = { { inputVar, inputGradientValue }, { plusParam, plusParameterGradientValue }, { timesParam, timesParameterGradientValue } };
-        rootFunc->Backward(backpropState, { { plusOutput, rootGradientValue } }, outGradients);
+        reducedOutput->Backward(backpropState, { { plusOutput, rootGradientValue } }, outGradients);
 
         // Verify forward prop results
         std::vector<ElementType> expectedPlusOutputData(plusOutputShape.TotalSize(), 0);

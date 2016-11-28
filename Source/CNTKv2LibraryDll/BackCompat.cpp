@@ -128,6 +128,12 @@ namespace CNTK
                     opType = PrimitiveOpType::Sigmoid;
                 else if (node->OperationName() == OperationNameOf(TanhNode))
                     opType = PrimitiveOpType::Tanh;
+                else if (node->OperationName() == OperationNameOf(CosineNode))
+                    opType = PrimitiveOpType::Cos;
+                else if (node->OperationName() == OperationNameOf(SinNode))
+                    opType = PrimitiveOpType::Sin;
+                else if (node->OperationName() == OperationNameOf(PassNode))
+                    opType = PrimitiveOpType::Pass;
                 else if (node->OperationName() == OperationNameOf(RectifiedLinearNode))
                     opType = PrimitiveOpType::ReLU;
                 else if (node->OperationName() == OperationNameOf(ExpNode))
@@ -268,6 +274,8 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOffset] = (size_t)node->As<FutureValueNode<ElementType>>()->TimeStep();
                     opType = PrimitiveOpType::FutureValue;
                 }
+                else if (node->OperationName() == OperationNameOf(CosDistanceNode))
+                    opType = PrimitiveOpType::CosDistance;
                 else if (node->OperationName() == OperationNameOf(LogisticNode))
                     opType = PrimitiveOpType::Logistic;
                 else if (node->OperationName() == OperationNameOf(SquareErrorNode))
@@ -477,10 +485,10 @@ namespace CNTK
             switch (dataType)
             {
             case DataType::Float:
-                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, false);
+                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, {}, false);
                 break;
             case DataType::Double:
-                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, false);
+                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, {}, false);
                 break;
             default:
                 LogicError("Unknown DataType %s", DataTypeName(dataType));

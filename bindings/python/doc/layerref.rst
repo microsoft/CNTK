@@ -28,7 +28,7 @@ you can use the alternative :ref:`sequential` notation:
 ::
 
     from layers import *
-    from modelss import *
+    from models import *
     my_model = Sequential ([
         Dense(1024, activation=relu),
         Dense(9000, activation=softmax)
@@ -707,7 +707,7 @@ softmax classifer, could have this form:
 
     w = Input(...)                          # word sequence (one-hot vectors)
     e = Embedding(150)(w)                   # embed as a 150-dimensional dense vector
-    h = Recurrent(LSTM(300))(e)             # left-to-right LSTM with hidden and cell dim 300
+    h = Recurrence(LSTM(300))(e)            # left-to-right LSTM with hidden and cell dim 300
     t = select_last(h)                      # extract last hidden state
     z = Dense(10000, activation=softmax)(t) # softmax classifier
 
@@ -716,8 +716,8 @@ dimension compared to above), use this:
 
 ::
 
-    h_fwd = Recurrent(LSTM(150))(e)
-    h_bwd = Recurrent(LSTM(150), go_backwards=True)(e)
+    h_fwd = Recurrence(LSTM(150))(e)
+    h_bwd = Recurrence(LSTM(150), go_backwards=True)(e)
     h = splice ([h_fwd, h_bwd])
 
 .. _lstm:

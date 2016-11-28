@@ -176,3 +176,15 @@ def test_mask(batch, seq_starts, expected_mask):
     s = sanitize_batch(var, batch, seq_starts)
     assert np.allclose(s.mask, expected_mask)
 
+def test_sanitize_batch_contiguity():
+    a1 = AA([[1,2],[3,4]])
+    a2 = AA([[5,6],[7,8]])
+    var = input_variable((2,2), is_sparse=True)
+
+    batch = [[a1.T],[a2.T]]
+    with pytest.raises(ValueError):
+        b = sanitize_batch(var, batch)
+
+    batch = [[a1],[a2]]
+    b = sanitize_batch(var, batch)
+    assert b.shape == (2,1,2,2)

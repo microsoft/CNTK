@@ -9,7 +9,7 @@ import math
 import numpy as np
 from .. import Function
 from ..ops import times
-from ..utils import one_hot, cntk_device, cpu
+from ..utils import one_hot, cntk_device
 from ..trainer import *
 from ..learner import *
 from .. import cross_entropy_with_softmax, classification_error, parameter, \
@@ -118,12 +118,12 @@ def test_eval_sparse_dense(tmpdir, device_id):
     data = [csr_matrix(np.eye(input_vocab_dim, dtype=np.float32)[d]) for d in
             one_hot_data]
     e_csr = z.eval({raw_input: data}, device=cntk_device(device_id))
-    assert np.all(np.allclose(a, b) for a,b in zip(e_reader, e_csr))
+    assert np.all([np.allclose(a, b) for a,b in zip(e_reader, e_csr)])
 
     # One-hot with the raw_input encoding in ctf_data
     data = one_hot(one_hot_data, num_classes=input_vocab_dim)
     e_hot = z.eval({raw_input: data}, device=cntk_device(device_id))
-    assert np.all(np.allclose(a, b) for a,b in zip(e_reader, e_hot))
+    assert np.all([np.allclose(a, b) for a,b in zip(e_reader, e_hot)])
 
 @pytest.mark.parametrize("batch_index_data", [
      [2,3], 
@@ -159,11 +159,15 @@ def test_eval_sparse_seq_1(batch, device_id):
     for var_is_sparse in [True, False]: 
         in1 = input_variable(shape=(dim,), is_sparse=var_is_sparse)
         z = times(in1, multiplier*np.eye(dim))
-        expected = [[m.todense() * multiplier for m in seq] for seq in batch]
+        if isinstance(batch[0], list):
+            expected = [np.vstack([m.todense() * multiplier for m in seq]) for seq in
+                    batch]
+        else:
+            expected = [seq.todense() * multiplier for seq in batch]
         result = z.eval({in1: batch}, device=cntk_device(device_id))
 
-        assert np.all(np.allclose(a,b) \
-                for a,b in zip(result, expected))
+        assert np.all([np.allclose(a,b) for a,b in zip(result, expected)]), \
+                "%s != %s"%(result,expected)
 
 
 @pytest.mark.parametrize("one_hot_batch", [
@@ -176,6 +180,9 @@ def test_eval_sparse_seq_1(batch, device_id):
 def test_eval_one_hot_seq(one_hot_batch, device_id):
     dim = 10
     multiplier = 2
+
+    from cntk.device import cpu, gpu, set_default_device
+    set_default_device(gpu(0))
     for var_is_sparse in [True, False]: 
         in1 = input_variable(shape=(dim,), is_sparse=var_is_sparse)
         # Convert CNTK node value to dense so that we can compare it later
@@ -183,8 +190,8 @@ def test_eval_one_hot_seq(one_hot_batch, device_id):
         # Convert expectation to dense
         expected = [np.eye(dim)[seq]*multiplier for seq in one_hot_batch]
         batch = one_hot(one_hot_batch, num_classes=dim, device=cntk_device(device_id))
-        assert np.all(np.allclose(a,b) \
-                for a,b in zip(z.eval({in1: batch}, device=cntk_device(device_id)), expected))
+        result = z.eval({in1: batch}, device=cntk_device(device_id))
+        assert np.all([np.allclose(a,b) for a,b in zip(result, expected)])
 
 @pytest.mark.parametrize("one_hot_batch, dim", [
     ([[11]], 10),

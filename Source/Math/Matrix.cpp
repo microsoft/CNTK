@@ -17,6 +17,7 @@
 #include "GPUWatcher.h" // bring in this class as well so that it gets exported from this DLL
 #include <memory>
 #include <atomic>
+#include "Quantizers.h"
 #ifndef CPUONLY
 #pragma comment(lib, "MathCUDA.lib") // built by CNTKMathCUDA project
 #endif
@@ -1094,12 +1095,18 @@ Matrix<ElemType>& Matrix<ElemType>::DoGatherColumnsOf(ElemType beta, const Matri
         { m_CPUSparseMatrix->DoGatherColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUSparseMatrix, alpha); },
         { 
             // TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
-            Matrix<ElemType> tempIdx(CPUDEVICE); tempIdx.AssignValuesOf(idx);
-            CPUSparseMatrix<ElemType> tempA(a.GetFormat(), a.GetNumRows(), a.GetNumCols(), a.m_GPUSparseMatrix->GetNumNZElements());
 
+            Matrix<ElemType> tempIdx(CPUDEVICE); tempIdx.AssignValuesOf(idx);
+
+            CPUSparseMatrix<ElemType> tempA(a.GetFormat(), a.GetNumRows(), a.GetNumCols(), a.m_GPUSparseMatrix->GetNumNZElements());
             a.m_GPUSparseMatrix->CopyToCPUSparseMatrix(tempA);
-            tempA.DoGatherColumnsOf(beta, *tempIdx.m_CPUMatrix, tempA, alpha);
-            m_GPUSparseMatrix->SetValue(tempA);
+
+            CPUSparseMatrix<ElemType> tempThis(m_GPUSparseMatrix->GetFormat(), m_GPUSparseMatrix->GetNumRows(), m_GPUSparseMatrix->GetNumCols(),
+                m_GPUSparseMatrix->GetNumNZElements());
+            m_GPUSparseMatrix->CopyToCPUSparseMatrix(tempThis);
+
+            tempThis.DoGatherColumnsOf(beta, *tempIdx.m_CPUMatrix, tempA, alpha);
+            m_GPUSparseMatrix->SetValue(tempThis);
         });
 
     return *this;
@@ -4496,7 +4503,7 @@ void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, M
 /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
 template <class ElemType>
 void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const bool transposeA, const Matrix<ElemType>& b, const bool transposeB,
-                                              ElemType beta, Matrix<ElemType>& c)
+                                              ElemType beta, Matrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier)
 {
     DecideAndMoveToRightDevice(a, b, c);
 
@@ -4546,7 +4553,7 @@ void Matrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const Matrix<ElemT
             else // CPU, DENSE * DENSE -> DENSE (matrix c enforced to be DENSE)
             {
                 c.SwitchToMatrixType(MatrixType::DENSE, matrixFormatDense, false);
-                CPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix);
+                CPUMatrix<ElemType>::MultiplyAndWeightedAdd(alpha, *a.m_CPUMatrix, transposeA, *b.m_CPUMatrix, transposeB, beta, *c.m_CPUMatrix, pQuantizedMultiplier);
                 c.SetDataLocation(CPU, DENSE);
             }
         }

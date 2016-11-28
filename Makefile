@@ -1114,6 +1114,7 @@ UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/CPUSparseMatrixTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/fixtures.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/QuantizersTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/MathTests/QuantizedOperationsTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/TensorTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/GPUMatrixCudaBlasTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/GPUMatrixTests.cpp \

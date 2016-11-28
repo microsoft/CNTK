@@ -371,6 +371,12 @@ namespace CNTK
         case PrimitiveOpType::Tanh:
             computationNodePtr = New<TanhNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
+        case PrimitiveOpType::Cos:
+            computationNodePtr = New<CosineNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
+        case PrimitiveOpType::Sin:
+            computationNodePtr = New<SinNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
         case PrimitiveOpType::ReLU:
             computationNodePtr = New<RectifiedLinearNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
@@ -528,6 +534,9 @@ namespace CNTK
             computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose, ImageLayoutKind::CHW, maxTempMemSizeInSamples);
             break;
         }
+        case PrimitiveOpType::CosDistance:
+            computationNodePtr = New<CosDistanceNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
         case PrimitiveOpType::Logistic:
             computationNodePtr = New<LogisticNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
@@ -619,6 +628,9 @@ namespace CNTK
             computationNodePtr = New<LogSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
         }
+        case PrimitiveOpType::Pass:
+            computationNodePtr = New<PassNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+            break;
         default:
             LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
             break;
@@ -703,7 +715,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device, const std::unordered_set<Variable>& backpropRoots, bool allocateNetworkMatrices)
+    ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device, const std::unordered_set<Variable>& backpropRoots, const std::unordered_set<Variable>& outputs, bool allocateNetworkMatrices)
     {
         if (m_computationNetwork != nullptr)
         {
@@ -716,7 +728,6 @@ namespace CNTK
             // TODO: Support changing the device across different invocations of the forward method on a Function instance
             if (AsDeviceDescriptor(m_computationNetwork->GetDeviceId()) != device)
                 LogicError("Changing device across different Forward calls on a CNTK composite Function is currently unsupported");
-
         }
         else
         {
@@ -743,6 +754,13 @@ namespace CNTK
             {
                 if (!m_isVariableRootMap[rootOutput])
                     m_computationNetwork->AddToNodeGroup(L"output", m_variableToNodeMap[rootOutput]);
+            }
+
+            // If any of the requested outputs is not a root node, we need to explicitly add it to the 'output' group of the ComputationNetwork
+            for (auto output : outputs)
+            {
+                if (!m_isVariableRootMap[output])
+                    m_computationNetwork->AddToNodeGroup(L"output", m_variableToNodeMap[output]);
             }
 
             m_currentBackpropRoots = backpropRoots;
@@ -819,8 +837,32 @@ namespace CNTK
                     backpropRootNode = currentRootNode;
             }
 
-            m_computationNetwork->AllocateAllMatrices(forwardRootNodes, {}, backpropRootNode);
+            std::vector<ComputationNodeBasePtr> forwardOutputNodes;
+            for (auto output : outputs)
+            {
+                auto currentOutputNode = m_variableToNodeMap[output];
+                forwardOutputNodes.push_back(currentOutputNode);
+
+                if (m_currentBackpropRoots.find(output) != m_currentBackpropRoots.end())
+                    backpropRootNode = currentOutputNode;
+            }
+
+            m_computationNetwork->AllocateAllMatrices(forwardRootNodes, forwardOutputNodes, backpropRootNode);
             m_networkMatricesAllocated = allocateNetworkMatrices;
+
+            m_currentOutputs = outputs;
+            m_currentOutputs.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
+            m_currentOutputs.insert(m_currentBackpropRoots.begin(), m_currentBackpropRoots.end());
+        }
+        else
+        {
+            // Make sure the outputs requested are a subset of the outputs we setup the current matrix allocation structure
+            // in the cached computation network
+            for (auto output : outputs)
+            {
+                if (m_currentOutputs.find(output) == m_currentOutputs.end())
+                    LogicError("Changing requested outputs across different Forward calls on a CNTK composite Function is currently unsupported");
+            }
         }
 
         return m_computationNetwork;
@@ -1235,10 +1277,6 @@ namespace CNTK
         auto functionOutputs = this->Outputs();
         for (auto gradientVarValuePair : gradients)
         {
-            // Only gradients for roots of the function can be specified
-            if (std::find(functionOutputs.begin(), functionOutputs.end(), gradientVarValuePair.first) == functionOutputs.end())
-                InvalidArgument("Gradients cannot be specified for a Variable that is not an Output of the Function");
-
             auto outputComputationNode = m_variableToNodeMap[gradientVarValuePair.first];
             ValuePtr gradientValue = gradientVarValuePair.second;
 
@@ -1394,10 +1432,14 @@ namespace CNTK
             }
         }
 
+        std::unordered_set<Variable> requestedOutputVariables;
+        for (auto output : outputs)
+            requestedOutputVariables.insert(output.first);
+
         if (dataType == DataType::Float)
-            GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor, true);
+            GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, true);
         else if (dataType == DataType::Double)
-            GetComputationNetwork<double>(computeDevice, outputsToRetainBackwardStateFor, true);
+            GetComputationNetwork<double>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, true);
         else
             InvalidArgument("Unsupported DataType %s", DataTypeName(dataType));
 
@@ -1406,10 +1448,6 @@ namespace CNTK
         std::unordered_set<Variable> requiredArguments;
         for (auto outputVarValuePair : outputs)
         {
-            // Ensure that only a subset of this function's outputs are being asked to be evaluated
-            if (functionOutputs.find(outputVarValuePair.first) == functionOutputs.end())
-                InvalidArgument("Requested output is not an Output of the Function");
-
             auto& requiredArgumentsForCurrentOutput = GetArgumentDependencies(outputVarValuePair.first);
             requiredArguments.insert(requiredArgumentsForCurrentOutput.begin(), requiredArgumentsForCurrentOutput.end());
 
@@ -1452,9 +1490,6 @@ namespace CNTK
         // The 'outputsToRetainBackwardStateFor' nodes also need to be evaluated if not already specified in 'outputs'
         for (auto rootVarForBackprop : outputsToRetainBackwardStateFor)
         {
-            if (functionOutputs.find(rootVarForBackprop) == functionOutputs.end())
-                InvalidArgument("Requested outputs to retain backward state for is not an Ouptut of the Function");
-
             if (outputs.find(rootVarForBackprop) == outputs.end())
                 outputsToEvaluate.push_back(m_variableToNodeMap[rootVarForBackprop]);
         }

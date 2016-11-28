@@ -369,6 +369,11 @@ class Test:
   # Baseline filename fragments to match for GPU device, decreasing priority.
   gpuBaselinePatternList = []
 
+  # Generate baseline pattern fragments for GPU tests based on the minimum CC
+  # level of the cards available on the host. The CC level of only a few cards
+  # is made known to the test driver, based on our test lab set up. Note that
+  # we don't mix cards of different CC levels.
+  # TODO make more general, provide GPU selection
   def getGpuBaselinePatternList(self):
     if not self.gpuBaselinePatternList:
       self.gpuBaselinePatternList = [".gpu", ""]

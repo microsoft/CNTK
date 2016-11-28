@@ -16,6 +16,7 @@
 #include <stdarg.h>
 #ifdef _WIN32
 #include <Windows.h>
+#undef max
 #endif
 #if __unix__
 #include <dlfcn.h> // for Plugin
@@ -586,6 +587,7 @@ struct nocase_compare
 // ----------------------------------------------------------------------------
 
 // Array class
+// Wrapper that holds pointer to data, as well as size
 template <class T>
 class ArrayRef
 {
@@ -612,7 +614,9 @@ public:
     // TODO: Move assignment operator
     ArrayRef& operator=(ArrayRef&& rhs) = delete;
 
-    size_t size() const { return count; }
+    size_t size()  const { return count; }
+    void setSize(size_t size) { count = size; }
+
     T* data() const { return elements; }
 
     T operator[](size_t i) const

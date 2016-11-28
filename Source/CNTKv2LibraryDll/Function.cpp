@@ -552,6 +552,16 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Tanh, operand, Dictionary(), name);
     }
 
+    FunctionPtr Sin(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Sin, operand, Dictionary(), name);
+    }
+
+    FunctionPtr Cos(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::Cos, operand, Dictionary(), name);
+    }
+
     FunctionPtr ReLU(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::ReLU, operand, Dictionary(), name);
@@ -752,6 +762,11 @@ namespace CNTK
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
         return BinaryOp(PrimitiveOpType::TransposeTimes, leftOperand, rightOperand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
+    {
+        return BinaryOp(PrimitiveOpType::CosDistance, leftOperand, rightOperand, Dictionary(), name);
     }
 
     FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name)

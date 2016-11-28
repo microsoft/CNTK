@@ -114,7 +114,8 @@ namespace CNTK
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::ClassificationError) ||
-            (op == PrimitiveOpType::Logistic))
+            (op == PrimitiveOpType::Logistic) ||
+            (op == PrimitiveOpType::CosDistance))
         {
             outputDynamicAxes = std::vector<Axis>({});
         }
@@ -201,6 +202,9 @@ namespace CNTK
             case PrimitiveOpType::Dropout:
             case PrimitiveOpType::Where:
             case PrimitiveOpType::LogSoftmax:
+            case PrimitiveOpType::Sin:
+            case PrimitiveOpType::Cos:
+            case PrimitiveOpType::Pass:
             {
                 assert(inputs.size() == 1);
                 outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
@@ -409,6 +413,7 @@ namespace CNTK
                 functionConfig[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
                 break;
             }
+            case PrimitiveOpType::CosDistance:
             case PrimitiveOpType::Logistic:
             case PrimitiveOpType::SquaredError:
             case PrimitiveOpType::CrossEntropyWithSoftmax:
