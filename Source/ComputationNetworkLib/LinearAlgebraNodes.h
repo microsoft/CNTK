@@ -751,6 +751,202 @@ template class QuantizedTimesNode<float>;
 template class QuantizedTimesNode<double>;
 
 // -----------------------------------------------------------------------
+// SampledTimesNode (A, B)
+// Same as TimesNode, except forward prob and backprop takes place only 
+// for a numSamples-sampled subset of the columns of A.
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class SampledTimesNode : public TimesNodeBase<ElemType, false>
+{
+	typedef TimesNodeBase<ElemType, false> Base;
+	UsingComputationNodeMembersBoilerplate;
+	static const std::wstring TypeName() { return L"SampledTimes"; }
+
+public:
+	DeclareConstructorFromConfigWithNumInputs(SampledTimesNode);
+	SampledTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet, const std::vector<size_t>& weights, size_t outputRank = 1)
+		: Base(deviceId, name, outputRank, /*inferInputRankToMap=*/-1), m_sizeOfSampledSet(sizeOfSampledSet)
+	{
+		if (outputRank != 1)
+			LogicError("SampledTimes does not yet support outputRank other than 1");
+
+		UpdateWeightsPrefixSum(weights);
+	}
+
+	void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+	{
+		Base::CopyTo(nodeP, newName, flags);
+		if (flags & CopyNodeFlags::copyNodeValue)
+		{
+			auto node = dynamic_pointer_cast<SampledTimesNode<ElemType>>(nodeP);
+			node->m_sizeOfSampledSet = m_sizeOfSampledSet;
+			node->m_allowDuplicates = m_allowDuplicates;
+			node->m_randomSeed = m_randomSeed;
+		}
+	}
+
+	void Save(File& fstream) const
+	{
+		Base::Save(fstream);
+		fstream << m_sizeOfSampledSet;
+		fstream << m_allowDuplicates;
+	}
+
+	void Load(File& fstream, size_t modelVersion) override
+	{
+		Base::Load(fstream, modelVersion);
+		fstream >> m_sizeOfSampledSet;
+		fstream >> m_allowDuplicates;
+	}
+
+	void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+	{
+		// TensorView::DoMatrixProductOf() will reduce each tensor object into a 2D tensor (or fail if it cannot)
+		// and recreate actual Matrix objects (in case of sparse, they must be identical to the original tensor storage object).
+		// Transposition is applied after flattening into 2D, but only allowed if the input sample is 2D anyway.
+		auto input0 = Base::OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
+		auto input1 = Base::OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
+		auto output = Base::OneSampleTensorFor(-1, /*gradient=*/false, fr);
+		output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
+	}
+
+	void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+	{
+		// this potentially computes inner products over time, so we must mask gaps to 0
+		if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+			MaskMissingGradientColumnsToZero(fr);
+		if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+			Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
+		if (inputIndex == 0) // left derivative
+		{
+			// currently we only support one combination when the input is sparse
+			// If input data is sparse, then gradient is block sparse.
+			// BUGBUG: This does not accumulate into the InputRef(0).Gradient, which might cause problems elsewhere.
+			if (InputRef(1).Value().GetMatrixType() == SPARSE && InputRef(0).Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
+				InputRef(0).Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
+			auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true, fr.AllowBroadcast());
+			auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
+			auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
+			input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
+		}
+		else if (inputIndex == 1) // right derivative
+		{
+			// BUGBUG: Above block produces case of sparse second input a sparse gradient gor first input. We should either have corresponding code here or not at all.
+			auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
+			auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true, fr.AllowBroadcast());
+			auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
+			input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
+		}
+	}
+
+	template<class ElemType>
+	void Validate(bool isFinalValidationPass)
+	{
+		if (m_sizeOfSampledSet == 0)
+		{
+			InvalidArgument("Number of requested samples is zero.");
+		}
+
+		if (isFinalValidationPass)
+		{
+			// Sampling without replacement does only work when the number of requested classes is <= number of classes.
+			let& shape = Input(0)->GetSampleLayout();
+			let dims = shape.GetDims();
+			size_t nClasses = dims[0];
+			if (!m_allowDuplicates && nClasses <= m_sizeOfSampledSet)
+				InvalidArgument("For sampling without duplicates the number of requested samples (%lu) needs to be less than the number of classes (%lu).", m_sizeOfSampledSet, nClasses);
+		}
+	}
+
+private:
+	template<class ElemType>
+	void UpdateWeightsPrefixSum(const std::vector<size_t>& samplingWeights)
+	{
+		m_samplingWeightsPrefixSum.clear();
+		double runningWeightsSum = 0;
+		for (int iClass = 0; iClass < samplingWeights.size(); iClass++)
+		{
+			ElemType currentWeight = samplingWeights[iClass];
+			if (currentWeight < 0)
+				InvalidArgument("Sampling weights contain negative number %f.", currentWeight);
+
+			runningWeightsSum += currentWeight;
+			m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
+		}
+	}
+
+	// Estimates the expected number of occurences of each class in the sampled set.
+	// For sampling without replacement we use estimate using average number of tries. (Inspired by TensorFlow)
+	// BUGBUG: Consider to reimplement using a less biased estimate as proposed by Nikos.
+	template<class ElemType>
+	ElemType EstimateInSampleFrequency(ElemType p) const
+	{
+		if (m_allowDuplicates)
+		{
+			return p * Base::m_sizeOfSampledSet;
+		}
+		else /* No duplicates allowed. Estimated count is same as probability of inclusion. */
+		{
+			return -expm1(estimatedNumTries * log1p(-p));
+		}
+	}
+
+	// Runs the sampling returning a vector with the id's of the samples. 
+	template<class ElemType>
+	const std::vector<size_t> RunSampling()
+	{
+		std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
+		std::unordered_set<int> alreadySampled;
+		std::vector<size_t> samples;
+		CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));
+		// find random samples using the specified weight
+
+		if (m_allowDuplicates)
+			nTries = m_sizeOfSampledSet;
+		else
+			nTries = 0; // just initialize and count how many tries we need.
+
+		while (samples.size() < m_sizeOfSampledSet)
+		{
+			double randomValue = r(cpuRNGHandle->Generator());
+			// Find the first index where value[idx] >= randomValue.
+			auto lower = std::lower_bound(m_samplingWeightsPrefixSum.begin(), m_samplingWeightsPrefixSum.end(), randomValue);
+			int idx = (int)(lower - m_samplingWeightsPrefixSum.begin());
+
+			if (m_allowDuplicates)
+				samples.push_back(idx);
+			else
+			{
+				// Sampling without replacement: each value can be sampled at most once. 
+				// The implementation below using rejection sampling is problematic.
+				// E.g if first class has probability p = 0.999 we typically will have to sample 1000 times or more to hit another class.
+				// BUGBUG Alternative implementions, e.g:
+				// * Weighted Random Sampling with Reservoir: http://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
+				// * Binary tree with classes as leafes and branch probs on non-leafes.
+				// * As in numpy: https://github.com/numpy/numpy/blob/master/numpy/random/mtrand/mtrand.pyx#L1440
+				nTries++;
+				if (alreadySampled.find(idx) != alreadySampled.end()) continue;
+				else
+				{
+					samples.push_back(idx);
+					alreadySampled.insert(idx);
+				}
+			}
+		}
+		return samples;
+	}
+
+	size_t m_sizeOfSampledSet;
+	bool m_allowDuplicates;
+	std::vector<ElemType> m_samplingWeightsPrefixSum;
+};
+
+template class TransposeTimesNode<float>;
+template class TransposeTimesNode<double>;
+
+// -----------------------------------------------------------------------
 // SumElementsNode (input)
 // Sums up all elements in the input across all samples into a single scalar.
 // When applied to minibatch data, this will sum across all sequences in the

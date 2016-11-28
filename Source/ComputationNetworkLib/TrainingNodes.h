@@ -1144,7 +1144,6 @@ template class NoiseContrastiveEstimationNode<float>;
 template class NoiseContrastiveEstimationNode<double>;
 
 
-
 // Nodes using a random number generators should derive from this interface.
 // One purpuose of this interface is to have a common interface for setting the seeds when setting up a network.
 class IRngUser

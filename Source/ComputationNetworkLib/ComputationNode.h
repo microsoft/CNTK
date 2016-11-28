@@ -65,6 +65,40 @@ enum CopyNodeFlags // flags to be passed to the CopyTo() function
 
 #pragma region base computation class
 
+// Nodes using a random number generators should derive from this interface.
+// One purpuose of this interface is to have a common interface for setting the seeds when setting up a network.
+class IRngUser
+{
+public:
+	virtual RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) = 0;
+	virtual void SetRandomSeed(const unsigned long val) = 0;
+};
+
+// This implements IRngUser using RNGHandle.
+class RngUser : public IRngUser
+{
+public:
+	RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) override
+	{
+		if (!m_RNGHandle)
+			m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
+
+		return *m_RNGHandle;
+	}
+
+	// E.g. called from ComputationNetwork to make sure that CNTK running on different nodes will have different seed.
+	void SetRandomSeed(const unsigned long val) override
+	{
+		m_randomSeed = (unsigned long)val;
+
+		m_RNGHandle.reset(); // Reset handle. New handle will be generated with next call of GetRNGHandle(...).
+	}
+
+protected:
+	unsigned long m_randomSeed = 0;
+	std::shared_ptr<RNGHandle> m_RNGHandle;
+};
+
 // =======================================================================
 // IComputationNode -- set of methods that are to be implemented (or optionally overridable) by node implementations.
 // =======================================================================
