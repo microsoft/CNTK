@@ -29,10 +29,15 @@ model_path = os.path.join(abs_path, "Models")
 # Define the reader for both training and evaluation action.
 class VideoReader(object):
     '''
-    VideoReader iterate through each video and return all its frames as
+    A simple VideoReader: 
+    It iterates through each video and select 16 frames as
     stacked numpy arrays.
+    Similar to http://vlg.cs.dartmouth.edu/c3d/c3d_video.pdf
     '''
     def __init__(self, map_file, label_count, is_training):
+        '''
+        Load video file paths and their corresponding labels.
+        '''
         self.map_file        = map_file
         self.label_count     = label_count
         self.width           = 112
@@ -69,7 +74,7 @@ class VideoReader(object):
 
     def next_minibatch(self, batch_size):
         '''
-        Return a mini batch of sequences and their ground truth.
+        Return a mini batch of sequence frames and their corresponding ground truth.
         '''
         batch_end = min(self.batch_start + batch_size, self.size())
         current_batch_size = batch_end - self.batch_start
@@ -97,13 +102,17 @@ class VideoReader(object):
             raise ValueError('Sequence length {} is larger then the total number of frames {} in {}.'.format(self.sequence_length, num_frames, video_file))
 
         # select which sequence frames to use.
+        step = 1
+        expanded_sequence = self.sequence_length
         if num_frames > 2*self.sequence_length:
-            seq_start = int(num_frames/2) - self.sequence_length
-            frame_range = [seq_start + 2*i for i in range(self.sequence_length)]
-        else:
-            seq_start = randint(0, num_frames - self.sequence_length)
-            frame_range = [seq_start + i for i in range(self.sequence_length)]            
+            step = 2
+            expanded_sequence = 2*self.sequence_length
 
+        seq_start = int(num_frames/2) - int(expanded_sequence/2)
+        if self.is_training:
+            seq_start = randint(0, num_frames - expanded_sequence)
+
+        frame_range = [seq_start + step*i for i in range(self.sequence_length)]            
         video_frames = []
         for frame_index in frame_range:
             video_frames.append(self._read_frame(video_reader.get_data(frame_index)))
@@ -116,16 +125,19 @@ class VideoReader(object):
         We resize the image to 128x171 first, then selecting a 112x112
         crop.
         '''
+        if (self.width >= 171) or (self.height >= 128):
+            raise ValueError("Target width need to be less than 171 and target height need to be less than 128.")
+        
         image = Image.fromarray(data)
         image.thumbnail((171, 128), Image.ANTIALIAS)
         
         center_w = image.size[0] / 2
         center_h = image.size[1] / 2
 
-        image = image.crop((center_w - 112 / 2,
-                            center_h - 112 / 2,
-                            center_w + 112 / 2,
-                            center_h + 112 / 2))
+        image = image.crop((center_w - self.width  / 2,
+                            center_h - self.height / 2,
+                            center_w + self.width  / 2,
+                            center_h + self.height / 2))
         
         norm_image = np.array(image, dtype=np.float32)
         norm_image -= 128.0
@@ -135,11 +147,11 @@ class VideoReader(object):
         return np.ascontiguousarray(np.transpose(norm_image, (2, 0, 1)))
 
 # Creates and trains a feedforward classification model for UCF11 action videos
-def conv3d_ucf11(debug_output=False):
+def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
+    # Replace 0 with 1 to get detailed log.
     set_computation_network_trace_level(0)
 
-    train_reader = VideoReader(os.path.join(data_path, 'train_map.csv'), 11, True)
-
+    # These values must match for both train and test reader.
     image_height       = train_reader.height
     image_width        = train_reader.width
     num_channels       = train_reader.channel_count
@@ -150,7 +162,8 @@ def conv3d_ucf11(debug_output=False):
     input_var = input_variable((num_channels, sequence_length, image_height, image_width), np.float32)
     label_var = input_variable(num_output_classes, np.float32)
 
-    # Instantiate the feedforward classification model
+    # Instantiate simple 3D Convolution network inspired by VGG network 
+    # and http://vlg.cs.dartmouth.edu/c3d/c3d_video.pdf
     with default_options (activation=relu):
         z = Sequential([
             Convolution((3,3,3), 64, pad=True),
@@ -167,11 +180,12 @@ def conv3d_ucf11(debug_output=False):
             Dense(num_output_classes, activation=None)
         ])(input_var)
     
+    # loss and classification error.
     ce = cross_entropy_with_softmax(z, label_var)
     pe = classification_error(z, label_var)
 
     # training config
-    epoch_size = 1322                  # for now we manually specify epoch size
+    epoch_size     = 1322                  # for now we manually specify epoch size
     minibatch_size = 8
 
     # Set learning parameters
@@ -188,7 +202,6 @@ def conv3d_ucf11(debug_output=False):
     progress_printer = ProgressPrinter(tag='Training')
 
     # Get minibatches of images to train with and perform model training
-    max_epochs = 30
     for epoch in range(max_epochs):       # loop over epochs
         train_reader.reset()
 
@@ -199,9 +212,6 @@ def conv3d_ucf11(debug_output=False):
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
     
-    # Load test data
-    test_reader = VideoReader(os.path.join(data_path, 'test_map.csv'), num_output_classes, False)
-
     # Test data for trained model
     epoch_size     = 332
     minibatch_size = 2
@@ -211,6 +221,7 @@ def conv3d_ucf11(debug_output=False):
     metric_denom    = 0
     minibatch_index = 0
 
+    test_reader.reset()    
     while test_reader.has_more():
         videos, labels, current_minibatch = test_reader.next_minibatch(minibatch_size)
         # minibatch data to be trained with
@@ -219,7 +230,6 @@ def conv3d_ucf11(debug_output=False):
         # Keep track of the number of samples processed so far.
         minibatch_index += 1
 
-
     print("")
     print("Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
     print("")
@@ -227,5 +237,9 @@ def conv3d_ucf11(debug_output=False):
     return metric_numer/metric_denom
 
 if __name__=='__main__':
-    conv3d_ucf11()
+    num_output_classes = 11
+    train_reader = VideoReader(os.path.join(data_path, 'train_map.csv'), num_output_classes, True)
+    test_reader  = VideoReader(os.path.join(data_path, 'test_map.csv'), num_output_classes, False)
+        
+    conv3d_ucf11(train_reader, test_reader)
 
