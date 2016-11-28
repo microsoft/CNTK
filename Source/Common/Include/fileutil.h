@@ -484,7 +484,7 @@ const wchar_t* GetFormatString(float);
 template <>
 const wchar_t* GetFormatString(double);
 template <>
-const wchar_t* GetFormatString(size_t);
+const wchar_t* GetFormatString(unsigned long long);
 template <>
 const wchar_t* GetFormatString(long long);
 template <>
@@ -522,7 +522,7 @@ const wchar_t* GetScanFormatString(float);
 template <>
 const wchar_t* GetScanFormatString(double);
 template <>
-const wchar_t* GetScanFormatString(size_t);
+const wchar_t* GetScanFormatString(unsigned long long);
 template <>
 const wchar_t* GetScanFormatString(long long);
 

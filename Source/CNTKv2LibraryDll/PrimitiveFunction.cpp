@@ -65,6 +65,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumLayers = L"numLayers";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameHiddenSize = L"hiddenSize";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRecurrentOp = L"recurrentOp";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngSeed = L"rngSeed";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngOffset = L"rngOffset";
 
     /*static*/ std::vector<Variable> PrimitiveFunction::GetOutputVariables(PrimitiveOpType op,
                                                                            std::vector<Variable>& inputs,

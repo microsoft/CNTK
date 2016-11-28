@@ -507,7 +507,7 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
 
     const size_t minibatchSize = 50;
     auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
-     auto actualMBSize = minibatchData[labelStreamInfo].m_numSamples;
+    auto actualMBSize = minibatchData[labelStreamInfo].m_numSamples;
 
     LearningRatePerSampleSchedule learningRateSchedule({ { 2, 0.005 }, { 2, 0.0025 }, { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
     MomentumAsTimeConstantSchedule momentumValues({ { 2, 100 }, { 2, 200 }, { 2, 400 }, { 2, 800 } }, actualMBSize);
@@ -723,6 +723,47 @@ void TestLoadingDictionariesGeneratedFromPresentPastAndFutureProtos()
     assert(futureDict.Size() > 0);
 }
 
+
+void TestCheckpointingWithStatefulNodes(bool useLegacyModelFormat, const DeviceDescriptor& device)
+{
+    auto featureStreamName = L"features";
+    auto labelsStreamName = L"labels";
+
+    size_t inputDim = 784;
+    size_t numOutputClasses = 10;
+    auto features = InputVariable({ inputDim }, false /*isSparse*/, DataType::Float, featureStreamName);
+    auto labels = InputVariable({ numOutputClasses }, DataType::Float, labelsStreamName);
+    //auto net = BuildFFClassifierNet(features, numOutputClasses, device, 1);
+    auto net = Dropout(BuildFFClassifierNet(features, numOutputClasses, device, 1), 0.5);
+
+    auto trainer = BuildTrainer(net, labels);
+
+    const size_t minibatchSize = 50;
+    const size_t epochSize = 150;
+    auto minibatchSource = TextFormatMinibatchSource(L"Train-28x28_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },  epochSize, false);    
+    auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+    auto featureStreamInfo = minibatchSource->StreamInfo(features);
+    auto labelStreamInfo = minibatchSource->StreamInfo(labels);
+
+    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+
+    vector<double> expectedLoss;
+    for (int i = 0; i < epochSize / minibatchSize; i++)
+    {
+        trainer.SaveCheckpoint(L"stateful_nodes.model" + std::to_wstring(i), useLegacyModelFormat);
+        trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        expectedLoss.push_back(trainer.PreviousMinibatchLossAverage());
+    }
+
+    for (int i = 0; i < epochSize / minibatchSize; i++)
+    {
+        trainer.RestoreFromCheckpoint(L"stateful_nodes.model" + std::to_wstring(i));
+        trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        double loss = trainer.PreviousMinibatchLossAverage();
+        FloatingPointCompare(loss, expectedLoss[i], "Post checkpoint restoration training loss does not match expectation");
+    }
+}
+
 void SerializationTests()
 {
     fprintf(stderr, "\nSerializationTests..\n");
@@ -749,6 +790,9 @@ void SerializationTests()
     TestCheckpointing(DeviceDescriptor::CPUDevice());
     TestLegacyModelSaving(DeviceDescriptor::CPUDevice());
 
+    TestCheckpointingWithStatefulNodes(true, DeviceDescriptor::CPUDevice());
+    TestCheckpointingWithStatefulNodes(false, DeviceDescriptor::CPUDevice());;
+
     if (IsGPUAvailable())
     {
         TestLearnerSerialization<float>(5, DeviceDescriptor::GPUDevice(0));
@@ -758,6 +802,8 @@ void SerializationTests()
         TestCheckpointing(DeviceDescriptor::GPUDevice(0));
         TestLegacyModelSaving(DeviceDescriptor::GPUDevice(0));
 
+        TestCheckpointingWithStatefulNodes(true, DeviceDescriptor::GPUDevice(0));
+        TestCheckpointingWithStatefulNodes(false, DeviceDescriptor::GPUDevice(0));
     }
 
 }

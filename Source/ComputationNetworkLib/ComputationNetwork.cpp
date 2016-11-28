@@ -561,7 +561,7 @@ template <class ElemType>
     for (auto& nodeIter : rngUserNodes)
     {
         auto rngUser = dynamic_pointer_cast<IRngUser>(nodeIter);
-        rngUser->SetRandomSeed(randSeed);
+        rngUser->SetRngState(randSeed);
         randSeed++;
     }
 }
