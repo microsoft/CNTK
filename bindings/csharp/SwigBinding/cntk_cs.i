@@ -11,7 +11,7 @@
 %include <attribute.i>
 %include <arrays_csharp.i>
 
-// include the unordered_map.i
+// include the unordered_map.i.
 %include "std_unordered_map.i"
 
 %{
@@ -83,6 +83,7 @@
 %apply float INPUT[]  { float *dataBuffer }
 %apply double INPUT[]  { double *dataBuffer }
 
+
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
 
@@ -111,6 +112,7 @@
     }
 }
 
+
 //
 // NDArryView
 //
@@ -124,6 +126,7 @@
     {
         return new CNTK::NDArrayView(CNTK::DataType::Double, viewShape, dataBuffer, numBufferElements * sizeof(double), device, readOnly);
     }
+
 }
 
 //
