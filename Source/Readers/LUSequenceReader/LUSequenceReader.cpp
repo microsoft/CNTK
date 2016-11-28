@@ -1087,9 +1087,9 @@ bool BatchLUSequenceReader<ElemType>::GetFrame(StreamMinibatchInputs& matrices, 
                 assert((jj == m_wordContext.size() - 1) ? true : cxt > m_wordContext[jj + 1]);
 
                 size_t hidx;
-                size_t hlength = history.size();
-                if (hlength + cxt > 0)
-                    hidx = history[hlength + cxt - 1];
+                size_t hlength2 = history.size();
+                if (hlength2 + cxt > 0)
+                    hidx = history[hlength2 + cxt - 1];
                 else
                     hidx = history[0];
 
@@ -1174,7 +1174,6 @@ template <class ElemType>
 bool MultiIOBatchLUSequenceReader<ElemType>::TryGetMinibatch(StreamMinibatchInputs& matrices)
 {
     // on first iteration, need to check if all requested data matrices are available
-    std::map<std::wstring, size_t>::iterator iter;
     if (mCheckDictionaryKeys)
     {
         for (auto iter = matrices.begin(); iter != matrices.end(); iter++) // TODO: range-based for

@@ -118,12 +118,12 @@ DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t maxSize
     }
     case DictionaryValue::Type::Vector:
     {   
-        auto type = GetType();
+        auto type2 = GetType();
         size_t size = rng() % maxSize + 1;
         vector<DictionaryValue> vector(size);
         for (auto i = 0; i < size; i++)
         {
-            vector[i] = CreateDictionaryValue(type, maxSize-1, maxDepth-1);
+            vector[i] = CreateDictionaryValue(type2, maxSize-1, maxDepth-1);
         }
         return DictionaryValue(vector);
     }
@@ -449,21 +449,21 @@ void TestFunctionSerializationDuringTraining(const FunctionPtr& function, const 
 
     for (int i = 0; i < 3; ++i)
     {
-        Dictionary model = classifierOutput1->Serialize();
+        Dictionary model2 = classifierOutput1->Serialize();
 
-        auto classifierOutput2 = Function::Deserialize(model, device);
+        auto classifierOutput3 = Function::Deserialize(model2, device);
 
-        if (!AreEqual(classifierOutput1, classifierOutput2))
+        if (!AreEqual(classifierOutput1, classifierOutput3))
         {
             throw std::runtime_error("TestModelSerialization: original and reloaded functions are not identical.");
         }
       
-        Trainer trainer2 = BuildTrainer(classifierOutput2, labels);
+        Trainer trainer2 = BuildTrainer(classifierOutput3, labels);
 
         for (int j = 0; j < 3; ++j)
         {
             trainer1.TrainMinibatch({ { classifierOutput1->Arguments()[0], minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-            trainer2.TrainMinibatch({ { classifierOutput2->Arguments()[0], minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+            trainer2.TrainMinibatch({ { classifierOutput3->Arguments()[0], minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
 
             double mbLoss1 = trainer1.PreviousMinibatchLossAverage();
             double mbLoss2 = trainer2.PreviousMinibatchLossAverage();
