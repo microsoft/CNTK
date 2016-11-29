@@ -753,7 +753,7 @@ template class QuantizedTimesNode<double>;
 // -----------------------------------------------------------------------
 // SampledTimesNode (A, B)
 // Same as TimesNode, except forward prob and backprop takes place only 
-// for a numSamples-sampled subset of the columns of A.
+// for a numSamples sample subset of the columns of A.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -791,6 +791,7 @@ public:
 		Base::Save(fstream);
 		fstream << m_sizeOfSampledSet;
 		fstream << m_allowDuplicates;
+		fstream << m_randomSeed;
 	}
 
 	void Load(File& fstream, size_t modelVersion) override
@@ -798,6 +799,7 @@ public:
 		Base::Load(fstream, modelVersion);
 		fstream >> m_sizeOfSampledSet;
 		fstream >> m_allowDuplicates;
+		fstream >> m_randomSeed;
 	}
 
 	void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
@@ -807,8 +809,14 @@ public:
 		// Transposition is applied after flattening into 2D, but only allowed if the input sample is 2D anyway.
 		auto input0 = Base::OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
 		auto input1 = Base::OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
+		auto idx = RunSampling();
+		auto sampledWeights = new Matrix<ElemType>();
+		sampledWeights.DoGatherColumnsOf(ElemType(0), idx, input0, ElemType(1)); // *sampledWeights[:,j] = a[:,idx[j]]
+		auto sampledOutput = new Matrix<ElemType>();
+		sampledOutput.AssignMatrixProductOf(false/*transC*/, sampledWeights, m_transpose/*transA*/, input1, false/*transB*/);
 		auto output = Base::OneSampleTensorFor(-1, /*gradient=*/false, fr);
-		output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
+		output.SetValue(0);
+		output.DoScatterColumnsOf(ElemType(0), idx, sampledOutput, ElemType(0));
 	}
 
 	void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
