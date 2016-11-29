@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-def dfs_walk(node, visitor):
+def depth_first_search(node, visitor):
     '''
     Generic function that walks through the graph starting at ``node`` and
     uses function ``visitor`` on each node to check whether it should be
@@ -54,7 +54,7 @@ def find_nodes_by_name(node, node_name):
     Returns:
         List of nodes having the specified name
     '''
-    return dfs_walk(node, lambda x: x.name == node_name)
+    return depth_first_search(node, lambda x: x.name == node_name)
 
 def output_function_graph(node,dot_file_path=None,png_file_path=None):
     '''
