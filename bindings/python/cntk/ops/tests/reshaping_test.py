@@ -14,7 +14,8 @@ import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE
 import cntk as C
 from cntk.axis import Axis
-from ...utils import sanitize_dtype_cntk
+from ...utils import sanitize_dtype_cntk, cntk_device
+from .. import constant
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 # the backward result returned by CNTK log() for epsilon
@@ -42,7 +43,7 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
     # For testing the gradients we want to have different gradients for each input index otherwise we can't
     # test if they get wrongly permuted during test. To this end we multiply
     # the reshaping result with itself.
-
+    dev = cntk_device(device_id)
     from ...utils import sanitize_dtype_cntk
     from .. import reshape, element_times
 
@@ -58,7 +59,8 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
 
     a_reshaped = reshape(a, output_shape)
 
-    input_op = element_times(a_reshaped, input_reshaped)
+    const_input_reshaped = constant(input_reshaped, device=dev)
+    input_op = element_times(a_reshaped, const_input_reshaped)
 
     expected_forward = [[input_reshaped**2]]
     expected_backward = {a: input_tensor}

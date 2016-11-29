@@ -12,6 +12,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Microsoft.MSR.CNTK.Extensibility.Managed;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 {
