@@ -259,8 +259,8 @@ private:
 // (w)strprintf() -- sprintf() that returns an STL string
 // ----------------------------------------------------------------------------
 
-typedef strfun::_strprintf<char>    strprintf;  // char version
-typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
+typedef ::msra::strfun::_strprintf<char>    strprintf;  // char version
+typedef ::msra::strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
 
 // ----------------------------------------------------------------------------
 // utf8(), utf16() -- convert between narrow and wide strings
