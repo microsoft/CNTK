@@ -21,7 +21,7 @@ You need to install the latest version of CNTK, please follow the instruction in
 
 All video examples use CNTK Python API, so make sure that you can call CNTK API from your python environment by following the instruction in the above link.
 
-Also, all examples depend on `imageio` package, to install imageio dot he following:
+Also, all examples depend on `imageio` package, to install imageio do the following:
 
 * For Anaconda: `conda install -c pyzo imageio`
 * For pip: `pip install imageio`

@@ -1,4 +1,4 @@
-# Copyright (c) Microsoft. All rights reserved.
+﻿# Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -70,6 +70,8 @@ class VideoReader(object):
         return False
 
     def reset(self):
+        if self.is_training:
+            np.random.shuffle(self.indices)
         self.batch_start = 0
 
     def next_minibatch(self, batch_size):

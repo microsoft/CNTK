@@ -1,4 +1,4 @@
-#
+﻿#
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
@@ -36,6 +36,8 @@ def split_data(groups, file_ext):
     '''
     group_count = len(groups)
     indices = np.arange(group_count)
+
+    np.random.seed(0) # Make it deterministic.
     np.random.shuffle(indices)
 
     # 80% training and 20% test.
@@ -79,11 +81,6 @@ def write_to_csv(items, file_path):
     '''
     Write file path and its target pair in a CSV file format.
     '''
-    
-    # Don't override existing file.
-    if os.path.exists(file_path):
-        return
-        
     if sys.version_info[0] < 3:
         with open(file_path, 'wb') as csv_file:
             writer = csv.writer(csv_file, delimiter=',')
