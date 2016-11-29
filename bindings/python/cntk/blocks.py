@@ -38,21 +38,22 @@ def UntestedBranchError(name):
 #    with default_options(init=..., ...):
 #        # code block within which the changed defaults are active
 # TODO: rename to _current_default_overrides
-_current_default_options = Record(
-    init=glorot_uniform(),
-    #activation=None,                  # Dense() and Convolution() have no activation by default
-    pad=False, # BUGBUG: not done for pooling at present. Need a special default? How to name?
-    # ^^ This should be addressed by allowing configs per layer type.
-    #    To be addressed as a per-layer default. See default_options below.
-    bias=True,
-    init_bias=0,
-    enable_self_stabilization=False,  # Stabilizer() and LSTM()
-    initial_state=None,               # Recurrence()
-    use_peepholes=False,              # LSTM()
-    dtype=np.float32,                 # Constant(), Parameter(), Input()
-    _scope = None,                    # set of all functions that this scope belongs to; None means "all"
-    _outer = None                     # link to outer scope
-)
+_current_default_options = None
+#Record(
+    #init=glorot_uniform(),
+    ##activation=None,                  # Dense() and Convolution() have no activation by default
+    #pad=False, # BUGBUG: not done for pooling at present. Need a special default? How to name?
+    ## ^^ This should be addressed by allowing configs per layer type.
+    ##    To be addressed as a per-layer default. See default_options below.
+    #bias=True,
+    #init_bias=0,
+    #enable_self_stabilization=False,  # Stabilizer() and LSTM()
+    #initial_state=None,               # Recurrence()
+    #use_peepholes=False,              # LSTM()
+    #dtype=np.float32,                 # Constant(), Parameter(), Input()
+#    _scope = None,                    # set of all functions that this scope belongs to; None means "all"
+#    _outer = None                     # link to outer scope
+#)
 
 # simple wrapper to hold default values#
 # meant to be both an indicator in a function signature and a detectable wrapper of a default
@@ -91,30 +92,31 @@ def get_default_override(function, **kwargs):
     while opts is not None:
         if opts._scope is None or function in opts._scope: # we are in the right scope
             try:
-                return opts[key]  # look up the option override and return it if present in this scope
+                value = opts[key]  # look up the option override and return it if present in this scope
+                return value
             except:
                 pass       # no such override in this scope
         opts = opts._outer # step out one scope and try again
     return value.value # no override found: use the default as passed in
 
-_default_sentinel           = '(default)'           # This is a singleton sentinel value we recognize and replace in _initializer_for()
-_default_sentinel_init      = '(init default)'      # use different ones for init andinit_bias so we can distinguish them in _initializer_for()
-_default_sentinel_init_bias = '(init_bias default)'
+#_default_sentinel           = '(default)'           # This is a singleton sentinel value we recognize and replace in _initializer_for()
+#_default_sentinel_init      = '(init default)'      # use different ones for init andinit_bias so we can distinguish them in _initializer_for()
+#_default_sentinel_init_bias = '(init_bias default)'
 # in function signatures we use symbols that indicate the default default in their name
-init_default_or_glorot_uniform             = _default_sentinel_init
-activation_default_or_None                 = _default_sentinel
-init_bias_default_or_0                     = _default_sentinel_init_bias
-bias_default_or_True                       = _default_sentinel
-pad_default_or_False                       = _default_sentinel
-enable_self_stabilization_default_or_False = _default_sentinel
-initial_state_default_or_None              = _default_sentinel
-use_peepholes_default_or_False             = _default_sentinel
-dtype_default_or_float32                   = _default_sentinel_init
+#init_default_or_glorot_uniform             = _default_sentinel_init
+#activation_default_or_None                 = _default_sentinel
+#init_bias_default_or_0                     = _default_sentinel_init_bias
+#bias_default_or_True                       = _default_sentinel
+#pad_default_or_False                       = _default_sentinel
+#enable_self_stabilization_default_or_False = _default_sentinel
+#initial_state_default_or_None              = _default_sentinel
+#use_peepholes_default_or_False             = _default_sentinel
+#dtype_default_or_float32                   = _default_sentinel_init
 
 # check whether a parameter is a default
 # This is meant to be used by implementations of layers that take default values that may default to default-defaults.
-def _is_given(p):
-    return p is not _default_sentinel and p is not _default_sentinel_init and p is not _default_sentinel_init_bias
+#def _is_given(p):
+#    return p is not _default_sentinel and p is not _default_sentinel_init and p is not _default_sentinel_init_bias
 
 # scope guard for overriding defaults
 # with default_options(activation=relu, init=he_normal(), pad=True):
@@ -125,36 +127,29 @@ def _is_given(p):
 #         ...
 # TODO: actually implement this
 class _OptionsStack: # implement Python's 'with' protocol
-    # constructor prepares the updated record of defaults and remembers it
-    def __init__(self, layer_subset=None, **kwargs):
-        if layer_subset:
-            raise NotImplementedError('default_options not yet implemented per layer')
-        new_options = kwargs
-        # TODO: layer subset
-        # dict() make a deep copy of _current_default_options.__dict__ into merged_options.
-        merged_options = dict(_current_default_options.__dict__)
-        # we merge the newly provided options with the current defaults
-        # Only names that already exist may be used (cannot create new default variables).
-        # TODO: we may consider a more generic mechanism where one can overwrite all, if Python allows that.
-        for key in new_options:
-            try:
-                merged_options[key]
-            except:
-                raise TypeError("default_options() got an unexpected keyword argument '{}'".format(key))
-            merged_options[key] = new_options[key]
-        self.new_default_options = Record(**merged_options) # this is the new options record that entering the with section will activate
-    # entering with block: replaces the current defaults with the new ones, after remembering the old ones
+    # constructor remembers the options-override record
+    def __init__(self, functions=None, **kwargs):
+        if functions is not None and not isinstance(functions, list):
+            functions = [functions]
+        #for key in new_options:
+        #    try:
+        #        merged_options[key]
+        #    except:
+        #        raise TypeError("default_options() got an unexpected keyword argument '{}'".format(key))
+        #    merged_options[key] = new_options[key]
+        self.scope = set(functions) if functions is not None else None
+        self.kwargs = kwargs
+    # entering with block: link in a new default-options record at head
     def __enter__(self):
-        # BUGBUG: __init__ should just remember the new options, but merging should happen here
-        #         So that we can say with xxx as foo: with yyy: with foo: ... where foo re-applies to current.
         global _current_default_options
-        self.saved_default_options = _current_default_options
-        _current_default_options = self.new_default_options
+        #self.new_scope._outer = _current_default_options # remember outer link into this objects scope (for traversal and __exit__())
+        _current_default_options = Record(_scope = self.scope, _outer = _current_default_options, **self.kwargs) # insert new scope at head of link
         return self
     # exiting with block: restore previous remembered defaults
     def __exit__(self, type, value, traceback):
         global _current_default_options
-        _current_default_options = self.saved_default_options
+        _current_default_options = _current_default_options._outer # restore outer scope
+        #self.new_scope._outer = None # (for good measure)
 
 def default_options(**kwargs):
     return _OptionsStack(None, **kwargs)
@@ -169,14 +164,14 @@ def _get_current_default_options():
     return _current_default_options
 
 # resolve activation option against current default
-def _resolve_activation(activation):
-    # if none is passed to caller then use the default
-    if activation is _default_sentinel:
-        activation = _current_default_options.activation
-    # activation=None is implemented as activation=identity
-    if activation is None:
-        activation = identity
-    return activation
+#def _resolve_activation(activation):
+#    # if none is passed to caller then use the default
+#    if activation is _default_sentinel:
+#        activation = _current_default_options.activation
+#    # activation=None is implemented as activation=identity
+#    if activation is None:
+#        activation = identity
+#    return activation
 
 # create the complete initializer for a given 'init' parameter, to pass to parameter()
 # This is called from Parameter() and every place that injects rank parameters.
@@ -189,10 +184,10 @@ def _initializer_for(init, rank_params=None):
         raise ValueError("init parameter cannot be None")
 
     # if default then select
-    if init is _default_sentinel_init:
-        init = _current_default_options.init
-    elif init is _default_sentinel_init_bias:
-        init = _current_default_options.init_bias
+    #if init is _default_sentinel_init:
+    #    init = _current_default_options.init
+    #elif init is _default_sentinel_init_bias:
+    #    init = _current_default_options.init_bias
 
     # scalar constant: that's it, nothing further to do here
     if np.isscalar(init):
@@ -231,22 +226,23 @@ def Block(f, op_name, members={}):
         f.__dict__[key] = members[key]
     return f
 
+# TODO: Move this into the lower layer where these are defined.
 # some mappings--these currently exist only so that I can name the nodes for debugging
 def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
-    dtype = dtype if _is_given(dtype) else _current_default_options.dtype
+    dtype = get_default_override(Parameter, dtype=dtype)
     init = _initializer_for(init)
     p = parameter(shape, init=init, dtype=dtype, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'parameter')   # these are factory methods for things with state
 
 def Constant(init, shape=None, dtype=default_override_or(np.float32), name=''):
-    dtype = dtype if _is_given(dtype) else _current_default_options.dtype
+    dtype = get_default_override(Constant, dtype=dtype)
     p = constant(init, shape=shape, dtype=dtype, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'constant')   # these are factory methods for things with state
 
 # TODO: this function should not be necessary anymore
 def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_sparse=False,
           dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
-    dtype = dtype if _is_given(dtype) else _current_default_options.dtype
+    dtype = get_default_override(Input, dtype=dtype)
     return _name_node(input_variable(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
                                      dynamic_axes=dynamic_axes, name=name), 'input')
 
@@ -288,14 +284,13 @@ def _Identity(name='identity_arg'):
 # TODO: This should become a C++-side Function, e.g. like sigmoid
 identity = _Identity()
 
-# TODO: add a flag enable_self_stabilizer (maybe rename it) default to True, overridable by default_options
 # This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
-def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(False)):
-    if _is_given(enable_self_stabilization):
-        raise NotImplementedError('Stabilizer: enable_self_stabilization flag not implemented yet')
-    #enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
-    #if not enable_self_stabilization: # disabled (typically through global option)
-    #    return identity
+def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True)):
+
+    enable_self_stabilization = get_default_override(Stabilizer, enable_self_stabilization=enable_self_stabilization)
+
+    if not enable_self_stabilization: # disabled (typically through global option; otherwise one would not call this in the first place)
+        return identity
 
     # parameters bound to this Function
     param = Parameter((1), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
@@ -316,8 +311,14 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
          enable_self_stabilization=default_override_or(False)): # (x, (h, c))
 
-    use_peepholes             = use_peepholes             if _is_given(use_peepholes)             else _current_default_options.use_peepholes
-    enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
+    use_peepholes             = get_default_override(LSTM, use_peepholes=use_peepholes)
+    init                      = get_default_override(LSTM, init=init)
+    init_bias                 = get_default_override(LSTM, init_bias=init_bias)
+    enable_self_stabilization = get_default_override(LSTM, enable_self_stabilization=enable_self_stabilization)
+
+    #use_peepholes             = use_peepholes             if _is_given(use_peepholes)             else _current_default_options.use_peepholes
+    #enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
+
     has_projection = cell_shape is not None
     has_aux = False
 

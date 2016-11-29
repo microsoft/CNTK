@@ -20,7 +20,7 @@ from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-from cntk.blocks import _get_current_default_options, _is_given, _initializer_for, _resolve_activation, _INFERRED
+from cntk.blocks import _initializer_for, _INFERRED
 
 # Dense -- create a fully-connected linear projection layer with optional non-linear activation
 # Note: shape may describe a tensor as well.
@@ -30,6 +30,7 @@ from cntk.blocks import _get_current_default_options, _is_given, _initializer_fo
 def Dense(shape, init=default_override_or(glorot_uniform()), activation=default_override_or(identity),
           input_rank=None, map_rank=None,
           bias=default_override_or(True), init_bias=default_override_or(0)):
+
     init       = get_default_override(Dense, init=init)
     activation = get_default_override(Dense, activation=activation)
     bias       = get_default_override(Dense, bias=bias)
@@ -84,6 +85,9 @@ def Dense(shape, init=default_override_or(glorot_uniform()), activation=default_
 # To create an embedding from a file, use this:
 #  Embedding(weights=np.load('PATH'))
 def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None):
+
+    init = get_default_override(Embedding, init=init)
+
     if not is_default_override(init) and weights is not None:
         raise ValueError('Embedding: init and weights options are mutually exclusive')
 
@@ -92,7 +96,6 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     if weights is None:
         if shape is None:
             raise ValueError('Embedding: output shape must be specified')
-        init  = get_default_override(Embedding, init=init)
         #if init is None:
         #    init = init_default_or_glorot_uniform
         shape = _as_tuple(shape)
@@ -139,11 +142,16 @@ def Convolution(rf_shape,        # e.g. (3,3)
                 reduction_rank=1, # (must be 1 currently)
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0):
-    #UntestedBranchError("Convolution")
-    activation = _resolve_activation(activation)
-    pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
-    bias = bias if _is_given(bias) else _get_current_default_options().bias
-    # TODO: there must be a Python trick to do this as a function call on locals or so
+
+    activation = get_default_override(Convolution, activation=activation)
+    init       = get_default_override(Convolution, init=init)
+    pad        = get_default_override(Convolution, pad=pad)
+    bias       = get_default_override(Convolution, bias=bias)
+    init_bias  = get_default_override(Convolution, init_bias=init_bias)
+    #activation = _resolve_activation(activation)
+    #pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
+    #bias = bias if _is_given(bias) else _get_current_default_options().bias
+
     if reduction_rank != 1:
         NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
     if transpose:
@@ -184,10 +192,11 @@ def Convolution(rf_shape,        # e.g. (3,3)
 #
 # Setting the filter_shape to None, mean global pooling.
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
-def Pooling(op,      # PoolingType_Max or _Average
+def _Pooling(op,      # PoolingType_Max or _Average
             rf_shape,  # e.g. (3,3)
             strides=1,
-            pad=default_override_or(False)):
+            pad=False):
+
     x = Placeholder(name='pooling_arg')
     apply_x = pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
 
@@ -203,26 +212,28 @@ def Pooling(op,      # PoolingType_Max or _Average
 def MaxPooling(rf_shape,  # e.g. (3,3)
                strides=1,
                pad=default_override_or(False)):
-    return Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad)
+    pad = get_default_override(MaxPooling, pad=pad)
+    return _Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad)
 
 # AveragePooling
 def AveragePooling(rf_shape,  # e.g. (3,3)
                    strides=1,
                    pad=default_override_or(False)):
-    return Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad)
+    pad = get_default_override(AveragePooling, pad=pad)
+    return _Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad)
 
 # GlobalMaxPooling
 def GlobalMaxPooling():
-    return Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False)
+    return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False)
 
 # GlobalAveragePooling
 def GlobalAveragePooling():
-    return Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False)
+    return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False)
 
 # helper to get the initial_state or the default
 def _get_initial_state_or_default(initial_state):
     # TODO: remove this line
-    initial_state = initial_state if _is_given(initial_state) else _get_current_default_options().initial_state
+    #initial_state = initial_state if _is_given(initial_state) else _get_current_default_options().initial_state
     # if initial state is given and a numeric constant, then turn it into a Constant() object
     if initial_state is None:
         return Constant(0) # note: don't pass None to past_value, because that would default to float32
@@ -235,6 +246,7 @@ def _get_initial_state_or_default(initial_state):
 def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
+    initial_state = get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
     def previous_hook(state):
         if isinstance (state, tuple):  # if multiple then apply to each element
@@ -262,6 +274,7 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
 # TODO: This does not really have bound parameters. Should it still be a layer?
 def Delay(T=1, initial_state=default_override_or(0)):
     # TODO: change initial_state to a per-function default
+    initial_state = get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
     UntestedBranchError("Delay")
 
@@ -284,11 +297,15 @@ def Dropout(prob):
 
 # BatchNormalization -- create a batch-normalization layer
 # TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
-def BatchNormalization(map_rank=None,  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
+def BatchNormalization(map_rank=default_override_or(None),  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
-                       normalization_time_constant=5000, blend_time_constant=0,
-                       epsilon=0.00001, use_cntk_engine=True):
-    # TODO: make map_rank a default option, once per-layer type defaults are implemented
+                       normalization_time_constant=default_override_or(5000), blend_time_constant=0,
+                       epsilon=default_override_or(0.00001), use_cntk_engine=default_override_or(True)):
+
+    map_rank                    = get_default_override(BatchNormalization, map_rank=map_rank)
+    normalization_time_constant = get_default_override(BatchNormalization, normalization_time_constant=normalization_time_constant)
+    epsilon                     = get_default_override(BatchNormalization, epsilon=epsilon)
+    use_cntk_engine             = get_default_override(BatchNormalization, use_cntk_engine=use_cntk_engine)
 
     # parameters bound to this Function
     norm_shape  = _INFERRED
