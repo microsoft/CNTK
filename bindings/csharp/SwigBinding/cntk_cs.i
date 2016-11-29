@@ -126,7 +126,16 @@
     {
         return new CNTK::NDArrayView(CNTK::DataType::Double, viewShape, dataBuffer, numBufferElements * sizeof(double), device, readOnly);
     }
+}
 
+// 
+// NDShape
+//
+%extend CNTK::NDShape {
+    size_t GetDimensionSize(size_t axisId)
+    {
+        return (*self)[axisId];
+    }
 }
 
 //

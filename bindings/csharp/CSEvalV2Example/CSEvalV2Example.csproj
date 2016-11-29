@@ -69,109 +69,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\SwigBinding\Axis.cs">
-      <Link>GeneratedFiles\Axis.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\AxisVector.cs">
-      <Link>GeneratedFiles\AxisVector.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\BackPropState.cs">
-      <Link>GeneratedFiles\BackPropState.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\BoolVector.cs">
-      <Link>GeneratedFiles\BoolVector.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\CSharpBindings.cs">
-      <Link>GeneratedFiles\CSharpBindings.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\CSharpBindingsPINVOKE.cs">
-      <Link>GeneratedFiles\CSharpBindingsPINVOKE.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\DataType.cs">
-      <Link>GeneratedFiles\DataType.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\DeviceDescriptor.cs">
-      <Link>GeneratedFiles\DeviceDescriptor.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\DeviceDescriptorVector.cs">
-      <Link>GeneratedFiles\DeviceDescriptorVector.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\DeviceKind.cs">
-      <Link>GeneratedFiles\DeviceKind.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\DoubleVector.cs">
-      <Link>GeneratedFiles\DoubleVector.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\DoubleVectorVector.cs">
-      <Link>GeneratedFiles\DoubleVectorVector.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\FloatVector.cs">
-      <Link>GeneratedFiles\FloatVector.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\FloatVectorVector.cs">
-      <Link>GeneratedFiles\FloatVectorVector.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\Function.cs">
-      <Link>GeneratedFiles\Function.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\MaskKind.cs">
-      <Link>GeneratedFiles\MaskKind.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\NDArrayView.cs">
-      <Link>GeneratedFiles\NDArrayView.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\NDMask.cs">
-      <Link>GeneratedFiles\NDMask.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\NDShape.cs">
-      <Link>GeneratedFiles\NDShape.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\ParameterCloningMethod.cs">
-      <Link>GeneratedFiles\ParameterCloningMethod.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\PrimitiveOpType.cs">
-      <Link>GeneratedFiles\PrimitiveOpType.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\SizeTVector.cs">
-      <Link>GeneratedFiles\SizeTVector.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\SizeTVectorVector.cs">
-      <Link>GeneratedFiles\SizeTVectorVector.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\StorageFormat.cs">
-      <Link>GeneratedFiles\StorageFormat.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t.cs">
-      <Link>GeneratedFiles\SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\SWIGTYPE_p_void.cs">
-      <Link>GeneratedFiles\SWIGTYPE_p_void.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\UnorderedMapVariableValuePtr.cs">
-      <Link>GeneratedFiles\UnorderedMapVariableValuePtr.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\UnorderedMapVariableVariable.cs">
-      <Link>GeneratedFiles\UnorderedMapVariableVariable.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\Value.cs">
-      <Link>GeneratedFiles\Value.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\Variable.cs">
-      <Link>GeneratedFiles\Variable.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\VariableKind.cs">
-      <Link>GeneratedFiles\VariableKind.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\VariableVector.cs">
-      <Link>GeneratedFiles\VariableVector.cs</Link>
-    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\CSEvalV2Library\CSEvalV2Library.csproj">
+      <Project>{50ef9ee6-5018-453e-a063-f77044ef1a97}</Project>
+      <Name>CSEvalV2Library</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="GeneratedFiles\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

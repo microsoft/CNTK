@@ -270,15 +270,87 @@ namespace CSEvalV2Example
             }
         }
 
+
+        static void EvaluateUsingCSEvalLib()
+        {
+            // Load the model
+            var model = new CNTK.CSharp.Evaluation();
+
+            model.LoadModel("z.model", DeviceDescriptor.CPUDevice());
+
+            // prepare input for evaluation
+            int numOfSamples = 1;
+
+            var inputDims = model.GetInputSizes();
+            const string inputNodeName = "features";
+            
+            ulong numOfInputData = inputDims[inputNodeName];
+            var inputData = new List<List<float>>(numOfSamples);
+            for (uint i = 0; i < numOfInputData; ++i)
+            {
+                inputData[0].Add(i % 255);
+            }
+
+            var inputValue = model.CreateValue<float>(inputNodeName, inputData, DeviceDescriptor.CPUDevice());
+
+            // Create input map
+            // Todo: create a Dictionary wrapper?
+            var inputMap = new Dictionary<string, Value>() { { inputNodeName, inputValue } }; 
+
+            // Prepare output
+            const string outputNodeName = "out.z_output";
+
+            // Create ouput map. Using null as Value to indicate using system allocated memory.
+            var outputMap = new Dictionary<string, Value>() { { outputNodeName, null } };
+
+            // Evalaute
+            // Todo: test on GPUDevice()?
+            model.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice());
+
+            var output = new List<List<float>>();
+            var outputDims = model.GetOutputSizes();
+            ulong numOfElementsInSample = outputDims[outputNodeName];
+
+            model.CopyValueTo<float>(outputNodeName, outputMap[outputNodeName], output);
+
+            ulong seqNo = 0;
+            foreach (var seq in output)
+            { 
+                var numOfSamplesInSequence = (ulong)seq.Count/numOfElementsInSample;
+                ulong elementIndex = 0;
+                ulong sampleIndex = 0;
+                Console.Write("Seq=" + seqNo + ", Sample=" + sampleIndex + ":");
+                foreach (var data in seq)
+                {
+                    if (elementIndex++ == 0) 
+                    {
+                        Console.Write("Seq=" + seqNo + ", Sample=" + sampleIndex + ":");
+                    }
+                    Console.Write(" " + data);
+                    if (elementIndex == numOfElementsInSample)
+                    {
+                        Console.WriteLine(".");
+                        elementIndex = 0;
+                        sampleIndex++;
+                    }
+                }
+                seqNo++;
+            }
+        }
+
         static void Main(string[] args)
         {
-            EvaluateUsingCreateValue();
+            
             //Console.WriteLine("======== Evaluate V1 Model ========");
             // EvaluateV1ModelUsingNDView();
             //Console.WriteLine("======== Evaluate V2 Model ========");
             //EvaluateV2ModelUsingNDView();
             //Console.WriteLine("======== Evaluate Model Using System Allocated Memory for Output Value ========");
             //EvaluateUsingSystemAllocatedMemory();
+            //Console.WriteLine("======== Evaluate Using Value::Create ========");
+            //EvaluateUsingCreateValue();
+            Console.WriteLine("======== Evaluate Using EvalV2Library ========");
+            EvaluateUsingCSEvalLib();
         }
 
         private static void OutputFunctionInfo(global::Function func)
