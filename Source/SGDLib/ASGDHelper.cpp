@@ -178,8 +178,8 @@ public:
             mat.CopyToArray(px, m_tableLength[i]);
         }
 
-        for (int i = 1; i < m_localBufferNum; i++)
-            memcpy(m_cpuAsyncBuffer[i], m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
+        for (int i2 = 1; i2 < m_localBufferNum; i2++)
+            memcpy(m_cpuAsyncBuffer[i2], m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
 
         memcpy(m_deltaArray, m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
 
@@ -312,10 +312,10 @@ public:
                 // copy parameters from CPU buffer to GPU buffer
                 for (int widx = 0; widx < m_tableCount; widx++)
                 {
-                    ElemType * py = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[widx];
+                    ElemType * py2 = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[widx];
 
                     CUDA_CALL(cudaMemcpyAsync(m_gpuAsyncBuffer[m_bufferIndexInUse][widx].Data(),
-                        py,
+                        py2,
                         m_gpuAsyncBuffer[m_bufferIndexInUse][widx].GetNumElements() * sizeof(ElemType),
                         cudaMemcpyHostToDevice,
                         _commStream));
@@ -405,8 +405,8 @@ public:
                 ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
                 Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 
-                ElemType * px = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
-                mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
+                ElemType * px2 = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
+                mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px2);
             }
             m_reportTimer.Stop();
             if (m_traceLevel > 3)
@@ -468,17 +468,17 @@ private:
         }
 
 #ifndef CPUONLY
-        for (int i = 0; i < m_localBufferNum; i++)
-            m_gpuAsyncBuffer[i].reserve(m_tableCount);
+        for (int i2 = 0; i2 < m_localBufferNum; i2++)
+            m_gpuAsyncBuffer[i2].reserve(m_tableCount);
 
         // create pinned memory
-        for (int i = 0; i < m_localBufferNum; ++i)
-            CUDA_CALL(cudaMallocHost((void **)&m_cpuAsyncBuffer[i], sizeof(ElemType) * (m_totalModelSize), cudaHostAllocPortable));
+        for (int i3 = 0; i3 < m_localBufferNum; ++i3)
+            CUDA_CALL(cudaMallocHost((void **)&m_cpuAsyncBuffer[i3], sizeof(ElemType) * (m_totalModelSize), cudaHostAllocPortable));
 
         CUDA_CALL(cudaMallocHost((void **)&m_deltaArray, sizeof(ElemType) * (m_totalModelSize), cudaHostAllocPortable));
 #else
-        for (int i = 0; i < m_localBufferNum; i++)
-            m_cpuAsyncBuffer[i] = new ElemType[m_totalModelSize];
+        for (int i4 = 0; i4 < m_localBufferNum; i4++)
+            m_cpuAsyncBuffer[i4] = new ElemType[m_totalModelSize];
 #endif
     }
 
