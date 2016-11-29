@@ -45,8 +45,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     m_streams[name] = name;
             }
         }
-        else
-            RuntimeError("\"input\" section not defined for the reader. This must be defined and all streams in use must be listed.");
 
         m_filepath = msra::strfun::utf16(config(L"file"));
         m_keepDataInMemory = config(L"keepDataInMemory", false);

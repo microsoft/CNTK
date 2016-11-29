@@ -23,7 +23,8 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
 {
     BinaryConfigHelper configHelper(config);
 
-    fprintf(stderr, "Initializing CNTKBinaryReader");
+    string log;
+    log += "Initializing CNTKBinaryReader";
     try
     {
         m_deserializer = shared_ptr<IDataDeserializer>(new BinaryChunkDeserializer(configHelper));
@@ -31,14 +32,14 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
         if (configHelper.ShouldKeepDataInMemory())
         {
             m_deserializer = shared_ptr<IDataDeserializer>(new ChunkCache(m_deserializer));
-            fprintf(stderr, " | keeping data in memory");
+            log += " | keeping data in memory";
         }
 
         if (configHelper.GetRandomize())
         {
             size_t window = configHelper.GetRandomizationWindow();
             // Verbosity is a general config parameter, not specific to the binary format reader.
-            fprintf(stderr, " | randomizing with window: %d", (int)window);
+            log += " | randomizing with window: " + (int)window;
             int verbosity = config(L"verbosity", 0);
             m_sequenceEnumerator = make_shared<BlockRandomizer>(
                 verbosity, /* verbosity */
@@ -52,7 +53,7 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
         }
         else
         {
-            fprintf(stderr, " | without randomization");
+            log += " | without randomization";
             m_sequenceEnumerator = std::make_shared<NoRandomizer>(m_deserializer);
         }
 
@@ -63,7 +64,8 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
     {
         RuntimeError("CNTKBinaryReader: While reading '%ls': %s", configHelper.GetFilePath().c_str(), e.what());
     }
-    fprintf(stderr, "\n");
+    if (configHelper.GetTraceLevel() > 2)
+        fprintf(stderr, "%s\n", log);
 }
 
 } } }

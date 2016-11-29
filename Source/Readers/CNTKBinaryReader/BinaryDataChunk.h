@@ -18,7 +18,6 @@ public:
     explicit BinaryDataChunk(ChunkIdType chunkId, size_t startSequence, size_t numSequences, unique_ptr<byte[]> buffer, std::vector<BinaryDataDeserializerPtr> deserializer)
         : m_chunkId(chunkId), m_startSequence(startSequence), m_numSequences(numSequences), m_buffer(std::move(buffer)), m_deserializers(deserializer)
     {
-        m_data.clear();
     }
 
     // Gets sequences by id.
@@ -27,11 +26,12 @@ public:
         // Check if we've already parsed the chunk. If not, parse it.
         if (m_data.size() == 0)
             ParseChunk();
+        assert(m_data.size() != 0);
         // resize the output to have the same dimensionality
         result.resize(m_data.size());
         // now copy the decoded sequences
         for (size_t c = 0; c < m_data.size(); c++)
-            result[c] = m_data[c][sequenceId - m_startSequence];
+            result[c] = m_data[c].at(sequenceId - m_startSequence);
     }
 
     uint32_t GetNumSamples(size_t sequenceId)
@@ -51,7 +51,7 @@ protected:
         size_t bytesProcessed = 0;
         // Now call all of the deserializers on the chunk, in order
         for (size_t c = 0; c < m_deserializers.size(); c++)
-            bytesProcessed += m_deserializers[c]->GetSequencesForChunk(m_numSequences, 0, (byte*)m_buffer.get() + bytesProcessed, m_data[c]);
+            bytesProcessed += m_deserializers[c]->GetSequenceDataForChunk(m_numSequences, 0, (byte*)m_buffer.get() + bytesProcessed, m_data[c]);
     }
 
     // chunk id (copied from the descriptor)

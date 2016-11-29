@@ -27,16 +27,17 @@ struct DiskOffsetsTable
 class OffsetsTable {
 public:
 
-    OffsetsTable(size_t numChunks, DiskOffsetsTable* offsetsTable) : m_numChunks(numChunks), m_diskOffsetsTable(offsetsTable)
+    OffsetsTable(size_t numChunks, DiskOffsetsTable* offsetsTable) : m_numChunks(numChunks)//, m_diskOffsetsTable(offsetsTable)
     {
+        m_diskOffsetsTable = make_unique<DiskOffsetsTable*>(offsetsTable);
         Initialize();
     }
 
-    int64_t GetOffset(size_t index) { return m_diskOffsetsTable[index].offset; }
-    int32_t GetNumSequences(size_t index) { return m_diskOffsetsTable[index].numSequences; }
-    int32_t GetNumSamples(size_t index) { return m_diskOffsetsTable[index].numSamples; }
+    int64_t GetOffset(size_t index) { return (*m_diskOffsetsTable)[index].offset; }
+    int32_t GetNumSequences(size_t index) { return (*m_diskOffsetsTable)[index].numSequences; }
+    int32_t GetNumSamples(size_t index) { return (*m_diskOffsetsTable)[index].numSamples; }
     int64_t GetStartIndex(size_t index) { return m_startIndex[index]; }
-    size_t GetChunkSize(size_t index) { return m_diskOffsetsTable[index + 1].offset - m_diskOffsetsTable[index].offset; }
+    size_t GetChunkSize(size_t index) { return (*m_diskOffsetsTable)[index + 1].offset - (*m_diskOffsetsTable)[index].offset; }
 
 private:
     void Initialize()
@@ -44,12 +45,12 @@ private:
         m_startIndex.resize(m_numChunks);
         m_startIndex[0] = 0;
         for (int64_t c = 1; c < m_numChunks; c++)
-            m_startIndex[c] = m_startIndex[c-1] + m_diskOffsetsTable[c].numSequences;
+            m_startIndex[c] = m_startIndex[c-1] + (*m_diskOffsetsTable)[c].numSequences;
     }
 
 private:
     int64_t m_numChunks;
-    DiskOffsetsTable* m_diskOffsetsTable;
+    unique_ptr<DiskOffsetsTable*> m_diskOffsetsTable;
     vector<size_t> m_startIndex;
 };
 

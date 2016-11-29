@@ -11,6 +11,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+enum class DeserializerType : int32_t
+{
+    DenseBinaryDataDeserializer = 0,
+    SparseBinaryDataDeserializer = 1
+};
 void BinaryChunkDeserializer::ReadOffsetsTable(FILE* infile)
 {
     ReadOffsetsTable(infile, 0, m_numChunks);
@@ -97,8 +102,8 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
     m_deserializers.resize(m_numInputs);
 
     int32_t len;
-    int32_t maxLen = 100;
-    char* tempName = new char[maxLen];
+    // 100 characters should be plenty by default, but grow if necessary.
+    vector<char> tempName(100);
     for (int32_t c = 0; c < m_numInputs; c++)
     {
         // Create our streamDescription for this input
@@ -106,15 +111,11 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
 
         // read the name
         CNTKBinaryFileHelper::readOrDie(&len, sizeof(len), 1, m_file);
-        if (len + 1 > maxLen)
-        {
-            maxLen = len + 1;
-            delete[] tempName;
-            tempName = new char[maxLen];
-        }
-        CNTKBinaryFileHelper::readOrDie(tempName, sizeof(char), len, m_file);
+        // Need 1 extra char for the null.
+        tempName.resize(len+1);
+        CNTKBinaryFileHelper::readOrDie(tempName.data(), sizeof(char), len, m_file);
         tempName[len] = '\0';
-        wstring wname = msra::strfun::utf16(tempName);
+        wstring wname = msra::strfun::utf16(tempName.data());
         // Check if we should rename this input based on the config
         if (rename.find(wname) == rename.end())
             streamDescription->m_name = wname;
@@ -123,11 +124,11 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
 
         // Read the matrix type. Then instantiate the appropriate BinaryDataDeserializer, and have it read in its parameters
         // Note: Is there a better way to do this?
-        int32_t matType;
+        DeserializerType matType;
         CNTKBinaryFileHelper::readOrDie(&matType, sizeof(matType), 1, m_file);
-        if (matType == 0)
+        if (matType == DeserializerType::DenseBinaryDataDeserializer)
             m_deserializers[c] = make_shared<DenseBinaryDataDeserializer>(m_file);
-        else if (matType == 1)
+        else if (matType == DeserializerType::SparseBinaryDataDeserializer)
             m_deserializers[c] = make_shared<SparseBinaryDataDeserializer>(m_file);
         else
             RuntimeError("Unknown matrix type %d requested.", matType);
@@ -138,7 +139,6 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
         streamDescription->m_sampleLayout = m_deserializers[c]->GetSampleLayout();
         m_streams[c]                      = streamDescription;
     }
-    delete[] tempName;
 
     // We just finished the header. So we're now at the offsets table.
     m_offsetStart = CNTKBinaryFileHelper::tellOrDie(m_file);

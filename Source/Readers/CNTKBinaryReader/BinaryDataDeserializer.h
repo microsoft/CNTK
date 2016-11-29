@@ -16,9 +16,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 class BinaryDataDeserialzer {
 public:
-    virtual size_t GetSequencesForChunk(size_t numSequences, size_t startIndex, void* data, std::vector<SequenceDataPtr>& result) = 0;
+    virtual size_t GetSequenceDataForChunk(size_t numSequences, size_t startIndex, void* data, std::vector<SequenceDataPtr>& result) = 0;
 
-    StorageType GetStorageType() { return m_matType; }
+    StorageType GetStorageType() { return m_storageType; }
     ElementType GetElementType() { return m_elemType; }
     TensorShapePtr GetSampleLayout() { return make_shared<TensorShape>(m_numCols); }
     virtual bool IsSequence() { return false; }
@@ -76,7 +76,7 @@ protected:
 
     
 protected:
-    StorageType m_matType;
+    StorageType m_storageType;
     ElementType m_elemType;
     size_t m_numCols;
 
@@ -90,7 +90,7 @@ public:
     DenseBinaryDataDeserializer(FILE* infile)
     {
         // We don't have to read the storage type. We know we're dense
-        m_matType = StorageType::dense;
+        m_storageType = StorageType::dense;
 
         // Read the element type, note it's stored as an int32
         int32_t elemType;
@@ -100,7 +100,7 @@ public:
         else if (elemType == 1)
             m_elemType = ElementType::tdouble;
         else
-            RuntimeError("Error, the reader read element type %d, but only 0 (float) and 1 (double) are valid.", elemType);
+            RuntimeError("Unsupported element type %d.", elemType);
 
         // Read the number of columns
         int32_t numCols;
@@ -108,14 +108,13 @@ public:
         m_numCols = numCols;
     }
 
-    size_t GetSequencesForChunk(size_t numSequences, size_t startIndex, void* data, std::vector<SequenceDataPtr>& result)
+    size_t GetSequenceDataForChunk(size_t numSequences, size_t startIndex, void* data, std::vector<SequenceDataPtr>& result)
     {
         size_t elemSize = GetElemSizeBytes();
         result.resize(numSequences);
         for (size_t c = 0; c < numSequences; c++)
         {
             shared_ptr<DenseInputStreamBuffer> sequence = make_shared<DenseInputStreamBuffer>();
-            // We can't popuplate sequence->m_chunk here, so delay that for later
             sequence->SetDataBuffer( (char*)data + c*m_numCols*elemSize );
             sequence->m_id              = startIndex + c;
             sequence->m_numberOfSamples = 1;
@@ -139,9 +138,9 @@ public:
         int32_t storageType;
         CNTKBinaryFileHelper::readOrDie(&storageType, sizeof(storageType), 1, infile);
         if (storageType == 0)
-            m_matType = StorageType::sparse_csc;
+            m_storageType = StorageType::sparse_csc;
         else
-            RuntimeError("Error, the reader read matrix type %d, but only 0 (sparse_csc) is valid.", storageType);
+            RuntimeError("Unsupported storage type %d.", storageType);
 
         // Read the element type, note it's stored as an int32
         int32_t elemType;
@@ -151,7 +150,7 @@ public:
         else if (elemType == 1)
             m_elemType = ElementType::tdouble;
         else
-            RuntimeError("Error, the reader read element type %d, but only 0 (float) and 1 (double) are valid.", elemType);
+            RuntimeError("Unsupported element type %d.", elemType);
 
         int32_t isSequence;
         CNTKBinaryFileHelper::readOrDie(&isSequence, sizeof(isSequence), 1, infile);
@@ -160,7 +159,7 @@ public:
         else if (isSequence == 1)
             m_isSequence = true;
         else
-            RuntimeError("Error, the reader read is sequence %d, but only 0 (false) and 1 (true) are valid.", isSequence);
+            RuntimeError("Unsupported sequence type %d.", isSequence);
 
         // Read the number of columns
         int32_t numCols;
@@ -175,7 +174,7 @@ public:
     // ElemType[nnz]: the values for the sparse sequences
     // int32_t[nnz]: the row offsets for the sparse sequences
     // int32_t[numSequences]: the column offsets for the sparse sequences
-    size_t GetSequencesForChunk(size_t numSequences, size_t startIndex, void* data, std::vector<SequenceDataPtr>& result)
+    size_t GetSequenceDataForChunk(size_t numSequences, size_t startIndex, void* data, std::vector<SequenceDataPtr>& result)
     {
         size_t elemSize = GetElemSizeBytes();
         result.resize(numSequences);
@@ -186,10 +185,10 @@ public:
         // the rest of this chunk
         // Since we're not templating on ElemType, we use void for the values. Note that this is the only place
         // this deserializer uses ElemType, the rest are int32_t for this deserializer.
-        void* values = (byte*)data + sizeof(int32_t);
+        void* values = (char*)data + sizeof(int32_t);
 
         // Now the row offsets
-        int32_t* rowOffsets = (int32_t*)((byte*)values + elemSize * totalNNz);
+        int32_t* rowOffsets = (int32_t*)((char*)values + elemSize * totalNNz);
 
         // Now the col offsets
         int32_t* colOffsets = rowOffsets + totalNNz;
@@ -199,7 +198,7 @@ public:
         {
             shared_ptr<SparseInputStreamBuffer> sequence = make_shared<SparseInputStreamBuffer>();
             // We can't popuplate sequence->m_chunk here, so delay that for later
-            sequence->m_id              = startIndex + colIndex;
+            sequence->m_id = startIndex + colIndex;
 
             // We know the number of elements in all of the samples, it's just this:
             sequence->m_totalNnzCount = colOffsets[colIndex + 1] - colOffsets[colIndex];
@@ -224,7 +223,7 @@ public:
             }
             sequence->m_numberOfSamples = (uint32_t)sequence->m_nnzCounts.size();
             // update values, rowOffsets pointers
-            values = (byte*)values + sequence->m_totalNnzCount * elemSize;
+            values = (char*)values + sequence->m_totalNnzCount * elemSize;
             rowOffsets += sequence->m_totalNnzCount;
 
             result[colIndex] = sequence;
