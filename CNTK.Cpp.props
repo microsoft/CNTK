@@ -133,7 +133,7 @@
 
   <PropertyGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">
     <UseDebugLibraries>$(DebugBuild)</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>$(ReleaseBuild)</WholeProgramOptimization>
     <LinkIncremental>$(DebugBuild)</LinkIncremental>
