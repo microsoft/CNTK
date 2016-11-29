@@ -20,19 +20,21 @@ def combine(operands, name=''):
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
 
     Example:
-    >>> i1 = C.input_variable((5,))
-    >>> i2 = C.input_variable((5,))
+    >>> in1 = C.input_variable((4,))
+    >>> in2 = C.input_variable((4,))
 
-    >>> i1_arr = np.asarray([[1., 2., 3., 4., 5]], np.float32)
-    >>> i2_arr = np.asarray([[0., 5., -3., 2., 8.]], np.float32)
+    >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
+    >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
 
-    >>> my_op1 = C.plus(i1, i2)
-    >>> my_op2 = C.minus(i1, i2)
+    >>> plus_node = in1 + in2
+    >>> minus_node = in1 - in2
 
-    >>> forward = C.combine([my_op1, my_op2]).eval({i1: i1_arr, i2: i2_arr})
+    >>> forward = C.combine([plus_node, minus_node]).eval({in1: in1_data, in2: in2_data})
+    >>> len(forward)
+    2
     >>> list(forward.values()) # doctest: +SKIP
-    [array([[[  1.,   7.,   0.,   6.,  13.]]], dtype=float32),
-     array([[[ 1., -3.,  6.,  2., -3.]]], dtype=float32)]
+    [array([[[ 1., -3.,  6.,  2.]]], dtype=float32),
+     array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)]
 
     Args:
         operands (list): list of functions or their variables to combine
