@@ -415,15 +415,15 @@ if __name__ == '__main__':
     vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create model
-    #model = create_model()
+    model = create_model()
     
     # train
-    #train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
     #write(valid_reader, "model_epoch0.cmf", vocab, i2w)
     
     # test the model out in an interactive session
-    print('loading model...')
-    model_filename = "model_epoch0.cmf"
-    model = load_model(model_filename)
-    interactive_session(model, vocab, i2w, show_attention=True)
+    #print('loading model...')
+    #model_filename = "model_epoch0.cmf"
+    #model = load_model(model_filename)
+    #interactive_session(model, vocab, i2w, show_attention=True)
