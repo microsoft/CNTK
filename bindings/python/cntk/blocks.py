@@ -37,9 +37,10 @@ def UntestedBranchError(name):
 # These can be overwritten temporarily by saying
 #    with default_options(init=..., ...):
 #        # code block within which the changed defaults are active
+# TODO: rename to _current_default_overrides
 _current_default_options = Record(
     init=glorot_uniform(),
-    activation=None,                  # Dense() and Convolution() have no activation by default
+    #activation=None,                  # Dense() and Convolution() have no activation by default
     pad=False, # BUGBUG: not done for pooling at present. Need a special default? How to name?
     # ^^ This should be addressed by allowing configs per layer type.
     #    To be addressed as a per-layer default. See default_options below.
@@ -48,8 +49,53 @@ _current_default_options = Record(
     enable_self_stabilization=False,  # Stabilizer() and LSTM()
     initial_state=None,               # Recurrence()
     use_peepholes=False,              # LSTM()
-    dtype=np.float32                  # Constant(), Parameter(), Input()
+    dtype=np.float32,                 # Constant(), Parameter(), Input()
+    _scope = None,                    # set of all functions that this scope belongs to; None means "all"
+    _outer = None                     # link to outer scope
 )
+
+# simple wrapper to hold default values#
+# meant to be both an indicator in a function signature and a detectable wrapper of a default
+# This has a single member 'value' to hold the value.
+class default_override_or:
+    def __init__(self, value):
+        self.value = value
+
+# check if a parameter was given
+# (No if it is still of type default_override_or.)
+def is_default_override(value):
+    return isinstance(value, default_override_or)
+
+# look up an option default override
+# 'function' is the function that calls this
+# new pattern:
+# def Convolution(args, init=default_override_or(glorot_uniform()), activation=default_override_or(identity), pad=default_override_or(False)):
+#     init = _get_default_override(Convolution, init=init) # pass default under the same name
+def get_default_override(function, **kwargs):
+    # parameter checking and casting
+    if len(kwargs) != 1:
+        raise ValueError("_get_default_override() expects 1 keyword argument")
+    key, value = [kvp for kvp in kwargs.items()][0] # this is the keyword argument that the user passed in  --TODO: can this be simplified?
+    from inspect import signature, isfunction  # check if key is a valid parameter  --TODO: should check for kw arguments
+    if not isfunction(function):
+        raise ValueError('First argument must be a function')
+    try:
+        signature(function).parameters[key]
+    except:
+        raise TypeError("{0}() has no argument named '{1}'".format(function.__name__, key))
+    # if the value passed in is not a default, then use that value
+    if not is_default_override(value):
+        return value
+    # traverse linked list of scopes inside-out until an override was found, else fall back to default
+    opts = _current_default_options
+    while opts is not None:
+        if opts._scope is None or function in opts._scope: # we are in the right scope
+            try:
+                return opts[key]  # look up the option override and return it if present in this scope
+            except:
+                pass       # no such override in this scope
+        opts = opts._outer # step out one scope and try again
+    return value.value # no override found: use the default as passed in
 
 _default_sentinel           = '(default)'           # This is a singleton sentinel value we recognize and replace in _initializer_for()
 _default_sentinel_init      = '(init default)'      # use different ones for init andinit_bias so we can distinguish them in _initializer_for()
@@ -135,8 +181,9 @@ def _resolve_activation(activation):
 # create the complete initializer for a given 'init' parameter, to pass to parameter()
 # This is called from Parameter() and every place that injects rank parameters.
 # It does a few things:
-#  - maps init_default_or_glorot_uniform to default  --TODO: we should have a global setting for that
+#  - maps init_default_override_or_glorot_uniform to default  --TODO: we should have a global setting for that
 #  - creates a new initializer object from an existing one, while updating members
+# TODO: remove default resolution, only make this a conversion; then rename
 def _initializer_for(init, rank_params=None):
     if init is None:
         raise ValueError("init parameter cannot be None")
@@ -185,19 +232,19 @@ def Block(f, op_name, members={}):
     return f
 
 # some mappings--these currently exist only so that I can name the nodes for debugging
-def Parameter(shape, init, dtype=dtype_default_or_float32, name=''):
+def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
     dtype = dtype if _is_given(dtype) else _current_default_options.dtype
     init = _initializer_for(init)
     p = parameter(shape, init=init, dtype=dtype, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'parameter')   # these are factory methods for things with state
 
-def Constant(init, shape=None, dtype=dtype_default_or_float32, name=''):
+def Constant(init, shape=None, dtype=default_override_or(np.float32), name=''):
     dtype = dtype if _is_given(dtype) else _current_default_options.dtype
     p = constant(init, shape=shape, dtype=dtype, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'constant')   # these are factory methods for things with state
 
 # TODO: this function should not be necessary anymore
-def Input(shape, dtype=dtype_default_or_float32, needs_gradient=True, is_sparse=False,
+def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_sparse=False,
           dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
     dtype = dtype if _is_given(dtype) else _current_default_options.dtype
     return _name_node(input_variable(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
@@ -243,7 +290,7 @@ identity = _Identity()
 
 # TODO: add a flag enable_self_stabilizer (maybe rename it) default to True, overridable by default_options
 # This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
-def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_default_or_False):
+def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(False)):
     if _is_given(enable_self_stabilization):
         raise NotImplementedError('Stabilizer: enable_self_stabilization flag not implemented yet')
     #enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
@@ -265,9 +312,9 @@ def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_
     apply_x = beta * x
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
-def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
-         init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,
-         enable_self_stabilization=enable_self_stabilization_default_or_False): # (x, (h, c))
+def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
+         init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
+         enable_self_stabilization=default_override_or(False)): # (x, (h, c))
 
     use_peepholes             = use_peepholes             if _is_given(use_peepholes)             else _current_default_options.use_peepholes
     enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization

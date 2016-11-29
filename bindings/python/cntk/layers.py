@@ -27,11 +27,16 @@ from cntk.blocks import _get_current_default_options, _is_given, _initializer_fo
 # input_rank given: number of inferred axes to add to W (map_rank must not be given)
 # map_rank   given: expand W to leave exactly mapRank axes (input_rank must not be given)
 # none       given: expand W to all (same as map_rank=0)
-def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_default_or_None,
+def Dense(shape, init=default_override_or(glorot_uniform()), activation=default_override_or(identity),
           input_rank=None, map_rank=None,
-          bias=bias_default_or_True, init_bias=init_bias_default_or_0):
-    activation = _resolve_activation(activation)
-    bias       = bias if _is_given(bias) else _get_current_default_options().bias
+          bias=default_override_or(True), init_bias=default_override_or(0)):
+    init       = get_default_override(Dense, init=init)
+    activation = get_default_override(Dense, activation=activation)
+    bias       = get_default_override(Dense, bias=bias)
+    init_bias  = get_default_override(Dense, init_bias=init_bias)
+
+    #activation = _resolve_activation(activation)
+    #bias       = bias if _is_given(bias) else _get_current_default_options().bias
     output_shape = _as_tuple(shape)
 
     if input_rank is not None and map_rank is not None:
@@ -78,8 +83,8 @@ def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_defa
 # Embedding -- create a linear embedding layer
 # To create an embedding from a file, use this:
 #  Embedding(weights=np.load('PATH'))
-def Embedding(shape=None, init=None, weights=None):
-    if init is not None or weights is not None:
+def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None):
+    if not is_default_override(init) and weights is not None:
         raise ValueError('Embedding: init and weights options are mutually exclusive')
 
     # parameters bound to this Function:
@@ -87,8 +92,9 @@ def Embedding(shape=None, init=None, weights=None):
     if weights is None:
         if shape is None:
             raise ValueError('Embedding: output shape must be specified')
-        if init is None:
-            init = init_default_or_glorot_uniform
+        init  = get_default_override(Embedding, init=init)
+        #if init is None:
+        #    init = init_default_or_glorot_uniform
         shape = _as_tuple(shape)
         weight_shape = _INFERRED + shape
         E = Parameter(weight_shape, init=init, name='E')
@@ -123,13 +129,13 @@ def Embedding(shape=None, init=None, weights=None):
 #  - num_filters first is what Keras does
 def Convolution(rf_shape,        # e.g. (3,3)
                 num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension_
-                activation=activation_default_or_None,
-                init=init_default_or_glorot_uniform,
-                pad=pad_default_or_False,
+                activation=default_override_or(identity),
+                init=default_override_or(glorot_uniform()),
+                pad=default_override_or(False),
                 strides=1,
                 sharing=True,     # (must be True currently)
-                bias=bias_default_or_True,
-                init_bias=init_bias_default_or_0,
+                bias=default_override_or(True),
+                init_bias=default_override_or(0),
                 reduction_rank=1, # (must be 1 currently)
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0):
@@ -181,7 +187,7 @@ from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
 def Pooling(op,      # PoolingType_Max or _Average
             rf_shape,  # e.g. (3,3)
             strides=1,
-            pad=False):
+            pad=default_override_or(False)):
     x = Placeholder(name='pooling_arg')
     apply_x = pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
 
@@ -196,13 +202,13 @@ def Pooling(op,      # PoolingType_Max or _Average
 # MaxPooling
 def MaxPooling(rf_shape,  # e.g. (3,3)
                strides=1,
-               pad=False):
+               pad=default_override_or(False)):
     return Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad)
 
 # AveragePooling
 def AveragePooling(rf_shape,  # e.g. (3,3)
                    strides=1,
-                   pad=False):
+                   pad=default_override_or(False)):
     return Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad)
 
 # GlobalMaxPooling
@@ -215,6 +221,7 @@ def GlobalAveragePooling():
 
 # helper to get the initial_state or the default
 def _get_initial_state_or_default(initial_state):
+    # TODO: remove this line
     initial_state = initial_state if _is_given(initial_state) else _get_current_default_options().initial_state
     # if initial state is given and a numeric constant, then turn it into a Constant() object
     if initial_state is None:
@@ -225,7 +232,7 @@ def _get_initial_state_or_default(initial_state):
         return initial_state # already in good shape: return as is
 
 # Recurrence() -- run a block recurrently over a time sequence
-def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):
+def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
     initial_state = _get_initial_state_or_default(initial_state)
@@ -253,7 +260,7 @@ def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_
 
 # Delay -- delay input
 # TODO: This does not really have bound parameters. Should it still be a layer?
-def Delay(T=1, initial_state=None):
+def Delay(T=1, initial_state=default_override_or(0)):
     # TODO: change initial_state to a per-function default
     initial_state = _get_initial_state_or_default(initial_state)
     UntestedBranchError("Delay")
