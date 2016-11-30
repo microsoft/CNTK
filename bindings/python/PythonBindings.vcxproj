@@ -54,6 +54,7 @@
     <None Include="cntk\blocks.py" />
     <None Include="cntk\cntk_py.i" />
     <None Include="cntk\conftest.py" />
+    <None Include="cntk\default_options.py" />
     <None Include="cntk\device.py" />
     <None Include="cntk\distributed.py" />
     <None Include="cntk\graph.py" />

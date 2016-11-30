@@ -66,11 +66,12 @@ def get_default_override(function, **kwargs):
     opts = _current_default_options
     while opts is not None:
         if opts._scope is None or function in opts._scope: # we are in the right scope
-            try:
+            if hasattr(opts, key):
+            #try:
                 value = opts[key]  # look up the option override and return it if present in this scope
                 return value
-            except:
-                pass       # no such override in this scope
+            #except:
+            #    pass       # no such override in this scope
         opts = opts._outer # step out one scope and try again
     return value.value # no override found: use the default as passed in
 

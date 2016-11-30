@@ -56,12 +56,12 @@ class Function(cntk_py.Function):
         args = [to_input(arg) for arg in arg_types]
         #self.replace_placeholders(dict(zip(placeholders, args)))
         for pair in zip(placeholders, args):
-            try:
+            #try:
                 if pair[1] is not None:
                     self.replace_placeholders({pair[0]: pair[1]})
                 # BUGBUG: fails with "At least one of the placeholders specified for replacement was not found in the function"
-            except:
-                pass # workaround
+            #except:
+            #    pass # workaround
 
 
     # call a function, i.e. clone with all placeholders/inputs replaced

@@ -3797,8 +3797,8 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
         }
     }
     else
-    {
 #pragma omp critical
+    {
         if (from_id == CPUDEVICE) // from CPU to GPU
         {
             if (!m_CPUMatrix)
