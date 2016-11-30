@@ -80,7 +80,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
     Args:
         deserializers ('list', default is empty): list of deserializers
         randomize (bool, default True): randomize before every epoch
-        randomization_window (int) : size of window that reader will shuffle
+        randomization_window (int) : size of window that reader will shuffle, ignored if `randomize` is False
         epoch_size (int): epoch size
         distributed_after (int): sample count after which minibatch source becomes distributed
         multithreaded_deserializer (bool): using multi threaded deserializer
@@ -243,7 +243,7 @@ class ReaderConfig(dict):
         deserializers ('list', default is empty): list of deserializers
          (:class:`ImageDeserializer` for now).
         randomize (bool, default True): randomize images before every epoch
-        randomization_window (int) : size of window that reader will shuffle
+        randomization_window (int) : size of window that reader will shuffle, ignored if `randomize` is False
         epoch_size (int): epoch size
         distributed_after (int): sample count after which reader becomes distributed
         multithreaded_deserializer (bool): using multi threaded deserializer

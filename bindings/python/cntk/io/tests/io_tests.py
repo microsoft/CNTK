@@ -116,7 +116,33 @@ def test_image():
     t1['interpolations'] == 'linear'
     t2['type'] == 'mean'
     t2['meanFile'] == mean_file
-
+    
+    rc = ReaderConfig(image, randomize=False, randomization_window = 100, epoch_size=epoch_size)
+    
+    assert rc['epochSize'].value == epoch_size
+    assert rc['randomize'] == False
+    assert len(rc['deserializers']) == 1
+    d = rc['deserializers'][0]
+    assert d['type'] == 'ImageDeserializer'
+    assert d['file'] == map_file
+    assert set(d['input'].keys()) == {label_name, feature_name}
+    
+    l = d['input'][label_name]
+    assert l['labelDim'] == num_classes
+    
+    rc = ReaderConfig(image, randomize=True, randomization_window = 100, epoch_size=epoch_size)
+    
+    assert rc['epochSize'].value == epoch_size
+    assert rc['randomize'] == True
+    assert len(rc['deserializers']) == 1
+    d = rc['deserializers'][0]
+    assert d['type'] == 'ImageDeserializer'
+    assert d['file'] == map_file
+    assert set(d['input'].keys()) == {label_name, feature_name}
+    
+    l = d['input'][label_name]
+    assert l['labelDim'] == num_classes
+    
     # TODO depends on ImageReader.dll
     ''' 
     mbs = rc.minibatch_source()
