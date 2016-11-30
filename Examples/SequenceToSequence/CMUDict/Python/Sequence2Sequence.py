@@ -90,6 +90,7 @@ def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recu
     if augment_input_hook != None:
         create_aux = True
 
+    # only the first layer should create an auxiliary input (the attention weights are shared amongs the layers)
     output_h, output_c, aux = LSTM_layer(Stabilizer()(input), output_dim, 
                                          recurrence_hook_h, recurrence_hook_c, augment_input_hook, create_aux)
     for layer_index in range(1, num_layers):
@@ -97,22 +98,12 @@ def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recu
 
     return (output_h, output_c)
 
-def create_model():
+def create_model(inputs):
     
-    # Source and target inputs to the model
-    batch_axis = Axis.default_batch_axis()
-    input_seq_axis = Axis('inputAxis')
-    label_seq_axis = Axis('labelAxis')
-
-    input_dynamic_axes = [batch_axis, input_seq_axis]
-    raw_input = input_variable(
-        shape=(input_vocab_dim), dynamic_axes=input_dynamic_axes, name='raw_input')
-
-    label_dynamic_axes = [batch_axis, label_seq_axis]
-    raw_labels = input_variable(
-        shape=(label_vocab_dim), dynamic_axes=label_dynamic_axes, name='raw_labels')
-
-    # Instantiate the sequence to sequence translation model
+    # get inputs to the model (has to include labels for input to the decoder)
+    raw_input, raw_labels = inputs
+    
+    # Set up sequences...
     input_sequence = raw_input
 
     # Drop the sentence start token from the label, for decoder training
@@ -411,6 +402,23 @@ def debug_attention(model, mb, reader):
     att_value = output[1][att_key]
     print(att_value[0,0,:])
 
+# function to model the inputs
+def create_inputs():
+    
+    # Source and target inputs to the model
+    batch_axis = Axis.default_batch_axis()
+    input_seq_axis = Axis('inputAxis')
+    label_seq_axis = Axis('labelAxis')
+
+    input_dynamic_axes = [batch_axis, input_seq_axis]
+    raw_input = input_variable(
+        shape=(input_vocab_dim), dynamic_axes=input_dynamic_axes, name='raw_input')
+
+    label_dynamic_axes = [batch_axis, label_seq_axis]
+    raw_labels = input_variable(
+        shape=(label_vocab_dim), dynamic_axes=label_dynamic_axes, name='raw_labels')
+
+    return (raw_input, raw_labels)
 
 #############################
 # main function boilerplate #
@@ -423,8 +431,9 @@ if __name__ == '__main__':
     valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
     vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
-    # create model
-    model = create_model()
+    # create inputs and create model
+    inputs = create_inputs()
+    model = create_model(inputs)
     
     # train
     train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
