@@ -189,11 +189,7 @@ namespace CNTK
         LearnerAdaGrad(const std::vector<Parameter>& parameters,
                        const LearningRateSchedule& learningRateSchedule,
                        bool needAveMultiplier,
-                       AdditionalLearningOptions additionalOptions)
-                       : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ true),
-                       m_needAveMultiplier(needAveMultiplier)
-    {
-    }
+                       AdditionalLearningOptions additionalOptions);
 
     protected:
         bool m_needAveMultiplier;

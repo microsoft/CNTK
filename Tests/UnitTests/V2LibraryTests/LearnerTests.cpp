@@ -14,8 +14,8 @@ using namespace std;
 
 static const size_t maxMinibatchSize = 1000;
 
-static const size_t maxNumAxes = 5;
-static const size_t maxDimSize = 10;
+static const size_t maxNumAxes = 3;
+static const size_t maxDimSize = 5;
 
 template <typename ElementType>
 void TestUpdate(LearnerPtr& learner, NDShape& shape, size_t numMinibatches, const DeviceDescriptor& device)
@@ -236,20 +236,20 @@ void LearnerTests()
     TestTrainingParametersSchedule();
 
     TestSGDLearner<double>(5, 3, DeviceDescriptor::CPUDevice());
+    TestMomentumSGDLearner<float>(3, 4, DeviceDescriptor::CPUDevice());
+    TestNesterovLearner<float>(1, 4, DeviceDescriptor::CPUDevice());
+    TestAdaGradLearner<double>(2, 5, DeviceDescriptor::CPUDevice());
+    TestFSAdaGradLearner<double>(10, 2, DeviceDescriptor::CPUDevice());
+    TestRMSPropLearner<float>(3, 3, DeviceDescriptor::CPUDevice());
 
     if (IsGPUAvailable())
     {
-        TestMomentumSGDLearner<float>(3, 11, DeviceDescriptor::GPUDevice(0));
-        TestNesterovLearner<float>(1, 20, DeviceDescriptor::GPUDevice(0));
+        TestSGDLearner<double>(1, 1, DeviceDescriptor::CPUDevice());
+        TestMomentumSGDLearner<float>(3, 5, DeviceDescriptor::GPUDevice(0));
+        TestNesterovLearner<float>(1, 4, DeviceDescriptor::GPUDevice(0));
+        TestAdaGradLearner<double>(1, 2, DeviceDescriptor::GPUDevice(0));
+        TestFSAdaGradLearner<double>(2, 2, DeviceDescriptor::GPUDevice(0));
+        TestRMSPropLearner<float>(3, 3, DeviceDescriptor::GPUDevice(0));
     }
-    else
-    {
-        TestMomentumSGDLearner<float>(3, 11, DeviceDescriptor::CPUDevice());
-        TestNesterovLearner<float>(1, 20, DeviceDescriptor::CPUDevice());
-    }
-    
-    TestAdaGradLearner<double>(2, 10, DeviceDescriptor::CPUDevice());
-    
-    TestFSAdaGradLearner<double>(10, 2, DeviceDescriptor::CPUDevice());
-    TestRMSPropLearner<float>(3, 3, DeviceDescriptor::CPUDevice());
+
 }
