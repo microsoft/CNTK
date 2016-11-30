@@ -307,6 +307,12 @@ std::wstring PrintNDArrayView(const NDArrayView& value)
     return result;
 }
 
+namespace GRAPHIR
+{
+    std::ostream& operator<<(std::ostream& stream, const Dictionary& dictionary);
+}
+
+
 void PrintDictionaryValue(const std::wstring& name, const DictionaryValue& value, int indent)
 {
     std::wstring result;
@@ -368,6 +374,10 @@ void PrintDictionaryValue(const std::wstring& name, const DictionaryValue& value
         break;
 
     case DictionaryValue::Type::Dictionary:
+        std::stringstream s;
+        GRAPHIR::operator<<(s, value.Value<Dictionary>());
+
+
         for (auto subNode : value.Value<Dictionary>())
         {
             if ((subNode.second.ValueType() != DictionaryValue::Type::Vector) &&
