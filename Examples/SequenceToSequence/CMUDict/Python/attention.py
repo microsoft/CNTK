@@ -89,7 +89,6 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
         
         u = times(Stabilizer()(element_times(tanh_out, valid)), v) # (attention_span, 1)
         u_valid = u + (valid - 1) * 50
-        #u_valid = u
 
         # we do two reshapes (20,1)->(20) and then (20)->(20,1) so that we can use the built-in softmax()
         attention_weights = alias(softmax(reshape(u_valid, shape=(attention_span))), name='attention_weights')
