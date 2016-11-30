@@ -231,10 +231,10 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 {
                     // Desired output layers
                     // const string hiddenLayerName = "out.h1";
-                    const string outputLayerName = "out.z"; // "__v2libuid__Plus2069__v2libname__Plus2060"; //"out.z";
+                    const string outputLayerName = "__v2libuid__Plus2069__v2libname__Plus2060"; //"out.z";
 
                     // Load model
-                    string modelFilePath = @"01_OneHidden"; // @"01_OneHidden"; // @"trainer.checkpoint"; // @".\z.model"; // Path.Combine(Environment.CurrentDirectory, @".\Output\Models\01_OneHidden");
+                    string modelFilePath = @".\z.model"; // @"01_OneHidden"; // @"trainer.checkpoint"; // @".\z.model"; // Path.Combine(Environment.CurrentDirectory, @".\Output\Models\01_OneHidden");
                     ThrowIfFileNotExist(modelFilePath,
                         string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/GettingStarted to create the model.", modelFilePath));
 

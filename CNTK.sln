@@ -2560,7 +2560,7 @@ Global
 		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_NoOpt|Any CPU.ActiveCfg = Release_CpuOnly|x64
 		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_NoOpt|Mixed Platforms.ActiveCfg = Release_CpuOnly|x64
 		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_NoOpt|Mixed Platforms.Build.0 = Release_CpuOnly|x64
-		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_NoOpt|Win32.ActiveCfg = release_zmq|x64
+		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_NoOpt|Win32.ActiveCfg = Release_NoOpt|x64
 		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_NoOpt|x64.ActiveCfg = Release|x64
 		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release_NoOpt|x64.Build.0 = Release|x64
 		{16F14058-B116-49D9-8BA0-209F3AFFE849}.Release|Any CPU.ActiveCfg = Release|x64
