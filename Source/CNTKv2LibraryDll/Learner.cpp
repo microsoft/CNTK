@@ -397,6 +397,29 @@ namespace CNTK
         return std::pow(currentMomentum, minibatchSize);
     }
 
+    LearnerAdaGrad::LearnerAdaGrad(const std::vector<Parameter>& parameters,
+                                   const LearningRateSchedule& learningRateSchedule,
+                                   bool needAveMultiplier,
+                                   AdditionalLearningOptions additionalOptions)
+                                   : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ false),
+                                   m_needAveMultiplier(needAveMultiplier)
+    {
+        for (const auto& parameter : parameters)
+        {
+            // When needAveMultiplier == true, CPU and GPU implementations of LearnerAdaGrad require different number of columns.
+            size_t factor = 1;
+            if (needAveMultiplier && parameter.Value()->Device().Type() == DeviceKind::GPU)
+            {
+                factor = 2;
+            }
+
+            const auto shape = GetMatrixShape(parameter);
+            NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], factor * shape[1] });
+
+            m_smoothedGradientValues.insert(make_pair(parameter, view));
+        }
+    }
+
     /*virtual*/ void LearnerAdaGrad::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
     {
         UPDATE_FUNCTION;
