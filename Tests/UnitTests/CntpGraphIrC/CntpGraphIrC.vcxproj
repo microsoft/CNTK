@@ -138,24 +138,22 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CntkIr\proto\CNTK.pb.cc.VS_wrapper.cpp" />
     <ClCompile Include="EvalMultithreads.cpp" />
     <ClCompile Include="GraphIrExporter.cpp" />
     <ClCompile Include="GraphIr\cpp\GraphIrWrapper.cpp" />
     <ClCompile Include="GraphIr\libb64\cdecode.c" />
     <ClCompile Include="GraphIr\libb64\cencode.c" />
+    <ClCompile Include="GraphIr\Serialization.cpp" />
     <ClCompile Include="LSTM\LSTMClientImpl.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CntkIr\proto\CNTK.pb.h" />
     <ClInclude Include="GraphIrExporter.h" />
     <ClInclude Include="GraphIr\cpp\graphid.pb.h" />
     <ClInclude Include="GraphIr\libb64\b64\cdecode.h" />
     <ClInclude Include="GraphIr\libb64\b64\cencode.h" />
     <ClInclude Include="GraphIr\libb64\b64\decode.h" />
     <ClInclude Include="GraphIr\libb64\b64\encode.h" />
-    <ClInclude Include="Image.h" />
     <ClInclude Include="LSTM\FixedPoint.hpp" />
     <ClInclude Include="LSTM\LSTMClient.h" />
     <ClInclude Include="LSTM\LstmGraphNode.h" />

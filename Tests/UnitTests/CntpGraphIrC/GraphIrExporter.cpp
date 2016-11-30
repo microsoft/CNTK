@@ -86,6 +86,15 @@ graphIR::Graph* CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
 	auto graph = new graphIR::Graph();
 	graph->set_allocated_graph_info(graphInfo);
 
+    // get the data describing the graph
+    auto graphDict = evalFunc->Serialize();
+
+    // assume we get a root-directory, so retrieve the primitive functions.
+    for (auto funct : graphDict[L"primitive_functions"].Value<std::vector<DictionaryValue>>())
+    {
+        printf("function: %S\n", funct.Value<Dictionary>()[L"uid"].Value<std::wstring>().c_str());
+    }
+
 	std::unordered_set<FunctionPtr> functions;
 	Traverse(evalFunc->RootFunction(), functions,
 		[&graph](const FunctionPtr& f)
