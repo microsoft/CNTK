@@ -90,3 +90,34 @@ def test_exception_for_unnamed_arguments():
         # not allowed, since plus has more than 1 input
         result = root_node.eval([input1, input2])
 
+def test_output_in_intermediate_node():
+    x = input_variable((2,))
+    y = input_variable((2,))
+    x0 = np.asarray([[2., 1.]])
+    y0 = np.asarray([[4., 6.]])
+
+    sum_node = x + 2
+    times_node = sum_node * y
+
+    sum_output = times_node.forward({x: x0, y: y0}, sum_node.outputs)
+
+    assert len(sum_output[1]) == 1
+    assert np.allclose(list(sum_output[1].values())[0], np.asarray(x0 + 2))
+
+    two_nodes_output = times_node.forward({x: x0, y: y0}, times_node.outputs + sum_node.outputs)
+
+    assert len(two_nodes_output[1]) == 2
+
+def test_getting_output_from_non_existent_node():
+    x = input_variable((2,))
+    y = input_variable((2,))
+    x0 = np.asarray([[2., 1.]])
+    y0 = np.asarray([[4., 6.]])
+
+    sum_node = x + 2
+
+    # times_node not having sum_node
+    times_node = x * y
+
+    with pytest.raises(RuntimeError):
+        sum_output = times_node.forward({x: x0, y: y0}, sum_node.outputs)
