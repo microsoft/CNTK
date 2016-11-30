@@ -34,7 +34,7 @@ VOCAB_FILE = "cmudict-0.7b.mapping"
 input_vocab_dim  = 69
 label_vocab_dim  = 69
 hidden_dim = 128
-num_layers = 1
+num_layers = 2
 attention_dim = 128
 attention_span = 20
 use_attention = True
@@ -53,15 +53,18 @@ def create_reader(path, is_training):
 # define the model     #
 ########################
 
-def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None):
+def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None, create_aux=False):
     dh = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
     dc = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
     
     aux_input = None
     has_aux   = False
     if augment_input_hook != None:
-        aux_input = augment_input_hook(dh)
         has_aux = True
+        if create_aux:
+            aux_input = augment_input_hook(dh)
+        else:
+            aux_input = augment_input_hook
        
     LSTM_cell = LSTM(output_dim, auxiliary_input=has_aux, enable_self_stabilization=True)
     if has_aux:    
@@ -79,7 +82,20 @@ def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_
     h = f_x_h_c.outputs[0]
     c = f_x_h_c.outputs[1]
 
-    return combine([h]), combine([c])
+    return combine([h]), combine([c]), aux_input
+
+def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None):
+
+    create_aux = False
+    if augment_input_hook != None:
+        create_aux = True
+
+    output_h, output_c, aux = LSTM_layer(Stabilizer()(input), output_dim, 
+                                         recurrence_hook_h, recurrence_hook_c, augment_input_hook, create_aux)
+    for layer_index in range(1, num_layers):
+        (output_h, output_c, aux) = LSTM_layer(output_h.output, output_dim, recurrence_hook_h, recurrence_hook_c, aux, False)
+
+    return (output_h, output_c)
 
 def create_model():
     
@@ -111,10 +127,8 @@ def create_model():
 
     # Encoder: create multiple layers of LSTMs by passing the output of the i-th layer
     # to the (i+1)th layer as its input
-    encoder_output_h = Stabilizer()(input_sequence)
-    for layer_index in range(0, num_layers):
-        (encoder_output_h, encoder_output_c) = LSTM_layer(
-            encoder_output_h.output, hidden_dim, future_value, future_value)
+    encoder_output_h, encoder_output_c = LSTM_stack(input_sequence, num_layers, hidden_dim, 
+                                                    recurrence_hook_h=future_value, recurrence_hook_c=future_value)
 
     # Prepare encoder output to be used in decoder
     thought_vector_h = sequence.first(encoder_output_h)
@@ -134,27 +148,22 @@ def create_model():
     decoder_input = element_select(is_first_label, label_sentence_start_scattered, past_value(
         decoder_history_hook))
 
+    # Parameters to the decoder stack depend on the model type (use attention or not)
     augment_input_hook = None
     if use_attention:
         augment_input_hook = create_attention_augment_hook(attention_dim, attention_span, 
                                                            label_sequence, encoder_output_h)
+        recurrence_hook_h = past_value
+        recurrence_hook_c = past_value
+    else:
+        def recurrence_hook_h(operand):
+            return element_select(
+            is_first_label, thought_vector_broadcast_h, past_value(operand))
+        def recurrence_hook_c(operand):
+            return element_select(
+            is_first_label, thought_vector_broadcast_c, past_value(operand))
 
-    decoder_output_h = Stabilizer()(decoder_input)
-    for layer_index in range(0, num_layers):
-        if (layer_index > 0) or use_attention:
-            recurrence_hook_h = past_value
-            recurrence_hook_c = past_value
-        else:
-            def recurrence_hook_h(operand):
-                return element_select(
-                is_first_label, thought_vector_broadcast_h, past_value(operand))            
-            def recurrence_hook_c(operand): 
-                return element_select(
-                is_first_label, thought_vector_broadcast_c, past_value(operand))
-
-        (decoder_output_h, decoder_output_c) = LSTM_layer(
-            decoder_output_h.output, hidden_dim, recurrence_hook_h, recurrence_hook_c, 
-            augment_input_hook)
+    decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, past_value, past_value, augment_input_hook)    
 
     # dense Linear output layer    
     z = Dense(label_vocab_dim) (Stabilizer()(decoder_output_h))    
@@ -186,7 +195,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     decoder_output_model = clone_and_hook()
 
     # Instantiate the trainer object to drive the model training
-    lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
+    lr_per_sample = learning_rate_schedule(0.005, UnitType.sample)
     minibatch_size = 72
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     clipping_threshold_per_sample = 2.3
@@ -200,7 +209,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     # Get minibatches of sequences to train with and perform model training
     i = 0
     mbs = 0
-    sample_freq = 30
+    sample_freq = 100
 
     # print out some useful training information
     log_number_of_parameters(model) ; print()
@@ -228,7 +237,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
                 print_sequences(e, i2w)
                 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
-                #debug_attention(decoder_output_model, mb_valid, valid_reader)                
+                debug_attention(decoder_output_model, mb_valid, valid_reader)                
 
             i += mb_train[train_reader.streams.labels].num_samples
             mbs += 1
@@ -415,15 +424,15 @@ if __name__ == '__main__':
     vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create model
-    #model = create_model()
+    model = create_model()
     
     # train
-    #train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
     #write(valid_reader, "model_epoch0.cmf", vocab, i2w)
     
     # test the model out in an interactive session
-    print('loading model...')
-    model_filename = "model_epoch0.cmf"
-    model = load_model(model_filename)
-    interactive_session(model, vocab, i2w, show_attention=True)
+    #print('loading model...')
+    #model_filename = "model_epoch0.cmf"
+    #model = load_model(model_filename)
+    #interactive_session(model, vocab, i2w, show_attention=True)
