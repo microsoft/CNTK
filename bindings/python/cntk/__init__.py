@@ -21,3 +21,4 @@ from .persist import load_model, save_model
 from .device import *
 
 DATATYPE = np.float32
+InferredDimension = cntk_py.InferredDimension
