@@ -263,8 +263,11 @@ namespace CNTK
             }
             case PrimitiveOpType::Reshape:
             {
-                auto newShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
+                auto& newShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
                 outputShape = ReshapeOutputShape(inputs[0].Shape(), newShape);
+                if (inferDimensions)
+                    newShape = outputShape;
+
                 break;
             }
             case PrimitiveOpType::ROIPooling:

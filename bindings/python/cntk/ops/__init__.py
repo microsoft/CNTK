@@ -1527,11 +1527,6 @@ def reshape(x, shape, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    if np.any(np.asarray(shape) < 0):
-        # TODO decide on whether -1 instead of 0 should be used to infer the
-        # dimension
-        raise ValueError('shape dimensions cannot be negative')
-
     from cntk.cntk_py import reshape
     x = sanitize_input(x)
     shape = sanitize_shape(shape)

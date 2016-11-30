@@ -155,7 +155,7 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        InputRef(inputIndex).GradientFor(fr).AssignValuesOf(GradientFor(fr));
+        InputRef(inputIndex).GradientFor(fr) += GradientFor(fr);
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
