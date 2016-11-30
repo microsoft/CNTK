@@ -16,7 +16,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class CPURNGHandle : public RNGHandle
 {
 public:
-    CPURNGHandle(int deviceId, unsigned long seed);
+    CPURNGHandle(int deviceId, unsigned long seed, unsigned long long offset = 0);
 
 #ifdef _MSC_VER // TODO: check if available under GCC/Linux
     std::ranlux64_base_01& Generator()

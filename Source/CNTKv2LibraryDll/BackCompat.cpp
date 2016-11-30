@@ -401,6 +401,13 @@ namespace CNTK
                 else
                     LogicError("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
 
+                if (node->Is<RngUser>())
+                {
+                    auto rngUserNode = node->As<RngUser>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRngSeed] = static_cast<size_t>(rngUserNode->GetRngSeed());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRngOffset] = static_cast<size_t>(rngUserNode->GetRngOffset());
+                }
+
                 // Let's reorder inputVars properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
                 ReorderAsPrimitiveFunctionInputs(opType, inputVars);
 

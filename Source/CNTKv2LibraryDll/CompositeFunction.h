@@ -164,6 +164,12 @@ namespace CNTK
             return inputs;
         }
 
+        // If the network is already created, copy internal state over from the functions in the graph into the underlying network.
+        void UpdateInternalNetworkState();
+
+        // Copy state info from source function graph into' this' function graph.
+        void CopyState(const CompositeFunction& source);
+
         template <typename ElementType>
         Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device,
                                                                           const std::unordered_set<Variable>& backpropRoots,
@@ -245,7 +251,10 @@ namespace CNTK
 
         std::unordered_map<Parameter, size_t> m_lastRecordedParameterValueTimeStamps;
 
-        static const size_t s_serializationVersion = 1;
+        // Version history:
+        // 1 -- initial version.
+        // 2 -- add support for stateful functions (with corresponding nodes inheriting from RngUser).
+        static const size_t s_serializationVersion = 2;
     };
 
     inline std::vector<CNTK::Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)

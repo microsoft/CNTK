@@ -53,10 +53,10 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
     map<string, wstring> aliasToInputMap;
     for (const pair<string, ConfigParameters>& section : input)
     {
-        ConfigParameters input = section.second;
+        ConfigParameters input2 = section.second;
         wstring name = msra::strfun::utf16(section.first);
 
-        if (!input.ExistsCurrent(L"dim") || !input.ExistsCurrent(L"format"))
+        if (!input2.ExistsCurrent(L"dim") || !input2.ExistsCurrent(L"format"))
         {
             RuntimeError("Input section for input '%ls' does not specify all the required parameters, "
                 "\"dim\" and \"format\".", name.c_str());
@@ -65,8 +65,8 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         StreamDescriptor stream;
         stream.m_id = id++;
         stream.m_name = name;
-        stream.m_sampleDimension = input(L"dim");
-        string type = input(L"format");
+        stream.m_sampleDimension = input2(L"dim");
+        string type = input2(L"format");
 
         if (AreEqualIgnoreCase(type, "dense"))
         {
@@ -88,9 +88,9 @@ TextConfigHelper::TextConfigHelper(const ConfigParameters& config)
         }
 
         // alias is optional
-        if (input.ExistsCurrent(L"alias"))
+        if (input2.ExistsCurrent(L"alias"))
         {
-            stream.m_alias = input(L"alias");
+            stream.m_alias = input2(L"alias");
             if (stream.m_alias.empty())
             {
                 RuntimeError("Alias value for input '%ls' is empty.", name.c_str());

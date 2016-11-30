@@ -369,7 +369,7 @@ private:
         else if (dynamic_cast<const ScriptableObjects::ScriptingException*>(&ex) != nullptr) // Includes derived classes
         {
             const auto& err = dynamic_cast<const ScriptableObjects::ScriptingException&>(ex);
-            return gcnew CNTKLogicErrorException(gcnew System::String(wstrprintf(L"%ls\n%ls", msra::strfun::utf16(err.what()).c_str(), err.GetError(L"").c_str()).c_str()), nullptr);
+            return gcnew CNTKLogicErrorException(gcnew System::String(::msra::strfun::_strprintf<wchar_t>(L"%ls\n%ls", msra::strfun::utf16(err.what()).c_str(), err.GetError(L"").c_str()).c_str()), nullptr);
         }
         else
         {
@@ -425,7 +425,7 @@ private:
     void PinBuffer(cli::array<ElemType>^ itemBuffer, vector<gcroot<cli::array<ElemType>^>>& pinBuffers, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
     {
         // gcroot object manages the pointer so that it always corresponds to the correct managed location (even after gc relocation)
-        gcroot<array<ElemType>^> pBuf(itemBuffer);
+        gcroot<cli::array<ElemType>^> pBuf(itemBuffer);
         pin_ptr<ElemType> pp = &(pBuf[0]);
         pinBuffers.push_back(pBuf);
         vb->m_buffer.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);
@@ -435,7 +435,7 @@ private:
     void PinIndices(cli::array<int>^ itemBuffer, vector<gcroot<cli::array<int>^>>& pinBuffers, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
     {
         // gcroot object manages the pointer so that it always corresponds to the correct managed location (even after gc relocation)
-        gcroot<array<int>^> pBuf(itemBuffer);
+        gcroot<cli::array<int>^> pBuf(itemBuffer);
         pin_ptr<int> pp = &(pBuf[0]);
         pinBuffers.push_back(pBuf);
         vb->m_indices.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);
@@ -445,7 +445,7 @@ private:
     void PinColIndices(cli::array<int>^ itemBuffer, vector<gcroot<cli::array<int>^>>& pinBuffers, Native::ValueBuffer<ElemType, Native::VectorRef>* vb, StorageType storageType, int bufferSize)
     {
         // gcroot object manages the pointer so that it always corresponds to the correct managed location (even after gc relocation)
-        gcroot<array<int>^> pBuf(itemBuffer);
+        gcroot<cli::array<int>^> pBuf(itemBuffer);
         pin_ptr<int> pp = &(pBuf[0]);
         pinBuffers.push_back(pBuf);
         vb->m_colIndices.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);

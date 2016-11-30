@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, AA, I, precision, PRECISION_TO_TYPE, constant
 from cntk.ops import AVG_POOLING, MAX_POOLING
-from ...utils import sanitize_dtype_cntk
+from ...utils import sanitize_dtype_cntk, cntk_device
 
 CONVOLUTION_OPERANDS = [
     ([[[5., 6.],  # (1, 2, 2) map
@@ -36,6 +36,7 @@ CONVOLUTION_OPERANDS = [
 @pytest.mark.parametrize("convolution_map, convolution_input", CONVOLUTION_OPERANDS)
 def test_op_convolution_without_padding(convolution_map, convolution_input, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
 
     conv_map = AA(convolution_map, dtype=dt)
     conv_input = AA(convolution_input, dtype=dt)
@@ -56,7 +57,7 @@ def test_op_convolution_without_padding(convolution_map, convolution_input, devi
     conv_input.shape = (1,1) + conv_input.shape # adding batch and channel axis
     conv_map.shape = (1,1) + conv_map.shape
 
-    constant_map = constant(value=conv_map)
+    constant_map = constant(value=conv_map, device=dev)
 
     from cntk import convolution
     input_op = convolution(constant_map, a, auto_padding=[False])

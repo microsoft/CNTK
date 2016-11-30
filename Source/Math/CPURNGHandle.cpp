@@ -10,7 +10,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-CPURNGHandle::CPURNGHandle(int deviceId, unsigned long seed)
+CPURNGHandle::CPURNGHandle(int deviceId, unsigned long seed, unsigned long long offset)
     : RNGHandle(deviceId)
 {
 #ifdef _MSC_VER // TODO: check if available under GCC/Linux
@@ -19,6 +19,7 @@ CPURNGHandle::CPURNGHandle(int deviceId, unsigned long seed)
 #else
     m_generator.reset(new std::default_random_engine(seed));
 #endif
+    m_generator->discard(offset);
 }
 
 }}}

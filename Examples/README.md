@@ -9,5 +9,4 @@ Speech, and so forth. To get started with CNTK we recommend the tutorials in
 the `Tutorials` folder.
 
 An overview on all examples and tutorials is also provided by the
-[https://www.microsoft.com/en-us/research/product/cognitive-toolkit/model-gallery/](Cognitive
-Toolkit Model Gallery) page.
+[Cognitive Toolkit Model Gallery](https://www.microsoft.com/en-us/research/product/cognitive-toolkit/model-gallery/) page.

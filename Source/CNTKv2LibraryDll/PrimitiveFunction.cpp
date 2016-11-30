@@ -65,6 +65,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumLayers = L"numLayers";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameHiddenSize = L"hiddenSize";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRecurrentOp = L"recurrentOp";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngSeed = L"rngSeed";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngOffset = L"rngOffset";
 
     /*static*/ std::vector<Variable> PrimitiveFunction::GetOutputVariables(PrimitiveOpType op,
                                                                            std::vector<Variable>& inputs,
@@ -143,8 +145,8 @@ namespace CNTK
                         outputDynamicAxes.push_back(Axis::NewUniqueDynamicAxis(L"whereNodeDynamicAxis"));
                     }
 
-                    for (size_t i = 1; i < inputs[0].DynamicAxes().size(); ++i)
-                        outputDynamicAxes.push_back(inputs[0].DynamicAxes()[i]);
+                    for (size_t i2 = 1; i2 < inputs[0].DynamicAxes().size(); ++i2)
+                        outputDynamicAxes.push_back(inputs[0].DynamicAxes()[i2]);
 
                     functionConfig[PrimitiveFunction::AttributeNameNewDynamicAxes] = AsDictionaryValueVector(outputDynamicAxes);
                 }
@@ -405,8 +407,8 @@ namespace CNTK
                 outputShape = ConvolutionOpOutputShape(op, inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, inferDimensions);
                 if (originalKernelShape != kernelShape)
                 {
-                    for (size_t i = 0; i < kernelShape.Rank(); ++i)
-                        inputs[0].m_dataFields->m_shape[i] = kernelShape[i];
+                    for (size_t i2 = 0; i2 < kernelShape.Rank(); ++i2)
+                        inputs[0].m_dataFields->m_shape[i2] = kernelShape[i2];
                 }
 
                 functionConfig[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
@@ -433,8 +435,8 @@ namespace CNTK
                     RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %S operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(op).c_str());
 
                 std::vector<int> reductionAxes;
-                for (int i = 0; i < (int)inputs[0].Shape().Rank(); ++i)
-                reductionAxes.push_back(i);
+                for (int i3 = 0; i3 < (int)inputs[0].Shape().Rank(); ++i3)
+                reductionAxes.push_back(i3);
 
                 outputShape = ReductionOpOutputShape(op, predictionShape, reductionAxes, /*preserveReductionAxes =*/ false);
                 break;

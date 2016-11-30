@@ -1470,8 +1470,8 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
     // move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = globalStdDev.GetDeviceId();
     globalStdDev.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-    for (int i = 0; i < globalStdDev.GetNumRows(); i++)
-        globalStdDev(i, 0) = (ElemType) 1.0 / (const ElemType) globalStdDev(i, 0);
+    for (int i2 = 0; i2 < globalStdDev.GetNumRows(); i2++)
+        globalStdDev(i2, 0) = (ElemType) 1.0 / (const ElemType) globalStdDev(i2, 0);
     globalStdDev.TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
     if (!CheckDbnTag(fstream, "BNET"))

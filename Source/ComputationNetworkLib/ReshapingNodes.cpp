@@ -667,6 +667,10 @@ template <class ElemType>
 void CropNode<ElemType>::ComputeCropOffsets()
 {
     // Helper method for traversing the tree and calculating node transforms.
+    // For currNode, calculates coordinate maps of its inputs based on known coordinate maps of its outputs.
+    // nodeToTransformMap contains coordinate maps for all nodes traversed so far, and is updated by this function.
+    // Traversal stack contains all nodes traversed so far. Inputs of currNode are pushed to traversal stack so that their
+    // inputs can be processed later on.
     auto ProcessInputs = [](ComputationNodeBase* currNode, stack<ComputationNodeBase*>& traversalStack, unordered_map<ComputationNodeBase*, SpaceTransform>& nodeToTransformMap)
     {
         if (!currNode->Is<TransformerNode>())
@@ -785,7 +789,7 @@ void CropNode<ElemType>::ComputeCropOffsets()
             break;
         }
         // No connected path, keep searching.
-        ProcessInputs(currNode, traversalStack, nodeToCropInput0TransformMap);
+        ProcessInputs(currNode, traversalStack, nodeToCropInput1TransformMap);
     }
     if (xOffset == numeric_limits<double>::max() || yOffset == numeric_limits<double>::max())
         LogicError("Connected path between crop inputs not found. Unable to compute crop offsets.");
@@ -800,6 +804,7 @@ void CropNode<ElemType>::ComputeTransforms()
 {
     if (m_transforms[0].m_axisTransforms.empty())
     {
+        m_transforms[0].m_axisTransforms.resize(2);
         m_transforms[0].m_axisTransforms[0].scale = 1;
         m_transforms[0].m_axisTransforms[0].translate = -m_xOffset;
         m_transforms[0].m_axisTransforms[1].scale = 1;
