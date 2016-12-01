@@ -41,15 +41,17 @@ class Function(cntk_py.Function):
         from inspect import signature
         params = signature(f).parameters
         f_name = f.__name__
-        from cntk import placeholder_variable, combine
+        from cntk import placeholder_variable, combine, alias
         args = [placeholder_variable(name=arg_name) for arg_name in list(params.keys())]
         ordered_args = combine(args).outputs # force them into the right order
         # execute the lambda with placeholders as inputs, which creates a piece of graph
         out = f(*args)
         if isinstance(out, dict): # multi-value function, returned as a dictionary
-            # give outputs the names of the dictionary
+            # give outputs the names of the dictionary and make them unique (so that the same node may be output multiple times, as in LSTM)
+            #out = [alias(value, name=key) for key, value in out.items()]
+            # BUGBUG: Fails with "ValueError: Variable(ElementTimes64_output) with unknown shape detected when compiling the Function graph!"
             out = [combine([value], name=key) for key, value in out.items()]
-            # BUGBUG: somehow, these names are not propagated into outputs, though (they show up as e.g. Minus123_output, i.e. get overwritten by combine() below)
+            # BUGBUG: Without alias, the names are not propagated into outputs.
             # BUGBUG: Forgetting [] in combine will hang combine().
         if not isinstance(out, (tuple, list)): # multi-value function, returned a tuple
             out = [out]

@@ -234,7 +234,10 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
         return (Placeholder(shape=shape, name='hPh'), Placeholder(shape=cell_shape, name='cPh')) # (h, c)
 
     # define the model function itself
-    # (x, dh, dc) --> (h, c)
+    # general interface for Recurrence():
+    #   (x, prev state vars) --> (out, new state vars)
+    # in this case:
+    #   (x, dh, dc) --> (out, h, c)
     def lstm(x, dh, dc):
 
         # parameters to model function
@@ -283,9 +286,13 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
 
         # TODO: figure out how to do scoping, and also rename all the apply... to expression
 
+        # LSTM output is the same as h
+        out = alias(h)
+
         # returns the new state as a tuple with names but order matters
         from collections import OrderedDict
-        return OrderedDict([('h', h), ('c', c)])
+        return OrderedDict([('out', out), ('h', h), ('c', c)])
+        #return OrderedDict([('h', h), ('c', c)])
 
     # create a CNTK function out of it
     apply_x_h_c = Function(lstm)

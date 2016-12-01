@@ -70,6 +70,7 @@ def create_criterion_function(model):
         z = model(x)
         ce   = cross_entropy_with_softmax(z, y)
         errs = classification_error      (z, y)
+        #return Record(loss=ce, metric=errs)
         return Record(ce=ce, errs=errs)
     return Function(criterion)
 
