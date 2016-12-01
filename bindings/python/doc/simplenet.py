@@ -51,10 +51,13 @@ def ffnet():
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
         trainer.train_minibatch({features : train_features, label : labels})
         pp.update_with_trainer(trainer)
+
+    last_avg_error = pp.avg_loss_since_start()
+
     test_features, test_labels = generate_random_data(minibatch_size, inputs, outputs)
     avg_error = trainer.test_minibatch({features : test_features, label : test_labels})
     print(' error rate on an unseen minibatch: {}'.format(avg_error))
+    return last_avg_error, avg_error
 
 np.random.seed(98052)
 ffnet()
-
