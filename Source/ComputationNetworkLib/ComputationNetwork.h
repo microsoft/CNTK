@@ -567,11 +567,7 @@ public:
     // add a node to a node group
     void AddToNodeGroup(const std::wstring& groupTag, const ComputationNodeBasePtr& node)
     {
-        // check if node is valid i.e. if it makes part of the network graph
-        if (!node)
-        {
-            RuntimeError("Node cannot be added to the computation network for group tag '%ls'", groupTag.c_str());
-        }
+        assert(node);
 
         // determine the node group by its group tag string
         auto& nodeGroup = GetNodeGroup(groupTag);

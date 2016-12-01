@@ -13,7 +13,7 @@ import pytest
 from ..functions import *
 from ...trainer import *
 from .. import constant, parameter, input_variable, placeholder_variable, times, plus
-
+from .ops_test_utils import compare_lists_of_np_arrays
 
 def test_variable_forwarding():
     op = constant(value=2, shape=(3,4)) + 1
@@ -108,6 +108,11 @@ def test_output_in_intermediate_node():
 
     assert len(two_nodes_output[1]) == 2
 
+    sum_forward = np.asarray(x0 + 2)
+    expected_results = [sum_forward, sum_forward * y0]
+
+    assert compare_lists_of_np_arrays(list(two_nodes_output[1].values()), expected_results)
+
 def test_getting_output_from_non_existent_node():
     x = input_variable((2,))
     y = input_variable((2,))
@@ -119,5 +124,5 @@ def test_getting_output_from_non_existent_node():
     # times_node not having sum_node
     times_node = x * y
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         sum_output = times_node.forward({x: x0, y: y0}, sum_node.outputs)
