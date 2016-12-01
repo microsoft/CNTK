@@ -12,7 +12,7 @@ from cntk.layers import *
 from cntk.models import Sequential, LayerStack
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITE_SAMPLES
-from cntk import Trainer, persist, cntk_py, distributed
+from cntk import Trainer, cntk_py, distributed
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
 from _cntk_py import set_computation_network_trace_level
 
@@ -114,7 +114,7 @@ def convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer, max_
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
         if distributed_trainer.communicator().current_worker().global_rank == 0:
-            persist.save_model(z, os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
+            z.save_model(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
     
     ### Evaluation action
     epoch_size     = 10000

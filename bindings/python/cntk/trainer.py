@@ -127,18 +127,16 @@ class Trainer(cntk_py.Trainer):
 
         return super(Trainer, self).test_minibatch(arguments, device)
 
-    def save_checkpoint(self, filename, use_legacy_format=True):
+    def save_checkpoint(self, filename):
         '''
         Saves a checkpoint of the model and other Trainer state at the
         specified file location.
 
         Args:
-            filename (str): filename to store the checkpoint
-            use_legacy_format (str): if 'True', model is stored using legacy format.
-             Otherwise, it's stored using protobuf-based protocol serialization.
+            filename (str): filename to store the checkpoint.
         '''
 
-        super(Trainer, self).save_checkpoint(filename, use_legacy_format)
+        super(Trainer, self).save_checkpoint(filename)
 
     def restore_from_checkpoint(self, filename):
         '''

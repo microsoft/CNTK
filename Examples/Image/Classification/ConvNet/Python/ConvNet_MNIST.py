@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, persist
+from cntk import Trainer
 from cntk.utils import *
 from cntk.layers import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
@@ -89,7 +89,7 @@ def convnet_mnist(debug_output=False):
             sample_count += data[label_var].num_samples                     # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
-        persist.save_model(z, os.path.join(model_path, "ConvNet_MNIST_{}.dnn".format(epoch)))
+        z.save_model(os.path.join(model_path, "ConvNet_MNIST_{}.dnn".format(epoch)))
     
     # Load test data
     reader_test = create_reader(os.path.join(data_path, 'Test-28x28_cntk_text.txt'), False, input_dim, num_output_classes)

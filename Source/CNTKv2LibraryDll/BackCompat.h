@@ -15,8 +15,6 @@ namespace CNTK
     {
         FunctionPtr LoadLegacyModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice);
 
-        void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
-
         inline bool IsLegacyModel(std::fstream& stream)
         {
             static const char legacyMarker[] = { 0x42, 0x00, 0x43, 0x00, 0x4e, 0x00, 0x00, 0x00 }; // L"BCN"
