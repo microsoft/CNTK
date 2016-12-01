@@ -27,7 +27,6 @@
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
 #include "PostComputingActions.h"
-#include "GPUMatrix.h"
 
 #include <string>
 #include <chrono>
@@ -116,12 +115,6 @@ void DoTrain(const ConfigRecordType& config)
     if (config.Exists(L"cvReader"))
         cvDataReader = CreateObject<DataReader>(config, L"cvReader");
 
-    CudaProfilerTimer cudaProfilerTimer(config(L"cudaProfilerEnabled", false),
-                                        config(L"cudaProfilerIterations", (int)1000),
-                                        config(L"cudaProfilerMaxIterations", (int)-1));
-
-    optimizer->SetCudaProfilerTimer(cudaProfilerTimer);
-
     optimizer->InitMPI(MPIWrapper::GetInstance());
     optimizer->Train(net, deviceId, dataReader.get(), cvDataReader.get(), startEpoch, loadNetworkFromCheckpoint);
 }
@@ -193,12 +186,6 @@ void DoAdapt(const ConfigParameters& config)
     wstring refNodeName = config(L"refNodeName", L"");
 
     SGD<ElemType> sgd(configSGD);
-
-    CudaProfilerTimer cudaProfilerTimer(config(L"cudaProfilerEnabled", false),
-                                        config(L"cudaProfilerIterations", (int)1000),
-                                        config(L"cudaProfilerMaxIterations", (int)-1));
-
-    sgd.SetCudaProfilerTimer(cudaProfilerTimer);
 
     sgd.InitMPI(MPIWrapper::GetInstance());
     sgd.Adapt(origModelFileName, refNodeName, dataReader.get(), cvDataReader.get(), deviceId, makeMode);

@@ -23,7 +23,6 @@
 #include "NDLNetworkBuilder.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
-#include "GPUMatrix.h"
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
@@ -78,8 +77,7 @@ void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& con
     {
         profilerContext.Init(config(L"profilerDirectory", L"./profiler"),
                              config(L"profilerBufferSize", static_cast<uint64_t>(32ull * 1024ull * 1024ull)),
-                             std::to_wstring(nodeRank), config(L"profilerSyncGpu", true),
-                             config(L"synchronizeCUDAKernelExecutions", false));
+                             std::to_wstring(nodeRank), config(L"profilerSyncGpu", true));
     }
 }
 
@@ -602,9 +600,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // Setup profiling
     ProfilerContext profilerContext;
     SetupProfiling<ScriptableObjects::IConfigRecord>(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
-#ifndef CPUONLY
-    AsyncGPUProfiler gpuProfiler;
-#endif
 
     // execute the actions
     // std::string type = config(L"precision", "float");
@@ -801,9 +796,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     // Setup profiling
     ProfilerContext profilerContext;
     SetupProfiling<ConfigParameters>(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
-#ifndef CPUONLY
-    AsyncGPUProfiler gpuProfiler;
-#endif
 
     // run commands
     std::string type = config(L"precision", "float");

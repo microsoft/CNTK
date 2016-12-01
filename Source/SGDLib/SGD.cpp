@@ -31,6 +31,7 @@
 #include "SimpleDistGradAggregator.h"
 #include "V2SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
+#include "PerformanceProfiler.h"
 
 #include <map>
 #include <set>
@@ -84,8 +85,7 @@ template <class ElemType>
 void SGD<ElemType>::Adapt(wstring origModelFileName, wstring refNodeName,
                           IDataReader* trainSetDataReader,
                           IDataReader* validationSetDataReader,
-                          const DEVICEID_TYPE deviceId, 
-                          const bool makeMode)
+                          const DEVICEID_TYPE deviceId, const bool makeMode)
 {
     int startEpoch = DetermineStartEpoch(makeMode);
     if (startEpoch == m_maxEpochs)
@@ -1025,8 +1025,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (m_perfTraceLevel > 0)
             fineGrainedPerfMeasurementTimer.Start();
         auto minibatchProfilerState = ProfilerTimeBegin();
-
-        m_pCudaProfilerTimer->Update();
 
         // get minibatch
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?

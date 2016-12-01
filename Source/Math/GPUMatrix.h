@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+
 #pragma once
 #include "Platform.h"
 #include "File.h"
@@ -11,10 +12,6 @@
 #include "BestGpu.h" // for CPUONLY macro
 #include "ConcStack.h"
 #include "GPURNGHandle.h"
-#ifndef CPUONLY
-#include "PerformanceProfiler.h"
-#endif
-#include "TimerUtility.h"
 #include <string>
 #include <vector>
 #include <array>
@@ -22,7 +19,6 @@
 #include <iostream> // for cout/cerr
 #include <memory>   // for unique_ptr
 #include <limits.h> // for ULONG_MAX
-#include <thread>
 
 //#include "CPUMatrix.h"
 //#include "CPUSparseMatrix.h"
@@ -30,8 +26,6 @@
 
 #ifndef _WIN32
 #include <unistd.h>
-#include <pthread.h>
-#include <sched.h>
 #endif
 
 // predeclare cublasHandle_t
@@ -68,6 +62,27 @@ cudaStream_t MATH_API GetStream();
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 class DataTransferer;
+
+// -----------------------------------------------------------------------
+// SyncGuard -- synchronize around CUDA calls
+// -----------------------------------------------------------------------
+
+class SyncGuard
+{
+private:
+    static bool s_isSyncEnabled;
+
+    bool m_forceSync;
+#ifndef CPUONLY
+    cudaEvent_t m_done;
+#endif
+
+public:
+    static MATH_API void EnableSync();
+
+    SyncGuard(bool forceSync = false);
+    ~SyncGuard();
+};
 
 // -----------------------------------------------------------------------
 // DeviceBoundNumber -- This class represents a number which resides on a particular device. Use it to avoid unnecessary transfers between CPU and GPU
@@ -644,48 +659,4 @@ static void CudaCall(ERRTYPE retCode, const char* exprString, const char* libNam
 #define CURAND_CALL(expr)   (CudaCall((expr), #expr, "CURAND",   CURAND_STATUS_SUCCESS))
 #define CUDNN_CALL(expr)    (CudaCall((expr), #expr, "cuDNN",    CUDNN_STATUS_SUCCESS))
 
-// -----------------------------------------------------------------------
-// SyncCudaScope -- synchronize and time CUDA calls
-//
-// This class measures the elapsed GPU time when issuing CUDA calls. It
-// also optionally synchronizes the GPU so that it waits for the CUDA
-// kernel to complete.
-// -----------------------------------------------------------------------
-struct SyncCudaScope
-{
-    SyncCudaScope(const char* functionName, const char* description, cudaStream_t stream = (cudaStream_t)0);
-    ~SyncCudaScope();
-
-private:
-    cudaEvent_t         m_beginEvent;
-    cudaEvent_t         m_endEvent;
-    cudaStream_t        m_stream;
-    char                m_description[256];
-};
-
-#define PROFILE_CUDA(description)                   SyncCudaScope  __scs(__FUNCTION__, description);
-#define PROFILE_CUDA_STREAM(description, stream)    SyncCudaScope  __scs(__FUNCTION__, description, stream);
-
-
-// -----------------------------------------------------------------------
-// AsyncGPUProfiler -- Measure GPU consumption asynchronously
-//
-// This class creates a time critical background thread to be able to
-// accuratelly measure the GPU busy/idle duty cycle. This will not
-// interfere with other threads due to calling Sleep() to give time slices
-// to the other threads. The thread here needs to be time critical to
-// ensure it can measure time accuratelly, without it being swapped out
-// for upwards of 10's of ms (OS dependent).
-// -----------------------------------------------------------------------
-struct AsyncGPUProfiler
-{
-    AsyncGPUProfiler();
-    ~AsyncGPUProfiler();
-
-private:
-    std::thread*    m_workerThread;
-    bool            m_threadQuit = false;
-};
-
 #endif // CPUONLY
-
