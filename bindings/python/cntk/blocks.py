@@ -232,6 +232,7 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
     def create_hc_placeholder():
         # we pass the known dimensions here, which makes dimension inference easier
         return (Placeholder(shape=shape, name='hPh'), Placeholder(shape=cell_shape, name='cPh')) # (h, c)
+        #return (Placeholder(name='hPh'), Placeholder(name='cPh')) # (h, c)
 
     # define the model function itself
     # general interface for Recurrence():
@@ -287,7 +288,7 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
         # TODO: figure out how to do scoping, and also rename all the apply... to expression
 
         # LSTM output is the same as h
-        out = alias(h)
+        out = alias(h)  # alias is needed because otherwise we cannot return it as out and h; and an API bug prevents us from doing that inside Function(from lambda)
 
         # returns the new state as a tuple with names but order matters
         from collections import OrderedDict

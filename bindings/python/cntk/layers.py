@@ -254,21 +254,22 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
         # not a tuple: must be a 'scalar', i.e. a single element
         return past_value  (state, initial_state) if not go_backwards else \
                future_value(state, initial_state)
-    x = Placeholder(name='recurrence_arg')
-    state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
-    prev_state = previous_hook(state_forward)  # delay (h, c)
-    f_x_h_c = over(x, prev_state) # apply the recurrent over
-    # this returns a Function (x, (h_prev, c_prev)) -> (h, c)
-    out, *h_c = list(f_x_h_c.outputs)
-    #out = h_c[0]
-    #h_c.pop(0)  # take out 'out' for now
-    replacements = { value_forward: value for (value_forward, value) in zip(list(_as_tuple(state_forward)), h_c) }
-    f_x_h_c.replace_placeholders(replacements)  # resolves state_forward := h_c
-    #out = f_x_h_c.outputs[0]  # 'out' is a Variable (the output of a Function that computed it)
-    if _trace_layers:
-        _log_node(out)
-        _log_node(combine([out.owner]))
-    apply_x = combine([out])     # the Function that yielded 'out', so we get to know its inputs
+    def recur(x):
+        state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
+        prev_state = previous_hook(state_forward)  # delay (state vars)
+        # apply the recurrent block ('over')
+        f_x_h_c = over(x, prev_state)
+        # this returns a Function (x, previous state vars...) -> (out, state vars...)
+        out, *state_vars = list(f_x_h_c.outputs)
+        replacements = { var_forward: var for (var_forward, var) in zip(list(_as_tuple(state_forward)), state_vars) }
+        f_x_h_c.replace_placeholders(replacements)  # resolves state_forward := state_vars
+        #out = f_x_h_c.outputs[0]  # 'out' is a Variable (the output of a Function that computed it)
+        if _trace_layers:
+            _log_node(out)
+            _log_node(combine([out.owner]))
+        apply_x = combine([out])     # the Function that yielded 'out', so we get to know its inputs
+        return apply_x
+    apply_x = Function(recur)
     # apply_x is a Function x -> h
     return Block(apply_x, 'Recurrence', Record(over=over))
 
