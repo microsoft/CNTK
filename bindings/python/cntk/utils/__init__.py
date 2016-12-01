@@ -176,6 +176,9 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     if device is None:
         device = use_default_device()
 
+    if isinstance(batch, np.ndarray):
+        batch = batch.tolist()
+
     if dtype in [np.float32, None]:
         value = cntk_py.Value.create_one_hot_float(num_classes, batch, device, False)
     elif dtype == np.float64:
