@@ -27,7 +27,7 @@ struct DiskOffsetsTable
 class OffsetsTable {
 public:
 
-    OffsetsTable(size_t numChunks, DiskOffsetsTable* offsetsTable) : m_numChunks(numChunks)//, m_diskOffsetsTable(offsetsTable)
+    OffsetsTable(size_t numChunks, DiskOffsetsTable* offsetsTable) : m_numChunks(numChunks)
     {
         m_diskOffsetsTable = make_unique<DiskOffsetsTable*>(offsetsTable);
         Initialize();

@@ -65,7 +65,7 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
         RuntimeError("CNTKBinaryReader: While reading '%ls': %s", configHelper.GetFilePath().c_str(), e.what());
     }
     if (configHelper.GetTraceLevel() > 2)
-        fprintf(stderr, "%s\n", log);
+        fprintf(stderr, "%s\n", log.c_str());
 }
 
 } } }

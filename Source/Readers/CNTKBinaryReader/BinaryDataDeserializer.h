@@ -42,11 +42,6 @@ protected:
             return m_data;
         }
 
-        void SetDataBuffer(void* data)
-        {
-            m_data = data;
-        }
-
         void* m_data;
     };
 
@@ -65,11 +60,6 @@ protected:
             return m_data;
         }
         
-        void SetDataBuffer(void* data)
-        {
-            m_data = data;
-        }
-
         std::vector<IndexType> m_indicesBuffer;
         void* m_data;
     };
@@ -115,11 +105,11 @@ public:
         for (size_t c = 0; c < numSequences; c++)
         {
             shared_ptr<DenseInputStreamBuffer> sequence = make_shared<DenseInputStreamBuffer>();
-            sequence->SetDataBuffer( (char*)data + c*m_numCols*elemSize );
+            sequence->m_data            = (char*)data + c*m_numCols*elemSize;
             sequence->m_id              = startIndex + c;
             sequence->m_numberOfSamples = 1;
             sequence->m_sampleLayout    = std::make_shared<TensorShape>(m_numCols);
-            result[c] = sequence;
+            result[c]                   = sequence;
         }
 
         // For dense, the number of bytes processed is just numRows * numCols * elemSize;
@@ -204,7 +194,7 @@ public:
             sequence->m_totalNnzCount = colOffsets[colIndex + 1] - colOffsets[colIndex];
 
             // The values array is already properly packed, so just use it.
-            sequence->SetDataBuffer(values);
+            sequence->m_data = values;
             
             // The indices are correct (note they MUST BE IN INCREASING ORDER), but we will have to fix them up a 
             // little bit, for now just use them

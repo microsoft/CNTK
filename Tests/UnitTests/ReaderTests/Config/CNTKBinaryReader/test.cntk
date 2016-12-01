@@ -8,10 +8,10 @@ SparseSeq = [
         file = "sparseseqoutput.bin"
 
         input = [
-            features1 = [ original="a" ]
-            features2 = [ original="b" ]
-            labels1 = [ original="c" ]
-            labels2 = [ original="d" ]
+            features1 = [ alias="a" ]
+            features2 = [ alias="b" ]
+            labels1 = [ alias="c" ]
+            labels2 = [ alias="d" ]
         ]
         randomize = false
     ]
@@ -24,10 +24,10 @@ Sparse = [
         file = "sparseoutput.bin"
 
         input = [
-            features1 = [ original="a" ]
-            features2 = [ original="b" ]
-            labels1 = [ original="c" ]
-            labels2 = [ original="d" ]
+            features1 = [ alias="a" ]
+            features2 = [ alias="b" ]
+            labels1 = [ alias="c" ]
+            labels2 = [ alias="d" ]
         ]
         randomize = false
     ]
@@ -40,10 +40,10 @@ Simple = [
         file = "simple.bin"
 
         input = [
-            features1 = [ original="a" ]
-            features2 = [ original="b" ]
-            features3 = [ original="c" ]
-            features4 = [ original="d" ]
+            features1 = [ alias="a" ]
+            features2 = [ alias="b" ]
+            features3 = [ alias="c" ]
+            features4 = [ alias="d" ]
         ]
         randomize = false
     ]

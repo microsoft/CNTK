@@ -34,12 +34,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 ConfigParameters input = section.second;
                 wstring name = msra::strfun::utf16(section.first);
 
-                // If there is an option for "original", we will rename the stream with the "original"
+                // If there is an option for "alias", we will rename the stream with the "alias"
                 // name to the target name.
-                if (input.ExistsCurrent(L"original"))
+                if (input.ExistsCurrent(L"alias"))
                 {
-                    wstring original = msra::strfun::utf16(input(L"original"));
-                    m_streams[original] = name;
+                    wstring alias = msra::strfun::utf16(input(L"alias"));
+                    m_streams[alias] = name;
                 }
                 else
                     m_streams[name] = name;

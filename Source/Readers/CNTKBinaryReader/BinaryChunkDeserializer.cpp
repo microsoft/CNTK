@@ -124,14 +124,14 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
 
         // Read the matrix type. Then instantiate the appropriate BinaryDataDeserializer, and have it read in its parameters
         // Note: Is there a better way to do this?
-        DeserializerType matType;
-        CNTKBinaryFileHelper::readOrDie(&matType, sizeof(matType), 1, m_file);
-        if (matType == DeserializerType::DenseBinaryDataDeserializer)
+        DeserializerType desType;
+        CNTKBinaryFileHelper::readOrDie(&desType, sizeof(desType), 1, m_file);
+        if (desType == DeserializerType::DenseBinaryDataDeserializer)
             m_deserializers[c] = make_shared<DenseBinaryDataDeserializer>(m_file);
-        else if (matType == DeserializerType::SparseBinaryDataDeserializer)
+        else if (desType == DeserializerType::SparseBinaryDataDeserializer)
             m_deserializers[c] = make_shared<SparseBinaryDataDeserializer>(m_file);
         else
-            RuntimeError("Unknown matrix type %d requested.", matType);
+            RuntimeError("Unknown deserializer type %d requested.", desType);
 
         streamDescription->m_id           = c;
         streamDescription->m_elementType  = m_deserializers[c]->GetElementType();
@@ -181,6 +181,8 @@ void BinaryChunkDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vec
 
     // We don't store every piece of sequence information, so we have to read the chunk in, parse it, and then
     // find the information.
+    // BUGBUG: Note this requires reading each chunk twice. This might not be hugely disadvantageous due to OS 
+    // caching, but should be avoided none the less.
     ChunkPtr chunk = GetChunk(chunkId);
 
     size_t startId = m_offsetsTable->GetStartIndex(chunkId);
