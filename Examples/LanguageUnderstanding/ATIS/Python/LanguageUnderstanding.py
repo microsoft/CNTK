@@ -61,27 +61,6 @@ def create_model_function():
 # define the criteria  #
 ########################
 
-# TODO: find a better name
-def AsFunction(f, members={}):
-    from inspect import signature
-    params = signature(f).parameters
-    f_name = f.__name__
-    args = [Placeholder(name=arg_name) for arg_name in list(params.keys())]
-    ordered_args = combine(args).outputs # force them into the right order
-    out = f(*args) # run with placeholders as inputs, which creates a piece of graph
-    if isinstance(out, dict): # multi-value function, returned a dictionary
-        #out = [combine([value], name=key) for key, value in out.items()]
-        # BUGBUG: Forgetting [] in combine will hang combine().
-        # BUGBUG: This currently fails with some dimension mismatch. Ordering problem? Workaround:
-        out = [value for key, value in out.items()]
-    if isinstance(out, (tuple, list)): # multi-value function, returned a tuple
-        out = combine(out, name=f_name)
-    else:
-        out = combine([out], name=f_name)  # UNTESTED
-    for key in members:   # UNTESTED
-        out.__dict__[key] = members[key]
-    return out
-
 # compose model function and criterion primitives into a criterion function
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
@@ -92,7 +71,7 @@ def create_criterion_function(model):
         ce   = cross_entropy_with_softmax(z, y)
         errs = classification_error      (z, y)
         return Record(ce=ce, errs=errs)
-    return AsFunction(criterion)
+    return Function(criterion)
 
 # alternative way of doing it, e.g. for use with Beta2
 def create_criterion_function1(model):

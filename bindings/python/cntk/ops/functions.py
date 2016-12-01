@@ -35,6 +35,36 @@ class Function(cntk_py.Function):
     will relay to its only output.
     '''
 
+    # construct a Function from a Python lambda
+    # where the Function's input signature is defined by the lambda
+    def __new__(cls, f, members = {}):
+        from inspect import signature
+        params = signature(f).parameters
+        f_name = f.__name__
+        from cntk import placeholder_variable, combine
+        args = [placeholder_variable(name=arg_name) for arg_name in list(params.keys())]
+        ordered_args = combine(args).outputs # force them into the right order
+        # execute the lambda with placeholders as inputs, which creates a piece of graph
+        out = f(*args)
+        if isinstance(out, dict): # multi-value function, returned as a dictionary
+            # give outputs the names of the dictionary
+            out = [combine([value], name=key) for key, value in out.items()]
+            # BUGBUG: somehow, these names are not propagated into outputs, though (they show up as e.g. Minus123_output, i.e. get overwritten by combine() below)
+            # BUGBUG: Forgetting [] in combine will hang combine().
+        if not isinstance(out, (tuple, list)): # multi-value function, returned a tuple
+            out = [out]
+        # implant the function name as the node name --TODO: should be op_name in a BlockFunction
+        out = combine(out, name=f_name)
+        # add all members to the Python class
+        # TODO: This should really be a dictionary inside BlockFunction
+        for key in members:   # UNTESTED
+            out.__dict__[key] = members[key]
+        return out
+
+    def __init__(self, f, members = {}):
+        # don't call the base class, since Function is abstract in C++
+        pass
+
     def _get_arguments(self):
         return [arg for arg in self.inputs if arg.is_input or arg.is_placeholder]
 

@@ -86,10 +86,10 @@ def Dense(shape, init=default_override_or(glorot_uniform()), activation=default_
 #  Embedding(weights=np.load('PATH'))
 def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None):
 
-    init = get_default_override(Embedding, init=init)
-
     if not is_default_override(init) and weights is not None:
         raise ValueError('Embedding: init and weights options are mutually exclusive')
+
+    init = get_default_override(Embedding, init=init)
 
     # parameters bound to this Function:
     # no weights given: learn the embedding
