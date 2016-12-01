@@ -26,7 +26,7 @@
     <ProjectGuid>{7B7A563D-AA8E-4660-A805-D50235A02120}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CompositeDataReader</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />

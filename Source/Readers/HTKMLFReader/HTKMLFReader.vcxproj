@@ -26,7 +26,7 @@
     <ProjectGuid>{33D2FD22-DEF2-4507-A58A-368F641AEBE5}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>HTKMLFReader</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
