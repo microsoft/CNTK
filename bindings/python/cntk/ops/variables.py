@@ -14,7 +14,7 @@ class VariableMixin:
         '''
         The dynamic axes of this variable.
         '''
-        return super().dynamic_axes()
+        return super(VariableMixin, self).dynamic_axes()
 
     @property
     def dtype(self):
@@ -28,56 +28,56 @@ class VariableMixin:
         '''
         Whether this variable is a constant.
         '''
-        return super().is_constant()
+        return super(VariableMixin, self).is_constant()
 
     @property
     def is_input(self):
         '''
         Whether this variable is an input.
         '''
-        return super().is_input()
+        return super(VariableMixin, self).is_input()
 
     @property
     def is_output(self):
         '''
         Whether this variable is an output.
         '''
-        return super().is_output()
+        return super(VariableMixin, self).is_output()
 
     @property
     def is_parameter(self):
         '''
         Whether this variable is a parameter.
         '''
-        return super().is_parameter()
+        return super(VariableMixin, self).is_parameter()
 
     @property
     def is_placeholder(self):
         '''
         Whether this variable is a placeholder.
         '''
-        return super().is_placeholder()
+        return super(VariableMixin, self).is_placeholder()
 
     @property
     def is_sparse(self):
         '''
         Whether this variable is sparse.
         '''
-        return super().is_sparse()
+        return super(VariableMixin, self).is_sparse()
 
     @property
     def name(self):
         '''
         The name of this variable.
         '''
-        return super().name()
+        return super(VariableMixin, self).name()
 
     @property
     def needs_gradient(self):
         '''
         Whether this variable needs gradients.
         '''
-        return super().needs_gradient()
+        return super(VariableMixin, self).needs_gradient()
 
     @property
     @typemap
@@ -87,21 +87,21 @@ class VariableMixin:
         '''
         if self.is_output == False:
             raise RuntimeError('called owner() on a variable that is not an output variable')
-        return super().owner()
+        return super(VariableMixin, self).owner()
 
     @property
     def shape(self):
         '''
         The shape of this variable as a tuple.
         '''
-        return super().shape().dimensions()
+        return super(VariableMixin, self).shape().dimensions()
 
     @property
     def uid(self):
         '''
         The internally generated unique name of the variable.
         '''
-        return super().uid()
+        return super(VariableMixin, self).uid()
 
 
 class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
@@ -127,7 +127,7 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
             dtype = np.float32
         dtype = utils.sanitize_dtype_cntk(dtype)
 
-        super().__init__(shape, is_sparse, dtype, needs_gradient, name,
+        super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name,
                          dynamic_axes)
 
 
@@ -164,11 +164,11 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
 
         if isinstance(init, (np.ndarray, list, float, int)):
             ndav = sanitize_value(shape, init, dtype, device)
-            super().__init__(ndav, name)
+            super(Parameter, self).__init__(ndav, name)
         else:
             shape = utils.sanitize_shape(shape)
             cntk_dtype = utils.sanitize_dtype_cntk(dtype)
-            super().__init__(shape, cntk_dtype, init,
+            super(Parameter, self).__init__(shape, cntk_dtype, init,
                     device, name)
 
     @property
@@ -176,7 +176,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
         '''
         NumPy array of the value
         '''
-        return super().value().to_numpy()
+        return super(Parameter, self).value().to_numpy()
 
 class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     '''
@@ -201,15 +201,15 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
                 dtype = np.float32
 
         if np.isscalar(value):
-            super().__init__(utils.sanitize_shape(shape), sanitize_dtype_cntk(dtype), value)
+            super(Constant, self).__init__(utils.sanitize_shape(shape), sanitize_dtype_cntk(dtype), value)
         else:
             ndav = sanitize_value(shape, value, dtype, device)
-            super().__init__(ndav, name)
+            super(Constant, self).__init__(ndav, name)
 
     @property
     def value(self):
         '''
         NumPy array of the value
         '''
-        return super().value().to_numpy()
+        return super(Constant, self).value().to_numpy()
 
