@@ -375,9 +375,7 @@ namespace CNTK
                     else
                     {
                         InvalidArgument(
-                            "%ls %ls supports only cuDNN (CHW) data layout. "
-                            "Please specify imageLayout=\"cudnn\" in %ls node in your script "
-                            "and make sure input data layout is CHW", node->NodeName().c_str(), node->OperationName().c_str(), node->NodeName().c_str());
+                            "%ls %ls supports only cuDNN (CHW) data layout. ", node->NodeName().c_str(), node->OperationName().c_str());
                     }
                 }
                 else if (node->OperationName() == OperationNameOf(BatchNormalizationNode))
