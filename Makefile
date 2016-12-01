@@ -409,6 +409,8 @@ CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/BackCompat.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/PrimitiveFunction.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/CompositeFunction.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDMask.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Trainer.cpp \
@@ -1112,6 +1114,7 @@ UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/CPUSparseMatrixTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/fixtures.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/QuantizersTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/MathTests/QuantizedOperationsTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/TensorTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/GPUMatrixCudaBlasTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/GPUMatrixTests.cpp \

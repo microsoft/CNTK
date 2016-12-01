@@ -603,17 +603,17 @@ class minibatchutterancesourcemulti : public minibatchsource
 
                 // now randomize them --we use the nested loop again to avoid storing a backpointer
                 // The condition is that a randomized frame may not be moved out of its associated chunk window.
-                foreach_index(t, m_randomizedframerefs)
+                foreach_index(t2, m_randomizedframerefs)
                 {
-                    const size_t positionchunkindex = ttochunk[t];               // position 't' lies within this chunk (relationship is monotonous, not random)
+                    const size_t positionchunkindex = ttochunk[t2]; // position 't2' lies within this chunk (relationship is monotonous, not random)
                     const auto &chunk = m_randomizedChunks[0][positionchunkindex]; // for window
 
                     // get in-RAM chunk range for this frame position (shared across all frame positions within the same chunk)
                     const size_t poswindowbegin = chunk.windowbegin; // rolling window over chunks (which under the hood have been randomized)
                     const size_t poswindowend = chunk.windowend;
-                    // Chunk implies that if we are at position 't', we are guaranteed to have chunks [poswindowbegin, poswindowend) in RAM.
+                    // Chunk implies that if we are at position 't2', we are guaranteed to have chunks [poswindowbegin, poswindowend) in RAM.
                     // These chunks are associated with a range of frame positions.
-                    // It is implied that if we are at position 't', the frames covered by chunks [poswindowbegin, poswindowend) are in RAM.
+                    // It is implied that if we are at position 't2', the frames covered by chunks [poswindowbegin, poswindowend) are in RAM.
                     const size_t postbegin = m_randomizedChunks[0][poswindowbegin].globalts - sweepts;
                     const size_t postend = m_randomizedChunks[0][poswindowend - 1].globalte() - sweepts;
                     // The position that this frame gets randomized to must be guaranteed to belong to a chunk within [postbegin, postend).
@@ -621,15 +621,15 @@ class minibatchutterancesourcemulti : public minibatchsource
                     for (;;) // (randomization retry loop)
                     {
                         size_t tswap = Microsoft::MSR::CNTK::rand(postbegin, postend); // random frame position within allowed range
-                        // We want to swap 't' to 'tswap' and 'tswap' to 't'.
+                        // We want to swap 't2' to 'tswap' and 'tswap' to 't2'.
                         //  - Both may have been swapped before.
                         //  - Both must stay within the randomization window of their respective position.
-                        // check admissibility of where the element at 'tswap' gets swapped to 't' (range = [windowbegin,windowend))
+                        // check admissibility of where the element at 'tswap' gets swapped to 't2' (range = [windowbegin,windowend))
                         size_t tswapchunkindex = m_randomizedframerefs[tswap].chunkindex;
                         if (tswapchunkindex < poswindowbegin || tswapchunkindex >= poswindowend)
                             continue;
-                        // check admissibility of where the element at t gets swapped to (which is frame position 'tswap')
-                        const size_t sourcechunkindex = m_randomizedframerefs[t].chunkindex;
+                        // check admissibility of where the element at t2 gets swapped to (which is frame position 'tswap')
+                        const size_t sourcechunkindex = m_randomizedframerefs[t2].chunkindex;
                         size_t targetchunkindex = ttochunk[tswap]; // chunk associated with this frame position defines value range
                         const auto &targetchunk = m_randomizedChunks[0][targetchunkindex];
                         const size_t targetwindowbegin = targetchunk.windowbegin;
@@ -637,12 +637,12 @@ class minibatchutterancesourcemulti : public minibatchsource
                         if (sourcechunkindex < targetwindowbegin || sourcechunkindex >= targetwindowend)
                             continue;
                         // admissible--swap the two
-                        std::swap(m_randomizedframerefs[t], m_randomizedframerefs[tswap]);
+                        std::swap(m_randomizedframerefs[t2], m_randomizedframerefs[tswap]);
                         // do a post-check if we got it right  --we seem not to
-                        if (isframepositionvalid(t, ttochunk) && isframepositionvalid(tswap, ttochunk))
+                        if (isframepositionvalid(t2, ttochunk) && isframepositionvalid(tswap, ttochunk))
                             break;
                         // not valid: swap them back and try again  --we actually discovered a bug in the code above
-                        std::swap(m_randomizedframerefs[t], m_randomizedframerefs[tswap]);
+                        std::swap(m_randomizedframerefs[t2], m_randomizedframerefs[tswap]);
                         fprintf(stderr, "lazyrandomization: BUGBUG --invalid swapping condition detected\n");
                     }
                 }
@@ -1099,10 +1099,10 @@ public:
                                 {
                                     const auto &labseq = labels[j].find(key)->second;
                                     // expand classid sequence into flat array
-                                    foreach_index (i, labseq)
+                                    foreach_index (i2, labseq)
                                     {
-                                        const auto &e = labseq[i];
-                                        if ((i > 0 && labseq[i - 1].firstframe + labseq[i - 1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
+                                        const auto &e = labseq[i2];
+                                        if ((i2 > 0 && labseq[i2 - 1].firstframe + labseq[i2 - 1].numframes != e.firstframe) || (i2 == 0 && e.firstframe != 0))
                                         {
                                             RuntimeError("minibatchutterancesource: labels not in consecutive order MLF in label set: %ls", key.c_str());
                                         }
@@ -1580,7 +1580,7 @@ public:
                   std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids,
                   std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
                   std::vector<std::shared_ptr<const latticesource::latticepair>> &latticepairs, std::vector<std::vector<size_t>> &sentendmark,
-                  std::vector<std::vector<size_t>> &phoneboundaries) override
+                  std::vector<std::vector<size_t>> &phoneboundaries2) override
     {
         bool readfromdisk = false; // return value: shall be 'true' if we paged in anything
 
@@ -1640,7 +1640,7 @@ public:
             feat.resize(vdim.size());
             uids.resize(classids.size());
             if (m_generatePhoneBoundaries)
-                phoneboundaries.resize(classids.size());
+                phoneboundaries2.resize(classids.size());
             sentendmark.resize(vdim.size());
             assert(feat.size() == vdim.size());
             assert(feat.size() == randomizedchunks.size());
@@ -1656,13 +1656,13 @@ public:
                         {
                             uids[j].resize(tspos);
                             if (m_generatePhoneBoundaries)
-                                phoneboundaries[j].resize(tspos);
+                                phoneboundaries2[j].resize(tspos);
                         }
                         else
                         {
                             uids[i].clear();
                             if (m_generatePhoneBoundaries)
-                                phoneboundaries[i].clear();
+                                phoneboundaries2[i].clear();
                         }
                         latticepairs.clear(); // will push_back() below
                         transcripts.clear();
@@ -1728,7 +1728,7 @@ public:
                                 {
                                     uids[j][t + tspos] = uttclassids[j][t];
                                     if (m_generatePhoneBoundaries)
-                                        phoneboundaries[j][t + tspos] = uttphoneboudaries[j][t];
+                                        phoneboundaries2[j][t + tspos] = uttphoneboudaries[j][t];
                                 }
                             }
 
@@ -1821,13 +1821,13 @@ public:
 
             // return randomized frames for the time range of those utterances
             size_t currmpinodeframecount = 0;
-            for (size_t j = 0; j < mbframes; j++)
+            for (size_t j2 = 0; j2 < mbframes; j2++)
             {
                 if (currmpinodeframecount >= feat[0].cols()) // MPI/data-parallel mode: all nodes return the same #frames, which is how feat(,) is allocated
                     break;
 
                 // map to time index inside arrays
-                const frameref &frameref = m_frameRandomizer.randomizedframeref(globalts + j);
+                const frameref &frameref = m_frameRandomizer.randomizedframeref(globalts + j2);
 
                 // in MPI/data-parallel mode, skip frames that are not in chunks loaded for this MPI node
                 if ((frameref.chunkindex % numsubsets) != subsetnum)
@@ -1889,11 +1889,11 @@ public:
     bool getbatch(const size_t globalts,
                   const size_t framesrequested, std::vector<msra::dbn::matrix> &feat, std::vector<std::vector<size_t>> &uids,
                   std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
-                  std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices, std::vector<std::vector<size_t>> &sentendmark,
-                  std::vector<std::vector<size_t>> &phoneboundaries)
+                  std::vector<std::shared_ptr<const latticesource::latticepair>> &lattices2, std::vector<std::vector<size_t>> &sentendmark,
+                  std::vector<std::vector<size_t>> &phoneboundaries2)
     {
         size_t dummy;
-        return getbatch(globalts, framesrequested, 0, 1, dummy, feat, uids, transcripts, lattices, sentendmark, phoneboundaries);
+        return getbatch(globalts, framesrequested, 0, 1, dummy, feat, uids, transcripts, lattices2, sentendmark, phoneboundaries2);
     }
 
     double gettimegetbatch()

@@ -428,7 +428,7 @@ void PrintGpuInfo()
     for (GpuData& data : gpusData)
     {
         LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
-                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), data.totalMemory);
+                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 #endif
@@ -528,12 +528,12 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     auto valpp = config.Find(L"deviceId");
     if (valpp)
     {
-        auto valp = *valpp;
-        if (!valp.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
+        auto valp2 = *valpp;
+        if (!valp2.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
         {
-            if (static_cast<int>(valp) >= 0) // gpu (id >= 0)
+            if (static_cast<int>(valp2) >= 0) // gpu (id >= 0)
             {
-                CheckSupportForGpu(valp); // throws if gpu is not supported
+                CheckSupportForGpu(valp2); // throws if gpu is not supported
             }
         }
     }
@@ -645,7 +645,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 2.0.beta4.0+ (");
+    fprintf(stderr, "CNTK 2.0.beta5.0+ (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
@@ -857,27 +857,26 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     {
         fprintf(stderr, "\n");
         err.PrintError(ProgressTracing::GetTimeStampPrefix() + L"EXCEPTION occurred.");
-        return EXIT_FAILURE;
     }
     catch (const IExceptionWithCallStackBase& err)
     {
         fprintf(stderr, "\n");
         fprintf(stderr, "%s", err.CallStack());
         LOGPRINTF(stderr, "EXCEPTION occurred: %s\n", dynamic_cast<const std::exception&>(err).what());
-        return EXIT_FAILURE;
     }
     catch (const std::exception& err)
     {
         fprintf(stderr, "\n");
         LOGPRINTF(stderr, "EXCEPTION occurred: %s\n", err.what());
-        return EXIT_FAILURE;
     }
     catch (...)
     {
         fprintf(stderr, "\n");
         LOGPRINTF(stderr, "Unknown ERROR occurred.\n");
-        return EXIT_FAILURE;
     }
+
+    fflush(stderr);
+    return EXIT_FAILURE;
 }
 
 #ifdef __WINDOWS__

@@ -32,7 +32,8 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
         InvalidArgument("Network needs at least 1 feature specified.");
     }
 
-    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>();
+    bool useNumericSequenceKeys = readerConfig(L"useNumericSequenceKeys", false);
+    CorpusDescriptorPtr corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
 
     std::vector<IDataDeserializerPtr> featureDeserializers;
     std::vector<IDataDeserializerPtr> labelDeserializers;

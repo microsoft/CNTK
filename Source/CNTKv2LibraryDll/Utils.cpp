@@ -13,8 +13,8 @@
 #include "CNTKLibrary.h"
 #include "Utils.h"
 #include "Serialization.h"
-#include "Function.h"
 #include <fcntl.h>
+#include "PrimitiveFunction.h"
 
 using namespace std;
 

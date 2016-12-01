@@ -181,7 +181,7 @@ public:
         // finish off last block
         flushlastblock();
         fflushOrDie(f);
-        fprintf(stderr, "biggrowablevectorarray: disk backup store created, %d frames, %lu bytes\n", (int) n, fgetpos(f));
+        fprintf(stderr, "biggrowablevectorarray: disk backup store created, %d frames, %lu bytes\n", (int) n, (unsigned long)fgetpos(f));
         fclose(f);
         foreach_index (i, blocks)
             assert(!blocks[i]);         // ensure we flushed
@@ -368,10 +368,10 @@ public:
             if (!key.empty()) // (we have a key if supervised mode)
             {
                 const auto &labseq = labels.find(key)->second; // (we already checked above that it exists)
-                foreach_index (i, labseq)
+                foreach_index (i2, labseq)
                 {
-                    const auto &e = labseq[i];
-                    if ((i > 0 && labseq[i - 1].firstframe + labseq[i - 1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
+                    const auto &e = labseq[i2];
+                    if ((i2 > 0 && labseq[i2 - 1].firstframe + labseq[i2 - 1].numframes != e.firstframe) || (i2 == 0 && e.firstframe != 0))
                         RuntimeError("minibatchframesource: labels not in consecutive order MLF in label set: %ls", key.c_str());
                     for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                     {
@@ -696,10 +696,10 @@ public:
                         foreach_index (j, labels)
                         {
                             const auto &labseq = labels[j].find(key)->second; // (we already checked above that it exists)
-                            foreach_index (i, labseq)
+                            foreach_index (i2, labseq)
                             {
-                                const auto &e = labseq[i];
-                                if ((i > 0 && labseq[i - 1].firstframe + labseq[i - 1].numframes != e.firstframe) || (i == 0 && e.firstframe != 0))
+                                const auto &e = labseq[i2];
+                                if ((i2 > 0 && labseq[i2 - 1].firstframe + labseq[i2 - 1].numframes != e.firstframe) || (i2 == 0 && e.firstframe != 0))
                                     RuntimeError("minibatchframesourcemulti: labels not in consecutive order MLF in label set: %ls", key.c_str());
                                 for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                                 {

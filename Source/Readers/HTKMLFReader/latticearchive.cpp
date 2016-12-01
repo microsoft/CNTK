@@ -156,7 +156,7 @@ static size_t tryfind(const MAPTYPE &map, const KEYTYPE &key, VALTYPE deflt)
     // TODO: This is sort of redundant now--it gets the symmap from the HMM, i.e. always the same for all archives.
     writeunitmap(symlistpath, modelsymmap);
 
-    fprintf(stderr, "completed %lu out of %lu lattices (%lu read failures, %.1f%%)\n", infiles.size(), infiles.size() - brokeninputfiles, brokeninputfiles, 100.0f * brokeninputfiles / infiles.size());
+    fprintf(stderr, "completed %lu out of %lu lattices (%lu read failures, %.1f%%)\n", (unsigned long)infiles.size(), (unsigned long)(infiles.size() - brokeninputfiles), (unsigned long)brokeninputfiles, 100.0f * brokeninputfiles / infiles.size());
 }
 
 // helper to set a context value (left, right) with checking of uniqueness
@@ -206,7 +206,7 @@ vector<lattice::nodecontext> lattice::determinenodecontexts(const msra::asr::sim
                     // ends with n = position of furthest non-sp
                     if (n < 0) // only sp?
                         RuntimeError("determinenodecontexts: word consists only of /sp/");
-                    fprintf(stderr, "determinenodecontexts: word with %lu /sp/ at the end found, edge %d\n", a.size() - 1 - n, j);
+                    fprintf(stderr, "determinenodecontexts: word with %lu /sp/ at the end found, edge %d\n", (unsigned long)a.size() - 1 - n, j);
                     multispseen++;
                     Z = a[n].unit;
                 }
@@ -231,7 +231,7 @@ vector<lattice::nodecontext> lattice::determinenodecontexts(const msra::asr::sim
         nodecontexts[E].setleft(Zid);
     }
     if (multispseen > 0)
-        fprintf(stderr, "determinenodecontexts: %lu broken edges in %lu with multiple /sp/ at the end seen\n", multispseen, edges.size());
+        fprintf(stderr, "determinenodecontexts: %lu broken edges in %lu with multiple /sp/ at the end seen\n", (unsigned long)multispseen, (unsigned long)edges.size());
     // check CI conditions and put in 't'
     // We make the hard assumption that there is only one CI phone, /sil/.
     const auto &silhmm = hset.gethmm(silunit);
@@ -325,7 +325,7 @@ void lattice::merge(const lattice &other, const msra::asr::simplesenonehmm &hset
         if (contexts[i].iother != SIZE_MAX)
             othernodemap[contexts[i].iother] = j - 1;
     }
-    fprintf(stderr, "merge: joint node space uniq'ed to %d from %d\n", j, contexts.size());
+    fprintf(stderr, "merge: joint node space uniq'ed to %d from %d\n", j, (unsigned long)contexts.size());
     contexts.resize(j);
 
     // create a new node array (just copy the contexts[].t fields)
@@ -339,17 +339,17 @@ void lattice::merge(const lattice &other, const msra::asr::simplesenonehmm &hset
     align.insert(align.end(), other.align.begin(), other.align.end());
 
     // map existing edges' S and E fields, and also 'firstalign'
-    foreach_index (j, edges)
+    foreach_index (j2, edges)
     {
-        edges[j].S = nodemap[edges[j].S];
-        edges[j].E = nodemap[edges[j].E];
+        edges[j2].S = nodemap[edges[j2].S];
+        edges[j2].E = nodemap[edges[j2].E];
     }
     auto otheredges = other.edges;
-    foreach_index (j, otheredges)
+    foreach_index (j3, otheredges)
     {
-        otheredges[j].S = othernodemap[otheredges[j].S];
-        otheredges[j].E = othernodemap[otheredges[j].E];
-        otheredges[j].firstalign += alignoffset; // that's where they are now
+        otheredges[j3].S = othernodemap[otheredges[j3].S];
+        otheredges[j3].E = othernodemap[otheredges[j3].E];
+        otheredges[j3].firstalign += alignoffset; // that's where they are now
     }
 
     // at this point, a new 'nodes' array exists, and the edges already are w.r.t. the new node space and align space
@@ -360,8 +360,8 @@ void lattice::merge(const lattice &other, const msra::asr::simplesenonehmm &hset
     // remove acoustic scores --they are likely not identical if they come from different decoders
     // If we don't do that, this will break the sorting in builduniquealignments()
     info.hasacscores = 0;
-    foreach_index (j, edges)
-        edges[j].a = 0.0f;
+    foreach_index (j4, edges)
+        edges[j4].a = 0.0f;
 
     // Note: we have NOT sorted or de-duplicated yet. That is best done after conversion to the uniq'ed format.
 }
@@ -384,7 +384,7 @@ void lattice::dedup()
         }
         edges2[k++] = edges2[j];
     }
-    fprintf(stderr, "dedup: edges reduced to %d from %d\n", k, edges2.size());
+    fprintf(stderr, "dedup: edges reduced to %lu from %lu\n", (unsigned long)k, (unsigned long)edges2.size());
     edges2.resize(k);
     info.numedges = edges2.size();
     edges.clear(); // (should already be, but isn't; make sure we no longer use it)
@@ -517,13 +517,13 @@ void lattice::dedup()
         }
     } // end for (toclines)
     if (skippedmerges > 0)
-        fprintf(stderr, "convert: %d out of %d merge operations skipped due to secondary lattice missing\n", skippedmerges, toclines.size());
+        fprintf(stderr, "convert: %lu out of %lu merge operations skipped due to secondary lattice missing\n", (unsigned long)skippedmerges, (unsigned long)toclines.size());
 
     // write out the updated unit map
     if (f && ftoc)
         writeunitmap(symlistpath, modelsymmap);
 
-    fprintf(stderr, "converted %d lattices\n", toclines.size());
+    fprintf(stderr, "converted %lu lattices\n", (unsigned long)toclines.size());
 }
 
 // ---------------------------------------------------------------------------
@@ -544,7 +544,7 @@ void lattice::fromhtklattice(const wstring &path, const std::unordered_map<std::
     for (; iter != lines.end() && strncmp(*iter, "N=", 2); iter++)
     {
         if (strncmp(*iter, "lmscale=", 8) == 0) // note: HTK sometimes generates extra garbage space at the end of this line
-            if (sscanf_s(*iter, "lmscale=%f wdpenalty=%f%c", &info.lmf, &info.wp, &dummychar, sizeof(dummychar)) != 2 && dummychar != ' ')
+            if (sscanf_s(*iter, "lmscale=%f wdpenalty=%f%c", &info.lmf, &info.wp, &dummychar, (unsigned int)sizeof(dummychar)) != 2 && dummychar != ' ')
                 RuntimeError("lattice: mal-formed lmscale/wdpenalty line in lattice: %s", *iter);
     }
 
@@ -552,7 +552,7 @@ void lattice::fromhtklattice(const wstring &path, const std::unordered_map<std::
     if (iter != lines.end())
     {
         unsigned long N, L;
-        if (sscanf_s(*iter, "N=%lu L=%lu %c", &N, &L, &dummychar, sizeof(dummychar)) != 2)
+        if (sscanf_s(*iter, "N=%lu L=%lu %c", &N, &L, &dummychar, (unsigned int)sizeof(dummychar)) != 2)
             RuntimeError("lattice: mal-formed N=/L= line in lattice: %s", *iter);
         info.numnodes = N;
         info.numedges = L;
@@ -570,7 +570,7 @@ void lattice::fromhtklattice(const wstring &path, const std::unordered_map<std::
             RuntimeError("lattice: not enough I lines in lattice");
         unsigned long itest;
         float t;
-        if (sscanf_s(*iter, "I=%lu t=%f%c", &itest, &t, &dummychar, sizeof(dummychar)) < 2)
+        if (sscanf_s(*iter, "I=%lu t=%f%c", &itest, &t, &dummychar, (unsigned int)sizeof(dummychar)) < 2)
             RuntimeError("lattice: mal-formed node line in lattice: %s", *iter);
         if (i != (size_t) itest)
             RuntimeError("lattice: out-of-sequence node line in lattice: %s", *iter);
@@ -592,7 +592,7 @@ void lattice::fromhtklattice(const wstring &path, const std::unordered_map<std::
         char d[1024];
         // example:
         // J=12    S=1    E=13   a=-326.81   l=-5.090  d=:sil-t:s+k:e,0.03:dh:m-ax:m+sil,0.03:sil,0.02:
-        int nvals = sscanf_s(*iter, "J=%lu S=%lu E=%lu a=%f l=%f d=%s", &jtest, &S, &E, &a, &l, &d, sizeof(d));
+        int nvals = sscanf_s(*iter, "J=%lu S=%lu E=%lu a=%f l=%f d=%s", &jtest, &S, &E, &a, &l, &d, (unsigned int)sizeof(d));
         if (nvals == 5 && j == info.numedges - 1) // special case: last edge is a !NULL and thus may have the d= record missing
             strcpy(d, ":");
         else if (nvals != 6)
@@ -635,7 +635,7 @@ void lattice::fromhtklattice(const wstring &path, const std::unordered_map<std::
         if (edgeframes != nodes[E].t - (size_t) nodes[S].t)
         {
             char msg[128];
-            sprintf(msg, "\n-- where edgeframes=%d != (nodes[E].t - nodes[S].t=%d), the gap is %d.", edgeframes, nodes[E].t - (size_t) nodes[S].t, edgeframes + nodes[S].t - nodes[E].t);
+            sprintf(msg, "\n-- where edgeframes=%lu != (nodes[E].t - nodes[S].t=%lu), the gap is %lu.", (unsigned long)edgeframes, (unsigned long)(nodes[E].t - (size_t) nodes[S].t), (unsigned long)(edgeframes + nodes[S].t - nodes[E].t));
             RuntimeError("lattice: alignment info duration mismatches edge duration: %s%s", *iter, msg);
         }
     }
@@ -652,19 +652,19 @@ void lattice::fromhtklattice(const wstring &path, const std::unordered_map<std::
 
 // construct a numerator lattice from an MLF entry
 // The lattice is expected to be freshly constructed (I did not bother to check).
-void lattice::frommlf(const wstring &key, const std::unordered_map<std::string, size_t> &unitmap,
+void lattice::frommlf(const wstring &key2, const std::unordered_map<std::string, size_t> &unitmap,
                       const msra::asr::htkmlfreader<msra::asr::htkmlfentry, lattice::htkmlfwordsequence> &labels,
                       const msra::lm::CMGramLM &unigram, const msra::lm::CSymbolSet &unigramsymbols)
 {
     const auto &transcripts = labels.allwordtranscripts(); // (TODO: we could just pass the transcripts map--does not really matter)
 
     // get the labels (state and word)
-    auto iter = transcripts.find(key);
+    auto iter = transcripts.find(key2);
     if (iter == transcripts.end())
-        RuntimeError("frommlf: no reference word sequence in MLF for lattice with key %ls", key.c_str());
+        RuntimeError("frommlf: no reference word sequence in MLF for lattice with key %ls", key2.c_str());
     const auto &transcript = iter->second;
     if (transcript.words.size() == 0)
-        RuntimeError("frommlf: empty reference word sequence for lattice with key %ls", key.c_str());
+        RuntimeError("frommlf: empty reference word sequence for lattice with key %ls", key2.c_str());
 
     // determine unigram scores for all words
     vector<float> lmscores(transcript.words.size());
@@ -687,7 +687,7 @@ void lattice::frommlf(const wstring &key, const std::unordered_map<std::string, 
         e.S = j;
         e.E = j + 1;
         if (e.E != j + 1)
-            RuntimeError("frommlf: too many tokens to be represented as edgeinfo::E in label set: %ls", key.c_str());
+            RuntimeError("frommlf: too many tokens to be represented as edgeinfo::E in label set: %ls", key2.c_str());
         e.a = 0.0f; // no ac score
 
         // LM score
@@ -717,7 +717,7 @@ void lattice::frommlf(const wstring &key, const std::unordered_map<std::string, 
     }
     nodes[transcript.words.size()].t = (unsigned short) numframes;
     if (nodes[transcript.words.size()].t != numframes)
-        RuntimeError("frommlf: too many frames to be represented as nodeinfo::t in label set: %ls", key.c_str());
+        RuntimeError("frommlf: too many frames to be represented as nodeinfo::t in label set: %ls", key2.c_str());
     info.lmf = -1.0f; // indicates not set
     info.wp = 0.0f;   // not set indicated by lmf < 0
     info.numedges = edges.size();

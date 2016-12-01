@@ -135,12 +135,13 @@
     <ClInclude Include="API\CNTKLibraryExperimental.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
     <ClInclude Include="BackCompat.h" />
+    <ClInclude Include="CompositeFunction.h" />
     <ClInclude Include="DataParallelDistributedTrainer.h" />
     <ClInclude Include="DistributedCommunicator.h" />
     <ClInclude Include="DistributedTrainerBase.h" />
-    <ClInclude Include="Function.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
+    <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="Serialization.h" />
     <ClInclude Include="Utils.h" />
@@ -151,6 +152,7 @@
   <ItemGroup>
     <ClCompile Include="BackCompat.cpp" />
     <ClCompile Include="Common.cpp" />
+    <ClCompile Include="CompositeFunction.cpp" />
     <ClCompile Include="ComputeInputStatistics.cpp" />
     <ClCompile Include="DataParallelDistributedTrainer.cpp" />
     <ClCompile Include="DistributedCommunicator.cpp" />
@@ -165,6 +167,7 @@
     <ClCompile Include="MinibatchSource.cpp" />
     <ClCompile Include="NDArrayView.cpp" />
     <ClCompile Include="NDMask.cpp" />
+    <ClCompile Include="PrimitiveFunction.cpp" />
     <ClCompile Include="proto\CNTK.pb.cc.VS_wrapper.cpp" />
     <ClCompile Include="Serialization.cpp" />
     <ClCompile Include="stdafx.cpp">
