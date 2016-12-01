@@ -356,6 +356,30 @@ namespace CNTK
 
                     opType = PrimitiveOpType::Pooling;
                 }
+                // Legacy pooling node.
+                else if ((node->OperationName() == OperationNameOf(MaxPoolingNode)) ||
+                         (node->OperationName() == OperationNameOf(AveragePoolingNode)))
+                {
+                    auto poolingNode = node->As<PoolingNodeBase<ElementType>>();
+                    if (poolingNode->IsImageLayoutCHW())
+                    {
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingType] = (size_t)(AsPoolingType(poolingNode->PoolingKind()));
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingWindowShape] = AsNDShape(poolingNode->KernelShape());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(poolingNode->Strides());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(poolingNode->AutoPad());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(poolingNode->LowerPad());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(poolingNode->UpperPad());
+
+                        opType = PrimitiveOpType::Pooling;
+                    }
+                    else
+                    {
+                        InvalidArgument(
+                            "%ls %ls supports only cuDNN (CHW) data layout. "
+                            "Please specify imageLayout=\"cudnn\" in %ls node in your script "
+                            "and make sure input data layout is CHW", node->NodeName().c_str(), node->OperationName().c_str(), node->NodeName().c_str());
+                    }
+                }
                 else if (node->OperationName() == OperationNameOf(BatchNormalizationNode))
                 {
                     auto batchNormalizationNode = node->As<BatchNormalizationNode<ElementType>>();
