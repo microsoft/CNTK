@@ -373,10 +373,7 @@ namespace CNTK
                         opType = PrimitiveOpType::Pooling;
                     }
                     else
-                    {
-                        InvalidArgument(
-                            "%ls %ls supports only cuDNN (CHW) data layout. ", node->NodeName().c_str(), node->OperationName().c_str());
-                    }
+                        LogicError("Unsupported data layout for ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
                 }
                 else if (node->OperationName() == OperationNameOf(BatchNormalizationNode))
                 {
