@@ -221,61 +221,75 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
 
     Wmr = Parameter(cell_shape + shape, init=init) if has_projection else None  # final projection
 
+    # each use of a stabilizer layer must get its own instance
     Sdh = Stabilizer() if enable_self_stabilization else identity
     Sdc = Stabilizer() if enable_self_stabilization else identity
     Sct = Stabilizer() if enable_self_stabilization else identity
     Sht = Stabilizer() if enable_self_stabilization else identity
 
+    # TODO: move this to the end
+    # TODO: How best to return this information?
     def create_hc_placeholder():
         # we pass the known dimensions here, which makes dimension inference easier
         return (Placeholder(shape=shape, name='hPh'), Placeholder(shape=cell_shape, name='cPh')) # (h, c)
 
-    # parameters to model function
-    x = Placeholder(name='lstm_block_arg')
-    prev_state = create_hc_placeholder()
+    # define the model function itself
+    # (x, dh, dc) --> (h, c)
+    def lstm(x, dh, dc):
 
-    # formula of model function
-    dh, dc = prev_state
+        # parameters to model function
+        #x = Placeholder(name='lstm_block_arg')
+        #prev_state = create_hc_placeholder()
 
-    dhs = Sdh(dh)  # previous values, stabilized
-    dcs = Sdc(dc)
-    # note: input does not get a stabilizer here, user is meant to do that outside
+        # formula of model function
+        #dh, dc = prev_state
 
-    # projected contribution from input(s), hidden, and bias
-    proj4 = b + times(x, W) + times(dhs, H) + times(aux, A) if has_aux else \
-            b + times(x, W) + times(dhs, H)
+        dhs = Sdh(dh)  # previous values, stabilized
+        dcs = Sdc(dc)
+        # note: input does not get a stabilizer here, user is meant to do that outside
 
-    it_proj  = slice (proj4, stack_axis, 0*stacked_dim, 1*stacked_dim)  # split along stack_axis
-    bit_proj = slice (proj4, stack_axis, 1*stacked_dim, 2*stacked_dim)
-    ft_proj  = slice (proj4, stack_axis, 2*stacked_dim, 3*stacked_dim)
-    ot_proj  = slice (proj4, stack_axis, 3*stacked_dim, 4*stacked_dim)
+        # projected contribution from input(s), hidden, and bias
+        proj4 = b + times(x, W) + times(dhs, H) + times(aux, A) if has_aux else \
+                b + times(x, W) + times(dhs, H)
 
-    # add peephole connection if requested
-    def peep(x, c, C):
-        return x + C * c if use_peepholes else x
+        it_proj  = slice (proj4, stack_axis, 0*stacked_dim, 1*stacked_dim)  # split along stack_axis
+        bit_proj = slice (proj4, stack_axis, 1*stacked_dim, 2*stacked_dim)
+        ft_proj  = slice (proj4, stack_axis, 2*stacked_dim, 3*stacked_dim)
+        ot_proj  = slice (proj4, stack_axis, 3*stacked_dim, 4*stacked_dim)
 
-    it = sigmoid (peep (it_proj, dcs, Ci))        # input gate(t)
-    bit = it * tanh (bit_proj)                    # applied to tanh of input network
+        # add peephole connection if requested
+        def peep(x, c, C):
+            return x + C * c if use_peepholes else x
 
-    ft = sigmoid (peep (ft_proj, dcs, Cf))        # forget-me-not gate(t)
-    bft = ft * dc                                 # applied to cell(t-1)
+        it = sigmoid (peep (it_proj, dcs, Ci))        # input gate(t)
+        bit = it * tanh (bit_proj)                    # applied to tanh of input network
 
-    ct = bft + bit                                # c(t) is sum of both
+        ft = sigmoid (peep (ft_proj, dcs, Cf))        # forget-me-not gate(t)
+        bft = ft * dc                                 # applied to cell(t-1)
 
-    ot = sigmoid (peep (ot_proj, Sct(ct), Co))    # output gate(t)
-    ht = ot * tanh (ct)                           # applied to tanh(cell(t))
+        ct = bft + bit                                # c(t) is sum of both
 
-    c = ct                                        # cell value
-    h = times(Sht(ht), Wmr) if has_projection else \
-        ht
+        ot = sigmoid (peep (ot_proj, Sct(ct), Co))    # output gate(t)
+        ht = ot * tanh (ct)                           # applied to tanh(cell(t))
 
-    _name_node(h, 'h')
-    if _trace_layers:
-        _log_node(h)  # this looks right
-    _name_node(c, 'c')
+        c = ct                                        # cell value
+        h = times(Sht(ht), Wmr) if has_projection else \
+            ht
 
-    # TODO: figure out how to do scoping, and also rename all the apply... to expression
-    apply_x_h_c = combine ([h, c])
+        #_name_node(h, 'h')
+        #if _trace_layers:
+        #    _log_node(h)  # this looks right
+        #_name_node(c, 'c')
+
+        # TODO: figure out how to do scoping, and also rename all the apply... to expression
+
+        # returns the new state as a tuple with names but order matters
+        from collections import OrderedDict
+        return OrderedDict([('h', h), ('c', c)])
+
+    # create a CNTK function out of it
+    apply_x_h_c = Function(lstm)
+
     # return to caller a helper function to create placeholders for recurrence
     # Note that this function will only exist in the object returned here, but not any cloned version of it.
     apply_x_h_c.create_placeholder = create_hc_placeholder
