@@ -11,8 +11,8 @@ _DEFAULT_DEVICE_ID = -1
 
 
 def pytest_addoption(parser):
-    parser.addoption("--deviceid", action="append", default=[_DEFAULT_DEVICE_ID],
-                     help="list of device ids to pass to test functions")
+    parser.addoption("--deviceid", default=_DEFAULT_DEVICE_ID,
+                     help="device id to pass to test functions")
     parser.addoption("--is1bitsgd", default="0",
                      help="whether 1-bit SGD is used")
 
@@ -25,19 +25,16 @@ DEVICE_MAP = {
 
 def pytest_generate_tests(metafunc):
     if 'device_id' in metafunc.fixturenames:
-        if (len(metafunc.config.option.deviceid)) > 1:
-            del metafunc.config.option.deviceid[0]
-
-        devices = set()
-        for elem in metafunc.config.option.deviceid:
-            try:
-                if elem in DEVICE_MAP:
-                    devices.add(DEVICE_MAP[elem])
-                else:
-                    devices.add(int(elem))
-            except ValueError:
-                raise RuntimeError("invalid deviceid value '{0}', please " +
-                                   "use integer values or 'auto'".format(elem))
+        devices = None
+        deviceid = metafunc.config.option.deviceid
+        try:
+            if deviceid in DEVICE_MAP:
+                devices = [DEVICE_MAP[deviceid]]
+            else:
+                devices = [int(deviceid)]
+        except ValueError:
+            raise RuntimeError("invalid deviceid value '{0}', please " +
+                               "use integer values or 'auto'".format(deviceid))
 
         metafunc.parametrize("device_id", devices)
 
@@ -62,9 +59,12 @@ import numpy
 # precision and don't write in scientific notation
 numpy.set_printoptions(precision=6, suppress=True)
 import cntk
+from cntk.utils import cntk_device
+cntk.cntk_py.always_allow_setting_default_device()
 
 
 @pytest.fixture(autouse=True)
-def add_namespace(doctest_namespace):
+def add_namespace(device_id, doctest_namespace):
+    cntk.device.set_default_device(cntk_device(device_id));
     doctest_namespace['np'] = numpy
     doctest_namespace['C'] = cntk
