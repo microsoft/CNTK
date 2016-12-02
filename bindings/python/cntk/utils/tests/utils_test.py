@@ -85,6 +85,15 @@ def test_sanitize_input(data, dtype):
     assert np.allclose(inp.value, data)
     assert inp.dtype == dtype
 
+def test_axes():
+    axes = [Axis.default_batch_axis(), Axis.default_dynamic_axis()]
+    assert tuple(axes) == Axis.default_input_variable_dynamic_axes()
+    assert sanitize_dynamic_axes(axes) == \
+            tuple(reversed(Axis.default_input_variable_dynamic_axes()))
+
+    assert (Axis.default_dynamic_axis(),) == \
+            sanitize_dynamic_axes(Axis.default_dynamic_axis())
+    
 def test_get_data_type():
     pa32 = parameter(init=np.asarray(2, dtype=np.float32))
     pa64 = parameter(init=np.asarray(2, dtype=np.float64))
