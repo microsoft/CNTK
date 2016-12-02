@@ -875,7 +875,14 @@ namespace CNTK
             for (auto output : outputs)
             {
                 if (!m_isVariableRootMap[output])
-                    m_computationNetwork->AddToNodeGroup(L"output", m_variableToNodeMap[output]);
+                {
+                    auto computationNode = m_variableToNodeMap[output];
+
+                    if (!computationNode)
+                        InvalidArgument("One of the requested outputs for the Function forward computation is not part of the graph underlying the Function");
+
+                    m_computationNetwork->AddToNodeGroup(L"output", computationNode);
+                }
             }
 
             m_currentBackpropRoots = backpropRoots;
