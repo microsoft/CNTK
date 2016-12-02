@@ -389,8 +389,10 @@ class Test:
       }
       cc = sys.maxint
       try:
-        gpuList = subprocess.check_output([nvidiaSmiPath, '-L'])
-        for line in gpuList.split('\n'):
+        process = subprocess.Popen([nvidiaSmiPath, '-L'], stdout=subprocess.PIPE)
+        gpuList = process.communicate()[0]
+        # We ignore process.returncode.
+        for line in gpuList.decode('utf-8').split('\n'):
           m = re.match(r"GPU (?P<id>\d+): (?P<type>[^(]*) \(UUID: (?P<guid>GPU-.*)\)\r?$", line)
           if m:
             try:
