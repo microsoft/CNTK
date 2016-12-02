@@ -16,9 +16,10 @@ def test_cntk_104_finance_timeseries_basic_with_pandas_numpy_noErrors(nb):
     print(errors)
     assert errors == []
 
-expectedEvalError = 0.49
+expectedEvalErrorUpper = 0.55
+expectedEvalErrorLower = 0.45
 
 def test_cntk_104_finance_timeseries_basic_with_pandas_numpy_trainerror(nb):
     testCell = [cell for cell in nb.cells
                 if cell.cell_type == 'code' and re.search('# Repeatable factor ', cell.source)]
-    assert float((testCell[0].outputs[0])['text']) < expectedEvalError
+    assert (float((testCell[0].outputs[0])['text']) < expectedEvalErrorUpper) or (float((testCell[0].outputs[0])['text']) > expectedEvalErrorLower)
