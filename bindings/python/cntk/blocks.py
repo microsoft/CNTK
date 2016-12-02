@@ -75,12 +75,18 @@ def _initializer_for(init, rank_params=None):
     return init
 
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
+# If passed function is an actual Python function, it will be executed with Placeholders as inputs.
 # All layers functions call this at the end.
 # BUGBUG: does not actually exist yet, faking it
 # BUGBUG: should create a new object, but does it in-place instead. Works for current usage, but should be fixed.
 # BUGBUG: using combine causes an error ater, so the name actually does not get changed
 # BUGBUG: combine like this won't work for functions with multiple outputs (LSTM)
 def Block(f, op_name, members={}):
+
+    from inspect import isfunction
+    if isfunction(f):
+        f = Function(f, members)
+
     #f = combine([f], op_name)  # 'combine' to create a separate identity so we can reassign the debug name --BUGBUG: "Unknown DataType"
     #_name_node(f, op_name) ; _extend_Function(f)  # debugging
 
@@ -143,17 +149,17 @@ def Placeholders(num_positional, *named_names):
 #SymbolicArgument = Placeholder  # Placeholder is too overloaded; we should use this instead everywhere
 
 # If we have C++-side Function identity, in same pattern as e.g. sigmoid, then that would suffice.
-def _Identity(name='identity_arg'):
-    x = Placeholder(name=name)
-    apply_x = combine([x])
-    # TODO: Let's not encourage users to use combine([f]) as a workaround for identity/pass, but rather have it as a first-class operator implemented that we then use. [Willi]
-    #apply_x = alias(x) # TODO: does not work. Should it?
-    #_name_and_extend_Function(apply_x, 'Identity')
-    return Block(apply_x, 'Identity')
+#def _Identity(name='identity_arg'):
+#    x = Placeholder(name=name)
+#    apply_x = combine([x])
+#    # TODO: Let's not encourage users to use combine([f]) as a workaround for identity/pass, but rather have it as a first-class operator implemented that we then use. [Willi]
+#    #apply_x = alias(x) # TODO: does not work. Should it?
+#    #_name_and_extend_Function(apply_x, 'Identity')
+#    return Block(apply_x, 'Identity')
 
 # there is only one identity function
 # TODO: This should become a C++-side Function, e.g. like sigmoid
-identity = _Identity()
+identity = Function(lambda x: combine([x]))   # BUGBUG: there should be no need for combine()
 
 # This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
 def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True)):
@@ -186,9 +192,6 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
     init                      = get_default_override(LSTM, init=init)
     init_bias                 = get_default_override(LSTM, init_bias=init_bias)
     enable_self_stabilization = get_default_override(LSTM, enable_self_stabilization=enable_self_stabilization)
-
-    #use_peepholes             = use_peepholes             if _is_given(use_peepholes)             else _current_default_options.use_peepholes
-    #enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
 
     has_projection = cell_shape is not None
     has_aux = False
@@ -227,26 +230,12 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
     Sct = Stabilizer() if enable_self_stabilization else identity
     Sht = Stabilizer() if enable_self_stabilization else identity
 
-    # TODO: move this to the end
-    # TODO: How best to return this information?
-    def create_hc_placeholder():
-        # we pass the known dimensions here, which makes dimension inference easier
-        return (Placeholder(shape=shape, name='hPh'), Placeholder(shape=cell_shape, name='cPh')) # (h, c)
-        #return (Placeholder(name='hPh'), Placeholder(name='cPh')) # (h, c)
-
     # define the model function itself
     # general interface for Recurrence():
     #   (x, prev state vars) --> (out, new state vars)
     # in this case:
     #   (x, dh, dc) --> (out, h, c)
     def lstm(x, dh, dc):
-
-        # parameters to model function
-        #x = Placeholder(name='lstm_block_arg')
-        #prev_state = create_hc_placeholder()
-
-        # formula of model function
-        #dh, dc = prev_state
 
         dhs = Sdh(dh)  # previous values, stabilized
         dcs = Sdc(dc)
@@ -261,7 +250,7 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
         ft_proj  = slice (proj4, stack_axis, 2*stacked_dim, 3*stacked_dim)
         ot_proj  = slice (proj4, stack_axis, 3*stacked_dim, 4*stacked_dim)
 
-        # add peephole connection if requested
+        # helper to inject peephole connection if requested
         def peep(x, c, C):
             return x + C * c if use_peepholes else x
 
@@ -280,26 +269,19 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
         h = times(Sht(ht), Wmr) if has_projection else \
             ht
 
-        #_name_node(h, 'h')
-        #if _trace_layers:
-        #    _log_node(h)  # this looks right
-        #_name_node(c, 'c')
-
-        # TODO: figure out how to do scoping, and also rename all the apply... to expression
-
         # LSTM output is the same as h
-        out = alias(h)  # alias is needed because otherwise we cannot return it as out and h; and an API bug prevents us from doing that inside Function(from lambda)
+        out = alias(h)  # alias is needed because otherwise we cannot return it as out and h; and an API bug prevents us from doing that inside Function(from_lambda)
 
         # returns the new state as a tuple with names but order matters
         from collections import OrderedDict
         return OrderedDict([('out', out), ('h', h), ('c', c)])
-        #return OrderedDict([('h', h), ('c', c)])
 
     # create a CNTK function out of it
-    apply_x_h_c = Function(lstm)
+    function = Block(lstm, 'LSTM')
 
     # return to caller a helper function to create placeholders for recurrence
+    # we pass the known dimensions here, which makes dimension inference easier
     # Note that this function will only exist in the object returned here, but not any cloned version of it.
-    apply_x_h_c.create_placeholder = create_hc_placeholder
-    #return Block(apply_x_h_c, 'LSTM') # BUGBUG: fails with "RuntimeError: A Function instance with more than one output cannot be implicitly converted to a Variable"
-    return apply_x_h_c
+    function.create_placeholder = lambda: [Placeholder(shape=shape, name='hPh'), Placeholder(shape=cell_shape, name='cPh')]
+
+    return function

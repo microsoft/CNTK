@@ -244,34 +244,36 @@ def _get_initial_state_or_default(initial_state):
 
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
-    # helper to compute previous value
-    # can take a single Variable/Function or a tuple
+
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
-    def previous_hook(state):
-        if isinstance (state, tuple):  # if multiple then apply to each element
-            return tuple([previous_hook(s) for s in state])
-        # not a tuple: must be a 'scalar', i.e. a single element
-        return past_value  (state, initial_state) if not go_backwards else \
-               future_value(state, initial_state)
-    def recur(x):
-        state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
-        prev_state = previous_hook(state_forward)  # delay (state vars)
+
+    # function that this layer represents
+    def recurrence(x):
+
+        # compute the delayed state variable(s)
+        # All state variables get delayed with the same function.
+        state_forward = over.create_placeholder() # creates list of placeholders for the state variables
+        if not isinstance(state_forward, list):
+            state_forward = [state_forward]
+        def previous_hook(state):
+            return past_value  (state, initial_state) if not go_backwards else \
+                   future_value(state, initial_state)
+        prev_state = [previous_hook(s) for s in state_forward]  # delay (state vars)
+
         # apply the recurrent block ('over')
-        f_x_h_c = over(x, prev_state)
-        # this returns a Function (x, previous state vars...) -> (out, state vars...)
-        out, *state_vars = list(f_x_h_c.outputs)
-        replacements = { var_forward: var for (var_forward, var) in zip(list(_as_tuple(state_forward)), state_vars) }
-        f_x_h_c.replace_placeholders(replacements)  # resolves state_forward := state_vars
-        #out = f_x_h_c.outputs[0]  # 'out' is a Variable (the output of a Function that computed it)
-        if _trace_layers:
-            _log_node(out)
-            _log_node(combine([out.owner]))
-        apply_x = combine([out])     # the Function that yielded 'out', so we get to know its inputs
-        return apply_x
-    apply_x = Function(recur)
-    # apply_x is a Function x -> h
-    return Block(apply_x, 'Recurrence', Record(over=over))
+        out_and_state = over(x, *prev_state)  # this returns a Function (x, previous state vars...) -> (out, state vars...)
+        out, *state_vars = list(out_and_state.outputs)
+        if len(state_vars) != len(prev_state):
+            raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
+
+        # connect the recurrent dependency
+        replacements = { var_forward: var for (var_forward, var) in zip(state_forward, state_vars) }
+        out_and_state.replace_placeholders(replacements)  # resolves state_forward := state_vars
+
+        return combine([out])  # BUGBUG: Without this, it fails with "RuntimeError: Runtime exception"
+
+    return Block(recurrence, 'Recurrence', Record(over=over))
 
 # Delay -- delay input
 # TODO: This does not really have bound parameters. Should it still be a layer?
