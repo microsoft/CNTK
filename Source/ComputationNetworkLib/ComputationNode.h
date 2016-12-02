@@ -1651,7 +1651,7 @@ public:
         {
             for (auto& input : GetInputs())
             {
-                if (!input->IsOutputNeededDuringBackprop())
+                if (!input->IsOutputNeededDuringBackprop() && input->IsValueSharable())
                 {
                     auto inputNodePtr = DownCast(input);
                     inputNodePtr->Value().Resize(0, 0);
