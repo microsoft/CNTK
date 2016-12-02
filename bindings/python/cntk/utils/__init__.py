@@ -500,6 +500,11 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
         if len(batch) == 0:
             raise ValueError('batch is empty')
 
+    if isinstance(batch, np.ndarray) and batch.dtype == object:
+        raise ValueError('dtype object is not supported. If this is a batch '
+                'of sequences, you need to pass them as a pure-Python list '
+                'of NumPy arrays')
+
     # We need to figure out whether the data has a sequence axis. Note that
     # it is not enough to check whether the variable's dynamic axes include the
     # sequence axis, because the sequence axis might be omitted in the data if
