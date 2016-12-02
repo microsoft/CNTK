@@ -107,7 +107,8 @@ size_t NoRandomizer::GetCurrentSamplePosition()
 Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
 {
     Sequences result;
-    if (m_globalSamplePosition >=  m_config.m_totalEpochSizeInSamples * (m_config.m_epochIndex + 1))
+    size_t endOfEpochPosition = m_config.m_totalEpochSizeInSamples * (m_config.m_epochIndex + 1);
+    if (m_globalSamplePosition >=  endOfEpochPosition)
     {
         result.m_endOfEpoch = true;
         return result;
@@ -120,6 +121,10 @@ Sequences NoRandomizer::GetNextSequences(size_t sampleCount)
     assert(sampleCount != 0);
 
     std::vector<SequenceDescription> descriptions = GetNextSequenceDescriptions(sampleCount);
+    
+    // m_globalSamplePosition is already shifted in GetNextSequenceDescriptions() by the current minibatch size.
+    // Set the end-of-epoch flag (true when the current batch is last in an epoch).
+    result.m_endOfEpoch = (m_globalSamplePosition >= endOfEpochPosition);
 
     // Retrieve only sequences that are required by this worker.
     size_t start = descriptions.size() * m_config.m_workerRank / m_config.m_numberOfWorkers;
