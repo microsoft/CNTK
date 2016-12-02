@@ -176,6 +176,9 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     if device is None:
         device = use_default_device()
 
+    if isinstance(batch, np.ndarray):
+        batch = batch.tolist()
+
     if dtype in [np.float32, None]:
         value = cntk_py.Value.create_one_hot_float(num_classes, batch, device, False)
     elif dtype == np.float64:
@@ -259,7 +262,8 @@ def _has_seq_dim(var, data):
 
     if drill_shape != var_shape:
         raise ValueError('could not match the data with shape %s to the '
-                'input variable with shape %s'%(drill_shape, var_shape))
+                'input variable (name="%s") with shape %s'%\
+                        (drill_shape, var.name, var_shape))
 
     num_var_dyn_axes = len(var.dynamic_axes)
     if num_dyn_axes == num_var_dyn_axes:
@@ -417,7 +421,7 @@ def _pad_dense_to_max_len(var, batch, max_seq_len):
     Z = np.zeros((len(batch), max_seq_len) +
                  (data_point.shape), dtype=data_point.dtype)
     for idx, seq in enumerate(batch):
-        elem_shape = seq[0].shape if hasattr(seq, 'shape') else ()
+        elem_shape = seq[0].shape if hasattr(seq[0], 'shape') else ()
         if elem_shape != data_point.shape:
             raise ValueError('shape mismatch: expected %s but got %s'
                              % (str(data_point.shape), str(elem_shape)))

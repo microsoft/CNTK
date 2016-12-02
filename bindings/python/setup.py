@@ -20,7 +20,7 @@ if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
     sys.exit(1)
 
 if IS_WINDOWS:
-    if shutil.which("cl") is None:
+    if os.system('cl /? -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
         print("Compiler was not found in path. Please run this from a Visual Studio 2013 x64 Native Tools Command Prompt,\n"
               "e.g., by running the following command:\n"
               "  \"C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\VC\\vcvarsall\" amd64\n")

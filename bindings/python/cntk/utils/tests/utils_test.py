@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-import numpy
+import numpy as np
 import scipy.sparse as sparse
 csr = sparse.csr_matrix
 import pytest
@@ -160,15 +160,19 @@ def test_sanitize_batch_sparse():
     assert b.shape == (2,2,3)
 
 @pytest.mark.parametrize("batch, seq_starts, expected_mask", [
-    ([[5, 6, 7],
-       [8]],
+    ([[5, 6, 7], [8]],
        [True, False],
        [[2, 1, 1], [1, 0, 0]]),
 
-    ([[5],
-       [8]],
+    ([[AA([5]), AA([6]), AA([7])], [AA([8])]],
+       [True, False],
+       [[2, 1, 1], [1, 0, 0]]),
+
+    ([[5], [8]],
        [True, False],
        [[2], [1]]),
+
+
 ])
 def test_mask(batch, seq_starts, expected_mask):
     shape = (1,)

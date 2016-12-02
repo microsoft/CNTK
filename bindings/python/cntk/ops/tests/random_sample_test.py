@@ -8,10 +8,11 @@
 Unit tests random sampling related operations
 """
 
+from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import AA, precision
-from  cntk import random_sample_inclusion_frequency
+from cntk import random_sample_inclusion_frequency
 
 TEST_CASES = [
     # drawing 1 sample
