@@ -50,15 +50,16 @@ std::string ConstructUniqueName(const std::wstring& name)
     return std::string(name.begin(), name.end());
 }
 
-static std::string EncodeBase64(const char *buf, size_t len)
+std::string EncodeBase64(const char *buf, size_t len)
 {
 	base64_encodestate state;
-	char *sout = new char[len * 2];
-	memset(sout, 0, len * 2);
+	char *sout = new char[len * 2 + 4];
 
+    char *temp = sout;
 	base64_init_encodestate(&state);
-	base64_encode_block(buf, (int)len, sout, &state);
-	base64_encode_blockend(sout, &state);
+	temp += base64_encode_block(buf, (int)len, temp, &state);
+	temp += base64_encode_blockend(temp, &state);
+    *temp++ = '\0';
 
 	// TODO: remove once we export everything.
     static_assert(MAX_BASE64_EXPORT_LENGTH > 10, "base64 export should at least be 10");
@@ -307,12 +308,6 @@ std::wstring PrintNDArrayView(const NDArrayView& value)
     return result;
 }
 
-namespace GRAPHIR
-{
-    std::ostream& operator<<(std::ostream& stream, const Dictionary& dictionary);
-}
-
-
 void PrintDictionaryValue(const std::wstring& name, const DictionaryValue& value, int indent)
 {
     std::wstring result;
@@ -338,7 +333,7 @@ void PrintDictionaryValue(const std::wstring& name, const DictionaryValue& value
         result = value.Value<std::wstring>();
         break;
     case DictionaryValue::Type::NDShape:
-        result = L"value.Value<NDShape>()";
+        result = value.Value<NDShape>().AsString();
         break;
     case DictionaryValue::Type::Axis:
         result = L"staticAxisIndex=" + std::to_wstring(value.Value<Axis>().StaticAxisIndex(false)) +
@@ -374,10 +369,6 @@ void PrintDictionaryValue(const std::wstring& name, const DictionaryValue& value
         break;
 
     case DictionaryValue::Type::Dictionary:
-        std::stringstream s;
-        GRAPHIR::operator<<(s, value.Value<Dictionary>());
-
-
         for (auto subNode : value.Value<Dictionary>())
         {
             if ((subNode.second.ValueType() != DictionaryValue::Type::Vector) &&

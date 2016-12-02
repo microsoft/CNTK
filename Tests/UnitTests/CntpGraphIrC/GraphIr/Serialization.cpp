@@ -25,6 +25,7 @@
 #pragma warning(pop)
 
 #define ToWstring(a) std::to_wstring(a)
+extern std::string EncodeBase64(const char *buf, size_t len);
 
 namespace GRAPHIR
 {
@@ -60,11 +61,8 @@ namespace GRAPHIR
 
     class Serializer
     {
-        friend std::ostream& operator<<(std::ostream&, const Dictionary&);
-        friend std::istream& operator>>(std::istream&, Dictionary&);
-
-        friend class Dictionary;
-        friend class DictionaryValue;
+        friend const google::protobuf::Message* Serialize(const Dictionary&);
+        friend const Dictionary* Derialize(const proto::Graph&);
 
     private:
         static proto::Graph* CreateGraphProto(const Dictionary& src, Arena* arena = nullptr);
@@ -96,6 +94,24 @@ namespace GRAPHIR
         }
     };
 
+    proto::InitArg* CreateInitArgProto(const NDArrayView& arrayview)
+    {
+        proto::InitArg* dst = /*(arena != nullptr) ?
+                            Arena::CreateMessage<proto::InitArg>(arena) :*/ new proto::InitArg();
+
+        const auto& shape2 = arrayview.Shape();
+        assert(arrayview.GetStorageFormat() == StorageFormat::Dense);
+
+        auto data = arrayview.DataBuffer<float>();
+        auto count = shape2.TotalSize();
+        auto base64data = EncodeBase64((char *)data, count * sizeof(float));
+
+        dst->set_dbytes(sizeof(float));
+        dst->set_data_base64(base64data);
+
+        return dst;
+    }
+
     /*static*/ proto::Graph* Serializer::CreateGraphProto(const Dictionary& src, Arena* arena)
     {
         proto::Graph* dst = /*(arena != nullptr) ?
@@ -109,11 +125,8 @@ namespace GRAPHIR
         graphInfo->set_model_name(ToString(src[L"name"].Value<std::wstring>()));
         dst->set_allocated_graph_info(graphInfo);
 
-
+        // PassFindComputationalNodes
         auto pfunctions = src[L"primitive_functions"].Value<std::vector<DictionaryValue>>();
-
-        // assume we get a root-directory, so retrieve the primitive functions.
-        dst->mutable_nodes()->Reserve((int)pfunctions.size());
         for (auto funct : pfunctions)
         {
             auto value = funct.Value<Dictionary>();
@@ -121,6 +134,114 @@ namespace GRAPHIR
 
             dst->mutable_nodes()->AddAllocated(CreateNodeProto(value, arena));
         }
+
+        // PassConnectVariablesNodes
+        // ...we iterate on the variables
+        auto pinputs = src[L"inputs"].Value<std::vector<DictionaryValue>>();
+        for (auto input : pinputs)
+        {
+            auto value = input.Value<Dictionary>();
+            auto shape = value[L"shape"].Value<NDShape>();
+            auto iuip = ToString(value[L"uid"].Value<std::wstring>());
+            auto kind = value[L"kind"].Value<size_t>();
+
+            // print name of variable we're going to connect
+            printf("variables : %s, name %S\n", iuip.c_str(), value[L"name"].Value<std::wstring>().c_str());
+            if (iuip.substr(0, 12) == "PastValue136")
+            {
+                printf("\n");
+            }
+
+            // ...find any node referencing the variable
+            for (auto n = 0; n < dst->nodes_size(); n++)
+            {
+                auto node = dst->mutable_nodes(n);
+
+                // ...see if this node is consuming the variable as input
+                for (auto n2 = 0; n2 < node->inputs_size(); n2++)
+                {
+                    auto ioArg = node->mutable_inputs(n2);
+                    if (ioArg->name() == iuip)
+                    {
+                        printf("  node %s consumes input %s\n", node->name().c_str(), iuip.c_str());
+
+                        // ...append the dimensions of the shape to the ioArg constructed previously
+                        for (auto n3 = 0; n3 < shape.Rank(); n3++)
+                        {
+                            ioArg->add_shape(shape[n3]);
+                        }
+
+                        // now check if the data is already part of the serialized stream
+                        if (kind == (int)VariableKind::Constant || kind == (int)VariableKind::Parameter)
+                        {
+                            const auto& arrayview = value[L"value"].Value<NDArrayView>();
+
+                            auto initArg = CreateInitArgProto(arrayview);
+                            (*node->mutable_init_attrs())[iuip] = *initArg;
+                            printf("  This is a parameter i need to embed: %s\n", initArg->data_base64().c_str());
+                        }
+                    }
+                }
+
+                // check if this node is supposed to provide this data
+                auto outPrefix = node->name() + "_Output_";
+                if (iuip.substr(0, outPrefix.size()) == outPrefix)
+                {
+                    // this in an out variable for this node
+                    printf(" current node %s is out source for %s\n", node->name().c_str(), iuip.c_str());
+
+                    // try to find node
+                    auto found = false;
+                    for (auto n4 = 0; !found && n4 < node->outputs_size(); n4++)
+                    {
+                        found |= node->outputs(n4).name() == iuip;
+                    }
+
+                    if (!found)
+                    {
+                        auto ioArg2 = CreateIOArgProto(value[L"uid"].Value<std::wstring>(), arena);
+
+                        printf("  adding new output %s\n", iuip.c_str());
+                        node->mutable_outputs()->AddAllocated(ioArg2);
+
+                        // ...append the dimensions of the shape to the ioArg constructed previously
+                        // note: no need to add the data here since we are generating it in the node.
+                        for (auto n5 = 0; n5 < shape.Rank(); n5++)
+                        {
+                            ioArg2->add_shape(shape[n5]);
+                        }
+                    }
+                }
+            }
+        }
+
+        // PassConnectComputationNodes
+        // we provide output references for data shared between two nodes that
+        // are not covered by a Variable
+        // iterating over nodes
+        auto pfunctions = src[L"primitive_functions"].Value<std::vector<DictionaryValue>>();
+        for (auto n = 0; n < dst->nodes_size(); n++)
+        {
+            auto node = dst->mutable_nodes(n);
+
+            // for every input
+            for (auto n1 = 0; n1 < node->inputs_size(); n1++)
+            {
+                auto input = node->inputs(n1);
+                auto postfix = input.name().find("_Output_", 1);
+
+                if (postfix == string::npos)
+                {
+                    continue;
+                }
+
+                for (auto n2 = 0; n2 < dst->nodes_size(); n2++)
+                {
+                    auto node2 = dst->mutable_nodes(n2);
+                }
+            }
+        }
+
 
         //dst->set_version(src.s_version);
         //for (const auto& kv : src)
@@ -136,8 +257,12 @@ namespace GRAPHIR
         proto::IOArg* dst = /*(arena != nullptr) ?
                             Arena::CreateMessage<proto::IOArg>(arena) :*/ new proto::IOArg();
 
-        // TODO: lots of more stuff here
         dst->set_name(ToString(src));
+        dst->set_dtype("fp32");
+        dst->set_dbytes(sizeof(float));
+
+        // TODO: add shape
+        // this will be added in the second pass, integrating the variables.
 
         return dst;
     }
@@ -243,16 +368,15 @@ namespace GRAPHIR
         return stream;
     }
 
-    std::ostream& operator<<(std::ostream& stream, const Dictionary& dictionary)
+    const google::protobuf::Message* Serialize(const Dictionary& dictionary)
     {
         UsingUTF8 locale;
         Arena arena;
         proto::Graph* proto(Serializer::CreateGraphProto(dictionary, &arena));
-        proto->SerializeToOstream(&stream);
-        return stream;
+        return proto;
     }
 
-    std::istream& operator>>(std::istream& stream, Dictionary& dictionary)
+    const Dictionary* Derialize(const proto::Graph& graph)
     {
         UsingUTF8 locale;
         //proto::Dictionary proto;
@@ -262,7 +386,7 @@ namespace GRAPHIR
         //{
         //    Serializer::Copy(kv.second, dictionary[ToWString(kv.first)]);
         //}
-        return stream;
+        return nullptr;
     }
 }
 

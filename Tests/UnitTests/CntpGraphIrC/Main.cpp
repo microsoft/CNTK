@@ -39,10 +39,27 @@ extern void PrintDictionaryValue(
     const DictionaryValue& value,
     int indent);
 
+namespace GRAPHIR
+{
+    const google::protobuf::Message* Serialize(const Dictionary& dictionary);
+}
+
+void DumpAsJson(const google::protobuf::Message& message, const std::string& filename)
+{
+    // save it out to disk in json format.
+    string jsonstring;
+    auto serialized = google::protobuf::util::MessageToJsonString(message, &jsonstring);
+    auto fp = fopen((filename + string(".pb.json")).c_str(), "w+");
+    auto written = fwrite(jsonstring.c_str(), sizeof(char), jsonstring.length(), fp);
+
+    assert(written == jsonstring.length());
+    fclose(fp);
+}
+
 int main()
 {
 	auto device = DeviceDescriptor::CPUDevice();
-	string filename = "\\Cntk\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn";
+	string filename = "\\BrainWaveCntk\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn";
     wstring filenameW = wstring(filename.begin(), filename.end());
 
 //    CntkNetParser parser;
@@ -52,6 +69,10 @@ int main()
 	auto modelFuncPtr = CNTK::Function::LoadModel(filenameW, device/*, LstmGraphNodeFactory*/);
 
     auto serializedFunc = modelFuncPtr->Serialize();
+
+    auto message = GRAPHIR::Serialize(serializedFunc);
+    DumpAsJson(*message, filename + string(".serialized.pb.json"));
+
     PrintDictionaryValue(L"ROOT", serializedFunc, 0);
 
     unordered_map<wstring, vector<float>> inputs;
@@ -83,13 +104,7 @@ int main()
 	auto graphIrPtr = CntkGraphToGraphIr(filenameW, modelFuncPtr);
 
 	// save it out to disk in json format.
-	string jsonstring;
-	auto serialized = google::protobuf::util::MessageToJsonString(*graphIrPtr, &jsonstring);
-	auto fp = fopen((filename + string(".pb.json")).c_str(), "w+");
-	auto written = fwrite(jsonstring.c_str(), sizeof(char), jsonstring.length(), fp);
-
-    assert(written == jsonstring.length());
-	fclose(fp);
+    DumpAsJson(*graphIrPtr, filename + string(".pb.json"));
 
 	// convert graphir back to cntk (with the original cntk model as template)
 	auto modelImportFuncPtr = GraphIrToCntkGraph(graphIrPtr, modelFuncPtr);
