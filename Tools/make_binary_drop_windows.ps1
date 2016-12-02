@@ -55,9 +55,13 @@ If ($targetConfig -eq "CPU")
 {
 	$buildPath = "x64\Release_CpuOnly"
 }
+# Include Files
 $includePath = "Source\Common\Include"
-# TBD To be redone either via white-list or via array
-$includeFile = Join-Path $includePath -ChildPath Eval.h
+$includePath20 = "Source\CNTKv2LibraryDll\API"
+$includeFiles = New-Object string[] 3
+$includeFiles[0] = Join-Path $includePath -ChildPath Eval.h
+$includeFiles[1] = Join-Path $includePath20 -ChildPath CNTKLibrary.h
+$includeFiles[2] = Join-Path $includePath20 -ChildPath CNTKLibraryInternals.h
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
 
@@ -69,32 +73,34 @@ Write-Verbose "Copying build binaries ..."
 Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
 
 # Clean unwanted items
-If (Test-Path $baseDropPath\cntk\UnitTests)
-{
-	Remove-Item $baseDropPath\cntk\UnitTests -Recurse
-}
 Remove-Item $baseDropPath\cntk\*test*.exe
 Remove-Item $baseDropPath\cntk\*.pdb
 # Keep EvalDll.lib
-Remove-Item $baseDropPath\cntk\*.lib  -exclude EvalDll.lib
+Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
-If (Test-Path $baseDropPath\cntk\CNTKLibrary-2.0.dll)
+# Add Python artefacts to 2.0 Beta Drop
+# If (Test-Path $baseDropPath\cntk\Python)
+# {
+# 	Remove-Item $baseDropPath\cntk\Python -Recurse
+# }
+# Add CNTKLibrary-2.0.dll to 2.0 Beta Drop
+# If (Test-Path $baseDropPath\cntk\CNTKLibrary-2.0.dll)
+# {
+# 	Remove-Item $baseDropPath\cntk\CNTKLibrary-2.0.dll
+# }
+If (Test-Path $baseDropPath\cntk\CPPEvalClientTest.exe)
 {
-	Remove-Item $baseDropPath\cntk\CNTKLibrary-2.0.dll
+	Remove-Item $baseDropPath\cntk\CPPEvalClientTest.exe
 }
-If (Test-Path $baseDropPath\cntk\CPPEvalClient.exe)
+If (Test-Path $baseDropPath\cntk\CSEvalClientTest.exe)
 {
-	Remove-Item $baseDropPath\cntk\CPPEvalClient.exe
+	Remove-Item $baseDropPath\cntk\CSEvalClientTest.exe
 }
-If (Test-Path $baseDropPath\cntk\CSEvalClient.exe)
+If (Test-Path $baseDropPath\cntk\CSEvalClientTest.exe.config)
 {
-	Remove-Item $baseDropPath\cntk\CSEvalClient.exe
-}
-If (Test-Path $baseDropPath\cntk\CSEvalClient.exe.config)
-{
-	Remove-Item $baseDropPath\cntk\CSEvalClient.exe.config
+	Remove-Item $baseDropPath\cntk\CSEvalClientTest.exe.config
 }
 If (Test-Path $baseDropPath\cntk\CommandEval.exe)
 {
@@ -106,11 +112,23 @@ New-Item -Path $baseIncludePath -ItemType directory
 
 # Copy Include
 Write-Verbose "Copying Include files ..."
-Copy-Item $includeFile -Destination $baseIncludePath
+Foreach ($includeFile in $includeFiles)
+{
+	Copy-Item $includeFile -Destination $baseIncludePath
+}
 
 # Copy Examples
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
+# Include CPPEvalV2Client examples in 2.0 Beta drop
+# If (Test-Path $baseDropPath\Examples\Evaluation\CPPEvalV2Client)
+# {
+# 	Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalV2Client -Recurse
+# }
+
+# Copy Examples
+Write-Verbose "Copying Tutorials ..."
+Copy-Item Tutorials -Recurse -Destination $baseDropPath\Tutorials
 
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."

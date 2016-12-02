@@ -26,6 +26,7 @@
 #include <memory>
 #include "CntkBatchNormalization.cuh"
 #include "Convolution.cuh"
+#include "CuDnnRNN.h"
 
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
@@ -41,7 +42,7 @@
 #define UNCONST(t, c, uc) GPUMatrix<t>& uc = const_cast<GPUMatrix<t>&>(c);
 
 #ifdef _WIN32
-// thread local storage to access the current stream, initalize to default stream
+// thread local storage to access the current stream, initialize to default stream
 __declspec(thread)
 #endif
     cudaStream_t t_stream = cudaStreamDefault;
@@ -62,12 +63,12 @@ cudaStream_t MATH_API GetStream()
     return t_stream;
 }
 
-// Helper macro patterns for elemtwise methods
+// Helper macro patterns for elementwise methods
 #define DEF_ELEMWISE_INPLACE_FUNC(f)                                      \
     template <class ElemType>                                             \
     GPUMatrix<ElemType>& GPUMatrix<ElemType>::Inplace##f()                \
     {                                                                     \
-        performElementWiseFunction(ElementWiseOperator::op##f, Data()); \
+        performElementWiseFunction(ElementWiseOperator::op##f, Data());   \
         return *this;                                                     \
     }
 #define DEF_ELEMWISE_ASSIGN_FUNC(f)                                                       \
@@ -77,8 +78,8 @@ cudaStream_t MATH_API GetStream()
         if (a.IsEmpty())                                                                  \
             LogicError("Assign##f##Of: Matrix a is empty.");                              \
         if (this != &a)                                                                   \
-            RequireSize(a.GetNumRows(), a.GetNumCols());                                       \
-        performElementWiseFunction(ElementWiseOperator::op##f, a.Data());               \
+            RequireSize(a.GetNumRows(), a.GetNumCols());                                  \
+        performElementWiseFunction(ElementWiseOperator::op##f, a.Data());                 \
         return *this;                                                                     \
     }
 
@@ -115,6 +116,9 @@ const char* CudaErrString<curandStatus>(curandStatus)
 }
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+/*static*/ std::vector<cudaDeviceProp> GridDim::s_cachedDeviceProps;
+/*static*/ std::once_flag GridDim::s_cachedDevicePropsInitFlag;
 
 /*static*/ bool SyncGuard::s_isSyncEnabled = false;
 
@@ -237,7 +241,7 @@ std::pair<size_t, size_t> TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(
 // deviceId - the device on which the operation will take place
 void PrepareDevice(DEVICEID_TYPE deviceId)
 {
-    static DEVICEID_TYPE currentDevice = DEVICEID_NOTYETDETERMINED;
+    THREAD_LOCAL static DEVICEID_TYPE currentDevice = DEVICEID_NOTYETDETERMINED;
     // and if we last set the device to be this device we are good
     if (deviceId == currentDevice)
         return;
@@ -530,7 +534,7 @@ GPUMatrix<ElemType>::~GPUMatrix(void)
 template <class ElemType>
 void GPUMatrix<ElemType>::Clear()
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
     //if (OwnBuffer() && m_pArray != NULL)
     if (m_sob != nullptr)
     {
@@ -1179,10 +1183,10 @@ void GPUMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom
 #endif
 
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags)
+void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags, DataTransferer* transferer)
 {
     // handle externally managed case
-	// BUGBUG: This is super super ugly, and needs to be fixed, but if matrixFlags has the right value, then we can't free anything,
+    // BUGBUG: This is super super ugly, and needs to be fixed, but if matrixFlags has the right value, then we can't free anything,
     // and everything gets wonky. This should be fixed, and would go away if it is made a shared_ptr.
     if (matrixFlags & matrixFlagDontOwnBuffer)
     {
@@ -1200,6 +1204,9 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
     }
     else
     {
+        if (transferer && (matrixFlags & matrixFlagSetValueOnDevice))
+            RuntimeError("Asynchronous data copy from device to device is currently not supported.");
+
         // if the devices are different move it now
         if (GetComputeDeviceId() != deviceId && deviceId >= 0)
         {
@@ -1216,7 +1223,10 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
         {
             if (!(matrixFlags & matrixFormatRowMajor))
             {
-                CUDA_CALL(cudaMemcpy(Data(), pArray, sizeof(ElemType) * GetNumElements(), (matrixFlags & matrixFlagSetValueOnDevice) ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice));
+                if (transferer)
+                    transferer->CopyCPUToGPUAsync(pArray, GetNumElements(), sizeof(ElemType), Data());
+                else
+                    CUDA_CALL(cudaMemcpy(Data(), pArray, sizeof(ElemType) * GetNumElements(), (matrixFlags & matrixFlagSetValueOnDevice) ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice));
             }
             else // row major: must transpose (this is not meant to be efficient, but very useful for defining inline matrices for test code)
             {
@@ -1224,7 +1234,11 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
                 for (size_t i = 0; i < numRows; i++)
                     for (size_t j = 0; j < numCols; j++)
                         transposed[i + numRows * j] = pArray[j + numCols * i];
-                CUDA_CALL(cudaMemcpy(Data(), transposed.data(), sizeof(ElemType) * GetNumElements(), (matrixFlags & matrixFlagSetValueOnDevice) ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice));
+
+                if (transferer)
+                    transferer->CopyCPUToGPUAsync(transposed.data(), GetNumElements(), sizeof(ElemType), Data());
+                else
+                    CUDA_CALL(cudaMemcpy(Data(), transposed.data(), sizeof(ElemType) * GetNumElements(), (matrixFlags & matrixFlagSetValueOnDevice) ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice));
             }
         }
     }
@@ -1491,32 +1505,43 @@ void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly)
+void GPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly, bool cachedResize)
 {
     if (GetNumRows() != numRows || GetNumCols() != numCols)
-        Resize(numRows, numCols, growOnly);
+        Resize(numRows, numCols, growOnly, cachedResize);
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly)
+void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly, bool cachedResize)
 {
-    VerifyResizable(__func__);
-
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
 
+    VerifyResizable(__FUNCTION__);
+    bool isForceResize = (!growOnly) || cachedResize;
+
     size_t numElements = numRows * numCols;
-    if (numElements > GetSizeAllocated() ||                 // grow allocation
-        (!growOnly && numElements != GetSizeAllocated()))   // shrink allocation if not growOnly
+    if (numElements > GetSizeAllocated() ||                     // grow allocation
+        (isForceResize && numElements != GetSizeAllocated()))   // shrink allocation if not growOnly
     {
         // reallocate buffer if numElements > 0
         ElemType* pArray = nullptr;
         if (numElements > 0)
-            pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), numRows, numCols);
+        {
+            if (cachedResize)
+                pArray = BufferManagement::GetManagerInstance(GetComputeDeviceId()).RequestBuffer<ElemType>(numElements);
+            else
+                pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), numRows, numCols);
+        }
 
         // If the buffer exists, free it
         if (Buffer())
-            TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
+        {
+            if(cachedResize)
+                BufferManagement::GetManagerInstance(GetComputeDeviceId()).LogicalReleaseBuffer<ElemType>(Buffer(), GetSizeAllocated());
+            else
+                TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
+        }
 
         SetBuffer(pArray, numElements * sizeof(ElemType));
         SetSizeAllocated(numElements);
@@ -3128,6 +3153,36 @@ void GPUMatrix<ElemType>::MaxPoolingBackward(const GPUMatrix<ElemType>& out, con
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::ROIPoolingForward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                            const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, 
+                                            GPUMatrix<ElemType>& argmax) const
+{
+    PrepareDevice();
+    SyncGuard syncGuard;
+
+    int count = numRois * numImg * channels * pooledHeight * pooledWidth;
+    const int blockSize = GridDim::maxThreadsPerBlock;
+    auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
+    kROIPoolingForward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
+                                                               pooledWidth, pooledHeight, Data(), roiData.Data(), output.Data(), argmax.Data());
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t channels, const size_t width, const size_t height,
+                                             const size_t pooledWidth, const size_t pooledHeight, const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, 
+                                             GPUMatrix<ElemType>& argmax) const
+{
+    PrepareDevice();
+    SyncGuard syncGuard;
+
+    int count = numImg * channels * height * width;
+    const int blockSize = GridDim::maxThreadsPerBlock;
+    auto numThreads = dim3((int)floor((double)(count + blockSize - 1) / blockSize));
+    kROIPoolingBackward<<<numThreads, blockSize, 0, t_stream>>>(count, numRois, numImg, channels, width, height, 
+                                                                pooledWidth, pooledHeight, Data(), roiData.Data(), grad.Data(), argmax.Data());
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::MaxUnpooling(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, const GPUMatrix<ElemType>& poolInput, GPUMatrix<ElemType>& input) const
 {
     const int BlockSize = 128;
@@ -3160,11 +3215,11 @@ void GPUMatrix<ElemType>::AveragePoolingBackward(const GPUMatrix<int>& mpRowCol,
                                                                 Data(), (int)GetNumRows(), grad.Data(), (int)grad.GetNumRows());
 }
 
-// returns saveMean/saveInvStdDev which are the actual values used to perform the normalization, except for blendFactor 1, in which case they are unused and set to empty
+// returns savedMean/savedInvStdDev which are the actual values used to perform the normalization, except for blendFactor 1, in which case they are unused and set to empty
 template <class ElemType>
-void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, double expAvgFactor, double blendFactor,
-                                                    GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runInvStdDev, GPUMatrix<ElemType>& out, double epsilon,
-                                                    GPUMatrix<ElemType>& saveMean, GPUMatrix<ElemType>& saveInvStdDev) const
+void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& scale, const GPUMatrix<ElemType>& bias, bool inferenceOnly, double expAvgFactor, double blendFactor,
+                                                    GPUMatrix<ElemType>& runMean, GPUMatrix<ElemType>& runVariance, GPUMatrix<ElemType>& out, double epsilon,
+                                                    GPUMatrix<ElemType>& savedMean, GPUMatrix<ElemType>& savedInvStdDev) const
 {
     assert((GetNumRows() % scale.GetNumRows()) == 0);
 
@@ -3172,75 +3227,59 @@ void GPUMatrix<ElemType>::BatchNormalizationForward(const GPUMatrix<ElemType>& s
     size_t vectorSize = GetNumRows();
     size_t spatialSize = spatial ? (GetNumRows() / scale.GetNumRows()) : 1;
     size_t batchSize = GetNumCols();
+    bool normalizeRunningStats;
 
     assert(0 < vectorSize && vectorSize <= std::numeric_limits<int>::max());
     assert(0 < batchSize  && batchSize  <= std::numeric_limits<int>::max());
 
-    // --- compute data mean/stddev (into saveMean/saveInvStdDev) and update running mean/stddev
     SyncGuard syncGuard;
-    // If expAvgFactor == 0 && blendFactor == 1 then we don't need to compute current minibatch statistics.
-    if (expAvgFactor > 0 || blendFactor < 1)
+    if (inferenceOnly)
     {
-        saveMean.RequireSize(runMean);
-        saveInvStdDev.RequireSize(runMean);
+        // Pick running statistics for normalizing. No update reuqired, and
+        // saved statistics do not need to be produced.
+        assert(expAvgFactor == 0 && blendFactor == 1);
+        normalizeRunningStats = true;
+        savedMean.RequireSize(0, 0);
+        savedInvStdDev.RequireSize(0, 0);
+    }
+    else
+    {
+        // Compute data mean and inverse standard deviation (into savedMean and
+        // savedInvStdDev), and update running mean and variance.
+        // TODO expAvgFactor == 0 && blendFactor == 1 can be optimized (no need for update).
+        normalizeRunningStats = false;
+        savedMean.RequireSize(runMean);
+        savedInvStdDev.RequireSize(runMean);
         if (spatial)
         {
             Call<ComputeSpatialBatchMeanAndInvStdDev, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, Data(),
-                                                                expAvgFactor, runMean.Data(), runInvStdDev.Data(), epsilon,
-                                                                saveMean.Data(), saveInvStdDev.Data(), GetStream());
+                                                                expAvgFactor, blendFactor,
+                                                                runMean.Data(), runVariance.Data(), epsilon,
+                                                                savedMean.Data(), savedInvStdDev.Data(), GetStream());
         }
         else
         {
             Call<ComputeBatchMeanAndInvStdDev, ElemType>(vectorSize, vectorSize, batchSize, Data(),
-                                                         expAvgFactor, runMean.Data(), runInvStdDev.Data(), epsilon,
-                                                         saveMean.Data(), saveInvStdDev.Data(), GetStream());
+                                                         expAvgFactor, blendFactor,
+                                                         runMean.Data(), runVariance.Data(), epsilon,
+                                                         savedMean.Data(), savedInvStdDev.Data(), GetStream());
         }
-    }
-    else // not computing new statistics
-    {
-        saveMean.RequireSize(0, 0);
-        saveInvStdDev.RequireSize(0, 0);
     }
 
-    // --- apply MAP estimates of mean/stddev (interpolation of data and running mean/stddev) to data
-    // When:
-    //     blendFactor == 1 - use running mean/var instead of the current minibatch mean/var. Note: saveMean/saveInvStdDev are NOT produced.
-    // 0 < blendFactor <  1 - blend running mean/var with mean/var of the current minibatch: saveMean = (1 - blendFactor) * saveMean + blendFactor * runMean
-    //     blendFactor == 0 - use mean/var of the current minibatch.
-    if (blendFactor < 1)
-    {
-        // non-zero blendFactor: interpolate minibatch mean/stddev in-place with running mean/stddev
-        if (blendFactor > 0)
-        {
-            // REVIEW alexeyk: can be rolled into NormalizeBatchTraining to save bandwidth.
-            // TODO: add a 'beta' parameter to ScaleAndAdd()
-            Scale((ElemType)(1 - blendFactor), saveMean);
-            ScaleAndAdd((ElemType)blendFactor, /*in*/ runMean, /*in/out*/ saveMean);
-            Scale((ElemType)(1 - blendFactor), saveInvStdDev);
-            ScaleAndAdd((ElemType)blendFactor, runInvStdDev, saveInvStdDev);
-        }
-        // normalize
-        Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
-                                               Data(), out.Data(),                            // (in, out) data to be normalized -> normalized data
-                                               scale.Data(), bias.Data(),                     // (in) scale/bias to denormalize with
-                                               /*(in)*/saveMean.Data(), saveInvStdDev.Data(), // (in) actual mean/stddev to normalize with
-                                               GetStream());
-    }
-    else // blendFactor == 1: use running mean/stddev only
-    {
-        Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
-                                               Data(), out.Data(),
-                                               scale.Data(), bias.Data(),
-                                               runMean.Data(), runInvStdDev.Data(), GetStream());
-        // CNTK engine returns saveMean and saveInvStdDev empty, but cnDNN engine does not.
-    }
+    Call<NormalizeBatchTraining, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
+                                           normalizeRunningStats, epsilon,
+                                           Data(), out.Data(),
+                                           scale.Data(), bias.Data(),
+                                           runMean.Data(), runVariance.Data(),
+                                           savedMean.Data(), savedInvStdDev.Data(),
+                                           GetStream());
 }
 
-// saveMean/saveInvStdDev are the interpolated mean/stddev as used in ForwardProp().
+// savedMean/savedInvStdDev are the interpolated mean/inverse standard deviation as used in ForwardProp().
 // For blendFactor=1, they are not used and can be uninitialized or empty.
 template <class ElemType>
 void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& in, GPUMatrix<ElemType>& grad, const GPUMatrix<ElemType>& scale, double blendFactor,
-                                                     const GPUMatrix<ElemType>& saveMean, const GPUMatrix<ElemType>& saveInvStdDev,
+                                                     const GPUMatrix<ElemType>& savedMean, const GPUMatrix<ElemType>& savedInvStdDev,
                                                      GPUMatrix<ElemType>& scaleGrad, GPUMatrix<ElemType>& biasGrad) const
 {
     assert((GetNumRows() % scale.GetNumRows()) == 0);
@@ -3257,16 +3296,43 @@ void GPUMatrix<ElemType>::BatchNormalizationBackward(const GPUMatrix<ElemType>& 
     if (spatial)
     {
         Call<ComputeSpatialScaleAndBiasGradients, ElemType>(spatialSize, vectorSize, spatialSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
-                                                            saveMean.Data(), saveInvStdDev.Data(), GetStream());
+                                                            savedMean.Data(), savedInvStdDev.Data(), GetStream());
     }
     else
     {
         Call<ComputeScaleAndBiasGradients, ElemType>(vectorSize, vectorSize, batchSize, in.Data(), Data(), scaleGrad.Data(), biasGrad.Data(),
-                                                     saveMean.Data(), saveInvStdDev.Data(), GetStream());
+                                                     savedMean.Data(), savedInvStdDev.Data(), GetStream());
     }
     ElemType mbStatsWeight = (ElemType)(1 - blendFactor); // weight for contribution from actual MB stats (0 if none, e.g. locked BN node)
     Call<BackpropagateBatchNormGradients, ElemType>(spatial ? spatialSize : vectorSize, vectorSize, spatialSize, batchSize, spatial,
-                                                    in.Data(), Data(), grad.Data(), scale.Data(), mbStatsWeight, scaleGrad.Data(), biasGrad.Data(), saveMean.Data(), saveInvStdDev.Data(), GetStream());
+                                                    in.Data(), Data(), grad.Data(), scale.Data(), mbStatsWeight, scaleGrad.Data(), biasGrad.Data(), savedMean.Data(), savedInvStdDev.Data(), GetStream());
+}
+
+#pragma region RNN Functions
+
+template <class ElemType>
+void GPUMatrix<ElemType>::RNNForward(const GPUMatrix<ElemType> &inputX, const GPUMatrix<ElemType> &paramW, size_t xDim, size_t yDim, const vector<size_t>& numSequencesForFrame, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
+{
+    // numLayers, hiddenSize are input parameters
+    if (!m_rnnExecutor)
+        m_rnnExecutor = std::make_unique<CuDnnRNNExecutor<ElemType>>(xDim, yDim, rnnAttributes);
+    m_rnnExecutor->ForwardCore(paramW, inputX, *this, numSequencesForFrame, rnnAttributes, reserve, workspace);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::RNNBackwardData(const GPUMatrix<ElemType>& outputDY, const GPUMatrix<ElemType>& paramW, GPUMatrix<ElemType>& outputDX, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
+{
+    if (!m_rnnExecutor)
+        LogicError("RNNBackwardData called, but RNNWrapper object is not yet initialized");
+    m_rnnExecutor->BackwardDataCore(*this, outputDY, paramW, outputDX, rnnAttributes, reserve, workspace);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, const GPUMatrix<ElemType>& outputY, GPUMatrix<ElemType>& dw, const RnnAttributes& rnnAttributes, GPUMatrix<ElemType>& reserve, GPUMatrix<ElemType>& workspace)
+{
+    if (!m_rnnExecutor)
+        LogicError("RNNBackwardWeights called, but RNNWrapper object is not yet initialized");
+    m_rnnExecutor->BackwardWeightsCore(inputX, outputY, dw, rnnAttributes, reserve, workspace);
 }
 
 #pragma region Static BLAS Functions
@@ -3965,8 +4031,11 @@ void GPUMatrix<ElemType>::CreateCurandObject(unsigned long seed, const char* cal
     if (s_curandGenerator == NULL)
     {
         unsigned long long cudaSeed = (seed == USE_TIME_BASED_SEED) ? time(NULL) : seed;
-        fprintf(stderr, "%s (GPU): creating curand object with seed %llu, sizeof(ElemType)==%lu\n",
-                caller, cudaSeed, (unsigned long)sizeof(ElemType));
+        if (GetMathLibTraceLevel() > 0)
+        {
+            fprintf(stderr, "%s (GPU): creating curand object with seed %llu, sizeof(ElemType)==%lu\n",
+                    caller, cudaSeed, (unsigned long)sizeof(ElemType));
+        }
         s_curandGenerator = new curandGenerator_t;
         // Create pseudo-random number generator
         CURAND_CALL(curandCreateGenerator(&(((curandGenerator_t*) s_curandGenerator)[0]), CURAND_RNG_PSEUDO_XORWOW));
@@ -4501,15 +4570,15 @@ template GPUMatrix<char>::GPUMatrix(const GPUMatrix<char>&);
 template GPUMatrix<char>::GPUMatrix(GPUMatrix<char>&&);
 template char* GPUMatrix<char>::CopyToArray() const;
 template void GPUMatrix<char>::ChangeDeviceTo(int);
-template void GPUMatrix<char>::Resize(size_t, size_t, bool);
-template void GPUMatrix<char>::RequireSize(size_t, size_t, bool);
+template void GPUMatrix<char>::Resize(size_t, size_t, bool, bool);
+template void GPUMatrix<char>::RequireSize(size_t, size_t, bool, bool);
 
 template GPUMatrix<char>::~GPUMatrix();
 template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
 template GPUMatrix<char>& GPUMatrix<char>::operator=(GPUMatrix<char>&&);
 template GPUMatrix<char>::GPUMatrix(int);
 template void GPUMatrix<char>::SetValue(const char);
-template void GPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags);
+template void GPUMatrix<char>::SetValue(const size_t numRows, const size_t numCols, int deviceId, char* pArray, size_t matrixFlags, DataTransferer* transferer);
 //template void GPUMatrix<char>::SetValue(CPUMatrix<char> const&);
 template void GPUMatrix<char>::SetValue(GPUMatrix<char> const&);
 //template void GPUMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
@@ -4526,15 +4595,15 @@ template GPUMatrix<short>::GPUMatrix(const GPUMatrix<short>&);
 template GPUMatrix<short>::GPUMatrix(GPUMatrix<short>&&);
 template short* GPUMatrix<short>::CopyToArray() const;
 template void GPUMatrix<short>::ChangeDeviceTo(int);
-template void GPUMatrix<short>::Resize(size_t, size_t, bool);
-template void GPUMatrix<short>::RequireSize(size_t, size_t, bool);
+template void GPUMatrix<short>::Resize(size_t, size_t, bool, bool);
+template void GPUMatrix<short>::RequireSize(size_t, size_t, bool, bool);
 
 template GPUMatrix<short>::~GPUMatrix();
 template GPUMatrix<short> GPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;
 template GPUMatrix<short>& GPUMatrix<short>::operator=(GPUMatrix<short>&&);
 template GPUMatrix<short>::GPUMatrix(int);
 template void GPUMatrix<short>::SetValue(const short);
-template void GPUMatrix<short>::SetValue(const size_t numRows, const size_t numCols, int deviceId, short* pArray, size_t matrixFlags);
+template void GPUMatrix<short>::SetValue(const size_t numRows, const size_t numCols, int deviceId, short* pArray, size_t matrixFlags, DataTransferer* transferer);
 //template void GPUMatrix<short>::SetValue(CPUMatrix<short> const&);
 template void GPUMatrix<short>::SetValue(GPUMatrix<short> const&);
 //template void GPUMatrix<short>::SetValue(CPUSparseMatrix<short> const&);

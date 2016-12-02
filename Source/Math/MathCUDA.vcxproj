@@ -1,8 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
@@ -30,7 +34,7 @@
         <CuDnnIncPath>$(CUDNN_PATH)\include</CuDnnIncPath>
         <CuDnnLibPath>$(CUDNN_PATH)\lib\x64</CuDnnLibPath>
         <CuDnnLib>cudnn.lib</CuDnnLib>
-        <CuDnnDll>$(CUDNN_PATH)\bin\cudnn64_4.dll</CuDnnDll>
+        <CuDnnDll>$(CUDNN_PATH)\bin\cudnn64_5.dll</CuDnnDll>
       </PropertyGroup>
     </When>
     <Otherwise>
@@ -120,6 +124,7 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <ClInclude Include="cudalib.h" />
     <ClInclude Include="CuDnnCommon.h" />
     <ClInclude Include="CuDnnFactories.h" />
+    <ClInclude Include="CuDnnRNN.h" />
     <ClInclude Include="GPUDataTransferer.h" />
     <ClInclude Include="GPURNGHandle.h" />
     <ClInclude Include="GPUTensor.h" />
@@ -147,7 +152,9 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     </CudaCompile>
     <CudaCompile Include="GPUTensor.cu">
       <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</InterleaveSourceInPTX>
+      <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</InterleaveSourceInPTX>
       <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
+      <Keep Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</Keep>
       <FileType>CppCode</FileType>
     </CudaCompile>
     <CudaCompile Include="cudalatticeops.cu">
@@ -165,6 +172,7 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
       <FileType>CppCode</FileType>
     </CudaCompile>
     <ClCompile Include="CuDnnCommon.cpp" />
+    <ClCompile Include="CuDnnRNN.cpp" />
     <ClCompile Include="GPUDataTransferer.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -181,7 +189,9 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
     <CudaCompile Include="GPUMatrix.cu">
       <FileType>CppCode</FileType>
       <Keep Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</Keep>
+      <Keep Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</Keep>
       <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</InterleaveSourceInPTX>
+      <InterleaveSourceInPTX Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">false</InterleaveSourceInPTX>
     </CudaCompile>
     <CudaCompile Include="GPUMatrixCUDAKernels.cuh">
       <ExcludedFromBuild>true</ExcludedFromBuild>
@@ -197,6 +207,6 @@ if exist "$(CuDnnDll)" xcopy /D /Y "$(CuDnnDll)" "$(OutputPath)"
   </ImportGroup>
   <Target Name="CheckDependencies">
     <Error Condition="!Exists('$(CUB_PATH)')" Text="CNTK requires the NVIDIA CUB library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cuda for installation instructions." />
-    <Error Condition="!Exists('$(CUDNN_PATH)')" Text="CNTK requires the NVIDIA cuDNN library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cuda for installation instructions." />
+    <Error Condition="!Exists('$(CUDNN_PATH)')" Text="CNTK requires the NVIDIA cuDNN library 5.0 or higher to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#cuda for installation instructions." />
   </Target>
 </Project>

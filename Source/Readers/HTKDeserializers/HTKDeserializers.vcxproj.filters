@@ -3,25 +3,10 @@
   <ItemGroup>
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="..\..\Common\TimerUtility.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\fileutil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="ConfigHelper.cpp" />
     <ClCompile Include="MLFDataDeserializer.cpp" />
     <ClCompile Include="HTKDataDeserializer.cpp" />
     <ClCompile Include="HTKMLFReader.cpp" />
-    <ClCompile Include="..\..\Common\Config.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\File.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="Exports.cpp" />
   </ItemGroup>
   <ItemGroup>

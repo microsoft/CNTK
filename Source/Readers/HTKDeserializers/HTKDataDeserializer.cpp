@@ -9,6 +9,7 @@
 #include "HTKDataDeserializer.h"
 #include "ConfigHelper.h"
 #include "Basics.h"
+#include "StringUtil.h"
 
 // TODO: This will be removed when dependency on old code is eliminated.
 // Currently this fixes the linking.
@@ -44,6 +45,7 @@ HTKDataDeserializer::HTKDataDeserializer(
 
     ConfigParameters input = inputs.front();
     auto inputName = input.GetMemberIds().front();
+    std::wstring precision = cfg(L"precision", L"float");
 
     m_expandToPrimary = cfg(L"expandToUtterance", false);
     if (m_expandToPrimary && m_primary)
@@ -56,7 +58,7 @@ HTKDataDeserializer::HTKDataDeserializer(
     ConfigHelper config(streamConfig);
     auto context = config.GetContextWindow();
 
-    m_elementType = config.GetElementType();
+    m_elementType = AreEqualIgnoreCase(precision,  L"float") ? ElementType::tfloat : ElementType::tdouble;
     m_dimension = config.GetFeatureDimension();
     m_dimension = m_dimension * (1 + context.first + context.second);
 
@@ -121,7 +123,6 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
     vector<wstring> paths = config.GetSequencePaths();
     vector<UtteranceDescription> utterances;
     utterances.reserve(paths.size());
-    auto& stringRegistry = m_corpus->GetStringRegistry();
     size_t allUtterances = 0, allFrames = 0;
 
     for (const auto& u : paths)
@@ -149,7 +150,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
         // No need to store key, releasing it.
         description.ClearLogicalPath();
 
-        size_t id = stringRegistry[key];
+        size_t id = m_corpus->KeyToId(key);
         description.SetId(id);
         utterances.push_back(description);
         m_totalNumberOfFrames += numberOfFrames;
@@ -420,7 +421,11 @@ struct HTKFloatSequenceData : DenseSequenceData
         {
             RuntimeError("Maximum number of samples per sequence exceeded.");
         }
-        m_data = m_buffer.GetData();
+    }
+
+    const void* GetDataBuffer() override
+    {
+        return m_buffer.GetData();
     }
 
 private:
@@ -437,7 +442,11 @@ struct HTKDoubleSequenceData : DenseSequenceData
         {
             RuntimeError("Maximum number of samples per sequence exceeded.");
         }
-        m_data = m_buffer.data();
+    }
+
+    const void* GetDataBuffer() override
+    {
+        return m_buffer.data();
     }
 
 private:

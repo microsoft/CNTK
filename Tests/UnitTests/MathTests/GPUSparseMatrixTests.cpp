@@ -10,6 +10,7 @@
 #include <crtdefs.h>
 #endif
 #include "../../../Source/Math/GPUSparseMatrix.h"
+#include "common.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -51,14 +52,15 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixConstructorsAndInitializers, RandomSeedFi
 BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixScaleAndAdd, RandomSeedFixture)
 {
     const int m = 4;
-    const int n = 5;
+    const int n = 5;    
 
     float a[m * n];
     float b[m * n];
+    std::mt19937 rng(0);
     for (int i = 0; i < m * n; i++)
     {
-        a[i] = static_cast<float>(rand());
-        b[i] = static_cast<float>(rand());
+        a[i] = static_cast<float>(rng());
+        b[i] = static_cast<float>(rng());
     }
 
     const GPUMatrix<float> denseMatrixA(m, n, c_deviceIdZero, a, MatrixFlags::matrixFlagNormal);
@@ -79,8 +81,12 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixScaleAndAdd, RandomSeedFixture)
     const GPUMatrix<float> denseMatrixC = sparseMatrixC.CopyToDenseMatrix();
     unique_ptr<float[]> c(denseMatrixC.CopyToArray());
     for (int i = 0; i < m * n; i++)
-    {
-        BOOST_CHECK_EQUAL(alpha * (alpha * a[i] + beta * b[i]), c[i]);
+    {        
+        float res1 = alpha * (alpha * a[i] + beta * b[i]);
+        float res2 = c[i];
+        BOOST_REQUIRE_MESSAGE(AreEqual(res1, res2, Err<float>::Rel, Err<float>::Abs), 
+                              "first mismatch at " << i << ", " << res1 << "!=" << res2 << ", relErr=" << (std::abs(res1 - res2) / std::max(std::abs(res1), \
+                              std::abs(res2))) << ", absErr = " << std::abs(res1 - res2));
     }
 }
 

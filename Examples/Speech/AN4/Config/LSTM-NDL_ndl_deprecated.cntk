@@ -1,0 +1,71 @@
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
+#       Please find updated samples on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+RootDir = ".."
+
+ConfigDir = "$RootDir$/Config"
+DataDir = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+# deviceId = -1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
+deviceId = -1
+
+command = speechTrain
+
+precision = "float"
+traceLevel = 1
+modelPath = "$ModelDir$/cntkSpeechLSTM.dnn"
+parallelTrain = true
+
+#######################################
+#  TRAINING CONFIG                    #
+#######################################
+
+frameMode = false
+truncated = true
+
+speechTrain = [
+    action = "train"
+    nbrUttsIneachRecurrentIter = 16
+    
+    NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/lstmp-3layer-opt.ndl"
+    ]
+    
+    SGD = [
+        epochSize = 0
+        minibatchSize = 16
+        learningRatesPerMB = 0.5
+        numMBsToShowResult = 10
+        momentumPerMB = 0:0.9
+        maxEpochs = 4
+        keepCheckPointFiles = true       
+    ]
+    
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        
+        features = [
+            dim = 363
+            type = "real"
+            scpFile = "$DataDir$/glob_0000.scp"
+        ]
+        
+        labels = [
+            mlfFile = "$DataDir$/glob_0000.mlf"
+            labelMappingFile = "$DataDir$/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+]

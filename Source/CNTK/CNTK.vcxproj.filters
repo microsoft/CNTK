@@ -172,8 +172,15 @@
     <ClInclude Include="..\Readers\ReaderLib\Transformer.h">
       <Filter>from ReaderLib</Filter>
     </ClInclude>
-    <ClInclude Include="..\Common\Include\basetypes.h" />
-    <ClInclude Include="..\Readers\CompositeDataReader\CompositeDataReader.h" />
+    <ClInclude Include="..\Common\Include\Globals.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Readers\CompositeDataReader\CompositeDataReader.h">
+      <Filter>from ReaderLib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\basetypes.h">
+      <Filter>Common\Include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="modelEditor.txt">

@@ -1,0 +1,106 @@
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
+#       Please find updated samples on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+NdlDir=$ExpDir$/configs
+command=$command$
+numCPUThreads=$numThreads$
+precision=float
+Truncated=true
+
+EditModel=[
+    action=edit
+    oldModel=$origModelName$
+    newModel=$ExpDir$/$modelName$.0
+    scaleFactor=$smoothFactor$
+    labelDim=$labelDim$
+    editPath=$NdlDir$/edit.mel
+]
+
+TrainModel=[
+    action=train
+    modelPath=$ExpDir$/$modelName$
+
+    # deviceId=-1 for CPU, >=0 for GPU devices
+    deviceId=$DeviceNumber$
+    traceLevel=1
+
+    NDLNetworkBuilder=[
+        ndlMacros=$NdlDir$/default_macros.ndl
+        networkDescription=$NdlDir$/model.ndl
+    ]
+
+
+    SGD=[
+        epochSize=0
+        minibatchSize=$minibatchSize$
+        learningRatesPerSample=$lratePerSample$
+        momentumPerMB=$momentum$
+        L2RegWeight=$l2RegWeight$
+        dropoutRate=$dropoutRate$
+        maxEpochs=$maxEpochs$
+        numMBsToShowResult=$evaluatePeriod$
+
+        #settings for Auto Adjust Learning Rate
+        AutoAdjust=[
+            reduceLearnRateIfImproveLessThan=0
+            loadBestModel=true
+            increaseLearnRateIfImproveMoreThan=1000000000
+            learnRateDecreaseFactor=0.5
+            autoAdjustLR=AdjustAfterEpoch
+            learnRateAdjustInterval=1
+        ]
+
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=$clippingThresholdPerSample$
+
+    ]
+       
+    # Parameter values for the reader
+    reader=[
+        # reader to use
+        readerType=Kaldi2Reader
+        readMethod=blockRandomize
+        frameMode=false
+        Truncated=$truncated$
+        nbruttsineachrecurrentiter=$numUttsPerMinibatch$
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=1
+        seqTrainCriterion=$criterion$
+        features=[
+            dim=$featDim$
+            scpFile=$inputCounts$
+            rx=$inputFeats$
+            featureTransform=$featureTransform$
+        ]
+
+        labels=[
+            mlfFile=$inputLabels$
+            labelDim=$labelDim$
+            labelMappingFile=$labelMapping$
+        ]
+
+        derivatives=[
+            type=seqTrainDeriv
+        ]
+
+        objectives=[
+            type=seqTrainObj
+        ]
+
+        denlats=[
+            rx=$inputDenLats$
+            silPhoneList=$silPhoneList$
+            kaldiModel=$kaldiModel$
+            oldAcousticScale=0.0
+            acousticScale=$acwt$
+            lmScale=1
+            oneSilenceClass=$oneSilenceClass$
+        ]
+
+        alignments=[
+            rx=$inputAli$
+        ]
+    ]
+]

@@ -13,6 +13,7 @@
 #endif 
 
 #include "Basics.h"
+#include "Globals.h"
 #include "Actions.h"
 #include "ComputationNetwork.h"
 #include "ComputationNode.h"
@@ -60,11 +61,6 @@
 #define let const auto
 #endif
 
-// TODO: Temporary mechanism to enable memory sharing for
-// node output value matrices. This will go away when the
-// sharing is ready to be enabled by default
-bool g_shareNodeValueMatrices = false;
-
 using namespace std;
 using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK;
@@ -75,6 +71,7 @@ void TestCn(const ConfigParameters& config);
 
 void RedirectStdErr(wstring logpath)
 {
+    // TODO: if there is already a file, rename it
     LOGPRINTF(stderr, "Redirecting stderr to file %S\n", logpath.c_str());
     auto f = make_shared<File>(logpath.c_str(), fileOptionsWrite | fileOptionsText);
     if (dup2(fileno(*f), 2) == -1)
@@ -93,32 +90,22 @@ std::string WCharToString(const wchar_t* wst)
     return s;
 }
 
-// TODO: This is an action, it should be moved into ActionsLib.
-template <typename ElemType>
-void DumpNodeInfo(const ConfigParameters& config)
-{
-    wstring modelPath = config(L"modelPath");
-    wstring nodeName = config(L"nodeName", L"__AllNodes__");
-    wstring nodeNameRegexStr = config(L"nodeNameRegex", L"");
-    wstring defOutFilePath = modelPath + L"." + nodeName + L".txt";
-    wstring outputFile = config(L"outputFile", defOutFilePath);
-    bool printValues = config(L"printValues", true);
-    bool printMetadata = config(L"printMetadata", true);
-    if (!printValues && !printMetadata)
-    {
-        InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
-    }
-
-    ComputationNetworkPtr net = ComputationNetwork::CreateFromFile<ElemType>(CPUDEVICE, modelPath);
-    net->DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
-}
-
 size_t GetMaxEpochs(const ConfigParameters& configParams)
 {
     ConfigParameters configSGD(configParams("SGD"));
     size_t maxEpochs = configSGD("maxEpochs");
 
     return maxEpochs;
+}
+
+// Currently we force determinism by setting compatibility mode for different CPU versions
+// and limiting computation to a single CPU thread.
+// TODO: Clarify how a single thread restriction can be lifted.
+void ForceDeterministicAlgorithmsOnCPU()
+{
+    LOGPRINTF(stderr, "WARNING: forceDeterministcAlgorithms flag is specified. Using 1 CPU thread for processing.\n");
+    CPUMatrix<float /*any type will do*/>::SetNumThreads(1);
+    CPUMatrix<float /*any type will do*/>::SetCompatibleMode();
 }
 
 #ifndef CPUONLY
@@ -173,7 +160,7 @@ static void DisableLegacyUsage(const ConfigParameters& TopLevelConfig, const Con
 
 // When running in parallel with MPI, only commands in 'commandstoRunOnAllRanks' should
 // be run in parallel across multiple ranks. Others should only run on rank 0
-const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "adapt", "test", "eval", "cv", "devtest" };
+const std::set<std::string> commandstoRunOnAllRanks = { "train", "trainRNN", "adapt", "test", "eval", "cv", "devtest", "bnstat" };
 
 // process the command
 template <typename ElemType>
@@ -181,12 +168,17 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
 {
     ConfigArray command = config(L"command", "train");
 
-    int numCPUThreads = config(L"numCPUThreads", "0");
-    numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
-
-    if (numCPUThreads > 0)
+    if (Globals::ShouldForceDeterministicAlgorithms())
+        ForceDeterministicAlgorithmsOnCPU();
+    else
     {
-        LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+        // Setting specified number of threads.
+        int numCPUThreads = config(L"numCPUThreads", "0");
+        numCPUThreads = CPUMatrix<ElemType>::SetNumThreads(numCPUThreads);
+        if (numCPUThreads > 0)
+        {
+            LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+        }
     }
 
     bool progressTracing = config(L"progressTracing", false);
@@ -208,14 +200,20 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             if (action[j] == "train" || action[j] == "trainRNN")
             {
                 wstring modelPath = commandParams("modelPath");
-                LOGPRINTF(stderr, "CNTKModelPath: %ls\n", modelPath.c_str());
                 size_t maxEpochs = GetMaxEpochs(commandParams);
-                LOGPRINTF(stderr, "CNTKCommandTrainInfo: %s : %d\n", command[i].c_str(), (int) maxEpochs);
+                if (progressTracing)
+                {
+                    LOGPRINTF(stderr, "CNTKModelPath: %ls\n", modelPath.c_str());
+                    LOGPRINTF(stderr, "CNTKCommandTrainInfo: %s : %d\n", command[i].c_str(), (int)maxEpochs);
+                }
                 fullTotalMaxEpochs += maxEpochs;
             }
         }
     }
-    LOGPRINTF(stderr, "CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : %d\n", (int) fullTotalMaxEpochs);
+    if (progressTracing)
+    {
+        LOGPRINTF(stderr, "CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : %d\n", (int)fullTotalMaxEpochs);
+    }
 
     // set up progress tracing for compute cluster management
     if (progressTracing && (!mpi || mpi->IsMainNode()))
@@ -230,26 +228,31 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
     for (int i = 0; i < command.size(); i++)
     {
         // get the configuration parameters that match the command
-        ConfigParameters commandParams(config(command[i]));
+        const string thisCommand = command[i];
+        ConfigParameters commandParams(config(thisCommand));
         ConfigArray action = commandParams("action", "train");
+        int traceLevel = commandParams("traceLevel", "0");
 
         if (progressTracing && ((mpi == nullptr) || mpi->IsMainNode()))
         {
             ProgressTracing::SetStepOffset(fullEpochsOffset); // this is the epoch number that SGD will log relative to
         }
 
+        if (Globals::ShouldEnableHyperCompressMemory())
+            Matrix<ElemType>::UseCachedResizeOrNot(true);
+
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
-            string thisAction = action[j];
+            const string thisAction = action[j];
 
             // print a banner to visually separate each action in the log
             const char* delim = "##############################################################################";
-            const char* prefix = "Action ";
+            string showActionAs = thisCommand + " command (" + thisAction + " action)";
             fprintf(stderr, "\n");
             LOGPRINTF(stderr, "%s\n", delim);
             LOGPRINTF(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
-            LOGPRINTF(stderr, "# %s\"%s\"%*s #\n", prefix, thisAction.c_str(), (int)(strlen(delim) - strlen(prefix) - thisAction.size() - 6), "");
+            LOGPRINTF(stderr, "# %s%*s #\n", showActionAs.c_str(), (int)(strlen(delim) - showActionAs.size() - 4), "");
             LOGPRINTF(stderr, "#%*s#\n", (int)(strlen(delim) - 2), "");
             LOGPRINTF(stderr, "%s\n\n", delim);
 
@@ -257,10 +260,20 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             {
                 if (thisAction == "train" || thisAction == "trainRNN")
                 {
-                    LOGPRINTF(stderr, "CNTKCommandTrainBegin: %s\n", command[i].c_str());
+                    if (progressTracing)
+                    {
+                        LOGPRINTF(stderr, "CNTKCommandTrainBegin: %s\n", command[i].c_str());
+                    }
                     DoTrain<ConfigParameters, ElemType>(commandParams);
-                    LOGPRINTF(stderr, "CNTKCommandTrainEnd: %s\n", command[i].c_str());
+                    if (progressTracing)
+                    {
+                        LOGPRINTF(stderr, "CNTKCommandTrainEnd: %s\n", command[i].c_str());
+                    }
                     fullEpochsOffset += GetMaxEpochs(commandParams);
+                }
+                else if (thisAction == "bnstat")
+                {
+                    DoBatchNormalizationStat<ElemType>(commandParams);
                 }
                 else if (thisAction == "adapt")
                 {
@@ -286,9 +299,9 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
                 {
                     TestCn<ElemType>(config); // for "devtest" action pass the root config instead
                 }
-                else if (thisAction == "dumpNode" /*deprecated:*/|| thisAction == "dumpnode")
+                else if (thisAction == "dumpNodes" /*deprecated:*/ || thisAction == "dumpNode" || thisAction == "dumpnode")
                 {
-                    DumpNodeInfo<ElemType>(commandParams);
+                    DoDumpNodes<ElemType>(commandParams);
                 }
                 else if (thisAction == "convertdbn")
                 {
@@ -321,7 +334,10 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             }
 
             fprintf(stderr, "\n");
+            if (traceLevel > 0)
+            {
             LOGPRINTF(stderr, "Action \"%s\" complete.\n\n", thisAction.c_str());
+            }
 
             NDLScript<ElemType> ndlScript;
             ndlScript.ClearGlobal(); // clear global macros between commands
@@ -356,6 +372,9 @@ void PrintBuiltInfo()
 #endif
 #ifdef _WITH_1BITSGD_
     LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
+#endif
+#ifdef _WITH_ASGD_
+    LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
 #endif
 #ifdef _MATHLIB_
     LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
@@ -409,14 +428,14 @@ void PrintGpuInfo()
     for (GpuData& data : gpusData)
     {
         LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
-                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), data.totalMemory);
+                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 #endif
 }
 
 // ---------------------------------------------------------------------------
-// main() for use with BrainScript
+// main() for use with BrainScript as entire config language (this is experimental)
 // ---------------------------------------------------------------------------
 
 wstring ConsumeArg(vector<wstring>& args)
@@ -500,16 +519,21 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     let valp = BS::Evaluate(expr);                                // evaluate parse into a dictionary
     let& config = valp.AsRef<ScriptableObjects::IConfigRecord>(); // this is the dictionary
 
+    if (config(L"forceDeterministicAlgorithms", false))
+        Globals::ForceDeterministicAlgorithms();
+    if (config(L"forceConstantRandomSeed", false))
+        Globals::ForceConstantRandomSeed();
+
 #ifndef CPUONLY
     auto valpp = config.Find(L"deviceId");
     if (valpp)
     {
-        auto valp = *valpp;
-        if (!valp.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
+        auto valp2 = *valpp;
+        if (!valp2.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
         {
-            if (static_cast<int>(valp) >= 0) // gpu (id >= 0)
+            if (static_cast<int>(valp2) >= 0) // gpu (id >= 0)
             {
-                CheckSupportForGpu(valp); // throws if gpu is not supported
+                CheckSupportForGpu(valp2); // throws if gpu is not supported
             }
         }
     }
@@ -528,11 +552,19 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     // parallel training
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
     auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
-    bool paralleltrain = config(L"parallelTrain", false);
-    if (paralleltrain)
-        mpi = MPIWrapper::GetInstance(true /*create*/);
+    // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
+    // 'false' otherwise.
+    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
 
-    g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
+    if (paralleltrain)
+    {
+        mpi = MPIWrapper::GetInstance(true /*create*/);
+    }  
+
+    if (config(L"shareNodeValueMatrices", false))
+        Globals::EnableShareNodeValueMatrices();
+    if (config(L"hyperCompressMemory", false))
+        Globals::EnableHyperCompressMemory();
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -544,28 +576,28 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     wstring logpath = config(L"stderr", L"");
     if (logpath != L"")
     {
-        logpath += L"_actions"; // TODO: for old CNTK, this was a concatenation of all action names, which we no longer know
-        logpath += L".log";     // TODO: why do we need to append this here?
-
-        if (paralleltrain)
-            logpath += msra::strfun::wstrprintf(L"rank%d", (int) mpi->CurrentNodeRank());
+        if (paralleltrain && mpi->CurrentNodeRank() != 0)
+            logpath += msra::strfun::wstrprintf(L".rank%d", (int) mpi->CurrentNodeRank());
 
         RedirectStdErr(logpath);
         LOGPRINTF(stderr, "%ls\n", startupMessage.c_str());
+        PrintBuiltInfo();
     }
-
-    // echo config info to log
-    PrintBuiltInfo();
 
     // echo gpu info to log
     PrintGpuInfo();
 
     // execute the actions
     // std::string type = config(L"precision", "float");
-    int numCPUThreads = config(L"numCPUThreads", 0);
-    numCPUThreads = CPUMatrix<float /*any will do*/>::SetNumThreads(numCPUThreads);
-    if (numCPUThreads > 0)
-        LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+    if (Globals::ShouldForceDeterministicAlgorithms())
+        ForceDeterministicAlgorithmsOnCPU();
+    else
+    {
+        int numCPUThreads = config(L"numCPUThreads", 0);
+        numCPUThreads = CPUMatrix<float /*any will do*/>::SetNumThreads(numCPUThreads);
+        if (numCPUThreads > 0)
+            LOGPRINTF(stderr, "Using %d CPU threads.\n", numCPUThreads);
+    }
 
     bool progressTracing = config(L"progressTracing", false);
     size_t fullTotalMaxEpochs = 1; // BUGBUG: BS does not allow me to read out the max epochs parameters, as that would instantiate and thus execute the objects
@@ -608,13 +640,32 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 }
 
 // ---------------------------------------------------------------------------
-// main() for old CNTK config language
+// main() for CNTK config language (this is the current way of using CNTK)
 // ---------------------------------------------------------------------------
+
+static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
+{
+    fprintf(stderr, "CNTK 2.0.beta5.0+ (");
+#ifdef _GIT_EXIST
+    fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
+#endif
+    fprintf(stderr, "%s %s", __DATE__, __TIME__); // build time
+    fprintf(stderr, ") on %s at %s\n\n", GetHostName().c_str(), timestamp.c_str());
+    for (int i = 0; i < argc; i++)
+        fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
+    fprintf(stderr, "\n");
+}
+
 // called from wmain which is a wrapper that catches & repots Win32 exceptions
 int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 {
+    std::string timestamp = TimeDateStamp();
+    PrintBanner(argc, argv, timestamp);
+
     ConfigParameters config;
     std::string rawConfigString = ConfigParameters::ParseCommandLine(argc, argv, config);    // get the command param set they want
+
+    int traceLevel = config(L"traceLevel", 0);
 
 #ifndef CPUONLY
     ConfigValue val = config("deviceId", "auto");
@@ -627,88 +678,107 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     }
 #endif
 
-    bool timestamping = config(L"timestamping", false);
-    if (timestamping)
-    {
+    if (config(L"timestamping", false))
         ProgressTracing::SetTimestampingFlag();
-    }
+
+    if (config(L"forceDeterministicAlgorithms", false))
+        Globals::ForceDeterministicAlgorithms();
+    if (config(L"forceConstantRandomSeed", false))
+        Globals::ForceConstantRandomSeed();
 
     // get the command param set they want
     wstring logpath = config(L"stderr", L"");
 
-    //  [1/26/2015 erw, add done file so that it can be used on HPC]
-    wstring DoneFile = config(L"DoneFile", L"");
+    wstring doneFile = config(L"doneFile", L"");
     ConfigArray command = config(L"command", "train");
 
-    // paralleltrain training
+    // parallel training
+    // The top-level 'parallelTrain' is a bool, not to be confused with the parallelTrain block inside SGD.
     shared_ptr<Microsoft::MSR::CNTK::MPIWrapper> mpi;
     auto ensureMPIWrapperCleanup = MakeScopeExit(&MPIWrapper::DeleteInstance);
-    bool paralleltrain = config(L"parallelTrain", "false");
-    if (paralleltrain)
-        mpi = MPIWrapper::GetInstance(true /*create*/);
+    
+    // when running under MPI with more than one node, use 'true' as the default value for parallelTrain,
+    // 'false' otherwise.
+    bool paralleltrain = config(L"parallelTrain", (MPIWrapper::GetTotalNumberOfMPINodes() > 1));
 
-    g_shareNodeValueMatrices = config(L"shareNodeValueMatrices", false);
+    if (paralleltrain)
+    {
+       mpi = MPIWrapper::GetInstance(true /*create*/);
+    } 
+
+    if (config(L"shareNodeValueMatrices", false))
+        Globals::EnableShareNodeValueMatrices();
+    if (config(L"hyperCompressMemory", false))
+        Globals::EnableHyperCompressMemory();
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
     if (logpath != L"")
     {
-        for (int i = 0; i < command.size(); i++)
+#if 1   // keep the ability to do it how it was done before 1.8; delete if noone needs it anymore
+        let useOldWay = ProgressTracing::GetTimestampingFlag(); // enable it when running in our server farm
+        if (useOldWay)
         {
+            for (int i = 0; i < command.size(); i++) // append all 'command' entries
+            {
             logpath += L"_";
-            logpath += (wstring) command[i];
+                logpath += (wstring)command[i];
         }
-        logpath += L".log";
+            logpath += L".log"; // append .log
+        }
 
-        if (paralleltrain)
+        if (paralleltrain && useOldWay)
         {
             std::wostringstream oss;
             oss << mpi->CurrentNodeRank();
             logpath += L"rank" + oss.str();
         }
+        else
+#endif
+        // for MPI workers except main, append .rankN
+        if (paralleltrain && mpi->CurrentNodeRank() != 0)
+            logpath += msra::strfun::wstrprintf(L".rank%d", mpi->CurrentNodeRank());
         RedirectStdErr(logpath);
+        if (traceLevel == 0)
+            PrintBanner(argc, argv, timestamp); // repeat simple banner into log file
     }
 
-    PrintBuiltInfo(); // this one goes to log file
+    // full config info
+    if (traceLevel > 0)
+    {
+        PrintBuiltInfo();
     PrintGpuInfo();
+    }
 
-    std::string timestamp = TimeDateStamp();
-
-    // dump config info
-    fprintf(stderr, "\n");
-    LOGPRINTF(stderr, "Running on %s at %s\n", GetHostName().c_str(), timestamp.c_str());
-    LOGPRINTF(stderr, "Command line: \n");
-    for (int i = 0; i < argc; i++)
-        fprintf(stderr, "%*s%ls", i > 0 ? 2 : 0, "", argv[i]); // use 2 spaces for better visual separability
-    fprintf(stderr, "\n\n");
-
-#if 1 //def _DEBUG
+#ifdef _DEBUG
+    if (traceLevel > 0)
+    {
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.
-    fprintf(stderr, "\n\n");
-    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>\n");
+        fprintf(stderr, "\nConfiguration, Raw:\n\n");
     LOGPRINTF(stderr, "%s\n", rawConfigString.c_str());
-    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<\n");
 
     // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overridden at command line),
     // All of these assignments will appear, even though only the last assignment matters.
-    fprintf(stderr, "\n");
-    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+        fprintf(stderr, "\nConfiguration After Variable Resolution:\n\n");
     LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
-    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
+    }
+#endif
+
+    SetMathLibTraceLevel(traceLevel);
 
     // This outputs the final value each variable/parameter is assigned to in config (so if a parameter is set multiple times, only the last
     // value it is set to will appear).
-    fprintf(stderr, "\n");
-    LOGPRINTF(stderr, ">>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>\n");
+    if (traceLevel > 0)
+    {
+        fprintf(stderr, "\nConfiguration After Processing and Variable Resolution:\n\n");
     config.dumpWithResolvedVariables();
-    LOGPRINTF(stderr, "<<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<\n");
-#endif
 
     LOGPRINTF(stderr, "Commands:");
     for (int i = 0; i < command.size(); i++)
         fprintf(stderr, " %s", command[i].c_str());
     fprintf(stderr, "\n");
+    }
 
     // run commands
     std::string type = config(L"precision", "float");
@@ -716,7 +786,10 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     if (config.Exists("type"))
         InvalidArgument("CNTK: Use of 'type' parameter is deprecated, it is called 'precision' now.");
 
-    LOGPRINTF(stderr, "Precision = \"%s\"\n", type.c_str());
+    if (traceLevel > 0)
+    {
+        LOGPRINTF(stderr, "precision = \"%s\"\n", type.c_str());
+    }
 
     if (type == "float")
         DoCommands<float>(config, mpi);
@@ -725,15 +798,19 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     else
         RuntimeError("CNTK: Invalid precision string: \"%s\", must be \"float\" or \"double\"", type.c_str());
 
-    // if completed then write a DoneFile if requested
-    if (!DoneFile.empty())
+    // if completed then write a doneFile if requested
+    if (!doneFile.empty())
     {
-        FILE* fp = fopenOrDie(DoneFile.c_str(), L"w");
-        fprintf(fp, "successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
+        FILE* fp = fopenOrDie(doneFile.c_str(), L"w");
+        fprintf(fp, "Successfully finished at %s on %s\n", TimeDateStamp().c_str(), GetHostName().c_str());
         fcloseOrDie(fp);
     }
-    // TODO: Change back to COMPLETED (no underscores)
-    LOGPRINTF(stderr, "__COMPLETED__\n");
+    if (ProgressTracing::GetTimestampingFlag())
+    {
+        LOGPRINTF(stderr, "__COMPLETED__\n"); // running in server environment which expects this string
+    }
+    else
+        fprintf(stderr, "COMPLETED.\n");
     fflush(stderr);
 
     return EXIT_SUCCESS;
@@ -757,10 +834,9 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
 
     try
     {        
-        PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
-
         if (argc <= 1)
         {
+            PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
             LOGPRINTF(stderr, "No command-line argument given.\n");
             PrintUsageInfo();
             return EXIT_FAILURE;
@@ -780,34 +856,33 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     catch (const ScriptableObjects::ScriptingException& err)
     {
         fprintf(stderr, "\n");
-        err.PrintError(ProgressTracing::GetTimeStampPrefix() + L"EXCEPTION occurred");
-        return EXIT_FAILURE;
+        err.PrintError(ProgressTracing::GetTimeStampPrefix() + L"EXCEPTION occurred.");
     }
     catch (const IExceptionWithCallStackBase& err)
     {
         fprintf(stderr, "\n");
         fprintf(stderr, "%s", err.CallStack());
         LOGPRINTF(stderr, "EXCEPTION occurred: %s\n", dynamic_cast<const std::exception&>(err).what());
-        return EXIT_FAILURE;
     }
     catch (const std::exception& err)
     {
         fprintf(stderr, "\n");
         LOGPRINTF(stderr, "EXCEPTION occurred: %s\n", err.what());
-        return EXIT_FAILURE;
     }
     catch (...)
     {
         fprintf(stderr, "\n");
-        LOGPRINTF(stderr, "Unknown ERROR occurred\n");
-        return EXIT_FAILURE;
+        LOGPRINTF(stderr, "Unknown ERROR occurred.\n");
     }
+
+    fflush(stderr);
+    return EXIT_FAILURE;
 }
 
 #ifdef __WINDOWS__
 void TerminateThis()
 {
-    LOGPRINTF(stderr, "terminate_this: aborting\n");
+    LOGPRINTF(stderr, "terminate_this: aborting.\n");
     fflush(stderr);
     exit(EXIT_FAILURE);
 }

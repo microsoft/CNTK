@@ -33,7 +33,7 @@ ndlCreateNetwork=[
 	 L2 = SBFF(L1,hiddenDim,hiddenDim)
 	 L3 = SBFF(L2,hiddenDim,hiddenDim)
 	 CE = SMBFF(L3,labelDim,hiddenDim,labels,tag=Criteria)
-	 Err = ErrorPrediction(labels,CE.BFF.FF.P,tag=Eval)
+	 Err = ClassificationError(labels,CE.BFF.FF.P,tag=Eval)
 
 	 # define output (scaled loglikelihood)
      logPrior = LogPrior(labels)	 

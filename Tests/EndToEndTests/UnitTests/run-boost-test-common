@@ -1,0 +1,5 @@
+boosttestrun()
+{
+  name=$1
+  $TEST_BIN_DIR/$name --report_level=detailed
+}

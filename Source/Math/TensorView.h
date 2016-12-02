@@ -10,6 +10,7 @@
 #include "Basics.h"
 #include "Matrix.h"
 #include "TensorShape.h"
+#include "Quantizers.h"
 
 #pragma warning(push)
 #pragma warning(disable : 4251) // needs to have dll-interface to be used by clients of... caused by TensorView::m_shape which is only private. We use the same compiler everywhere.
@@ -46,6 +47,10 @@ public:
     // copy constructor
     TensorView(const TensorView<ElemType>& other)
         : m_sob(other.m_sob), m_shape(other.m_shape)
+    {
+    }
+    // dummy constructor; this is an invalid object
+    TensorView()
     {
     }
 
@@ -139,14 +144,13 @@ public:
     // If beta == 0, c is not read out, i.e. it can be uninitialized or contain NaNs.
     // -------------------------------------------------------------------
 
-    void DoMatrixProductOf    (ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha);
-    void AssignMatrixProductOf(               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(0,    transC, a, transA, b, transB, alpha); }
-    void AddMatrixProductOf   (               bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
+    void DoMatrixProductOf(ElemType beta, bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier = nullptr);
+    void AssignMatrixProductOf(           bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier = nullptr) { DoMatrixProductOf(0, transC, a, transA, b, transB, alpha, pQuantizedMultiplier); }
+    void AddMatrixProductOf   (           bool transC, const TensorView& a, bool transA, const TensorView& b, bool transB, ElemType alpha = 1.0f) { DoMatrixProductOf(1.0f, transC, a, transA, b, transB, alpha); }
 
     shared_ptr<Matrix<ElemType>> AsMatrix() const;
     const TensorShape& GetShape() const { return m_shape; }
 
-private:
     // -------------------------------------------------------------------
     // accessors
     // -------------------------------------------------------------------
@@ -155,6 +159,7 @@ private:
     Matrix<ElemType>&       GetSOB()       { return *m_sob; }
     friend Test::TensorTest<ElemType>;
 
+private:
     // -------------------------------------------------------------------
     // sob members
     // -------------------------------------------------------------------

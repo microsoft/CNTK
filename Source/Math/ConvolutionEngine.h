@@ -59,10 +59,10 @@ public:
 
     std::shared_ptr<const ConvolveGeometry> Geometry() const { return m_geometry; }
 
-    static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
-                                                               size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None, 
+    static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, 
+                                                               ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None,
                                                                ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All,
-                                                               std::wstring logPrefix = L"");
+                                                               std::wstring logPrefix = L"", bool forceDeterministicAlgorithms = false);
 
     DISABLE_COPY_AND_MOVE(ConvolutionEngine);
 

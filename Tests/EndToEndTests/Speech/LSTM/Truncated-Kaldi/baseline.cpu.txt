@@ -135,7 +135,7 @@ speechTrain = [
         LSTMoutputW = W(LSTMoutput[numLSTMs].output) + B;
         // training
         cr = CrossEntropyWithSoftmax(labels, LSTMoutputW, tag='criterion')  // this is the objective
-        Err = ErrorPrediction(labels, LSTMoutputW, tag='eval')              // this also gets tracked
+        Err = ClassificationError(labels, LSTMoutputW, tag='eval')              // this also gets tracked
         // decoding
         logPrior = LogPrior(labels)	 
         ScaledLogLikelihood = Minus(LSTMoutputW, logPrior, tag='output')    // sadly we can't say x - y since we want to assign a tag
@@ -245,7 +245,7 @@ speechTrain = [
         LSTMoutputW = W(LSTMoutput[numLSTMs].output) + B;
         // training
         cr = CrossEntropyWithSoftmax(labels, LSTMoutputW, tag='criterion')  // this is the objective
-        Err = ErrorPrediction(labels, LSTMoutputW, tag='eval')              // this also gets tracked
+        Err = ClassificationError(labels, LSTMoutputW, tag='eval')              // this also gets tracked
         // decoding
         logPrior = LogPrior(labels)	 
         ScaledLogLikelihood = Minus(LSTMoutputW, logPrior, tag='output')    // sadly we can't say x - y since we want to assign a tag
@@ -359,7 +359,7 @@ configparameters: cntk.kaldi.cntk:speechTrain=[
         LSTMoutputW = W(LSTMoutput[numLSTMs].output) + B;
         // training
         cr = CrossEntropyWithSoftmax(labels, LSTMoutputW, tag='criterion')  // this is the objective
-        Err = ErrorPrediction(labels, LSTMoutputW, tag='eval')              // this also gets tracked
+        Err = ClassificationError(labels, LSTMoutputW, tag='eval')              // this also gets tracked
         // decoding
         logPrior = LogPrior(labels)	 
         ScaledLogLikelihood = Minus(LSTMoutputW, logPrior, tag='output')    // sadly we can't say x - y since we want to assign a tag
@@ -394,7 +394,7 @@ minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 
 Post-processing network...
 
 6 roots:
-	Err = ErrorPrediction()
+	Err = ClassificationError()
 	ScaledLogLikelihood = Minus()
 	cr = CrossEntropyWithSoftmax()
 	featNorm.invStdDevVector = InvStdDev()
@@ -714,7 +714,7 @@ Validating --> LSTMoutputW.PlusArgs[0].TimesArgs[1] = ElementTimes (LSTMoutputW.
 Validating --> LSTMoutputW.PlusArgs[0] = Times (LSTMoutputW.PlusArgs[0].TimesArgs[0], LSTMoutputW.PlusArgs[0].TimesArgs[1]) : [132 x 256], [256 x 1 x *] -> [132 x 1 x *]
 Validating --> B = LearnableParameter() :  -> [132]
 Validating --> LSTMoutputW = Plus (LSTMoutputW.PlusArgs[0], B) : [132 x 1 x *], [132] -> [132 x 1 x *]
-Validating --> Err = ErrorPrediction (labels, LSTMoutputW) : [132 x *], [132 x 1 x *] -> [1]
+Validating --> Err = ClassificationError (labels, LSTMoutputW) : [132 x *], [132 x 1 x *] -> [1]
 Validating --> logPrior.x = Mean (labels) : [132 x *] -> [132]
 Validating --> logPrior = Log (logPrior.x) : [132] -> [132]
 Validating --> ScaledLogLikelihood = Minus (LSTMoutputW, logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
@@ -786,7 +786,7 @@ Post-processing network complete.
 
 05/03/2016 18:11:56: Evaluation criterion node(s):
 
-05/03/2016 18:11:56: 	Err = ErrorPrediction
+05/03/2016 18:11:56: 	Err = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.

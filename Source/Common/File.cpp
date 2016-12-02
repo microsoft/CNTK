@@ -26,6 +26,9 @@
 #include <linux/limits.h> // for PATH_MAX
 #endif
 
+#define PCLOSE_ERROR -1
+#define WRITE_BUFFER_SIZE (1024 * 1024)
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // File creation
@@ -255,16 +258,22 @@ bool File::IsTextBased()
 // Note: this does not check for errors when the File corresponds to pipe stream. In this case, use Flush() before closing a file you are writing.
 File::~File(void)
 {
+    int rc = 0;
     if (m_pcloseNeeded)
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()     
-        _pclose(m_file);
+        rc = _pclose(m_file);
+        if ((rc == PCLOSE_ERROR) && !std::uncaught_exception())
+        {
+            RuntimeError("File: failed to close file at %S", m_filename.c_str());
+        }
     }
     else if (m_file != stdin && m_file != stdout && m_file != stderr)
     {
-        int rc = fclose(m_file);
-        if ((rc != 0) && !std::uncaught_exception())
+        rc = fclose(m_file);
+        if ((rc != FCLOSE_SUCCESS) && !std::uncaught_exception())
+        {
             RuntimeError("File: failed to close file at %S", m_filename.c_str());
+        }
     }
 }
 
@@ -640,6 +649,12 @@ int File::EndOfLineOrEOF(bool skip)
         return fskipNewline(m_file, skip);
     else
         return false;
+}
+
+// Buffer write stream
+int File::Setvbuf()
+{
+    return setvbuf(this->m_file, NULL, _IOFBF, WRITE_BUFFER_SIZE);
 }
 
 // Get a marker from the file

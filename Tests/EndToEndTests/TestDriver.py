@@ -263,6 +263,7 @@ class Test:
             break
       os.environ["TEST_CNTK_BINARY"] = tempPath
       os.environ["MPI_BINARY"] = "mpiexec"
+    os.environ["TEST_1BIT_SGD"] = ("1" if args.build_sku == "1bitsgd" else "0")
     if not os.path.exists(os.environ["TEST_CNTK_BINARY"]):
       raise ValueError("the cntk executable does not exist at path '%s'"%os.environ["TEST_CNTK_BINARY"]) 
     os.environ["TEST_BIN_DIR"] = os.path.dirname(os.environ["TEST_CNTK_BINARY"])
@@ -295,7 +296,11 @@ class Test:
           line=line[:len(line)-1]
 
         if args.verbose:
-          six.print_(self.fullName + ": " + line)
+          # TODO find a better way
+          if sys.version_info.major < 3:
+            six.print_(self.fullName + ": " + line)
+          else:
+            six.print_(self.fullName + ": " + line.decode('utf-8').rstrip())
 
         if args.dry_run:
           print (line)
@@ -361,6 +366,46 @@ class Test:
       fullPath = os.path.join(self.testDir, candidateName)
       return fullPath
 
+  # Baseline filename fragments to match for GPU device, decreasing priority.
+  gpuBaselinePatternList = []
+
+  # Generate baseline pattern fragments for GPU tests based on the minimum CC
+  # level of the cards available on the host. The CC level of only a few cards
+  # is made known to the test driver, based on our test lab set up. Note that
+  # we don't mix cards of different CC levels.
+  # TODO make more general, provide GPU selection
+  def getGpuBaselinePatternList(self):
+    if not self.gpuBaselinePatternList:
+      self.gpuBaselinePatternList = [".gpu", ""]
+      if windows:
+        nvidiaSmiPath = '/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi.exe'
+      else:
+        nvidiaSmiPath = 'nvidia-smi'
+      ccMajorByCard = {
+        'GeForce GTX 780 Ti': 3,
+        'GeForce GTX 960': 5,
+        'Quadro M2000M': 5,
+        'Quadro M4000': 5,
+      }
+      cc = sys.maxint
+      try:
+        gpuList = subprocess.check_output([nvidiaSmiPath, '-L'])
+        for line in gpuList.split('\n'):
+          m = re.match(r"GPU (?P<id>\d+): (?P<type>[^(]*) \(UUID: (?P<guid>GPU-.*)\)\r?$", line)
+          if m:
+            try:
+              current = ccMajorByCard[m.group('type')]
+              if current < cc:
+                cc = current
+            except KeyError:
+              pass
+      except OSError:
+        pass
+      if cc != sys.maxint:
+        self.gpuBaselinePatternList.insert(0, ".gpu.cc" + str(cc))
+
+    return self.gpuBaselinePatternList
+
   # Finds a location of a baseline file by probing different names in the following order:
   #   baseline.$os.$flavor.$device.txt
   #   baseline.$os.$flavor.txt
@@ -371,9 +416,14 @@ class Test:
   #   baseline.$device.txt
   #   baseline.txt
   def findBaselineFile(self, flavor, device):
+    if device == 'gpu':
+      deviceList = self.getGpuBaselinePatternList()
+    else:
+      deviceList = ["." + device.lower(), ""]
+
     for o in ["." + ("windows" if windows else "linux"), ""]:
       for f in ["." + flavor.lower(), ""]:
-        for d in ["." + device.lower(), ""]:
+        for d in deviceList:
           candidateName = "baseline" + o + f + d + ".txt"
           fullPath = cygpath(os.path.join(self.testDir, candidateName), relative=True)
           if os.path.isfile(fullPath):
@@ -593,7 +643,7 @@ def listCommand(args):
                    testsByTag[tag] = set([test.fullName])
   for tag in sorted(testsByTag.keys()):
     if tag=="*":
-      six.print_(' '.join(sorted(testsByTag[tag])))
+      six.print_(' \n'.join(sorted(testsByTag[tag])))
     else:
       six.print_(tag + ": " + ' '.join(sorted(testsByTag[tag])))
 
@@ -614,6 +664,9 @@ def runCommand(args):
 
   devices = args.devices
   flavors = args.flavors
+
+  if args.func == runCommand and args.prepend_path:
+    os.environ["PATH"] = os.pathsep.join([cygpath(y) for y in args.prepend_path.split(',')]) + os.pathsep + os.environ["PATH"]
 
   os.environ["TEST_ROOT_DIR"] = os.path.dirname(os.path.realpath(sys.argv[0]))
 
@@ -703,6 +756,7 @@ if __name__ == "__main__":
   runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
   runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
   runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - run tests only for a specified build SKU")
+  runSubparser.add_argument("-pp", "--prepend-path", help="comma-separated paths to prepend when running test script")
   tmpDir = os.getenv("TEMP") if windows else "/tmp"
   defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
   runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")

@@ -128,7 +128,7 @@ void TestReader(const ConfigParameters& configBase)
     epochs *= 2;
     for (int epoch = 0; epoch < epochs; epoch++)
     {
-        dataReader.StartMinibatchLoop(mbSize, epoch, epochSize);
+        dataReader.StartMinibatchLoop(mbSize, epoch, matrices.GetStreamDescriptions(), epochSize);
         int i = 0;
         while (dataReader.GetMinibatch(matrices))
         {
@@ -137,11 +137,11 @@ void TestReader(const ConfigParameters& configBase)
 
             if (labels.GetNumRows() == 0)
             {
-                fprintf(stderr, "%4d: features dim: %lu x %lu - [%.8g, %.8g, ...]\n", i++, features.GetNumRows(), features.GetNumCols(), features(0, 0), features(0, 1));
+                fprintf(stderr, "%4d: features dim: %lu x %lu - [%.8g, %.8g, ...]\n", i++, (unsigned long)features.GetNumRows(), (unsigned long)features.GetNumCols(), features(0, 0), features(0, 1));
             }
             else
             {
-                fprintf(stderr, "%4d: features dim: %lu x %lu - [%.8g, %.8g, ...] label dim: %lu x %lu - [%d, %d, ...]\n", i++, features.GetNumRows(), features.GetNumCols(), features(0, 0), features(0, 1), labels.GetNumRows(), labels.GetNumCols(), (int) labels(0, 0), (int) labels(0, 1));
+                fprintf(stderr, "%4d: features dim: %lu x %lu - [%.8g, %.8g, ...] label dim: %lu x %lu - [%d, %d, ...]\n", i++, (unsigned long)features.GetNumRows(), (unsigned long)features.GetNumCols(), features(0, 0), features(0, 1), (unsigned long)labels.GetNumRows(), (unsigned long)labels.GetNumCols(), (int) labels(0, 0), (int) labels(0, 1));
             }
         }
     }
@@ -191,7 +191,7 @@ void TestSequenceReader(const ConfigParameters& configBase)
         epochs *= 2;
         for (int epoch = 0; epoch < epochs; epoch++)
         {
-            dataReader.StartMinibatchLoop(mbSize, epoch, epochSize);
+            dataReader.StartMinibatchLoop(mbSize, epoch, matrices.GetStreamDescriptions(), epochSize);
             for (int i = 0; dataReader.GetMinibatch(matrices); i++)
             {
                 auto& features = matrices.GetInputMatrix<ElemType>(featureNames[0]);

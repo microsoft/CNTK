@@ -21,7 +21,7 @@ public:
     ByteReader() = default;
     virtual ~ByteReader() = default;
 
-    virtual void Register(size_t seqId, const std::string& path) = 0;
+    virtual void Register(const std::map<std::string, size_t>& sequences) = 0;
     virtual cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) = 0;
 
     DISABLE_COPY_AND_MOVE(ByteReader);
@@ -30,8 +30,13 @@ public:
 class FileByteReader : public ByteReader
 {
 public:
-    void Register(size_t, const std::string&) override {}
+    FileByteReader(const std::string& expandDirectory) : m_expandDirectory(expandDirectory)
+    {}
+
+    void Register(const std::map<std::string, size_t>&) override {}
     cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) override;
+
+    std::string m_expandDirectory;
 };
 
 #ifdef USE_ZIP
@@ -40,7 +45,7 @@ class ZipByteReader : public ByteReader
 public:
     ZipByteReader(const std::string& zipPath);
 
-    void Register(size_t seqId, const std::string& path) override;
+    void Register(const std::map<std::string, size_t>& sequences) override;
     cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) override;
 
 private:

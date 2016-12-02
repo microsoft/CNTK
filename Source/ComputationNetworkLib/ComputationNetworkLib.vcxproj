@@ -5,6 +5,10 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
@@ -57,7 +61,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
     <ClCompile>
-      <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/d2Zi+ /bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
@@ -98,6 +102,7 @@
     <ClInclude Include="ConvolutionalNodes.h" />
     <ClInclude Include="DeprecatedNodes.h" />
     <ClInclude Include="PreComputeNodes.h" />
+    <ClInclude Include="RNNNodes.h" />
     <ClInclude Include="SpecialPurposeNodes.h" />
     <ClInclude Include="EvaluationNodes.h" />
     <ClInclude Include="InputAndParamNodes.h" />
@@ -121,9 +126,13 @@
     <ClCompile Include="ComputationNode.cpp" />
     <ClCompile Include="ComputationNodeScripting.cpp" />
     <ClCompile Include="InputAndParamNodes.cpp" />
+    <ClCompile Include="RecurrentNodes.cpp" />
+    <ClCompile Include="LinearAlgebraNodes.cpp" />
     <ClCompile Include="ReshapingNodes.cpp" />
+    <ClCompile Include="RNNNodes.cpp" />
     <ClCompile Include="SpecialPurposeNodes.cpp" />
     <ClCompile Include="stdafx.cpp" />
+    <ClCompile Include="TrainingNodes.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

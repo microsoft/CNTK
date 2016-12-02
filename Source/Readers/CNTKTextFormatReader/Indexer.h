@@ -20,7 +20,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class Indexer 
 {
 public:
-    Indexer(FILE* file, bool skipSequenceIds = false, size_t chunkSize = 32 * 1024 * 1024);
+    Indexer(FILE* file, bool isPrimary, bool skipSequenceIds = false, size_t chunkSize = 32 * 1024 * 1024);
 
     // Reads the input file, building and index of chunks and corresponding
     // sequences.
@@ -54,7 +54,7 @@ private:
     Index m_index;
 
     // Same function as above but with check that the sequence is included in the corpus descriptor.
-    void AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceKey, SequenceDescriptor& sd);
+    void AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceId, SequenceDescriptor& sd);
 
     // fills up the buffer with data from file, all previously buffered data
     // will be overwritten.

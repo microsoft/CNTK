@@ -30,7 +30,7 @@ IntensityTransform_Test = [
             cropType=center
             cropRatio=1
             jitterType=UniRatio
-            interpolations=Linear
+            interpolations=linear
             intensityFile="$RootDir$/ImageNet1K_intensity.xml"
             intensityStdDev=0:0.1
         ]

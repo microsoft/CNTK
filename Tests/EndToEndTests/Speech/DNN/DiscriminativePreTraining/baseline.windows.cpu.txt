@@ -550,7 +550,7 @@ Validating --> HL1.y = Sigmoid(HL1.z[512, MBSize 1]) -> [512, MBSize 1]
 Validating --> OL.t = Times(OL.W[132, 512], HL1.y[512, MBSize 1]) -> [132, MBSize 1]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 1], OL.b[132, 1]) -> [132, MBSize 1]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 1], OL.z[132, MBSize 1]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 1], OL.z[132, MBSize 1]) -> [1, 1]
 
 Validating for node Err. 1 nodes to process in pass 2.
 
@@ -568,7 +568,7 @@ Validating --> HL1.y = Sigmoid(HL1.z[512, MBSize 1]) -> [512, MBSize 1]
 Validating --> OL.t = Times(OL.W[132, 512], HL1.y[512, MBSize 1]) -> [132, MBSize 1]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 1], OL.b[132, 1]) -> [132, MBSize 1]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 1], OL.z[132, MBSize 1]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 1], OL.z[132, MBSize 1]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -586,7 +586,7 @@ Validating --> HL1.y = Sigmoid(HL1.z[512, MBSize 1]) -> [512, MBSize 1]
 Validating --> OL.t = Times(OL.W[132, 512], HL1.y[512, MBSize 1]) -> [132, MBSize 1]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 1], OL.b[132, 1]) -> [132, MBSize 1]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 1], OL.z[132, MBSize 1]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 1], OL.z[132, MBSize 1]) -> [1, 1]
 
 7 out of 15 nodes do not share the minibatch layout with the input data.
 
@@ -608,7 +608,7 @@ Validating --> HL1.y = Sigmoid(HL1.z[512, MBSize 1]) -> [512, MBSize 1]
 Validating --> OL.t = Times(OL.W[132, 512], HL1.y[512, MBSize 1]) -> [132, MBSize 1]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 1], OL.b[132, 1]) -> [132, MBSize 1]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 1], OL.z[132, MBSize 1]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 1], OL.z[132, MBSize 1]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -626,7 +626,7 @@ Validating --> HL1.y = Sigmoid(HL1.z[512, MBSize 1]) -> [512, MBSize 1]
 Validating --> OL.t = Times(OL.W[132, 512], HL1.y[512, MBSize 1]) -> [132, MBSize 1]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 1], OL.b[132, 1]) -> [132, MBSize 1]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 1], OL.z[132, MBSize 1]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 1], OL.z[132, MBSize 1]) -> [1, 1]
 
 7 out of 15 nodes do not share the minibatch layout with the input data.
 
@@ -947,7 +947,7 @@ Validating --> HL1.y = Sigmoid(HL1.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL1.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err. 1 nodes to process in pass 2.
 
@@ -965,7 +965,7 @@ Validating --> HL1.y = Sigmoid(HL1.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL1.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -983,7 +983,7 @@ Validating --> HL1.y = Sigmoid(HL1.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL1.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 7 out of 15 nodes do not share the minibatch layout with the input data.
 
@@ -1005,7 +1005,7 @@ Validating --> HL1.y = Sigmoid(HL1.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL1.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -1023,7 +1023,7 @@ Validating --> HL1.y = Sigmoid(HL1.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL1.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 7 out of 15 nodes do not share the minibatch layout with the input data.
 
@@ -1300,7 +1300,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -1323,7 +1323,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 9 out of 20 nodes do not share the minibatch layout with the input data.
 
@@ -1350,7 +1350,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -1373,7 +1373,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 9 out of 20 nodes do not share the minibatch layout with the input data.
 
@@ -1684,7 +1684,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err. 1 nodes to process in pass 2.
 
@@ -1707,7 +1707,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -1730,7 +1730,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 9 out of 20 nodes do not share the minibatch layout with the input data.
 
@@ -1757,7 +1757,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -1780,7 +1780,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 9 out of 20 nodes do not share the minibatch layout with the input data.
 
@@ -2161,7 +2161,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err. 1 nodes to process in pass 2.
 
@@ -2184,7 +2184,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -2207,7 +2207,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 9 out of 20 nodes do not share the minibatch layout with the input data.
 
@@ -2234,7 +2234,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -2257,7 +2257,7 @@ Validating --> HL2.y = Sigmoid(HL2.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL2.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 9 out of 20 nodes do not share the minibatch layout with the input data.
 
@@ -2589,7 +2589,7 @@ Validating --> HL3.y = Sigmoid(HL3.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL3.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -2617,7 +2617,7 @@ Validating --> HL3.y = Sigmoid(HL3.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL3.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 11 out of 25 nodes do not share the minibatch layout with the input data.
 
@@ -2649,7 +2649,7 @@ Validating --> HL3.y = Sigmoid(HL3.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL3.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -2677,7 +2677,7 @@ Validating --> HL3.y = Sigmoid(HL3.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL3.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 11 out of 25 nodes do not share the minibatch layout with the input data.
 
@@ -3048,7 +3048,7 @@ Validating --> HL3.y = Sigmoid(HL3.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL3.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err. 1 nodes to process in pass 2.
 
@@ -3076,7 +3076,7 @@ Validating --> HL3.y = Sigmoid(HL3.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL3.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -3104,7 +3104,7 @@ Validating --> HL3.y = Sigmoid(HL3.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL3.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 11 out of 25 nodes do not share the minibatch layout with the input data.
 
@@ -3136,7 +3136,7 @@ Validating --> HL3.y = Sigmoid(HL3.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL3.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 Validating for node Err, final verification.
 
@@ -3164,7 +3164,7 @@ Validating --> HL3.y = Sigmoid(HL3.z[512, MBSize 0]) -> [512, MBSize 0]
 Validating --> OL.t = Times(OL.W[132, 512], HL3.y[512, MBSize 0]) -> [132, MBSize 0]
 Validating --> OL.b = LearnableParameter -> [132, 1]
 Validating --> OL.z = Plus(OL.t[132, MBSize 0], OL.b[132, 1]) -> [132, MBSize 0]
-Validating --> Err = ErrorPrediction(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
+Validating --> Err = ClassificationError(labels[132, MBSize 0], OL.z[132, MBSize 0]) -> [1, 1]
 
 11 out of 25 nodes do not share the minibatch layout with the input data.
 

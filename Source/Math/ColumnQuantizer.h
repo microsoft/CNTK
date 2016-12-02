@@ -81,12 +81,7 @@ public:
     static cudacode void ComputeRangeStatColj(const ElemType* inMat, const ElemType* inResidual, long M, size_t j, size_t bits, ElemType& lower, ElemType& upper)
     {
         /*dummy reducers do nothing in linear CPU version*/
-        ComputeRangeStatColjSubset<ZeroThresholdFor1Bit>(inMat, inResidual, M, j, bits, lower, upper, 0, 1, [](ElemType&)
-                                                         {
-                                                         },
-                                                         [](unsigned int&)
-                                                         {
-                                                         });
+        ComputeRangeStatColjSubset<ZeroThresholdFor1Bit>(inMat, inResidual, M, j, bits, lower, upper, 0, 1, [](ElemType&){}, [](unsigned int&){});
     }
 
 public:
@@ -231,9 +226,9 @@ public:
         // i.e.
         //  - do not symmetrize/pool the quantization values for 0 and 1
         //  - but hard-code the quantization threshold to be 0 instead of the mean of the two bounds
-        // This should give us the best of all--fast operation yet ability to be asymmetric within a column
+        // This should give us the best of all--fast operation yet ability to be asymmetric within a column.
         ElemType mean = 0.0f;
-        if (!ZeroThresholdFor1Bit || (bits != 1))
+        if (!ZeroThresholdFor1Bit && (bits == 1))
         {
             ElemType meanacc = 0.0f;
             // (subset: compute subset sum)
@@ -320,7 +315,7 @@ public:
         }
         else
         {
-            ElemType stddevs = 5.0f;
+            ElemType stddevs = 4.0f; // TODO: make this a parameter
             // >1 bit:
             // We linearly quantize between 'stddevs' standard deviations.
             ElemType varacc = 0.0f;
@@ -349,7 +344,6 @@ private:
     template <typename T>
     friend class QuantizedMatrix;
 };
-}
-}
-}
+
+}}}
 #endif

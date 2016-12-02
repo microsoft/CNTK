@@ -3,20 +3,8 @@
   <ItemGroup>
     <ClCompile Include="Exports.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="..\..\Common\ExceptionWithCallStack.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\fileutil.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\Common\File.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="TextConfigHelper.cpp" />
-    <ClCompile Include="..\..\Common\Config.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="Indexer.cpp" />
     <ClCompile Include="TextParser.cpp" />
     <ClCompile Include="CNTKTextFormatReader.cpp" />

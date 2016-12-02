@@ -139,7 +139,7 @@ template <class ElemType>
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCopy)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     DeepCopy(deepCopy);
 }
@@ -148,7 +148,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUSparseMatrix<ElemType>& deepCo
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCopy)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     SetFormat(deepCopy.GetFormat());
     if (deepCopy.IsEmpty())
@@ -172,7 +172,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const CPUSparseMatrix<ElemType>& deepCo
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::CopyToCPUSparseMatrix(CPUSparseMatrix<ElemType>& cpuSparseMatrix) const
 {
-    cpuSparseMatrix.VerifyWritable(__func__);
+    cpuSparseMatrix.VerifyWritable(__FUNCTION__);
 
     cpuSparseMatrix.SetFormat(GetFormat());
     if (IsEmpty())
@@ -302,7 +302,7 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ConvertToSparseFormat(MatrixFormat newFormat, GPUSparseMatrix<ElemType>& outMatrix) const
 {
-    outMatrix.VerifyWritable(__func__);
+    outMatrix.VerifyWritable(__FUNCTION__);
 
     if (IsEmpty())
     {
@@ -381,7 +381,7 @@ GPUMatrix<ElemType> GPUSparseMatrix<ElemType>::CopyToDenseMatrix() const
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
     if (to_id == CPUDEVICE)
         LogicError("to_id must be valid GPU");
     if (GetComputeDeviceId()== to_id)
@@ -438,7 +438,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const CPUMatrix<ElemType>& /*denseMatri
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     SetValue(denseMatrix, GetFormat());
 }
@@ -446,7 +446,7 @@ void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix)
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetValue(const GPUMatrix<ElemType>& denseMatrix, const MatrixFormat matrixFormat)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (matrixFormat != matrixFormatSparseCSR && matrixFormat != matrixFormatSparseCSC)
     {
@@ -532,7 +532,7 @@ GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     size_t n = GetNumCols();
     if (n != columnsMask.GetNumCols())
@@ -620,7 +620,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
 
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (GetFormat() != MatrixFormat::matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
@@ -657,12 +657,6 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
     SetBuffer(pArray, bufferSizeNeeded);
     SetNumRows(numRows);
     SetNumCols(numCols);
-
-    // following are generated dynamically and no need to save
-    if (GetRowToIdMap() != nullptr)
-        TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(GetComputeDeviceId(), GetRowToIdMap());
-
-    SetRowToIdMap(TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(GetComputeDeviceId(), GetSizeAllocated()));
 }
 
 // WARNING: When memory is reallocated, existing information will be lost.
@@ -670,7 +664,7 @@ void GPUSparseMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCo
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
-	// BugBug: This doesn't work because allocate is called from Resize sometimes and resize expects allocate to know the old values not the new values, so this won't work.
+    // BugBug: This doesn't work because allocate is called from Resize sometimes and resize expects allocate to know the old values not the new values, so this won't work.
     if (GetNumRows() != numRows || GetNumCols() != numCols)
         LogicError("Error, calling allocate with dimensions (%d, %d), but the matrix has dimension (%d, %d).", (int)numRows, (int)numCols, (int)GetNumRows(), (int)GetNumCols());
 
@@ -679,14 +673,14 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
 
     if (reallocate)
     {
-		// Note that we are allocating one buffer for all of our data structures. Thus the ElemType* nzValues array lives directly next to
-		// the GPUSPARSE_INDEX_TYPE* rowIndices/colIndices in sparseCSC/CSR formats. Thus we allocate the number of bytes, and then set the
-		// start pointer to an ElemType*.
+        // Note that we are allocating one buffer for all of our data structures. Thus the ElemType* nzValues array lives directly next to
+        // the GPUSPARSE_INDEX_TYPE* rowIndices/colIndices in sparseCSC/CSR formats. Thus we allocate the number of bytes, and then set the
+        // start pointer to an ElemType*.
         char* buf = TracingGPUMemoryAllocator::Allocate<char>(GetComputeDeviceId(), bufferSizeNeeded);
         ElemType* pArray = (ElemType*)(buf);
 
-		// Note this is required due to m_nz 
-		CUDA_CALL(cudaMemset(pArray, 0, bufferSizeNeeded));
+        // Note this is required due to m_nz 
+        CUDA_CALL(cudaMemset(pArray, 0, bufferSizeNeeded));
         if (Buffer() != nullptr)
         {
             if (keepExistingValues)
@@ -705,11 +699,6 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
             }
             TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
         }
-        // following are generated dynamically and no need to save
-        if (GetRowToIdMap() != nullptr)
-            TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(GetComputeDeviceId(), GetRowToIdMap());
-
-        SetRowToIdMap(TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(GetComputeDeviceId(), numNZElemToReserve));
 
         SetBuffer(pArray, bufferSizeNeeded);
         SetSizeAllocated(numNZElemToReserve);
@@ -717,7 +706,7 @@ void GPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
     else // if requested size is smaller, keeping original values does not make sense
     {
         SetSizeAllocated(ElemCountFromBufferSize(numRows, numCols, GetFormat(), BufferSizeAllocated()));
-		CUDA_CALL(cudaMemset(Buffer(), 0, BufferSizeAllocated()));
+        CUDA_CALL(cudaMemset(Buffer(), 0, BufferSizeAllocated()));
     }
 }
 
@@ -730,7 +719,7 @@ void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/, bool keepExistingValues /*= true*/)
 {
-	RequireSize(numRows, numCols, matrixFormat, growOnly);
+    RequireSize(numRows, numCols, matrixFormat, growOnly);
     
     size_t bufferSizeNeeded = BufferSizeNeeded(numRows, numCols, numNZElemToReserve, matrixFormat);
     bool reallocate = (BufferSizeAllocated() < bufferSizeNeeded || (!growOnly && BufferSizeAllocated() > bufferSizeNeeded));
@@ -762,7 +751,7 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat matrixFormat, const bool growOnly /*= true*/)
 {
-    VerifyResizable(__func__);
+    VerifyResizable(__FUNCTION__);
 
     m_sliceViewOffset = 0;
     SetNumRows(numRows);
@@ -771,8 +760,8 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
     SetNumStorageCols(numCols);
     SetFormat(matrixFormat);
 
-	// If we really did resize the number of rows/columns, then we changed the number of nz elements allocated. That is, if we used to have a buffer capable of
-	// stroring 100 nz elements and 10 columns in CSC format, but we resized to 20 columns, we can no longer store 100 elements, we can only store 95. 
+    // If we really did resize the number of rows/columns, then we changed the number of nz elements allocated. That is, if we used to have a buffer capable of
+    // stroring 100 nz elements and 10 columns in CSC format, but we resized to 20 columns, we can no longer store 100 elements, we can only store 95. 
     // Thus we must reset the number of nz elements which can be stored. So let's compute it now.
     size_t newNzElem = ComputeMaxNZElemFromBufferSize(numRows, numCols, BufferSizeAllocated(), matrixFormat);
     SetSizeAllocated(newNzElem);
@@ -790,7 +779,7 @@ void GPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Reset()
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     ClearNzCount();
 }
@@ -813,7 +802,7 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYPE* h_CSRRow, const GPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
                                                        const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (h_CSRRow == nullptr || h_Col == nullptr || h_Val == nullptr)
         LogicError("SetMatrixFromCSRFormat: nullptr passed in.");
@@ -828,7 +817,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYP
 
     if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
     {
-		// ColSize doesn't work since it requires NzCount() to be usable (RowSize doesn't, since it's the fixed, compressed,
+        // ColSize doesn't work since it requires NzCount() to be usable (RowSize doesn't, since it's the fixed, compressed,
         // dimension. Since NzCount is not available (because the sparse indices which is where the NzCount is copmuted from
         // haven't been copied in yet), we just tell it how many bytes to copy. That is, nz * sizeof(GPUSPARSE_INDEX_TYPE);
         CUDA_CALL(cudaMemcpy(RowLocation(), h_CSRRow, RowSize(), kind));
@@ -852,7 +841,7 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSRFormat(const GPUSPARSE_INDEX_TYP
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t& numElemAllocated, size_t& nz, size_t& numRows, size_t& numCols) const
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (h_CSRRow != nullptr || h_Col != nullptr || h_Val != nullptr)
         LogicError("GetMatrixFromCSRFormat: Passed pointers must be nullptr");
@@ -894,9 +883,9 @@ void GPUSparseMatrix<ElemType>::GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_
 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
-                                                       const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
+    const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/, DataTransferer* transferer /*= nullptr*/)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (h_CSCCol == nullptr || h_Row == nullptr || h_Val == nullptr)
         LogicError("SetMatrixFromCSCFormat: nullptr passed in.");
@@ -905,14 +894,36 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     SetFormat(matrixFormatSparseCSC);
     RequireSizeAndAllocate(numRows, numCols, nz, true, false);
 
-	// m_nz doesn't exist anymore. How are we going to deal with the NzSize, RowSize, and ColSize? Do it ourselves of course.
+    if (transferer && IsOnDevice)
+        RuntimeError("Currently it is prohibited to copy data asynchronous from device to device.");
+
+    // m_nz doesn't exist anymore. How are we going to deal with the NzSize, RowSize, and ColSize? Do it ourselves of course.
+
     cudaMemcpyKind kind = IsOnDevice ? cudaMemcpyDeviceToDevice : cudaMemcpyHostToDevice;
-    CUDA_CALL(cudaMemcpy(Data(), h_Val, nz * sizeof(ElemType), kind));
+    if (transferer)
+    {
+        // TODO: All RequireSizeAndAllocate should be async and use a transferer.
+        // Currently there are some memset operations that can be still executing on the default stream,
+        // Here we have to wait for them to finish.
+        transferer->RecordComputeStreamSyncPoint();
+        transferer->WaitForSyncPointOnAssignStreamAsync();
+        transferer->CopyCPUToGPUAsync(h_Val, nz, sizeof(ElemType), Data());
+    }
+    else
+        CUDA_CALL(cudaMemcpy(Data(), h_Val, nz * sizeof(ElemType), kind));
 
     if (sizeof(CPUSPARSE_INDEX_TYPE) == sizeof(GPUSPARSE_INDEX_TYPE))
     {
-        CUDA_CALL(cudaMemcpy(RowLocation(), h_Row, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
-        CUDA_CALL(cudaMemcpy(ColLocation(), h_CSCCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols+1), kind));
+        if (transferer)
+        {
+            transferer->CopyCPUToGPUAsync(h_Row, nz, sizeof(GPUSPARSE_INDEX_TYPE), RowLocation());
+            transferer->CopyCPUToGPUAsync(h_CSCCol, numCols + 1, sizeof(GPUSPARSE_INDEX_TYPE), ColLocation());
+        }
+        else
+        {
+            CUDA_CALL(cudaMemcpy(RowLocation(), h_Row, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
+            CUDA_CALL(cudaMemcpy(ColLocation(), h_CSCCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1), kind));
+        }
     }
     else
     {
@@ -923,8 +934,16 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
         ConvertBuffer(pCol, h_CSCCol, (numCols+1));
         ConvertBuffer(pRow, h_Row, nz);
 
-        CUDA_CALL(cudaMemcpy(RowLocation(), pRow, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
-        CUDA_CALL(cudaMemcpy(ColLocation(), pCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols+1), kind));
+        if (transferer)
+        {
+            transferer->CopyCPUToGPUAsync(pRow, nz, sizeof(GPUSPARSE_INDEX_TYPE), RowLocation());
+            transferer->CopyCPUToGPUAsync(pCol, numCols + 1, sizeof(GPUSPARSE_INDEX_TYPE), ColLocation());
+        }
+        else
+        {
+            CUDA_CALL(cudaMemcpy(RowLocation(), pRow, sizeof(GPUSPARSE_INDEX_TYPE) * nz, kind));
+            CUDA_CALL(cudaMemcpy(ColLocation(), pCol, sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1), kind));
+        }
     }
 }
 
@@ -982,6 +1001,8 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId() || (lhs.GetComputeDeviceId() != c.GetComputeDeviceId()))
         RuntimeError("GPUSparseMatrix::MultiplyAndWeightedAdd: All matrices must be on the same GPU");
 
+    // BUGBUG: Below we fail if one of the factors is empty.That is wrong. We should be able to handle empty factors (e.g. worker of a minibatch got 0 samples).
+    // Probably one should test further down and exit early, but we need to make sure that c is correct for beta != 0.
     if (lhs.IsEmpty() || rhs.IsEmpty())
         LogicError("GPUSparseMatrix::MultiplyAndWeightedAdd:  one of the input matrix is empty.");
 
@@ -994,7 +1015,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     assert(k == l);
     if (k != l)
     {
-        InvalidArgument("GPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
+        InvalidArgument("GPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a (= %d) and b (= %d) don't match.", k, l);
     }
 
     if (beta == 0)
@@ -1120,7 +1141,7 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUSparseMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, 
     ElemType scaleFactor, const GPUSparseMatrix<ElemType>& b, GPUSparseMatrix<ElemType>& c)
 {
-    c.VerifyWritable(__func__);
+    c.VerifyWritable(__FUNCTION__);
 
     if (a.GetComputeDeviceId() != c.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId())
         RuntimeError("GPUSparseMatrix<ElemType>::TensorShuffleScaleAndAdd: All matrices must be on the same GPU");
@@ -1165,7 +1186,7 @@ template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
                                                const GPUSparseMatrix<ElemType>& rhs, const bool transposeB, GPUSparseMatrix<ElemType>& c)
 {
-    c.VerifyWritable(__func__);
+    c.VerifyWritable(__FUNCTION__);
 
     if (lhs.GetComputeDeviceId() != rhs.GetComputeDeviceId())
         RuntimeError("GPUSparseMatrix::MultiplyAndAdd: All matrices must be on the same GPU");
@@ -1181,7 +1202,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
     assert(k == l);
     if (k != l)
     {
-        InvalidArgument("GPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a and b must match.");
+        InvalidArgument("GPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a (= %d) and b (= %d) don't match.", k, l);
     }
 
     if (!transposeA && !transposeB)
@@ -1244,7 +1265,7 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
         }
         else
         {
-            c.SetBlockSize( rhs.IdentifyRowsWithValues());
+            c.SetBlockSize(rhs.IdentifyRowsWithValues());
             size_t nnz = m * c.GetBlockSize();
             c.RequireSizeAndAllocate(m, n, nnz, true, false);
             CUDA_CALL(cudaMemset(c.Data(), 0, sizeof(ElemType) * (c.GetSizeAllocated())));
@@ -1260,11 +1281,10 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
                 rhs.Data(),
                 rhs.RowLocation(),
                 rhs.ColLocation(),
-                rhs.GetRowToIdMap(),
+                rhs.GetTempDeviceBuffer(),
                 c.Data(),
                 c.BlockId2ColOrRow());
         }
-
     }
     else if (transposeA && !transposeB)
     {
@@ -1283,13 +1303,17 @@ size_t GPUSparseMatrix<ElemType>::IdentifyRowsWithValues() const
     if (GetFormat() != matrixFormatSparseCSC)
         NOT_IMPLEMENTED;
 
-    let nz = NzCount();
+    let nnz = NzCount();
+    this->ReserveTempDeviceBuffer(nnz);
     map<size_t, GPUSPARSE_INDEX_TYPE> indexer;
-    GPUSPARSE_INDEX_TYPE* rowToId = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(sizeof(GPUSPARSE_INDEX_TYPE) * nz * 2);
-    GPUSPARSE_INDEX_TYPE* h_Row = rowToId + nz;
-    CUDA_CALL(cudaMemcpy(h_Row, RowLocation(), sizeof(GPUSPARSE_INDEX_TYPE) * nz, cudaMemcpyDeviceToHost));
+    GPUSPARSE_INDEX_TYPE* rowToId = (GPUSPARSE_INDEX_TYPE*) ReserveTempHostBuffer(sizeof(GPUSPARSE_INDEX_TYPE) * nnz * 2);
 
-    for (size_t i = 0; i < nz; i++)
+    // In the first nnz values of the 'rowToId' we will store the block ids of the nonzero-values (to be computed below).
+    // In the next nnz values of 'rowToId' we store the row-ids of the non-zero values (copied from GPU).
+    GPUSPARSE_INDEX_TYPE* h_Row = rowToId + nnz;
+    CUDA_CALL(cudaMemcpy(h_Row, RowLocation(), sizeof(GPUSPARSE_INDEX_TYPE) * nnz, cudaMemcpyDeviceToHost));
+
+    for (size_t i = 0; i < nnz; i++)
     {
         size_t row = h_Row[i];
         if (indexer.find(row) == indexer.end())
@@ -1299,7 +1323,7 @@ size_t GPUSparseMatrix<ElemType>::IdentifyRowsWithValues() const
         }
         rowToId[i] = indexer[row];
     }
-    CUDA_CALL(cudaMemcpy(GetRowToIdMap(), rowToId, sizeof(GPUSPARSE_INDEX_TYPE) * nz, cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(GetTempDeviceBuffer(), rowToId, sizeof(GPUSPARSE_INDEX_TYPE) * nnz, cudaMemcpyHostToDevice));
     return indexer.size();
 }
 
@@ -1340,7 +1364,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const GPUSpars
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate(const ElemType threshold)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
 
@@ -1354,7 +1378,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate(const Elem
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const ElemType threshold)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
 
@@ -1369,7 +1393,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (c.IsEmpty())
     {
@@ -1403,7 +1427,7 @@ void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemTyp
 template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool needAveMultiplier)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     size_t numColsNeeded = GetNumCols();
     if (needAveMultiplier)
@@ -1441,7 +1465,7 @@ ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool n
     if (!needAveMultiplier)
         return 1;
 
-	let nz = NzCount();
+    let nz = NzCount();
     cublasHandle_t cuHandle = GPUMatrix<ElemType>::GetCublasHandle(GetComputeDeviceId());
     if (sizeof(ElemType) == sizeof(float))
     {
@@ -1567,7 +1591,7 @@ size_t GPUSparseMatrix<ElemType>::ElemCountFromBufferSize() const
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseBuffer, std::function<size_t(GPUSPARSE_INDEX_TYPE* csrRowPtrC)> func)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (this->GetFormat() != matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
@@ -1614,7 +1638,7 @@ void GPUSparseMatrix<ElemType>::PrepareBuffer(size_t m, size_t n, bool canReuseB
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Multiply(const GPUSparseMatrix<ElemType>& S1, bool transposeS1, const GPUSparseMatrix<ElemType>& S2, bool transposeS2, GPUSparseMatrix<ElemType>& c)
 {
-    c.VerifyWritable(__func__);
+    c.VerifyWritable(__FUNCTION__);
 
     if (S1.GetFormat() != matrixFormatSparseCSR || S2.GetFormat() != matrixFormatSparseCSR || c.GetFormat() != matrixFormatSparseCSR)
         NOT_IMPLEMENTED;
@@ -1775,7 +1799,7 @@ void GPUSparseMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const GPUMatrix<Elem
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::Scale(ElemType alpha, GPUSparseMatrix<ElemType>& a)
 {
-    a.VerifyWritable(__func__);
+    a.VerifyWritable(__FUNCTION__);
 
     if (a.IsEmpty())
         return;
@@ -1789,7 +1813,7 @@ void GPUSparseMatrix<ElemType>::Scale(ElemType alpha, GPUSparseMatrix<ElemType>&
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::ElementWisePower(ElemType alpha, const GPUSparseMatrix<ElemType>& a, GPUSparseMatrix<ElemType>& c)
 {
-    c.VerifyWritable(__func__);
+    c.VerifyWritable(__FUNCTION__);
 
     if (a.GetComputeDeviceId() != c.GetComputeDeviceId())
     {
@@ -2154,7 +2178,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::Transpose() const
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTransposeOf(const GPUSparseMatrix<ElemType>& a)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (this == &a)
         LogicError("AssignTransposeOf: a is the same as [this]. Does not support inplace transpose.");
@@ -2188,7 +2212,7 @@ GPUSparseMatrix<ElemType> GPUSparseMatrix<ElemType>::ColumnSlice(size_t startCol
     slice.ShallowCopyFrom(*this);
     slice.SetNumCols(numCols);
     slice.m_sliceViewOffset          = m_sliceViewOffset + startColumn; // Just shift the compressed index location to the new startColumn - that's it!
-	// Note: m_nz is missing from here because it does not exist. We must compute it every time.
+    // Note: m_nz is missing from here because it does not exist. We must compute it every time.
 
     return slice;
 }
@@ -2525,7 +2549,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignAbsOf(const GPUSpars
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateBottom(const ElemType threshold)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (IsEmpty())
         LogicError("InplaceTruncateBottom: Matrix is empty.");
@@ -2539,7 +2563,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateBottom(cons
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateBottomOf(const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (a.IsEmpty())
         LogicError("AssignTruncateBottomOf: Matrix a is empty.");
@@ -2559,7 +2583,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateBottomOf(con
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateTop(const ElemType threshold)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (IsEmpty())
         LogicError("InplaceTruncateTop: Matrix is empty.");
@@ -2573,7 +2597,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateTop(const E
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf(const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (a.IsEmpty())
         LogicError("AssignTruncateTopOf: Matrix a is empty.");
@@ -2593,7 +2617,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf(const 
 template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::SetToZeroIfAbsLessThan(const ElemType threshold)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     if (IsEmpty())
         LogicError("SetToZeroIfAbsLessThan: Matrix is empty.");
@@ -2643,7 +2667,7 @@ void* GPUSparseMatrix<ElemType>::ReserveTempHostBuffer(const size_t sizeInByte) 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::performElementWiseFunction(ElementWiseOperator kind, const GPUSparseMatrix<ElemType>& src)
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
 
     CUDA_LONG N = (CUDA_LONG) GetNumNZElements();
     int blocksPerGrid = (int) ceil(1.0 * N / GridDim::maxThreadsPerBlock);
@@ -2728,7 +2752,7 @@ template void GPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const s
 template <class ElemType>
 MATH_API File& operator>>(File& stream, GPUSparseMatrix<ElemType>& us)
 {
-    us.VerifyWritable(__func__);
+    us.VerifyWritable(__FUNCTION__);
 
     stream.GetMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
     size_t elsize;
@@ -2801,8 +2825,8 @@ MATH_API File& operator<<(File& stream, const GPUSparseMatrix<ElemType>& us)
 
     stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
     stream << sizeof(ElemType);
-	std::wstring s(L"nnmatrix");
-	stream << s;
+    std::wstring s(L"nnmatrix");
+    stream << s;
 
     size_t nz = us.GetNumNZElements(), numElemAllocated = us.GetNumElemAllocated(), numRows = us.GetNumRows(), numCols = us.GetNumCols();
     size_t compressedSize = us.SecondaryIndexCount();

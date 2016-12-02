@@ -8,13 +8,194 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Drawing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+// Re-use the Resize method defined in the CSEvalClientTest.exe assembly. 
+// Strictly speaking, those extensions should live in an assembly of their own.
+using Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient;
+using System.Drawing.Imaging;
 
 namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
 {
     [TestClass]
     public class EvalManagedTests
     {
+        [TestMethod]
+        public void EvalManagedEvaluateNoInputTest()
+        {
+            string modelDefinition = @"precision = ""float""
+                traceLevel = 1
+                run=NDLNetworkBuilder 
+                NDLNetworkBuilder=[ 
+                v1 = Constant(1)
+                v2 = Constant(2) 
+                o1 = Plus(v1, v2, tag=""output"")
+                FeatureNodes = (v1)
+                ]";
+
+            using (var model = new IEvaluateModelManagedF())
+            {
+                model.CreateNetwork(modelDefinition);
+
+                var inDims = model.GetNodeDimensions(NodeGroup.Input);
+                Assert.AreEqual(inDims.Count(), 0);
+
+                var outDims = model.GetNodeDimensions(NodeGroup.Output);
+                Assert.AreEqual(outDims.Count(), 1);
+                Assert.AreEqual(outDims.First().Key, "o1");
+                Assert.AreEqual(outDims.First().Value, 1);
+
+                var outputVal = model.Evaluate(outDims.First().Key);
+
+                var expected = new List<float>() {3};
+                CollectionAssert.AreEqual(expected, outputVal);
+            }
+        }
+
+        [TestMethod]
+        public void EvalManagedEvaluateSingleOutputTest()
+        {
+            string modelDefinition = @"precision = ""float"" 
+                traceLevel = 1
+                run=NDLNetworkBuilder
+                NDLNetworkBuilder=[
+                i1 = Input(1)
+                o1 = Times(Constant(3), i1, tag=""output"") 
+                FeatureNodes = (i1)
+                ]";
+
+            using (var model = new IEvaluateModelManagedF())
+            {
+                model.CreateNetwork(modelDefinition);
+
+                var inDims = model.GetNodeDimensions(NodeGroup.Input);
+                Assert.AreEqual(inDims.Count(), 1);
+                Assert.AreEqual(inDims.First().Key, "i1");
+                Assert.AreEqual(inDims.First().Value, 1);
+
+                var inputs = new Dictionary<string, List<float>>()
+                    {
+                        {inDims.First().Key, new List<float>() {2}}
+                    };
+
+                var outDims = model.GetNodeDimensions(NodeGroup.Output);
+                Assert.AreEqual(outDims.Count(), 1);
+                Assert.AreEqual(outDims.First().Key, "o1");
+                Assert.AreEqual(outDims.First().Value, 1);
+
+                var outputs = new Dictionary<string, List<float>>()
+                    {
+                        {outDims.First().Key, new List<float>() {0}}
+                    };
+
+                model.Evaluate(inputs, outputs);
+
+                var expected = new List<float>() {6};
+                CollectionAssert.AreEqual(expected, outputs.First().Value);
+            }
+        }
+
+        [TestMethod]
+        public void EvalManagedEvaluateDualOutputsTest()
+        {
+            string modelDefinition = @"deviceId = -1 
+                precision = ""float""
+                traceLevel = 1
+                run=NDLNetworkBuilder
+                NDLNetworkBuilder=[
+                i1 = Input(1)
+                o1 = Times(Constant(3), i1, tag=""output"")
+                o2 = Times(Constant(5), i1, tag=""output"")
+                FeatureNodes = (i1)
+                ]";
+
+            using (var model = new IEvaluateModelManagedF())
+            {
+                model.CreateNetwork(modelDefinition);
+
+                var inDims = model.GetNodeDimensions(NodeGroup.Input);
+                Assert.AreEqual(inDims.Count(), 1);
+                Assert.AreEqual(inDims.First().Key, "i1");
+                Assert.AreEqual(inDims.First().Value, 1);
+
+                var inputs = new Dictionary<string, List<float>>()
+                    {
+                        {"i1", new List<float>() {2}}
+                    };
+
+                var outDims = model.GetNodeDimensions(NodeGroup.Output);
+                Assert.AreEqual(outDims.Count(), 2);
+                Assert.AreEqual(outDims["o1"], 1);
+                Assert.AreEqual(outDims["o2"], 1);
+
+                var outputs = new Dictionary<string, List<float>>()
+                    {
+                        {"o1", new List<float>() {0}},
+                        {"o2", new List<float>() {0}}
+                    };
+
+                model.Evaluate(inputs, outputs);
+
+                var expected1 = new List<float>() {6};
+                var expected2 = new List<float>() {10};
+                CollectionAssert.AreEqual(expected1, outputs["o1"]);
+                CollectionAssert.AreEqual(expected2, outputs["o2"]);
+            }
+        }
+
+        [TestMethod]
+        public void EvalManagedEvaluateHiddenLayerTest()
+        {
+            string modelDefinition = @"deviceId = -1 
+                precision = ""float""
+                traceLevel = 1
+                run=NDLNetworkBuilder
+                NDLNetworkBuilder=[
+                i1 = Input(1)
+                pool5 = Times(Constant(2), i1)
+                OutputNodes.z = Plus(pool5, Constant(7), tag=""output"")
+                FeatureNodes = (i1)
+                ]";
+
+            using (var model = new IEvaluateModelManagedF())
+            {
+                var desiredOutputLayers = new List<string>() { "pool5", "OutputNodes.z" };
+
+                model.CreateNetwork(modelDefinition, deviceId: -1, outputNodeNames: desiredOutputLayers);
+
+                var inDims = model.GetNodeDimensions(NodeGroup.Input);
+                Assert.AreEqual(inDims.Count(), 1);
+                Assert.AreEqual(inDims["i1"], 1);
+
+                var inputs = new Dictionary<string, List<float>>()
+                    {
+                        { "i1", new List<float>() {5} }
+                    };
+
+                // We request the output layer names(s) and dimension, we'll use the first one.
+                var outDims = model.GetNodeDimensions(NodeGroup.Output);
+                Assert.AreEqual(outDims.Count(), 2);
+                Assert.AreEqual(outDims["pool5"], 1);
+                Assert.AreEqual(outDims["OutputNodes.z"], 1);
+
+                var outputs = new Dictionary<string, List<float>>()
+                    {
+                        // The order of node name below is different than that returned by outDims,
+                        // in order to test whether the output values are correctly mapped to the name.
+                        { "pool5", new List<float>() {0} },
+                        { "OutputNodes.z", new List<float>() {0} }
+                    };
+
+                // We can call the evaluate method and get back the results (single layer)...
+                model.Evaluate(inputs, outputs);
+
+                var expected1 = new List<float>() {10};
+                var expected2 = new List<float>() {17};
+                CollectionAssert.AreEqual(expected1, outputs["pool5"]);
+                CollectionAssert.AreEqual(expected2, outputs["OutputNodes.z"]);
+            }
+        }
+
         [TestMethod]
         public void EvalManagedValuesBufferTest()
         {
@@ -229,5 +410,86 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             var instance = (CNTKException)domain.CreateInstanceFromAndUnwrap(path, t.FullName);
             Assert.AreNotEqual(null, instance);
         }
+
+        private void AssertArgumentException(IEvaluateModelManagedF model, 
+            Bitmap image, 
+            string outputKey, 
+            string expectedParameterName, 
+            string expectedMessageText,
+            string errorMessage)
+        {
+            bool exception = false;
+            try
+            {
+                model.EvaluateRgbImage(image, outputKey);
+            }
+            catch (ArgumentException ex)
+            {
+                if (ex.ParamName == expectedParameterName && ex.Message.Contains(expectedMessageText))
+                {
+                    exception = true;
+                }
+            }
+            catch { }
+            if (!exception)
+            {
+                throw new Exception(errorMessage);
+            }
+        }
+
+        [TestMethod]
+        public void EvalManagedImageApiErrorHandling()
+        {
+            // The width and height of the image that will be fed into the network.
+            var expectedSize = 10;
+            // Images with correct size and pixel format.
+            var correctBmp1 = new Bitmap(expectedSize, expectedSize, PixelFormat.Format24bppRgb);
+            var correctBmp2 = new Bitmap(expectedSize, expectedSize, PixelFormat.Format32bppRgb);
+            // Image with correct size, but wrong pixel format
+            var wrongPixelFormat = new Bitmap(expectedSize, expectedSize, PixelFormat.Format16bppRgb565);
+            // Image with wrong size, correct pixel format
+            var wrongSize = new Bitmap(expectedSize * 2, expectedSize, PixelFormat.Format24bppRgb);
+
+            var inputVectorSize = expectedSize * expectedSize * 3;
+            var modelDefinition = String.Format(@"deviceId = -1 
+                precision = ""float""
+                traceLevel = 1
+                run=NDLNetworkBuilder
+                NDLNetworkBuilder=[
+                i1 = Input({0}) # Network must have size expectedSize * expectedSize * 3, for 3 channels
+                o1 = Times(Constant(1, rows=2, cols={0}), i1, tag=""output"")
+                FeatureNodes = (i1)
+                ]", inputVectorSize);
+            using (var model = new IEvaluateModelManagedF())
+            {
+                model.CreateNetwork(modelDefinition);
+
+                var output = model.EvaluateRgbImage(correctBmp1, "o1");
+                // Network computes 2 simple dot products. 
+                Assert.AreEqual(2, output.Count, "Size of output vector");
+                // Input image is all zero, output should be too.
+                Assert.AreEqual(0.0f, output[0], "OutputVector[0]");
+                Assert.AreEqual(0.0f, output[1], "OutputVector[1]");
+                AssertArgumentException(model, 
+                    correctBmp1, 
+                    "No such output key", 
+                    "outputKey",
+                    "not an output node", 
+                    "Providing a non-existing output node should fail with an ArgumentException.");
+                AssertArgumentException(model,
+                    wrongPixelFormat,
+                    "o1",
+                    "image",
+                    "must be one of { Format24bppRgb, Format32bppArgb}",
+                    "Images with an unrecognized pixel format should fail with an ArgumentException.");
+                AssertArgumentException(model,
+                    wrongSize,
+                    "o1",
+                    "image",
+                    "invalid size",
+                    "Calling with a wrongly sized image should fail with an ArgumentException.");
+            }
+        }
+
     }
 }

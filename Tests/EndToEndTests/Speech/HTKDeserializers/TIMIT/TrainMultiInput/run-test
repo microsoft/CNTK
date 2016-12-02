@@ -14,4 +14,4 @@ if [ $? != 0 ]; then
   exit 1
 fi
 
-cntkrun TIMIT_TrainMultiInput.cntk "TIMIT_TrainMultiInput=[reader=[readerType=HTKDeserializers]] $CntkArguments" || exit $?
+cntkrun TIMIT_TrainMultiInput_ndl_deprecated.cntk "TIMIT_TrainMultiInput=[reader=[readerType=HTKDeserializers]] $CntkArguments" || exit $?

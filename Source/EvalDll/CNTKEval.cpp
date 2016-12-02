@@ -28,11 +28,7 @@
 #include "HeapMemoryProvider.h"
 #include "InputAndParamNodes.h"
 #include "latticearchive.h"
-
-// TODO: Temporary mechanism to enable memory sharing for
-// node output value matrices. This will go away when the
-// sharing is ready to be enabled by default
-bool g_shareNodeValueMatrices = false;
+#include <limits>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -43,7 +39,10 @@ void CNTKEvalBase<ElemType>::Init(const std::string& config)
     m_config.Parse(config);
     size_t nThreads = m_config("numCPUThreads", "1");
     CPUMatrix<ElemType>::SetNumThreads(nThreads);
-    g_shareNodeValueMatrices = m_config(L"shareNodeValueMatrices", false);
+    if (m_config(L"shareNodeValueMatrices", false))
+        Globals::EnableShareNodeValueMatrices();
+    if (m_config(L"hyperCompressMemory", false))
+        Globals::EnableHyperCompressMemory();
 }
 
 
@@ -309,7 +308,7 @@ VariableSchema CNTKEvalExtended<ElemType>::GetInputSchema() const
 
 template<typename ElemType>
 template<template<typename> class ValueContainer>
-void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<ElemType, ValueContainer> >& inputs, std::vector<ValueBuffer<ElemType, ValueContainer> >& outputs)
+void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<ElemType, ValueContainer> >& inputs, std::vector<ValueBuffer<ElemType, ValueContainer> >& outputs, bool resetRNN)
 {
     if (!m_started)
         RuntimeError("ForwardPass() called before StartForwardEvaluation()");
@@ -359,7 +358,9 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
         int numCols = type == MatrixType::DENSE ? buffer.m_buffer.size() / numRows : buffer.m_colIndices.size() - 1;
         assert(numCols >= 1);
         inputNode->GetMBLayout()->Init(1, numCols);
-        inputNode->GetMBLayout()->AddSequence(0, 0, 0, numCols);
+        
+        // INT_MIN is used to specify the lower bound of look-back step of recurrent nodes
+        inputNode->GetMBLayout()->AddSequence(0, 0, resetRNN ? 0 : INT_MIN, numCols);
 
         if (type == MatrixType::DENSE)
             matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), buffer.m_buffer.data(), matrixFlagNormal);
@@ -376,9 +377,9 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
 
     ComputationNetwork::BumpEvalTimeStamp(m_inputNodes);
 
-    for (size_t i = 0; i < m_outputNodes.size(); ++i)
+    for (size_t i2 = 0; i2 < m_outputNodes.size(); ++i2)
     {
-        auto node = m_outputNodes[i];
+        auto node = m_outputNodes[i2];
         this->m_net->ForwardProp(node);
         shared_ptr<Matrix<ElemType>> outputMatrix = dynamic_pointer_cast<Matrix<ElemType>>(node->ValuePtr());
         auto pMBLayout = node->GetMBLayout();
@@ -392,7 +393,7 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
         if (seq.size() != 1)
             RuntimeError("Only 1 output sequence supported by this API");
 
-        ValueContainer<ElemType>& vec = outputs[i].m_buffer;
+        ValueContainer<ElemType>& vec = outputs[i2].m_buffer;
 
         size_t numElements = outputMatrix->GetNumElements();
 
@@ -411,18 +412,32 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
 template<typename ElemType>
 void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& outputs)
 {
-    ForwardPassT(inputs, outputs);
+    ForwardPassT(inputs, outputs, true);
+}
+
+template<typename ElemType>
+void CNTKEvalExtended<ElemType>::ForwardPass(const Values<ElemType>& inputs, Values<ElemType>& outputs, bool resetRNN)
+{
+    ForwardPassT(inputs, outputs, resetRNN);
 }
 
 template<typename ElemType>
 void CNTKEvalExtended<ElemType>::ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& outputs)
 {
-    ForwardPassT(inputs, outputs);
+    ForwardPassT(inputs, outputs, true);
+}
+
+template<typename ElemType>
+void CNTKEvalExtended<ElemType>::ForwardPass(const ValueRefs<ElemType>& inputs, ValueRefs<ElemType>& outputs, bool resetRNN)
+{
+    ForwardPassT(inputs, outputs, resetRNN);
 }
 
 template <typename ElemType>
 void CNTKEvalExtended<ElemType>::Destroy()
 {
+    // Since m_scopeNetworkOperationMode has a reference to m_net, it has to be released first.
+    m_scopedNetworkOperationMode.reset();
     CNTKEvalBase<ElemType>::Destroy();
     delete this;
 }

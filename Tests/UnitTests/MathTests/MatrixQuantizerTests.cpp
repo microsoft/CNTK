@@ -161,7 +161,8 @@ static void ReferenceCPUQuantizer(
         {
             // >1 bit:
             // We linearly quantize between 'stddevs' standard deviations.
-            ElemType stddevs = 5.0f;
+            mean = 0; // mean is assumed 0
+            ElemType stddevs = 4.0f;
             ElemType varacc = 0.0f;
             for (int i = 0; i < numRows; i++)
             {
@@ -186,8 +187,11 @@ static void ReferenceCPUQuantizer(
         }
         else
         {
-            qFactor = rangeSize / (quantiMax - quantiMin);
-            uFactor = (quantiMax - quantiMin) / rangeSize;
+            QWordVal usedRangeSize = rangeSize;
+            if (numBits > 1)
+                usedRangeSize--;
+            qFactor = usedRangeSize / (quantiMax - quantiMin);
+            uFactor = (quantiMax - quantiMin) / usedRangeSize;
         }
 
         for (int i = 0; i < numRows; i++)

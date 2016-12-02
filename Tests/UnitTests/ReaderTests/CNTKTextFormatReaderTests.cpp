@@ -19,6 +19,8 @@
 
 using namespace Microsoft::MSR::CNTK;
 
+#pragma warning(disable: 4459) // declaration of 'boost_scope_exit_aux_args' hides global declaration
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // A thin wrapper around CNTK text format reader
@@ -32,7 +34,7 @@ public:
 
     CNTKTextFormatReaderTestRunner(const string& filename,
         const vector<StreamDescriptor>& streams, unsigned int maxErrors) :
-        m_parser(std::make_shared<CorpusDescriptor>(), wstring(filename.begin(), filename.end()), streams)
+        m_parser(std::make_shared<CorpusDescriptor>(true), wstring(filename.begin(), filename.end()), streams, true)
     {
         m_parser.SetMaxAllowedErrors(maxErrors);
         m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Info);
@@ -97,6 +99,23 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_Simple_dense)
         10,   // num epochs 
         1,
         1,
+        0,
+        1);
+};
+
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_Simple_dense_single_stream)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/Simple_dense_single_stream.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/Simple_dense_single_stream_Output.txt",
+        "Simple_single_stream",
+        "reader",
+        1000, // epoch size
+        250,  // mb size
+        10,   // num epochs 
+        1,
+        0,
         0,
         1);
 };
@@ -557,7 +576,7 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_duplicate_inputs)
         1,  // epoch size
         1,  // mb size  
         1,  // num epochs
-        1,
+        2,
         0,
         0,
         1),
@@ -805,6 +824,23 @@ BOOST_AUTO_TEST_CASE(CompositeCNTKTextFormatReader_5x5_and_5x10_jagged_minibatch
         false,
         false,
         false);
+};
+
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReaderNoFirstMinibatchData)
+{
+    HelperRunReaderTest<double>(
+        testDataPath() + "/Config/CNTKTextFormatReader/dense.cntk",
+        testDataPath() + "/Control/CNTKTextFormatReader/NonExistent.txt",
+        testDataPath() + "/Control/CNTKTextFormatReader/CNTKTextFormatReaderNoFirstMinibatchData_Output.txt",
+        "1x2",
+        "reader",
+        10, // epoch size
+        1,  // mb size
+        10,  // num epochs
+        1,
+        0,
+        1,
+        2);
 };
 
 BOOST_AUTO_TEST_SUITE_END()

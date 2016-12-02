@@ -259,7 +259,7 @@ CE=CrossEntropyWithSoftmax(labels, Plus2)
 
 \begin_layout Plain Layout
 
-ErrPredict=ErrorPrediction(labels, Plus2)
+ErrPredict=ClassificationError(labels, Plus2)
 \end_layout
 
 \begin_layout Plain Layout
@@ -616,7 +616,7 @@ CE=CrossEntropyWithSoftmax(labels, Plus2)
 
 \begin_layout Plain Layout
 
-ErrPredict=ErrorPrediction(labels, Plus2)
+ErrPredict=ClassificationError(labels, Plus2)
 \end_layout
 
 \end_inset
@@ -633,19 +633,19 @@ CrossEntropyWithSoftmax
 
 \end_inset
 
-() to compute the training criterion and the operator ErrorPrediction
+() to compute the training criterion and the operator ClassificationError
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-ErrorPrediction
+ClassificationError
 \end_layout
 
 \end_inset
 
 () to compute the testing criterion.
  These operators are internally represented as computation nodes CrossEntropyWit
-hSoftmaxNode and ErrorPredictionNode with names CE and ErrPredict, respectively.
+hSoftmaxNode and ClassificationErrorNode with names CE and ErrPredict, respectively.
 \end_layout
 
 \begin_layout Subsubsection
@@ -740,7 +740,7 @@ status open
 
 \begin_layout Plain Layout
 
-ErrPredict=ErrorPrediction(labels, Plus2) # classification error
+ErrPredict=ClassificationError(labels, Plus2) # classification error
 \end_layout
 
 \begin_layout Plain Layout
@@ -1025,7 +1025,7 @@ reference "sub:NDL-Basic-Concepts"
  but is much simpler and easier to understand because of the use of macros.
  One new feature shown in this network definition is the access to macro-region
  variables.
- ErrorPrediction() needs to access an intermediate result from SMBFF before
+ ClassificationError() needs to access an intermediate result from SMBFF before
  the CrossEntropyWithSoftmax() is applied.
  Although the needed variable is local to the macro, it can be accessed
  via the 
@@ -1107,7 +1107,7 @@ CE = SMBFF(L1, LDim, HDim, labels)
 
 \begin_layout Plain Layout
 
-Err=ErrorPrediction(labels, CE.F)
+Err=ClassificationError(labels, CE.F)
 \end_layout
 
 \end_inset
@@ -1280,7 +1280,7 @@ CE = SMBFF(L3, LDim, HDim, labels, tag="criterion")
 
 \begin_layout Plain Layout
 
-Err=ErrorPrediction(labels, CE.F, tag="evaluation")
+Err=ClassificationError(labels, CE.F, tag="evaluation")
 \end_layout
 
 \end_inset
@@ -2900,12 +2900,12 @@ classProbBeforeSoftmax - applying softmax on this matrix will result in
 \end_layout
 
 \begin_layout Subsubsection
-ErrorPrediction
+ClassificationError
 \begin_inset Index idx
 status open
 
 \begin_layout Plain Layout
-ErrorPrediction
+ClassificationError
 \end_layout
 
 \end_inset
@@ -2941,7 +2941,7 @@ status open
 
 \begin_layout Plain Layout
 
-ErrorPrediction(labels, m)
+ClassificationError(labels, m)
 \end_layout
 
 \begin_layout Plain Layout
@@ -4059,7 +4059,7 @@ CE = SMBFF(L3, LDim, HDim, labels, tag="criterion")
 
 \begin_layout Plain Layout
 
-Err=ErrorPrediction(labels, CE.F, tag="evaluation")
+Err=ClassificationError(labels, CE.F, tag="evaluation")
 \end_layout
 
 \begin_layout Plain Layout

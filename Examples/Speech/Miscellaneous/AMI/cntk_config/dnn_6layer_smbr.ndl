@@ -128,7 +128,7 @@ ndlCreateNetwork=[
     # same name as the corresponding node in the non-sequence training model.
     CE.BFF = BFF(L6, labelDim, hiddenDim)
     Cr = DummyCriterion(objectives, derivatives, CE.BFF.FF.P, tag=Criteria)
-    Err = ErrorPrediction(labels, CE.BFF.FF.P, tag=Eval)
+    Err = ClassificationError(labels, CE.BFF.FF.P, tag=Eval)
 
     # define output (scaled loglikelihood)
     logPrior = LogPrior(labels)

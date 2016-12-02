@@ -40,6 +40,10 @@ public:
     // Gets sequence description by key.
     bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
 
+    // A helper class for generation of type specific labels (currently float/double only).
+    class LabelGenerator;
+    typedef std::shared_ptr<LabelGenerator> LabelGeneratorPtr;
+
 private:
     // Creates a set of sequence descriptions.
     void CreateSequenceDescriptions(CorpusDescriptorPtr corpus, std::string mapPath, size_t labelDimension, bool isMultiCrop);
@@ -53,9 +57,6 @@ private:
 
     class ImageChunk;
 
-    // A helper class for generation of type specific labels (currently float/double only).
-    class LabelGenerator;
-    typedef std::shared_ptr<LabelGenerator> LabelGeneratorPtr;
     LabelGeneratorPtr m_labelGenerator;
 
     // Sequence descriptions for all input data.
@@ -64,22 +65,24 @@ private:
     // Mapping of logical sequence key into sequence description.
     std::map<size_t, size_t> m_keyToSequence;
 
-    // Element type of the feature/label stream (currently float/double only).
-    ElementType m_featureElementType;
+    // Precision required by the network.
+    ElementType m_precision;
 
     // whether images shall be loaded in grayscale 
     bool m_grayscale;
 
     // Not using nocase_compare here as it's not correct on Linux.
     using PathReaderMap = std::unordered_map<std::string, std::shared_ptr<ByteReader>>;
-    void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders);
+    using ReaderSequenceMap = std::map<std::string, std::map<std::string, size_t>>;
+    void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences, const std::string& expandDirectory);
     cv::Mat ReadImage(size_t seqId, const std::string& path, bool grayscale);
 
     // REVIEW alexeyk: can potentially use vector instead of map. Need to handle default reader and resizing though.
     using SeqReaderMap = std::unordered_map<size_t, std::shared_ptr<ByteReader>>;
     SeqReaderMap m_readers;
 
-    FileByteReader m_defaultReader;
+    std::unique_ptr<FileByteReader> m_defaultReader;
+    int m_verbosity;
 };
 
 }}}

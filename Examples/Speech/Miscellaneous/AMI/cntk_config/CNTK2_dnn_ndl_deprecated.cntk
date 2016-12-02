@@ -1,0 +1,93 @@
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
+#       Please find updated samples on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+NdlDir=$ExpDir$/configs
+command=$command$
+numCPUThreads=$numThreads$
+precision=float
+
+TrainModel=[
+    action=train
+    modelPath=$ExpDir$/$modelName$
+
+    # deviceId=-1 for CPU, >=0 for GPU devices
+    deviceId=$DeviceNumber$
+    traceLevel=1
+    NDLNetworkBuilder=[
+        ndlMacros=$NdlDir$/default_macros.ndl
+        networkDescription=$NdlDir$/model.ndl
+    ]
+
+
+    SGD=[
+        epochSize=0
+        minibatchSize=$minibatchSize$
+        learningRatesPerMB=$lratePerMB$
+        momentumPerMB=$momentum$
+        dropoutRate=0.0
+        maxEpochs=$maxEpochs$
+        numMBsToShowResult=$evaluatePeriod$
+
+
+        #settings for Auto Adjust Learning Rate
+        AutoAdjust=[
+            reduceLearnRateIfImproveLessThan=0
+            loadBestModel=true
+            increaseLearnRateIfImproveMoreThan=1000000000
+            learnRateDecreaseFactor=0.5
+            autoAdjustLR=AdjustAfterEpoch
+            learnRateAdjustInterval=1
+        ]
+
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=$clippingThresholdPerSample$
+
+    ]
+
+    # Parameter values for the reader
+    reader=[
+        # reader to use
+        readerType=Kaldi2Reader
+        readMethod=blockRandomize
+        frameMode=true
+        Truncated=false
+        nbruttsineachrecurrentiter=1
+        miniBatchMode=Partial
+        randomize=1000000
+        verbosity=0
+        features=[
+            dim=$featDim$
+            scpFile=$inputCounts$
+            rx=$inputFeats$
+            featureTransform=$featureTransform$
+        ]
+
+        labels=[
+            mlfFile=$inputLabels$
+            labelDim=$labelDim$
+            labelMappingFile=$labelMapping$
+        ]
+    ]
+    cvReader=[
+        # reader to use
+        readerType=Kaldi2Reader
+        readMethod=blockRandomize
+        frameMode=true
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=0
+        features=[
+            dim=$featDim$
+            scpFile=$cvInputCounts$
+            rx=$cvInputFeats$
+            featureTransform=$featureTransform$
+        ]
+
+        labels=[
+            mlfFile=$cvInputLabels$
+            labelDim=$labelDim$
+            labelMappingFile=$labelMapping$
+        ]
+    ]
+]

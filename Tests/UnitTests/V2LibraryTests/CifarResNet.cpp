@@ -1,3 +1,7 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
@@ -45,7 +49,6 @@ MinibatchSourcePtr CreateCifarMinibatchSource(size_t epochSize)
 
     Dictionary deserializerConfiguration;
     deserializerConfiguration[L"type"] = L"ImageDeserializer";
-    deserializerConfiguration[L"module"] = L"ImageReader";
     deserializerConfiguration[L"file"] = mapFilePath;
     deserializerConfiguration[L"input"] = inputStreamsConfig;
 
@@ -61,12 +64,12 @@ Constant GetProjectionMap(size_t outputDim, size_t inputDim, const DeviceDescrip
     if (inputDim > outputDim)
         throw std::runtime_error("Can only project from lower to higher dimensionality");
 
-    std::vector<float> projectionMapValues(inputDim * outputDim);
+    std::vector<float> projectionMapValues(inputDim * outputDim, 0);
     for (size_t i = 0; i < inputDim; ++i)
-        projectionMapValues[(i * outputDim) + i] = 1.0f;
+        projectionMapValues[(i * inputDim) + i] = 1.0f;
 
-    auto projectionMap = MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ outputDim, 1, 1, inputDim }), device);
-    projectionMap->CopyFrom(NDArrayView(NDShape({ outputDim, 1, 1, inputDim }), projectionMapValues));
+    auto projectionMap = MakeSharedObject<NDArrayView>(DataType::Float, NDShape({ 1, 1, inputDim, outputDim }), device);
+    projectionMap->CopyFrom(NDArrayView(NDShape({ 1, 1, inputDim, outputDim }), projectionMapValues));
 
     return Constant(projectionMap);
 }
@@ -87,34 +90,33 @@ FunctionPtr ResNetClassifier(Variable input, size_t numOutputClasses, const Devi
 
     double conv1WScale = 0.26;
     size_t cMap1 = 16;
-    auto conv1 = ConvBNReLULayer(input, cMap1, kernelWidth, kernelHeight, 1, 1, conv1WScale, convBValue, scValue, bnTimeConst, device);
+    auto conv1 = ConvBNReLULayer(input, cMap1, kernelWidth, kernelHeight, 1, 1, conv1WScale, convBValue, scValue, bnTimeConst, true /*spatial*/, device);
 
-    auto rn1_1 = ResNetNode2(conv1, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
-    auto rn1_2 = ResNetNode2(rn1_1, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
-    auto rn1_3 = ResNetNode2(rn1_2, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
+    auto rn1_1 = ResNetNode2(conv1, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, false /*spatial*/, device);
+    auto rn1_2 = ResNetNode2(rn1_1, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, true /*spatial*/, device);
+    auto rn1_3 = ResNetNode2(rn1_2, cMap1, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, false /*spatial*/, device);
 
     size_t cMap2 = 32;
     auto rn2_1_wProj = GetProjectionMap(cMap2, cMap1, device);
-    auto rn2_1 = ResNetNode2Inc(rn1_3, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, rn2_1_wProj, device);
-    auto rn2_2 = ResNetNode2(rn2_1, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
-    auto rn2_3 = ResNetNode2(rn2_2, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
+    auto rn2_1 = ResNetNode2Inc(rn1_3, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, true /*spatial*/, rn2_1_wProj, device);
+    auto rn2_2 = ResNetNode2(rn2_1, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, false /*spatial*/, device);
+    auto rn2_3 = ResNetNode2(rn2_2, cMap2, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, true /*spatial*/, device);
 
     size_t cMap3 = 64;
     auto rn3_1_wProj = GetProjectionMap(cMap3, cMap2, device);
-    auto rn3_1 = ResNetNode2Inc(rn2_3, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, rn3_1_wProj, device);
-    auto rn3_2 = ResNetNode2(rn3_1, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
-    auto rn3_3 = ResNetNode2(rn3_2, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, device);
+    auto rn3_1 = ResNetNode2Inc(rn2_3, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, true /*spatial*/, rn3_1_wProj, device);
+    auto rn3_2 = ResNetNode2(rn3_1, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, false /*spatial*/, device);
+    auto rn3_3 = ResNetNode2(rn3_2, cMap3, kernelWidth, kernelHeight, convWScale, convBValue, scValue, bnTimeConst, false /*spatial*/, device);
 
     // Global average pooling
     size_t poolW = 8;
     size_t poolH = 8;
     size_t poolhStride = 1;
     size_t poolvStride = 1;
-    //size_t numInputChannels = rn3_3->Output().Shape()[rn3_3->Output().Shape().NumAxes() - 1];
     auto pool = Pooling(rn3_3, PoolingType::Average, { poolW, poolH, 1 }, { poolhStride, poolvStride, 1 });
 
     // Output DNN layer
-    auto outTimesParams = Parameter(NDArrayView::RandomNormal<float>({ numOutputClasses, 1, 1, cMap3 }, 0.0, fc1WScale, 1, device));
+    auto outTimesParams = Parameter({ numOutputClasses, 1, 1, cMap3 }, DataType::Float, GlorotUniformInitializer(1, 0, fc1WScale), device);
     auto outBiasParams = Parameter({ numOutputClasses }, (float)fc1BValue, device);
 
     return Plus(Times(outTimesParams, pool), outBiasParams, outputName);
@@ -123,53 +125,58 @@ FunctionPtr ResNetClassifier(Variable input, size_t numOutputClasses, const Devi
 void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndReLoad)
 {
     auto minibatchSource = CreateCifarMinibatchSource(SIZE_MAX);
-    auto streamInfos = minibatchSource->StreamInfos();
-    auto imageStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) { return (streamInfo.m_name == L"features"); });
-    auto labelStreamInfo = std::find_if(streamInfos.begin(), streamInfos.end(), [](const StreamInfo& streamInfo) { return (streamInfo.m_name == L"labels"); });
+    auto imageStreamInfo = minibatchSource->StreamInfo(L"features");
+    auto labelStreamInfo = minibatchSource->StreamInfo(L"labels");
 
-    auto inputImageShape = imageStreamInfo->m_sampleLayout;
-    // Change the input shape from CHW to HWC form
-    inputImageShape = { inputImageShape[1], inputImageShape[2], inputImageShape[0] };
+    auto inputImageShape = imageStreamInfo.m_sampleLayout;
+    const size_t numOutputClasses = labelStreamInfo.m_sampleLayout[0];
 
-    const size_t numOutputClasses = labelStreamInfo->m_sampleLayout[0];
+    auto imageInputName = L"Images";
+    auto imageInput = InputVariable(inputImageShape, imageStreamInfo.m_elementType, imageInputName);
+    auto classifierOutput = ResNetClassifier(imageInput, numOutputClasses, device, L"classifierOutput");
 
-    Variable imageInput(inputImageShape, imageStreamInfo->m_elementType, L"Images");
-    auto classifierOutputFunction = ResNetClassifier(imageInput, numOutputClasses, device, L"classifierOutput");
-    Variable classifierOutput = classifierOutputFunction;
-
-    auto labelsVar = Variable({ numOutputClasses }, labelStreamInfo->m_elementType, L"Labels");
-
-    auto trainingLossFunction = CrossEntropyWithSoftmax(classifierOutputFunction, labelsVar, L"lossFunction");
-    Variable trainingLoss = trainingLossFunction;
-    auto predictionFunction = ClassificationError(classifierOutputFunction, labelsVar, L"predictionError");
-    Variable prediction = predictionFunction;
-
-    auto imageClassifier = Combine({ trainingLossFunction, predictionFunction, classifierOutputFunction }, L"ImageClassifier");
+    auto labelsInputName = L"Labels";
+    auto labelsVar = InputVariable({ numOutputClasses }, labelStreamInfo.m_elementType, labelsInputName);
+    auto trainingLoss = CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"lossFunction");
+    auto prediction = ClassificationError(classifierOutput, labelsVar, 5, L"predictionError");
 
     if (testSaveAndReLoad)
-        SaveAndReloadModel<float>(imageClassifier, { &imageInput, &labelsVar, &trainingLoss, &prediction, &classifierOutput }, device);
+    {
+        Variable classifierOutputVar = classifierOutput;
+        Variable trainingLossVar = trainingLoss;
+        Variable predictionVar = prediction;
+        auto imageClassifier = Combine({ trainingLoss, prediction, classifierOutput }, L"ImageClassifier");
+        SaveAndReloadModel<float>(imageClassifier, { &imageInput, &labelsVar, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
 
-    double learningRatePerSample = 0.0078125;
+        // Make sure that the names of the input variables were properly restored
+        if ((imageInput.Name() != imageInputName) || (labelsVar.Name() != labelsInputName))
+            throw std::runtime_error("One or more input variable names were not properly restored after save and load");
 
-    Trainer trainer(imageClassifier, trainingLoss, { SGDLearner(imageClassifier->Parameters(), learningRatePerSample) });
+        trainingLoss = trainingLossVar;
+        prediction = predictionVar;
+        classifierOutput = classifierOutputVar;
+    }
+
+    LearningRatePerSampleSchedule learningRatePerSample = 0.0078125;
+    Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
+
     const size_t minibatchSize = 32;
-    size_t numMinibatchesToTrain = 100;
-    std::unordered_map<StreamInfo, std::pair<size_t, size_t>> minibatchSizeLimits = { { *imageStreamInfo, std::make_pair((size_t)0, minibatchSize) }, { *labelStreamInfo, std::make_pair((size_t)0, minibatchSize) } };
+    size_t numMinibatchesToTrain = 2000;
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
-        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSizeLimits, device);
-        trainer.TrainMinibatch({ { imageInput, minibatchData[*imageStreamInfo].m_data }, { labelsVar, minibatchData[*labelStreamInfo].m_data } }, device);
-
-        if ((i % outputFrequencyInMinibatches) == 0)
-        {
-            float trainLossValue = PrevMinibatchTrainingLossValue(trainer);
-            printf("Minibatch %d: CrossEntropy loss = %.8g\n", (int)i, trainLossValue);
-        }
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+        trainer.TrainMinibatch({ { imageInput, minibatchData[imageStreamInfo].m_data }, { labelsVar, minibatchData[labelStreamInfo].m_data } }, device);
+        PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
 }
 
-void TestCifarResnet()
+void TrainCifarResnet()
 {
-    TrainResNetCifarClassifer(DeviceDescriptor::GPUDevice(0), true /*testSaveAndReLoad*/);
+    fprintf(stderr, "\nTrainCifarResnet..\n");
+
+    if (IsGPUAvailable())
+        TrainResNetCifarClassifer(DeviceDescriptor::GPUDevice(0), true /*testSaveAndReLoad*/);
+    else
+        fprintf(stderr, "Cannot run TrainCifarResnet test on a CPU device.\n");
 }

@@ -5,6 +5,10 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
@@ -58,6 +62,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Math\NcclComm.cpp" />
     <ClCompile Include="Config.cpp" />
     <ClCompile Include="DataReader.cpp" />
     <ClCompile Include="DataWriter.cpp" />
@@ -65,7 +70,9 @@
     <ClCompile Include="ExceptionWithCallStack.cpp" />
     <ClCompile Include="File.cpp" />
     <ClCompile Include="fileutil.cpp" />
+    <ClCompile Include="Globals.cpp" />
     <ClCompile Include="MPIWrapper.cpp" />
+    <ClCompile Include="Sequences.cpp" />
     <ClCompile Include="TimerUtility.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

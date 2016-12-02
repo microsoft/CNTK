@@ -1,0 +1,76 @@
+# Note: This sample uses the deprecated NdlNetworkBuilder.
+#       An updated version using BrainScript is coming soon.
+#       Please find updated samples on Github, https://github.com/Microsoft/CNTK/tree/master/Examples /...
+#
+# If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
+initOnCPUOnly=true
+
+command=TIMIT_TrainMultiTask
+
+precision=float
+
+TIMIT_TrainMultiTask=[
+    action=train
+    modelPath=$ExpDir$/TrainMultiTask/model/cntkSpeech.dnn
+    #=-1 for CPU, >=0 for GPU devices 
+    deviceId=$DeviceNumber$
+
+    traceLevel=1
+
+    NDLNetworkBuilder=[
+        ndlMacros=$NdlDir$/default_macros.ndl
+        networkDescription=$NdlDir$/mtl_senones_dr.ndl
+    ]
+
+    SGD=[
+        epochSize=0
+        minibatchSize=256:1024
+        learningRatesPerMB=0.8:3.2*14:0.08
+        momentumPerMB=0.9
+        dropoutRate=0.0
+        maxEpochs=25
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+
+        #settings for Auto Adjust Learning Rate
+        #AutoAdjust=[
+        #    # auto learning rate adjustment
+        #    #autoAdjustLR=SearchBeforeEpoch
+        #    reduceLearnRateIfImproveLessThan=0
+        #    loadBestModel=true
+        #    increaseLearnRateIfImproveMoreThan=1000000000
+        #    learnRateDecreaseFactor=0.618
+        #    learnRateIncreaseFactor=1.382
+        #    numMiniBatch4LRSearch=500
+        #    numPrevLearnRates=5
+        #    numBestSearchEpoch=1
+        #]
+
+        gradientClippingWithTruncation=true
+        clippingThresholdPerSample=1#INF
+    ]
+
+    # Parameter values for the reader
+    reader=[
+        readerType=HTKMLFReader
+        readMethod=blockRandomize
+        miniBatchMode=Partial
+        randomize=Auto
+        verbosity=0
+        features=[
+            dim=792
+            scpFile=$ScpDir$/TIMIT.train.scp.fbank.fullpath.rnn
+        ]
+        labels=[
+            mlfFile=$MlfDir$/TIMIT.train.align_cistate.mlf.cntk
+            labelMappingFile=$MlfDir$/TIMIT.statelist
+            labelDim=183
+            labelType=Category
+        ]
+        regions=[
+            mlfFile=$MlfDir$/TIMIT.train.align_dr.mlf.cntk
+            labelDim=8
+            labelType=Category
+        ]
+    ]
+]

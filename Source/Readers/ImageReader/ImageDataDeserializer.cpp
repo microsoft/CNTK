@@ -13,13 +13,17 @@
 #include "ImageConfigHelper.h"
 #include "StringUtil.h"
 #include "ConfigUtil.h"
+#include "TimerUtility.h"
+#include "ImageTransformers.h"
+#include "SequenceData.h"
+#include "ImageUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 class ImageDataDeserializer::LabelGenerator
 {
 public:
-    virtual void CreateLabelFor(size_t classId, SparseSequenceData& data) = 0;
+    virtual void CreateLabelFor(size_t classId, CategorySequenceData& data) = 0;
     virtual ~LabelGenerator() { }
 };
 
@@ -42,7 +46,7 @@ public:
         iota(m_indices.begin(), m_indices.end(), 0);
     }
 
-    virtual void CreateLabelFor(size_t classId, SparseSequenceData& data) override
+    virtual void CreateLabelFor(size_t classId, CategorySequenceData& data) override
     {
         data.m_nnzCounts.resize(1);
         data.m_nnzCounts[0] = 1;
@@ -54,12 +58,6 @@ public:
 private:
     TElement m_value;
     vector<IndexType> m_indices;
-};
-
-// Used to keep track of the image. Accessed only using DenseSequenceData interface.
-struct DeserializedImage : DenseSequenceData
-{
-    cv::Mat m_image;
 };
 
 // For image, chunks correspond to a single image.
@@ -79,41 +77,46 @@ public:
         assert(sequenceId == m_description.m_id);
         const auto& imageSequence = m_description;
 
-        auto image = std::make_shared<DeserializedImage>();
+        auto image = std::make_shared<ImageSequenceData>();
         image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path, m_parent.m_grayscale));
         auto& cvImage = image->m_image;
-
         if (!cvImage.data)
-        {
             RuntimeError("Cannot open file '%s'", imageSequence.m_path.c_str());
-        }
 
         // Convert element type.
-        int dataType = m_parent.m_featureElementType == ElementType::tfloat ? CV_32F : CV_64F;
-        if (cvImage.type() != CV_MAKETYPE(dataType, cvImage.channels()))
-        {
-            cvImage.convertTo(cvImage, dataType);
-        }
-
+        ElementType dataType = ConvertImageToSupportedDataType(cvImage);
         if (!cvImage.isContinuous())
-        {
             cvImage = cvImage.clone();
-        }
         assert(cvImage.isContinuous());
 
-        image->m_data = image->m_image.data;
         ImageDimensions dimensions(cvImage.cols, cvImage.rows, cvImage.channels());
         image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
         image->m_id = sequenceId;
         image->m_numberOfSamples = 1;
         image->m_chunk = shared_from_this();
+        image->m_elementType = dataType;
         result.push_back(image);
 
-        SparseSequenceDataPtr label = std::make_shared<SparseSequenceData>();
+        auto label = std::make_shared<CategorySequenceData>();
         label->m_chunk = shared_from_this();
         m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
         label->m_numberOfSamples = 1;
         result.push_back(label);
+    }
+
+private:
+    ElementType ConvertImageToSupportedDataType(cv::Mat& image)
+    {
+        ElementType resultType;
+        if (!IdentifyElementTypeFromOpenCVType(image.depth(), resultType))
+        {
+            // Could not identify element type.
+            // Natively unsupported image type. Let's convert it to required precision.
+            int requiredType = m_parent.m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+            image.convertTo(image, requiredType);
+            resultType = m_parent.m_precision;
+        }
+        return resultType;
     }
 };
 
@@ -135,6 +138,9 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     }
 
     string precision = (ConfigValue)config("precision", "float");
+    m_precision = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+
+    m_verbosity = config(L"verbosity", 0);
 
     // Feature stream.
     ConfigParameters featureSection = inputs(featureNames[0]);
@@ -142,9 +148,10 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     features->m_id = 0;
     features->m_name = msra::strfun::utf16(featureSection.ConfigName());
     features->m_storageType = StorageType::dense;
-    features->m_elementType = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+
+    // Due to performance, now we support images of different types.
+    features->m_elementType = ElementType::tvariant;
     m_streams.push_back(features);
-    m_featureElementType = features->m_elementType;
 
     // Label stream.
     ConfigParameters label = inputs(labelNames[0]);
@@ -154,7 +161,7 @@ ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const C
     labels->m_name = msra::strfun::utf16(label.ConfigName());
     labels->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
     labels->m_storageType = StorageType::sparse_csc;
-    labels->m_elementType = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+    labels->m_elementType = m_precision;
     m_streams.push_back(labels);
 
     m_labelGenerator = labels->m_elementType == ElementType::tfloat ?
@@ -180,6 +187,11 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     const auto& label = m_streams[configHelper.GetLabelStreamId()];
     const auto& feature = m_streams[configHelper.GetFeatureStreamId()];
 
+    m_verbosity = config(L"verbosity", 0);
+
+    string precision = (ConfigValue)config("precision", "float");
+    m_precision = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
+
     // Expect data in HWC.
     ImageDimensions dimensions(*feature->m_sampleLayout, configHelper.GetDataFormat());
     feature->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
@@ -187,7 +199,9 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
     label->m_storageType = StorageType::sparse_csc;
     feature->m_storageType = StorageType::dense;
 
-    m_featureElementType = feature->m_elementType;
+    // Due to performance, now we support images of different types.
+    feature->m_elementType = ElementType::tvariant;
+
     size_t labelDimension = label->m_sampleLayout->GetDim(0);
 
     if (label->m_elementType == ElementType::tfloat)
@@ -203,7 +217,7 @@ ImageDataDeserializer::ImageDataDeserializer(const ConfigParameters& config)
         RuntimeError("Unsupported label element type '%d'.", (int)label->m_elementType);
     }
 
-    CreateSequenceDescriptions(std::make_shared<CorpusDescriptor>(), configHelper.GetMapPath(), labelDimension, configHelper.IsMultiViewCrop());
+    CreateSequenceDescriptions(std::make_shared<CorpusDescriptor>(false), configHelper.GetMapPath(), labelDimension, configHelper.IsMultiViewCrop());
 }
 
 // Descriptions of chunks exposed by the image reader.
@@ -237,14 +251,21 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
         RuntimeError("Could not open %s for reading.", mapPath.c_str());
     }
 
+    // Creating the default reader with expanded directory to the map file.
+    auto mapFileDirectory = ExtractDirectory(mapPath);
+    m_defaultReader = make_unique<FileByteReader>(mapFileDirectory);
+
     size_t itemsPerLine = isMultiCrop ? 10 : 1;
     size_t curId = 0;
     std::string line;
     PathReaderMap knownReaders;
+    ReaderSequenceMap readerSequences;
     ImageSequenceDescription description;
     description.m_numberOfSamples = 1;
 
-    auto& stringRegistry = corpus->GetStringRegistry();
+    Timer timer;
+    timer.Start();
+
     for (size_t lineIndex = 0; std::getline(mapFile, line); ++lineIndex)
     {
         std::stringstream ss(line);
@@ -277,7 +298,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
         if (cid >= labelDimension)
         {
             RuntimeError(
-                "Image '%s' has invalid class id '%" PRIu64 "'. Expected label dimension is '%" PRIu64 "'. Line %" PRIu64 " in file %s.",
+                "Image '%s' has invalid class id '%" PRIu64 "'. It is exceeding the label dimension of '%" PRIu64 "'. Line %" PRIu64 " in file %s.",
                 imagePath.c_str(), cid, labelDimension, lineIndex, mapPath.c_str());
         }
 
@@ -292,13 +313,24 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
             description.m_chunkId = (ChunkIdType)curId;
             description.m_path = imagePath;
             description.m_classId = cid;
-            description.m_key.m_sequence = stringRegistry[sequenceKey];
+            description.m_key.m_sequence = corpus->KeyToId(sequenceKey);
             description.m_key.m_sample = 0;
 
             m_keyToSequence[description.m_key.m_sequence] = m_imageSequences.size();
             m_imageSequences.push_back(description);
-            RegisterByteReader(description.m_id, description.m_path, knownReaders);
+            RegisterByteReader(description.m_id, description.m_path, knownReaders, readerSequences, mapFileDirectory);
         }
+    }
+
+    for (auto& reader : knownReaders)
+    {
+        reader.second->Register(readerSequences[reader.first]);
+    }
+
+    timer.Stop();
+    if (m_verbosity > 1)
+    {
+        fprintf(stderr, "ImageDeserializer: Read information about %d images in %.6g seconds\n", (int)m_imageSequences.size(), timer.ElapsedSeconds());
     }
 }
 
@@ -308,9 +340,11 @@ ChunkPtr ImageDataDeserializer::GetChunk(ChunkIdType chunkId)
     return std::make_shared<ImageChunk>(sequenceDescription, *this);
 }
 
-void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders)
+void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& seqPath, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences, const std::string& expandDirectory)
 {
-    assert(!path.empty());
+    assert(!seqPath.empty());
+
+    auto path = Expand3Dots(seqPath, expandDirectory);
 
     auto atPos = path.find_first_of('@');
     // Is it container or plain image file?
@@ -331,16 +365,19 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
     {
         reader = std::make_shared<ZipByteReader>(containerPath);
         knownReaders[containerPath] = reader;
+        readerSequences[containerPath] = std::map<std::string, size_t>();
     }
     else
     {
         reader = (*r).second;
     }
-    reader->Register(seqId, itemPath);
+
+    readerSequences[containerPath][itemPath] = seqId;
     m_readers[seqId] = reader;
 #else
     UNUSED(seqId);
     UNUSED(knownReaders);
+    UNUSED(readerSequences);
     RuntimeError("The code is built without zip container support. Only plain image files are supported.");
 #endif
 }
@@ -351,13 +388,14 @@ cv::Mat ImageDataDeserializer::ReadImage(size_t seqId, const std::string& path, 
 
     ImageDataDeserializer::SeqReaderMap::const_iterator r;
     if (m_readers.empty() || (r = m_readers.find(seqId)) == m_readers.end())
-        return m_defaultReader.Read(seqId, path, grayscale);
+        return m_defaultReader->Read(seqId, path, grayscale);
     return (*r).second->Read(seqId, path, grayscale);
 }
 
-cv::Mat FileByteReader::Read(size_t, const std::string& path, bool grayscale)
+cv::Mat FileByteReader::Read(size_t, const std::string& seqPath, bool grayscale)
 {
-    assert(!path.empty());
+    assert(!seqPath.empty());
+    auto path = Expand3Dots(seqPath, m_expandDirectory);
 
     return cv::imread(path, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
 }

@@ -60,7 +60,7 @@ typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 // TODO: add type casts (As<T>() or AsRef<>() or AsPtr<>()) to subclasses as members here.
 struct SequenceDataBase
 {
-    SequenceDataBase() : m_id(0), m_numberOfSamples(0), m_data(nullptr) {}
+    SequenceDataBase() : m_id(0), m_numberOfSamples(0), m_elementType(ElementType::tvariant) {}
     virtual ~SequenceDataBase() = default;
 
     // Sequence id.
@@ -68,10 +68,11 @@ struct SequenceDataBase
     uint32_t m_numberOfSamples;      // Number of samples in the sequence
 
     ChunkPtr m_chunk;
-    // A non-owned pointer. The actual size is provided for particular sequences,
-    // i.e. see DenseSequenceData, or SparseSequenceData.
-    void* m_data;
+    // Returns a pointer to the data buffer.
+    // The actual size is provided for particular sequences,i.e. see DenseSequenceData, or SparseSequenceData.
+    virtual const void* GetDataBuffer() = 0;
 
+    ElementType m_elementType;     // Sequence element type.
     TensorShapePtr m_sampleLayout; // Sample layout, can be shared by several sequences.
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;

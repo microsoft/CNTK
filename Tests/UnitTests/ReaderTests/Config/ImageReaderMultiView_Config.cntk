@@ -30,7 +30,7 @@ MultiView_Test = [
             cropType=multiview10
             cropRatio=0.5
             jitterType=UniRatio
-            interpolations=Linear
+            interpolations=linear
             #meanFile=$RootDir$/ImageReaderMultiView_mean.xml
         ]
         labels=[

@@ -56,10 +56,10 @@ BOOST_AUTO_TEST_CASE(ImageAndTextReaderSimple)
 BOOST_AUTO_TEST_CASE(ImageAndImageReaderSimple)
 {
     HelperRunReaderTest<float>(
-        testDataPath() + "/Config/ImageAndImageReaderSimple_Config.cntk",
+        testDataPath() + "/Config/ImageDeserializers.cntk",
         testDataPath() + "/Control/ImageAndImageReaderSimple_Control.txt",
         testDataPath() + "/Control/ImageAndImageReaderSimple_Output.txt",
-        "Simple_Test",
+        "ImageAndImageReaderSimple_Test",
         "reader",
         4,
         4,
@@ -67,7 +67,11 @@ BOOST_AUTO_TEST_CASE(ImageAndImageReaderSimple)
         2,
         2,
         0,
-        1);
+        1,
+        false,
+        false,
+        true,
+        { L"MapFile=\"$RootDir$/ImageReaderSimple_map.txt\"" });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
@@ -127,7 +131,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderLabelOutOfRange)
             0,
             1),
             std::runtime_error,
-            [](std::runtime_error const& ex) { return string("Image 'images\\red.jpg' has invalid class id '10'. Expected label dimension is '4'. Line 3 in file ./ImageReaderLabelOutOfRange_map.txt.") == ex.what(); });
+            [](std::runtime_error const& ex) { return string("Image 'images/red.jpg' has invalid class id '10'. It is exceeding the label dimension of '4'. Line 3 in file ./ImageReaderLabelOutOfRange_map.txt.") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderZip)
@@ -164,7 +168,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderZipMissingFile)
             0,
             1),
             std::runtime_error,
-            [](std::runtime_error const& ex) { return string("Failed to get file info of missing.jpg, zip library error: Unknown error -1") == ex.what(); });
+            [](std::runtime_error const& ex) { return string("Cannot retrieve image data for some sequences. For more detail, please see the log file.") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderMultiView)
@@ -253,7 +257,7 @@ BOOST_AUTO_TEST_CASE(ImageReaderMissingImage)
         0,
         1),
         std::runtime_error,
-        [](const std::runtime_error& ex) { return string("Cannot open file 'imageDoesNotExists\\black.jpg'") == ex.what(); });
+        [](const std::runtime_error& ex) { return string("Cannot open file 'imageDoesNotExists/black.jpg'") == ex.what(); });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderEmptyTransforms)
@@ -264,8 +268,8 @@ BOOST_AUTO_TEST_CASE(ImageReaderEmptyTransforms)
         testDataPath() + "/Control/ImageTransforms_Output.txt",
         "SameShapeEmptyTransforms_Test",
         "reader",
-        1,
         2,
+        1,
         1,
         1,
         0,
@@ -293,8 +297,8 @@ BOOST_AUTO_TEST_CASE(ImageReaderInvalidEmptyTransforms)
         [](const std::runtime_error& ex)
         {
             return string("Packer currently does not support samples with varying shapes."
-                "Please make sure there is a transform that unifies the shape of samples"
-                " for input stream 'features' or the deserializer provides samples with the same shape.") == ex.what();
+                "Please make sure there is a transform that unifies the shape of samples for input stream 'features' "
+                "or the deserializer provides samples with the same shape.") == ex.what();
         });
 }
 
@@ -324,4 +328,41 @@ BOOST_AUTO_TEST_CASE(ImageReaderMissingScaleTransforms)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-} } } }
+
+namespace
+{
+    // Test with not set data directory.
+    struct EmptyDataDirFixture : ReaderFixture
+    {
+        EmptyDataDirFixture() : ReaderFixture("/.") { }
+    };
+
+    BOOST_FIXTURE_TEST_SUITE(ReaderTestSuite, EmptyDataDirFixture)
+
+    BOOST_AUTO_TEST_CASE(ImageReader3DotsSyntaxInMapFile)
+    {
+        auto testDir = testDataPath();
+        std::wstring mapFileLocaton = std::wstring(testDir.begin(), testDir.end()) + L"/Data/ImageReader3Dots_map.txt";
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/ImageDeserializers.cntk",
+            testDataPath() + "/Control/ImageReader3DotsSyntaxInMapFile_Control.txt",
+            testDataPath() + "/Control/ImageReader3DotsSyntaxInMapFile_Output.txt",
+            "3DotsExpansionTest",
+            "reader",
+            1,
+            2,
+            1,
+            1,
+            1,
+            0,
+            1,
+            false,
+            true,
+            true,
+            { L"MapFile=\"" + mapFileLocaton + L"\"" });
+    }
+
+    BOOST_AUTO_TEST_SUITE_END()
+}
+
+}}}}

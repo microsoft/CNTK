@@ -4,14 +4,14 @@
 //
 
 #include "stdafx.h"
-
+#include <numeric>
+#include <random>
+#include <boost/random/uniform_int_distribution.hpp>
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
 #include "BlockRandomizer.h"
 #include "CorpusDescriptor.h"
-
-#include <numeric>
-#include <random>
+#include "SequentialDeserializer.h"
 
 using namespace Microsoft::MSR::CNTK;
 using namespace std;
@@ -46,7 +46,7 @@ public:
         assert(m_chunkBegin <= sequenceId);
         assert(sequenceId < m_chunkEnd);
 
-        auto data = make_shared<DenseSequenceData>();
+        auto data = make_shared<MockDenseSequenceData>();
         data->m_data = &m_sequenceData[sequenceId][0];
         data->m_numberOfSamples = m_sequenceLength;
         data->m_sampleLayout = m_sampleLayout;
@@ -163,6 +163,248 @@ void BlockRandomizerInstantiateTest(bool prefetch)
     auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
 }
 
+BOOST_AUTO_TEST_CASE(CheckGetCurrentCursorForRandomizers)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = chunkSizeInSamples * 5;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto noRandomizer = make_shared<NoRandomizer>(deserializer, false);
+
+    auto test = [](SequenceEnumeratorPtr r, size_t epochSize)
+    {
+        auto firstEpoch = ReadFullEpoch(r, epochSize, 0);
+        auto firstCursor = r->GetCurrentSamplePosition();
+        BOOST_CHECK_EQUAL(firstCursor, firstEpoch.size());
+
+        auto secondEpoch = ReadFullEpoch(r, epochSize, 1);
+        auto secondCursor = r->GetCurrentSamplePosition();
+        BOOST_CHECK_EQUAL(secondCursor - firstCursor, secondEpoch.size());
+
+        auto thirdEpoch = ReadFullEpoch(r, epochSize, 2);
+        auto thirdCursor = r->GetCurrentSamplePosition();
+        BOOST_CHECK_EQUAL(thirdCursor - secondCursor, thirdEpoch.size());
+
+        auto anotherSecondEpoch = ReadFullEpoch(r, epochSize, 1);
+        auto anotherSecondCursor = r->GetCurrentSamplePosition();
+
+        BOOST_CHECK_EQUAL(anotherSecondCursor, secondCursor);
+    };
+
+    // Inside sweep
+    size_t epochSize = 50000;
+    test(blockRandomizer, epochSize);
+    test(noRandomizer, epochSize);
+
+    // Between sweeps
+    epochSize = (size_t)(sweepNumberOfSamples / 1.5);
+    test(blockRandomizer, epochSize);
+    test(noRandomizer, epochSize);
+}
+
+BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = chunkSizeInSamples * 5;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    auto expectedBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto expectedNo = make_shared<NoRandomizer>(deserializer, false);
+
+    auto underTestBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto unterTestNo = make_shared<NoRandomizer>(deserializer, false);
+
+    auto test = [](SequenceEnumeratorPtr expected, SequenceEnumeratorPtr underTest, size_t epochSize)
+    {
+        auto firstEpoch = ReadFullEpoch(expected, epochSize, 0);
+        auto secondEpoch = ReadFullEpoch(expected, epochSize, 1);
+        auto thirdEpoch = ReadFullEpoch(expected, epochSize, 2);
+
+        // First setup the enumerator to ead unbounded amount of data
+        EpochConfiguration config;
+        config.m_numberOfWorkers = 1;
+        config.m_workerRank = 0;
+        config.m_minibatchSizeInSamples = 1;
+        config.m_totalEpochSizeInSamples = std::numeric_limits<size_t>().max() / 2;
+        config.m_epochIndex = 0;
+        underTest->StartEpoch(config);
+
+        // Rereading second epoch
+        underTest->SetCurrentSamplePosition(firstEpoch.size());
+        auto anotherSecond = ReadNextSamples(underTest, secondEpoch.size());
+        BOOST_CHECK_EQUAL_COLLECTIONS(
+            secondEpoch.begin(),
+            secondEpoch.end(),
+            anotherSecond.begin(),
+            anotherSecond.end());
+
+        // Rereading first epoch
+        underTest->SetCurrentSamplePosition(0);
+        auto anotherFirst = ReadNextSamples(underTest, firstEpoch.size());
+        BOOST_CHECK_EQUAL_COLLECTIONS(
+            firstEpoch.begin(),
+            firstEpoch.end(),
+            anotherFirst.begin(),
+            anotherFirst.end());
+
+        // Rereading third epoch
+        underTest->SetCurrentSamplePosition(firstEpoch.size() + secondEpoch.size());
+        auto anotherThird = ReadNextSamples(underTest, thirdEpoch.size());
+        BOOST_CHECK_EQUAL_COLLECTIONS(
+            thirdEpoch.begin(),
+            thirdEpoch.end(),
+            anotherThird.begin(),
+            anotherThird.end());
+    };
+
+    // Inside sweep
+    size_t epochSize = 50000;
+    test(expectedBlock, underTestBlock, epochSize);
+    test(expectedNo, unterTestNo, epochSize);
+
+    // Between sweeps
+    epochSize = (size_t)(sweepNumberOfSamples / 1.5);
+    test(expectedBlock, underTestBlock, epochSize);
+    test(expectedNo, unterTestNo, epochSize);
+}
+
+BOOST_AUTO_TEST_CASE(RandRollbackToEarlierEpochBetweenSweeps)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = chunkSizeInSamples * 5;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    // Let's randomize complete sweep, so that we have a baseline.
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+
+    // Let's read all sequences from the first three sweeps in the randomized order.
+    auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
+    auto secondSweep = ReadFullSweep(randomizer, 1, sweepNumberOfSamples);
+    auto thirdSweep = ReadFullSweep(randomizer, 2, sweepNumberOfSamples);
+
+    // Now let's merge the global timeline of these three sweeps.
+    std::vector<float> threeSweeps = Concat(std::vector<vector<float>>{ firstSweep, secondSweep, thirdSweep });
+
+    // Ok, now let's run smaller epochs and check whether they are the same as full sweeps.
+    size_t epochSize = threeSweeps.size() / 5;
+    auto firstEpoch = ReadFullEpoch(randomizer, epochSize, 0);
+    auto secondEpoch = ReadFullEpoch(randomizer, epochSize, 1);
+    auto thirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+    auto fourthEpoch = ReadFullEpoch(randomizer, epochSize, 3);
+    auto fifthEpoch = ReadFullEpoch(randomizer, epochSize, 4);
+    std::vector<float> anotherThreeSweeps = Concat(std::vector<vector<float>>{ firstEpoch, secondEpoch, thirdEpoch, fourthEpoch, fifthEpoch });
+
+    // Check that data is the same.
+    BOOST_CHECK_EQUAL_COLLECTIONS(threeSweeps.begin(), threeSweeps.end(), anotherThreeSweeps.begin(), anotherThreeSweeps.end());
+
+    // Now roll back to the third one.
+    auto anotherThirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+
+    // Check that it is the same.
+    BOOST_CHECK_EQUAL_COLLECTIONS(thirdEpoch.begin(), thirdEpoch.end(), anotherThirdEpoch.begin(), anotherThirdEpoch.end());
+}
+
+BOOST_AUTO_TEST_CASE(RandRollbackToEarlierEpochInTheSweep)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = chunkSizeInSamples * 3;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    // Let's randomize complete sweep, so that we have a baseline.
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+
+    // Let's read all sequences from the first three sweeps in the randomized order.
+    auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
+
+    // Ok, now let's run smaller epochs and check whether they are the same as full sweeps.
+    size_t epochSize = firstSweep.size() / 3;
+    auto firstEpoch = ReadFullEpoch(randomizer, epochSize, 0);
+    auto secondEpoch = ReadFullEpoch(randomizer, epochSize, 1);
+    auto thirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+    std::vector<float> anotherThreeSweeps = Concat(std::vector<vector<float>>{ firstEpoch, secondEpoch, thirdEpoch });
+
+    // Check that data is the same.
+    BOOST_CHECK_EQUAL_COLLECTIONS(firstSweep.begin(), firstSweep.end(), anotherThreeSweeps.begin(), anotherThreeSweeps.end());
+
+    // Now roll back to the second one.
+    auto anotherSecondEpoch = ReadFullEpoch(randomizer, epochSize, 1);
+
+    // Check that it is the same.
+    BOOST_CHECK_EQUAL_COLLECTIONS(secondEpoch.begin(), secondEpoch.end(), anotherSecondEpoch.begin(), anotherSecondEpoch.end());
+}
+
+BOOST_AUTO_TEST_CASE(RandRollbackToSameEpochInTheSweep)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = chunkSizeInSamples * 3;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    // Let's randomize complete sweep, so that we have a baseline.
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+
+    // Let's read all sequences from the first three sweeps in the randomized order.
+    auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
+
+    // Ok, now let's run smaller epochs and check whether they are the same as full sweeps.
+    size_t epochSize = firstSweep.size() / 4;
+    auto firstEpoch = ReadFullEpoch(randomizer, epochSize, 0);
+    auto secondEpoch = ReadFullEpoch(randomizer, epochSize, 1);
+    auto thirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+
+    // Now roll back to the third one.
+    auto anotherThirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+
+    // Check that it is the same.
+    BOOST_CHECK_EQUAL_COLLECTIONS(thirdEpoch.begin(), thirdEpoch.end(), anotherThirdEpoch.begin(), anotherThirdEpoch.end());
+}
+
+BOOST_AUTO_TEST_CASE(RandRollbackToSameEpochInBigRandomizationWindow)
+{
+    size_t chunkSizeInSamples = 10000;
+    size_t sweepNumberOfSamples = 500000;
+    uint32_t maxSequenceLength = 300;
+    size_t randomizationWindow = sweepNumberOfSamples / 2;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    // Let's randomize complete sweep, so that we have a baseline.
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+
+    // Let's read all sequences from the first three sweeps in the randomized order.
+    auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
+
+    // Ok, now let's run smaller epochs and check whether they are the same as full sweeps.
+    size_t epochSize = firstSweep.size() / 5;
+    auto firstEpoch = ReadFullEpoch(randomizer, epochSize, 0);
+    auto secondEpoch = ReadFullEpoch(randomizer, epochSize, 1);
+    auto thirdEpoch = ReadFullEpoch(randomizer, epochSize, 2);
+    auto fourthEpoch = ReadFullEpoch(randomizer, epochSize, 3);
+
+    // Now roll back to the third one.
+    auto current = ReadFullEpoch(randomizer, epochSize, 1);
+    BOOST_CHECK_EQUAL_COLLECTIONS(secondEpoch.begin(), secondEpoch.end(), current.begin(), current.end());
+
+    current = ReadFullEpoch(randomizer, epochSize, 3);
+    BOOST_CHECK_EQUAL_COLLECTIONS(fourthEpoch.begin(), fourthEpoch.end(), current.begin(), current.end());
+
+    current = ReadFullEpoch(randomizer, epochSize, 2);
+    BOOST_CHECK_EQUAL_COLLECTIONS(thirdEpoch.begin(), thirdEpoch.end(), current.begin(), current.end());
+
+    current = ReadFullEpoch(randomizer, epochSize, 2);
+    BOOST_CHECK_EQUAL_COLLECTIONS(thirdEpoch.begin(), thirdEpoch.end(), current.begin(), current.end());
+}
+
+
 BOOST_AUTO_TEST_CASE(BlockRandomizerInstantiate)
 {
     BlockRandomizerInstantiateTest(false);
@@ -185,7 +427,7 @@ void BlockRandomizerOneEpochTest(bool prefetch)
     epochConfiguration.m_epochIndex = 0;
     randomizer->StartEpoch(epochConfiguration);
 
-    vector<float> expected { 3, 4, 1, 8, 0, 5, 9, 6, 7, 2 };
+    vector<float> expected { 6, 3, 1, 5, 9, 0, 4, 2, 7, 8 };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
@@ -194,11 +436,11 @@ void BlockRandomizerOneEpochTest(bool prefetch)
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
-            auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
-            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
-            actual.push_back(*((float*)data.m_data));
+            auto& data2 = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
+            BOOST_CHECK_EQUAL(data2.m_numberOfSamples, 1u);
+            actual.push_back(*((float*)data2.GetDataBuffer()));
         }
-        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
+        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i + 1));
     }
     BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
                                   actual.begin(), actual.end());
@@ -226,7 +468,7 @@ void BlockRandomizerOneEpochWithChunks1Test(bool prefetch)
     epochConfiguration.m_epochIndex = 0;
     randomizer->StartEpoch(epochConfiguration);
 
-    vector<float> expected{ 9, 8, 6, 7, 3, 2, 1, 0, 4, 5 };
+    vector<float> expected{ 8, 9, 1, 0, 6, 7, 2, 3, 4, 5 };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
@@ -235,11 +477,11 @@ void BlockRandomizerOneEpochWithChunks1Test(bool prefetch)
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
-            auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
-            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
-            actual.push_back(*((float*)data.m_data));
+            auto& data2 = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
+            BOOST_CHECK_EQUAL(data2.m_numberOfSamples, 1u);
+            actual.push_back(*((float*)data2.GetDataBuffer()));
         }
-        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
+        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i + 1));
     }
     BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
         actual.begin(), actual.end());
@@ -269,8 +511,8 @@ void BlockRandomizerOneEpochWithChunks2Test(bool prefetch)
     randomizer->StartEpoch(epochConfiguration);
 
     vector<float> expected {
-        16, 14, 15, 8, 13, 6, 17, 4, 12, 9,
-        3, 18, 0, 5, 2, 11, 19, 7, 1, 10
+        18, 19, 7, 14, 6, 9, 8, 15, 5, 2,
+        10, 13, 16, 17, 1, 4, 3, 12, 11, 0
     };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     vector<float> actual;
@@ -280,11 +522,11 @@ void BlockRandomizerOneEpochWithChunks2Test(bool prefetch)
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
-            auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
-            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
-            actual.push_back(*((float*)data.m_data));
+            auto& data2 = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
+            BOOST_CHECK_EQUAL(data2.m_numberOfSamples, 1u);
+            actual.push_back(*((float*)data2.GetDataBuffer()));
         }
-        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
+        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i + 1));
     }
     BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
         actual.begin(), actual.end());
@@ -305,8 +547,8 @@ void BlockRandomizerChaosMonkeyTest(bool prefetch)
     const int windowSize = 18;
     vector<float> data(numChunks * numSequencesPerChunk);
     iota(data.begin(), data.end(), 0.0f);
-    mt19937 rng(seed);
-    uniform_int_distribution<int> distr(1, 10);
+    std::mt19937 rng(seed);
+    boost::random::uniform_int_distribution<int> distr(1, 10);
 
     auto mockDeserializer = make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data, sequenceLength);
 
@@ -377,7 +619,7 @@ void BlockRandomizerOneEpochLegacyRandomizationTest(bool prefetch)
     epochConfiguration.m_epochIndex = 0;
     randomizer->StartEpoch(epochConfiguration);
 
-    vector<float> expected { 9, 4, 1, 2, 0, 5, 3, 6, 7, 8 };
+    vector<float> expected { 6, 3, 1, 5, 9, 0, 4, 2, 7, 8 };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
@@ -386,12 +628,12 @@ void BlockRandomizerOneEpochLegacyRandomizationTest(bool prefetch)
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < 10)
         {
-            auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
-            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
-            actual.push_back(*((float*)data.m_data));
+            auto& data2 = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
+            BOOST_CHECK_EQUAL(data2.m_numberOfSamples, 1u);
+            actual.push_back(*((float*)data2.GetDataBuffer()));
 
         }
-        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
+        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i + 1));
     }
     BOOST_CHECK_EQUAL_COLLECTIONS(expected.begin(), expected.end(),
                                   actual.begin(), actual.end());
@@ -428,12 +670,12 @@ BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
-            auto data = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
-            BOOST_CHECK_EQUAL(data.m_numberOfSamples, 1u);
-            actual.push_back(*((float*)data.m_data));
+            auto& data2 = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][0]);
+            BOOST_CHECK_EQUAL(data2.m_numberOfSamples, 1u);
+            actual.push_back(*((float*)data2.GetDataBuffer()));
         }
 
-        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i));
+        BOOST_CHECK_EQUAL(sequences.m_endOfEpoch, (data.size() <= i + 1));
     }
 
     BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(),
@@ -443,14 +685,45 @@ BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)
 BOOST_AUTO_TEST_CASE(DefaultCorpusDescriptor)
 {
     const int seed = 13;
-    mt19937 rng(seed);
-    uniform_int_distribution<int> distr(50, 60);
+    std::mt19937 rng(seed);
+    boost::random::uniform_int_distribution<int> distr(50, 60);
 
     string randomKey(10, (char)distr(rng));
 
-    CorpusDescriptor corpus;
+    CorpusDescriptor corpus(false);
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded(randomKey));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded(""));
+}
+
+BOOST_AUTO_TEST_CASE(NumericCorpusDescriptor)
+{
+    const int seed = 13;
+    std::mt19937 rng(seed);
+    boost::random::uniform_int_distribution<size_t> distr;
+
+    CorpusDescriptor corpus(true);
+    for (int i = 0; i < 10; ++i)
+    {
+        auto value = distr(rng);
+        BOOST_CHECK_EQUAL(value, corpus.KeyToId(std::to_string(value)));
+    }
+    BOOST_CHECK_EXCEPTION(
+        corpus.KeyToId("not a number"),
+        std::exception, 
+        [](const std::exception& e) { return e.what() == std::string("Invalid numeric sequence id 'not a number'"); });
+}
+
+BOOST_AUTO_TEST_CASE(LiteralCorpusDescriptor)
+{
+    const int seed = 13;
+    std::mt19937 rng(seed);
+    boost::random::uniform_int_distribution<int> distr(50, 60);
+
+    string randomKey(10, (char)distr(rng));
+
+    CorpusDescriptor corpus(false);
+    BOOST_CHECK(100 != corpus.KeyToId("100"));
+    BOOST_CHECK_NO_THROW(corpus.KeyToId("not a number"));
 }
 
 BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
@@ -461,7 +734,7 @@ BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
     fwrite("4\n", sizeof(char), 2, test);
     fclose(test);
 
-    CorpusDescriptor corpus(L"test.tmp");
+    CorpusDescriptor corpus(L"test.tmp", true);
     BOOST_CHECK_EQUAL(false, corpus.IsIncluded("0"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded("1"));
     BOOST_CHECK_EQUAL(true, corpus.IsIncluded("2"));

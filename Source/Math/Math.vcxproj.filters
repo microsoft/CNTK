@@ -46,8 +46,9 @@
       <Filter>CPU</Filter>
     </ClCompile>
     <ClCompile Include="BlockHandlerSSE.cpp">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClCompile>
+    <ClCompile Include="DataTransferer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonMatrix.h" />
@@ -111,19 +112,25 @@
     <ClInclude Include="CPURNGHandle.h">
       <Filter>CPU</Filter>
     </ClInclude>
+    <ClInclude Include="RNNCommon.h">
+      <Filter>RNN</Filter>
+    </ClInclude>
     <ClInclude Include="BlockHandlerAVX.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="BlockHandlerSSE.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="BlockMultiplier.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="BlockMultiplierPlatform.h">
-        <Filter>CPU</Filter>
+      <Filter>CPU</Filter>
     </ClInclude>
     <ClInclude Include="Quantizers.h" />
+    <ClInclude Include="QuantizedOperations.h" />
+    <ClInclude Include="BlockMultiplierMatrixUtil.h" />
+    <ClInclude Include="DataTransferer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GPUMatrix.h">
@@ -172,6 +179,9 @@
     </Filter>
     <Filter Include="BatchNormalization">
       <UniqueIdentifier>{8f982dac-298d-4e48-b060-8e6cba5ff554}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RNN">
+      <UniqueIdentifier>{ee6bf704-73f0-488d-8432-0d23f034de88}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

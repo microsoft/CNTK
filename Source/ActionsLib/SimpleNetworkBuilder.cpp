@@ -1470,8 +1470,8 @@ ComputationNetworkPtr SimpleNetworkBuilder<ElemType>::BuildNetworkFromDbnFile(co
     // move to CPU since element-wise operation is expensive and can go wrong in GPU
     int curDevId = globalStdDev.GetDeviceId();
     globalStdDev.TransferFromDeviceToDevice(curDevId, CPUDEVICE, true, false, false);
-    for (int i = 0; i < globalStdDev.GetNumRows(); i++)
-        globalStdDev(i, 0) = (ElemType) 1.0 / (const ElemType) globalStdDev(i, 0);
+    for (int i2 = 0; i2 < globalStdDev.GetNumRows(); i2++)
+        globalStdDev(i2, 0) = (ElemType) 1.0 / (const ElemType) globalStdDev(i2, 0);
     globalStdDev.TransferFromDeviceToDevice(CPUDEVICE, curDevId, true, false, false);
 
     if (!CheckDbnTag(fstream, "BNET"))
@@ -1751,10 +1751,10 @@ shared_ptr<ComputationNode<ElemType>> SimpleNetworkBuilder<ElemType>::AddTrainAn
             // output = builder.SquareError(label, tinput, (evalNodeName == L"")?L"EvalSquareError":evalNodeName);
             output = builder.Logistic(label, tinput, (evalNodeName == L"") ? L"Logistic" : evalNodeName);
             break;
-        case EvalCriterion::ErrorPrediction:
+        case EvalCriterion::ClassificationError:
             if (matrix != nullptr && tinput == input)
                 tinput = builder.Times(matrix, input);
-            output = builder.ErrorPrediction(label, tinput, (evalNodeName == L"") ? L"EvalErrorPrediction" : evalNodeName);
+            output = builder.ClassificationError(label, tinput, (evalNodeName == L"") ? L"EvalClassificationError" : evalNodeName);
             break;
 #ifdef COMING_SOON
         case EvalCriterion::CRF:
@@ -1785,23 +1785,26 @@ template class SimpleNetworkBuilder<double>;
 TrainingCriterion ParseTrainingCriterionString(wstring s)
 {
     if      (EqualCI(s, L"crossEntropyWithSoftmax"))      return TrainingCriterion::CrossEntropyWithSoftmax;
-    else if (EqualCI(s, L"sequenceWithSoftmax"))          return TrainingCriterion::SequenceWithSoftmax;
     else if (EqualCI(s, L"squareError"))                  return TrainingCriterion::SquareError;
     else if (EqualCI(s, L"logistic"))                     return TrainingCriterion::Logistic;
     else if (EqualCI(s, L"noiseContrastiveEstimation"))   return TrainingCriterion::NCECrossEntropyWithSoftmax;
+    // legacy/deprecated
     else if (EqualCI(s, L"classCrossEntropyWithSoftmax")) return TrainingCriterion::ClassCrossEntropyWithSoftmax;
+    else if (EqualCI(s, L"sequenceWithSoftmax"))          return TrainingCriterion::SequenceWithSoftmax;
     else LogicError("trainingCriterion: Invalid trainingCriterion value. Valid values are (crossEntropyWithSoftmax | squareError | logistic | classCrossEntropyWithSoftmax| sequenceWithSoftmax)");
 }
 
 EvalCriterion ParseEvalCriterionString(wstring s)
 {
-    if      (EqualCI(s, L"errorPrediction"))              return EvalCriterion::ErrorPrediction;
+    if      (EqualCI(s, L"classificationError"))          return EvalCriterion::ClassificationError;
     else if (EqualCI(s, L"crossEntropyWithSoftmax"))      return EvalCriterion::CrossEntropyWithSoftmax;
-    else if (EqualCI(s, L"sequenceWithSoftmax"))          return EvalCriterion::SequenceWithSoftmax; 
-    else if (EqualCI(s, L"classCrossEntropyWithSoftmax")) return EvalCriterion::ClassCrossEntropyWithSoftmax;
     else if (EqualCI(s, L"logistic"))                     return EvalCriterion::Logistic;
     else if (EqualCI(s, L"noiseContrastiveEstimation"))   return EvalCriterion::NCECrossEntropyWithSoftmax;
     else if (EqualCI(s, L"squareError"))                  return EvalCriterion::SquareError;
+    // legacy/deprecated
+    else if (EqualCI(s, L"classCrossEntropyWithSoftmax")) return EvalCriterion::ClassCrossEntropyWithSoftmax;
+    else if (EqualCI(s, L"sequenceWithSoftmax"))          return EvalCriterion::SequenceWithSoftmax;
+    else if (EqualCI(s, L"errorPrediction"))              return EvalCriterion::ClassificationError;
     else LogicError("evalCriterion: Invalid trainingCriterion value. Valid values are (errorPrediction | crossEntropyWithSoftmax | squareError | logistic | sequenceWithSoftmax)");
 }
 

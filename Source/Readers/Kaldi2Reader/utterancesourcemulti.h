@@ -33,13 +33,13 @@ class minibatchutterancesourcemulti : public minibatchsource
     std::vector<std::vector<size_t>> counts; // [s] occurence count for all states (used for priors)
     int verbosity;
     // lattice reader
-    // const std::vector<unique_ptr<latticesource>> &lattices;
+    // const std::vector<std::unique_ptr<latticesource>> &lattices;
     const latticesource &lattices;
 
     // std::vector<latticesource> lattices;
     // word-level transcripts (for MMI mode when adding best path to lattices)
-    const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts; // (used for getting word-level transcripts)
-                                                                                         // std::vector<map<wstring,msra::lattices::lattice::htkmlfwordsequence>> allwordtranscripts;
+    const std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts; // (used for getting word-level transcripts)
+                                                                                         // std::vector<std::map<std::wstring,msra::lattices::lattice::htkmlfwordsequence>> allwordtranscripts;
     // data store (incl. paging in/out of features and lattices)
     struct utterancedesc // data descriptor for one utterance
     {
@@ -51,7 +51,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         {
         }
 
-        const wstring &logicalpath() const
+        const std::wstring &logicalpath() const
         {
             return parsedpath; /*type cast will return logical path*/
         }
@@ -59,7 +59,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         {
             return parsedpath.numframes();
         }
-        const wstring key() const // key used for looking up lattice (not stored to save space)
+        const std::wstring key() const // key used for looking up lattice (not stored to save space)
         {
             // the logical path is the uttid, not a filename. don't need to remove extension
             return logicalpath();
@@ -76,7 +76,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         std::vector<size_t> firstframes;                                            // [utteranceindex] first frame for given utterance
         mutable msra::dbn::matrix frames;                                           // stores all frames consecutively (mutable since this is a cache)
         size_t totalframes;                                                         // total #frames for all utterances in this chunk
-        mutable std::vector<shared_ptr<const latticesource::latticepair>> lattices; // (may be empty if none)
+        mutable std::vector<std::shared_ptr<const latticesource::latticepair>> lattices; // (may be empty if none)
 
         // construction
         utterancechunkdata()
@@ -115,7 +115,7 @@ class minibatchutterancesourcemulti : public minibatchsource
             const size_t n = numframes(i);
             return msra::dbn::matrixstripe(frames, ts, n);
         }
-        shared_ptr<const latticesource::latticepair> getutterancelattice(size_t i) const // return the frame set for a given utterance
+        std::shared_ptr<const latticesource::latticepair> getutterancelattice(size_t i) const // return the frame set for a given utterance
         {
             if (!isinram())
                 throw std::logic_error("getutteranceframes: called when data have not been paged in");
@@ -186,7 +186,7 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
     };
     std::vector<std::vector<utterancechunkdata>> allchunks;           // set of utterances organized in chunks, referred to by an iterator (not an index)
-    std::vector<unique_ptr<biggrowablevector<CLASSIDTYPE>>> classids; // [classidsbegin+t] concatenation of all state sequences
+    std::vector<std::unique_ptr<biggrowablevector<CLASSIDTYPE>>> classids; // [classidsbegin+t] concatenation of all state sequences
     bool issupervised() const
     {
         return !classids.empty();
@@ -254,8 +254,8 @@ class minibatchutterancesourcemulti : public minibatchsource
         }
         void swap(utteranceref &other) // used in randomization
         {
-            ::swap(chunkindex, other.chunkindex);
-            ::swap(utteranceindex, other.utteranceindex);
+            std::swap(chunkindex, other.chunkindex);
+            std::swap(utteranceindex, other.utteranceindex);
             assert(globalts == SIZE_MAX && other.globalts == SIZE_MAX && numframes == 0 && other.numframes == 0); // can only swap before assigning these
         }
     };
@@ -376,9 +376,9 @@ public:
     // constructor
     // Pass empty labels to denote unsupervised training (so getbatch() will not return uids).
     // This mode requires utterances with time stamps.
-    minibatchutterancesourcemulti(std::vector<msra::asr::FeatureSection *> &featuresections, const std::vector<std::vector<wstring>> &infiles, const std::vector<map<wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
+    minibatchutterancesourcemulti(std::vector<msra::asr::FeatureSection *> &featuresections, const std::vector<std::vector<std::wstring>> &infiles, const std::vector<std::map<std::wstring, std::vector<msra::asr::htkmlfentry>>> &labels,
                                   std::vector<size_t> vdim, std::vector<size_t> udim, std::vector<size_t> leftcontext, std::vector<size_t> rightcontext, size_t randomizationrange,
-                                  const latticesource &lattices, const map<wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode)
+                                  const latticesource &lattices, const std::map<std::wstring, msra::lattices::lattice::htkmlfwordsequence> &allwordtranscripts, const bool framemode)
         : vdim(vdim), leftcontext(leftcontext), rightcontext(rightcontext), sampperiod(0), featdim(0), randomizationrange(randomizationrange), currentsweep(SIZE_MAX), lattices(lattices), allwordtranscripts(allwordtranscripts), framemode(framemode), chunksinram(0), timegetbatch(0), verbosity(2)
     // [v-hansu] change framemode (lattices.empty()) into framemode (false) to run utterance mode without lattice
     // you also need to change another line, search : [v-hansu] comment out to run utterance mode without lattice
@@ -390,7 +390,7 @@ public:
         size_t nolat = 0;               // number of entries missing in lattice archive (diagnostics)
         std::vector<size_t> numclasses; // number of output classes as found in the label file (diagnostics)
         _totalframes = 0;
-        wstring key;
+        std::wstring key;
         size_t numutts = 0;
 
         std::vector<bool> uttisvalid;    // boolean flag to check that utterance is valid. valid means number of
@@ -412,10 +412,10 @@ public:
         counts = std::vector<std::vector<size_t>>(labels.size(), std::vector<size_t>());
         foreach_index (i, labels)
         {
-            classids.push_back(unique_ptr<biggrowablevector<CLASSIDTYPE>>(new biggrowablevector<CLASSIDTYPE>()));
-            // std::pair<std::vector<wstring>,std::vector<wstring>> latticetocs;
+            classids.push_back(std::unique_ptr<biggrowablevector<CLASSIDTYPE>>(new biggrowablevector<CLASSIDTYPE>()));
+            // std::pair<std::vector<std::wstring>,std::vector<std::wstring>> latticetocs;
             // std::unordered_map<std::string,size_t> modelsymmap;
-            // lattices.push_back(shared_ptr<latticesource>(new latticesource(latticetocs, modelsymmap)));
+            // lattices.push_back(std::shared_ptr<latticesource>(new latticesource(latticetocs, modelsymmap)));
         }
 
         // first check consistency across feature streams
@@ -595,7 +595,7 @@ public:
                                             throw std::runtime_error("CLASSIDTYPE has too few bits");
                                         for (size_t t = e.firstframe; t < e.firstframe + e.numframes; t++)
                                             classids[j]->push_back((CLASSIDTYPE) e.classid);
-                                        numclasses[j] = max(numclasses[j], (size_t)(1u + e.classid));
+                                        numclasses[j] = std::max(numclasses[j], (size_t)(1u + e.classid));
                                         counts[j].resize(numclasses[j], 0);
                                         counts[j][e.classid] += e.numframes;
                                     }
@@ -710,7 +710,7 @@ private:
             // swap element i with it
             if (irand == (size_t) i)
                 continue;
-            ::swap(v[i], v[irand]);
+            std::swap(v[i], v[irand]);
         }
     }
 #if 0
@@ -732,7 +732,7 @@ private:
             // swap element i with it
                 if (irand == (size_t) i)
                     continue;
-                ::swap (v[j][i], v[j][irand]);
+                std::swap (v[j][i], v[j][irand]);
             }
         }
     }
@@ -1036,7 +1036,7 @@ private:
                     if (sourcechunkindex < targetwindowbegin || sourcechunkindex >= targetwindowend)
                         continue;
                     // admissible--swap the two
-                    ::swap(randomizedframerefs[t], randomizedframerefs[tswap]);
+                    std::swap(randomizedframerefs[t], randomizedframerefs[tswap]);
 #if 0
                     break;
 #else // post-check  --so far did not trigger, can be removed
@@ -1045,7 +1045,7 @@ private:
                     if (isframepositionvalid(t, ttochunk) && isframepositionvalid(tswap, ttochunk))
                         break;
                     // not valid: swap them back and try again  --we actually discovered a bug in the code above
-                    ::swap(randomizedframerefs[t], randomizedframerefs[tswap]);
+                    std::swap(randomizedframerefs[t], randomizedframerefs[tswap]);
                     fprintf(stderr, "lazyrandomization: BUGBUG --invalid swapping condition detected\n");
 #endif
                 }
@@ -1199,9 +1199,9 @@ public:
     //
     //
     /*implement*/ bool getbatch(const size_t globalts, const size_t framesrequested, std::vector<msra::dbn::matrix> &feat,
-                                std::vector<std::vector<size_t>> &uids, std::vector<std::pair<wstring, size_t>> &utteranceinfo,
+                                std::vector<std::vector<size_t>> &uids, std::vector<std::pair<std::wstring, size_t>> &utteranceinfo,
                                 std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> &transcripts,
-                                std::vector<shared_ptr<const latticesource::latticepair>> &latticepairs)
+                                std::vector<std::shared_ptr<const latticesource::latticepair>> &latticepairs)
     {
         bool readfromdisk = false; // return value: shall be 'true' if we paged in anything
 
@@ -1341,7 +1341,7 @@ public:
         {
             const size_t sweepts = sweep * _totalframes;                      // first global frame index for this sweep
             const size_t sweepte = sweepts + _totalframes;                    // and its end
-            const size_t globalte = min(globalts + framesrequested, sweepte); // we return as much as requested, but not exceeding sweep end
+            const size_t globalte = std::min(globalts + framesrequested, sweepte); // we return as much as requested, but not exceeding sweep end
             const size_t mbframes = globalte - globalts;                      // that's our mb size
 
             // determine window range
@@ -1440,12 +1440,12 @@ public:
 
     // alternate (updated) definition for multiple inputs/outputs - read as a vector of feature matrixes or a vector of label strings
     /*implement*/ bool getbatch(const size_t /*globalts*/, const size_t /*framesrequested*/, msra::dbn::matrix & /*feat*/,
-                                std::vector<size_t> & /*uids*/, std::vector<std::pair<wstring, size_t>> & /*utterances*/,
+                                std::vector<size_t> & /*uids*/, std::vector<std::pair<std::wstring, size_t>> & /*utterances*/,
                                 std::vector<const_array_ref<msra::lattices::lattice::htkmlfwordsequence::word>> & /*transcripts*/,
-                                std::vector<shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
+                                std::vector<std::shared_ptr<const latticesource::latticepair>> & /*latticepairs*/)
     {
         // should never get here
-        throw runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchutterancesource instead\n");
+        throw std::runtime_error("minibatchframesourcemulti: getbatch() being called for single input feature and single output feature, should use minibatchutterancesource instead\n");
 
         // for single input/output set size to be 1 and run old getbatch
         // feat.resize(1);

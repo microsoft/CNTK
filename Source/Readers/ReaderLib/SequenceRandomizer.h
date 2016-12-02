@@ -11,6 +11,7 @@
 #include "DataDeserializer.h"
 #include "ChunkRandomizer.h"
 #include <deque>
+#include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -45,18 +46,7 @@ public:
     size_t Seek(size_t sweepSampleOffset, size_t sweep);
 
     // Gets the next randomized sequence descriptions not exceeding the sample count.
-    std::vector<RandomizedSequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
-
-    // Gets the current randomized chunk window.
-    const std::deque<RandomizedChunk>& GetChunkWindow(size_t& randomizedIndex) const
-    {
-        assert(m_chunkWindow.size() >= m_randomizationCursor - m_chunkWindowBegin);
-        randomizedIndex = m_randomizationCursor - m_chunkWindowBegin;
-        return m_chunkWindow;
-    }
-
-    // Release chunks from the chunk window that are not needed anymore.
-    void ReleaseChunks();
+    std::vector<RandomizedSequenceDescription> GetNextSequenceDescriptions(size_t sampleCount, ClosedOpenChunkInterval& requiredChunks);
 
 private:
     DISABLE_COPY_AND_MOVE(SequenceRandomizer);
@@ -79,7 +69,8 @@ private:
     // Move the chunk cursor to the next chunk, randomizing more sequences if necessary.
     void MoveChunkCursor();
 
-private:
+    // Release chunks from the chunk window that are not needed anymore.
+    void ReleaseChunks();
 
     IDataDeserializerPtr m_deserializer;
 
@@ -126,10 +117,6 @@ private:
     //
     //
 
-    // A rolling windows of randomized chunks.
-    // Which chunk to load is decided by the BlockRandomizer (i.e. decimation based on chunk).
-    std::deque<RandomizedChunk> m_chunkWindow;
-
     // A rolling window of randomized sequences for the chunks.
     // Contains randomized sequences from m_chunkWindow chunks.
     std::deque<std::vector<RandomizedSequenceDescription>> m_sequenceWindow;
@@ -164,6 +151,8 @@ private:
 
     // General configuration
     int m_verbosity;
+
+    std::mt19937_64 m_rng;
 };
 
 typedef std::shared_ptr<SequenceRandomizer> SequenceRandomizerPtr;

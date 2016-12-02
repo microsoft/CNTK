@@ -1,0 +1,142 @@
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+RootDir = ".."
+
+ConfigDir = "$RootDir$/Config"
+DataDir   = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir  = "$OutputDir$/Models"
+
+# deviceId=-1 for CPU, >=0 for GPU devices, "auto" chooses the best GPU, or CPU if no usable GPU is available
+deviceId = -1
+
+command = Simple_Demo_Train:Simple_Demo_Test:Simple_Demo_Output
+
+precision = "float"
+traceLevel = 1
+modelPath = "$ModelDir$/simple.dnn"
+outputNodeNames = ScaledLogLikelihood
+
+#######################################
+#  TRAINING CONFIG                    #
+#######################################
+
+Simple_Demo_Train = [
+    action = "train"
+
+    # Notation xxx:yyy*n:zzz is equivalent to xxx, then yyy repeated n times, then zzz
+    # Example: 10:20*3:5 is equivalent to 10:20:20:20:5
+    SimpleNetworkBuilder = [
+        # 2 input, 2 50-element hidden, 2 output
+        layerSizes = 2:50*2:2
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ClassificationError"
+        layerTypes = "Sigmoid"
+        initValueScale = 1.0
+        applyMeanVarNorm = true
+        uniformInit = true
+        needPrior = true
+    ]
+
+    SGD = [
+        # epochSize = 0 means epochSize is the size of the training set 
+        epochSize = 0 
+        minibatchSize = 25  
+        learningRatesPerMB = 0.5:0.2*20:0.1
+        momentumPerMB = 0.9
+        dropoutRate = 0.0
+        maxEpochs = 10
+    ]
+       
+    # Parameter values for the reader
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTrain_cntk_text.txt"
+        input = [
+            features = [
+                dim = 2        # two-dimensional input data
+                format = "dense"
+            ]
+            labels = [
+                dim = 2        # two-dimensional labels
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+########################################
+#  TEST RESULTS                        #
+#  (computes prediction error and      #
+#   perplexity on a test set and       #
+#   writes the output to the console.) #
+########################################
+
+Simple_Demo_Test = [
+    action = "test"
+
+    # Parameter values for the reader
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+                dim = 2        # two-dimensional input data
+                format = "dense"
+            ]
+            labels = [
+                dim = 2        # two-dimensional labels
+                format = "dense"
+            ]
+        ]
+    ]
+]
+
+########################################
+#  OUTPUT RESULTS                      #
+#  (Computes the labels for a test set #
+#   and writes the results to a file.) #
+########################################
+
+Simple_Demo_Output=[
+    action = "write"
+
+    # Parameter values for the reader
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+                dim = 2        # two-dimensional input data
+                format = "dense"
+            ]
+            labels = [
+                dim = 2        # two-dimensional labels
+                format = "dense"
+            ]
+        ]
+    ]
+
+    outputNodeNames = PosteriorProb : labels    # Select the nodes to print. If this is not given, the nodes tagged as "output" are printed instead.
+
+    outputPath = "$OutputDir$/SimpleOutput"     # Path to write to. ".NODENAME" will be appended.
+    #outputPath = "-"                           # As an alternative, this prints to stdout.
+
+    # extra formatting options
+    # This is configured to print the classified and ground-truth labels.
+    # To write out the actual posterior probabilities, comment out this section.
+    format = [
+        type = "category"                                # This finds the highest-scoring entry and prints its index.
+        labelMappingFile = "$DataDir$/SimpleMapping.txt" # Specifying this as well will translate the index into a string.
+        sequenceEpilogue = "\t// %s\n"                   # Append this on every line, %s = node name. Useful when printing to stdout.
+
+        # How to implement simple error counting with this (cd into $OutputDir$ first):
+        #    grep PosteriorProb SimpleOutput.PosteriorProb | awk '{print $1}' > P
+        #    grep labels        SimpleOutput.labels        | awk '{print $1}' > L
+        #    diff L P | grep "<" | wc -l
+        #    wc -l P
+        # The ratio of the two numbers gives the same error rate as ClassificationError/Sample in the log.
+    ]
+]

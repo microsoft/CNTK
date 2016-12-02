@@ -1,25 +1,12 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
 
 using namespace CNTK;
-
-FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input,
-                                                   size_t numOutputClasses,
-                                                   size_t hiddenLayerDim,
-                                                   size_t numHiddenLayers,
-                                                   const DeviceDescriptor& device,
-                                                   const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity,
-                                                   const std::wstring& outputName)
-{
-    assert(numHiddenLayers >= 1);
-    auto classifierRoot = FullyConnectedDNNLayer(input, hiddenLayerDim, device, nonLinearity);
-    for (size_t i = 1; i < numHiddenLayers; ++i)
-        classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
-
-    auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, 1, device));
-    return Times(outputTimesParam, classifierRoot, 1, outputName);
-}
 
 std::wstring s_tempModelPath = L"feedForward.net";
 
@@ -32,17 +19,16 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
     const size_t numHiddenLayers = 6;
     const size_t hiddenLayersDim = 2048;
 
-    Variable inputVar({ inputDim }, DataType::Float, L"features");
-    auto classifierOutputFunction = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, std::bind(Sigmoid, _1, L""), L"classifierOutput");
-    Variable classifierOutput = classifierOutputFunction;
+    auto inputVarName = L"features";
+    auto inputVar = InputVariable({ inputDim }, DataType::Float, inputVarName);
+    auto classifierOutput = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, std::bind(Sigmoid, _1, L""), L"classifierOutput");
 
-    Variable labelsVar({ numOutputClasses }, DataType::Float, L"Labels");
-    auto trainingLossFunction = CNTK::CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"LossFunction");
-    Variable trainingLoss = trainingLossFunction;
-    auto predictionFunction = CNTK::ClassificationError(classifierOutput, labelsVar, L"ClassificationError");
-    Variable prediction = predictionFunction;
+    auto labelsVarName = L"Labels";
+    auto labelsVar = InputVariable({ numOutputClasses }, DataType::Float, labelsVarName);
+    auto trainingLoss = ReduceSum(CNTK::CrossEntropyWithSoftmax(classifierOutput, labelsVar), L"LossFunction");
+    auto prediction = ReduceSum(CNTK::ClassificationError(classifierOutput, labelsVar), L"ClassificationError");
 
-    auto ffNet = CNTK::Combine({ trainingLoss.Owner(), prediction.Owner(), classifierOutput.Owner() }, L"ClassifierModel");
+    auto ffNet = CNTK::Combine({ trainingLoss, prediction, classifierOutput }, L"ClassifierModel");
 
     // Now test the structure
     if (ffNet->Parameters().size() != ((numHiddenLayers * 2) + 1))
@@ -55,7 +41,21 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
         throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Output count");
 
     if (testSaveAndReLoad)
-        SaveAndReloadModel<float>(ffNet, { &inputVar, &labelsVar, &trainingLoss, &prediction, &classifierOutput }, device);
+    {
+        Variable classifierOutputVar = classifierOutput;
+        Variable trainingLossVar = trainingLoss;
+        Variable predictionVar = prediction;
+
+        SaveAndReloadModel<float>(ffNet, { &inputVar, &labelsVar, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        // Make sure that the names of the input variables were properly restored
+        if ((inputVar.Name() != inputVarName) || (labelsVar.Name() != labelsVarName))
+            throw std::runtime_error("One or more input variable names were not properly restored after save and load");
+
+        classifierOutput = classifierOutputVar;
+        trainingLoss = trainingLossVar;
+        prediction = predictionVar;
+    }
 
     // Run Forward and backward a few times
     size_t iterationCount = 4;
@@ -65,15 +65,15 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
     for (size_t i = 0; i < iterationCount; ++i)
     {
         std::vector<float> inputData(inputDim * numSamples);
-        for (size_t i = 0; i < inputData.size(); ++i)
-            inputData[i] = ((float)rand()) / RAND_MAX;
+        for (size_t i2 = 0; i2 < inputData.size(); ++i2)
+            inputData[i2] = ((float)rand()) / RAND_MAX;
 
         NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
 
         std::vector<float> labelData(numOutputClasses * numSamples, 0);
-        for (size_t i = 0; i < numSamples; ++i)
-            labelData[(i*numOutputClasses) + (rand() % numOutputClasses)] = 1;
+        for (size_t i3 = 0; i3 < numSamples; ++i3)
+            labelData[(i3*numOutputClasses) + (rand() % numOutputClasses)] = 1;
 
         NDShape labelShape = labelsVar.Shape().AppendShape({ 1, numSamples });
         ValuePtr labelValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(labelShape, labelData.data(), labelData.size(), DeviceDescriptor::CPUDevice(), true));
@@ -83,14 +83,13 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
         auto backpropState = ffNet->Forward({ { inputVar, inputValue }, { labelsVar, labelValue } }, outputs, device, { trainingLoss });
 
         // Perform backprop
-        NDShape outputShape = trainingLoss.Shape();
+        NDShape outputShape = trainingLoss->Output().Shape();
         std::vector<float> rootGradientsData(outputShape.TotalSize(), 1);
         ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true));
         std::unordered_map<Variable, ValuePtr> paramGradients;
         auto allParams = ffNet->Parameters();
         for (auto iter = allParams.begin(); iter != allParams.end(); ++iter)
             paramGradients[*iter] = nullptr;
-        
         ffNet->Backward(backpropState, { { trainingLoss, rootGradientValue } }, paramGradients);
     }
 }
@@ -106,14 +105,23 @@ void TestTimesAndPlus(size_t inputDim,
                       bool testSaveAndReLoad,
                       unsigned int seed = 1)
 {
-    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device), L"timesParameters");
-    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)1.2, std::initializer_list<size_t>({ outputDim }), device), L"plusParameters");
+    auto timesParamName = L"timesParameters";
+    auto plusParamName = L"plusParameters";
+    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device), timesParamName);
+    Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)1.2, std::initializer_list<size_t>({ outputDim }), device), plusParamName);
 
-    Variable inputVar({ inputDim }, AsDataType<ElementType>(), L"input");
+    auto inputVarName = L"input";
+    auto inputVar = InputVariable({ inputDim }, AsDataType<ElementType>(), inputVarName);
     auto timesAndPlusFunc = Plus(plusParam, Times(timesParam, inputVar));
 
     if (testSaveAndReLoad)
+    {
         SaveAndReloadModel<ElementType>(timesAndPlusFunc, { &inputVar, &timesParam, &plusParam }, device);
+
+        // Make sure that the names of the input variables were properly restored
+        if ((inputVar.Name() != inputVarName) || (timesParam.Name() != timesParamName) || (plusParam.Name() != plusParamName))
+            throw std::runtime_error("One or more input variable names were not properly restored after save and load");
+    }
 
     srand(seed);
     for (size_t iterIdx = 0; iterIdx < numIterations; ++iterIdx)
@@ -238,14 +246,18 @@ void TestTimesAndPlus(size_t inputDim,
 
 void FeedForwardTests()
 {
-    TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true, true);
-#ifndef CPUONLY
-    TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, true);
-    TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, false);
+    fprintf(stderr, "\nFeedForwardTests..\n");
 
-    TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), true);
-    TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), false);
-#endif
+    TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true, true);
+    if (IsGPUAvailable())
+    {
+        TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, true);
+        TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, false);
+
+        TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), true);
+        TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), false);
+    }
+
     TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), false);
     TestFeedForwardNetworkCreation(DeviceDescriptor::CPUDevice(), true);
 }

@@ -8,6 +8,7 @@ precision = "double"
 
 Simple_Test = [
     reader = [
+        useMersenneTwisterRand = true
         readerType = "HTKMLFReader"
         readMethod = "blockRandomize"
         miniBatchMode = "partial"

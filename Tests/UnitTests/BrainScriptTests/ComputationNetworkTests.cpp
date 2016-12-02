@@ -74,4 +74,4 @@ BOOST_AUTO_TEST_CASE(CompareNetworkStructureFromModel)
 
 BOOST_AUTO_TEST_SUITE_END()
 
-} } } }
+}}}}

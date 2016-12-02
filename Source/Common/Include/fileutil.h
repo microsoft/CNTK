@@ -9,7 +9,6 @@
 #define _FILEUTIL_
 
 #include "Basics.h"
-#include <stdio.h>
 #ifdef __WINDOWS__
 #define NOMINMAX
 #include "Windows.h" // for mmreg.h and FILETIME
@@ -31,6 +30,8 @@
 #include <string.h>  // for strerror()
 #include <stdexcept> // for exception
 #include <fcntl.h>
+
+#define FCLOSE_SUCCESS 0
 
 // ----------------------------------------------------------------------------
 // fopenOrDie(): like fopen() but terminate with err msg in case of error.
@@ -482,7 +483,7 @@ const wchar_t* GetFormatString(float);
 template <>
 const wchar_t* GetFormatString(double);
 template <>
-const wchar_t* GetFormatString(size_t);
+const wchar_t* GetFormatString(unsigned long long);
 template <>
 const wchar_t* GetFormatString(long long);
 template <>
@@ -520,7 +521,7 @@ const wchar_t* GetScanFormatString(float);
 template <>
 const wchar_t* GetScanFormatString(double);
 template <>
-const wchar_t* GetScanFormatString(size_t);
+const wchar_t* GetScanFormatString(unsigned long long);
 template <>
 const wchar_t* GetScanFormatString(long long);
 
@@ -700,18 +701,8 @@ class auto_file_ptr
     {
         if (f && f != stdin && f != stdout && f != stderr)
         {
-            bool readMode = false;
-
-#ifdef _WIN32
-            if ((f->_flag&_IOREAD) == _IOREAD)
-                readMode = true;
-#else
-            int mode = fcntl(fileno(f), F_GETFL);
-            if ((mode & O_ACCMODE) == O_RDONLY)
-                readMode = true;
-#endif
             int rc = ::fclose(f);
-            if (!readMode && (rc != 0) && !std::uncaught_exception())
+            if ((rc != FCLOSE_SUCCESS) && !std::uncaught_exception())
                 RuntimeError("auto_file_ptr: failed to close file: %s", strerror(errno));
 
             f = NULL;

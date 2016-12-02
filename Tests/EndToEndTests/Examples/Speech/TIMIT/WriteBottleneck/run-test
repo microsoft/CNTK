@@ -6,7 +6,7 @@
 . $TEST_DIR/../run-timit-test-common
 
 # Train:
-cntkrun TIMIT_TrainAutoEncoder.cntk "$CntkArguments" || exit $?
+cntkrun TIMIT_TrainAutoEncoder_ndl_deprecated.cntk "$CntkArguments TIMIT_TrainAutoEncoder=[reader=[useMersenneTwisterRand=true]]" || exit $?
 
 # Copy the test data to the test run directory, so that we do not damage anything
 DataDir=$TEST_RUN_DIR/TestData
@@ -14,7 +14,7 @@ mkdir $DataDir
 cp -R $DataSourceDir/* $DataDir || exit $?
 
 # Write:
-cntkrun TIMIT_WriteBottleneck.cntk "$CntkArguments"
+cntkrun TIMIT_WriteBottleneck.cntk "$CntkArguments TIMIT_WriteBottleneck=[reader=[useMersenneTwisterRand=true]]"
 ExitCode=$?
 
 if [ $ExitCode == 0 ]; then

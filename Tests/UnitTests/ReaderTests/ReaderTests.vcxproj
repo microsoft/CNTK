@@ -5,6 +5,10 @@
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release_NoOpt|x64">
+      <Configuration>Release_NoOpt</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
@@ -27,8 +31,6 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup>
-    <HasBoost>false</HasBoost>
-    <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
     <ImageReaderDefine Condition="$(HasOpenCv)">ENABLE_IMAGEREADER_TESTS</ImageReaderDefine>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
@@ -52,14 +54,13 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(OutDir)\UnitTests\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)\Source\Readers\CNTKTextFormatReader;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\Readers\ReaderLib;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\Source\Readers\CNTKBinaryReader;$(SolutionDir)\Source\Readers\CNTKTextFormatReader;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\Readers\ReaderLib;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(OutDir);$(OutDir)..;$(BOOST_LIB_PATH)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(OutDir);$(OutDir);$(BOOST_LIB_PATH)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup>
@@ -104,10 +105,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Common\ReaderTestHelper.h" />
+    <ClInclude Include="SequentialDeserializer.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="CNTKBinaryReaderTests.cpp" />
     <ClCompile Include="CNTKTextFormatReaderTests.cpp" />
     <ClCompile Include="HTKLMFReaderTests.cpp" />
     <ClCompile Include="ImageReaderTests.cpp" />
@@ -115,7 +118,6 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="UCIFastReaderTests.cpp" />
     <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\Indexer.cpp" />
     <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\TextParser.cpp" />
   </ItemGroup>
@@ -232,8 +234,8 @@
     <None Include="Config\HTKDeserializersSimpleDataLoop5_Config.cntk" />
     <None Include="Config\HTKDeserializersSimpleDataLoop8_Config.cntk" />
     <None Include="Config\HTKDeserializersSimpleDataLoop9_Config.cntk" />
-    <None Include="Config\ImageAndImageReaderSimple_Config.cntk" />
     <None Include="Config\ImageAndTextReaderSimple_Config.cntk" />
+    <None Include="Config\ImageDeserializers.cntk" />
     <None Include="Config\ImageTransforms_Config.cntk" />
     <None Include="Config\ImageReaderBadLabel_Config.cntk" />
     <None Include="Config\ImageReaderBadMap_Config.cntk" />
@@ -255,20 +257,5 @@
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
     <Warning Condition="!$(HasBoost)" Text="ReaderTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
-  </Target>
-  <PropertyGroup Condition="$(HasOpenCv)">
-    <ImageReaderDependencies>$(OutDir)..\ImageReader.dll;$(OpenCvBinPath)\$(OpenCvWorld).dll</ImageReaderDependencies>
-    <ImageReaderDependencies Condition="$(UseZip)">$(ImageReaderDependencies);$(OutDir)..\zip.dll;$(OutDir)..\zlib1.dll</ImageReaderDependencies>
-  </PropertyGroup>
-  <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
-    <PropertyGroup>
-      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
-    </PropertyGroup>
-    <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(OutDir)..\ucifastreader.dll;$(OutDir)..\cntktextformatreader.dll;$(OutDir)..\htkmlfreader.dll;$(OutDir)..\HTKDeserializers.dll;$(OutDir)..\compositedatareader.dll;$(UnitTestDlls);$(ImageReaderDependencies);$(CuDnnDll)" />
-    </ItemGroup>
-    <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
-      <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
-    </Copy>
   </Target>
 </Project>

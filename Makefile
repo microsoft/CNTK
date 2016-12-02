@@ -26,15 +26,23 @@
 #   CUB_PATH= path to NVIDIA CUB installation, so $(CUB_PATH)/cub/cub.cuh exists
 #     defaults to /usr/local/cub-1.4.1
 #   CUDNN_PATH= path to NVIDIA cuDNN installation so $(CUDNN_PATH)/cuda/include/cudnn.h exists
-#     If not specified, CNTK will be be built without cuDNN.
+#     CuDNN version needs to be 5.0 or higher.
 #   KALDI_PATH= Path to Kaldi
 #     If not specified, Kaldi plugins will not be built
 #   OPENCV_PATH= path to OpenCV 3.1.0 installation, so $(OPENCV_PATH) exists
 #     defaults to /usr/local/opencv-3.1.0
+#   PROTOBUF_PATH= path to Protocol Buffers 3.1.0 installation, so $(PROTOBUF_PATH) exists
+#     defaults to /usr/local/protobuf-3.1.0
 #   LIBZIP_PATH= path to libzip installation, so $(LIBZIP_PATH) exists
 #     defaults to /usr/local/
 #   BOOST_PATH= path to Boost installation, so $(BOOST_PATH)/include/boost/test/unit_test.hpp
 #     defaults to /usr/local/boost-1.60.0
+#   PYTHON_SUPPORT=true iff CNTK v2 Python module should be build
+#   SWIG_PATH= path to SWIG (>= 3.0.10)
+#   PYTHON_VERSIONS= list of Python versions to build for
+#     A Python version is identified by "34" or "35".
+#   PYTHON34_PATH= path to Python 3.4 interpreter
+#   PYTHON35_PATH= path to Python 3.5 interpreter
 # These can be overridden on the command line, e.g. make BUILDTYPE=debug
 
 # TODO: Build static libraries for common dependencies that are shared by multiple 
@@ -67,15 +75,23 @@ endif
 # The mpic++ wrapper only adds MPI specific flags to the g++ command line.
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
 CXX = mpic++
+SSE_FLAGS = -msse4.1 -mssse3
+
+PROTOC = $(PROTOBUF_PATH)/bin/protoc
+
+# Settings for ARM64 architectures that use a crosscompiler on a host machine.
+#CXX = aarch64-linux-gnu-g++
+#SSE_FLAGS =
 
 SOURCEDIR:= Source
-INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib)
+INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/proto Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib)
+INCLUDEPATH+=$(PROTOBUF_PATH)/include
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
 COMMON_FLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
-CPPFLAGS:= 
-CXXFLAGS:= -msse4.1 -mssse3 -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
+CPPFLAGS:=
+CXXFLAGS:= $(SSE_FLAGS) -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
-LIBS:=
+LIBS_LIST:=
 LDFLAGS:=
 
 CXXVER_GE480:= $(shell expr `$(CXX) -dumpversion | sed -e 's/\.\([0-9][0-9]\)/\1/g' -e 's/\.\([0-9]\)/0\1/g' -e 's/^[0-9]\{3,4\}$$/&00/'` \>= 40800)
@@ -85,6 +101,8 @@ endif
 
 SEPARATOR = "=-----------------------------------------------------------="
 ALL:=
+ALL_LIBS:=
+LIBS_FULLPATH:=
 SRC:=
 
 # Make sure all is the first (i.e. default) target, but we can't actually define it
@@ -92,7 +110,7 @@ SRC:=
 all : buildall
 
 # Set up basic nvcc options and add CUDA targets from above
-CUFLAGS = -m 64 
+CUFLAGS = -m 64
 
 ifdef CUDA_PATH
   ifndef GDK_INCLUDE_PATH
@@ -120,14 +138,22 @@ ifdef CUDA_PATH
 # Set up CUDA includes and libraries
   INCLUDEPATH += $(CUDA_PATH)/include
   LIBPATH += $(CUDA_PATH)/lib64
-  LIBS += -lcublas -lcudart -lcuda -lcurand -lcusparse -lnvidia-ml
+  LIBS_LIST += cublas cudart cuda curand cusparse nvidia-ml
 
 # Set up cuDNN if needed
   ifdef CUDNN_PATH
     INCLUDEPATH += $(CUDNN_PATH)/cuda/include
     LIBPATH += $(CUDNN_PATH)/cuda/lib64
-    LIBS += -lcudnn
+    LIBS_LIST += cudnn
     COMMON_FLAGS +=-DUSE_CUDNN
+  endif
+
+# Set up NCCL if needed
+  ifdef NCCL_PATH
+    INCLUDEPATH += $(NCCL_PATH)/include
+    LIBPATH += $(NCCL_PATH)/lib
+    LIBS_LIST += nccl
+    COMMON_FLAGS += -DUSE_NCCL
   endif
 else
   DEVICE = cpu
@@ -142,13 +168,13 @@ endif
 
 ifeq ("$(MATHLIB)","mkl")
   INCLUDEPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/include
-  LIBS += -lm
+  LIBS_LIST += m
 ifeq ("$(MKL_THREADING)","sequential")
   LIBPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/sequential
-  LIBS += -lmkl_cntk_s
+  LIBS_LIST += mkl_cntk_s
 else
   LIBPATH += $(MKL_PATH)/$(CNTK_CUSTOM_MKL_VERSION)/x64/parallel
-  LIBS += -lmkl_cntk_p -liomp5 -lpthread
+  LIBS_LIST += mkl_cntk_p iomp5 pthread
 endif
   COMMON_FLAGS += -DUSE_MKL
 endif
@@ -156,7 +182,7 @@ endif
 ifeq ("$(MATHLIB)","openblas")
   INCLUDEPATH += $(OPENBLAS_PATH)/include
   LIBPATH += $(OPENBLAS_PATH)/lib
-  LIBS += -lopenblas -lm -lpthread
+  LIBS_LIST += openblas m pthread
   CPPFLAGS += -DUSE_OPENBLAS
 endif
 
@@ -167,10 +193,11 @@ ifdef KALDI_PATH
   ATLASINC = $(KALDI_PATH)/tools/ATLAS/include
 
   INCLUDEPATH += $(KALDI_PATH)/src $(ATLASINC) $(FSTROOT)/include
-  CPPFLAGS+= -DKALDI_DOUBLEPRECISION=0 -DHAVE_POSIX_MEMALIGN -DHAVE_EXECINFO_H=1 -DHAVE_CXXABI_H -DHAVE_ATLAS -DHAVE_OPENFST_GE_10400
+  CPPFLAGS += -DKALDI_DOUBLEPRECISION=0 -DHAVE_POSIX_MEMALIGN -DHAVE_EXECINFO_H=1 -DHAVE_CXXABI_H -DHAVE_ATLAS -DHAVE_OPENFST_GE_10400
 
   KALDI_LIBPATH += $(KALDI_PATH)/src/lib
-  KALDI_LIBS += -lkaldi-util -lkaldi-matrix -lkaldi-base -lkaldi-hmm -lkaldi-cudamatrix -lkaldi-nnet -lkaldi-lat
+  KALDI_LIBS_LIST := kaldi-util kaldi-matrix kaldi-base kaldi-hmm kaldi-cudamatrix kaldi-nnet kaldi-lat
+  KALDI_LIBS := $(addprefix -l,$(KALDI_LIBS_LIST))
 endif
 
 ifdef SUPPORT_AVX2
@@ -224,11 +251,14 @@ ifdef CNTK_CUDA_DEVICE_DEBUGINFO
   CUFLAGS += -G
 endif
 
-#######
+# Create the library link options for the linker.
+# LIBS_LIST must not be changed beyond this point.
+LIBS:= $(addprefix -l,$(LIBS_LIST))
 
 OBJDIR:= $(BUILD_TOP)/.build
 BINDIR:= $(BUILD_TOP)/bin
 LIBDIR:= $(BUILD_TOP)/lib
+PYTHONDIR:= $(BUILD_TOP)/python
 
 ORIGINLIBDIR:='$$ORIGIN/../lib'
 ORIGINDIR:='$$ORIGIN'
@@ -266,10 +296,12 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/TruncatedBpttPacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
-	$(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/ReaderBase.cpp \
+    $(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
+	$(SOURCEDIR)/Common/Globals.cpp \
 	$(SOURCEDIR)/Common/DataReader.cpp \
 	$(SOURCEDIR)/Common/DataWriter.cpp \
 	$(SOURCEDIR)/Common/ExceptionWithCallStack.cpp \
@@ -277,21 +309,24 @@ COMMON_SRC =\
 	$(SOURCEDIR)/Common/File.cpp \
 	$(SOURCEDIR)/Common/TimerUtility.cpp \
 	$(SOURCEDIR)/Common/fileutil.cpp \
+	$(SOURCEDIR)/Common/Sequences.cpp \
 
 MATH_SRC =\
+	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
 	$(SOURCEDIR)/Math/BlockHandlerSSE.cpp \
+	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
 	$(SOURCEDIR)/Math/CPUMatrix.cpp \
-	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
 	$(SOURCEDIR)/Math/CPURNGHandle.cpp \
+	$(SOURCEDIR)/Math/CPUSparseMatrix.cpp \
+	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
 	$(SOURCEDIR)/Math/MatrixQuantizerImpl.cpp \
 	$(SOURCEDIR)/Math/MatrixQuantizerCPU.cpp \
-	$(SOURCEDIR)/Math/QuantizedMatrix.cpp \
 	$(SOURCEDIR)/Math/Matrix.cpp \
+	$(SOURCEDIR)/Math/QuantizedMatrix.cpp \
+	$(SOURCEDIR)/Math/DataTransferer.cpp \
 	$(SOURCEDIR)/Math/RNGHandle.cpp \
 	$(SOURCEDIR)/Math/TensorView.cpp \
-	$(SOURCEDIR)/Math/CUDAPageLockedMemAllocator.cpp \
-	$(SOURCEDIR)/Math/ConvolutionEngine.cpp \
-	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
+	$(SOURCEDIR)/Math/NcclComm.cpp \
 
 ifdef SUPPORT_AVX2
 MATH_SRC +=\
@@ -301,16 +336,17 @@ endif
 
 ifdef CUDA_PATH
 MATH_SRC +=\
+	$(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \
+	$(SOURCEDIR)/Math/CuDnnCommon.cu \
+	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
+	$(SOURCEDIR)/Math/CuDnnRNN.cpp \
+	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 	$(SOURCEDIR)/Math/GPUMatrix.cu \
-	$(SOURCEDIR)/Math/GPUTensor.cu \
 	$(SOURCEDIR)/Math/GPUSparseMatrix.cu \
+	$(SOURCEDIR)/Math/GPUTensor.cu \
 	$(SOURCEDIR)/Math/GPUWatcher.cu \
 	$(SOURCEDIR)/Math/GPURNGHandle.cu \
 	$(SOURCEDIR)/Math/MatrixQuantizerGPU.cu \
-	$(SOURCEDIR)/Math/CuDnnCommon.cu \
-	$(SOURCEDIR)/Math/CuDnnConvolutionEngine.cu \
-	$(SOURCEDIR)/Math/CuDnnBatchNormalization.cu \
-	$(SOURCEDIR)/Math/GPUDataTransferer.cpp \
 
 else
 MATH_SRC +=\
@@ -324,7 +360,7 @@ MATH_SRC+=$(READER_SRC)
 MATH_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(MATH_SRC)))
 
 CNTKMATH_LIB:= $(LIBDIR)/lib$(CNTKMATH).so
-ALL += $(CNTKMATH_LIB)
+ALL_LIBS += $(CNTKMATH_LIB)
 SRC+=$(MATH_SRC)
 
 $(CNTKMATH_LIB): $(MATH_OBJ)
@@ -345,7 +381,10 @@ COMPUTATION_NETWORK_LIB_SRC =\
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNode.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNodeScripting.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/InputAndParamNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/RecurrentNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/LinearAlgebraNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ReshapingNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/RNNNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/SpecialPurposeNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetwork.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEvaluation.cpp \
@@ -353,6 +392,7 @@ COMPUTATION_NETWORK_LIB_SRC =\
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkEditing.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkBuilder.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNetworkScripting.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/TrainingNodes.cpp \
 
 SEQUENCE_TRAINING_LIB_SRC =\
 	$(SOURCEDIR)/SequenceTrainingLib/latticeforwardbackward.cpp \
@@ -370,19 +410,30 @@ SEQUENCE_TRAINING_LIB_SRC +=\
 
 endif
 
-CNTKLIBRARY_SRC =\
+CNTKLIBRARY_COMMON_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/BackCompat.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
-	$(SOURCEDIR)/CNTKv2LibraryDll/MinibatchSource.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/PrimitiveFunction.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/CompositeFunction.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDMask.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Trainer.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Utils.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Value.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Variable.cpp \
-    $(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Learner.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/Serialization.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/DistributedCommunicator.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/DistributedTrainerBase.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/DataParallelDistributedTrainer.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/proto/CNTK.pb.cc \
 
+CNTKLIBRARY_SRC =\
+	$(SOURCEDIR)/CNTKv2LibraryDll/ComputeInputStatistics.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/MinibatchSource.cpp \
+
+CNTKLIBRARY_SRC+=$(CNTKLIBRARY_COMMON_SRC)
 CNTKLIBRARY_SRC+=$(CNTK_COMMON_SRC)
 CNTKLIBRARY_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
 CNTKLIBRARY_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
@@ -390,32 +441,46 @@ CNTKLIBRARY_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 CNTKLIBRARY_VERSION=2.0
 CNTKLIBRARY:=cntklibrary-$(CNTKLIBRARY_VERSION)
 
-CNTKLIBRARY_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_SRC)))
+CNTKLIBRARY_OBJ:=\
+	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(CNTKLIBRARY_SRC))) \
+	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(CNTKLIBRARY_SRC))) \
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(CNTKLIBRARY_SRC)))
 
 CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
-ALL+=$(CNTKLIBRARY_LIB)
+ALL_LIBS+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
-	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH)
+	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a
 
 ########################################
 # CNTKLibrary tests
 ########################################
 
+CNTKLIBRARY_TESTS_SRC_PATH =\
+    Tests/UnitTests/V2LibraryTests
+
 CNTKLIBRARY_TESTS_SRC =\
-	Tests/UnitTests/V2LibraryTests/FeedForwardTests.cpp \
-	Tests/UnitTests/V2LibraryTests/Main.cpp \
-	Tests/UnitTests/V2LibraryTests/NDArrayViewTests.cpp \
-	Tests/UnitTests/V2LibraryTests/RecurrentFunctionTests.cpp \
-	Tests/UnitTests/V2LibraryTests/TensorTests.cpp \
-	Tests/UnitTests/V2LibraryTests/TrainerTests.cpp \
-	Tests/UnitTests/V2LibraryTests/CifarResNet.cpp \
-    Tests/UnitTests/V2LibraryTests/SerializationTests.cpp \
-    Tests/UnitTests/V2LibraryTests/LearnerTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/FeedForwardTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/Main.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/Common.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/NDArrayViewTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/RecurrentFunctionTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/TensorTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/TrainerTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/CifarResNet.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/SerializationTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/LearnerTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/FunctionTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/SequenceClassification.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/Seq2Seq.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/TruncatedLSTMAcousticModel.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/DeviceSelectionTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/MinibatchSourceTest.cpp \
+	Examples/Evaluation/CPPEvalV2Client/EvalMultithreads.cpp \
 
 CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
 CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
@@ -426,7 +491,30 @@ SRC+=$(CNTKLIBRARY_TESTS_SRC)
 $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
-	@echo building output for $(ARCH) with build type $(BUILDTYPE)
+	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
+
+########################################
+# CNTKLibrary distribution tests
+########################################
+
+CNTKLIBRARY_DISTRIBUTION_TESTS_SRC =\
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/Common.cpp \
+	Tests/UnitTests/V2LibraryDistributionTests/Main.cpp \
+	Tests/UnitTests/V2LibraryDistributionTests/FrameModeTests.cpp \
+
+CNTKLIBRARY_DISTRIBUTION_TESTS:=$(BINDIR)/v2librarydistributiontests
+CNTKLIBRARY_DISTRIBUTION_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_DISTRIBUTION_TESTS_SRC)))
+
+ALL+=$(CNTKLIBRARY_DISTRIBUTION_TESTS)
+SRC+=$(CNTKLIBRARY_DISTRIBUTION_TESTS_SRC)
+
+INCLUDEPATH+=$(CNTKLIBRARY_TESTS_SRC_PATH)
+
+$(CNTKLIBRARY_DISTRIBUTION_TESTS): $(CNTKLIBRARY_DISTRIBUTION_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
 
 ########################################
@@ -436,9 +524,13 @@ $(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB)
 EVAL:=eval
 
 SGDLIB_SRC=\
+	$(SOURCEDIR)/SGDLib/ASGDHelper.cpp \
 	$(SOURCEDIR)/SGDLib/Profiler.cpp \
-	$(SOURCEDIR)/SGDLib/SGD.cpp
-	
+	$(SOURCEDIR)/SGDLib/SGD.cpp \
+	$(SOURCEDIR)/SGDLib/PostComputingActions.cpp \
+
+SGDLIB_SRC+=$(CNTKLIBRARY_COMMON_SRC)
+
 EVAL_SRC=\
 	$(SOURCEDIR)/EvalDll/CNTKEval.cpp \
 	$(SOURCEDIR)/CNTK/BrainScript/BrainScriptEvaluator.cpp \
@@ -455,36 +547,75 @@ EVAL_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
 EVAL_SRC+=$(CNTK_COMMON_SRC)
 EVAL_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 
-EVAL_OBJ:=$(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SRC)))
+EVAL_OBJ:=\
+	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(EVAL_SRC))) \
+	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(EVAL_SRC))) \
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(EVAL_SRC)))
 
 EVAL_LIB:=$(LIBDIR)/lib$(EVAL).so
-ALL+=$(EVAL_LIB)
+ALL_LIBS+=$(EVAL_LIB)
 SRC+=$(EVAL_SRC)
 
 $(EVAL_LIB): $(EVAL_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo Building $(EVAL_LIB) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) 
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) $(lMULTIVERSO) $(PROTOBUF_PATH)/lib/libprotobuf.a
 
 ########################################
-# Eval Sample client
+# Eval Sample clients
 ########################################
-EVAL_SAMPLE_CLIENT:=$(BINDIR)/cppevalclient
+EVAL_CLIENT:=$(BINDIR)/cppevalclient
 
-EVAL_SAMPLE_CLIENT_SRC=\
+EVAL_CLIENT_SRC=\
 	$(SOURCEDIR)/../Examples/Evaluation/CPPEvalClient/CPPEvalClient.cpp 
 
-EVAL_SAMPLE_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_SAMPLE_CLIENT_SRC))
+EVAL_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_CLIENT_SRC))
 
-ALL+=$(EVAL_SAMPLE_CLIENT)
-SRC+=$(EVAL_SAMPLE_CLIENT_SRC)
+ALL+=$(EVAL_CLIENT)
+SRC+=$(EVAL_CLIENT_SRC)
 
-$(EVAL_SAMPLE_CLIENT): $(EVAL_SAMPLE_CLIENT_OBJ) | $(EVAL_LIB) 
+$(EVAL_CLIENT): $(EVAL_CLIENT_OBJ) | $(EVAL_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
-	@echo building $(EVAL_SAMPLE_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH)
+	@echo building $(EVAL_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH) $(lMULTIVERSO)
+
+EVAL_EXTENDED_CLIENT:=$(BINDIR)/cppevalextendedclient
+
+EVAL_EXTENDED_CLIENT_SRC=\
+	$(SOURCEDIR)/../Examples/Evaluation/CPPEvalExtendedClient/CPPEvalExtendedClient.cpp 
+
+EVAL_EXTENDED_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVAL_EXTENDED_CLIENT_SRC))
+
+ALL+=$(EVAL_EXTENDED_CLIENT)
+SRC+=$(EVAL_EXTENDED_CLIENT_SRC)
+
+$(EVAL_EXTENDED_CLIENT): $(EVAL_EXTENDED_CLIENT_OBJ) | $(EVAL_LIB)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building $(EVAL_EXTENDED_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(EVAL) -l$(CNTKMATH) $(lMULTIVERSO)
+
+########################################
+# Eval V2 Sample client
+########################################
+EVALV2_SAMPLE_CLIENT:=$(BINDIR)/cppevalv2client
+
+EVALV2_SAMPLE_CLIENT_SRC=\
+	$(SOURCEDIR)/../Examples/Evaluation/CPPEvalV2Client/CPPEvalV2Client.cpp  \
+	$(SOURCEDIR)/../Examples/Evaluation/CPPEvalV2Client/EvalMultithreads.cpp
+
+EVALV2_SAMPLE_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVALV2_SAMPLE_CLIENT_SRC))
+
+ALL+=$(EVALV2_SAMPLE_CLIENT)
+SRC+=$(EVALV2_SAMPLE_CLIENT_SRC)
+
+$(EVALV2_SAMPLE_CLIENT): $(EVALV2_SAMPLE_CLIENT_OBJ) | $(CNTKLIBRARY_LIB)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building $(EVALV2_SAMPLE_CLIENT) for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) -l$(CNTKMATH)
 
 ########################################
 # BinaryReader plugin
@@ -499,7 +630,7 @@ BINARYREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(BINARYREADER_SRC))
 
 BINARY_READER:= $(LIBDIR)/BinaryReader.so
 
-#ALL += $(BINARY_READER)
+#ALL_LIBS += $(BINARY_READER)
 #SRC+=$(BINARYREADER_SRC)
 
 $(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
@@ -519,7 +650,7 @@ HTKMLFREADER_SRC =\
 HTKMLFREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKMLFREADER_SRC))
 
 HTKMLFREADER:=$(LIBDIR)/HTKMLFReader.so
-ALL+=$(HTKMLFREADER)
+ALL_LIBS+=$(HTKMLFREADER)
 SRC+=$(HTKMLFREADER_SRC)
 
 $(LIBDIR)/HTKMLFReader.so: $(HTKMLFREADER_OBJ) | $(CNTKMATH_LIB)
@@ -537,7 +668,7 @@ COMPOSITEDATAREADER_SRC =\
 COMPOSITEDATAREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(COMPOSITEDATAREADER_SRC))
 
 COMPOSITEDATAREADER:=$(LIBDIR)/CompositeDataReader.so
-ALL+=$(COMPOSITEDATAREADER)
+ALL_LIBS+=$(COMPOSITEDATAREADER)
 SRC+=$(COMPOSITEDATAREADER_SRC)
 
 $(LIBDIR)/CompositeDataReader.so: $(COMPOSITEDATAREADER_OBJ) | $(CNTKMATH_LIB)
@@ -560,7 +691,7 @@ HTKDESERIALIZERS_SRC =\
 HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC))
 
 HTKDESERIALIZERS:=$(LIBDIR)/HTKDeserializers.so
-ALL+=$(HTKDESERIALIZERS)
+ALL_LIBS+=$(HTKDESERIALIZERS)
 SRC+=$(HTKDESERIALIZERS_SRC)
 
 $(LIBDIR)/HTKDeserializers.so: $(HTKDESERIALIZERS_OBJ) | $(CNTKMATH_LIB)
@@ -580,7 +711,7 @@ LMSEQUENCEREADER_SRC =\
 LMSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LMSEQUENCEREADER_SRC))
 
 LMSEQUENCEREADER:= $(LIBDIR)/LMSequenceReader.so
-ALL+=$(LMSEQUENCEREADER)
+ALL_LIBS+=$(LMSEQUENCEREADER)
 SRC+=$(LMSEQUENCEREADER_SRC)
 
 $(LMSEQUENCEREADER): $(LMSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
@@ -601,7 +732,7 @@ LUSEQUENCEREADER_SRC =\
 LUSEQUENCEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LUSEQUENCEREADER_SRC))
 
 LUSEQUENCEREADER:=$(LIBDIR)/LUSequenceReader.so
-ALL+=$(LUSEQUENCEREADER)
+ALL_LIBS+=$(LUSEQUENCEREADER)
 SRC+=$(LUSEQUENCEREADER_SRC)
 
 $(LUSEQUENCEREADER): $(LUSEQUENCEREADER_OBJ) | $(CNTKMATH_LIB)
@@ -620,7 +751,7 @@ UCIFASTREADER_SRC =\
 UCIFASTREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UCIFASTREADER_SRC))
 
 UCIFASTREADER:=$(LIBDIR)/UCIFastReader.so
-ALL += $(UCIFASTREADER)
+ALL_LIBS += $(UCIFASTREADER)
 SRC+=$(UCIFASTREADER_SRC)
 
 $(UCIFASTREADER): $(UCIFASTREADER_OBJ) | $(CNTKMATH_LIB)
@@ -638,7 +769,7 @@ LIBSVMBINARYREADER_SRC =\
 LIBSVMBINARYREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(LIBSVMBINARYREADER_SRC))
 
 LIBSVMBINARYREADER:=$(LIBDIR)/LibSVMBinaryReader.so
-ALL += $(LIBSVMBINARYREADER)
+ALL_LIBS += $(LIBSVMBINARYREADER)
 SRC+=$(LIBSVMBINARYREADER_SRC)
 
 $(LIBSVMBINARYREADER): $(LIBSVMBINARYREADER_OBJ) | $(CNTKMATH_LIB)
@@ -656,12 +787,33 @@ SPARSEPCREADER_SRC =\
 SPARSEPCREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(SPARSEPCREADER_SRC))
 
 SPARSEPCREADER:=$(LIBDIR)/SparsePCReader.so
-ALL += $(SPARSEPCREADER)
+ALL_LIBS += $(SPARSEPCREADER)
 SRC+=$(SPARSEPCREADER_SRC)
 
 $(SPARSEPCREADER): $(SPARSEPCREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
+# CNTKBinaryReader plugin
+########################################
+
+CNTKBINARYREADER_SRC =\
+	$(SOURCEDIR)/Readers/CNTKBinaryReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/CNTKBinaryReader/BinaryChunkDeserializer.cpp \
+	$(SOURCEDIR)/Readers/CNTKBinaryReader/BinaryConfigHelper.cpp \
+	$(SOURCEDIR)/Readers/CNTKBinaryReader/CNTKBinaryReader.cpp \
+
+CNTKBINARYREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKBINARYREADER_SRC))
+
+CNTKBINARYREADER:=$(LIBDIR)/CNTKBinaryReader.so
+ALL += $(CNTKBINARYREADER)
+SRC+=$(CNTKBINARYREADER_SRC)
+
+$(CNTKBINARYREADER): $(CNTKBINARYREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
 
 ########################################
 # CNTKTextFormatReader plugin
@@ -677,7 +829,7 @@ CNTKTEXTFORMATREADER_SRC =\
 CNTKTEXTFORMATREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKTEXTFORMATREADER_SRC))
 
 CNTKTEXTFORMATREADER:=$(LIBDIR)/CNTKTextFormatReader.so
-ALL += $(CNTKTEXTFORMATREADER)
+ALL_LIBS += $(CNTKTEXTFORMATREADER)
 SRC+=$(CNTKTEXTFORMATREADER_SRC)
 
 $(CNTKTEXTFORMATREADER): $(CNTKTEXTFORMATREADER_OBJ) | $(CNTKMATH_LIB)
@@ -702,7 +854,7 @@ KALDI2READER_SRC = \
 KALDI2READER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(KALDI2READER_SRC))
 
 KALDI2READER:=$(LIBDIR)/Kaldi2Reader.so
-ALL+=$(KALDI2READER)
+ALL_LIBS+=$(KALDI2READER)
 SRC+=$(KALDI2READER_SRC)
 
 $(KALDI2READER): $(KALDI2READER_OBJ) | $(CNTKMATH_LIB)
@@ -716,14 +868,21 @@ endif
 ########################################
 
 ifdef OPENCV_PATH
+ifdef BOOST_PATH
 
-IMAGE_READER_LIBS += -lopencv_core -lopencv_imgproc -lopencv_imgcodecs
+INCLUDEPATH += $(BOOST_PATH)/include
+
+IMAGEREADER_LIBS_LIST := opencv_core opencv_imgproc opencv_imgcodecs
 
 ifdef LIBZIP_PATH
   CPPFLAGS += -DUSE_ZIP
-  INCLUDEPATH += $(LIBZIP_PATH)/lib/libzip/include
-  IMAGE_READER_LIBS += -lzip
+  # Both directories are needed for building libzip
+  INCLUDEPATH += $(LIBZIP_PATH)/include $(LIBZIP_PATH)/lib/libzip/include
+  LIBPATH += $(LIBZIP_PATH)/lib
+  IMAGEREADER_LIBS_LIST += zip
 endif
+
+IMAGEREADER_LIBS:= $(addprefix -l,$(IMAGEREADER_LIBS_LIST))
 
 IMAGEREADER_SRC =\
   $(SOURCEDIR)/Readers/ImageReader/Exports.cpp \
@@ -736,7 +895,7 @@ IMAGEREADER_SRC =\
 IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))
 
 IMAGEREADER:=$(LIBDIR)/ImageReader.so
-ALL += $(IMAGEREADER)
+ALL_LIBS += $(IMAGEREADER)
 SRC+=$(IMAGEREADER_SRC)
 
 INCLUDEPATH += $(OPENCV_PATH)/include
@@ -744,7 +903,8 @@ LIBPATH += $(OPENCV_PATH)/lib $(OPENCV_PATH)/release/lib
 
 $(IMAGEREADER): $(IMAGEREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGE_READER_LIBS)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH) $(IMAGEREADER_LIBS)
+endif
 endif
 
 ########################################
@@ -761,6 +921,74 @@ endif
 
   COMMON_FLAGS += -DCNTK_PARALLEL_TRAINING_SUPPORT
   # temporarily adding to 1bit, need to work with others to fix it
+endif
+
+ 
+########################################
+# ASGD(multiverso) setup
+########################################
+
+
+ifeq ("$(CNTK_ENABLE_ASGD)","true")
+
+ifeq (,$(wildcard Source/Multiverso/include/multiverso/*.h))
+  $(error Build with Multiverso was requested but cannot find the code. Please check https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#24-data-parallel-asgd to learn more.)
+endif
+
+lMULTIVERSO:=-lmultiverso
+
+INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
+COMMON_FLAGS += -DASGD_PARALLEL_SUPPORT
+
+MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
+
+ALL_LIBS+=$(MULTIVERSO_LIB)
+ifeq ("$(BUILDTYPE)","release")
+MULTIVERSO_CMAKE_BUILDTYPE=Release
+endif
+ifeq ("$(BUILDTYPE)","debug")
+MULTIVERSO_CMAKE_BUILDTYPE=Debug
+endif
+
+# TODO need to align Multiverso OpenMP with the one we use (libiomp). For now, disabled.
+$(MULTIVERSO_LIB): 
+	@echo "Build Multiverso lib"
+	@mkdir -p $(LIBDIR)
+	@mkdir -p $(BINDIR)
+	@mkdir -p $(SOURCEDIR)/Multiverso/build/$(BUILDTYPE)
+	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
+		-DOpenMP_CXX_FLAGS="" \
+		-DOpenMP_C_FLAGS="" \
+		-DBoost_NO_BOOST_CMAKE=TRUE \
+		-DBoost_NO_SYSTEM_PATHS=TRUE \
+		-DBOOST_ROOT:PATHNAME=$(BOOST_PATH) \
+		-DBOOST_LIBRARY_DIRS:FILEPATH=$(BOOST_PATH) \
+		-DLIBRARY_OUTPUT_PATH=$(shell readlink -f $(LIBDIR)) \
+		-DEXECUTABLE_OUTPUT_PATH=$(shell readlink -f $(BINDIR)) \
+		-DCMAKE_BUILD_TYPE=$(MULTIVERSO_CMAKE_BUILDTYPE) \
+		-B./Source/Multiverso/build/$(BUILDTYPE) -H./Source/Multiverso
+	@make VERBOSE=1 -C ./Source/Multiverso/build/$(BUILDTYPE) -j multiverso
+
+UNITTEST_MULTIVERSO_SRC = \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_array.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_blob.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_kv.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_message.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_multiverso.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_node.cpp \
+	$(SOURCEDIR)/Multiverso/Test/unittests/test_sync.cpp \
+
+UNITTEST_MULTIVERSO_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_MULTIVERSO_SRC))
+
+UNITTEST_MULTIVERSO := $(BINDIR)/multiversotests
+
+ALL += $(UNITTEST_MULTIVERSO)
+
+$(UNITTEST_MULTIVERSO): $(UNITTEST_MULTIVERSO_OBJ) | $(MULTIVERSO_LIB)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(lMULTIVERSO) -ldl
 endif
 
 ########################################
@@ -787,17 +1015,20 @@ CNTK_SRC+=$(CNTK_COMMON_SRC)
 CNTK_SRC+=$(COMPUTATION_NETWORK_LIB_SRC)
 CNTK_SRC+=$(SEQUENCE_TRAINING_LIB_SRC)
 
-CNTK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTK_SRC)))
+CNTK_OBJ :=\
+	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(CNTK_SRC))) \
+	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(CNTK_SRC))) \
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(CNTK_SRC)))
 
 CNTK:=$(BINDIR)/cntk
 ALL+=$(CNTK)
 SRC+=$(CNTK_SRC)
 
-$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB)
+$(CNTK): $(CNTK_OBJ) | $(CNTKMATH_LIB) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
-	@echo building output for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) -fopenmp
+	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) $(lMULTIVERSO) -fopenmp $(PROTOBUF_PATH)/lib/libprotobuf.a
 
 # deployable resources: standard library of BS
 CNTK_CORE_BS:=$(BINDIR)/cntk.core.bs
@@ -834,17 +1065,17 @@ $(UNITTEST_EVAL) : $(UNITTEST_EVAL_OBJ) | $(EVAL_LIB) $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) -l$(CNTKMATH) 
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(EVAL) -l$(CNTKMATH) $(lMULTIVERSO)
 
 #TODO: create project specific makefile or rules to avoid adding project specific path to the global path
 INCLUDEPATH += $(SOURCEDIR)/Readers/CNTKTextFormatReader
 
 UNITTEST_READER_SRC = \
+	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/CNTKBinaryReaderTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/CNTKTextFormatReaderTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/HTKLMFReaderTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/ImageReaderTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/ReaderLibTests.cpp \
-	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/UCIFastReaderTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/ReaderTests/stdafx.cpp \
 	$(SOURCEDIR)/Readers/CNTKTextFormatReader/Indexer.cpp \
 	$(SOURCEDIR)/Readers/CNTKTextFormatReader/TextParser.cpp \
@@ -863,8 +1094,11 @@ $(UNITTEST_READER): $(UNITTEST_READER_OBJ) | $(HTKMLFREADER) $(HTKDESERIALIZERS)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) -l$(CNTKMATH) -ldl 
 
 UNITTEST_NETWORK_SRC = \
+	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/AccumulatorNodeTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/CropNodeTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/OperatorEvaluation.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/stdafx.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/TestHelpers.cpp \
 	$(SOURCEDIR)/CNTK/ModelEditLanguage.cpp \
 	$(SOURCEDIR)/ActionsLib/TrainActions.cpp \
 	$(SOURCEDIR)/ActionsLib/EvalActions.cpp \
@@ -882,18 +1116,21 @@ UNITTEST_NETWORK_SRC += $(CNTK_COMMON_SRC)
 UNITTEST_NETWORK_SRC += $(SEQUENCE_TRAINING_LIB_SRC)
 UNITTEST_NETWORK_SRC += $(SGDLIB_SRC)
 
-UNITTEST_NETWORK_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_NETWORK_SRC)))
+UNITTEST_NETWORK_OBJ :=\
+	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(UNITTEST_NETWORK_SRC))) \
+	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(UNITTEST_NETWORK_SRC))) \
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(UNITTEST_NETWORK_SRC)))
 
 UNITTEST_NETWORK := $(BINDIR)/networktests
 
 ALL += $(UNITTEST_NETWORK)
 SRC += $(UNITTEST_NETWORK_SRC)
 
-$(UNITTEST_NETWORK): $(UNITTEST_NETWORK_OBJ) | $(CNTKMATH_LIB) $(CNTKTEXTFORMATREADER)
+$(UNITTEST_NETWORK): $(UNITTEST_NETWORK_OBJ) | $(CNTKMATH_LIB) $(CNTKTEXTFORMATREADER) $(MULTIVERSO_LIB)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -l$(CNTKMATH) -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) $(lMULTIVERSO) -l$(CNTKMATH) -fopenmp  $(PROTOBUF_PATH)/lib/libprotobuf.a
 
 UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/BatchNormalizationEngineTests.cpp \
@@ -903,6 +1140,9 @@ UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/CPUMatrixTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/CPUSparseMatrixTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/fixtures.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/MathTests/QuantizersTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/MathTests/QuantizedOperationsTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/MathTests/TensorTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/GPUMatrixCudaBlasTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/GPUMatrixTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/GPUSparseMatrixTests.cpp \
@@ -954,14 +1194,59 @@ unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MA
 
 endif
 
+# For now only build Release.
+ifeq ("$(PYTHON_SUPPORT) $(BUILDTYPE)","true release")
+
+# Libraries needed for the run-time (i.e., excluding test binaries)
+# TODO MPI doesn't appear explicitly here, hidden by mpic++ usage (but currently, it should be user installed)
+RUNTIME_LIBS_LIST := $(LIBS_LIST) $(IMAGEREADER_LIBS_LIST) $(KALDI_LIBS_LIST)
+RUNTIME_LIBS_EXCLUDE_LIST := m pthread nvidia-ml
+EXTRA_LIBS_BASENAMES:=$(addsuffix .so,$(addprefix lib,$(filter-out $(RUNTIME_LIBS_EXCLUDE_LIST),$(RUNTIME_LIBS_LIST))))
+
+# TODO dependencies
+# TODO intermediate build results should go below $OBJDIR
+.PHONY: python
+python: $(ALL_LIBS)
+	@bash -c '\
+            set -x -e; \
+            declare -A py_paths; \
+            py_paths[34]=$(PYTHON34_PATH); \
+            py_paths[35]=$(PYTHON35_PATH); \
+            export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$$(echo $(GDK_NVML_LIB_PATH) $(LIBPATH) $(KALDI_LIBPATH) | tr " " :); \
+            ldd $(LIBDIR)/* | grep "not found" && false; \
+            export CNTK_EXTRA_LIBRARIES=$$(ldd $(LIBDIR)/* | grep "^\s.*=> " | cut -d ">" -f 2- --only-delimited | cut -d "(" -f 1 --only-delimited | sort -u | grep -Ff <(echo $(EXTRA_LIBS_BASENAMES) | xargs -n1)); \
+            test -x $(SWIG_PATH); \
+            export CNTK_LIB_PATH=$$(readlink -f $(LIBDIR)); \
+            PYTHONDIR=$$(readlink -f $(PYTHONDIR)); \
+            test $$? -eq 0; \
+            cd bindings/python; \
+            export PATH=$(SWIG_PATH):$$PATH; \
+            for ver in $(PYTHON_VERSIONS); \
+            do \
+                test -x $${py_paths[$$ver]}; \
+                $${py_paths[$$ver]} setup.py \
+                    build_ext --inplace \
+                    bdist_wheel \
+                        --dist-dir $$PYTHONDIR || exit $$?; \
+            done'
+
+ALL += python
+
+endif
+
 ########################################
 # General compile and dependency rules
 ########################################
 
-VPATH := $(sort  $(dir $(SRC)))
+ALL += $(ALL_LIBS)
+
+VPATH := $(sort $(dir $(SRC)))
 
 # Define object files
-OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(SRC)))
+OBJ := \
+	$(patsubst %.cu, $(OBJDIR)/%.o, $(filter %.cu, $(SRC))) \
+	$(patsubst %.pb.cc, $(OBJDIR)/%.pb.o, $(filter %.pb.cc, $(SRC))) \
+	$(patsubst %.cpp, $(OBJDIR)/%.o, $(filter %.cpp, $(SRC)))
 
 # C++ include dependencies generated by -MF compiler option
 DEP := $(patsubst %.o, %.d, $(OBJ))
@@ -972,11 +1257,22 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 
 BUILD_CONFIGURATION := Makefile $(BUILD_TOP)/Config.make
 
+%.pb.cc : %.proto $(BUILD_CONFIGURATION)
+	@echo $(SEPARATOR)
+	@echo compiling protobuf $<
+	$(PROTOC) --proto_path=$(dir $<) --cpp_out=$(dir $<) $<
+
 $(OBJDIR)/%.o : %.cu $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)
 	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
 	@mkdir -p $(dir $@)
 	$(NVCC) -c $< -o $@ $(COMMON_FLAGS) $(CUFLAGS) $(INCLUDEPATH:%=-I%) -Xcompiler "-fPIC -Werror"
+
+$(OBJDIR)/%.pb.o : %.pb.cc $(BUILD_CONFIGURATION) 
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	@mkdir -p $(dir $@)
+	$(CXX) -c $< -o $@ $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) -MD -MP -MF ${@:.o=.d}
 
 $(OBJDIR)/%.o : %.cpp $(BUILD_CONFIGURATION) 
 	@echo $(SEPARATOR)

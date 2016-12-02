@@ -383,7 +383,7 @@ public:
     // --- access functions
 
     template <class C>
-    bool Is() const
+    bool Is() const // note: also works with null pointers (will return false)
     {
         EnsureIsResolved();
         const auto p = dynamic_cast<C *>(get());
@@ -668,7 +668,10 @@ public:
         {
             valp.ResolveValue(); // resolve upon access
             if (!flatten || !valp.Is<ConfigArray>())
-                res.push_back(valp);
+            {
+                const C &type = valp;
+                res.push_back(type);
+            }
             else // special case: flatten nested vectors (only if 'flatten')
             {
                 std::vector<C> subVector = valp.AsRef<ConfigArray>().AsVector<C>(Fail, flatten);
@@ -713,14 +716,9 @@ public:
         : paramNames(move(paramNames)), namedParams(move(namedParams)), f(f)
     {
     }
-    size_t GetNumParams() const
-    {
-        return paramNames.size();
-    }
-    const std::vector<std::wstring> &GetParamNames() const
-    {
-        return paramNames;
-    } // used for expression naming
+    size_t GetNumParams() const { return paramNames.size(); }
+    const std::vector<std::wstring>& GetParamNames() const { return paramNames; } // used for expression naming and function composition
+    const NamedParams& GetNamedParams() const { return namedParams; } // used for function composition
     // what this function does is call f() held in this object with the given arguments except optional arguments are verified and fall back to their defaults if not given
     // The arguments are rvalue references, which allows us to pass Thunks, which is important to allow stuff with circular references like CNTK's DelayedNode.
     ConfigValuePtr Apply(std::vector<ConfigValuePtr> &&args, NamedParams &&namedArgs, const std::wstring &exprName) const
@@ -735,11 +733,11 @@ public:
             const auto valuei = namedArgs.find(id); // was such parameter passed?
             if (valuei == namedArgs.end())          // named parameter not passed
             {                                       // if not given then fall back to default
-                auto f = [&namedParam]()            // we pass a lambda that resolves it upon first use, in our original location
+                auto f2 = [&namedParam]()            // we pass a lambda that resolves it upon first use, in our original location
                 {
                     return namedParam.second.ResolveValue();
                 };
-                actualNamedArgs[id] = move(ConfigValuePtr::MakeThunk(f, namedParam.second.GetFailFn(), exprName));
+                actualNamedArgs[id] = move(ConfigValuePtr::MakeThunk(f2, namedParam.second.GetFailFn(), exprName));
             }
             else                                            // named parameter was passed
                 actualNamedArgs[id] = move(valuei->second); // move it, possibly remaining unresolved

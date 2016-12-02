@@ -10,25 +10,6 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // NOTE: This is an old code, used for legacy randomization to make sure we preserve the same behavior for the tests.
-    // TODO: Deprecate when the new randomizer is in place.
-    template <typename TVector>
-    void RandomShuffle(TVector& v, size_t randomSeed)
-    {
-        if (v.size() > RAND_MAX * static_cast<size_t>(RAND_MAX))
-        {
-            RuntimeError("RandomShuffle: too large set: need to change to different random generator!");
-        }
-
-        srand(static_cast<unsigned int>(randomSeed));
-        foreach_index(currentLocation, v)
-        {
-            // Pick a random location a location and swap with current
-            const size_t randomLocation = rand(0, v.size());
-            std::swap(v[currentLocation], v[randomLocation]);
-        }
-    }
-
     ChunkRandomizer::ChunkRandomizer(IDataDeserializerPtr deserializer, size_t randomizationRangeInSamples, bool legacy) :
         m_deserializer(deserializer), m_legacy(legacy), m_randomizationRangeInSamples(randomizationRangeInSamples)
     {
@@ -52,15 +33,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             randomizedChunkIndices.push_back(i);
         }
 
-        if (m_legacy)
-        {
-            RandomShuffle(randomizedChunkIndices, seed);
-        }
-        else
-        {
-            std::mt19937 m_rng(static_cast<int>(seed));
-            std::shuffle(randomizedChunkIndices.begin(), randomizedChunkIndices.end(), m_rng);
-        }
+        m_rng.seed(seed);
+        RandomShuffleMT(randomizedChunkIndices, m_rng);
 
         // Place randomized chunks on the timeline
         m_randomizedChunks.clear();

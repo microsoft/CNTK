@@ -9,12 +9,14 @@
 
 #include "Platform.h"
 #include "ExceptionWithCallStack.h"
+#include <cmath>
 #include <string>
 #include <vector>
 #include <assert.h>
 #include <stdarg.h>
 #ifdef _WIN32
 #include <Windows.h>
+#undef max
 #endif
 #if __unix__
 #include <dlfcn.h> // for Plugin
@@ -25,7 +27,8 @@
 #define TWO_PI 6.283185307f // TODO: find the official standards-confirming definition of this and use it instead
 
 #define EPSILON 1e-5
-#define ISCLOSE(a, b, threshold) (abs(a - b) < threshold) ? true : false
+#define ISCLOSE(a, b, threshold) (std::abs(a - b) < threshold) ? true : false
+#define DLCLOSE_SUCCESS 0
 
 #define UNUSED(x) (void)(x) // for variables that are, e.g., only used in _DEBUG builds
 
@@ -256,8 +259,8 @@ private:
 // (w)strprintf() -- sprintf() that returns an STL string
 // ----------------------------------------------------------------------------
 
-typedef strfun::_strprintf<char>    strprintf;  // char version
-typedef strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
+typedef ::msra::strfun::_strprintf<char>    strprintf;  // char version
+typedef ::msra::strfun::_strprintf<wchar_t> wstrprintf; // wchar_t version
 
 // ----------------------------------------------------------------------------
 // utf8(), utf16() -- convert between narrow and wide strings
@@ -584,6 +587,7 @@ struct nocase_compare
 // ----------------------------------------------------------------------------
 
 // Array class
+// Wrapper that holds pointer to data, as well as size
 template <class T>
 class ArrayRef
 {
@@ -610,7 +614,9 @@ public:
     // TODO: Move assignment operator
     ArrayRef& operator=(ArrayRef&& rhs) = delete;
 
-    size_t size() const { return count; }
+    size_t size()  const { return count; }
+    void setSize(size_t size) { count = size; }
+
     T* data() const { return elements; }
 
     T operator[](size_t i) const
@@ -705,9 +711,14 @@ public:
     }
     ~Plugin()
     {
-        // TODO: Check for error code and throw if !std::uncaught_exception()
         if (handle != NULL)
-            dlclose(handle);
+        {
+            int rc = dlclose(handle);
+            if ((rc != DLCLOSE_SUCCESS) && !std::uncaught_exception())
+            {
+                RuntimeError("Plugin: Failed to decrements the reference count.");
+            }
+        }
     }
 };
 #endif

@@ -12,6 +12,7 @@
 #include "LinearAlgebraNodes.h"
 #include "NonlinearityNodes.h"
 #include "ConvolutionalNodes.h"
+#include "RNNNodes.h"
 #include "RecurrentNodes.h"
 #include "ReshapingNodes.h"
 #include "TrainingNodes.h"
@@ -105,6 +106,8 @@ void ComputationNetwork::Save(const wstring& fileName, const FileOptions fileFor
 void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptions fileFormat) const
 {
     File fstream(fileName, fileFormat | FileOptions::fileOptionsWrite);
+    // Buffer writes in memory then flush to filesystem, which reduces number of small writes
+    fstream.Setvbuf();
     fstream.PutMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
     // model version
@@ -426,6 +429,13 @@ void ComputationNetwork::RandomInitLearnableParameters(const ComputationNodeBase
     InitLearnableParameters(node, uniformInit ? L"uniform" : L"gaussian", initValueScale, randomSeed, initOnCPUOnly);
 }
 
+template <class ElemType>
+void ComputationNetwork::InitLearnableParametersWithBilinearFill(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight)
+{
+    auto learnableParameterNode = dynamic_pointer_cast<LearnableParameter<ElemType>>(node);
+    learnableParameterNode->InitBilinear(kernelWidth, kernelHeight);
+}
+
 bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
 {
     // TODO: just use return!
@@ -435,7 +445,7 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
         nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
-        nodePtr->OperationName() == OperationNameOf(ErrorPredictionNode) ||
+        nodePtr->OperationName() == OperationNameOf(ClassificationErrorNode) ||
 #ifdef COMING_SOON
         nodePtr->OperationName() == OperationNameOf(CRFNode) ||
 #endif
@@ -516,7 +526,7 @@ void ComputationNetwork::CollectInputAndLearnableParametersRec(const Computation
 }
 
 template <class ElemType>
-/*static*/ void ComputationNetwork::SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase)
+/*static*/ void ComputationNetwork::SetDropoutRate(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate)
 {
     list<ComputationNodeBasePtr> dropoutNodes = net->GetNodesWithType(OperationNameOf(DropoutNode), criterionNode);
     if (dropoutRate != prevDropoutRate)
@@ -527,19 +537,33 @@ template <class ElemType>
             fprintf(stderr, "WARNING: Attempting to set dropout rate, but there is no dropout node in the network.\n");
     }
 
-    // Each dropout node gets a distinct seed. The actual seed for each dropout node is computed as follows:
-    // seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * dropoutNodes.size()) + dropoutNodeIdx
-    size_t randSeed = randSeedBase * dropoutNodes.size();
     for (auto& nodeIter : dropoutNodes)
     {
         auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeIter);
         if (dropoutRate != prevDropoutRate)
             node->SetDropoutRate(dropoutRate);
-        node->SetRandomSeed(randSeed);
-        randSeed++;
     }
 
     prevDropoutRate = dropoutRate;
+}
+
+template <class ElemType>
+/* static */ void ComputationNetwork::SetIRngUserSeed(ComputationNetworkPtr net, const ComputationNodeBasePtr& node, size_t randSeedBase)
+{
+    // Predicate checking if the node is derived from IRngUser
+    function<bool(const ComputationNodeBasePtr&)> nodeIsIRngUser = [](const ComputationNodeBasePtr& p) { return dynamic_pointer_cast<IRngUser>(p) != nullptr; };
+
+    list<ComputationNodeBasePtr> rngUserNodes = net->GetNodesWhere(nodeIsIRngUser, node);
+
+    // Each IRngUser gets a distinct seed. This seed is computed as follows:
+    // seed = (((parallelWorkerIdx * maxEpochs) + currentEpochNum) /*i.e. randSeedBase*/ * rngUserNodes.size()) + dropoutNodeIdx.
+    size_t randSeed = randSeedBase * rngUserNodes.size();
+    for (auto& nodeIter : rngUserNodes)
+    {
+        auto rngUser = dynamic_pointer_cast<IRngUser>(nodeIter);
+        rngUser->SetRngState(randSeed);
+        randSeed++;
+    }
 }
 
 template <class ElemType>
@@ -610,7 +634,7 @@ void ComputationNetwork::SetSeqParam(ComputationNetworkPtr net,
 /*static*/ void ComputationNetwork::SetMaxTempMemSizeForCNN(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const size_t maxTempMemSizeInSamples)
 {
     if (maxTempMemSizeInSamples > 0)
-        fprintf(stderr, "Setting max temp memory size for Convolution operations to %lu samples.\n", maxTempMemSizeInSamples);
+        fprintf(stderr, "Setting max temp memory size for Convolution operations to %lu samples.\n", (unsigned long)maxTempMemSizeInSamples);
     list<ComputationNodeBasePtr> convolutionNodes = net->GetNodesWithType(OperationNameOf(ConvolutionNode), criterionNode);
     if (convolutionNodes.size() == 0 && maxTempMemSizeInSamples != 0)
     {
@@ -1228,7 +1252,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     };
 
     // Get output node
-    std::list<ComputationNodeBasePtr> outputNodes = net->GetNodesWithType(OperationNameOf(ErrorPredictionNode));
+    std::list<ComputationNodeBasePtr> outputNodes = net->GetNodesWithType(OperationNameOf(ClassificationErrorNode));
     ComputationNodeBasePtr outputNode = GetFirstNodeWithDifferentType(outputNodes.front()->GetInputs(), OperationNameOf(InputValue));
 
     if (outputNode == nullptr)
@@ -1478,19 +1502,23 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
     PutTag("EDBN");
 }
 
+template void ComputationNetwork::InitLearnableParametersWithBilinearFill<float>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
 template void ComputationNetwork::Read<float>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
-template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
+template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
+template /*static*/ void ComputationNetwork::SetIRngUserSeed<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                      const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);
 template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net, const std::wstring& fileName) const;
 
+template void ComputationNetwork::InitLearnableParametersWithBilinearFill<double>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
 template void ComputationNetwork::Read<double>(const wstring& fileName);
 template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
-template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate, size_t randSeedBase);
+template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
+template /*static*/ void ComputationNetwork::SetIRngUserSeed<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
 template /*static*/ void ComputationNetwork::SetBatchNormalizationTimeConstants<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double normalizationTimeConstant, double& prevNormalizationTimeConstant, double blendTimeConstant, double& prevBlendTimeConstant);
 template void ComputationNetwork::SetSeqParam<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr criterionNode, const double& hsmoothingWeight, const double& frameDropThresh, const bool& doreferencealign,
                                                       const double& amf, const double& lmf, const double& wp, const double& bMMIfactor, const bool& sMBR);

@@ -1,1 +1,1 @@
-images\grayscale.png	0
+images/grayscale.png	0
