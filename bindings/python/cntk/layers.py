@@ -243,6 +243,7 @@ def _get_initial_state_or_default(initial_state):
         return initial_state # already in good shape: return as is
 
 # Recurrence() -- run a block recurrently over a time sequence
+# TODO: Can bidirectionality be an option of this? bidirectional=True? What was the reason it cannot?
 def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
 
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
@@ -271,7 +272,7 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
         replacements = { var_forward: var for (var_forward, var) in zip(state_forward, state_vars) }
         out_and_state.replace_placeholders(replacements)  # resolves state_forward := state_vars
 
-        return combine([out])  # BUGBUG: Without this, it fails with "RuntimeError: Runtime exception"
+        return combine([out])  # BUGBUG: Without this, it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
 
     return Block(recurrence, 'Recurrence', Record(over=over))
 

@@ -184,9 +184,9 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True))
     apply_x = beta * x
     return Block(apply_x, 'Stabilizer', Record(beta=beta))
 
-def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
-         init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
-         enable_self_stabilization=default_override_or(False)): # (x, (h, c))
+def _RecurrentBlock(type, shape, cell_shape=None, use_peepholes=default_override_or(False),
+                    init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
+                    enable_self_stabilization=default_override_or(False)): # (x, (h, c))
 
     use_peepholes             = get_default_override(LSTM, use_peepholes=use_peepholes)
     init                      = get_default_override(LSTM, init=init)
@@ -216,7 +216,7 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
     # parameters
     b  = Parameter(            cell_shape_stacked, init=init_bias, name='b')                              # a bias
     W  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='W')                              # input
-    A  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='A') if has_aux else None         # aux input (optional)
+    A  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='A') if has_aux else None         # aux input (optional)  --TODO: remove
     H  = Parameter(shape     + cell_shape_stacked, init=init,      name='H')                              # hidden-to-hidden
     Ci = Parameter(            cell_shape,         init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
     Cf = Parameter(            cell_shape,         init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
@@ -277,7 +277,10 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
         return OrderedDict([('out', out), ('h', h), ('c', c)])
 
     # create a CNTK function out of it
-    function = Block(lstm, 'LSTM')
+    if type == 'lstm':
+        function = Block(lstm, 'LSTM')
+    else:
+        raise AssertionError('invalid type passed to _RecurrentBlock()')
 
     # return to caller a helper function to create placeholders for recurrence
     # we pass the known dimensions here, which makes dimension inference easier
@@ -285,3 +288,17 @@ def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
     function.create_placeholder = lambda: [Placeholder(shape=shape, name='hPh'), Placeholder(shape=cell_shape, name='cPh')]
 
     return function
+
+def LSTM(shape, cell_shape=None, use_peepholes=default_override_or(False),
+         init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
+         enable_self_stabilization=default_override_or(False)): # (x, (h, c))
+
+    use_peepholes             = get_default_override(LSTM, use_peepholes=use_peepholes)
+    init                      = get_default_override(LSTM, init=init)
+    init_bias                 = get_default_override(LSTM, init_bias=init_bias)
+    enable_self_stabilization = get_default_override(LSTM, enable_self_stabilization=enable_self_stabilization)
+
+    return _RecurrentBlock ('lstm', shape, cell_shape, use_peepholes=use_peepholes,
+                            init=init, init_bias=init_bias,
+                            enable_self_stabilization=enable_self_stabilization)
+

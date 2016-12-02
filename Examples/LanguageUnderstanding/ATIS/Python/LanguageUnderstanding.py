@@ -71,6 +71,7 @@ def create_criterion_function(model):
         ce   = cross_entropy_with_softmax(z, y)
         errs = classification_error      (z, y)
         #return Record(loss=ce, metric=errs)
+        # BUGBUG: parameters passed to Record are not ordered. This pattern is not correct.
         return Record(ce=ce, errs=errs)
     return Function(criterion)
 
@@ -160,7 +161,7 @@ def evaluate(reader, model):
             break
         metric = evaluator.test_minibatch({ criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[reader.streams.slot_labels] })
         progress_printer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
-        loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
+    loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric
 
