@@ -29,14 +29,14 @@ class WorkerDescriptor(cntk_py.DistributedWorkerDescriptor):
         '''
         The global rank of the worker.
         '''
-        return super().m_global_rank
+        return super(WorkerDescriptor, self).m_global_rank
 
     @property
     def host_id(self):
         '''
         The host id of the worker.
         '''
-        return super().m_host_id
+        return super(WorkerDescriptor, self).m_host_id
 
 class Communicator(cntk_py.DistributedCommunicator):
     '''
@@ -52,7 +52,7 @@ class Communicator(cntk_py.DistributedCommunicator):
         Returns:
             (`list`) of :class:`WorkerDescriptor`: workers in this communicator.
         '''
-        return super().workers()
+        return super(Communicator, self).workers()
 
     @typemap
     def current_worker(self):
@@ -62,13 +62,13 @@ class Communicator(cntk_py.DistributedCommunicator):
         Returns:
             :class:`WorkerDescriptor`: descriptor of current process.
         '''
-        return super().current_worker()
+        return super(Communicator, self).current_worker()
 
     def barrier(self):
         '''
         sync point to make sure all workers reach the same state
         '''
-        super().barrier()
+        super(Communicator, self).barrier()
         
     @staticmethod
     def finalize():
@@ -90,14 +90,14 @@ class DistributedTrainer(cntk_py.DistributedTrainer):
         Returns:
             :class:`Communicator`: descriptor of current process.
         '''
-        return super().get_communicator()
+        return super(DistributedTrainer, self).get_communicator()
         
     @property
     def distributed_after(self):
         '''
         number of samples to process, then parallelization starts
 		'''
-        return super().get_distributed_after_sample_count()
+        return super(DistributedTrainer, self).get_distributed_after_sample_count()
 
 @typemap
 def data_parallel_distributed_trainer(num_quantization_bits=32, distributed_after=0, use_async_buffered_parameter_update=False):
