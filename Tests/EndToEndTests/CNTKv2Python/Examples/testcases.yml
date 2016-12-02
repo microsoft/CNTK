@@ -1,3 +1,5 @@
+isPythonTest: True
+
 dataDir: .
 
 tags:

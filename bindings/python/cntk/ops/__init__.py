@@ -3,6 +3,7 @@
 # for full license information.
 # ==============================================================================
 
+from __future__ import division
 import numpy as np
 from . import sequence
 from .functions import Function
