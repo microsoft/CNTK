@@ -955,26 +955,36 @@ class PoolingNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     UsingComputationNodeMembers;
 
 public:
-    PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
+    PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring& name, PoolKind poolKind)
         : Base(deviceId, name),
         m_windowWidth(SIZE_MAX),
         m_windowHeight(SIZE_MAX),
         m_horizontalSubsample(SIZE_MAX),
         m_verticalSubsample(SIZE_MAX),
-        m_imageLayoutKind(ImageLayoutKind::HWC)
+        m_imageLayoutKind(ImageLayoutKind::HWC),
+        m_poolKind(poolKind)
     {
     }
-    PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring& name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
+    PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring& name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind, PoolKind poolKind)
         : Base(deviceId, name),
         m_windowWidth(windowWidth),
         m_windowHeight(windowHeight),
         m_horizontalSubsample(horizontalSubsample),
         m_verticalSubsample(verticalSubsample),
-        m_imageLayoutKind(imageLayoutKind)
+        m_imageLayoutKind(imageLayoutKind),
+        m_poolKind(poolKind)
     {
+        ConvertToTensorShape();
     }
-    PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
-        : PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"), ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+    PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp, PoolKind poolKind)
+        : PoolingNodeBase(configp->Get(L"deviceId"), 
+            L"<placeholder>", 
+            configp->Get(L"windowWidth"), 
+            configp->Get(L"windowHeight"), 
+            configp->Get(L"horizontalSubsample"), 
+            configp->Get(L"verticalSubsample"),
+            ImageLayoutKindFrom(configp->Get(L"imageLayout")), 
+            poolKind)
     {
         // input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
@@ -995,6 +1005,8 @@ public:
         fstream >> windowWidth >> imageLayoutKind >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
         m_windowWidth = windowWidth;
         m_imageLayoutKind = (ImageLayoutKind)imageLayoutKind;
+
+        ConvertToTensorShape();
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -1014,6 +1026,8 @@ public:
             node->m_outputSizePerSample = m_outputSizePerSample;
 
             node->m_imageLayoutKind = m_imageLayoutKind;
+
+            node->ConvertToTensorShape();
         }
     }
 
@@ -1091,12 +1105,41 @@ public:
         }
     }
 
+    bool IsImageLayoutCHW() const { return m_imageLayoutKind == ImageLayoutKind::CHW; }
+    TensorShape KernelShape() const { return m_kernelShape; }
+    TensorShape Strides() const { return m_stride; }
+    std::vector<bool> Sharing() const { return m_sharing; }
+    std::vector<bool> AutoPad() const { return m_autoPad; }
+    TensorShape LowerPad() const { return m_lowerPad; }
+    TensorShape UpperPad() const { return m_upperPad; }
+    PoolKind PoolingKind() const { return m_poolKind; }
+
+protected:
+    void ConvertToTensorShape()
+    {
+        m_kernelShape = ImageDimensions(m_windowWidth, m_windowHeight, 1).AsTensorShape(m_imageLayoutKind);
+        m_stride      = ImageDimensions(m_horizontalSubsample, m_verticalSubsample, 1).AsTensorShape(m_imageLayoutKind);
+        m_sharing     = { true };
+        m_autoPad     = { false };
+        m_lowerPad    = TensorShape(0);
+        m_upperPad    = TensorShape(0);
+    }
+
 protected:
     size_t m_windowWidth, m_windowHeight;
     size_t m_horizontalSubsample, m_verticalSubsample;
     size_t m_inputSizePerSample, m_outputSizePerSample;
 
     ImageLayoutKind m_imageLayoutKind; // how to interpret the tensor (which dimensions are X/Y and C)
+
+    // Mapping to V2 PoolingNode description..
+    PoolKind m_poolKind;
+    TensorShape m_kernelShape;
+    TensorShape m_stride;
+    std::vector<bool> m_sharing;
+    std::vector<bool> m_autoPad;
+    TensorShape m_lowerPad;
+    TensorShape m_upperPad;
 
     ConvolveGeometryPtr m_geometry;
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
@@ -1136,15 +1179,15 @@ class MaxPoolingNode : public PoolingNodeBase<ElemType>
 
 public:
     MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+        : Base(deviceId, name, PoolKind::Max)
     {
     }
     MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind)
+        : Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind, PoolKind::Max)
     {
     }
     MaxPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : Base(configp)
+        : Base(configp, PoolKind::Max)
     {
     }
 
@@ -1176,15 +1219,15 @@ class AveragePoolingNode : public PoolingNodeBase<ElemType>
 
 public:
     AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+        : Base(deviceId, name, PoolKind::Average)
     {
     }
     AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind)
+        : Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind, PoolKind::Average)
     {
     }
     AveragePoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : Base(configp)
+        : Base(configp, PoolKind::Average)
     {
     }
 

@@ -206,7 +206,15 @@ bool BlockRandomizer::GetNextSequenceDescriptions(size_t sampleCount, std::vecto
 
     // Randomizing sequences
     result = m_sequenceRandomizer->GetNextSequenceDescriptions(sampleCount, windowRange);
-    return false;
+
+    size_t minibatchSize = 0; // the actual size of the current minibatch in samples
+    for (const auto& sequence : result)
+    {
+        minibatchSize += sequence.m_numberOfSamples;
+    }
+
+    // return true if the current batch is last in an epoch.
+    return (m_globalSamplePosition + minibatchSize >= m_epochSize + m_epochStartPosition);
 }
 
 // Decimates sequences and load/unloads chunks using infromation of the SequenceRandomizer.

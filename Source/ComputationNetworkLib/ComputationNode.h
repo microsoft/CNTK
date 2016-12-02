@@ -260,7 +260,7 @@ public:
 
     int64_t CreateUniqId() const
     {
-        return atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+        return ++s_timeStampCounter;
     }
 
 private:
@@ -1651,7 +1651,7 @@ public:
         {
             for (auto& input : GetInputs())
             {
-                if (!input->IsOutputNeededDuringBackprop())
+                if (!input->IsOutputNeededDuringBackprop() && input->IsValueSharable())
                 {
                     auto inputNodePtr = DownCast(input);
                     inputNodePtr->Value().Resize(0, 0);

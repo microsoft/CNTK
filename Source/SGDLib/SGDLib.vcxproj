@@ -122,6 +122,7 @@
     <ClInclude Include="..\ComputationNetworkLib\ComputationNetwork.h" />
     <ClInclude Include="..\ComputationNetworkLib\ComputationNode.h" />
     <ClInclude Include="..\ComputationNetworkLib\ConvolutionalNodes.h" />
+    <ClInclude Include="AccumulatorAggregation.h" />
     <ClInclude Include="Criterion.h" />
     <ClInclude Include="DataReaderHelpers.h" />
     <ClInclude Include="DistGradHeader.h" />

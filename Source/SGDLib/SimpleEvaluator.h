@@ -7,10 +7,12 @@
 
 #include "V2SimpleDistGradAggregator.h"
 
+#include "AccumulatorAggregation.h"
 #include "Basics.h"
 #include "DataReader.h"
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
+#include "LinearAlgebraNodes.h"
 #include "DataReaderHelpers.h"
 #include "TrainingNodes.h" // TODO: we should move the functions that depend on these to the .cpp
 #include "ProgressTracing.h"
@@ -268,6 +270,15 @@ public:
         if (m_traceLevel > 0 && numSamplesLastLogged > 0)
         {
             DisplayEvalStatistics(numMBsRunLastLogged + 1, numMBsRun, numSamplesLastLogged, evalNodes, evalResults, evalResultsLastLogged);
+        }
+
+        if (useParallelTrain && !evalNodesWhichAccumulateResult.empty())
+        {
+            // Each worker contains accumulated values for part of the data set, we have to aggregate accumulated values
+            // and recalculate evaluation errors based on accumulators.
+            AggregateAccumulatorValuesAndUpdateEpochEvaluation<ElemType>(
+                m_net, evalNodesWhichAccumulateResult, m_gradHeader, m_mpi, evalResults, evalNodes,
+                localEpochEvalErrors, ContainsAccumulatedResult);
         }
 
         // final statistics
