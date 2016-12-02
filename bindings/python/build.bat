@@ -10,7 +10,7 @@ set DISTUTILS_USE_SDK=1
 python .\setup.py build_ext --inplace --force
 if errorlevel 1 exit /b 1
 
-set PATH=%CD%\..\..\x64\Release;%PATH%
+set PATH=%CD%\..\..\x64\Release_CpuOnly;%PATH%
 set PYTHONPATH=%CD%;%CD%\examples;%PYTHONPATH%
 
 pushd cntk\tests

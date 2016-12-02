@@ -3641,6 +3641,7 @@ namespace CNTK
         static const size_t InfinitelyRepeat = SIZE_MAX;
         static const size_t FullDataSweep    = SIZE_MAX - 2; // An arbitrary sentinel value
         static const size_t InfiniteSamples  = SIZE_MAX;
+		static const size_t DefaultRandomizationWindow = 1;
 
     public:
         ///

@@ -14,6 +14,7 @@ import numpy as np
 INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 FULL_DATA_SWEEP = cntk_py.MinibatchSource.full_data_sweep
 INFINITE_SAMPLES = cntk_py.MinibatchSource.infinite_samples
+DEFAULT_RANDOMIZATION_WINDOW = cntk_py.MinibatchSource.default_randomization_window
 
 class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
     '''
@@ -85,7 +86,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         distributed_after (int): sample count after which minibatch source becomes distributed
         multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, randomization_window=1, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
+    def __init__(self, deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
         reader_config = ReaderConfig(
@@ -248,14 +249,14 @@ class ReaderConfig(dict):
         distributed_after (int): sample count after which reader becomes distributed
         multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, randomization_window=1, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
+    def __init__(self, deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
 
         self['epochSize'] = cntk_py.SizeTWrapper(epoch_size) # force to store in size_t
         if not isinstance(deserializers, (list, tuple)):
             deserializers = [deserializers]
         self['deserializers'] = self.deserializers = deserializers or []
         self['randomize'] = randomize
-        self['randomizationWindow'] = randomization_window
+        self['randomizationWindow'] = cntk_py.SizeTWrapper(randomization_window)
         self['distributedAfterSampleCount'] = cntk_py.SizeTWrapper(distributed_after)
         if multithreaded_deserializer != None:
             self['multiThreadedDeserialization'] = multithreaded_deserializer

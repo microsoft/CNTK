@@ -74,6 +74,7 @@ namespace CNTK
         : m_epochEndReached(false),
           m_prevMinibatchSize(0),
           m_epochSize(MinibatchSource::InfinitelyRepeat),
+		  m_randomizedWindow(MinibatchSource::DefaultRandomizationWindow),
           m_truncationLength(0),
           m_numWorkers(1),
           m_workerRank(0),
@@ -124,7 +125,7 @@ namespace CNTK
             deserializerConfigDict[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
         }
 
-        ConfigParameters config;
+		ConfigParameters config;
         std::wstringstream s;
         for (const auto& keyValuePair : *(augmentedConfiguration.m_dictionaryData))
             AddConfigString(s, keyValuePair.first, keyValuePair.second, 0);
@@ -139,7 +140,14 @@ namespace CNTK
             m_epochSize = Microsoft::MSR::CNTK::requestDataSize;
         // Setting big value, but not the max in order to aviod bit overflow.
         else if (m_epochSize == MinibatchSource::InfinitelyRepeat)
-            m_epochSize = std::numeric_limits<size_t>::max()/2;
+			m_epochSize = std::numeric_limits<size_t>::max() / 2;
+
+		const wchar_t* randomizedWindowConfigurationKey = L"randomizationWindow";
+		if (augmentedConfiguration.Contains(randomizedWindowConfigurationKey))
+			m_randomizedWindow = augmentedConfiguration[randomizedWindowConfigurationKey].Value<size_t>();
+
+		if (m_randomizedWindow == MinibatchSource::DefaultRandomizationWindow)
+			m_randomizedWindow = randomizeAuto;
 
         const wchar_t* truncatedConfigurationKey = L"truncated";
         const wchar_t* truncationLengthConfigurationKey = L"truncationLength";
