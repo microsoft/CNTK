@@ -229,3 +229,23 @@ def test_batch_dense_to_sparse_zeros():
         [40, 50, 60]
     ]
     assert s == (2, 3)
+
+def remove_np_array_in_list(arr, l):
+    index = 0
+    size = len(l)
+    while index != size and not np.allclose(l[index], arr, atol=TOLERANCE_ABSOLUTE):
+        index += 1
+    if index != size:
+        l.pop(index)
+    else:
+        raise ValueError('array not found in list.')
+
+# compare two unordered lists of np arrays
+def compare_lists_of_np_arrays(first_list, second_list):
+    second_list = list(second_list)   # make a mutable copy
+    try:
+        for elem in first_list:
+            remove_np_array_in_list(elem, second_list)
+    except ValueError:
+        return False
+    return not second_list
