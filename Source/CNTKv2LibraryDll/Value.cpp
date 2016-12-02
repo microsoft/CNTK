@@ -37,6 +37,10 @@ namespace CNTK
         }
     }
 
+    //
+    // Create NDMask for the 'sequences' if the 'sequences' do not have the same length.
+    // It returns null if all the 'sequences' have the same length.
+    //
     template <typename T>
     static NDMaskPtr CreateMask(size_t numElementsPerSample, const std::vector<std::vector<T>>& sequences, const DeviceDescriptor& device)
     {
@@ -75,6 +79,7 @@ namespace CNTK
     /*static*/ ValuePtr Value::Create(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly/* = false*/)
     {
         NDMaskPtr deviceValueMask = CreateMask(1, oneHotSequences, DeviceDescriptor::CPUDevice());
+        // If deviceValueMask is null, all the sequences have the same length.
         size_t maxSequenceLength = (deviceValueMask == nullptr) ? oneHotSequences[0].size() : deviceValueMask->Shape()[0];
 
         size_t numSequences = oneHotSequences.size();
@@ -111,7 +116,9 @@ namespace CNTK
     {
         size_t numElementsPerSample = sampleShape.TotalSize();
         NDMaskPtr deviceValueMask = CreateMask(numElementsPerSample, sequences, DeviceDescriptor::CPUDevice());
-        size_t maxSequenceLength = (deviceValueMask == nullptr) ? sequences[0].size() : deviceValueMask->Shape()[0];
+        // If deviceValueMask is null, all the sequences have the same length.
+        // The maxSequenceLength is the sequence length in samples.
+        size_t maxSequenceLength = (deviceValueMask == nullptr) ? sequences[0].size()/numElementsPerSample: deviceValueMask->Shape()[0];
 
         size_t numSequences = sequences.size();
         NDShape valueDataShape = sampleShape.AppendShape({ maxSequenceLength, numSequences });
