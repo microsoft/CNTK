@@ -1,5 +1,93 @@
-Getting started with sequences 
-==============================
+Understanding Sequences
+=======================
+
+CNTK Concepts
+~~~~~~~~~~~~~
+
+CNTK inputs, outputs and parameters are organized as *tensors* which is a fancy 
+word for multidimensional array. Each tensor has a *rank*: 
+A scalar is a tensor of rank 0, a vector is a tensor of rank 1, a matrix is a tensor 
+of rank 2, a cube of numbers is a tensor of rank 3 and so on. We refer to these
+different dimensions as *axes* (also known as modes).
+
+Every CNTK tensor has some *static axes* and some *dynamic axes*.
+The static axes have the same length throughout the life of the network.
+The dynamic axes are like static axes in that they define a meaningful grouping of the numbers contained in the tensor but:
+
+ - their length can vary from instance to instance
+ - their length is typically not known before each minibatch is presented
+ - they may be ordered
+
+A minibatch is also a tensor. Therefore, it has a dynamic axis, called the *batch axis*,
+whose length can change from minibatch to minibatch. At the time of this writing 
+CNTK supports a single additional dynamic axis. It is sometimes referred to as the sequence 
+axis but it doesn't really have a dedicated name. This axis enables working with 
+sequences in a high level way. When operations on sequences are performed CNTK 
+does a simple type-checking to determine if combining two sequences is always safe.
+
+To make this more concrete, let's consider two examples. First let's see 
+how a minibatch of short video clips is represented in CNTK. 
+Suppose that the video clips are all 640x480 in 
+resolution and they are shot in color which is typically encoded with three channels.
+This means that our minibatch has three static axes of length 640, 480, and 3 respectively. 
+It also has two dynamic axes:
+the length of the video and the minibatch axis. So a minibatch of 16 videos each
+of which is 240 frames long would be represented as a 16 x 240 x 3 x 640 x 480
+tensor. 
+
+Another example where dynamic axes provide an elegant solution is in learning to rank documents
+given a query. Typically, the training data in this scenario consist of a set of 
+queries, with each query having a variable number of associated documents along with
+relevance labels from experts (e.g. whether the document is relevant for that query 
+or not). Now depending on how we treat the words in each document we can either place
+them on a static axis or a dynamic axis. To place them on a static axis we can process
+each document as a (sparse) vector of size equal to the size of our vocabulary 
+containing for each word (or short phrase) the number of times it appears in the 
+document. However we can also process the document to be a sequence of words
+in which case we use another dynamic axis. In this case we have the following nesting:
+
+ - Query: CNTK
+
+   - Document 1:
+
+     - Microsoft
+     - Cognitive
+     - Toolkit
+
+   - Document 2:
+
+     - Cartoon
+     - Network
+
+   - Document 3:
+
+     - NVIDIA
+     - Microsoft
+     - Accelerate
+     - AI
+
+ - Query: flower
+
+   - Document 1:
+
+     - Flower
+     - Wikipedia
+
+   - Document 2:
+
+     - Local 
+     - Florist
+     - Flower
+     - Delivery
+
+The outermost level is the batch axis. The document level should have 
+a dynamic axis because we have a variable number of candidate documents per query. 
+The innermost level should also have a dynamic axis because each document 
+has a variable number of words. The tensor describing this minibatch will also
+have one or more static axes, describing features such as the identity of the words in
+the query and the document. With rich enough training data it is possible to have
+another level of nesting, namely a session, in which multiple related queries belong
+to.
 
 Sequence classification
 ~~~~~~~~~~~~~~~~~~~~~~~
