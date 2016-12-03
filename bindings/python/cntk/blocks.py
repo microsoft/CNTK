@@ -205,12 +205,16 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     stack_axis = -1  # stacking along the fastest-changing one, to match BS
     # determine stacking dimensions
     cell_shape_list = list(cell_shape)
-    stacked_dim = cell_shape_list[0]
-    cell_shape_list[stack_axis] = stacked_dim * { 'RNNUnit': 1, 'GRU': 3, 'LSTM': 4 }[type]
+    stacked_dim = cell_shape_list[stack_axis]
+    cell_shape_list[stack_axis] = stacked_dim * {
+        'RNNUnit': 1,
+        'GRU': 3,
+        'LSTM': 4
+    }[type]
     cell_shape_stacked = tuple(cell_shape_list)  # patched dims with stack_axis duplicated 4 times
 
     # parameters
-    b  = Parameter(            cell_shape_stacked, init=init_bias, name='b')                              # a bias
+    b  = Parameter(            cell_shape_stacked, init=init_bias, name='b')                              # bias
     W  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='W')                              # input
     A  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='A') if has_aux else None         # aux input (optional)  --TODO: remove
     H  = Parameter(shape     + cell_shape_stacked, init=init,      name='H')                              # hidden-to-hidden
@@ -225,6 +229,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     Sdc = Stabilizer() if enable_self_stabilization else identity
     Sct = Stabilizer() if enable_self_stabilization else identity
     Sht = Stabilizer() if enable_self_stabilization else identity
+
+    from collections import OrderedDict
 
     # define the model function itself
     # general interface for Recurrence():
@@ -266,36 +272,43 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
             ht
 
         # returns the new state as a tuple with names but order matters
-        from collections import OrderedDict
         return OrderedDict([('h', h), ('c', c)])
 
     def gru(x, dh, dc):
+        UntestedBranchError("gru")
         return x
 
     def rnn(x, dh):
-        return x
+        dhs = Sdh(dh)  # previous values, stabilized
+        ht = activation (times(x, W) + times(dhs, H) + b)
+        h = times(Sht(ht), Wmr) if has_projection else \
+            ht
+        return dict(h=h)
 
     # return the corresponding lambda as a CNTK Function
-    function = Block({ 'RNNUnit': rnn, 'GRU': gru, 'LSTM': lstm }[type], type)
+    function = Block({
+        'RNNUnit': rnn,
+        'GRU': gru,
+        'LSTM': lstm
+    }[type], type)
 
     # we already know our state input's shapes, so implant the shape there
-    aa = function.placeholders
-    function.replace_placeholders({ function.placeholders[1]: Placeholder(shape=shape), function.placeholders[2]: Placeholder(shape=cell_shape) })
-
-    # return to caller a dictionary of the output shapes
-    # we pass the known dimensions here, which makes dimension inference easier
-    # Note that this function will only exist in the object returned here, but not any cloned version of it.
-    function.out_shapes = {
-        'LSTM': { function.outputs[0]: shape, function.outputs[1]: cell_shape }
+    # This is part of the contract with Recurrence(), which relies on this.
+    # BUGBUG: If V2 type inference could handle unknown shapes here, we would not need this.
+    arg_shapes = {
+        'RNNUnit': { 1: shape },
+        'GRU':     { 1: shape, 2: cell_shape },
+        'LSTM':    { 1: shape, 2: cell_shape }
     }[type]
+    function.replace_placeholders({ function.placeholders[index] : Placeholder(shape=shape) for index, shape in arg_shapes.items() })
 
     return function
 
 # LSTM block
-# returns a function (input, prev_h, prev_c -> out, h, c)
+# returns a function (input, prev_h, prev_c -> h, c)
 def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peepholes=default_override_or(False),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
-         enable_self_stabilization=default_override_or(False)): # (x, (h, c))
+         enable_self_stabilization=default_override_or(False)):
 
     activation                = get_default_override(RNNUnit, activation=activation)
     use_peepholes             = get_default_override(LSTM, use_peepholes=use_peepholes)
@@ -308,13 +321,12 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
                             enable_self_stabilization=enable_self_stabilization)
 
 # RNN block
-# returns a function (input, prev_h) -> out, h)
+# returns a function (input, prev_h) -> h)
 #   h = activation (W * input + R * prev_h + b)
-#   out = h
 # TODO: needs better name
 def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
-         enable_self_stabilization=default_override_or(False)): # (x, (h, c))
+         enable_self_stabilization=default_override_or(False)): # (x, prev_h) -> (h)
 
     #UntestedBranchError("RNNUnit")
 
@@ -330,7 +342,6 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
 #...
 
 # TODO:
-#  - RNNUnit, and do an ad-hoc test
 #  - get GRU from core.bs, ad-hoc test
 #  - get last() to work
 

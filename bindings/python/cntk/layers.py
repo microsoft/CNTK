@@ -252,20 +252,16 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
     # function that this layer represents
     def recurrence(x):
 
+        # TODO: move this entire placeholder business to Function.__call__
         # compute the delayed state variable(s)
-        # All state variables get delayed with the same function.
-        #out_vars_fwd = over.create_placeholder() # create list of placeholders for the state variables
-        _, *xx = over.placeholders
-        ss = xx[0].shape
-        out_vars_fwd = [Placeholder(state_var.shape) for state_var in xx] # create list of placeholders for the state variables
-        if not isinstance(out_vars_fwd, list):
-            out_vars_fwd = [out_vars_fwd]
-        if len(over.outputs) != len(out_vars_fwd):
+        _, *prev_state_args = over.placeholders
+        if len(over.outputs) != len(prev_state_args):
             raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
-        # BUGBUG: ^^ This should work without shape info, so that we can simply create one Placeholder per over.outputs
+        out_vars_fwd = [Placeholder(state_var.shape) for state_var in prev_state_args] # create list of placeholders for the state variables
 
         # previous function; that is, past or future_value with initial_state baked in
-        # BUGBUG: If initial_state itself depends on a Placeholder at this point, previous_hook will be a binary function...
+        # BUGBUG: If initial_state itself depends on a Placeholder at this point (e.g. seq2seq), previous_hook will be a binary function...
+        # All state variables get delayed with the same function.
         def previous_hook(state):
             return past_value  (state, initial_state) if not go_backwards else \
                    future_value(state, initial_state)
@@ -275,7 +271,7 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
         out = over(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
 
         # connect the recurrent dependency
-        replacements = { var_forward: var for (var_forward, var) in zip(out_vars_fwd, list(out.outputs)) }
+        replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)) }
         out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
 
         return combine([out.outputs[0]])  # BUGBUG: Without this, it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
