@@ -20,3 +20,8 @@ def test_dyn_axis():
 def test_default_axis():
     assert isinstance(Axis.default_batch_axis(), Axis)
     assert isinstance(Axis.default_dynamic_axis(), Axis)
+
+def test_axis_comparison():
+    a1 = Axis.default_batch_axis()
+    a2 = Axis.default_batch_axis()
+    assert a1 == a2

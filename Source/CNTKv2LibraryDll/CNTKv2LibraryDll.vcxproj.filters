@@ -21,7 +21,9 @@
     </ClCompile>
     <ClCompile Include="DistributedCommunicator.cpp" />
     <ClCompile Include="DataParallelDistributedTrainer.cpp" />
-    <ClCompile Include="Globals.cpp" />
+    <ClCompile Include="DistributedTrainerBase.cpp" />
+    <ClCompile Include="CompositeFunction.cpp" />
+    <ClCompile Include="PrimitiveFunction.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -33,7 +35,6 @@
     <ClInclude Include="API\CNTKLibraryInternals.h">
       <Filter>API</Filter>
     </ClInclude>
-    <ClInclude Include="Function.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
     <ClInclude Include="API\CNTKLibraryExperimental.h">
@@ -44,6 +45,10 @@
     <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="DistributedCommunicator.h" />
     <ClInclude Include="DataParallelDistributedTrainer.h" />
+    <ClInclude Include="DistributedTrainerBase.h" />
+    <ClInclude Include="BackCompat.h" />
+    <ClInclude Include="CompositeFunction.h" />
+    <ClInclude Include="PrimitiveFunction.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">
@@ -54,7 +59,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\bindings\python\cntk\PythonBindings.pyproj" />
     <None Include="proto\CNTK.proto">
       <Filter>proto</Filter>
     </None>

@@ -1,0 +1,115 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2680 v2 @ 2.80GHz
+    Hardware threads: 40
+    Total Memory: 264118516 kB
+-------------------------------------------------------------------
+Running 8 test cases...
+[INFO] [2016-09-30 12:19:35] multiverso MPI-Net is initialized under MPI_THREAD_SERIALIZED mode.
+[INFO] [2016-09-30 12:19:35] All nodes registered. System contains 1 nodes. num_worker = 1, num_server = 1
+[INFO] [2016-09-30 12:19:35] Create a async server
+[INFO] [2016-09-30 12:19:35] Rank 0: Multiverso start sucessfully
+[INFO] [2016-09-30 12:19:35] --------------Show dashboard monitor information--------------
+[INFO] [2016-09-30 12:19:35] [SERVER_PROCESS_ADD]  count = 2 elapse = 3.25433ms average = 1.62716ms
+[INFO] [2016-09-30 12:19:35] [SERVER_PROCESS_GET]  count = 2 elapse = 0.011775ms average = 0.0058875ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_ADD]  count = 2 elapse = 0.058559ms average = 0.0292795ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_GET]  count = 2 elapse = 0.014456ms average = 0.007228ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_REPLY_GET]  count = 2 elapse = 0.005685ms average = 0.0028425ms
+[INFO] [2016-09-30 12:19:35] [WORKER_TABLE_SYNC_ADD]  count = 1 elapse = 3.5289ms average = 3.5289ms
+[INFO] [2016-09-30 12:19:35] [WORKER_TABLE_SYNC_GET]  count = 1 elapse = 0.110966ms average = 0.110966ms
+[INFO] [2016-09-30 12:19:35] --------------------------------------------------------------
+[INFO] [2016-09-30 12:19:35] Multiverso Shutdown successfully
+[INFO] [2016-09-30 12:19:35] multiverso MPI-Net is initialized under MPI_THREAD_SERIALIZED mode.
+[INFO] [2016-09-30 12:19:35] All nodes registered. System contains 1 nodes. num_worker = 1, num_server = 1
+[INFO] [2016-09-30 12:19:35] Create a async server
+[INFO] [2016-09-30 12:19:35] Rank 0: Multiverso start sucessfully
+[INFO] [2016-09-30 12:19:35] --------------Show dashboard monitor information--------------
+[INFO] [2016-09-30 12:19:35] [SERVER_PROCESS_ADD]  count = 2 elapse = 3.25433ms average = 1.62716ms
+[INFO] [2016-09-30 12:19:35] [SERVER_PROCESS_GET]  count = 2 elapse = 0.011775ms average = 0.0058875ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_ADD]  count = 2 elapse = 0.058559ms average = 0.0292795ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_GET]  count = 2 elapse = 0.014456ms average = 0.007228ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_REPLY_GET]  count = 2 elapse = 0.005685ms average = 0.0028425ms
+[INFO] [2016-09-30 12:19:35] [WORKER_TABLE_SYNC_ADD]  count = 1 elapse = 3.5289ms average = 3.5289ms
+[INFO] [2016-09-30 12:19:35] [WORKER_TABLE_SYNC_GET]  count = 1 elapse = 0.110966ms average = 0.110966ms
+[INFO] [2016-09-30 12:19:35] --------------------------------------------------------------
+[INFO] [2016-09-30 12:19:35] Multiverso Shutdown successfully
+[INFO] [2016-09-30 12:19:35] multiverso MPI-Net is initialized under MPI_THREAD_SERIALIZED mode.
+[INFO] [2016-09-30 12:19:35] All nodes registered. System contains 1 nodes. num_worker = 1, num_server = 1
+[INFO] [2016-09-30 12:19:35] Create a async server
+[INFO] [2016-09-30 12:19:35] Rank 0: Multiverso start sucessfully
+[INFO] [2016-09-30 12:19:35] --------------Show dashboard monitor information--------------
+[INFO] [2016-09-30 12:19:35] [SERVER_PROCESS_ADD]  count = 4 elapse = 3.26092ms average = 0.81523ms
+[INFO] [2016-09-30 12:19:35] [SERVER_PROCESS_GET]  count = 5 elapse = 0.035872ms average = 0.0071744ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_ADD]  count = 4 elapse = 0.079631ms average = 0.0199077ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_GET]  count = 5 elapse = 0.055307ms average = 0.0110614ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_REPLY_GET]  count = 5 elapse = 0.014141ms average = 0.0028282ms
+[INFO] [2016-09-30 12:19:35] [WORKER_TABLE_SYNC_ADD]  count = 3 elapse = 3.64047ms average = 1.21349ms
+[INFO] [2016-09-30 12:19:35] [WORKER_TABLE_SYNC_GET]  count = 4 elapse = 0.35004ms average = 0.08751ms
+[INFO] [2016-09-30 12:19:35] --------------------------------------------------------------
+[INFO] [2016-09-30 12:19:35] Multiverso Shutdown successfully
+[INFO] [2016-09-30 12:19:35] multiverso MPI-Net is initialized under MPI_THREAD_SERIALIZED mode.
+[INFO] [2016-09-30 12:19:35] All nodes registered. System contains 1 nodes. num_worker = 1, num_server = 1
+[INFO] [2016-09-30 12:19:35] Create a sync server
+[INFO] [2016-09-30 12:19:35] Rank 0: Multiverso start sucessfully
+[INFO] [2016-09-30 12:19:35] --------------Show dashboard monitor information--------------
+[INFO] [2016-09-30 12:19:35] [SERVER_PROCESS_ADD]  count = 6 elapse = 3.35131ms average = 0.558552ms
+[INFO] [2016-09-30 12:19:35] [SERVER_PROCESS_GET]  count = 7 elapse = 0.049346ms average = 0.00704943ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_ADD]  count = 6 elapse = 0.110051ms average = 0.0183418ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_GET]  count = 7 elapse = 0.068958ms average = 0.00985114ms
+[INFO] [2016-09-30 12:19:35] [WORKER_PROCESS_REPLY_GET]  count = 7 elapse = 0.018843ms average = 0.00269186ms
+[INFO] [2016-09-30 12:19:35] [WORKER_TABLE_SYNC_ADD]  count = 4 elapse = 3.83984ms average = 0.959961ms
+[INFO] [2016-09-30 12:19:35] [WORKER_TABLE_SYNC_GET]  count = 5 elapse = 0.420295ms average = 0.084059ms
+[INFO] [2016-09-30 12:19:35] --------------------------------------------------------------
+[INFO] [2016-09-30 12:19:35] Multiverso Shutdown successfully
+
+Test module "multiverso" has passed with:
+  8 test cases out of 8 passed
+  83 assertions out of 83 passed
+
+  Test suite "array_test" has passed with:
+    2 test cases out of 2 passed
+    34 assertions out of 34 passed
+
+    Test case "array_test/array_access" has passed with:
+      20 assertions out of 20 passed
+
+    Test case "array_test/array_partition" has passed with:
+      14 assertions out of 14 passed
+
+  Test suite "blob" has passed with:
+    2 test cases out of 2 passed
+    7 assertions out of 7 passed
+
+    Test case "blob/blob_constructor_test" has passed with:
+      3 assertions out of 3 passed
+
+    Test case "blob/blob_access_test" has passed with:
+      4 assertions out of 4 passed
+
+  Test suite "test_kv" has passed with:
+    1 test case out of 1 passed
+    3 assertions out of 3 passed
+
+    Test case "test_kv/access" has passed with:
+      3 assertions out of 3 passed
+
+  Test suite "message" has passed with:
+    1 test case out of 1 passed
+    11 assertions out of 11 passed
+
+    Test case "message/message_access" has passed with:
+      11 assertions out of 11 passed
+
+  Test suite "node" has passed with:
+    1 test case out of 1 passed
+    8 assertions out of 8 passed
+
+    Test case "node/node_role" has passed with:
+      8 assertions out of 8 passed
+
+  Test suite "test_sync" has passed with:
+    1 test case out of 1 passed
+    20 assertions out of 20 passed
+
+    Test case "test_sync/sync" has passed with:
+      20 assertions out of 20 passed
+

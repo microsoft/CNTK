@@ -17,8 +17,8 @@ pytest
 echo(
 popd
 
-pushd examples\test
-echo RUNNING cntk\examples\test tests
+pushd ..\..\Tests\EndToEndTests\CNTKv2Python\Examples
+echo RUNNING cntk\Tests\EndToEndTests\CNTKv2Python\Examples tests
 pytest
 echo(
 popd

@@ -54,9 +54,6 @@
     <None Include="cntk\trainer.py">
       <Filter>cntk</Filter>
     </None>
-    <None Include="cntk\utils\persist.py">
-      <Filter>cntk\utils</Filter>
-    </None>
     <None Include="cntk\utils\swig_helper.py">
       <Filter>cntk\utils</Filter>
     </None>

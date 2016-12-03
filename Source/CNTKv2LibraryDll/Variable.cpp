@@ -5,8 +5,8 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
+#include "CompositeFunction.h"
 #include "Serialization.h"
-#include "Function.h"
 #include "InputAndParamNodes.h"
 
 namespace CNTK
@@ -353,13 +353,9 @@ namespace CNTK
             // Also, the correct device should be used upfront when deserializing NDArrayView.
             Variable var(shape, kind, dataType, nullptr, value.DeepClone(device, kind == VariableKind::Constant), needsGradient, dynamicAxis, isSparse, name, uid);
             if (var.IsParameter())
-            {
                 return Parameter(var);
-            }
             else
-            {
                 return Constant(var);
-            }
         }
 
         return Variable(shape, kind, dataType, nullptr, nullptr, needsGradient, dynamicAxis, isSparse, name, uid);

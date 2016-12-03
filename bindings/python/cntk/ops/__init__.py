@@ -3,6 +3,7 @@
 # for full license information.
 # ==============================================================================
 
+from __future__ import division
 import numpy as np
 from . import sequence
 from .functions import Function
@@ -19,12 +20,29 @@ def combine(operands, name=''):
      the two roots of the computation graph which can be combined to create a single Function
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
 
+    Example:
+    >>> in1 = C.input_variable((4,))
+    >>> in2 = C.input_variable((4,))
+
+    >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
+    >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
+
+    >>> plus_node = in1 + in2
+    >>> minus_node = in1 - in2
+
+    >>> forward = C.combine([plus_node, minus_node]).eval({in1: in1_data, in2: in2_data})
+    >>> len(forward)
+    2
+    >>> list(forward.values()) # doctest: +SKIP
+    [array([[[ 1., -3.,  6.,  2.]]], dtype=float32),
+     array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)]
+
     Args:
-        operands (`list`): list of functions or their variables to combine
-        name (`str`, optional): the name of the Combine Function in the network
+        operands (list): list of functions or their variables to combine
+        name (str, optional): the name of the Combine Function in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import combine
     converted_operands = list()
@@ -49,19 +67,89 @@ def alias(x, name=''):
 
     Args:
         operand: The Function/Variable to alias
-        name (`str`, optional): the name of the Alias Function in the network
+        name (str, optional): the name of the Alias Function in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import alias
     x = sanitize_input(x)
     return alias(x, name)
 
 ##########################################################################
-# evaluation ops
+# loss and evaluation ops
 ##########################################################################
 
+@typemap
+def cosine_distance(x, y, name=''):
+    '''
+    Computes the cosine distance between ``x`` and ``y``:
+
+    Example:
+        >>> a = np.asarray([-1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]).reshape(3,2,2)
+        >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
+        >>> x = C.input_variable(shape=(2,))
+        >>> y = C.input_variable(shape=(2,))
+        >>> C.cosine_distance(x,y).eval({x:a,y:b}) # doctest: +SKIP
+        array([[-0.99999982,  0.99999982],
+               [ 0.99999982,  0.        ],
+               [ 0.        , -0.99999982]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import cosine_distance
+    dtype = get_data_type(x, y)
+    x = sanitize_input(x, dtype)
+    y = sanitize_input(y, dtype)
+    return cosine_distance(x, y, name)
+
+@typemap
+def binary_cross_entropy(output, target, name=''):
+    r'''
+    Computes the binary cross entropy between the ``output`` and ``target``.
+
+    Example:
+        TBA
+
+    Args:
+        output: the computed posterior probability from the network
+        target: ground-truth label, 0 or 1
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import binary_cross_entropy
+    dtype = get_data_type(output, target)
+    output = sanitize_input(output, dtype)
+    target = sanitize_input(target, dtype)
+    return binary_cross_entropy(output, target, name)
+
+@typemap
+def weighted_binary_cross_entropy(output, target, weight, name=''):
+    r'''
+    This operation computes the weighted binary cross entropy between the ``output`` and ``target``.
+
+    Example:
+        TBA
+
+    Args:
+        output: the computed posterior probability from the network
+        target: ground-truth label, 0 or 1
+        weight: weight of each example
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import weighted_binary_cross_entropy
+    dtype = get_data_type(output, target, weight)
+    output = sanitize_input(output, dtype)
+    target = sanitize_input(target, dtype)
+    weight = sanitize_input(weight, dtype)
+    return weighted_binary_cross_entropy(output, target, weight, name)
 
 @typemap
 def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
@@ -91,11 +179,11 @@ def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
         target_vector: usually it is one-hot vector where the hot bit
          corresponds to the label index. But it can be any probability
          distribution over the labels.
-        axis (`int` or :class:`cntk.axis.Axis`): axis along which the cross
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the cross
          entropy will be computed.
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import cross_entropy_with_softmax
     dtype = get_data_type(output_vector, target_vector)
@@ -125,9 +213,9 @@ def squared_error(output, target, name=''):
         output: the output values from the network
         target: it is usually a one-hot vector where the hot bit
          corresponds to the label index
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import squared_error
     dtype = get_data_type(output, target)
@@ -161,11 +249,11 @@ def classification_error(output_vector, target_vector, axis=-1, topN=1, name='')
         output_vector: the output values from the network
         target_vector: it is one-hot vector where the hot bit corresponds to
          the label index.
-        axis (`int` or :class:`cntk.axis.Axis`): axis along which the
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the
          classification error will be computed.
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import classification_error
     dtype = get_data_type(output_vector, target_vector)
@@ -185,37 +273,41 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                 auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False,
                 max_temp_mem_size_in_samples=0, name=''):
     '''
-    Computes the convolution of a weight matrix with an image or tensor. This operation is used in image-processing applications
-    and language processing. It supports any dimensions, stride, sharing or padding.
+    Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
+    ``operand`` (commonly an image or output of a previous convolution/pooling operation).
+    This operation is used in image and language processing applications. It supports arbitrary
+    dimensions, strides, sharing, and padding.
 
-    This function operates on input tensors of the form [M1 x M2 x ... x Mn x inChannels]. This can be understood as a rank-n
-    object, where each entry consists of a inChannels-dimensional vector. For example, an RGB image would have dimensions
-    [W x H x 3], i.e. a [W x H]-sized structure, where each entry (pixel) consists of a 3-tuple (note, however, that the
-    memory-storage format is the concatenation of 3 planes of size [W x H]).
+    This function operates on input tensors with dimensions :math:`[C \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`. This can be understood as a rank-n
+    object, where each entry consists of a :math:`C`-dimensional vector. For example, an RGB image would have dimensions
+    :math:`[3 \\times W \\times H]`, i.e. a :math:`[W \\times H]`-sized structure, where each entry (pixel) consists of a 3-tuple.
 
-    `convolution` convolves the input with n+1-dimensional filters, where the first n dimensions are the spatial extent of the
-    filter, and the last one must be equal to inChannels. There are outChannels filters. I.e. for each output position, a vector of
-    dimension outChannels is computed. Hence, the total number of filter parameters is (M1*M2*...*Mn) * inChannels * outChannels.
+    `convolution` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
+    ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
+    The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
+    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input.
+    The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
+    dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
 
 
     Example:
-	>>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
-	>>> x = C.input_variable(img.shape)
-	>>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
-	>>> kernel = C.constant(value = filter)
-	>>> C.convolution(kernel , x, auto_padding = [False]).eval({x: img})
-	array([[[[[  6.,   8.,  10.,  12.],
-		  [ 16.,  18.,  20.,  22.],
-		  [ 26.,  28.,  30.,  32.],
-		  [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
+    >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
+    >>> x = C.input_variable(img.shape)
+    >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
+    >>> kernel = C.constant(value = filter)
+    >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}) # doctest: +SKIP
+    array([[[[[  6.,   8.,  10.,  12.],
+              [ 16.,  18.,  20.,  22.],
+              [ 26.,  28.,  30.,  32.],
+              [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
 
     Args:
-        convolution_map: convolution filter weights, stored as a tensor of dimensions [outChannels x M1 x M2 x ... x Mn],
-         where [M1 x M2 x ... x Mn] must be the kernel dimensions.
-        operand: convolution input. A tensor with dimensions [M1 x M2 x ... x Mn x inChannels].
-        strides (optional): stride dimensions. A stride > 1 means that only pixel positions that are multiples of the stride value are computed.
-         For example, a stride of 2 will lead to a halving of the dimensions. The last stride dimension that lines up with the number
-         of input channels must be equal to the number of input channels.
+        convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
+         where :math:`[m_1 \\times m_2 \\times \\ldots \\times m_n]` must be the kernel dimensions (spatial extent of the filter).
+        operand: convolution input. A tensor with dimensions :math:`[I \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`.
+        strides (tuple, optional): stride dimensions. If strides[i] > 1 then only pixel positions that are multiples of strides[i] are computed.
+         For example, a stride of 2 will lead to a halving of that dimension. The first stride dimension that lines up with the number
+         of input channels can be set to any non-zero value.
         sharing (bool): sharing flags for each input dimension
         auto_padding (bool): flags for each input dimension whether it should be padded automatically (that is,
          symmetrically) or not padded at all. Padding means that the convolution kernel is applied to all pixel positions, where all
@@ -229,15 +321,14 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
          samples.
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    return convolution(convolution_map, operand, tuple(reversed(strides)), sharing, auto_padding,
-                       tuple(reversed(lower_pad)), tuple(
-                           reversed(upper_pad)), transpose,
+    return convolution(convolution_map, operand, tuple(strides), sharing, auto_padding,
+                       tuple(lower_pad), tuple(upper_pad), transpose,
                        max_temp_mem_size_in_samples, name)
 
 
@@ -255,9 +346,9 @@ def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
         conv_feature_map: a convolutional feature map as the input volume ([W x H x C x N]).
         rois: the coordinates of the ROIs per image ([4 x roisPerImage x N]), each ROI is (x, y, w, h) relative to original image size.
         roi_output_shape: dimensions (width x height) of the ROI pooling output shape
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import roipooling
     conv_feature_map = sanitize_input(conv_feature_map)
@@ -281,26 +372,26 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
 
     Example:
-	>>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-	>>> x = C.input_variable(img.shape)
-	>>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : img})
-	array([[[[[  2.5,   4.5],
-		  [ 10.5,  12.5]]]]], dtype=float32)
-	>>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : img})
-	array([[[[[  5.,   7.],
-		  [ 13.,  15.]]]]], dtype=float32)
+    >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+    >>> x = C.input_variable(img.shape)
+    >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
+    array([[[[[  2.5,   4.5],
+              [ 10.5,  12.5]]]]], dtype=float32)
+    >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : [img]})
+    array([[[[[  5.,   7.],
+              [ 13.,  15.]]]]], dtype=float32)
 
     Args:
         operand: pooling input
-        pooling_type: one of :const:`cntk.ops.MAX_POOLING` or :const:`cntk.ops.AVG_POOLING`
+        pooling_type: one of :const:`~cntk.ops.MAX_POOLING` or :const:`~cntk.ops.AVG_POOLING`
         pooling_window_shape: dimensions of the pooling window
         strides (default 1): strides.
         auto_padding: automatic padding flags for each input dimension.
         lower_pad: precise lower padding for each input dimension
         upper_pad: precise upper padding for each input dimension
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import pooling
     operand = sanitize_input(operand)
@@ -330,17 +421,17 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
          training as well. You must pass a parameter tensor with initial value 0 and the same dimensions
          as ``scale`` and ``bias``
         running_inv_std: running variance. Represented as ``running_mean``
-        spatial(`bool`): flag that indicates whether to compute mean/var for each feature in a minibatch
+        spatial(bool): flag that indicates whether to compute mean/var for each feature in a minibatch
          independently or, in case of convolutional layers, per future map
-        normalization_time_constant(`float`, default 5000): time constant for computing running average of
-         mean and variance as a low-pass filtered version of the batch statistics. 
-        blend_time_constant(`float`, default 0): constant for smoothing batch estimates with the running
+        normalization_time_constant(float, default 5000): time constant for computing running average of
+         mean and variance as a low-pass filtered version of the batch statistics.
+        blend_time_constant(float, default 0): constant for smoothing batch estimates with the running
          statistics
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
-        use_cudnn_engine(`bool`, default True):
-        name (`str`, optional): the name of the Function instance in the network
+        use_cudnn_engine(bool, default True):
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import batch_normalization
     operand = sanitize_input(operand)
@@ -368,9 +459,9 @@ def less(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import less
     dtype = get_data_type(left, right)
@@ -394,9 +485,9 @@ def equal(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import equal
     dtype = get_data_type(left, right)
@@ -420,9 +511,9 @@ def greater(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import greater
     dtype = get_data_type(left, right)
@@ -446,9 +537,9 @@ def greater_equal(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import greater_equal
     dtype = get_data_type(left, right)
@@ -472,9 +563,9 @@ def not_equal(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import not_equal
     dtype = get_data_type(left, right)
@@ -498,9 +589,9 @@ def less_equal(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import less_equal
     dtype = get_data_type(left, right)
@@ -528,9 +619,9 @@ def plus(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import plus
     dtype = get_data_type(left, right)
@@ -555,9 +646,9 @@ def minus(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
 
     from cntk.cntk_py import minus
@@ -583,9 +674,9 @@ def element_times(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import element_times
     dtype = get_data_type(left, right)
@@ -610,15 +701,41 @@ def element_divide(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import element_divide
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
     return element_divide(left, right, name)
+
+@typemap
+def log_add_exp(left, right, name=''):
+    '''
+    Calculates the log of the sum of the exponentials
+    of the two input tensors. It supports broadcasting.
+
+    Example:
+    >>> a = np.arange(3,dtype=np.float32)
+    >>> np.exp(C.log_add_exp(np.log(1+a), np.log(1+a*a)).eval())
+    array([ 2.,  4.,  8.], dtype=float32)
+    >>> np.exp(C.log_add_exp(np.log(1+a), [0.]).eval())
+    array([ 2.,  3.,  4.], dtype=float32)
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import log_add_exp
+    dtype = get_data_type(left, right)
+    left = sanitize_input(left, dtype)
+    right = sanitize_input(right, dtype)
+    return log_add_exp(left, right, name)
 
 
 @typemap
@@ -654,14 +771,14 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
     Args:
         left: left side matrix or tensor
         right: right side matrix or tensor
-        output_rank (`int`): in case we have tensors as arguemnts, output_rank represents
+        output_rank (int): in case we have tensors as arguemnts, output_rank represents
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
         infer_input_rank_to_map ('int'): meant for internal use only. Always use default value
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import times
     dtype = get_data_type(left, right)
@@ -755,10 +872,10 @@ def times_transpose(left, right, name=''):
     Args:
         left: left side tensor
         right: right side matrix or vector
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import times_transpose
     dtype = get_data_type(left, right)
@@ -795,9 +912,9 @@ def floor(arg, name=''):
 
     Args:
         arg: input tensor
-        name (`str`, optional): the name of the Function instance in the network (optional)
+        name (str, optional): the name of the Function instance in the network (optional)
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import floor
     arg = sanitize_input(arg, get_data_type(arg))
@@ -820,9 +937,9 @@ def ceil(arg, name=''):
 
     Args:
         arg: input tensor
-        name (`str`, optional): the name of the Function instance in the network (optional)
+        name (str, optional): the name of the Function instance in the network (optional)
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import ceil
     arg = sanitize_input(arg, get_data_type(arg))
@@ -855,9 +972,9 @@ def round(arg, name=''):
 
     Args:
         arg: input tensor
-        name (`str`, optional): the name of the Function instance in the network (optional)
+        name (str, optional): the name of the Function instance in the network (optional)
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import round
     arg = sanitize_input(arg, get_data_type(arg))
@@ -885,13 +1002,13 @@ def clip(x, min_value, max_value, name=''):
 
     Args:
         x: tensor to be clipped
-        min_value (`float`): a scalar or a tensor which represents the minimum value to clip element
+        min_value (float): a scalar or a tensor which represents the minimum value to clip element
          values to
-        max_value (`float`): a scalar or a tensor which represents the maximum value to clip element
+        max_value (float): a scalar or a tensor which represents the maximum value to clip element
          values to
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import clip
     x = sanitize_input(x, get_data_type(x))
@@ -913,10 +1030,10 @@ def relu(x, name=''):
         array([[ 0.,  0.,  0.,  1.,  2.]], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import re_lu
     x = sanitize_input(x)
@@ -937,10 +1054,10 @@ def sigmoid(x, name=''):
         array([ 0.119203,  0.268941,  0.5     ,  0.731059,  0.880797], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import sigmoid
     x = sanitize_input(x)
@@ -960,14 +1077,58 @@ def tanh(x, name=''):
                [ 0.995055,  0.999329]], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import tanh
     x = sanitize_input(x)
     return tanh(x, name)
+
+@typemap
+def sin(x, name=''):
+    '''
+    Computes the element-wise sine of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.sin([[0,np.pi/2],[np.pi,3*np.pi/2]]).eval()
+        array([[ 0.,  1.],
+               [ 0., -1.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sin
+    x = sanitize_input(x)
+    return sin(x, name)
+
+@typemap
+def cos(x, name=''):
+    '''
+    Computes the element-wise cosine of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.cos([[0,np.pi/2],[np.pi,3*np.pi/2]]).eval()
+        array([[ 1.,  0.],
+               [-1., -0.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import cos
+    x = sanitize_input(x)
+    return cos(x, name)
 
 
 @typemap
@@ -992,14 +1153,14 @@ def softmax(x, name=''):
         array([ 0.5,  0.5], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
-    return softmax(x)
+    return softmax(x, name)
 
 
 @typemap
@@ -1016,14 +1177,14 @@ def hardmax(x, name=''):
         array([ 0.,  1.,  0.,  0.], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`): the name of the node in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str): the name of the node in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import hardmax
     x = sanitize_input(x)
-    return hardmax(x)
+    return hardmax(x, name)
 
 
 @typemap
@@ -1038,10 +1199,10 @@ def exp(x, name=''):
         array([ 1.      ,  2.718282], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import exp
     x = sanitize_input(x)
@@ -1058,10 +1219,10 @@ def log(x, name=''):
         array([ 0.      ,  0.693147], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
 
     Note:
         CNTK returns -85.1 for log(x) if ``x`` is negative or zero. The reason is that
@@ -1086,10 +1247,10 @@ def sqrt(x, name=''):
         array([ 0.,  2.], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
 
     Note:
         CNTK returns zero for sqrt of negative nubmers, this will be changed to
@@ -1110,10 +1271,10 @@ def square(x, name=''):
         array([   1.,  100.], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import square
     x = sanitize_input(x)
@@ -1132,10 +1293,10 @@ def abs(x, name=''):
         array([ 1.,  1.,  2.,  3.], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import abs
     x = sanitize_input(x)
@@ -1154,10 +1315,10 @@ def negate(x, name=''):
         array([ 1., -1.,  2., -3.], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import negate
     x = sanitize_input(x)
@@ -1174,10 +1335,10 @@ def reciprocal(x, name=''):
         array([-3.      ,  5.      , -0.5     ,  0.333333], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`cntk.ops.functions.Function` that outputs a tensor
-        name (`str`, optional): the name of the Function instance in the network
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import reciprocal
     x = sanitize_input(x)
@@ -1199,9 +1360,9 @@ def element_select(flag, value_if_true, value_if_false, name=''):
         flag: condition tensor
         value_if_true: true branch tensor
         value_if_false: false branch tensor
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import element_select
     flag = sanitize_input(flag)
@@ -1249,10 +1410,10 @@ def future_value(x, initial_state=None, time_step=1, name=''):
         x: the tensor (or its name) from which the future value is obtained.
         initial_state: tensor or scalar representing the initial value to be
         used when the input tensor is shifted in time.
-        time_step (`int`): the number of time steps to look into the future (default 1)
-        name (`str`, optional): the name of the Function instance in the network
+        time_step (int): the number of time steps to look into the future (default 1)
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
 
     from ..utils import sanitize_dtype_cntk
@@ -1301,11 +1462,11 @@ def past_value(x, initial_state=None, time_step=1, name=''):
         x: the tensor (or its name) from which the past value is obtained
         initial_state: tensor or scalar representing the initial value to be
         used when the input tensor is shifted in time.
-        time_step (`int`): the number of time steps to look into the past (default 1)
-        name (`str`, optional): the name of the Function instance in the network
+        time_step (int): the number of time steps to look into the past (default 1)
+        name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
 
     from ..utils import sanitize_dtype_cntk
@@ -1317,6 +1478,44 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 
     x = sanitize_input(x)
     return past_value(x, initial_state, time_step, name)
+
+@typemap
+def optimized_rnnstack(operand, weights, hidden_size, num_layers,
+                       bidirectional=False, recurrent_op='lstm', name=''):
+    '''
+    An RNN implementation that uses the primitives in cuDNN.
+    If cuDNN is not available it fails.
+
+    Args:
+        operand: input of the optimized RNN stack.
+        weights: parameter tensor that holds the learned weights.
+        hidden_size (int): number of hidden units in each layer (and in each direction).
+        num_layers (int): number of layers in the stack.
+        bidirectional(bool, default False): whether each layer should compute both in forward
+         and separately in backward mode and concatenate the results
+         (if True the output is twice the hidden_size). The default is
+         False which means the recurrence is only computed in the forward direction.
+        recurrent_op (str, optional): one of 'lstm', 'gru', 'relu', or 'tanh'.
+        name (str, optional): the name of the Function instance in the network
+
+    Example:
+        >>> from _cntk_py import InferredDimension, constant_initializer
+        >>> W = C.parameter((InferredDimension,4), constant_initializer(0.1))
+        >>> x = C.input_variable(shape=(4,))
+        >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))
+        >>> f = C.optimized_rnnstack(x, W, 8, 2)
+        >>> f.eval({x:s}).shape
+        (1, 5, 8)
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import optimized_rnnstack
+    operand = sanitize_input(operand)
+    if recurrent_op not in set(['lstm','gru','relu','tanh']):
+        raise(ValueError('unsupported recurrent_op value "%s"'%recurrent_op))
+    return optimized_rnnstack(operand, weights, hidden_size, num_layers,
+                       bidirectional, recurrent_op, name)
 
 ##########################################################################
 # reshaping ops
@@ -1341,16 +1540,11 @@ def reshape(x, shape, name=''):
 
     Args:
         x: tensor to be reshaped
-        shape (`tuple`): a tuple defining the resulting shape
-        name (`str`, optional): the name of the Function instance in the network
+        shape (tuple): a tuple defining the resulting shape
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
-    if np.any(np.asarray(shape) < 0):
-        # TODO decide on whether -1 instead of 0 should be used to infer the
-        # dimension
-        raise ValueError('shape dimensions cannot be negative')
-
     from cntk.cntk_py import reshape
     x = sanitize_input(x)
     shape = sanitize_shape(shape)
@@ -1371,11 +1565,11 @@ def transpose(x, axis1=0, axis2=1, name=''):
 
     Args:
         x: tensor to be transposed
-        axis1 (`int` or :class:`cntk.axis.Axis`): the axis to swap with ``axis2``
-        axis2 (`int` or :class:`cntk.axis.Axis`): the axis to swap with ``axis1``
-        name (`str`, optional): the name of the Function instance in the network
+        axis1 (int or :class:`~cntk.axis.Axis`): the axis to swap with ``axis2``
+        axis2 (int or :class:`~cntk.axis.Axis`): the axis to swap with ``axis1``
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import transpose_axes
     x = sanitize_input(x)
@@ -1425,17 +1619,17 @@ def slice(x, axis, begin_index, end_index, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.axis.Axis`): axis along which ``begin_index`` and ``end_index``
-         will be used. If it is of type `int` it will be used as a static axis.
-        begin_index (`int`): the index along axis where the slicing starts
-        end_index (`int`): the index along axis where the slicing ends
-        name (`str`, optional): the name of the Function instance in the network
+        axis (int or :class:`~cntk.axis.Axis`): axis along which ``begin_index`` and ``end_index``
+         will be used. If it is of type int it will be used as a static axis.
+        begin_index (int): the index along axis where the slicing starts
+        end_index (int): the index along axis where the slicing ends
+        name (str, optional): the name of the Function instance in the network
 
     See also:
         Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import slice
     x = sanitize_input(x)
@@ -1470,13 +1664,13 @@ def splice(inputs, axis=-1, name=''):
                 [ 50.,  60.]]], dtype=float32)
 
     Args:
-        inputs (`list`): tuple of input tensors
-        axis (`int` or :class:`cntk.axis.Axis`): axis along which the
+        inputs (list): tuple of input tensors
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the
          concatenation will be performed
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import splice
     if type(inputs) not in (list, tuple):
@@ -1530,11 +1724,11 @@ def reduce_sum(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
-        name (`str`, optional): the name of the Function instance in the network
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import reduce_sum
     x = sanitize_input(x)
@@ -1550,20 +1744,20 @@ def reduce_log_sum(x, axis=None, name=''):
 
     Examples:
         >>> x = C.input_variable(shape=(3,2))
-        >>> x0 = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
+        >>> val = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
         >>> lse = C.reduce_log_sum(x)
-        >>> lse.eval({x:x0})
+        >>> lse.eval({x:[val]})
         array([[ 5.456193]], dtype=float32)
-        >>> np.log(np.sum(np.exp(x0)))
+        >>> np.log(np.sum(np.exp(val)))
         5.4561934
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
-        name (`str`): the name of the Function instance in the network
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import reduce_log_sum
     x = sanitize_input(x)
@@ -1578,23 +1772,23 @@ def reduce_mean(x, axis=None, name=''):
 
     Examples:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]
+        >>> data = [[5, 20],[30, 40],[55, 60]]
 
         >>> C.reduce_mean(data, 0).eval()
         array([[ 30.,  40.]], dtype=float32)
 
         >>> C.reduce_mean(data, 1).eval()
-        array([[ 15.],
-               [ 35.],
-               [ 55.]], dtype=float32)
+        array([[ 12.5],
+               [ 35. ],
+               [ 57.5]], dtype=float32)
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
-        name (`str`, optional): the name of the Function instance in the network
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import reduce_mean
     x = sanitize_input(x)
@@ -1621,11 +1815,11 @@ def reduce_max(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
-        name (`str`): the name of the Function instance in the network
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import reduce_max
     x = sanitize_input(x)
@@ -1652,11 +1846,11 @@ def reduce_min(x, axis=None, name=''):
 
     Args:
         x: input tensor
-        axis (`int` or :class:`cntk.axis.Axis`): axis along which the reduction will be performed
-        name (`str`): the name of the Function instance in the network
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import reduce_min
     x = sanitize_input(x)
@@ -1686,12 +1880,12 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
     Args:
         weights: input vector of sampling weights which should be
             non-negative numbers.
-        num_samples (`int`): number of expected samples
-        allow_duplicates (`bool`): If sampling is done
+        num_samples (int): number of expected samples
+        allow_duplicates (bool): If sampling is done
             with replacement (`True`) or without (`False`).
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
 
     '''
     from cntk.cntk_py import random_sample
@@ -1702,32 +1896,32 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
 
 @typemap
 def random_sample_inclusion_frequency(
-    weights, 
-    num_samples, 
-    allow_duplicates, 
+    weights,
+    num_samples,
+    allow_duplicates,
     name=''):
     '''
     For weighted sampling with the specifed sample size (`num_samples`)
     this node computes the expected number of occurences of each class
-    in the the sampled set. In case of sampling without replacement 
+    in the the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the
     case of small sample sizes.
-    Intended uses are e.g. sampled softmax, noise contrastive 
+    Intended uses are e.g. sampled softmax, noise contrastive
     estimation etc.
-    This operation will be typically used together 
+    This operation will be typically used together
     with :func:`random_sample`.
 
     Args:
-        weights: input vector of sampling weights which should be 
-            non-negative numbers. 
-        num_samples (`int`): number of expected samples
-        allow_duplicates (`bool`): If sampling is done 
-            with replacement (`True`) or without (`False`).
+        weights: input vector of sampling weights which should be
+         non-negative numbers.
+        num_samples (int): number of expected samples
+        allow_duplicates (bool): If sampling is done
+         with replacement (`True`) or without (`False`).
 
     Examples:
         >>> import numpy as np
         >>> from cntk import *
-        >>> # weight vector with 100 '1000'-values followed 
+        >>> # weight vector with 100 '1000'-values followed
         >>> # by 100 '1' values
         >>> w1 = np.full((100),1000, dtype = np.float)
         >>> w2 = np.full((100),1, dtype = np.float)
@@ -1746,15 +1940,15 @@ def random_sample_inclusion_frequency(
         1.0
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import random_sample_inclusion_frequency
     weights = sanitize_input(weights)
 
     return random_sample_inclusion_frequency(
-        weights, 
-        num_samples, 
-        allow_duplicates, 
+        weights,
+        num_samples,
+        allow_duplicates,
         name)
 
 
@@ -1784,11 +1978,11 @@ def dropout(x, dropout_rate=0.0, name=''):
 
     Args:
         x: input tensor
-        dropout_rate (`float`, [0,1)): probability that an element of ``x`` will be set to zero
-        name (:class:`str`, optional): the name of the Function instance in the network
+        dropout_rate (float, [0,1)): probability that an element of ``x`` will be set to zero
+        name (:class:str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     if dropout_rate < 0.0 or dropout_rate >= 1.0:
         raise ValueError('dropout_rate must be in the interval [0,1)')
@@ -1810,30 +2004,30 @@ from cntk.axis import Axis
 
 
 @typemap
-def input_variable(shape, data_type=np.float32, needs_gradient=True, is_sparse=False,
-                   dynamic_axes=Axis.default_input_variable_dynamic_axes, name=''):
+def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
+                   dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
     '''
     It creates an input node.
 
     Args:
-        shape (`tuple` or `int`): the shape of the input tensor
-        data_type (`type`, optional): np.float32 (default) or np.float64
-        needs_gradients (`bool`, optional): whether to back-propagates to it or not. True by default.
-        is_sparse (`bool`, optional): whether the variable is sparse (`False` by default)
-        dynamic_axes (`list` or `tuple`, default): a list of dynamic axis (e.g., batch axis, time axis)
-        name (`str`, optional): the name of the Function instance in the network
+        shape (tuple or int): the shape of the input tensor
+        dtype (type, optional): np.float32 (default) or np.float64
+        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
+        is_sparse (bool, optional): whether the variable is sparse (`False` by default)
+        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
+        name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`cntk.ops.variables.Variable`
+        :class:`~cntk.ops.variables.Variable`
     '''
     from cntk.cntk_py import input_variable
     from ..utils import sanitize_shape, sanitize_dtype_cntk
 
     shape = sanitize_shape(shape)
 
-    if data_type is None:
-        data_type = np.float32
-    dtype = sanitize_dtype_cntk(data_type)
+    if dtype is None:
+        dtype = np.float32
+    dtype = sanitize_dtype_cntk(dtype)
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
 
     # TODO dynamic axis for numpy arrays
@@ -1849,11 +2043,11 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
 
     Args:
-        shape (`tuple` or `int`): the shape of the variable tensor
-        dynamic_axes (`list`): the list of dynamic axes that the actual variable uses
+        shape (tuple or int): the shape of the variable tensor
+        dynamic_axes (list): the list of dynamic axes that the actual variable uses
 
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import placeholder_variable, NDShape, Axis
 
@@ -1863,7 +2057,7 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
         shape = sanitize_shape(shape)
 
     if dynamic_axes is None:
-        dynamic_axes = Axis.unknown_dynamic_axes
+        dynamic_axes = Axis.unknown_dynamic_axes()
 
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
@@ -1882,7 +2076,7 @@ def parameter(shape=None, init=None, device=None, name=''):
                [ 2.,  2.,  2.,  2.]], dtype=float32)
 
     Args:
-        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it
+        shape (tuple or int, optional): the shape of the input tensor. If not provided, it
          will be inferred from ``value``.
         init (scalar or NumPy array or initializer): if init is a scalar
          it will be replicated for every element in the tensor or
@@ -1890,11 +2084,11 @@ def parameter(shape=None, init=None, device=None, name=''):
          :mod:`cntk.initializer` it will be used to initialize the tensor at
          the first forward pass. If `None`, the tensor will be initialized
          with 0.
-        device (:class:`cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
-        name (`str`, optional): the name of the Parameter instance in the network
+        device (:class:`~cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
+        name (str, optional): the name of the Parameter instance in the network
 
     Returns:
-        :class:`cntk.ops.variables.Parameter`
+        :class:`~cntk.ops.variables.Parameter`
     '''
 
     from .variables import Parameter
@@ -1929,12 +2123,12 @@ def constant(value=None, shape=None, device=None, name=''):
         value (scalar or NumPy array, optional): a scalar initial value that would be replicated for
          every element in the tensor or NumPy array.
          If ``None``, the tensor will be initialized uniformly random.
-        shape (`tuple` or `int`, optional): the shape of the input tensor. If not provided, it will
+        shape (tuple or int, optional): the shape of the input tensor. If not provided, it will
          be inferred from ``value``.
-        device (:class:`cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
-        name (`str`, optional): the name of the Function instance in the network
+        device (:class:`~cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.variables.Constant`
+        :class:`~cntk.ops.variables.Constant`
     '''
     from .variables import Constant
     if not device:
@@ -1965,9 +2159,9 @@ def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
         operand: the variable to be normalized
         mean (NumPy array): per dimension mean to use for the normalization
         inv_stddev (NumPy array): per dimension standard deviation to use for the normalization
-        name (`str`, optional): the name of the Function instance in the network
+        name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`cntk.ops.functions.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import per_dim_mean_variance_normalize
     mean = sanitize_input(mean, get_data_type(mean))

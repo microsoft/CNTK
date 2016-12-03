@@ -34,13 +34,13 @@ struct RnnAttributes
     }
 
     // compute the total number of parameters, for inference of weight matrix size
-    pair<size_t,size_t> GetNumParameters(size_t inputDim) const
+    pair<size_t, size_t> GetNumParameters(size_t inputDim) const
     {
         const size_t bidirFactor = m_bidirectional ? 2 : 1;
         const size_t numNetworks =
-            (m_recurrentOp == L"lstm"   ) ? 4 :
-            (m_recurrentOp == L"gru"    ) ? 3 :
-            /*else*/                        1;
+            (m_recurrentOp == L"lstm") ? 4 :
+            (m_recurrentOp == L"gru" ) ? 3 :
+            /*else*/                     1 ;
         size_t total = 0;
         for (size_t i = 0; i < m_numLayers; i++)
         {

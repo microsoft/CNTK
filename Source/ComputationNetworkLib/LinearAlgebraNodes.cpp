@@ -68,7 +68,13 @@ void EpochAccumulatorNode<ElemType>::ForwardPropNonLooping()
     size_t rank = DetermineElementwiseTensorRank();
     auto accumulator = DataTensorFor(m_accumulator, rank, FrameRange());
     UpdateRunningAverage(InputRef(0), accumulator, m_numSamples);
+    CopyAccumulatorToValue();
+}
 
+// Copies internal accumulator to the output.
+template <class ElemType>
+void EpochAccumulatorNode<ElemType>::CopyAccumulatorToValue()
+{
     // Value gets resized in UpdateFunctionValuesSize that is called in BeforeForwardProp. Resize fills matrix with NaN
     // values, so m_value matrix cannot be used as persistent storage between ForwardProp calls.
     Value().SetValue(*m_accumulator);

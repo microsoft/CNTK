@@ -6398,12 +6398,22 @@ Test module "MathTests" has passed with:
       2 assertions out of 2 passed
 
   Test suite "QuantizersUnitTests" has passed with:
-    1 test case out of 1 passed
+    2 test case out of 2 passed
     12 assertions out of 12 passed
 
     Test case "QuantizersUnitTests/FloatToShort" has passed with:
-      12 assertions out of 12 passed
+      6 assertions out of 6 passed
+	  
+	Test case "QuantizersUnitTests/QuantizeZeros" has passed with:
+      6 assertions out of 6 passed
 
+  Test suite "QuantizedOperationsUnitTests" has passed with:
+    1 test case out of 1 passed
+    65 assertions out of 65 passed
+
+    Test case "QuantizedOperationsUnitTests/MultiplyIntToShort" has passed with:
+      65 assertions out of 65 passed
+	  
   Test suite "MathTensorTests" has passed with:
     9 test cases out of 9 passed
     6 assertions out of 6 passed

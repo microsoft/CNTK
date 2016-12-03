@@ -22,9 +22,11 @@ struct ReaderFixture
     {
         BOOST_TEST_MESSAGE("Setup fixture");
 #ifdef _WIN32
+#if (_MSC_VER <= 1800) // Note: this does not trigger if loaded in vs2013 mode in vs2015!
         BOOST_TEST_MESSAGE("Set two-digit format of exponent number");
         // Todo: According to MSDN, the following function is obsolete and not available in the CRT from VS2015. 
         _set_output_format(_TWO_DIGIT_EXPONENT);
+#endif
 #endif
         m_initialWorkingPath = boost::filesystem::current_path().generic_string();
         BOOST_TEST_MESSAGE("Current working directory: " + m_initialWorkingPath);

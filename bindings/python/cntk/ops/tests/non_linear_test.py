@@ -13,6 +13,8 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE
+from .. import constant
+from ...utils import cntk_device
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 # the backward result returned by CNTK log() for epsilon
@@ -44,6 +46,7 @@ CLIP_TUPLES = [
 @pytest.mark.parametrize("min_value, max_value, x", CLIP_TUPLES)
 def test_op_clip(min_value, max_value, x, device_id, precision):
     from .. import clip
+    dev = cntk_device(device_id)
 
     expected_forward = [np.clip(AA([x], dtype=PRECISION_TO_TYPE[precision]), AA(
         min_value, dtype=PRECISION_TO_TYPE[precision]), AA(max_value, dtype=PRECISION_TO_TYPE[precision]))]
@@ -52,9 +55,12 @@ def test_op_clip(min_value, max_value, x, device_id, precision):
         'arg': [[np.array(np.logical_not(np.logical_or(np.greater(x, max_value), np.less(x, min_value))), dtype=PRECISION_TO_TYPE[precision])]]
     }
 
+    const_min_value = constant(min_value, device=dev)
+    const_max_value = constant(max_value, device=dev)
+
     _test_unary_op(precision, device_id, clip, x,
                    expected_forward, expected_backward,
-                   {'min_value': min_value, 'max_value': max_value})
+                   {'min_value': const_min_value, 'max_value': const_max_value})
 TENSORS = [
     ([[0, -0.1]]),
     ([[-100, -10], [-1, -0.1], [-0.01, -0.001],
@@ -137,7 +143,7 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
         value = np.ones(shape=shape, dtype=PRECISION_TO_TYPE[precision])
 
         a = I(shape=value.shape,
-              data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+              dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
               needs_gradient=True,
               name='a')
 
@@ -168,7 +174,7 @@ def test_op_dropout_bad_input(dropout_rate):
     from cntk import dropout
     from cntk.utils import eval, sanitize_dtype_cntk, cntk_device
 
-    a = I(shape=(1, 2), data_type='float', needs_gradient=True, name='a')
+    a = I(shape=(1, 2), dtype='float', needs_gradient=True, name='a')
 
     with pytest.raises(ValueError):
         dropout_node = dropout(a, dropout_rate=dropout_rate)

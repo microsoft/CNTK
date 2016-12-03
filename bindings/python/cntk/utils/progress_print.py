@@ -1,8 +1,9 @@
-# ==============================================================================
+﻿# ==============================================================================
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+from time import time
 
 # TODO: Let's switch to import logging in the future instead of print. [ebarsoum]
 class ProgressPrinter:
@@ -34,6 +35,7 @@ class ProgressPrinter:
         self.freq                = freq
         self.first               = first
         self.tag                 = '' if not tag else "[{}] ".format(tag)
+        self.epoch_start_time    = 0
 
         if freq==0:
             print(' average      since    average      since      examples')
@@ -100,10 +102,16 @@ class ProgressPrinter:
         if self.freq > 0:
             self.updates = 0
             avg_loss, avg_metric, samples = self.reset_start()
+            epoch_end_time = time()
+            time_delta = epoch_end_time - self.epoch_start_time
+            speed = 0
+            if (time_delta > 0):
+                speed = samples / time_delta
+                self.epoch_start_time = epoch_end_time
             if with_metric:
-                print("Finished Epoch [{}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {}".format(self.epochs, self.tag, avg_loss, samples, avg_metric*100.0, samples))
+                print("Finished Epoch [{}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {} {:0.3f}s ({:5.1f} samples per second)".format(self.epochs, self.tag, avg_loss, samples, avg_metric*100.0, samples, time_delta, speed))
             else:
-                print("Finished Epoch [{}]: {}loss = {:0.6f} * {}".format(self.epochs, self.tag, avg_loss, samples))
+                print("Finished Epoch [{}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second)".format(self.epochs, self.tag, avg_loss, samples, time_delta, speed))
             return avg_loss, avg_metric, samples  # BUGBUG: for freq=0, we don't return anything here
 
     def update(self, loss, minibatch_size, metric=None):
@@ -124,6 +132,8 @@ class ProgressPrinter:
         if metric is not None:
             self.metric_since_start += metric * minibatch_size
             self.metric_since_last  += metric * minibatch_size
+        if self.epoch_start_time == 0:
+            self.epoch_start_time = time()
         if self.freq == 0 and (self.updates+1) & self.updates == 0:
             avg_loss, avg_metric, samples = self.reset_last()
             if metric is not None:

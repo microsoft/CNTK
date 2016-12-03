@@ -82,7 +82,8 @@ class _OptionsStack: # implement Python's 'with' protocol
             raise NotImplementedError('default_options not yet implemented per layer')
         new_options = kwargs
         # TODO: layer subset
-        merged_options = _current_default_options.__dict__
+        # dict() make a deep copy of _current_default_options.__dict__ into merged_options.
+        merged_options = dict(_current_default_options.__dict__)
         # we merge the newly provided options with the current defaults
         # Only names that already exist may be used (cannot create new default variables).
         # TODO: we may consider a more generic mechanism where one can overwrite all, if Python allows that.
@@ -113,6 +114,10 @@ def default_options_for(layer_subset, **kwargs):
     if not isinstance(layer_subset, list):
         layer_subset = [layer_subset]
     return _OptionsStack(layer_subset, **kwargs)
+
+# return the up-to-date default option.
+def _get_current_default_options():
+    return _current_default_options
 
 # resolve activation option against current default
 def _resolve_activation(activation):

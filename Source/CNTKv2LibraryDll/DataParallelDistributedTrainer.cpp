@@ -10,6 +10,7 @@
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 #include "QuantizedDistributedCommunicator.h"
 #include "QuantizedDataParallelDistributedTrainer.h"
+#include "BlockMomentumDistributedTrainer.h"
 #endif
 
 namespace CNTK
@@ -20,38 +21,99 @@ namespace CNTK
         return MakeSharedObject<QuantizedMPICommunicatorImpl>(zeroThresholdFor1Bit, useQuantizationForSelfStripe, numQuantizationBits);
     }
 
-    DistributedTrainerPtr CreateQuantizedDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate)
+    DistributedTrainerPtr CreateQuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t distributedAfterSampleCount)
     {
-        return MakeSharedObject<DataParallelDistributedTrainer>(communicator, useAsyncBufferedParameterUpdate);
+        return MakeSharedObject<QuantizedDataParallelDistributedTrainer>(communicator, useAsyncBufferedParameterUpdate, distributedAfterSampleCount);
     }
+
+    DistributedTrainerPtr CreateBlockMomentumDistributedTrainer(
+        DistributedCommunicatorPtr communicator,
+        size_t blockSize,
+        bool useNestrovMomentum,
+        bool resetSGDMomentumAfterAggregation,
+        double blockLearningRate,
+        size_t distributedAfterSampleCount)
+    {
+        return MakeSharedObject<BlockMomentumDistributedTrainer>(
+            communicator,
+            blockSize,
+            useNestrovMomentum,
+            resetSGDMomentumAfterAggregation,
+            blockLearningRate,
+            distributedAfterSampleCount);
+    }
+
+    DistributedTrainerPtr CreateBlockMomentumDistributedTrainer(
+        DistributedCommunicatorPtr communicator,
+        size_t blockSize,
+        double blockMomentumAsTimeConstant,
+        bool useNestrovMomentum,
+        bool resetSGDMomentumAfterAggregation,
+        double blockLearningRate,
+        size_t distributedAfterSampleCount)
+    {
+        return MakeSharedObject<BlockMomentumDistributedTrainer>(
+            communicator,
+            blockSize,
+            useNestrovMomentum,
+            resetSGDMomentumAfterAggregation,
+            blockLearningRate,
+            blockMomentumAsTimeConstant,
+            distributedAfterSampleCount);
+    }
+
 #else
     QuantizedDistributedCommunicatorPtr QuantizedMPICommunicator(bool, bool, size_t)
     {
-        LogicError("Quantized MPI Communicator is not supported for this build.");
+        LogicError("Quantized MPI Communicator is not supported for this build. The 1BitSGD build is needed, see CNTK wiki for details.");
     }
 
-    DistributedTrainerPtr CreateQuantizedDataParallelDistributedTrainer(DistributedCommunicatorPtr, bool)
+    DistributedTrainerPtr CreateQuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr, bool, size_t)
     {
-        LogicError("Quantized Distributed Trainer is not supported for this build.");
+        LogicError("Quantized Distributed Trainer is not supported for this build. The 1BitSGD build is needed, see CNTK wiki for details.");
+    }
+
+    DistributedTrainerPtr CreateBlockMomentumDistributedTrainer(
+        DistributedCommunicatorPtr /*communicator*/,
+        size_t /*blockSize*/,
+        bool /*useNestrovMomentum*/,
+        bool /*resetSGDMomentumAfterAggregation*/,
+        double /*blockLearningRate*/,
+        size_t /*distributedAfterSampleCount*/)
+    {
+        LogicError("Block Momentum Distributed Trainer is not supported for this build. The 1BitSGD build is needed, see CNTK wiki for details.");
+    }
+
+    DistributedTrainerPtr CreateBlockMomentumDistributedTrainer(
+        DistributedCommunicatorPtr /*communicator*/,
+        size_t /*blockSize*/,
+        double /*blockMomentumAsTimeConstant*/,
+        bool /*useNestrovMomentum*/,
+        bool /*resetSGDMomentumAfterAggregation*/,
+        double /*blockLearningRate*/,
+        size_t /*distributedAfterSampleCount*/)
+    {
+        LogicError("Block Momentum Distributed Trainer is not supported for this build. The 1BitSGD build is needed, see CNTK wiki for details.");
     }
 #endif
 
-    DistributedTrainerPtr CreateDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate)
+    DistributedTrainerPtr CreateDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t distributedAfterSampleCount)
     {
-        return MakeSharedObject<DataParallelDistributedTrainer>(communicator, useAsyncBufferedParameterUpdate);
+        return MakeSharedObject<DataParallelDistributedTrainer>(communicator, useAsyncBufferedParameterUpdate, distributedAfterSampleCount);
     }
 
-    DataParallelDistributedTrainer::DataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate)
-        : m_communicator(communicator),
-        m_useAsyncBufferedParameterUpdate(useAsyncBufferedParameterUpdate)
+    DataParallelDistributedTrainer::DataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t distributedAfterSampleCount)
+        : DistributedTrainerBase(communicator, distributedAfterSampleCount)
     {
         if (useAsyncBufferedParameterUpdate)
             LogicError("Asynchronous parameter update is not yet supported.");
     }
 
     // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
-    void DataParallelDistributedTrainer::PreParameterUpdateCallback(const Trainer& /*trainer*/, std::vector<std::pair<Variable, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info)
+    bool DataParallelDistributedTrainer::PreParameterUpdateCallback(const Trainer& /*trainer*/, std::vector<std::pair<Parameter, NDArrayViewPtr>>& gradientValues, MinibatchInfo& info)
     {
+        HandleEmptyMinibatch(gradientValues, info);
+
         std::vector<NDArrayViewPtr> valuesToAggregate;
         for (const auto& i : gradientValues)
             valuesToAggregate.push_back(i.second);
@@ -63,24 +125,7 @@ namespace CNTK
 
         m_communicator->AggregateInPlace(valuesToAggregate, m_communicator->Workers());
 
-        info.numberOfSamples = static_cast<size_t>(*valuesToAggregate.back()->DataBuffer<double>());
-    }
-
-    // Optional override that gets called before each minbatch during training
-    void DataParallelDistributedTrainer::PreMinibatchCallback(const Trainer& /*trainer*/)
-    {
-    }
-
-    // Optionally overridable method to get checkpoint state associated with this Distributed train method
-    Dictionary DataParallelDistributedTrainer::GetCheckpointState() const
-    {
-        // Currently we do not safe the state of the distributed trainer.
-        return Dictionary();
-    }
-
-    // Optionally overridable method to restore state pertaining this distributed training method from a previous checkpoint
-    void DataParallelDistributedTrainer::RestoreFromCheckpoint(const Dictionary& /*checkpoint*/)
-    {
-        // Currently we do not safe the state of the distributed trainer.
+        info.numberOfSamples = static_cast<size_t>(*valuesToAggregate.back()->WritableDataBuffer<double>());
+        return info.numberOfSamples == 0;
     }
 }

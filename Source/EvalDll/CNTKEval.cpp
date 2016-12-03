@@ -30,11 +30,6 @@
 #include "latticearchive.h"
 #include <limits>
 
-// TODO: Temporary mechanism to enable memory sharing for
-// node output value matrices. This will go away when the
-// sharing is ready to be enabled by default
-bool g_shareNodeValueMatrices = false;
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 
@@ -44,7 +39,10 @@ void CNTKEvalBase<ElemType>::Init(const std::string& config)
     m_config.Parse(config);
     size_t nThreads = m_config("numCPUThreads", "1");
     CPUMatrix<ElemType>::SetNumThreads(nThreads);
-    g_shareNodeValueMatrices = m_config(L"shareNodeValueMatrices", false);
+    if (m_config(L"shareNodeValueMatrices", false))
+        Globals::EnableShareNodeValueMatrices();
+    if (m_config(L"hyperCompressMemory", false))
+        Globals::EnableHyperCompressMemory();
 }
 
 
@@ -379,9 +377,9 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
 
     ComputationNetwork::BumpEvalTimeStamp(m_inputNodes);
 
-    for (size_t i = 0; i < m_outputNodes.size(); ++i)
+    for (size_t i2 = 0; i2 < m_outputNodes.size(); ++i2)
     {
-        auto node = m_outputNodes[i];
+        auto node = m_outputNodes[i2];
         this->m_net->ForwardProp(node);
         shared_ptr<Matrix<ElemType>> outputMatrix = dynamic_pointer_cast<Matrix<ElemType>>(node->ValuePtr());
         auto pMBLayout = node->GetMBLayout();
@@ -395,7 +393,7 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
         if (seq.size() != 1)
             RuntimeError("Only 1 output sequence supported by this API");
 
-        ValueContainer<ElemType>& vec = outputs[i].m_buffer;
+        ValueContainer<ElemType>& vec = outputs[i2].m_buffer;
 
         size_t numElements = outputMatrix->GetNumElements();
 

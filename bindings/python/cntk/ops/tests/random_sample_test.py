@@ -8,10 +8,11 @@
 Unit tests random sampling related operations
 """
 
+from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import AA, precision
-from  cntk import random_sample_inclusion_frequency
+from cntk import random_sample_inclusion_frequency
 
 TEST_CASES = [
     # drawing 1 sample
@@ -43,7 +44,7 @@ def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicate
     weights = AA(weights);
 
     if raises_exception:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError):
             result = random_sample_inclusion_frequency(weights, num_samples, allow_duplicates)
             result.eval()
     else:

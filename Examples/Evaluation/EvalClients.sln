@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalClient", "CSEvalClien
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalV2Client", "CPPEvalV2Client\CPPEvalV2Client.vcxproj", "{D771A06D-CC25-4582-B5CD-D2A4782BB005}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPEvalExtendedClient", "CPPEvalExtendedClient\CPPEvalExtendedClient.vcxproj", "{93ECB70B-FDDD-44B4-BD6A-D63E094C704B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -25,6 +27,9 @@ Global
 		{D771A06D-CC25-4582-B5CD-D2A4782BB005}.Debug|x64.ActiveCfg = Release|x64
 		{D771A06D-CC25-4582-B5CD-D2A4782BB005}.Release|x64.ActiveCfg = Release|x64
 		{D771A06D-CC25-4582-B5CD-D2A4782BB005}.Release|x64.Build.0 = Release|x64
+		{93ECB70B-FDDD-44B4-BD6A-D63E094C704B}.Debug|x64.ActiveCfg = Release|x64
+		{93ECB70B-FDDD-44B4-BD6A-D63E094C704B}.Release|x64.ActiveCfg = Release|x64
+		{93ECB70B-FDDD-44B4-BD6A-D63E094C704B}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

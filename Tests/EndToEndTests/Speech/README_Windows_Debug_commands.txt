@@ -63,13 +63,13 @@ COMMAND:     currentDirectory=$(SolutionDir)ExampleSetups\Image\MNIST  configFil
 
 COMMAND:     configFile=$(SolutionDir)Tests/EndToEndTests/Image/QuickE2E/cntk.cntk  RunDir=$(SolutionDir)Tests/EndToEndTests/Image/_run  DataDir=$(SolutionDir)Tests/EndToEndTests/Image/Data  ConfigDir=$(SolutionDir)Tests/EndToEndTests/Image/QuickE2E  stderr=$(SolutionDir)Tests/EndToEndTests/RunDir/Image/QuickE2E/models/cntkImage.dnn.log  DeviceId=0  useCuDnn=false   makeMode=false
 
---- Other/Simple2d:
+--- Tests/EndToEndTests/Simple2d:
 
-COMMAND:     configFile=$(SolutionDir)Examples/Other/Simple2d/Config/Simple.cntk  RunDir=$(SolutionDir)Examples/Other/Simple2d/_run  DataDir=$(SolutionDir)Examples/Other/Simple2d/Data  ConfigDir=$(SolutionDir)Examples/Other/Simple2d/Config  stderr=$(SolutionDir)Examples/Other/Simple2d/_run/Simple.log  DeviceId=0  useCuDnn=false   makeMode=false
+COMMAND:     configFile=$(SolutionDir)Tests/EndToEndTests/Simple2d/OneHidden.cntk  RunDir=$(SolutionDir)Tests/EndToEndTests/Simple2d/_run  DataDir=$(SolutionDir)Tests/EndToEndTests/Simple2d/Data  ConfigDir=$(SolutionDir)Tests/EndToEndTests/Simple2d  stderr=$(SolutionDir)Tests/EndToEndTests/Simple2d/_run/Simple.log  DeviceId=0  useCuDnn=false   makeMode=false
 
 --- Text/RNN:
 
-COMMAND:    configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/rnn.cntk  RunDir=$(SolutionDir)Examples/Text/PennTreebank/_run  RootDir=$(SolutionDir)Examples/Text/PennTreebank/_run  DataDir=$(SolutionDir)Examples/Text/PennTreebank/Data  ConfigDir=$(SolutionDir)Examples/Text/PennTreebank/Config  stderr=$(SolutionDir)Examples/Text/PennTreebank/_run/Simple.log  train=[SGD=[maxEpochs=1]]  confVocabSize=1000  DeviceId=-1  makeMode=false
+COMMAND:    configFile=$(SolutionDir)Examples/SequenceToSequence/PennTreebank/Config/rnn.cntk  RunDir=$(SolutionDir)Examples/SequenceToSequence/PennTreebank/_run  RootDir=$(SolutionDir)Examples/SequenceToSequence/PennTreebank/_run  DataDir=$(SolutionDir)Examples/SequenceToSequence/PennTreebank/Data  ConfigDir=$(SolutionDir)Examples/SequenceToSequence/PennTreebank/Config  stderr=$(SolutionDir)Examples/SequenceToSequence/PennTreebank/_run/Simple.log  train=[SGD=[maxEpochs=1]]  confVocabSize=1000  DeviceId=-1  makeMode=false
 # append this for small set: trainFile=ptb.small.train.txt  validFile=ptb.small.valid.txt testFile=ptb.small.test.txt
 
 --- Text/SeqCla:
@@ -80,4 +80,4 @@ COMMAND:    configFile=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassifica
 Simple test
 -----------
 
-COMMAND:     currentDirectory=$(SolutionDir)Demos/Simple  configFile=Simple.cntk  stderr=RunDir/Simple.cntk.log  RootDir=$(SolutionDir)  DeviceNumber=-1
+COMMAND:     currentDirectory=$(SolutionDir)Demos/Simple  configFile=OneHidden.cntk  stderr=RunDir/OneHidden.cntk.log  RootDir=$(SolutionDir)  DeviceNumber=-1

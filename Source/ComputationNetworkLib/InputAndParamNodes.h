@@ -103,9 +103,9 @@ private:
         bool log = GetEnvironmentPtr() && Environment().traceLevel > 0; // note: this will not log before node is part of network
         if (log)
         {
-            fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f*%f, onCPU=%s.\n)",
+            fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f(%f*%f), onCPU=%s.\n)",
                     NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
-                    (int)randomSeed, (int)fanOut, (int)fanIn, range, initValueScale, initOnCPUOnly ? "true" : "false");
+                    (int)randomSeed, (int)fanOut, (int)fanIn, range, range/initValueScale, initValueScale, initOnCPUOnly ? "true" : "false");
         }
     }
 

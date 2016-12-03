@@ -2,7 +2,7 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
-set -x
+#set -x
 
 # This test uses a large dataset which is not part of the CNTK repository itself
 # We use the dataset from an external location specified using an environment variable
@@ -20,7 +20,7 @@ fi
 # Copy the test data to the test run directory
 TestDataDir=$TEST_RUN_DIR/TestData
 mkdir $TestDataDir
-cp -R $TEST_DIR/../../../../Examples/Other/Simple2d/Data/SimpleDataTrain_cntk_text.txt $TestDataDir || exit $?
+cp -R $TEST_DIR/../../../../Tests/EndToEndTests/Simple2d/Data/SimpleDataTrain_cntk_text.txt $TestDataDir || exit $?
 
 # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
 if [ "$TEST_DEVICE" == "cpu" ]; then
@@ -30,10 +30,22 @@ fi
 pushd $TestDataDir
 
 if [ "$OS" == "Windows_NT" ]; then
-  $TEST_BIN_DIR/V2LibraryDistributionTests.exe
+    RunDir=$(cygpath -aw $RunDir)
+fi 
+
+LogPath=$RunDir/v2library.log
+Instances=2
+
+if [ "$OS" == "Windows_NT" ]; then
+  TestBinaryPath=$(cygpath -aw $TEST_BIN_DIR/V2LibraryDistributionTests.exe)
+  run "$MPI_BINARY" -n $Instances -l $TestBinaryPath $LogPath
 else
-  $TEST_BIN_DIR/v2librarydistributiontests
+  TestBinaryPath=$TEST_BIN_DIR/v2librarydistributiontests
+  run "$MPI_BINARY" -n $Instances $TEST_BIN_DIR/v2librarydistributiontests $LogPath
 fi
+
+sed 's/^/MPI Rank 0: /' "$LogPath"0
+sed 's/^/MPI Rank 1: /' "$LogPath"1
 
 ExitCode=$?
 

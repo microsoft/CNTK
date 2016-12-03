@@ -315,6 +315,35 @@ namespace CNTK
         return matrix->Data();
     }
 
+    void NDArrayView::ChangeDevice(const DeviceDescriptor& device)
+    {
+        if (device == m_device)
+            return;
+
+        switch (m_dataType)
+        {
+        case DataType::Float:
+        {
+            auto matrix = GetMatrix<float>();
+            matrix->TransferFromDeviceToDevice(matrix->GetDeviceId(), AsCNTKImplDeviceId(device), /*isBeingMoved = */ true, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ true);
+            matrix->CollapseDataLocation();
+            break;
+        }
+        case DataType::Double:
+        {
+            auto matrix = GetMatrix<double>();
+            matrix->TransferFromDeviceToDevice(matrix->GetDeviceId(), AsCNTKImplDeviceId(device), /*isBeingMoved = */ true, /*emptyTransfer =*/ false, /*updatePreferredDevice =*/ true);
+            matrix->CollapseDataLocation();
+            break;
+        }
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+
+        m_device = device;
+    }
+
     template <typename ElementType>
     /*static*/ NDArrayViewPtr NDArrayView::RandomNormal(const NDShape& shape, double mean, double stdDev, unsigned long seed, const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/)
     {

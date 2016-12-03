@@ -25,6 +25,8 @@ namespace CNTK
 
         virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override final;
 
+        virtual void ResetSmoothedGradients() override final;
+
     protected:
         // allocateSmoothGradients flag specifies whether NDArrayViews for smoothed gradients can be allocated 
         // in the base class constructor (in which case they are allocated with the shapes identical to the shapes of
@@ -38,6 +40,19 @@ namespace CNTK
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const = 0;
 
         std::string LearnerType() const;
+
+        // Returns current (per-sample) learning rate.
+        double LearningRate(size_t minibatchSize) const
+        {
+            auto learningRate = Learner::LearningRate();
+            if (m_learningRateSchedule.Unit() == LearningRateSchedule::UnitType::Minibatch)
+            {
+                // learning rate needs to be converted to the per-sample value.
+                return (minibatchSize == 0) ? 0.0 : learningRate / minibatchSize;
+            }
+
+            return learningRate;
+        }
 
         AdditionalLearningOptions m_additionalOptions;
 
@@ -174,11 +189,7 @@ namespace CNTK
         LearnerAdaGrad(const std::vector<Parameter>& parameters,
                        const LearningRateSchedule& learningRateSchedule,
                        bool needAveMultiplier,
-                       AdditionalLearningOptions additionalOptions)
-                       : LearnerBase(parameters, learningRateSchedule, additionalOptions, /*allocateSmoothGradients*/ true),
-                       m_needAveMultiplier(needAveMultiplier)
-    {
-    }
+                       AdditionalLearningOptions additionalOptions);
 
     protected:
         bool m_needAveMultiplier;

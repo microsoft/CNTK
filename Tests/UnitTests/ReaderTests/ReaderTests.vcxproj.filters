@@ -22,6 +22,7 @@
     <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\Indexer.cpp">
       <Filter>Linked Source</Filter>
     </ClCompile>
+    <ClCompile Include="CNTKBinaryReaderTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -426,10 +427,10 @@
     <None Include="Config\HTKDeserializersSimpleDataLoop11_Config.cntk">
       <Filter>Config</Filter>
     </None>
-    <None Include="Config\ImageAndImageReaderSimple_Config.cntk">
+    <None Include="Config\ImageTransforms_Config.cntk">
       <Filter>Config</Filter>
     </None>
-    <None Include="Config\ImageTransforms_Config.cntk">
+    <None Include="Config\ImageDeserializers.cntk">
       <Filter>Config</Filter>
     </None>
   </ItemGroup>

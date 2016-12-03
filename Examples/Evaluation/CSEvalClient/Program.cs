@@ -55,6 +55,13 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
     class Program
     {
         private static string initialDirectory;
+        /// The location of the Resnet model file that is required for the image API tests.
+        private static string resnetModelFilePath;
+        /// The location of the test image that is using in the image API tests.
+        private static string imageFileName;
+        // The width and height of the images that go into ResNet.
+        private static int resNetImageSize = 224;
+
 
         /// <summary>
         /// Program entry point
@@ -63,18 +70,12 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         private static void Main(string[] args)
         {
             initialDirectory = Environment.CurrentDirectory;
-            
+
             Console.WriteLine("====== EvaluateModelSingleLayer ========");
             EvaluateModelSingleLayer();
 
             Console.WriteLine("\n====== EvaluateModelMultipleLayers ========");
             EvaluateModelMultipleLayers();
-
-            Console.WriteLine("\n====== EvaluateNetworkSingleLayer ========");
-            EvaluateNetworkSingleLayer();
-
-            Console.WriteLine("\n====== EvaluateNetworkSingleLayerNoInput ========");
-            EvaluateNetworkSingleLayerNoInput();
 
             Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
             EvaluateExtendedNetworkSingleLayerNoInput();
@@ -82,11 +83,44 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             Console.WriteLine("\n====== EvaluateMultipleModels ========");
             EvaluateMultipleModels();
 
-            Console.WriteLine("\n====== EvaluateModelImageInput ========");
-            EvaluateImageClassificationModel();
+            // The image tests require the Resnet model. 
+            // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
+            // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
+            // along with a sample image file named "zebra.jpg".
+            var resnetDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Classification\ResNet");
+            resnetModelFilePath = Path.Combine(resnetDirectory, "ResNet_18.model");
+            ThrowIfFileNotExist(resnetModelFilePath,
+                string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Classification\\ResNet.", resnetModelFilePath));
+            imageFileName = Path.Combine(resnetDirectory, "zebra.jpg");
+            ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
+
+            Console.WriteLine("\n====== EvaluateImageInputUsingFeatureVector ========");
+            var outputs1 = EvaluateImageInputUsingFeatureVector();
+
+            Console.WriteLine("\n====== EvaluateImageInputUsingImageApi ========");
+            var outputs2 = EvaluateImageInputUsingImageApi();
+
+            Console.WriteLine("\n====== CompareImageApiResults ========");
+            CompareImageApiResults(outputs1, outputs2);
 
             // This pattern is used by End2EndTests to check whether the program runs to complete.
             Console.WriteLine("\n====== Evaluation Complete ========");
+        }
+
+        private static void CompareImageApiResults(List<float> outputs1,List<float> outputs2)
+        {
+            if (outputs1.Count != outputs2.Count)
+            {
+                throw new Exception("Both APIs must return the same number of output values.");
+            }
+            foreach (var i in Enumerable.Range(0, outputs1.Count))
+            {
+                if (Math.Abs(outputs1[i] - outputs2[i]) > 1e-5f)
+                {
+                    throw new Exception(String.Format("Output value mismatch at position {0}", i));
+                }
+            }
+            Console.WriteLine("Both image API calls returned the same output vector.");
         }
 
         /// <summary>
@@ -224,94 +258,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 }
 
                 OutputResults(outputs);
-            }
-            catch (CNTKException ex)
-            {
-                OnCNTKException(ex);
-            }
-            catch (Exception ex)
-            {
-                OnGeneralException(ex);
-            }
-        }
-
-        /// <summary>
-        /// Evaluates a network (without a model, but requiring input) and obtains a single layer output
-        /// </summary>
-        private static void EvaluateNetworkSingleLayer()
-        {
-            try
-            {
-                // The examples assume the executable is running from the data folder
-                // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Other\Simple2d\Config");
-                Environment.CurrentDirectory = initialDirectory;
-
-                List<float> outputs;
-                string outputLayerName;
-
-                using (var model = new IEvaluateModelManagedF())
-                {
-                    // Create the network
-                    // This network (AddOperatorConstant_ndl_deprecated.cntk) is a simple network consisting of a single binary operator (Plus)
-                    // operating over a single input and a constant
-                    string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstant_ndl_deprecated.cntk");
-                    ThrowIfFileNotExist(networkFilePath, string.Format("Error: The network configuration file '{0}' does not exist.", networkFilePath));
-
-                    string networkDescription = File.ReadAllText(networkFilePath);
-                    model.CreateNetwork(networkDescription, deviceId: -1);
-
-                    // Prepare input value in the appropriate structure and size
-                    var inputs = new Dictionary<string, List<float>>() { { "features", new List<float>() { 1.0f } } };
-
-                    // We can call the evaluate method and get back the results (single layer output)...
-                    var outDims = model.GetNodeDimensions(NodeGroup.Output);
-                    outputLayerName = outDims.First().Key;
-                    outputs = model.Evaluate(inputs, outputLayerName);
-                }
-
-                OutputResults(outputLayerName, outputs);
-            }
-            catch (CNTKException ex)
-            {
-                OnCNTKException(ex);
-            }
-            catch (Exception ex)
-            {
-                OnGeneralException(ex);
-            }
-        }
-
-        /// <summary>
-        /// Evaluates a network (without a model and without input) and obtains a single layer output
-        /// </summary>
-        private static void EvaluateNetworkSingleLayerNoInput()
-        {
-            try
-            {
-                // The examples assume the executable is running from the data folder
-                // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Other\Simple2d\Config");
-                Environment.CurrentDirectory = initialDirectory;
-
-                List<float> outputs;
-
-                using (var model = new IEvaluateModelManagedF())
-                {
-                    // Create the network
-                    // This network (AddOperatorConstantNoInput_ndl_deprecated.cntk) is a simple network consisting of a single binary operator (Plus)
-                    // operating over a two constants, therefore no input is necessary.
-                    string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstantNoInput_ndl_deprecated.cntk");
-                    ThrowIfFileNotExist(networkFilePath, string.Format("Error: The network configuration file '{0}' does not exist.", networkFilePath));
-
-                    string networkDescription = File.ReadAllText(networkFilePath);
-                    model.CreateNetwork(networkDescription, deviceId: -1);
-
-                    // We can call the evaluate method and get back the results (single layer)...
-                    outputs = model.Evaluate("ol", 1);
-                }
-
-                OutputResults("ol", outputs);
             }
             catch (CNTKException ex)
             {
@@ -467,43 +413,36 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         }
 
         /// <summary>
-        /// This method shows how to evaluate a trained image classification model
+        /// This method shows how to evaluate a trained image classification model, with
+        /// explicitly created feature vectors.
         /// </summary>
-        public static void EvaluateImageClassificationModel()
+        public static List<float> EvaluateImageInputUsingFeatureVector()
         {
+            List<float> outputs = null;
+
             try
             {
                 // This example requires the RestNet_18 model.
                 // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
                 // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
                 // along with a sample image file named "zebra.jpg".
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Image\Classification\ResNet");
                 Environment.CurrentDirectory = initialDirectory;
-
-                List<float> outputs;
 
                 using (var model = new IEvaluateModelManagedF())
                 {
-                    string modelFilePath = Path.Combine(workingDirectory, "ResNet_18.model");
-                    ThrowIfFileNotExist(modelFilePath, 
-                        string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Classification\\ResNet.", modelFilePath));
-                        
-                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", resnetModelFilePath), deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
-                    if (inDims.First().Value != 224 * 224 * 3)
+                    if (inDims.First().Value != resNetImageSize * resNetImageSize * 3)
                     {
                         throw new CNTKRuntimeException(string.Format("The input dimension for {0} is {1} which is not the expected size of {2}.", inDims.First(), inDims.First().Value, 224 * 224 * 3), string.Empty);
                     }
 
                     // Transform the image
-                    string imageFileName = Path.Combine(workingDirectory, "zebra.jpg");
-                    ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
-
                     Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
+                    var resized = bmp.Resize(resNetImageSize, resNetImageSize, true);
 
-                    var resized = bmp.Resize(224, 224, true);
                     var resizedCHW = resized.ParallelExtractCHW();
                     var inputs = new Dictionary<string, List<float>>() { {inDims.First().Key, resizedCHW } };
 
@@ -517,7 +456,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     .Aggregate((a, b) => (a.Value > b.Value) ? a : b)
                     .Index;
 
-                Console.WriteLine("Outcome: {0}", max);
+                Console.WriteLine("EvaluateImageInputUsingFeatureVector: Outcome = {0}", max);
             }
             catch (CNTKException ex)
             {
@@ -527,6 +466,61 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             {
                 OnGeneralException(ex);
             }
+            return outputs;
+        }
+
+        /// <summary>
+        /// This method shows how to evaluate a trained image classification model, where the 
+        /// creation of the CNTK feature vector is happening in native code inside the EvalWrapper.
+        /// </summary>
+        public static List<float> EvaluateImageInputUsingImageApi()
+        {
+            List<float> outputs = null;
+
+            try
+            {
+                // This example requires the RestNet_18 model.
+                // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
+                // The model is assumed to be located at: <CNTK>\Examples\Image\Classification\ResNet 
+                // along with a sample image file named "zebra.jpg".
+                Environment.CurrentDirectory = initialDirectory;
+                using (var model = new IEvaluateModelManagedF())
+                {
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", resnetModelFilePath), deviceId: -1);
+
+                    // Prepare input value in the appropriate structure and size
+                    var inDims = model.GetNodeDimensions(NodeGroup.Input);
+                    if (inDims.First().Value != resNetImageSize * resNetImageSize * 3)
+                    {
+                        throw new CNTKRuntimeException(string.Format("The input dimension for {0} is {1} which is not the expected size of {2}.", inDims.First(), inDims.First().Value, 224 * 224 * 3), string.Empty);
+                    }
+
+                    // Transform the image
+                    Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
+                    var resized = bmp.Resize(resNetImageSize, resNetImageSize, true);
+                    // Now evaluate using the alternative API, where we directly pass the
+                    // native bitmap data to the unmanaged code.
+                    var outDims = model.GetNodeDimensions(NodeGroup.Output);
+                    var outputNodeName = outDims.First().Key;
+                    outputs = model.EvaluateRgbImage(resized, outputNodeName);
+                }
+
+                // Retrieve the outcome index (so we can compare it with the expected index)
+                var max = outputs.Select((value, index) => new { Value = value, Index = index })
+                    .Aggregate((a, b) => (a.Value > b.Value) ? a : b)
+                    .Index;
+
+                Console.WriteLine("EvaluateImageInputUsingImageApi: Outcome = {0}", max);
+            }
+            catch (CNTKException ex)
+            {
+                OnCNTKException(ex);
+            }
+            catch (Exception ex)
+            {
+                OnGeneralException(ex);
+            }
+            return outputs;
         }
 
         /// <summary>

@@ -502,13 +502,13 @@ void DSSM_BinaryInput<ElemType>::Init(wstring fileName, size_t dim)
 
     int64_t header_size = numRows * sizeof(int64_t) + offsets_padding;
 
-    void* offsets_orig = MapViewOfFile(m_filemap,     // handle to map object
+    void* offsets_orig2 = MapViewOfFile(m_filemap,     // handle to map object
                                        FILE_MAP_READ, // get correct permissions
                                        HIDWORD(base_offset),
                                        LODWORD(base_offset),
                                        header_size);
 
-    offsets_buffer = (char*) offsets_orig + offsets_padding;
+    offsets_buffer = (char*) offsets_orig2 + offsets_padding;
 
     if (offsets != NULL)
     {
@@ -522,12 +522,12 @@ void DSSM_BinaryInput<ElemType>::Init(wstring fileName, size_t dim)
     int64_t data_padding = header_offset % sysGran;
     header_offset -= data_padding;
 
-    void* data_orig = MapViewOfFile(m_filemap,     // handle to map object
+    void* data_orig2 = MapViewOfFile(m_filemap,     // handle to map object
                                     FILE_MAP_READ, // get correct permissions
                                     HIDWORD(header_offset),
                                     LODWORD(header_offset),
                                     0);
-    data_buffer = (char*) data_orig + data_padding;
+    data_buffer = (char*) data_orig2 + data_padding;
 }
 template <class ElemType>
 bool DSSM_BinaryInput<ElemType>::SetupEpoch(size_t minibatchSize)

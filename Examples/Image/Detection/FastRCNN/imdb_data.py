@@ -145,15 +145,12 @@ class imdb_data(fastRCNN.imdb):
         """
         Load image and bounding boxes info from human annotations.
         """
-        #negative images do not have any ground truth annotations
-        if self._image_subdirs[imgIndex].lower() == "negative":
-            return None
-
         imgPath = self.image_path_at(imgIndex)
         bboxesPaths = imgPath[:-4] + ".bboxes.tsv"
         labelsPaths = imgPath[:-4] + ".bboxes.labels.tsv"
-        assert os.path.exists(bboxesPaths), "Error: ground truth bounding boxes file not found: " + bboxesPaths
-        assert os.path.exists(labelsPaths), "Error: ground truth labels file not found: " + bboxesPaths
+        # if no ground truth annotations are available, return None
+        if not os.path.exists(bboxesPaths) or not os.path.exists(labelsPaths):
+            return None
         bboxes = np.loadtxt(bboxesPaths, np.float32)
         labels = readFile(labelsPaths)
 
@@ -207,7 +204,9 @@ class imdb_data(fastRCNN.imdb):
         for imgIndex in range(self.num_images):
             imgPath = self.image_path_at(imgIndex)
             imgSubir  = os.path.normpath(imgPath).split(os.path.sep)[-2]
-            if imgSubir != 'negative':
+            bboxesPaths = imgPath[:-4] + ".bboxes.tsv"
+            labelsPaths = imgPath[:-4] + ".bboxes.labels.tsv"
+            if os.path.exists(bboxesPaths) and os.path.exists(labelsPaths):
                 gtBoxes, gtLabels = readGtAnnotation(imgPath)
                 gtBoxes = [box for box, label in zip(gtBoxes, gtLabels) if label.decode('utf-8') == self.classes[classIndex]]
             else:

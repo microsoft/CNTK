@@ -237,8 +237,6 @@ namespace CNTK
 
     inline void AddConfigString(std::wstringstream& s, const std::wstring& key, const DictionaryValue& value, size_t numIndentationSpaces)
     {
-        static const size_t perLevelIndentSize = 4;
-
         AddIndentation(s, numIndentationSpaces);
         s << key << L" = ";
         AddConfigString(s, value, numIndentationSpaces);
@@ -488,5 +486,9 @@ namespace CNTK
             InvalidArgument("The specified axis index (%d) exceeds the static #axes (%d) of the corresponding operand", (int)axis.StaticAxisIndex(), (int)operandShape.Rank());
     }
 
-     std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly);
+    std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly);
+    int GetFileDescriptor(const std::wstring& filePath, bool readOnly);
+
+    std::string ToString(const std::wstring& wstring);
+    std::wstring ToWString(const std::string& string);
 }

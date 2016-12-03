@@ -20,7 +20,6 @@
 #include <utility>
 #include <assert.h>
 
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 vector<size_t> numSequencesForFrame;
@@ -44,6 +43,14 @@ OptimizedRNNStackNode<ElemType>::OptimizedRNNStackNode(const ScriptableObjects::
     m_BackwardDataCalledYet(false)
 {
     AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+}
+
+template<class ElemType>
+OptimizedRNNStackNode<ElemType>::OptimizedRNNStackNode(DEVICEID_TYPE deviceId, const std::wstring& name, bool bidirectional, size_t numLayers, size_t hiddenSize, const std::wstring& recurrentOp)
+    : Base(deviceId, name),
+    m_rnnAttributes(bidirectional, numLayers, hiddenSize, recurrentOp, -1),
+    m_BackwardDataCalledYet(false)
+{
 }
 
 template<class ElemType>
@@ -255,7 +262,7 @@ void OptimizedRNNStackNode<ElemType>::Validate(bool isFinalValidationPass)
 };
 
 template<class ElemType>
-void OptimizedRNNStackNode<ElemType>::PackSequencesForCuDNN(const Matrix<ElemType>& src, Matrix<ElemType>& dst, vector<size_t>& numSequencesForFrame)
+void OptimizedRNNStackNode<ElemType>::PackSequencesForCuDNN(const Matrix<ElemType>& src, Matrix<ElemType>& dst, vector<size_t>& numSequencesForFrame2)
 {
     MBLayoutPtr mb = this->GetMBLayout();
     if (mb->HasSequenceBeyondBegin())
@@ -299,8 +306,8 @@ void OptimizedRNNStackNode<ElemType>::PackSequencesForCuDNN(const Matrix<ElemTyp
     // a count of how many sequnces are packed for a particular frame.
     // reset to zero, and compute from current layout information
     // this information is useful when creating the tensor descriptors for CuDNN.
-    numSequencesForFrame.resize(maxSeqLength);
-    fill(numSequencesForFrame.begin(), numSequencesForFrame.end(), 0L);
+    numSequencesForFrame2.resize(maxSeqLength);
+    fill(numSequencesForFrame2.begin(), numSequencesForFrame2.end(), 0L);
 
     // make sure the index is on CPU so we can use SetValue()
     // 
@@ -315,7 +322,7 @@ void OptimizedRNNStackNode<ElemType>::PackSequencesForCuDNN(const Matrix<ElemTyp
         for (size_t j = 0; j < numSequences && seq[sequenceOrder[j]].GetNumTimeSteps()>fr; j++)
         {
             m_packingIndex->SetValue(0, dst_frame++, (ElemType)mb->GetColumnIndex(seq[sequenceOrder[j]], fr));
-            numSequencesForFrame[fr]++;
+            numSequencesForFrame2[fr]++;
         }
     }
 

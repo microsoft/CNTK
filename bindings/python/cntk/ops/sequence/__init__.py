@@ -17,8 +17,6 @@ def is_first(seq, name=''):
     first element of the sequence is 1 and all others are 0.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.is_first(x)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
@@ -30,7 +28,7 @@ def is_first(seq, name=''):
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import is_first
     seq = sanitize_input(seq, get_data_type(seq))
@@ -44,8 +42,6 @@ def is_last(seq, name=''):
     last element of the sequence is 1 and all others are 0.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.is_last(x)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
@@ -57,12 +53,34 @@ def is_last(seq, name=''):
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk.Function`:
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import is_last
     seq = sanitize_input(seq, get_data_type(seq))
     return is_last(seq, name)
 
+@typemap
+def slice(seq, begin_index, end_index, name=''):
+    '''
+    Slice the input sequence.
+
+    Examples:
+        TBA
+    Args:
+        seq: sequence input tensor
+        begin_index (`int`): the index along sequence axis where the slicing starts
+        end_index (`int`): the index along sequence axis where the slicing ends
+        name (`str`, optional): the name of the Function instance in the network
+
+    See also:
+        Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sequence_slice
+    seq = sanitize_input(seq, get_data_type(seq))
+    return sequence_slice(seq, begin_index, end_index, name)
 
 @typemap
 def first(seq, name=''):
@@ -70,8 +88,6 @@ def first(seq, name=''):
     Returns the first element of its symbolic input sequence ``seq``
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.first(x)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
@@ -84,7 +100,7 @@ def first(seq, name=''):
         seq: the symbolic tensor denoting a sequence
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import first
     seq = sanitize_input(seq, get_data_type(seq))
@@ -97,8 +113,6 @@ def last(seq, name=''):
     Returns the last element of its symbolic input sequence ``seq``
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.last(x)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
@@ -112,7 +126,7 @@ def last(seq, name=''):
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import last
     seq = sanitize_input(seq, get_data_type(seq))
@@ -126,23 +140,21 @@ def where(condition, name=''):
     a new sequence containing the indices for which the values were true.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
-        >>> z = C.greater(C.reduce_sum(x),60)
+        >>> z = C.greater(C.reduce_sum(x), 60)
+        >>> x0 = np.reshape(np.arange(24.0, dtype=np.float32), (4,3,2))
+        >>> z.eval({x:x0}).flatten()
+        array([ 0.,  0.,  1.,  1.], dtype=float32)
         >>> y = C.sequence.where(z)
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
-        >>> z.eval({x:x0})
-        array([[ 0.,  0.,  1.,  1.]], dtype=float32)
-        >>> y.eval({x:x0})
-        array([[ 2.,  3.]], dtype=float32)
+        >>> y.eval({x:x0}).flatten()
+        array([ 2.,  3.], dtype=float32)
 
     Args:
         condition: the symbolic sequence of booleans
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import where
     condition = sanitize_input(condition, get_data_type(condition))
@@ -177,7 +189,7 @@ def gather(seq, condition, name=''):
             elements should be selected
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import gather
     seq = sanitize_input(seq, get_data_type(seq))
@@ -196,8 +208,6 @@ def scatter(seq, condition, name=''):
     preserving their order.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> t = C.sequence.last(x)
         >>> b = C.sequence.is_first(x)
@@ -227,7 +237,7 @@ def scatter(seq, condition, name=''):
             elements should be copied
         name (str): the name of the node in the network
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import scatter
     seq = sanitize_input(seq, get_data_type(seq))
@@ -243,8 +253,6 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
     and broadcasting the value of the ``operand`` along those dynamic axes.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> t = C.sequence.last(x)
         >>> b = C.sequence.is_first(x)
@@ -274,10 +282,28 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
         name (str): the name of the node in the network
 
     Returns:
-        :class:`cntk.Function`
+        :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import broadcast_as
     operand = sanitize_input(operand, get_data_type(operand))
     broadcast_as_operand = sanitize_input(
         broadcast_as_operand, get_data_type(broadcast_as_operand))
     return broadcast_as(operand, broadcast_as_operand, name)
+
+@typemap
+def reduce_sum(seq, name=''):
+    '''
+    Computes the sum of the input sequence's elements across the sequence axis.
+
+    Examples:
+        TBA
+    Args:
+        seq: sequence input tensor
+        name (`str`, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sequence_reduce_sum
+    seq = sanitize_input(seq, get_data_type(seq))
+    return sequence_reduce_sum(seq, name)

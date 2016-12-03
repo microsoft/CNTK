@@ -176,7 +176,7 @@ fi
 echo "============ Creating CNTK temp directory in $OUTPUT_DIR ============"
 mkdir -p $OUTPUT_DIR || exit $?
 
-CONF_FILE="$OUTPUT_DIR/Simple.cntk"
+CONF_FILE="$OUTPUT_DIR/OneHidden.cntk"
 BUILD_FILE="$OUTPUT_DIR/Build"
 RUN_FILE="$OUTPUT_DIR/Result"
 
@@ -188,7 +188,7 @@ fi
 cd $CNTK_ROOT
 
 if ! [[ -f $CONF_FILE ]]; then
-    cp Examples/Other/Simple2d/Config/Simple.cntk $CONF_FILE || exit $?
+    cp Tests/EndToEndTests/Simple2d/OneHidden.cntk $CONF_FILE || exit $?
 
     # This chmod is necessary due to restrictive Cygwin interpretation of Windows permissions.
     # Cygwin interprets Windows permissions as ----rwx---, which lacks read permissions for user.
@@ -267,8 +267,8 @@ fi
 if [[ $RUN == 1 ]]; then
 
     cd $PREFIX_DIR
-    echo "============ cp Examples/Other/Simple2d/Config/Simple.cntk $CONF_FILE  ============"
-    echo "============ cd $CNTK_ROOT/Examples/Other/Simple2d/Data  ============"
+    echo "============ cp Tests/EndToEndTests/Simple2d/OneHidden.cntk $CONF_FILE  ============"
+    echo "============ cd $CNTK_ROOT/Tests/EndToEndTests/Simple2d/Data  ============"
 
     for FLAVOR in "${flavorArray[@]}"
     do
@@ -316,7 +316,7 @@ if [[ $RUN == 1 ]]; then
                     echo "============ Running $BIN_PATH configFile=$CONF_FILE for $TARGET/$FLAVOR (on $TESTTARGET) ============"
                 fi
                 echo "============ output in ($OUT_FILE) ============"
-                cd $CNTK_ROOT/Examples/Other/Simple2d/Data
+                cd $CNTK_ROOT/Tests/EndToEndTests/Simple2d/Data
                 rm -rf "$OUTPUT_DIR/Models"
                 if [[ $OS == "Windows_NT" ]]; then
                     # We have to use cygpath on Windows to modify the file paths into the format readable by cntk.

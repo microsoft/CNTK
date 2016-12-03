@@ -35,7 +35,7 @@ void RandomSampleNodeBase<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const 
         auto node = dynamic_pointer_cast<RandomSampleNodeBase<ElemType>>(nodeP);
         node->m_allowDuplicates  = m_allowDuplicates;
         node->m_sizeOfSampledSet = m_sizeOfSampledSet;
-        node->m_randomSeed       = m_randomSeed;
+        node->SetRngState(GetRngSeed(), GetRngOffset());
     }
 }
 
@@ -45,6 +45,8 @@ void RandomSampleNodeBase<ElemType>::Save(File& fstream) const
     Base::Save(fstream);
     fstream << m_allowDuplicates;
     fstream << m_sizeOfSampledSet;
+    fstream << GetRngSeed();
+    fstream << GetRngOffset();
 }
 
 template<class ElemType>
@@ -53,6 +55,14 @@ void RandomSampleNodeBase<ElemType>::Load(File& fstream, size_t modelVersion)
     Base::Load(fstream, modelVersion);
     fstream >> m_allowDuplicates;
     fstream >> m_sizeOfSampledSet;
+    if (modelVersion >= CNTK_MODEL_VERSION_16)
+    {
+        unsigned long seed;
+        unsigned long long offset;
+        fstream >> seed;
+        fstream >> offset;
+        SetRngState(seed, offset);
+    }
 }
 
 template<class ElemType>
@@ -88,9 +98,11 @@ const std::vector<size_t> RandomSampleNodeBase<ElemType>::RunSampling(size_t& nT
     else
         nTries = 0; // just initialize and count how many tries we need.
 
+    auto offset = GetRngOffset();
     while (samples.size() < m_sizeOfSampledSet)
     {
         double randomValue = r(cpuRNGHandle->Generator());
+        offset++;
         // Find the first index where value[idx] >= randomValue.
         auto lower = std::lower_bound(m_samplingWeightsPrefixSum.begin(), m_samplingWeightsPrefixSum.end(), randomValue);
         int idx = (int)(lower - m_samplingWeightsPrefixSum.begin());
@@ -115,6 +127,7 @@ const std::vector<size_t> RandomSampleNodeBase<ElemType>::RunSampling(size_t& nT
             }
         }
     }
+    UpdateRngOffset(offset);
     return samples;
 }
 
@@ -122,14 +135,25 @@ template<class ElemType>
 void RandomSampleNode<ElemType>::ForwardPropNonLooping()
 {
     Base::UpdateWeightsPrefixSum();
+
+    if (ValueAsMatrix().GetMatrixType() != SPARSE)
+    {
+        // BUGBUG: matrix type should be configured during validation
+        // Note: We allocate a new one instead of switching the type in place since switching in place may
+        // affect other nodes who share this matrix due to memory sharing
+        auto newSparseValueMatrix = std::make_shared<Matrix<ElemType>>(ValueAsMatrix().GetNumRows(), ValueAsMatrix().GetNumCols(), CPUDEVICE, SPARSE, matrixFormatSparseCSC);
+#ifdef _MSC_VER
+        ValuePtrRef() = newSparseValueMatrix;
+#else
+        this->template ValuePtrRef() = newSparseValueMatrix;
+#endif
+    }
+
     Matrix<ElemType>& valueMatrix = ValueAsMatrix();
+
     // TODO: Should we prepare the CSC data directly on the CPU and move it in one go?
     // Currently the reader will place the data onto the GPU. It will then be pulled on-demand to the CPU once (and cached there).
-    valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ false);
-    valueMatrix.SetDevice(CPUDEVICE);
-
-    // BUGBUG: matrix type should be configured during validation
-    valueMatrix.SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+    valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, /*ismoved =*/ true/*means: BOTH state not ok */, /*emptyTransfer =*/ true, /*updatePreferredDevice =*/ true);
     valueMatrix.Reset();
 
     // Get vector with indices of randomly sampled classes
@@ -246,4 +270,31 @@ void RandomSampleInclusionFrequencyNode<ElemType>::Validate(bool isFinalValidati
 
 template class RandomSampleInclusionFrequencyNode<float>;
 template class RandomSampleInclusionFrequencyNode<double>;
+
+template<class ElemType>
+void DropoutNode<ElemType>::Save(File& fstream) const
+{
+    Base::Save(fstream);
+    fstream << GetRngSeed();
+    fstream << GetRngOffset();
+}
+
+template<class ElemType>
+void DropoutNode<ElemType>::Load(File& fstream, size_t modelVersion)
+{
+    Base::Load(fstream, modelVersion);
+    
+    if (modelVersion >= CNTK_MODEL_VERSION_16)
+    {
+        unsigned long seed;
+        unsigned long long offset;
+        fstream >> seed;
+        fstream >> offset;
+        SetRngState(seed, offset);
+    }
+}
+
+template class DropoutNode<float>;
+template class DropoutNode<double>;
+
 }}}

@@ -109,7 +109,6 @@ void TestNDArrayView(size_t numAxes, const DeviceDescriptor& device)
 
     // Test readonliness
     auto errorMsg = "Was incorrectly able to get a writable buffer pointer from a readonly view";
-
     // Should not be able to get the WritableDataBuffer for a read-only view
     VerifyException([&aliasView]() {
         ElementType* aliasViewBuffer = aliasView->WritableDataBuffer<ElementType>();

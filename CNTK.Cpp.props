@@ -42,6 +42,10 @@
 
     <UseZip>false</UseZip>
     <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
+
+    <HasMultiverso>false</HasMultiverso>
+    <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
+
   </PropertyGroup>
 
   <PropertyGroup>
@@ -158,7 +162,7 @@
     </Link>
   </ItemDefinitionGroup>
 
-  <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'StaticLibrary' And $(ReleaseBuild) And !$(NoOptBuild)">
+  <ItemDefinitionGroup Condition="$(ReleaseBuild) And !$(NoOptBuild)">
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
@@ -180,8 +184,16 @@
       <IntrinsicFunctions>false</IntrinsicFunctions>
     </ClCompile>
     <Link>
+      <EnableCOMDATFolding>false</EnableCOMDATFolding>
       <OptimizeReferences>false</OptimizeReferences>
+      <Profile>false</Profile>
     </Link>
   </ItemDefinitionGroup>
+
+  <PropertyGroup Condition="$(NoOptBuild)" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
 
 </Project>

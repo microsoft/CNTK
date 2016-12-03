@@ -15,20 +15,22 @@ def map_if_possible(obj):
         from cntk.learner import Learner
         from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
         from cntk.axis import Axis
-        from cntk.distributed import WorkerDescriptor, Communicator, QuantizedCommunicator
+        from cntk.distributed import WorkerDescriptor, Communicator, DistributedTrainer 
+        from cntk.utils import Value
         __typemap = { 
                 cntk_py.Variable: Variable,
                 cntk_py.Parameter: Parameter,
                 cntk_py.Constant: Constant,
                 cntk_py.Function: Function, 
                 cntk_py.Learner: Learner, 
+                cntk_py.Value: Value, 
                 cntk_py.MinibatchSource: MinibatchSource,
                 cntk_py.MinibatchData: MinibatchData,
                 cntk_py.StreamConfiguration: StreamConfiguration, 
                 cntk_py.Axis: Axis,
                 cntk_py.DistributedWorkerDescriptor: WorkerDescriptor,
                 cntk_py.DistributedCommunicator: Communicator,
-                cntk_py.QuantizedDistributedCommunicator: QuantizedCommunicator
+                cntk_py.DistributedTrainer: DistributedTrainer
                 }
 
     # Some types like NumPy arrays don't let to set the __class__

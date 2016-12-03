@@ -2,7 +2,7 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
-ConfigDir=$TEST_DIR/../../../../../../Examples/Text/PennTreebank/Config
+ConfigDir=$TEST_DIR/../../../../../../Examples/SequenceToSequence/PennTreebank/Config
 
 # cntkrun <CNTK config file name> <additional CNTK args>
 cntkrun rnn.cntk "initOnCPUOnly=true command=writeWordAndClassInfo:train:test train=[SGD=[maxEpochs=3]] train=[epochSize=2048]] test=[SGD=[maxEpochs=3]] train=[epochSize=2048]]" || exit $?

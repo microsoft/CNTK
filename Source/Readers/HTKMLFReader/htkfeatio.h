@@ -492,20 +492,20 @@ private:
     void openphysical(const parsedpath& ppath)
     {
         wstring physpath = ppath.physicallocation();
-        // auto_file_ptr f = fopenOrDie (physpath, L"rbS");
-        auto_file_ptr f(fopenOrDie(physpath, L"rb")); // removed 'S' for now, as we mostly run local anyway, and this will speed up debugging
+        // auto_file_ptr f2 = fopenOrDie (physpath, L"rbS");
+        auto_file_ptr f2(fopenOrDie(physpath, L"rb")); // removed 'S' for now, as we mostly run local anyway, and this will speed up debugging
 
         // read the header (12 bytes for htk feature files)
         fileheader H;
         isidxformat = ppath.isidxformat;
         if (!isidxformat)
-            H.read(f);
+            H.read(f2);
         else // read header of idxfile
-            H.idxRead(f);
+            H.idxRead(f2);
 
         // take a guess as to whether we need byte swapping or not
-        bool needbyteswapping = ((unsigned int) swapint(H.sampperiod) < (unsigned int) H.sampperiod);
-        if (needbyteswapping)
+        bool needbyteswapping2 = ((unsigned int) swapint(H.sampperiod) < (unsigned int) H.sampperiod);
+        if (needbyteswapping2)
             H.byteswap();
 
         // interpret sampkind
@@ -542,8 +542,8 @@ private:
             kind += "_A";
         if (H.sampkind & HASTHIRD)
             kind += "_T";
-        bool compressed = (H.sampkind & HASCOMPX) != 0;
-        bool hascrcc = (H.sampkind & HASCRCC) != 0;
+        bool compressed2 = (H.sampkind & HASCOMPX) != 0;
+        bool hascrcc2 = (H.sampkind & HASCRCC) != 0;
         if (H.sampkind & HASZEROM)
             kind += "_Z";
         if (H.sampkind & HASZEROC)
@@ -554,47 +554,47 @@ private:
         if (H.sampkind == FESTREAM)
         { // ... note: untested
             unsigned char guid[16];
-            freadOrDie(&guid, sizeof(guid), 1, f);
+            freadOrDie(&guid, sizeof(guid), 1, f2);
             kind += ";guid=";
             for (int i = 0; i < sizeof(guid) / sizeof(*guid); i++)
                 kind += msra::strfun::strprintf("%02x", guid[i]);
         }
 
         // other checks
-        size_t bytesPerValue = isidxformat ? 1 : (compressed ? sizeof(short) : sizeof(float));
+        size_t bytesPerValue = isidxformat ? 1 : (compressed2 ? sizeof(short) : sizeof(float));
 
         if (H.sampsize % bytesPerValue != 0)
             RuntimeError("htkfeatreader:sample size not multiple of dimension");
         size_t dim = H.sampsize / bytesPerValue;
 
         // read the values for decompressing
-        vector<float> a, b;
-        if (compressed)
+        vector<float> a2, b2;
+        if (compressed2)
         {
-            freadOrDie(a, dim, f);
-            freadOrDie(b, dim, f);
+            freadOrDie(a2, dim, f2);
+            freadOrDie(b2, dim, f2);
             H.nsamples -= 4; // these are counted as 4 frames--that's the space they use
-            if (needbyteswapping)
+            if (needbyteswapping2)
             {
-                msra::util::byteswap(a);
-                msra::util::byteswap(b);
+                msra::util::byteswap(a2);
+                msra::util::byteswap(b2);
             }
         }
 
         // done: swap it in
-        int64_t bytepos = fgetpos(f);
+        int64_t bytepos = fgetpos(f2);
         auto location = ((std::wstring)ppath).empty() ? ppath.physicallocation() : (std::wstring)ppath;
         setkind(kind, dim, H.sampperiod, location); // this checks consistency
         this->physicalpath.swap(physpath);
         this->physicaldatastart = bytepos;
         this->physicalframes = H.nsamples;
-        this->f.swap(f); // note: this will get the previous f auto-closed at the end of this function
-        this->needbyteswapping = needbyteswapping;
-        this->compressed = compressed;
-        this->a.swap(a);
-        this->b.swap(b);
+        this->f.swap(f2); // note: this will get the previous f2 auto-closed at the end of this function
+        this->needbyteswapping = needbyteswapping2;
+        this->compressed = compressed2;
+        this->a.swap(a2);
+        this->b.swap(b2);
         this->vecbytesize = H.sampsize;
-        this->hascrcc = hascrcc;
+        this->hascrcc = hascrcc2;
     }
     void close() // force close the open file --use this in case of read failure
     {
@@ -647,19 +647,19 @@ public:
     }
     // get dimension and type information for a feature file
     // This will alter the state of this object in that it opens the file. It is efficient to read it right afterwards
-    void getinfo(const parsedpath& ppath, string& featkind, size_t& featdim, unsigned int& featperiod)
+    void getinfo(const parsedpath& ppath, string& featkind2, size_t& featdim2, unsigned int& featperiod2)
     {
         open(ppath);
-        featkind = this->featkind;
-        featdim = this->featdim;
-        featperiod = this->featperiod;
+        featkind2 = this->featkind;
+        featdim2 = this->featdim;
+        featperiod2 = this->featperiod;
     }
 
     // called to add energy as we read
-    void AddEnergy(size_t energyElements)
+    void AddEnergy(size_t energyElements2)
     {
-        this->energyElements = energyElements;
-        this->addEnergy = energyElements != 0;
+        this->energyElements = energyElements2;
+        this->addEnergy = energyElements2 != 0;
     }
     const string& getfeattype() const
     {
@@ -732,17 +732,17 @@ public:
     void read(const parsedpath& ppath, const string& kindstr, const unsigned int period, MATRIX& feat, bool needsExpansion=false)
     {
         // open the file and check dimensions
-        size_t numframes = open(ppath);
+        size_t numframes2 = open(ppath);
         if (needsExpansion)
         {
-            if (numframes != 1)
+            if (numframes2 != 1)
                 throw std::logic_error("read: if doing utterance-based expansion of features (e.g. ivectors), utterance must contain 1 frame only");
             if (feat.rows() != featdim)
                 throw std::logic_error("read: stripe read called with wrong dimensions");
         }
         else
         {
-            if (feat.cols() != numframes || feat.rows() != featdim)
+            if (feat.cols() != numframes2 || feat.rows() != featdim)
                 LogicError("read: stripe read called with wrong dimensions");
         }
         if (kindstr != featkind || period != featperiod)
@@ -751,7 +751,7 @@ public:
         // read vectors from file and push to our target structure
         try
         {
-            read(feat, 0, numframes);
+            read(feat, 0, numframes2);
             if (needsExpansion) // copy first frame to all the frames in the stripe
             {
                 for (int t = 1; t < feat.cols(); t++)
@@ -775,13 +775,13 @@ public:
     void read(const parsedpath& ppath, string& kindstr, unsigned int& period, MATRIX& feat)
     {
         // get the file
-        size_t numframes = open(ppath);
-        feat.resize(featdim + energyElements, numframes); // result matrix--columns are features
+        size_t numframes2 = open(ppath);
+        feat.resize(featdim + energyElements, numframes2); // result matrix--columns are features
 
         // read vectors from file and push to our target structure
         try
         {
-            read(feat, 0, numframes);
+            read(feat, 0, numframes2);
         }
         catch (...)
         {
@@ -824,10 +824,10 @@ private:
     // We distinguish
     static void parseframerange(const vector<char*>& toks, size_t& ts, size_t& te, const double htkTimeToFrame)
     {
-        const double maxFrameNumber = htkTimeToFrame / 2.0; // if frame number is greater than this we assume it is time instead of frame
         double rts = msra::strfun::todouble(toks[0]);
         double rte = msra::strfun::todouble(toks[1]);
-        if (rte > maxFrameNumber) // convert time to frame
+        // if the difference between two frames is more than htkTimeToFrame, we expect conversion to time
+        if (rte - rts >= htkTimeToFrame - 1) // convert time to frame
         {
             ts = (size_t)(rts / htkTimeToFrame + 0.5); // get start frame
             te = (size_t)(rte / htkTimeToFrame + 0.5); // get end frame
@@ -934,7 +934,7 @@ class htkmlfreader : public map<wstring, vector<ENTRY>> // [key][i] the data
         if (filename.length() < 3 || filename[0] != '"' || filename[filename.length() - 1] != '"')
         {
             fprintf(stderr, "warning: filename entry (%s)\n", filename.c_str());
-            fprintf(stderr, "skip current mlf entry from line (%lu) until line (%lu).\n", line + idx, line + lines.size());
+            fprintf(stderr, "skip current mlf entry from line (%lu) until line (%lu).\n", (unsigned long)(line + idx), (unsigned long)(line + lines.size()));
             return;
         }
 
@@ -1174,7 +1174,7 @@ public:
             malformed("unexpected end in mid-utterance");
 
         curpath.clear();
-        fprintf(stderr, " total %lu entries\n", this->size());
+        fprintf(stderr, " total %lu entries\n", (unsigned long)this->size());
     }
 
     // read state list, index is from 0
@@ -1195,7 +1195,7 @@ public:
                 RuntimeError("readstatelist: lines (%d) not equal to statelistmap size (%d)", (int) index, (int) statelistmap.size());
             if (statelistmap.size() != issilstatetable.size())
                 RuntimeError("readstatelist: size of statelookuparray (%d) not equal to statelistmap size (%d)", (int) issilstatetable.size(), (int) statelistmap.size());
-            fprintf(stderr, "total %lu state names in state list %ls\n", statelistmap.size(), stateListPath.c_str());
+            fprintf(stderr, "total %lu state names in state list %ls\n", (unsigned long)statelistmap.size(), stateListPath.c_str());
         }
     }
 

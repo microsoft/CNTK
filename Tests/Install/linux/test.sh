@@ -32,9 +32,11 @@ for drop in $*; do
   if [[ "$DROP_FILE" == *CPU* ]] || [[ "$DROP_FILE" == *cpu* ]]; then
     TEST_DEVICE=cpu
     DOCKER_TO_RUN=docker
+    DOCKERFILE_SUFFIX=CPU
   else
     TEST_DEVICE=gpu
     DOCKER_TO_RUN=nvidia-docker
+    DOCKERFILE_SUFFIX=GPU
   fi
 
   rm -f "$DROP_RESERVED"
@@ -43,7 +45,7 @@ for drop in $*; do
 
   IMAGE=cntk:installtest
   for base in Ubuntu16 Ubuntu14; do
-    docker build -t $IMAGE -f Dockerfile-$base-GPU .
+    docker build -t $IMAGE -f Dockerfile-$base-$DOCKERFILE_SUFFIX .
     $DOCKER_TO_RUN run --rm $IMAGE su - testuser -c "./run-test.sh $TEST_DEVICE"
     docker rmi $IMAGE
   done

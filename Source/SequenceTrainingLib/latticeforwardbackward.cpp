@@ -254,11 +254,11 @@ static bool islogzero(FLOAT v)
         const auto &hmm = hset.gethmm(units[k].unit);
         const size_t n = hmm.getnumstates();
         const auto &transP = hmm.gettransP();
-        const size_t te = ts + units[k].frames; // end time of current unit
-        const size_t je = js + n;               // range of state indices
+        const size_t te2 = ts + units[k].frames; // end time of current unit
+        const size_t je2 = js + n;               // range of state indices
 
         // expand from states j at time t (including LL) to time t+1
-        for (size_t t = ts; t < te; t++) // note: loop not entered for 0-frame units (tees)
+        for (size_t t = ts; t < te2; t++) // note: loop not entered for 0-frame units (tees)
         {
             for (size_t to = 0; to < n; to++)
             {
@@ -282,7 +282,7 @@ static bool islogzero(FLOAT v)
                 logalphas(j, t) = alphajtnoll + acLL;
             }
             // update the gammas  --do it here because in next frame, betas get overwritten by alphas (they share memory)
-            for (size_t j = js; j < je; j++)
+            for (size_t j = js; j < je2; j++)
             {
                 if (!islogzero(totalbwscore))
                     loggammas(j, t) = logalphas(j, t) + logbetas(j, t) - totalbwscore;
@@ -290,9 +290,9 @@ static bool islogzero(FLOAT v)
                     loggammas(j, t) = LOGZERO;
             }
         }
-        // t = te: exit transition (last frame only or tee transition)
+        // t = te2: exit transition (last frame only or tee transition)
         float exitscore;
-        if (te == ts) // tee transition
+        if (te2 == ts) // tee transition
         {
             exitscore = fwscore + transP(-1, n);
         }
@@ -302,14 +302,14 @@ static bool islogzero(FLOAT v)
             for (size_t from = 0 /*no tee possible here*/; from < n; from++)
             {
                 const size_t i = js + from;                   // origin trellis node
-                const float alphaitm1 = logalphas(i, te - 1); // newly computed path score, transiting to t=te
+                const float alphaitm1 = logalphas(i, te2 - 1); // newly computed path score, transiting to t=te2
                 const float pathscore = alphaitm1 + transP(from, n);
                 logadd(exitscore, pathscore);
             }
         }
         fwscore = exitscore; // score passed on to next unit
-        js = je;
-        ts = te;
+        js = je2;
+        ts = te2;
     }
     assert(js == logalphas.rows() && ts == logalphas.cols());
     const float totalfwscore = fwscore;
@@ -451,28 +451,28 @@ static bool islogzero(FLOAT v)
     for (size_t k = units.size() - 1; k + 1 > 0; k--) // go in units because we also need to clear out the column
     {
         const auto &hmm = hset.gethmm(units[k].unit);
-        const size_t ts = te - units[k].frames;    // end time of current unit
-        const size_t js = je - hmm.getnumstates(); // range of state indices
-        for (size_t t = te - 1; t + 1 > ts; t--)
+        const size_t ts2 = te - units[k].frames;    // end time of current unit
+        const size_t js2 = je - hmm.getnumstates(); // range of state indices
+        for (size_t t = te - 1; t + 1 > ts2; t--)
         {
-            if (j < (int) js || j >= (int) je)
+            if (j < (int)js2 || j >= (int) je)
                 LogicError("invalid backpointer resulting in state index out of range");
 
             int bp = (int) backpointers(j, t); // save the backpointer before overwriting it (gammas and backpointers are aliases of each other)
-                                               // thisedgealignmentsj[t] = (unsigned short)hmm.getsenoneid(j - js);
+                                               // thisedgealignmentsj[t] = (unsigned short)hmm.getsenoneid(j - js2);
             if (!returnsenoneids)              // return binary gammas (for MMI; this mode is compatible with softalignmode)
-                for (size_t i = js; i < je; i++)
+                for (size_t i = js2; i < je; i++)
                     loggammas(i, t) = ((int) i == j) ? 0.0f : LOGZERO;
             else // return senone id (for sMBR; note: NOT compatible with softalignmode; calling code must know this)
-                thisedgealignmentsj[t] = (unsigned short) hmm.getsenoneid(j - js);
+                thisedgealignmentsj[t] = (unsigned short) hmm.getsenoneid(j - js2);
 
             if (bp == invalidbp)
                 LogicError("deltabackpointer not initialized");
             j = bp; // trace back one step
         }
 
-        te = ts;
-        je = js;
+        te = ts2;
+        je = js2;
     }
     if (j != -1)
         LogicError("invalid backpointer resulting in not reaching start of utterance when tracing back");
@@ -1097,9 +1097,9 @@ void lattice::mmierrorsignal(parallelstate &parallelstate, double minlogpp, cons
                 // double logsum = LOGZERO;         // [v-hansu] check code for mmi; search this comment to see all related codes
                 for (size_t i = 0; i < n; i++)
                 {
-                    const size_t j = js + i;             // state index for this unit in matrix
+                    const size_t j2 = js + i;             // state index for this unit in matrix
                     const size_t s = hmm.getsenoneid(i); // state class index
-                    const float gammajt = loggammas(j, t);
+                    const float gammajt = loggammas(j2, t);
                     const float statelogP = edgelogP + gammajt;
                     logadd(errorsignal(s, tutt), statelogP);
                 }
