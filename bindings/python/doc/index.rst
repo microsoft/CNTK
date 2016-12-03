@@ -22,6 +22,7 @@ them on sample data in real time.
 
    Setup <setup>
    Getting Started <gettingstarted>
+   Undestanding Sequences <sequence>
    Tutorials <tutorials>
    Examples <examples>
    Layers Library Reference  <layerref>
