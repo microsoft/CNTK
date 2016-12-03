@@ -27,12 +27,12 @@ from cntk.blocks import _initializer_for, _INFERRED
 # input_rank given: number of inferred axes to add to W (map_rank must not be given)
 # map_rank   given: expand W to leave exactly mapRank axes (input_rank must not be given)
 # none       given: expand W to all (same as map_rank=0)
-def Dense(shape, init=default_override_or(glorot_uniform()), activation=default_override_or(identity),
+def Dense(shape, activation=default_override_or(identity), init=default_override_or(glorot_uniform()),
           input_rank=None, map_rank=None,
           bias=default_override_or(True), init_bias=default_override_or(0)):
 
-    init       = get_default_override(Dense, init=init)
     activation = get_default_override(Dense, activation=activation)
+    init       = get_default_override(Dense, init=init)
     bias       = get_default_override(Dense, bias=bias)
     init_bias  = get_default_override(Dense, init_bias=init_bias)
 
@@ -254,25 +254,31 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
 
         # compute the delayed state variable(s)
         # All state variables get delayed with the same function.
-        state_forward = over.create_placeholder() # creates list of placeholders for the state variables
-        if not isinstance(state_forward, list):
-            state_forward = [state_forward]
+        #out_vars_fwd = over.create_placeholder() # create list of placeholders for the state variables
+        _, *xx = over.placeholders
+        ss = xx[0].shape
+        out_vars_fwd = [Placeholder(state_var.shape) for state_var in xx] # create list of placeholders for the state variables
+        if not isinstance(out_vars_fwd, list):
+            out_vars_fwd = [out_vars_fwd]
+        if len(over.outputs) != len(out_vars_fwd):
+            raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
+        # BUGBUG: ^^ This should work without shape info, so that we can simply create one Placeholder per over.outputs
+
+        # previous function; that is, past or future_value with initial_state baked in
+        # BUGBUG: If initial_state itself depends on a Placeholder at this point, previous_hook will be a binary function...
         def previous_hook(state):
             return past_value  (state, initial_state) if not go_backwards else \
                    future_value(state, initial_state)
-        prev_state = [previous_hook(s) for s in state_forward]  # delay (state vars)
+        prev_out_vars = [previous_hook(s) for s in out_vars_fwd]  # delay (state vars)
 
         # apply the recurrent block ('over')
-        out_and_state = over(x, *prev_state)  # this returns a Function (x, previous state vars...) -> (out, state vars...)
-        out, *state_vars = list(out_and_state.outputs)
-        if len(state_vars) != len(prev_state):
-            raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
+        out = over(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
 
         # connect the recurrent dependency
-        replacements = { var_forward: var for (var_forward, var) in zip(state_forward, state_vars) }
-        out_and_state.replace_placeholders(replacements)  # resolves state_forward := state_vars
+        replacements = { var_forward: var for (var_forward, var) in zip(out_vars_fwd, list(out.outputs)) }
+        out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
 
-        return combine([out])  # BUGBUG: Without this, it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
+        return combine([out.outputs[0]])  # BUGBUG: Without this, it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
 
     return Block(recurrence, 'Recurrence', Record(over=over))
 
