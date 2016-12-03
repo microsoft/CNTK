@@ -10,6 +10,139 @@
 using namespace CNTK;
 using namespace std;
 
+// Check the actual shape matches the expected shape, sequence number and sample size.
+void CheckShape(const NDShape& shape, const NDShape& expectedShape, const size_t expectedNumOfSequences, const size_t expectedSampleSize)
+{
+    if (shape != expectedShape)
+    {
+        ReportFailure("The shape of the value does not match. Expected: %S, actual: %S\n", expectedShape.AsString().c_str(), shape.AsString().c_str());
+    }
+    size_t numOfSequences = shape[shape.Rank() - 1];
+    if (numOfSequences != expectedNumOfSequences)
+    {
+        ReportFailure("The sequence number in the Value does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", expectedNumOfSequences, numOfSequences);
+    }
+    size_t sampleSize = shape.SubShape(0, shape.Rank() - 2).TotalSize();
+    if (sampleSize != expectedSampleSize)
+    {
+        ReportFailure("The sample size in the Value does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", expectedSampleSize, sampleSize);
+    }
+}
+
+// Check the actual Value match the expected shape and the given data (in dense format)
+template <typename ElementType>
+void CheckValue(const ValuePtr testValue, const NDShape& expectedShape, const size_t expectedSampleSize, const vector<vector<ElementType>>& expectedData, const vector<size_t>& seqLenList)
+{
+    // Check parameters
+    if (expectedData.size() != seqLenList.size())
+    {
+        ReportFailure("Parameter error: the sequence number in the exepected data and sequence list does not match.");
+    }
+    for (size_t i = 0; i < expectedData.size(); i++)
+    {
+        if (expectedData[i].size() != seqLenList[i] * expectedSampleSize)
+        {
+            ReportFailure("Parameter erroe: the number of data for sequence %" PRIu64 " in the expected data does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", i, seqLenList[i] * expectedSampleSize, expectedData[i].size());
+        }
+    }
+
+    // Check shape 
+    CheckShape(testValue->Shape(), expectedShape, seqLenList.size(), expectedSampleSize);
+
+    // Get data from Value
+    vector<ElementType> outputData(testValue->Shape().TotalSize());
+    NDArrayViewPtr arrayOutput = MakeSharedObject<NDArrayView>(testValue->Shape(), outputData, false);
+    arrayOutput->CopyFrom(*testValue->Data());
+
+    size_t maxSeqLen = *max_element(seqLenList.begin(), seqLenList.end());
+    size_t oIndex = 0;
+    size_t sampleSize = testValue->Shape().SubShape(0, testValue->Shape().Rank() - 2).TotalSize();
+
+    for (size_t seq = 0; seq < seqLenList.size(); seq++)
+    {
+        size_t seqLen = seqLenList[seq];
+        for (size_t sIndex = 0; sIndex < seqLen * sampleSize; sIndex++, oIndex++)
+        {
+            if (expectedData[seq][sIndex] != outputData[oIndex])
+            {
+                ReportFailure("Data does match at position %" PRIu64 ", expected: %f, actual: %f\n", oIndex, expectedData[seq][sIndex], outputData[oIndex]);
+            }
+        }
+        // Skip mask data
+        oIndex += (maxSeqLen - seqLen) * sampleSize;
+    }
+}
+
+// Check the actual Value match the expected shape and the given data (in onehot vector format)
+template <typename ElementType>
+void CheckValue(const ValuePtr testValue, const NDShape& expectedShape, const size_t vocabSize, const vector<vector<size_t>>& expectedData, const vector<size_t>& seqLenList)
+{
+    // Check parameters
+    if (expectedData.size() != seqLenList.size())
+    {
+        ReportFailure("Parameter error: the sequence number in the exepected data and sequence list does not match.");
+    }
+    for (size_t i = 0; i < expectedData.size(); i++)
+    {
+        if (expectedData[i].size() != seqLenList[i])
+        {
+            ReportFailure("Parameter erroe: the number of data for sequence %" PRIu64 " in the expected data does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", i, seqLenList[i], expectedData[i].size());
+        }
+    }
+
+    // Check shape 
+    CheckShape(testValue->Shape(), expectedShape, seqLenList.size(), vocabSize);
+
+    // Get data from Value
+    vector<ElementType> outputData(testValue->Shape().TotalSize());
+    NDArrayViewPtr arrayOutput = MakeSharedObject<NDArrayView>(testValue->Shape(), outputData, false);
+    arrayOutput->CopyFrom(*testValue->Data());
+
+    size_t maxSeqLen = *max_element(seqLenList.begin(), seqLenList.end());
+    size_t oIndex = 0;
+    for (size_t seq = 0; seq < seqLenList.size(); seq++)
+    {
+        size_t seqLen = seqLenList[seq];
+        for (size_t sample = 0; sample < seqLen; sample++)
+        {
+            for (size_t c = 0; c < vocabSize; c++, oIndex++)
+            {
+                if (outputData[oIndex] != 0)
+                {
+                    if (outputData[oIndex] != 1)
+                    {
+                        ReportFailure("OneHot vector contains value other than 0 and 1 at seqNo=%" PRIu64 " sampleNo=%" PRIu64 " position=%" PRIu64 "\n", seq, sample, c);
+                    }
+                    if (c != expectedData[seq][sample])
+                    {
+                        ReportFailure("OneHot Index does match at seqNo=%" PRIu64 ", sampleNo=%" PRIu64 ", expected: %" PRIu64 ", actual: %" PRIu64 "\n", seq, sample, expectedData[seq][sample], c);
+                    }
+                }
+            }
+        }
+        // Skip mask data
+        oIndex += (maxSeqLen - seqLen) * vocabSize;
+    }
+}
+
+template <typename ElementType>
+void FillDenseMatrixData(vector<vector<ElementType>>& databuf,  const vector<size_t>& seqLenList, const size_t sampleSize)
+{
+    for (size_t seq = 0; seq < seqLenList.size(); seq++)
+    {
+        auto p = new vector<ElementType>();
+        databuf.push_back(*p);
+        size_t seqLen = seqLenList[seq];
+        for (size_t sample = 0; sample < seqLen ; sample++)
+        {
+            for (size_t element = 0; element < sampleSize; element++)
+            {
+                databuf[seq].push_back(static_cast<ElementType>(seq * 1000 + sample * 100 + element));
+            }
+        }
+    }
+}
+
 template <typename ElementType>
 void ValueCreationNoNDMaskTest(const DeviceDescriptor device, bool readOnly)
 {
@@ -17,161 +150,38 @@ void ValueCreationNoNDMaskTest(const DeviceDescriptor device, bool readOnly)
     size_t seqLen = 4;
     vector<size_t> dims{3, 2};
 
-    vector<vector<ElementType>> data;
-    for (size_t n = 0; n < numberOfSequences; n++)
+    vector<size_t> seqLenList;
+    for (size_t i = 0; i < numberOfSequences; i++)
     {
-        auto p = new vector<ElementType>();
-        data.push_back(*p);
-        for (size_t s = 0; s < seqLen; s++)
-        {
-            for (size_t r = 0; r < dims[1]; r++)
-            {
-                for (size_t c = 0; c < dims[0]; c++)
-                {
-                    data[n].push_back(static_cast<ElementType>(n * 1000 + s * 100 + r * 10 + c));
-                }
-            }
-        }
+        seqLenList.push_back(seqLen);
     }
+    vector<vector<ElementType>> data;
+    FillDenseMatrixData(data, seqLenList, dims[0] * dims[1]);
 
+    // Create the Value object based on the given data and shape.
     NDShape sampleShape(dims);
     ValuePtr testValue = Value::Create(sampleShape, data, device, readOnly);
 
-    if (testValue->Shape().Rank() != dims.size() + 2)
-    {
-        ReportFailure("Shape rank incorrect. Expected: 4, actual: %" PRIu64 "\n", testValue->Shape().Rank());
-    }
-    size_t rank = 0;
-    for (; rank < dims.size(); rank++)
-    {
-        if (testValue->Shape()[rank] != dims[rank])
-        {
-            ReportFailure("Shape rank[%" PRIu64 "] incorrect. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", rank, dims[rank], testValue->Shape()[rank]);
-        }
-    }
-    // The next is the length of sequence
-    if (testValue->Shape()[rank] != seqLen)
-    {
-        ReportFailure("The sequence length does not match. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", seqLen, testValue->Shape()[rank]);
-    }
-    rank++;
-    // The next is the number of sequences
-    if (testValue->Shape()[rank] != numberOfSequences)
-    {
-        ReportFailure("The number of sequences does not match. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", numberOfSequences, testValue->Shape()[rank]);
-    }
-
-    // Check data is also correct.
-    vector<ElementType> outputData(testValue->Shape().TotalSize());
-    NDShape outputShape(dims);
-    outputShape = outputShape.AppendShape({seqLen, numberOfSequences});
-    NDArrayViewPtr arrayOutput = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
-    arrayOutput->CopyFrom(*testValue->Data());
-
-    size_t sIndex = 0;
-    size_t oIndex = 0;
-    for (size_t n = 0; n < numberOfSequences; n++)
-    {
-        sIndex = 0;
-        for (size_t s = 0; s < seqLen; s++)
-        {
-            for (size_t r = 0; r < dims[1]; r++)
-            {
-                for (size_t c = 0; c < dims[0]; c++, sIndex++, oIndex++)
-                {
-                    if (data[n][sIndex] != outputData[oIndex])
-                    {
-                        ReportFailure("Data does match at position %" PRIu64 ", expected: %f, actual: %f\n", oIndex, data[n][sIndex], outputData[oIndex]);
-                    }
-                }
-            }
-        }
-    }
+    // Check whether the created value matches expected shape and data.
+    CheckValue(testValue, {dims[0], dims[1], seqLen, numberOfSequences}, dims[0] * dims[1], data, seqLenList);
 }
 
 template <typename ElementType>
 void ValueCreationWithNDMaskTest(const DeviceDescriptor device, bool readOnly)
 {
-    size_t numberOfSequences = 4;
     vector<size_t> seqLenList{5, 6, 8, 7};
     vector<size_t> dims{3, 2};
-    size_t maxSeqLen = 0;
 
+    size_t numberOfSequences = seqLenList.size();
     vector<vector<ElementType>> data;
-    for (size_t n = 0; n < numberOfSequences; n++)
-    {
-        auto p = new vector<ElementType>();
-        data.push_back(*p);
-        size_t seqLen = seqLenList[n];
-        maxSeqLen = max(seqLen, maxSeqLen);
-        for (size_t s = 0; s < seqLen; s++)
-        {
-            for (size_t r = 0; r < dims[1]; r++)
-            {
-                for (size_t c = 0; c < dims[0]; c++)
-                {
-                    data[n].push_back(static_cast<ElementType>(n * 1000 + s * 100 + r * 10 + c));
-                }
-            }
-        }
-    }
+    FillDenseMatrixData(data, seqLenList, dims[0] * dims[1]);
 
     NDShape sampleShape(dims);
     ValuePtr testValue = Value::Create(sampleShape, data, device, readOnly);
 
-    if (testValue->Shape().Rank() != dims.size() + 2)
-    {
-        ReportFailure("Shape rank incorrect. Expected: 4, actual: %" PRIu64 "\n", testValue->Shape().Rank());
-    }
-    size_t rank = 0;
-    for (; rank < dims.size(); rank++)
-    {
-        if (testValue->Shape()[rank] != dims[rank])
-        {
-            ReportFailure("Shape rank[%" PRIu64 "] incorrect. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", rank, dims[rank], testValue->Shape()[rank]);
-        }
-    }
-    // The next is the length of sequence
-    if (testValue->Shape()[rank] != maxSeqLen)
-    {
-        ReportFailure("The sequence length does not match. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", maxSeqLen, testValue->Shape()[rank]);
-    }
-    rank++;
-    // The next is the number of sequences
-    if (testValue->Shape()[rank] != numberOfSequences)
-    {
-        ReportFailure("The number of sequences does not match. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", numberOfSequences, testValue->Shape()[rank]);
-    }
-
-    // Check data is also correct.
-    vector<ElementType> outputData(testValue->Shape().TotalSize());
-    NDShape outputShape(dims);
-    outputShape = outputShape.AppendShape({maxSeqLen, numberOfSequences});
-    NDArrayViewPtr arrayOutput = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
-    arrayOutput->CopyFrom(*testValue->Data());
-
-    size_t sIndex = 0;
-    size_t oIndex = 0;
-    for (size_t n = 0; n < numberOfSequences; n++)
-    {
-        sIndex = 0;
-        size_t seqLen = seqLenList[n];
-        for (size_t s = 0; s < seqLen; s++)
-        {
-            for (size_t r = 0; r < dims[1]; r++)
-            {
-                for (size_t c = 0; c < dims[0]; c++, sIndex++, oIndex++)
-                {
-                    if (data[n][sIndex] != outputData[oIndex])
-                    {
-                        ReportFailure("Data does match at position %" PRIu64 ", expected: %f, actual: %f\n", oIndex, data[n][sIndex], outputData[oIndex]);
-                    }
-                }
-            }
-        }
-        // Skip mask data
-        oIndex += (maxSeqLen - seqLen) * dims[1] * dims[0];
-    }
+    // Check whether the created value matches expected shape and data.
+    size_t maxSeqLen = *max_element(seqLenList.begin(), seqLenList.end());
+    CheckValue(testValue, {dims[0], dims[1], maxSeqLen, numberOfSequences}, dims[0] * dims[1], data, seqLenList);
 }
 
 template <typename ElementType>
@@ -181,6 +191,11 @@ void ValueCreationOneHotNoNDMaskTest(const DeviceDescriptor device, bool readOnl
     size_t seqLen = 4;
     size_t vocabSize = 16;
 
+    vector<size_t> seqLenList;
+    for (size_t i = 0; i < numberOfSequences; i++)
+    {
+        seqLenList.push_back(seqLen);
+    }
     vector<vector<size_t>> data;
     for (size_t n = 0; n < numberOfSequences; n++)
     {
@@ -194,65 +209,18 @@ void ValueCreationOneHotNoNDMaskTest(const DeviceDescriptor device, bool readOnl
 
     ValuePtr testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
 
-    if (testValue->Shape().Rank() != 3)
-    {
-        ReportFailure("Shape rank incorrect. Expected: 3, actual: %" PRIu64 "\n", testValue->Shape().Rank());
-    }
-    if (testValue->Shape()[0] != vocabSize)
-    {
-        ReportFailure("Shape rank[0] incorrect. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", vocabSize, testValue->Shape()[0]);
-    }
-    // The next is the length of sequence
-    if (testValue->Shape()[1] != seqLen)
-    {
-        ReportFailure("The sequence length does not match. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", seqLen, testValue->Shape()[1]);
-    }
-    // The next is the number of sequences
-    if (testValue->Shape()[2] != numberOfSequences)
-    {
-        ReportFailure("The number of sequences does not match. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", numberOfSequences, testValue->Shape()[2]);
-    }
-
-    // Check data is also correct.
-    vector<ElementType> outputData(vocabSize * seqLen * numberOfSequences);
-    NDShape outputShape({vocabSize, seqLen, numberOfSequences});
-    NDArrayViewPtr arrayOutput = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
-    arrayOutput->CopyFrom(*testValue->Data());
-
-    size_t sIndex = 0;
-    size_t oIndex = 0;
-    for (size_t n = 0; n < numberOfSequences; n++)
-    {
-        sIndex = 0;
-        for (size_t s = 0; s < seqLen; s++, sIndex++)
-        {
-            for (size_t c = 0; c < vocabSize; c++, oIndex++)
-            {
-                if (outputData[oIndex] != 0)
-                {
-                    if (outputData[oIndex] != 1)
-                    {
-                        ReportFailure("OneHot vector contains value other than 0 and 1 at seqNo=%" PRIu64 " sampleNo=%" PRIu64 " position=%" PRIu64 "\n", n, s, c);
-                    }
-                    if (c != data[n][sIndex])
-                    {
-                        ReportFailure("OneHot Index does match at seqNo=%" PRIu64 ", sampleNo=%" PRIu64 ", expected: %" PRIu64 ", actual: %" PRIu64 "\n", n, s, data[n][sIndex], c);
-                    }
-                }
-            }
-        }
-    }
+    CheckValue<ElementType>(testValue, {vocabSize, seqLen, numberOfSequences}, vocabSize, data, seqLenList); 
 }
 
 template <typename ElementType>
 void ValueCreationOneHotWithNDMaskTest(const DeviceDescriptor device, bool readOnly)
 {
-    size_t numberOfSequences = 4;
     vector<size_t> seqLenList{5, 6, 8, 7};
     size_t maxSeqLen = 0;
     size_t vocabSize = 13;
 
     vector<vector<size_t>> data;
+    size_t numberOfSequences = seqLenList.size();
     for (size_t n = 0; n < numberOfSequences; n++)
     {
         auto p = new vector<size_t>();
@@ -267,57 +235,7 @@ void ValueCreationOneHotWithNDMaskTest(const DeviceDescriptor device, bool readO
 
     ValuePtr testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
 
-    if (testValue->Shape().Rank() != 3)
-    {
-        ReportFailure("Shape rank incorrect. Expected: 3, actual: %" PRIu64 "\n", testValue->Shape().Rank());
-    }
-    if (testValue->Shape()[0] != vocabSize)
-    {
-        ReportFailure("Shape rank[0] incorrect. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", vocabSize, testValue->Shape()[0]);
-    }
-    // The next is the length of sequence
-    if (testValue->Shape()[1] != maxSeqLen)
-    {
-        ReportFailure("The sequence length does not match. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", maxSeqLen, testValue->Shape()[1]);
-    }
-    // The next is the number of sequences
-    if (testValue->Shape()[2] != numberOfSequences)
-    {
-        ReportFailure("The number of sequences does not match. Expected: %" PRIu64 ", actual: %" PRIu64 "\n", numberOfSequences, testValue->Shape()[2]);
-    }
-
-    // Check data is also correct.
-    vector<ElementType> outputData(vocabSize * maxSeqLen * numberOfSequences);
-    NDShape outputShape({vocabSize, maxSeqLen, numberOfSequences});
-    NDArrayViewPtr arrayOutput = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
-    arrayOutput->CopyFrom(*testValue->Data());
-
-    size_t sIndex = 0;
-    size_t oIndex = 0;
-    for (size_t n = 0; n < numberOfSequences; n++)
-    {
-        sIndex = 0;
-        size_t seqLen = seqLenList[n];
-        for (size_t s = 0; s < seqLen; s++, sIndex++)
-        {
-            for (size_t c = 0; c < vocabSize; c++, oIndex++)
-            {
-                if (outputData[oIndex] != 0)
-                {
-                    if (outputData[oIndex] != 1)
-                    {
-                        ReportFailure("OneHot vector contains value other than 0 and 1 at seqNo=%" PRIu64 " sampleNo=%" PRIu64 " position=%" PRIu64 "\n", n, s, c);
-                    }
-                    if (c != data[n][sIndex])
-                    {
-                        ReportFailure("OneHot Index does match at seqNo=%" PRIu64 ", sampleNo=%" PRIu64 ", expected: %" PRIu64 ", actual: %" PRIu64 "\n", n, s, data[n][sIndex], c);
-                    }
-                }
-            }
-        }
-        // Skip mask data
-        oIndex += (maxSeqLen - seqLen) * vocabSize;
-    }
+    CheckValue<ElementType>(testValue, {vocabSize, maxSeqLen, numberOfSequences}, vocabSize, data, seqLenList);
 }
 
 void ValueTests()
