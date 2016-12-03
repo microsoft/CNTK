@@ -465,6 +465,7 @@ CNTKLIBRARY_TESTS_SRC =\
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/NDArrayViewTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/RecurrentFunctionTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/TensorTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/ValueTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/TrainerTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/CifarResNet.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/SerializationTests.cpp \
