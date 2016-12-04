@@ -847,7 +847,7 @@ vector:
 
     x  = ...                   # input value, e.g. a N-dimensional one-hot vector
     xp = Delay()(x)            # previous value
-    xn = Delay(T-1)(x)         # next value (negative delay)
+    xn = Delay(T=-1)(x)         # next value (negative delay)
     tg = splice ([xp, x, xn])  # concatenate all into a 3N-dimensional three-hot vector
 
 BatchNormalization(), LayerNormalization(), Stabilizer()
