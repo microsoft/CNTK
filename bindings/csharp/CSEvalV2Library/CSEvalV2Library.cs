@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CNTK.CSharp
+namespace CNTK
 {
     public class Evaluation
     {

@@ -84,6 +84,69 @@
 %apply double INPUT[]  { double *dataBuffer }
 
 
+%typemap(csclassmodifiers) CNTK::Value "public partial class"
+
+%pragma(csharp) moduleimports = %{
+
+using System;
+using System.Collections.Generic;
+
+public partial class Value
+{
+    public static Value Create<T>(NDShape shape, List<List<T>> sequences, DeviceDescriptor computeDevice)
+    {
+        var dim = shape.TotalSize();
+
+        if (typeof(T).Equals(typeof(float)))
+        {
+            var inputSeqVector = new FloatVectorVector();
+            foreach (var seq in sequences)
+            {
+                if (seq.Count % dim != 0)
+                {
+                    throw new ArgumentException("the number of data in sequences does not match the input dimension");
+                }
+                var samples = new FloatVector(seq);
+                inputSeqVector.Add(samples);
+            }
+            return Value.CreateDenseFloat(shape, inputSeqVector, computeDevice);
+        }
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            var inputSeqVector = new DoubleVectorVector();
+            foreach (var seq in sequences)
+            {
+                if (seq.Count % dim != 0)
+                {
+                    throw new ArgumentException("the number of data in sequences does not match the input dimension");
+                }
+                var samples = new DoubleVector(seq);
+                inputSeqVector.Add(samples);
+            }
+            return Value.CreateDenseDouble(shape, inputSeqVector, computeDevice);
+        }
+        else
+        {
+            throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+        }
+    }
+
+    public static Value Create<T>(NDShape shape, List<List<long>> oneHotIndex, DeviceDescriptor computeDevice)
+    {
+        throw new NotImplementedException("Not implemented");
+    }
+
+    // Create Value based on sparse input
+    // Todo: could this be a extension to Value class??
+    // Todo: use Variable instead of varName. VarName as extension method
+    public static Value Create<T>(NDShape shape, List<List<T>> data, List<List<long>> indexes, List<List<long>> nnzCounts, DeviceDescriptor computeDevice)
+    {
+        throw new NotImplementedException("Not implemented");
+    }
+}
+
+%}
+
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
 
@@ -154,3 +217,4 @@
         self->Forward(arguments, outputs, computeDevice, {});
     }
 }
+
