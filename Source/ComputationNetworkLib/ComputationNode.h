@@ -39,7 +39,8 @@
 #define CNTK_MODEL_VERSION_8 8 // DynamicAxis for inputs
 #define CNTK_MODEL_VERSION_9 9 // Transpose flag in ConvolutionNode to support deconvolution. 
 #define CNTK_MODEL_VERSION_10 10 // Learning rate multiplier for input nodes. 
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_10
+#define CNTK_MODEL_VERSION_11 11 // Dynamic axis name for where nodes. 
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_11
 
 extern bool g_shareNodeValueMatrices;
 

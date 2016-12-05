@@ -40,30 +40,10 @@ template SGD<double>::SGD(const ScriptableObjects::IConfigRecord&);
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-void SGD<ElemType>::Train(function<ComputationNetworkPtr(DEVICEID_TYPE)> createNetworkFn, DEVICEID_TYPE deviceId,
+void SGD<ElemType>::Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                           IDataReader* trainSetDataReader,
-                          IDataReader* validationSetDataReader,
-                          const bool makeMode)
+                          IDataReader* validationSetDataReader, int startEpoch, bool loadNetworkFromCheckpoint)
 {
-    // determine which epoch to start with, including recovering a checkpoint if any and 'makeMode' enabled
-    int startEpoch = DetermineStartEpoch(makeMode);
-    if (startEpoch == m_maxEpochs)
-    {
-        LOGPRINTF(stderr, "No further training is necessary.\n");
-        return;
-    }
-
-    wstring modelFileName = GetModelNameForEpoch(int(startEpoch) - 1);
-    bool loadNetworkFromCheckpoint = startEpoch >= 0;
-    fprintf(stderr, "\n");
-    if (loadNetworkFromCheckpoint)
-        LOGPRINTF(stderr, "Starting from checkpoint. Loading network from '%ls'.\n", modelFileName.c_str());
-    else
-        LOGPRINTF(stderr, "Creating virgin network.\n");
-
-    // create or load from checkpoint
-    shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
-
     // log the device we are computing on
     LOGPRINTF(stderr, "%s model with %d nodes", loadNetworkFromCheckpoint ? "Loaded" : "Created", (int)net->GetTotalNumberOfNodes());
     if (net->GetDeviceId() < 0)

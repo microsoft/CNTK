@@ -165,9 +165,9 @@ public:
         else if (format == matrixFormatSparseBlockRow)
             return (bufferSize - 2 * sizeof(GPUSPARSE_INDEX_TYPE) * numRows) / sizeof(ElemType);
         else if (format == matrixFormatSparseCSC)
-            return (bufferSize - sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1)) / (2 * sizeof(ElemType));
+            return (bufferSize - sizeof(GPUSPARSE_INDEX_TYPE) * (numCols + 1)) / (sizeof(GPUSPARSE_INDEX_TYPE) + sizeof(ElemType));
         else if (format == matrixFormatSparseCSR)
-            return (bufferSize - sizeof(GPUSPARSE_INDEX_TYPE) * (numRows + 1)) / (2 * sizeof(ElemType));
+            return (bufferSize - sizeof(GPUSPARSE_INDEX_TYPE) * (numRows + 1)) / (sizeof(GPUSPARSE_INDEX_TYPE) + sizeof(ElemType));
         else
             NOT_IMPLEMENTED;
     }

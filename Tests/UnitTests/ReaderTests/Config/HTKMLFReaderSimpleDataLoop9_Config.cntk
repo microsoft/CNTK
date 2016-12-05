@@ -8,6 +8,7 @@ precision = "float"
 
 Simple_Test = [
     reader = [
+        useMersenneTwisterRand = true
         readerType = "HTKMLFReader"
         readMethod = "blockRandomize"
         miniBatchMode = "partial"
@@ -15,7 +16,7 @@ Simple_Test = [
         verbosity = 0
         truncated = true
         frameMode = false
-        nbruttsineachrecurrentiter = 2
+        nbruttsineachrecurrentiter = 1
 
         features = [
             dim = 363

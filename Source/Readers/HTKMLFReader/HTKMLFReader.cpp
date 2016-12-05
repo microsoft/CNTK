@@ -377,8 +377,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
 
             // second, remove trailing slash if there is any
             // TODO: when gcc -v is 4.9 or greater, this should be: std::regex_replace(rootpath, L"\\/+$", wstring());
-            size_t stringPos = 0;
-            for (stringPos = rootpath.length() - 1; stringPos >= 0; stringPos--) 
+            int stringPos = 0;
+            for (stringPos = (int) (rootpath.length() - 1); stringPos >= 0; stringPos--) 
             {
                 if (rootpath[stringPos] != L'/')
                 {
@@ -517,11 +517,11 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_lattices->setverbosity(m_verbosity);
 
         // now get the frame source. This has better randomization and doesn't create temp files
-        bool minimizeReaderMemoryFootprint = readerConfig(L"minimizeReaderMemoryFootprint", true);
-        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(infilesmulti, labelsmulti, m_featDims, m_labelDims, 
+        bool useMersenneTwisterRand = readerConfig(L"useMersenneTwisterRand", false);
+        m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, m_featDims, m_labelDims,
                                                                          numContextLeft, numContextRight, randomize, 
                                                                          *m_lattices, m_latticeMap, m_frameMode, 
-                                                                         minimizeReaderMemoryFootprint, m_expandToUtt));
+                                                                         m_expandToUtt));
         m_frameSource->setverbosity(m_verbosity);
     }
     else if (EqualCI(readMethod, L"rollingWindow"))

@@ -109,9 +109,8 @@ void DumpNodeInfo(const ConfigParameters& config)
         InvalidArgument("printValues and printMetadata: Since both are set to false, there will be nothing to dump");
     }
 
-    ComputationNetwork net(-1);    // always use CPU
-    net.Load<ElemType>(modelPath); // TODO: we have a function now to combine this and the previous line
-    net.DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
+    ComputationNetworkPtr net = ComputationNetwork::CreateFromFile<ElemType>(CPUDEVICE, modelPath);
+    net->DumpNodeInfoToFile(nodeName, printValues, printMetadata, outputFile, nodeNameRegexStr);
 }
 
 size_t GetMaxEpochs(const ConfigParameters& configParams)

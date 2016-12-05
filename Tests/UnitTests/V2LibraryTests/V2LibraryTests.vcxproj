@@ -110,10 +110,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CifarResNet.cpp" />
+    <ClCompile Include="LearnerTests.cpp" />
+    <ClCompile Include="SerializationTests.cpp" />
     <ClCompile Include="FeedForwardTests.cpp" />
+    <ClCompile Include="FunctionTests.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="NDArrayViewTests.cpp" />
     <ClCompile Include="RecurrentFunctionTests.cpp" />
+    <ClCompile Include="SequenceClassification.cpp" />
     <ClCompile Include="TensorTests.cpp" />
     <ClCompile Include="TrainerTests.cpp" />
   </ItemGroup>

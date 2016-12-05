@@ -2,6 +2,9 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
+export MKL_NUM_THREADS=4
+export MKL_CBWR=COMPATIBLE
+
 # cntkrun <CNTK config file name> <additional CNTK args>
 DeleteModelsAfterTest=0
 cntkrun cntk.cntk || exit $?

@@ -258,13 +258,20 @@ public:
         m_evalOrders[rootNode] = nodes;
     }
 
+    bool EvalOrderExists(const ComputationNodeBasePtr& rootNode) const
+    {
+        return m_evalOrders.find(rootNode) != m_evalOrders.end();
+    }
+
     // get depth-first traversal order
     // TODO: This is currently not immutable because it gets patched w.r.t. recurrent loops. Ideally we don't patch. Need to review and verify that it is sufficient.
     const std::list<ComputationNodeBasePtr>& GetEvalOrder(const ComputationNodeBasePtr& rootNode) const
     {
         auto iter = m_evalOrders.find(rootNode);
         if (iter == m_evalOrders.end())
+        {
             LogicError("GetEvalOrder: Called without prior call to FormEvalOrder() for %ls %ls operation", rootNode->NodeName().c_str(), rootNode->OperationName().c_str());
+        }
         return iter->second;
     }
 

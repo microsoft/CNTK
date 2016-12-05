@@ -21,6 +21,7 @@ mkdir $DataDir
 cp -R $DataSourceDir/MNIST/v0/Train-28x28_cntk_text.txt $DataDir || exit $?
 cp -R $DataSourceDir/CIFAR/v0/cifar-10-batches-py $DataDir || exit $?
 cp -R $TEST_DIR/../../../../Examples/Other/Simple2d/Data/SimpleDataTrain_cntk_text.txt $DataDir || exit $?
+cp -R $TEST_DIR/../../Text/SequenceClassification/Data/Train.ctf $DataDir || exit $?
 
 pushd $DataDir
 

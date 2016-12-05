@@ -39,6 +39,7 @@ reader=[
     miniBatchMode=Partial
     randomize=Auto
     verbosity=0
+    useMersenneTwisterRand=true
     features=[
         dim=363
         type=Real

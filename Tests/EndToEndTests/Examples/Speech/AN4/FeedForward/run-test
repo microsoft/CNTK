@@ -5,5 +5,5 @@
 ConfigDir=$TEST_DIR/../../../../../../Examples/Speech/AN4/Config
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun FeedForward.cntk "speechTrain=[SGD=[maxEpochs=1]] speechTrain=[SGD=[epochSize=2048]]" || exit $?
+cntkrun FeedForward.cntk "speechTrain=[SGD=[maxEpochs=1]] speechTrain=[SGD=[epochSize=2048]] speechTrain=[reader=[useMersenneTwisterRand=true]]" || exit $?
 

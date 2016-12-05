@@ -83,6 +83,7 @@ speechTrain = [
         miniBatchMode = "partial"
         randomize = "auto"
         verbosity = 0
+        useMersenneTwisterRand=true
 
         features = [
             dim = 363
@@ -103,6 +104,7 @@ speechTrain = [
         miniBatchMode = "partial"
         randomize = "auto"
         verbosity = 0
+        useMersenneTwisterRand=true
 
         features = [
             dim = 363

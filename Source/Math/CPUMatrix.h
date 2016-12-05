@@ -77,6 +77,8 @@ public:
     {
         return m_numRows * m_numCols * sizeof(ElemType);
     }
+
+    // Returns pointer into underlying data buffer correspoinding to slice-view. This makes it different from method Buffer()
     ElemType* Data() const
     {
         return Buffer() + m_sliceViewOffset;

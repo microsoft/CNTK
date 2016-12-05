@@ -53,8 +53,6 @@ if "%p_CNTK_MKL%" == "1" (
   ) else (
     echo #define _MATHLIB_ "mkl">> buildinfo.h$$
   )
-) else (
-  echo #define _MATHLIB_ "acml">> buildinfo.h$$
 )
 
 echo #define _BUILDER_ "%USERNAME%"     >> buildinfo.h$$

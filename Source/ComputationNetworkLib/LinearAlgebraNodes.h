@@ -536,8 +536,8 @@ class TransposeTimesNode : public TimesNodeBase<ElemType, true>
 
 public:
     DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
-    TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name, /*outputRank=*/1)
+    TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
+        : Base(deviceId, name, outputRank)
     {
     }
 };
@@ -767,6 +767,9 @@ public:
         else
             m_axis1 = 1, m_axis2 = 2; // default
     }
+
+    int Axis1() const { return m_axis1; }
+    int Axis2() const { return m_axis2; }
 
 private:
     // compute the transposed tensor shape (in-place)

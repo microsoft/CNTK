@@ -6,4 +6,4 @@
 . $TEST_DIR/../run-timit-test-common
 
 # cntkrun <CNTK config file name> <additional CNTK arg>
-cntkrun TIMIT_AdaptLearnRate.cntk "$CntkArguments" || exit $?
+cntkrun TIMIT_AdaptLearnRate.cntk "$CntkArguments TIMIT_TrainAdaptLR=[reader=[useMersenneTwisterRand=true]] TIMIT_TrainAdaptLR=[cvReader=[useMersenneTwisterRand=true]]" || exit $?

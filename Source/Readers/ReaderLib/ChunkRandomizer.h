@@ -7,6 +7,7 @@
 
 #include <vector>
 #include "DataDeserializer.h"
+#include <random>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -68,6 +69,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         bool m_legacy;
         // Randomization range in samples.
         size_t m_randomizationRangeInSamples;
+
+        std::mt19937_64 m_rng;
     };
 
     typedef std::shared_ptr<ChunkRandomizer> ChunkRandomizerPtr;

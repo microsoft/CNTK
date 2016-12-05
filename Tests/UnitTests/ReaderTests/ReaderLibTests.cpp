@@ -185,7 +185,7 @@ void BlockRandomizerOneEpochTest(bool prefetch)
     epochConfiguration.m_epochIndex = 0;
     randomizer->StartEpoch(epochConfiguration);
 
-    vector<float> expected { 3, 4, 1, 8, 0, 5, 9, 6, 7, 2 };
+    vector<float> expected { 6, 3, 1, 5, 9, 0, 4, 2, 7, 8 };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
@@ -226,7 +226,7 @@ void BlockRandomizerOneEpochWithChunks1Test(bool prefetch)
     epochConfiguration.m_epochIndex = 0;
     randomizer->StartEpoch(epochConfiguration);
 
-    vector<float> expected{ 9, 8, 6, 7, 3, 2, 1, 0, 4, 5 };
+    vector<float> expected{ 8, 9, 1, 0, 6, 7, 2, 3, 4, 5 };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
@@ -269,8 +269,8 @@ void BlockRandomizerOneEpochWithChunks2Test(bool prefetch)
     randomizer->StartEpoch(epochConfiguration);
 
     vector<float> expected {
-        16, 14, 15, 8, 13, 6, 17, 4, 12, 9,
-        3, 18, 0, 5, 2, 11, 19, 7, 1, 10
+        18, 19, 7, 14, 6, 9, 8, 15, 5, 2,
+        10, 13, 16, 17, 1, 4, 3, 12, 11, 0
     };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     vector<float> actual;
@@ -377,7 +377,7 @@ void BlockRandomizerOneEpochLegacyRandomizationTest(bool prefetch)
     epochConfiguration.m_epochIndex = 0;
     randomizer->StartEpoch(epochConfiguration);
 
-    vector<float> expected { 9, 4, 1, 2, 0, 5, 3, 6, 7, 8 };
+    vector<float> expected { 6, 3, 1, 5, 9, 0, 4, 2, 7, 8 };
     BOOST_CHECK_EQUAL(data.size(), expected.size());
     vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)

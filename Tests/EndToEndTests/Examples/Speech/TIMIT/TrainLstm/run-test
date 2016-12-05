@@ -6,4 +6,4 @@
 . $TEST_DIR/../run-timit-test-common
 
 # Running only 3 epochs (~1000s gpu release), because full run takes a lot of time.
-cntkrun TIMIT_TrainLSTM.cntk "$CntkArguments TIMIT_TrainLSTM=[SGD=[maxEpochs=3]]" || exit $?
+cntkrun TIMIT_TrainLSTM.cntk "$CntkArguments TIMIT_TrainLSTM=[SGD=[maxEpochs=3]] TIMIT_TrainLSTM=[reader=[useMersenneTwisterRand=true]] TIMIT_TrainLSTM=[cvReader=[useMersenneTwisterRand=true]]" || exit $?

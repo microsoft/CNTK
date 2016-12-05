@@ -5,4 +5,4 @@
 # specific TIMIT variables
 . $TEST_DIR/../run-timit-test-common
 
-cntkrun TIMIT_TrainMultiInput.cntk "$CntkArguments" || exit $?
+cntkrun TIMIT_TrainMultiInput.cntk "$CntkArguments TIMIT_TrainMultiInput=[reader=[useMersenneTwisterRand=true]]" || exit $?

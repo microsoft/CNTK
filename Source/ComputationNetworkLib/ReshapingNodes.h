@@ -217,6 +217,9 @@ public:
     virtual bool /*ComputationNodeBase::*/ InputUsedInComputingInputNodesGradients(size_t childIndex) const override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 
+    std::wstring ReductionOpName() const { return m_operation; }
+    int ReductionAxis() const { return m_axis; }
+
 private:
     int m_axis;
     std::wstring m_operation; // the operation as a string, e.g. "Sum", see ValidateOp()
@@ -337,11 +340,12 @@ public:
         fstream << m_axis;
     }
 
-private:
-
     // these implement numpy-style negative bound values to index from the end
     size_t BeginIndex() const { return m_beginIndex >= 0 ? (size_t)m_beginIndex : (size_t)(m_beginIndex + Input(0)->GetSampleLayout()[m_axis - 1]); }
-    size_t EndIndex()   const { return m_endIndex   >  0 ? (size_t)m_endIndex   : (size_t)(m_endIndex   + Input(0)->GetSampleLayout()[m_axis - 1]); }
+    size_t EndIndex()   const { return m_endIndex   >  0 ? (size_t)m_endIndex : (size_t)(m_endIndex + Input(0)->GetSampleLayout()[m_axis - 1]); }
+    int Axis() const { return m_axis; }
+
+private:
 
     // determine the tensor shape that represents slice of the input that we are taking
     TensorShape GetInputSlice(size_t rank, const FrameRange & fr) const
@@ -651,10 +655,11 @@ class WhereNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"Where"; }
 
+    static const std::wstring DefaultWhereNodeDynamicAxisName() { return L"WhereNodeAxis"; }
 public:
     DeclareConstructorFromConfigWithNumInputs(WhereNode);
-    WhereNode(DEVICEID_TYPE deviceId, const wstring& name) :
-        Base(deviceId, name)
+    WhereNode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& dynamicAxisName = DefaultWhereNodeDynamicAxisName()) :
+        Base(deviceId, name), m_dynamicAxisName(dynamicAxisName)
     {
         MarkValueNonSharable();
     }
@@ -665,11 +670,29 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
     virtual void Validate(bool isFinalValidationPass) override;
 
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        if (modelVersion >= CNTK_MODEL_VERSION_11)
+            fstream >> m_dynamicAxisName;
+        else
+            m_dynamicAxisName = DefaultWhereNodeDynamicAxisName();
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_dynamicAxisName;
+    }
+
+    std::wstring DynamicAxisName() const { return m_dynamicAxisName; }
+
 private:
     // buffers for creating the result sequences (kept as object state to avoid memory allocations)
     std::vector<std::vector<size_t>>   m_indexSequenceBuffer; // [sequenceIndex][t] for creating the result sequences
     std::vector<size_t>               m_rowAllocationsBuffer; // [row] for determining new MBLayout packing
     std::vector<std::pair<size_t, size_t>> m_placementBuffer; // [sequenceIndex] assigned location for a sequence
+    std::wstring m_dynamicAxisName;
 };
 
 // -----------------------------------------------------------------------

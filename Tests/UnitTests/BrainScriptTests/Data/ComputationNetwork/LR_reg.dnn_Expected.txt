@@ -1,0 +1,14 @@
+ 
+b=LearnableParameter [1,1]   learningRateMultiplier=1.000000  NeedsGradient=true 
+ -12.3975687 
+ #################################################################### 
+err=SquareError ( labels , p ) 
+features=InputValue [ 2 ] 
+labels=InputValue [ 1 ] 
+lr=Logistic ( labels , p ) 
+p=Sigmoid ( p._ ) 
+p._=Plus ( p._.PlusArgs[0] , b ) 
+p._.PlusArgs[0]=Times ( w , features ) 
+w=LearnableParameter [1,2]   learningRateMultiplier=1.000000  NeedsGradient=true 
+ 2.40208387 2.66412616 
+ ####################################################################

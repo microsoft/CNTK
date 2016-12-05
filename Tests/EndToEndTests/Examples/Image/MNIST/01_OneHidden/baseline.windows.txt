@@ -1,69 +1,103 @@
-=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/../../../../Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/Config/01_OneHidden.cntk currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu DeviceId=0 timestamping=true train=[SGD=[maxEpochs=3]] imageLayout="cudnn"
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 24
+    Total Memory: 268381192 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/01_OneHidden.cntk currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu DeviceId=0 timestamping=true train=[SGD=[maxEpochs=3]] imageLayout="cudnn"
 -------------------------------------------------------------------
 Build info: 
 
-		Built time: May 13 2016 08:06:01
-		Last modified date: Thu May 12 07:31:50 2016
+		Built time: Aug 16 2016 02:54:53
+		Last modified date: Fri Aug 12 05:31:21 2016
 		Build type: Release
 		Build target: GPU
 		With 1bit-SGD: no
+		Math lib: mkl
 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
 		CUB_PATH: c:\src\cub-1.4.1
 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
 		Build Branch: HEAD
-		Build SHA1: 35fadc316f045d843bbd9b85061250a959268787
+		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
 		Built by svcphil on Philly-Pool3
 		Build Path: c:\Jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
 -------------------------------------------------------------------
-Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
-05/13/2016 08:15:51: -------------------------------------------------------------------
-05/13/2016 08:15:51: Build info: 
+Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
+08/16/2016 03:00:44: -------------------------------------------------------------------
+08/16/2016 03:00:44: Build info: 
 
-05/13/2016 08:15:51: 		Built time: May 13 2016 08:06:01
-05/13/2016 08:15:51: 		Last modified date: Thu May 12 07:31:50 2016
-05/13/2016 08:15:51: 		Build type: Release
-05/13/2016 08:15:51: 		Build target: GPU
-05/13/2016 08:15:51: 		With 1bit-SGD: no
-05/13/2016 08:15:51: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
-05/13/2016 08:15:51: 		CUB_PATH: c:\src\cub-1.4.1
-05/13/2016 08:15:51: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
-05/13/2016 08:15:51: 		Build Branch: HEAD
-05/13/2016 08:15:51: 		Build SHA1: 35fadc316f045d843bbd9b85061250a959268787
-05/13/2016 08:15:51: 		Built by svcphil on Philly-Pool3
-05/13/2016 08:15:51: 		Build Path: c:\Jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
-05/13/2016 08:15:51: -------------------------------------------------------------------
+08/16/2016 03:00:44: 		Built time: Aug 16 2016 02:54:53
+08/16/2016 03:00:44: 		Last modified date: Fri Aug 12 05:31:21 2016
+08/16/2016 03:00:44: 		Build type: Release
+08/16/2016 03:00:44: 		Build target: GPU
+08/16/2016 03:00:44: 		With 1bit-SGD: no
+08/16/2016 03:00:44: 		Math lib: mkl
+08/16/2016 03:00:44: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
+08/16/2016 03:00:44: 		CUB_PATH: c:\src\cub-1.4.1
+08/16/2016 03:00:44: 		CUDNN_PATH: c:\NVIDIA\cudnn-4.0\cuda
+08/16/2016 03:00:44: 		Build Branch: HEAD
+08/16/2016 03:00:44: 		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
+08/16/2016 03:00:44: 		Built by svcphil on Philly-Pool3
+08/16/2016 03:00:44: 		Build Path: c:\Jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+08/16/2016 03:00:44: -------------------------------------------------------------------
+08/16/2016 03:00:46: -------------------------------------------------------------------
+08/16/2016 03:00:46: GPU info:
 
-05/13/2016 08:15:51: Running on Philly-Pool2 at 2016/05/13 08:15:51
-05/13/2016 08:15:51: Command line: 
-C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/../../../../Tests/EndToEndTests/CNTKTextFormatReader/Examples/Image/MNIST/Config/01_OneHidden.cntk  currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu  DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu  DeviceId=0  timestamping=true  train=[SGD=[maxEpochs=3]]  imageLayout="cudnn"
+08/16/2016 03:00:46: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+08/16/2016 03:00:46: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+08/16/2016 03:00:46: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+08/16/2016 03:00:46: 		Device[3]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
+08/16/2016 03:00:46: -------------------------------------------------------------------
+
+08/16/2016 03:00:46: Running on DPHAIM-24 at 2016/08/16 03:00:46
+08/16/2016 03:00:46: Command line: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/01_OneHidden.cntk  currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu  DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu  DeviceId=0  timestamping=true  train=[SGD=[maxEpochs=3]]  imageLayout="cudnn"
 
 
 
-05/13/2016 08:15:51: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-05/13/2016 08:15:51: RootDir = ".."
-ConfigDir = "$RootDir$/Config"
-DataDir   = "$RootDir$/Data"
-OutputDir = "$RootDir$/Output"
-ModelDir  = "$OutputDir$/Models"
+08/16/2016 03:00:46: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
+08/16/2016 03:00:46: rootDir = ".."
+configDir = "$rootDir$/Config"
+dataDir   = "$rootDir$/Data"
+outputDir = "$rootDir$/Output"
+modelDir  = "$outputDir$/Models"
 deviceId = 0
-imageLayout = "cudnn"
 command = train:test
 precision = "float"
-modelPath = "$ModelDir$/01_OneHidden"
-ndlMacros = "$ConfigDir$/Macros.ndl"
-traceLevel=1
-numMBsToShowResult=500
-initOnCPUOnly=true
+modelPath = "$modelDir$/01_OneHidden"
+traceLevel = 1
+numMBsToShowResult = 500
 train = [
     action = "train"
+    BrainScriptNetworkBuilder_disabled = [
+        include "Shared.bs"
+featDim = 28 * 28                           
+labelDim = 10                               
+        features = Input (featDim)
+        featScaled = Constant (1.0 / 256.0) .* features
+        labels = Input (labelDim)
+        hiddenDim = 200
+        h1 = DNNSigmoidLayer (featDim,  hiddenDim, featScaled, 1)
+        z  = DNNLayer        (hiddenDim, labelDim, h1,         1)
+        ce   = CrossEntropyWithSoftmax (labels, z)
+        errs = ErrorPrediction         (labels, z)
+        top5Errs = ErrorPrediction (labels, z, topN=5)
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    ]
     NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
+        ndlMacros = "$configDir$/Macros.ndl"
         networkDescription = "$ConfigDir$/01_OneHidden.ndl"
     ]
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        learningRatesPerMB = 0.1
-        momentumPerMB = 0
+        learningRatesPerSample = 0.003125
+        momentumAsTimeConstant = 0
         maxEpochs = 30
     ]
     reader = [
@@ -83,7 +117,8 @@ train = [
 ]
 test = [
     action = "test"
-    minibatchSize = 16
+minibatchSize = 1024    
+    evalNodeNames = ce:errs:top5Errs
     reader = [
         readerType = "CNTKTextFormatReader"
         file = "$DataDir$/Test-28x28_cntk_text.txt"
@@ -99,48 +134,67 @@ test = [
         ]
     ]
 ]
-currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu
-DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
+currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu
+DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
 ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu
 DeviceId=0
 timestamping=true
 train=[SGD=[maxEpochs=3]]
 imageLayout="cudnn"
 
-05/13/2016 08:15:51: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
+08/16/2016 03:00:46: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-05/13/2016 08:15:51: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-05/13/2016 08:15:51: RootDir = ".."
-ConfigDir = "../Config"
-DataDir   = "../Data"
-OutputDir = "../Output"
-ModelDir  = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu/Models"
+08/16/2016 03:00:46: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+08/16/2016 03:00:46: rootDir = ".."
+configDir = "../Config"
+dataDir   = "../Data"
+outputDir = "../Output"
+modelDir  = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu/Models"
 deviceId = 0
-imageLayout = "cudnn"
 command = train:test
 precision = "float"
-modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden"
-ndlMacros = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/Macros.ndl"
-traceLevel=1
-numMBsToShowResult=500
-initOnCPUOnly=true
+modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden"
+traceLevel = 1
+numMBsToShowResult = 500
 train = [
     action = "train"
+    BrainScriptNetworkBuilder_disabled = [
+        include "Shared.bs"
+featDim = 28 * 28                           
+labelDim = 10                               
+        features = Input (featDim)
+        featScaled = Constant (1.0 / 256.0) .* features
+        labels = Input (labelDim)
+        hiddenDim = 200
+        h1 = DNNSigmoidLayer (featDim,  hiddenDim, featScaled, 1)
+        z  = DNNLayer        (hiddenDim, labelDim, h1,         1)
+        ce   = CrossEntropyWithSoftmax (labels, z)
+        errs = ErrorPrediction         (labels, z)
+        top5Errs = ErrorPrediction (labels, z, topN=5)
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    ]
     NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
+        ndlMacros = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/Macros.ndl"
         networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/01_OneHidden.ndl"
     ]
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        learningRatesPerMB = 0.1
-        momentumPerMB = 0
+        learningRatesPerSample = 0.003125
+        momentumAsTimeConstant = 0
         maxEpochs = 30
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData/Train-28x28_cntk_text.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData/Train-28x28_cntk_text.txt"
         input = [
             features = [
                 dim = 784
@@ -155,10 +209,11 @@ train = [
 ]
 test = [
     action = "test"
-    minibatchSize = 16
+minibatchSize = 1024    
+    evalNodeNames = ce:errs:top5Errs
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData/Test-28x28_cntk_text.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData/Test-28x28_cntk_text.txt"
         input = [
             features = [
                 dim = 784
@@ -171,40 +226,39 @@ test = [
         ]
     ]
 ]
-currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu
-DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
+currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
+RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu
+DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
 ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu
+OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu
 DeviceId=0
 timestamping=true
 train=[SGD=[maxEpochs=3]]
 imageLayout="cudnn"
 
-05/13/2016 08:15:51: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+08/16/2016 03:00:46: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-05/13/2016 08:15:51: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+08/16/2016 03:00:46: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: 01_OneHidden.cntk:command=train:test
-configparameters: 01_OneHidden.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config
-configparameters: 01_OneHidden.cntk:currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
-configparameters: 01_OneHidden.cntk:DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
+configparameters: 01_OneHidden.cntk:configDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config
+configparameters: 01_OneHidden.cntk:currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
+configparameters: 01_OneHidden.cntk:dataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData
 configparameters: 01_OneHidden.cntk:deviceId=0
 configparameters: 01_OneHidden.cntk:imageLayout=cudnn
-configparameters: 01_OneHidden.cntk:initOnCPUOnly=true
-configparameters: 01_OneHidden.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu/Models
-configparameters: 01_OneHidden.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden
-configparameters: 01_OneHidden.cntk:ndlMacros=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/Macros.ndl
+configparameters: 01_OneHidden.cntk:modelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu/Models
+configparameters: 01_OneHidden.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden
 configparameters: 01_OneHidden.cntk:numMBsToShowResult=500
-configparameters: 01_OneHidden.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu
+configparameters: 01_OneHidden.cntk:outputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu
 configparameters: 01_OneHidden.cntk:precision=float
-configparameters: 01_OneHidden.cntk:RootDir=..
-configparameters: 01_OneHidden.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu
+configparameters: 01_OneHidden.cntk:rootDir=..
+configparameters: 01_OneHidden.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu
 configparameters: 01_OneHidden.cntk:test=[
     action = "test"
-    minibatchSize = 16
+minibatchSize = 1024    
+    evalNodeNames = ce:errs:top5Errs
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData/Test-28x28_cntk_text.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData/Test-28x28_cntk_text.txt"
         input = [
             features = [
                 dim = 784
@@ -222,19 +276,41 @@ configparameters: 01_OneHidden.cntk:timestamping=true
 configparameters: 01_OneHidden.cntk:traceLevel=1
 configparameters: 01_OneHidden.cntk:train=[
     action = "train"
+    BrainScriptNetworkBuilder_disabled = [
+        include "Shared.bs"
+featDim = 28 * 28                           
+labelDim = 10                               
+        features = Input (featDim)
+        featScaled = Constant (1.0 / 256.0) .* features
+        labels = Input (labelDim)
+        hiddenDim = 200
+        h1 = DNNSigmoidLayer (featDim,  hiddenDim, featScaled, 1)
+        z  = DNNLayer        (hiddenDim, labelDim, h1,         1)
+        ce   = CrossEntropyWithSoftmax (labels, z)
+        errs = ErrorPrediction         (labels, z)
+        top5Errs = ErrorPrediction (labels, z, topN=5)
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    ]
     NDLNetworkBuilder = [
+        imageLayout = "cudnn"
+        initOnCPUOnly = true
+        ndlMacros = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/Macros.ndl"
         networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\MNIST\Config/01_OneHidden.ndl"
     ]
     SGD = [
         epochSize = 60000
         minibatchSize = 32
-        learningRatesPerMB = 0.1
-        momentumPerMB = 0
+        learningRatesPerSample = 0.003125
+        momentumAsTimeConstant = 0
         maxEpochs = 30
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData/Train-28x28_cntk_text.txt"
+        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu\TestData/Train-28x28_cntk_text.txt"
         input = [
             features = [
                 dim = 784
@@ -248,31 +324,45 @@ configparameters: 01_OneHidden.cntk:train=[
     ]   
 ] [SGD=[maxEpochs=3]]
 
-05/13/2016 08:15:51: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-05/13/2016 08:15:51: Commands: train test
-05/13/2016 08:15:51: Precision = "float"
-05/13/2016 08:15:51: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden
-05/13/2016 08:15:51: CNTKCommandTrainInfo: train : 3
-05/13/2016 08:15:51: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
+08/16/2016 03:00:46: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
+08/16/2016 03:00:46: Commands: train test
+08/16/2016 03:00:46: Precision = "float"
+08/16/2016 03:00:46: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden
+08/16/2016 03:00:46: CNTKCommandTrainInfo: train : 3
+08/16/2016 03:00:46: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
 
-05/13/2016 08:15:51: ##############################################################################
-05/13/2016 08:15:51: #                                                                            #
-05/13/2016 08:15:51: # Action "train"                                                             #
-05/13/2016 08:15:51: #                                                                            #
-05/13/2016 08:15:51: ##############################################################################
+08/16/2016 03:00:46: ##############################################################################
+08/16/2016 03:00:46: #                                                                            #
+08/16/2016 03:00:46: # Action "train"                                                             #
+08/16/2016 03:00:46: #                                                                            #
+08/16/2016 03:00:46: ##############################################################################
 
-05/13/2016 08:15:51: CNTKCommandTrainBegin: train
+08/16/2016 03:00:46: CNTKCommandTrainBegin: train
 NDLBuilder Using GPU 0
 
-05/13/2016 08:15:52: Creating virgin network.
+08/16/2016 03:00:47: Creating virgin network.
+Node 'featScale' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.000000.
+Node 'h1.W' (LearnableParameter operation): Initializing Parameter[200 x 784] <- 0.000000.
+Node 'h1.b' (LearnableParameter operation): Initializing Parameter[200 x 1] <- 0.000000.
+Node 'ol.W' (LearnableParameter operation): Initializing Parameter[10 x 200] <- 0.000000.
+Node 'ol.b' (LearnableParameter operation): Initializing Parameter[10 x 1] <- 0.000000.
+Node 'unnamed89' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.000000.
+Node 'featScale' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.003906.
+Node 'featScale' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.003906.
+Node 'unnamed89' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 5.000000.
+Node 'featScale' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.003906.
+Node 'h1.W' (LearnableParameter operation): Initializing Parameter[200 x 784] <- uniform(seed=1, range=0.050000*1.000000, onCPU=true).
+Node 'h1.b' (LearnableParameter operation): Initializing Parameter[200 x 1] <- uniform(seed=2, range=0.050000*1.000000, onCPU=true).
+Node 'ol.W' (LearnableParameter operation): Initializing Parameter[10 x 200] <- uniform(seed=3, range=0.050000*1.000000, onCPU=true).
+Node 'ol.b' (LearnableParameter operation): Initializing Parameter[10 x 1] <- uniform(seed=4, range=0.050000*1.000000, onCPU=true).
 
 Post-processing network...
 
 4 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ErrorPrediction()
-	errTop1 = ErrorPrediction()
+	errs = ErrorPrediction()
 	ol.z = Plus()
+	top5Errs = ErrorPrediction()
 
 Validating network. 17 nodes to process in pass 1.
 
@@ -290,9 +380,9 @@ Validating --> ol.t = Times (ol.W, h1.y) : [10 x 200], [200 x 1 x *] -> [10 x 1 
 Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
 Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *], [10 x 1] -> [10 x 1 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
-Validating --> err = ErrorPrediction (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
-Validating --> unnamed81 = LearnableParameter() :  -> [1 x 1]
-Validating --> errTop1 = ErrorPrediction (labels, ol.z, unnamed81) : [10 x *], [10 x 1 x *], [1 x 1] -> [1]
+Validating --> errs = ErrorPrediction (labels, ol.z) : [10 x *], [10 x 1 x *] -> [1]
+Validating --> unnamed89 = LearnableParameter() :  -> [1 x 1]
+Validating --> top5Errs = ErrorPrediction (labels, ol.z, unnamed89) : [10 x *], [10 x 1 x *], [1 x 1] -> [1]
 
 Validating network. 9 nodes to process in pass 2.
 
@@ -305,92 +395,88 @@ Validating network, final pass.
 
 Post-processing network complete.
 
-05/13/2016 08:15:53: Created model with 17 nodes on GPU 0.
+08/16/2016 03:00:47: Created model with 17 nodes on GPU 0.
 
-05/13/2016 08:15:53: Training criterion node(s):
-05/13/2016 08:15:53: 	ce = CrossEntropyWithSoftmax
+08/16/2016 03:00:47: Training criterion node(s):
+08/16/2016 03:00:47: 	ce = CrossEntropyWithSoftmax
 
-05/13/2016 08:15:53: Evaluation criterion node(s):
-
-05/13/2016 08:15:53: 	errTop1 = ErrorPrediction
-05/13/2016 08:15:53: 	err = ErrorPrediction
+08/16/2016 03:00:47: Evaluation criterion node(s):
+08/16/2016 03:00:47: 	top5Errs = ErrorPrediction
+08/16/2016 03:00:47: 	errs = ErrorPrediction
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing Structure:
+Memory Sharing: Out of 27 matrices, 10 are shared as 5, and 17 are not shared.
 
-0000000000000000: {[err Gradient[1]] [errTop1 Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[784 x 1 x *]] [features Gradient[784 x *]] [labels Gradient[10 x *]] [unnamed81 Gradient[1 x 1]] }
-000000780D2D93A0: {[unnamed81 Value[1 x 1]] }
-000000780D2D9440: {[featScaled Value[784 x 1 x *]] }
-000000780D2D94E0: {[h1.W Gradient[200 x 784]] [h1.z Value[200 x 1 x *]] }
-000000780D2D9580: {[h1.t Gradient[200 x 1 x *]] [h1.y Value[200 x 1 x *]] }
-000000780D2D9620: {[h1.z Gradient[200 x 1 x *]] [ol.t Value[10 x 1 x *]] }
-000000780D2D96C0: {[ol.W Value[10 x 200]] }
-000000780D2D9760: {[ol.b Value[10 x 1]] }
-000000780D2D99E0: {[errTop1 Value[1]] }
-000000780D2D9EE0: {[err Value[1]] }
-000000780D2DA0C0: {[ol.z Value[10 x 1 x *]] }
-000000780D2DA160: {[ce Value[1]] }
-000000780D2DA2A0: {[h1.t Value[200 x 1 x *]] }
-000000780D33AB50: {[ce Gradient[1]] }
-000000780D33ABF0: {[ol.t Gradient[10 x 1 x *]] }
-000000780D33AFB0: {[ol.b Gradient[10 x 1]] }
-000000780D33C270: {[h1.b Gradient[200 x 1]] [h1.y Gradient[200 x 1 x *]] }
-000000780D33C9F0: {[ol.W Gradient[10 x 200]] [ol.z Gradient[10 x 1 x *]] }
-00000078767789E0: {[featScale Value[1 x 1]] }
-0000007876778A80: {[labels Value[10 x *]] }
-0000007876778B20: {[h1.W Value[200 x 784]] }
-0000007876778BC0: {[h1.b Value[200 x 1]] }
-000000787677A1A0: {[features Value[784 x *]] }
-
-05/13/2016 08:15:53: No PreCompute nodes found, skipping PreCompute step.
-
-05/13/2016 08:15:53: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-
-05/13/2016 08:15:53: Starting minibatch loop.
-05/13/2016 08:15:56: Epoch[ 1 of 3]-Minibatch[1-500, 26.67%]: ce = 1.29023352 * 16000; errs = 37.9813% * 16000; err = 0.37981250 * 16000; time = 3.1210s; samplesPerSecond = 5126.5
-05/13/2016 08:15:57: Epoch[ 1 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.50742346 * 16000; errs = 13.9% * 16000; err = 0.13900000 * 16000; time = 0.6202s; samplesPerSecond = 25796.5
-05/13/2016 08:15:57: Epoch[ 1 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.39415479 * 16000; errs = 11.0812% * 16000; err = 0.11081250 * 16000; time = 0.6195s; samplesPerSecond = 25828.0
-05/13/2016 08:15:58: Finished Epoch[ 1 of 3]: [Training] ce = 0.65521146 * 60000; errs = 18.8467% * 60000; err = 0.18846667 * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.003125; epochTime=4.86409s
-05/13/2016 08:15:58: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.1'
-
-05/13/2016 08:15:58: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-
-05/13/2016 08:15:58: Starting minibatch loop.
-05/13/2016 08:15:59: Epoch[ 2 of 3]-Minibatch[1-500, 26.67%]: ce = 0.33321408 * 16000; errs = 9.58125% * 16000; err = 0.09581250 * 16000; time = 0.6590s; samplesPerSecond = 24277.8
-05/13/2016 08:15:59: Epoch[ 2 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.31547781 * 16000; errs = 9.2875% * 16000; err = 0.09287500 * 16000; time = 0.6704s; samplesPerSecond = 23866.0
-05/13/2016 08:16:00: Epoch[ 2 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.31882251 * 16000; errs = 9.21875% * 16000; err = 0.09218750 * 16000; time = 0.6720s; samplesPerSecond = 23808.7
-05/13/2016 08:16:00: Finished Epoch[ 2 of 3]: [Training] ce = 0.31533239 * 60000; errs = 9.15833% * 60000; err = 0.09158333 * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.003125; epochTime=2.52448s
-05/13/2016 08:16:00: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.2'
-
-05/13/2016 08:16:00: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-
-05/13/2016 08:16:00: Starting minibatch loop.
-05/13/2016 08:16:01: Epoch[ 3 of 3]-Minibatch[1-500, 26.67%]: ce = 0.28751190 * 16000; errs = 8.39375% * 16000; err = 0.08393750 * 16000; time = 0.6195s; samplesPerSecond = 25825.2
-05/13/2016 08:16:02: Epoch[ 3 of 3]-Minibatch[501-1000, 53.33%]: ce = 0.27455951 * 16000; errs = 7.95% * 16000; err = 0.07950000 * 16000; time = 0.6193s; samplesPerSecond = 25834.3
-05/13/2016 08:16:02: Epoch[ 3 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.27693610 * 16000; errs = 7.9875% * 16000; err = 0.07987500 * 16000; time = 0.6192s; samplesPerSecond = 25839.8
-05/13/2016 08:16:03: Finished Epoch[ 3 of 3]: [Training] ce = 0.27493141 * 60000; errs = 7.98333% * 60000; err = 0.07983333 * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.003125; epochTime=2.34147s
-05/13/2016 08:16:03: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160513081543.861015\CNTKTextFormatReader\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden'
-05/13/2016 08:16:03: CNTKCommandTrainEnd: train
-
-05/13/2016 08:16:03: Action "train" complete.
+	{ h1.W : [200 x 784] (gradient)
+	  h1.z : [200 x 1 x *] }
+	{ ol.W : [10 x 200] (gradient)
+	  ol.z : [10 x 1 x *] (gradient) }
+	{ h1.z : [200 x 1 x *] (gradient)
+	  ol.t : [10 x 1 x *] }
+	{ h1.t : [200 x 1 x *] (gradient)
+	  h1.y : [200 x 1 x *] }
+	{ h1.b : [200 x 1] (gradient)
+	  h1.y : [200 x 1 x *] (gradient) }
 
 
-05/13/2016 08:16:03: ##############################################################################
-05/13/2016 08:16:03: #                                                                            #
-05/13/2016 08:16:03: # Action "test"                                                              #
-05/13/2016 08:16:03: #                                                                            #
-05/13/2016 08:16:03: ##############################################################################
+08/16/2016 03:00:47: Training 159010 parameters in 4 out of 4 parameter tensors and 10 nodes with gradient:
+
+08/16/2016 03:00:47: 	Node 'h1.W' (LearnableParameter operation) : [200 x 784]
+08/16/2016 03:00:47: 	Node 'h1.b' (LearnableParameter operation) : [200 x 1]
+08/16/2016 03:00:47: 	Node 'ol.W' (LearnableParameter operation) : [10 x 200]
+08/16/2016 03:00:47: 	Node 'ol.b' (LearnableParameter operation) : [10 x 1]
+
+08/16/2016 03:00:47: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+08/16/2016 03:00:47: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+BlockRandomizer::StartEpoch: epoch 0: frames [0..60000] (first sequence at sample 0), data subset 0 of 1
+
+08/16/2016 03:00:47: Starting minibatch loop.
+08/16/2016 03:00:50:  Epoch[ 1 of 3]-Minibatch[   1- 500, 26.67%]: ce = 1.29666760 * 16000; top5Errs = 9.300% * 16000; errs = 38.350% * 16000; time = 2.6226s; samplesPerSecond = 6100.9
+08/16/2016 03:00:51:  Epoch[ 1 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.50958875 * 16000; top5Errs = 1.100% * 16000; errs = 13.856% * 16000; time = 0.9727s; samplesPerSecond = 16448.3
+08/16/2016 03:00:52:  Epoch[ 1 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.38464209 * 16000; top5Errs = 0.831% * 16000; errs = 10.700% * 16000; time = 0.9697s; samplesPerSecond = 16500.2
+08/16/2016 03:00:53: Finished Epoch[ 1 of 3]: [Training] ce = 0.65508639 * 60000; top5Errs = 3.093% * 60000; errs = 18.835% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.003125; epochTime=5.31129s
+08/16/2016 03:00:53: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.1'
+
+08/16/2016 03:00:53: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+BlockRandomizer::StartEpoch: epoch 1: frames [60000..120000] (first sequence at sample 60000), data subset 0 of 1
+
+08/16/2016 03:00:53: Starting minibatch loop.
+08/16/2016 03:00:54:  Epoch[ 2 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.33479074 * 16000; top5Errs = 0.563% * 16000; errs = 9.781% * 16000; time = 0.9692s; samplesPerSecond = 16508.2
+08/16/2016 03:00:55:  Epoch[ 2 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.30564261 * 16000; top5Errs = 0.469% * 16000; errs = 8.906% * 16000; time = 0.9679s; samplesPerSecond = 16530.7
+08/16/2016 03:00:55:  Epoch[ 2 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.30993488 * 16000; top5Errs = 0.613% * 16000; errs = 9.063% * 16000; time = 0.9663s; samplesPerSecond = 16557.3
+08/16/2016 03:00:56: Finished Epoch[ 2 of 3]: [Training] ce = 0.31617907 * 60000; top5Errs = 0.563% * 60000; errs = 9.202% * 60000; totalSamplesSeen = 120000; learningRatePerSample = 0.003125; epochTime=3.64141s
+08/16/2016 03:00:56: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden.2'
+
+08/16/2016 03:00:56: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+BlockRandomizer::StartEpoch: epoch 2: frames [120000..180000] (first sequence at sample 120000), data subset 0 of 1
+
+08/16/2016 03:00:56: Starting minibatch loop.
+08/16/2016 03:00:57:  Epoch[ 3 of 3]-Minibatch[   1- 500, 26.67%]: ce = 0.29109534 * 16000; top5Errs = 0.531% * 16000; errs = 8.563% * 16000; time = 0.9705s; samplesPerSecond = 16486.0
+08/16/2016 03:00:58:  Epoch[ 3 of 3]-Minibatch[ 501-1000, 53.33%]: ce = 0.27885516 * 16000; top5Errs = 0.506% * 16000; errs = 8.194% * 16000; time = 0.9618s; samplesPerSecond = 16636.3
+08/16/2016 03:00:59:  Epoch[ 3 of 3]-Minibatch[1001-1500, 80.00%]: ce = 0.27411078 * 16000; top5Errs = 0.513% * 16000; errs = 7.775% * 16000; time = 0.9625s; samplesPerSecond = 16622.6
+08/16/2016 03:01:00: Finished Epoch[ 3 of 3]: [Training] ce = 0.27539870 * 60000; top5Errs = 0.478% * 60000; errs = 8.005% * 60000; totalSamplesSeen = 180000; learningRatePerSample = 0.003125; epochTime=3.6287s
+08/16/2016 03:01:00: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160816030038.674053\Examples\Image\MNIST_01_OneHidden@release_gpu/Models/01_OneHidden'
+08/16/2016 03:01:00: CNTKCommandTrainEnd: train
+
+08/16/2016 03:01:00: Action "train" complete.
+
+
+08/16/2016 03:01:00: ##############################################################################
+08/16/2016 03:01:00: #                                                                            #
+08/16/2016 03:01:00: # Action "test"                                                              #
+08/16/2016 03:01:00: #                                                                            #
+08/16/2016 03:01:00: ##############################################################################
 
 
 Post-processing network...
 
-4 roots:
+3 roots:
 	ce = CrossEntropyWithSoftmax()
-	err = ErrorPrediction()
-	errTop1 = ErrorPrediction()
-	ol.z = Plus()
+	errs = ErrorPrediction()
+	top5Errs = ErrorPrediction()
 
 Validating network. 17 nodes to process in pass 1.
 
@@ -408,9 +494,9 @@ Validating --> ol.t = Times (ol.W, h1.y) : [10 x 200], [200 x 1 x *1] -> [10 x 1
 Validating --> ol.b = LearnableParameter() :  -> [10 x 1]
 Validating --> ol.z = Plus (ol.t, ol.b) : [10 x 1 x *1], [10 x 1] -> [10 x 1 x *1]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
-Validating --> err = ErrorPrediction (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
-Validating --> unnamed81 = LearnableParameter() :  -> [1 x 1]
-Validating --> errTop1 = ErrorPrediction (labels, ol.z, unnamed81) : [10 x *1], [10 x 1 x *1], [1 x 1] -> [1]
+Validating --> errs = ErrorPrediction (labels, ol.z) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> unnamed89 = LearnableParameter() :  -> [1 x 1]
+Validating --> top5Errs = ErrorPrediction (labels, ol.z, unnamed89) : [10 x *1], [10 x 1 x *1], [1 x 1] -> [1]
 
 Validating network. 9 nodes to process in pass 2.
 
@@ -423,34 +509,17 @@ Validating network, final pass.
 
 Post-processing network complete.
 
-evalNodeNames are not specified, using all the default evalnodes and training criterion nodes.
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing Structure:
+Memory Sharing: Out of 17 matrices, 0 are shared as 0, and 17 are not shared.
 
-0000000000000000: {[ce Gradient[1]] [err Gradient[1]] [errTop1 Gradient[1]] [featScale Gradient[1 x 1]] [featScaled Gradient[784 x 1 x *1]] [features Gradient[784 x *1]] [h1.W Gradient[200 x 784]] [h1.b Gradient[200 x 1]] [h1.t Gradient[200 x 1 x *1]] [h1.y Gradient[200 x 1 x *1]] [h1.z Gradient[200 x 1 x *1]] [labels Gradient[10 x *1]] [ol.W Gradient[10 x 200]] [ol.b Gradient[10 x 1]] [ol.t Gradient[10 x 1 x *1]] [ol.z Gradient[10 x 1 x *1]] [unnamed81 Gradient[1 x 1]] }
-000000780D33B230: {[labels Value[10 x *1]] }
-000000780D33BA50: {[ol.b Value[10 x 1]] }
-000000780D33BD70: {[featScale Value[1 x 1]] }
-000000780D33BF50: {[h1.b Value[200 x 1]] }
-000000780D33C6D0: {[features Value[784 x *1]] }
-000000780D33C770: {[h1.W Value[200 x 784]] }
-000000787673E350: {[ol.z Value[10 x 1 x *1]] }
-000000787673E850: {[ol.t Value[10 x 1 x *1]] }
-00000078767789E0: {[ol.W Value[10 x 200]] }
-0000007876778A80: {[unnamed81 Value[1 x 1]] }
-0000007876779020: {[errTop1 Value[1]] }
-00000078767790C0: {[err Value[1]] }
-0000007876779160: {[ce Value[1]] }
-00000078767792A0: {[h1.t Value[200 x 1 x *1]] }
-00000078767793E0: {[h1.z Value[200 x 1 x *1]] }
-00000078767795C0: {[h1.y Value[200 x 1 x *1]] }
-00000078767797A0: {[featScaled Value[784 x 1 x *1]] }
 
-05/13/2016 08:16:11: Final Results: Minibatch[1-10]: errs = 7.460% * 10000; top5Errs = 0.440% * 10000; ce = 0.26425332 * 10000; perplexity = 1.30245809
+BlockRandomizer::StartEpoch: epoch 0: frames [0..10000] (first sequence at sample 0), data subset 0 of 1
+08/16/2016 03:01:00: Minibatch[1-10]: ce = 0.24924074 * 10000; errs = 7.140% * 10000; top5Errs = 0.420% * 10000
+08/16/2016 03:01:00: Final Results: Minibatch[1-10]: ce = 0.24924074 * 10000; perplexity = 1.28305088; errs = 7.140% * 10000; top5Errs = 0.420% * 10000
 
-05/13/2016 08:16:11: Action "test" complete.
+08/16/2016 03:01:00: Action "test" complete.
 
-05/13/2016 08:16:11: __COMPLETED__
+08/16/2016 03:01:00: __COMPLETED__

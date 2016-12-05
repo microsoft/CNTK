@@ -17,7 +17,7 @@ RANDOM_OUTPUT=0
 CODE_COVERAGE=no
 FLAVORS="debug:release"
 TARGETS="cpu:gpu"
-MATH_LIBRARY="acml"
+MATH_LIBRARY="mkl"
 TESTTARGETS="cpu:gpu"
 
 # parsing command line arguments:
@@ -76,9 +76,6 @@ case $key in
     ;;
     -m|--math-library)
     case ${2,,} in
-        acml)
-        MATH_LIBRARY_OPTION="--with-acml=$ACML_PATH"
-        ;;
         mkl)
         MATH_LIBRARY_OPTION="--with-mkl=$MKL_PATH"
         ;;
@@ -131,12 +128,6 @@ if [[ $OS == "Windows_NT" && $OSTYPE == "cygwin" ]]; then
     if [[ $VS120COMNTOOLS == "" ]]; then
         echo "============ Visual Studio 12.0 environment not properly setup or VS not installed ============"
         echo "============ Please find and run the appropriate vcvarsall.bat script ============"
-        exit 1
-    fi
-
-    if [[ $ACML_PATH == "" ]]; then
-        echo "============ ACML path not set  ============"
-        echo "============ ACML libraries are needed to successfully build CNTK ============"
         exit 1
     fi
 

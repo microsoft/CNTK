@@ -122,3 +122,4 @@ Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
 *.docx binary
 *.chunk binary
 *.pptx binary
+*.snk binary

@@ -61,11 +61,12 @@ namespace CNTK
                     LogicError("The gradient value for a Parameter cannot have an associated mask!");
             }
 
-            auto trainingLossArguments = m_trainingLossVar.Owner()->Arguments();
-            auto labelsVar = *(std::find_if(trainingLossArguments.begin(), trainingLossArguments.end(), [](const Variable& var) {
-                return var.IsInput();
-            }));
-            auto argumentValue = arguments.at(labelsVar);
+            auto trainingLossArgument = *(m_trainingLossVar.Owner()->Arguments().begin());
+
+            // Find the argument whose dynamic axes match the criterion operation's dynamic axes (i.e. label dynamic axes)
+            auto argumentValue = std::find_if(arguments.begin(), arguments.end(), [trainingLossArgument](const std::pair<Variable, ValuePtr>& currentPair) {
+                return (currentPair.first.DynamicAxes() == trainingLossArgument.DynamicAxes());
+            })->second;
             auto argumentData = argumentValue->Data();
             auto argumentDataShape = argumentData->Shape();
             auto mask = argumentValue->Mask();

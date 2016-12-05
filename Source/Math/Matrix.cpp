@@ -1081,7 +1081,7 @@ Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matr
     DISPATCH_MATRIX_ON_FLAG(&a, this,
         { m_CPUMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUMatrix, alpha); },
         { m_GPUMatrix->DoScatterColumnsOf(beta, *idx.m_GPUMatrix, *a.m_GPUMatrix, alpha); },
-        { NOT_IMPLEMENTED; },
+        { m_CPUSparseMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUSparseMatrix, alpha); },
         { NOT_IMPLEMENTED; });
 
     return *this;
