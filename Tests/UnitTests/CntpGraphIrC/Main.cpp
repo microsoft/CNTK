@@ -3,17 +3,10 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-#define _CRT_SECURE_NO_WARNINGS
-#include "CNTKLibrary.h"
+#include "GraphIrExporter.h"
 #include <functional>
 #include "LSTM/LstmGraphNode.h"
 
-#pragma warning(push, 0)
-#include <graphid.pb.h>
-#include <google/protobuf/util/json_util.h>
-#pragma warning(pop)
-
-#include "GraphIrExporter.h"
 
 #include <fstream>
 
@@ -23,28 +16,6 @@
 
 using namespace CNTK;
 using namespace std;
-
-extern FunctionPtr GraphIrToCntkGraph(graphIR::Graph* /*graphIrPtr*/, FunctionPtr /*modelFuncPtr*/);
-extern graphIR::Graph* CntkGraphToGraphIr(wstring filename, FunctionPtr evalFunc);
-
-extern void RetrieveInputBuffers(
-    FunctionPtr evalFunc,
-    unordered_map<wstring, vector<float>>& inputs);
-
-extern void ExecuteModel(
-    FunctionPtr evalFunc,
-    unordered_map<wstring, vector<float>>& inputs,
-    unordered_map<wstring, vector<float>>& outputs);
-
-extern void PrintDictionaryValue(
-    const std::wstring& name,
-    const DictionaryValue& value,
-    int indent);
-
-namespace GRAPHIR
-{
-    const google::protobuf::Message* Serialize(const FunctionPtr& modelFuncPtr);
-}
 
 void DumpAsJson(const google::protobuf::Message& message, const std::string& filename)
 {
@@ -75,9 +46,6 @@ int main()
 	auto device = DeviceDescriptor::CPUDevice();
 	string filename = "\\BrainWaveCntk\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn";
     wstring filenameW = wstring(filename.begin(), filename.end());
-
-//    CntkNetParser parser;
-//    BG_Graph *g = parser.Net2Bg(filenameW, stdout, nullptr, true);
 
 	// The model file will be trained and copied to the current runtime directory first.
 	auto modelFuncPtr = CNTK::Function::LoadModel(filenameW, device/*, LstmGraphNodeFactory*/);
