@@ -3,8 +3,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// EvalMultithreads.cpp : Sample application shows how to evaluate a model in multiple threading environment. 
-//
 #define _CRT_SECURE_NO_WARNINGS
 #include "CNTKLibrary.h"
 
@@ -38,5 +36,5 @@ extern void PrintDictionaryValue(
 namespace GRAPHIR
 {
     const google::protobuf::Message* Serialize(const CNTK::FunctionPtr& modelFuncPtr);
-    const CNTK::FunctionPtr Deserialize(google::protobuf::Message* message);
+    const CNTK::FunctionPtr Deserialize(const CNTK::FunctionPtr& modelFuncPtr, google::protobuf::Message* message);
 }

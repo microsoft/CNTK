@@ -24,6 +24,8 @@
 #include <google/protobuf/arena.h>
 #pragma warning(pop)
 
+#pragma warning(disable : 4100) // unreferenced formal parameter
+
 #define ToWstring(a) std::to_wstring(a)
 extern std::string EncodeBase64(const char *buf, size_t len);
 
@@ -62,7 +64,7 @@ namespace GRAPHIR
     class Serializer
     {
         friend const google::protobuf::Message* Serialize(const FunctionPtr& modelFuncPtr);
-        friend const FunctionPtr Deserialize(google::protobuf::Message* graph);
+        friend const FunctionPtr Deserialize(const FunctionPtr& modelFuncPtr, google::protobuf::Message* graph);
 
     private:
         static proto::Graph* CreateGraphProto(const Dictionary& src, std::unordered_map<std::wstring, NDShape> outputShapes, Arena* arena = nullptr);
@@ -196,7 +198,7 @@ namespace GRAPHIR
                         // ...append the dimensions of the shape to the ioArg constructed previously
                         for (auto n3 = 0; n3 < shape.Rank(); n3++)
                         {
-                            ioArg->add_shape(shape[n3]);
+                            ioArg->add_shape((unsigned int)shape[n3]);
                         }
 
                         // now check if the data is already part of the serialized stream
@@ -233,7 +235,7 @@ namespace GRAPHIR
                         // note: no need to add the data here since we are generating it in the node.
                         for (auto n5 = 0; n5 < shape.Rank(); n5++)
                         {
-                            ioArg2->add_shape(shape[n5]);
+                            ioArg2->add_shape((unsigned int)shape[n5]);
                         }
 
                         printf("  adding new output %s\n", iuip.c_str());
@@ -303,7 +305,7 @@ namespace GRAPHIR
 
                     for (auto n6 = 0; n6 < shape.Rank(); n6++)
                     {
-                        ioArg3->add_shape(shape[n6]);
+                        ioArg3->add_shape((unsigned int)shape[n6]);
                     }
 
                     printf("  DIREKT LINK adding new output %s for node %s\n", input.name().c_str(), node2->name().c_str());
@@ -432,7 +434,7 @@ namespace GRAPHIR
         return proto;
     }
 
-    const FunctionPtr Deserialize(google::protobuf::Message* graph)
+    const FunctionPtr Deserialize(const FunctionPtr& modelFuncPtr, google::protobuf::Message* graph)
     {
         UsingUTF8 locale;
         //proto::Dictionary proto;
