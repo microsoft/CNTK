@@ -62,7 +62,7 @@ namespace GRAPHIR
     class Serializer
     {
         friend const google::protobuf::Message* Serialize(const FunctionPtr& modelFuncPtr);
-        friend const Dictionary* Derialize(google::protobuf::Message&);
+        friend const FunctionPtr Deserialize(google::protobuf::Message* graph);
 
     private:
         static proto::Graph* CreateGraphProto(const Dictionary& src, std::unordered_map<std::wstring, NDShape> outputShapes, Arena* arena = nullptr);
@@ -125,9 +125,6 @@ namespace GRAPHIR
             });
         }
     };
-
-
-
 
     proto::InitArg* CreateInitArgProto(const NDArrayView& arrayview)
     {
@@ -435,7 +432,7 @@ namespace GRAPHIR
         return proto;
     }
 
-    const Dictionary* Derialize(google::protobuf::Message& graph)
+    const FunctionPtr Deserialize(google::protobuf::Message* graph)
     {
         UsingUTF8 locale;
         //proto::Dictionary proto;
