@@ -74,11 +74,7 @@ namespace CNTK
         : m_epochEndReached(false),
           m_prevMinibatchSize(0),
           m_epochSize(MinibatchSource::InfinitelyRepeat),
-<<<<<<< 2b43ae6d3761ab3e2ea8e969ab622ac3389cccec
           m_randomizedWindow(MinibatchSource::DefaultRandomizationWindow),
-=======
-		  m_randomizedWindow(MinibatchSource::DefaultRandomizationWindow),
->>>>>>> CHanges
           m_truncationLength(0),
           m_numWorkers(1),
           m_workerRank(0),
@@ -129,7 +125,7 @@ namespace CNTK
             deserializerConfigDict[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
         }
 
-		ConfigParameters config;
+        ConfigParameters config;
         std::wstringstream s;
         for (const auto& keyValuePair : *(augmentedConfiguration.m_dictionaryData))
             AddConfigString(s, keyValuePair.first, keyValuePair.second, 0);
