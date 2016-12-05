@@ -16,8 +16,8 @@ from cntk.models import LayerStack, Sequential
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 
 # model hyperparameters
-hidden_dim = 256
-num_layers = 2
+hidden_dim = 128
+num_layers = 1
 minibatch_size = 100 # also how much time we unroll the RNN for
 
 # Get data
