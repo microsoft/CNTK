@@ -5,12 +5,12 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
-//#include "Utils.h"
 #include <istream>
 #include <ostream>
 #include <string>
 #include <locale>         // std::wstring_convert
-#include <codecvt>        // std::codecvt_utf8#include <vector>
+#include <codecvt>        // std::codecvt_utf8
+#include <vector>
 #include <limits>
 
 #ifdef _MSC_VER
@@ -64,7 +64,7 @@ namespace GRAPHIR
     class Serializer
     {
         friend const google::protobuf::Message* Serialize(const FunctionPtr& modelFuncPtr);
-        friend const FunctionPtr Deserialize(const FunctionPtr& modelFuncPtr, google::protobuf::Message* graph);
+        friend const FunctionPtr Deserialize(const FunctionPtr& modelFuncPtr, proto::Graph* graph);
 
     private:
         static proto::Graph* CreateGraphProto(const Dictionary& src, std::unordered_map<std::wstring, NDShape> outputShapes, Arena* arena = nullptr);
@@ -384,7 +384,6 @@ namespace GRAPHIR
 #endif
     }
 
-
     static void SetUTF8Locale()
     {
 #ifndef _MSC_VER
@@ -407,18 +406,7 @@ namespace GRAPHIR
         UsingUTF8() { SetUTF8Locale(); }
         ~UsingUTF8() { UnsetUTF8Locale(); }
     };
-   
-    std::istream& operator>>(std::istream& stream, Message& msg)
-    {
-        //io::IstreamInputStream isistream(&stream);
-        //io::CodedInputStream input(&isistream);
-        //if (!ParseMessage(input, msg))
-        //{
-        //     RuntimeError("Failed to parse protobuf %s from the input stream.",
-        //                  msg.GetTypeName().c_str());
-        //}
-        return stream;
-    }
+  
 
     const google::protobuf::Message* Serialize(const FunctionPtr& modelFuncPtr)
     {
@@ -434,9 +422,12 @@ namespace GRAPHIR
         return proto;
     }
 
-    const FunctionPtr Deserialize(const FunctionPtr& modelFuncPtr, google::protobuf::Message* graph)
+    const FunctionPtr Deserialize(const FunctionPtr& modelFuncPtr, proto::Graph* graph)
     {
         UsingUTF8 locale;
+
+        const auto& templateGraph = modelFuncPtr->Serialize();
+
         //proto::Dictionary proto;
         //stream >> proto;
         //dictionary.m_dictionaryData->reserve(proto.data_size());
