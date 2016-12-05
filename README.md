@@ -53,7 +53,7 @@ Highlights of this Release:
 * CNTK can now be used as a library with [brand new C++ and Python APIs](https://github.com/microsoft/cntk/wiki/CNTK-Library-API)
 * New Python Examples and Tutorials
 * Support of Protocol Buffers serialization
-* Support of Fast R-CNN algorithm
+M* Support of Fast R-CNN algorithm
 * New automated installation procedures
 * Improvements in CNTK Evaluation library including support of CNTK APIs
 
@@ -62,8 +62,8 @@ Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
-# What is CNTK
-CNTK (https://www.cntk.ai/), the Computational Network Toolkit by Microsoft Research, is a unified deep-learning toolkit that describes neural networks as a series of computational steps via a directed graph. In this directed graph, leaf nodes represent input values or network parameters, while other nodes represent matrix operations upon their inputs. CNTK allows to easily realize and combine popular model types such as feed-forward DNNs, convolutional nets (CNNs), and recurrent networks (RNNs/LSTMs). It implements stochastic gradient descent (SGD, error backpropagation) learning with automatic differentiation and parallelization across multiple GPUs and servers. CNTK has been available under an open-source license since April 2015. It is our hope that the community will take advantage of CNTK to share ideas more quickly through the exchange of open source working code.
+# What is The Microsoft Cognitive Toolkit
+The Microsoft Cognitive Toolkit (https://www.cntk.ai/), is a unified deep-learning toolkit that describes neural networks as a series of computational steps via a directed graph. In this directed graph, leaf nodes represent input values or network parameters, while other nodes represent matrix operations upon their inputs. CNTK allows to easily realize and combine popular model types such as feed-forward DNNs, convolutional nets (CNNs), and recurrent networks (RNNs/LSTMs). It implements stochastic gradient descent (SGD, error backpropagation) learning with automatic differentiation and parallelization across multiple GPUs and servers. CNTK has been available under an open-source license since April 2015. It is our hope that the community will take advantage of CNTK to share ideas more quickly through the exchange of open source working code.
 
 Wiki: Go to the [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) for all information on CNTK including [setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine ), [examples](https://github.com/Microsoft/CNTK/wiki/Examples ), etc.
 
