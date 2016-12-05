@@ -1425,8 +1425,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Python", "Python", "{CB4566
 		Examples\Video\GettingStarted\Python\Conv3D_UCF11.py = Examples\Video\GettingStarted\Python\Conv3D_UCF11.py
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BrainSliceClientLib", "Tests\UnitTests\BrainSliceClientLib\BrainSliceClientLib.vcxproj", "{83039914-7D1A-4874-8C7E-422ADD1B1C91}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CntpGraphIrC", "Tests\UnitTests\CntpGraphIrC\CntpGraphIrC.vcxproj", "{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6F}"
 EndProject
 Global
@@ -2057,26 +2055,6 @@ Global
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release|x64.ActiveCfg = Release|x64
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release|x64.Build.0 = Release|x64
 		{5D29C76D-648A-456F-920D-48230F2FB3C8}.Release|x86.ActiveCfg = Release|x64
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Debug_CpuOnly|x64.ActiveCfg = Debug|x64
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Debug_CpuOnly|x64.Build.0 = Debug|x64
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Debug_CpuOnly|x86.ActiveCfg = Debug|Win32
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Debug_CpuOnly|x86.Build.0 = Debug|Win32
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Debug|x64.ActiveCfg = Debug|x64
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Debug|x64.Build.0 = Debug|x64
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Debug|x86.ActiveCfg = Debug|Win32
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Debug|x86.Build.0 = Debug|Win32
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release_CpuOnly|x64.ActiveCfg = Release|x64
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release_CpuOnly|x64.Build.0 = Release|x64
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release_CpuOnly|x86.ActiveCfg = Release|Win32
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release_CpuOnly|x86.Build.0 = Release|Win32
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release_NoOpt|x64.ActiveCfg = Release|x64
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release_NoOpt|x64.Build.0 = Release|x64
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release_NoOpt|x86.ActiveCfg = Release|Win32
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release_NoOpt|x86.Build.0 = Release|Win32
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release|x64.ActiveCfg = Release|x64
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release|x64.Build.0 = Release|x64
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release|x86.ActiveCfg = Release|Win32
-		{83039914-7D1A-4874-8C7E-422ADD1B1C91}.Release|x86.Build.0 = Release|Win32
 		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6F}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
 		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6F}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
 		{F4CC3AB2-0DB2-4281-929A-2E68E30F0F6F}.Debug_CpuOnly|x86.ActiveCfg = Debug_CpuOnly|x64

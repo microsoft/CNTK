@@ -40,4 +40,3 @@ namespace GRAPHIR
     const google::protobuf::Message* Serialize(const CNTK::FunctionPtr& modelFuncPtr);
     const CNTK::FunctionPtr Deserialize(google::protobuf::Message* message);
 }
-

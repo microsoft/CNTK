@@ -144,7 +144,6 @@
     <ClCompile Include="GraphIr\libb64\cdecode.c" />
     <ClCompile Include="GraphIr\libb64\cencode.c" />
     <ClCompile Include="GraphIr\Serialization.cpp" />
-    <ClCompile Include="LSTM\LSTMClientImpl.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -154,14 +153,6 @@
     <ClInclude Include="GraphIr\libb64\b64\cencode.h" />
     <ClInclude Include="GraphIr\libb64\b64\decode.h" />
     <ClInclude Include="GraphIr\libb64\b64\encode.h" />
-    <ClInclude Include="LSTM\FixedPoint.hpp" />
-    <ClInclude Include="LSTM\LSTMClient.h" />
-    <ClInclude Include="LSTM\LstmGraphNode.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\BrainSliceClientLib\BrainSliceClientLib.vcxproj">
-      <Project>{83039914-7d1a-4874-8c7e-422add1b1c91}</Project>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="GraphIr\graphid.proto" />
