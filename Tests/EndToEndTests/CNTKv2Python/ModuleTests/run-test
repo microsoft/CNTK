@@ -2,22 +2,6 @@
 
 . $TEST_ROOT_DIR/run-test-common
 
-# Temporary workaround to force the default device to be always GPU 0 when
-# running the python unit tests since data placement is currently broken which
-# causes some of the test data to end on the default device instead of the
-# explicitly selected GPU device 0 which results in the tests to fail
-# This whould be removed when the test bugs have been addressed
-if [ "$TEST_DEVICE" == "gpu" ]; then
-  if [ -z "$CUDA_VISIBLE_DEVICES" ]; then
-    export CUDA_VISIBLE_DEVICES=0
-  else
-    IFS=','
-    visibleDevicesArray=($CUDA_VISIBLE_DEVICES)
-    unset IFS
-    export CUDA_VISIBLE_DEVICES=${visibleDevicesArray[0]}
-  fi
-fi
-
 python -c "import sys; print('Python: %s'%sys.version)"
 python -c "import numpy; print('NumPy: %s'%numpy.version.full_version)"
 python -c "import scipy; print('SciPy: %s'%scipy.version.full_version)"

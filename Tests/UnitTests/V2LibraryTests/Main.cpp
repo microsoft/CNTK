@@ -10,6 +10,7 @@
 using namespace CNTK;
 
 void NDArrayViewTests();
+void ValueTests();
 void TensorTests();
 void FeedForwardTests();
 void RecurrentFunctionTests();
@@ -50,6 +51,7 @@ int main()
     DeviceSelectionTests();
 
     NDArrayViewTests();
+    ValueTests();
     TensorTests();
     FunctionTests();
 
