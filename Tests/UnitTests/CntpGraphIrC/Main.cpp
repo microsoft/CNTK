@@ -41,7 +41,7 @@ extern void PrintDictionaryValue(
 
 namespace GRAPHIR
 {
-    const google::protobuf::Message* Serialize(const Dictionary& dictionary);
+    const google::protobuf::Message* Serialize(const FunctionPtr& modelFuncPtr);
 }
 
 void DumpAsJson(const google::protobuf::Message& message, const std::string& filename)
@@ -68,9 +68,7 @@ int main()
 	// The model file will be trained and copied to the current runtime directory first.
 	auto modelFuncPtr = CNTK::Function::LoadModel(filenameW, device/*, LstmGraphNodeFactory*/);
 
-    auto serializedFunc = modelFuncPtr->Serialize();
-
-    auto message = GRAPHIR::Serialize(serializedFunc);
+    auto message = GRAPHIR::Serialize(modelFuncPtr);
     DumpAsJson(*message, filename + string(".serialized.pb.json"));
 
     PrintDictionaryValue(L"ROOT", serializedFunc, 0);

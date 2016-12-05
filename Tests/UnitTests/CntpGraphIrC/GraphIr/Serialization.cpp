@@ -59,13 +59,48 @@ namespace GRAPHIR
 #endif
     }
 
+    template <typename FunctionType>
+    void Traverse(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor)
+    {
+        visitedFunctions.insert(rootFunction);
+        functor(rootFunction);
+
+        std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
+        for (const auto& rootInput : rootFunctionInputs)
+        {
+            if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+            {
+                const auto& function = rootInput.Owner();
+                Traverse(function, visitedFunctions, functor);
+            }
+        }
+    }
+
+    void CollectOutputShapes(FunctionPtr evalFunc, std::unordered_map<std::wstring, NDShape> & outputShapes)
+    {
+        std::unordered_set<FunctionPtr> functions;
+        Traverse(evalFunc->RootFunction(), functions,
+            [&outputShapes](const FunctionPtr& f)
+        {
+            fprintf(stderr, "now at %S opcode %S\n", f->Uid().c_str(), f->OpName().c_str());
+
+            auto index = 0;
+            for (auto output : f->Outputs())
+            {
+                auto outputUid = f->Uid() + L"_Output_" + std::to_wstring(index++);
+                auto shape = output.Shape();
+            }
+        });
+    }
+
+
     class Serializer
     {
-        friend const google::protobuf::Message* Serialize(const Dictionary&);
+        friend const google::protobuf::Message* Serialize(const FunctionPtr& modelFuncPtr);
         friend const Dictionary* Derialize(const proto::Graph&);
 
     private:
-        static proto::Graph* CreateGraphProto(const Dictionary& src, Arena* arena = nullptr);
+        static proto::Graph* CreateGraphProto(const Dictionary& src, std::unordered_map<std::wstring, NDShape> outputShapes, Arena* arena = nullptr);
         static proto::Node* CreateNodeProto(const Dictionary& src, Arena* arena = nullptr);
         static proto::IOArg* CreateIOArgProto(const std::wstring& src, Arena* arena);
 
@@ -112,7 +147,7 @@ namespace GRAPHIR
         return dst;
     }
 
-    /*static*/ proto::Graph* Serializer::CreateGraphProto(const Dictionary& src, Arena* arena)
+    /*static*/ proto::Graph* Serializer::CreateGraphProto(const Dictionary& src, std::unordered_map<std::wstring, NDShape> outputShapes, Arena* arena)
     {
         proto::Graph* dst = /*(arena != nullptr) ?
             Arena::CreateMessage<proto::Graph>(arena) :*/ new proto::Graph();
@@ -147,10 +182,6 @@ namespace GRAPHIR
 
             // print name of variable we're going to connect
             printf("variables : %s, name %S\n", iuip.c_str(), value[L"name"].Value<std::wstring>().c_str());
-            if (iuip.substr(0, 12) == "PastValue136")
-            {
-                printf("\n");
-            }
 
             // ...find any node referencing the variable
             for (auto n = 0; n < dst->nodes_size(); n++)
@@ -201,15 +232,15 @@ namespace GRAPHIR
                     {
                         auto ioArg2 = CreateIOArgProto(value[L"uid"].Value<std::wstring>(), arena);
 
-                        printf("  adding new output %s\n", iuip.c_str());
-                        node->mutable_outputs()->AddAllocated(ioArg2);
-
                         // ...append the dimensions of the shape to the ioArg constructed previously
                         // note: no need to add the data here since we are generating it in the node.
                         for (auto n5 = 0; n5 < shape.Rank(); n5++)
                         {
                             ioArg2->add_shape(shape[n5]);
                         }
+
+                        printf("  adding new output %s\n", iuip.c_str());
+                        node->mutable_outputs()->AddAllocated(ioArg2);
                     }
                 }
             }
@@ -219,7 +250,6 @@ namespace GRAPHIR
         // we provide output references for data shared between two nodes that
         // are not covered by a Variable
         // iterating over nodes
-        auto pfunctions = src[L"primitive_functions"].Value<std::vector<DictionaryValue>>();
         for (auto n = 0; n < dst->nodes_size(); n++)
         {
             auto node = dst->mutable_nodes(n);
@@ -227,17 +257,60 @@ namespace GRAPHIR
             // for every input
             for (auto n1 = 0; n1 < node->inputs_size(); n1++)
             {
-                auto input = node->inputs(n1);
-                auto postfix = input.name().find("_Output_", 1);
+                const auto& input = node->inputs(n1);
+                const auto& postfix = input.name().find("_Output_", 0);
 
+                // if not ending on output_, ignore it.
                 if (postfix == string::npos)
                 {
                     continue;
                 }
 
+                graphIR::Node *node2 = nullptr;
+                auto node2name = input.name().substr(0, postfix);
                 for (auto n2 = 0; n2 < dst->nodes_size(); n2++)
                 {
-                    auto node2 = dst->mutable_nodes(n2);
+                    auto node3 = dst->mutable_nodes(n2);
+                    if (node3->name() == node2name)
+                    {
+                        node2 = node3;
+                        break;
+                    }
+                }
+
+                // there has to be an owner of an output buffer
+                assert(node2 != nullptr);
+
+                // now check if the owner knows that he is the owner
+                auto hasOutput = false;
+                for (auto n3 = 0; !hasOutput &&  (n3 < node2->outputs_size()); n3++)
+                {
+                    const auto& output = node2->outputs(n3);
+                    hasOutput |= output.name() == input.name();
+                }
+
+                // owner does not know about connection, so
+                // lets add it here.
+                if (!hasOutput)
+                {
+                    auto ioArg3 = CreateIOArgProto(ToWString(input.name()), arena);
+
+                    // note: for these direct links between two nodes
+                    //       we don't have the shape data in the static description
+                    //       and thus assume the shape is not yet set.
+                    assert(input.shape().size() == 0);
+
+                    // ...append the dimensions of the shape to the ioArg constructed previously
+                    // note: no need to add the data here since we are generating it in the node.
+                    const auto& shape = outputShapes[ToWString(input.name())];
+
+                    for (auto n6 = 0; n6 < shape.Rank(); n6++)
+                    {
+                        ioArg3->add_shape(shape[n6]);
+                    }
+
+                    printf("  DIREKT LINK adding new output %s for node %s\n", input.name().c_str(), node2->name().c_str());
+                    node2->mutable_outputs()->AddAllocated(ioArg3);
                 }
             }
         }
@@ -368,11 +441,17 @@ namespace GRAPHIR
         return stream;
     }
 
-    const google::protobuf::Message* Serialize(const Dictionary& dictionary)
+    const google::protobuf::Message* Serialize(const FunctionPtr& modelFuncPtr)
     {
         UsingUTF8 locale;
         Arena arena;
-        proto::Graph* proto(Serializer::CreateGraphProto(dictionary, &arena));
+
+        auto dictionary = modelFuncPtr->Serialize();
+
+        std::unordered_map<std::wstring, NDShape> outputShapes;
+        CollectOutputShapes(modelFuncPtr, outputShapes);
+
+        proto::Graph* proto(Serializer::CreateGraphProto(dictionary, outputShapes, &arena));
         return proto;
     }
 
