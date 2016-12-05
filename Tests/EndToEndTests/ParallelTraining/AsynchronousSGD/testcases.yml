@@ -18,16 +18,17 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
-      - CE = {{float,tolerance=1}}
-      - Err = {{float,tolerance=1}}
+      - CE = {{float,tolerance=2}}
+      - Err = {{float,tolerance=2}}
 
+  # Due to the unstableness of ASGD at early stage, we should enlarge the tolerance.
   Per-minibatch training results must match for each MPI Rank:
     patterns:
       - ^MPI Rank {{integer}}
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
       - " * {{integer}}; "
-      - CE = {{float,tolerance=1}}
-      - Err = {{float,tolerance=1}}
+      - CE = {{float,tolerance=2}}
+      - Err = {{float,tolerance=2}}
 
   DataParallelASGD training parameters must match for each MPI Rank:
     patterns:
