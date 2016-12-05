@@ -498,28 +498,6 @@ class CTFDeserializer(Deserializer):
         self.input[node] = dict(dim=dim, format=format, alias=alias)
 
 
-# TODO: This should not exist; use MinibatchSource(CTFDeserializer(...))
-@typemap
-def text_format_minibatch_source(path, stream_configs, epoch_size=INFINITELY_REPEAT, randomize=True, distributed_after=INFINITE_SAMPLES):
-    '''
-    Creates a minibatch source from a CNTKTextFormatReader file.
-
-    Args:
-        path (file): filename of the data file
-        stream_configs (`list` of :class:`StreamConfiguration` instances): list
-         of stream configurations, each of which describes one stream in the
-         file
-        epoch_size (int, optional): size of an epoch. In case of 0 the size
-         of the training set will be taken. Default is max of 64bit.
-        randomize (bool, optional): whether to randomize the contents of data file.
-        distributed_after (int, optional): sample count after which minibatch source becomes distributed
-
-    Returns:
-        :class:`MinibatchSource`
-    '''
-    return cntk_py.text_format_minibatch_source(path, stream_configs, epoch_size, randomize, distributed_after)
-
-
 # TODO: this should be a private class; use StreamDef instead
 class StreamConfiguration(cntk_py.StreamConfiguration):
     '''
