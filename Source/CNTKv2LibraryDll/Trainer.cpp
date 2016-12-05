@@ -309,11 +309,11 @@ namespace CNTK
         return modelFilePath + checkpointExt;
     }
 
-    void Trainer::SaveCheckpoint(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
+    void Trainer::SaveCheckpoint(const std::wstring& modelFilePath)
     {
         // TODO: Need to pass currect state of the minibatch source here.
         if (!m_distributedTrainer)
-            return Save(modelFilePath, usinglegacyModelFormat, Dictionary());
+            return Save(modelFilePath, Dictionary());
 
         assert(m_distributedTrainer != nullptr);
 
@@ -321,14 +321,14 @@ namespace CNTK
         // CreateCheckpoint call synchronizes all workers before the perform the checkpoint.
         Dictionary state = m_distributedTrainer->CreateCheckpoint(*this, Dictionary());
         if (m_distributedTrainer->GetCommunicator()->CurrentWorker().IsMain())
-            Save(modelFilePath, usinglegacyModelFormat, state);
+            Save(modelFilePath, state);
 
         // all workers need to sync up after saving model to avoid read-after-write hazard
         // i.e. one worker is in the middle of write while another tries to read
         m_distributedTrainer->GetCommunicator()->Barrier();
     }
 
-    void Trainer::Save(const std::wstring& modelFilePath, bool usinglegacyModelFormat, const Dictionary& distributedLearnerState)
+    void Trainer::Save(const std::wstring& modelFilePath, const Dictionary& distributedLearnerState)
     {
         vector<DictionaryValue> learnerStates;
         for (const auto& learner : m_parameterLearners)
@@ -341,7 +341,7 @@ namespace CNTK
         state[distributedLearnerPropertyName] = distributedLearnerState;
         state[totalSeenSamplesPropertyName] = m_totalSamplesSeen;
 
-        m_combinedTrainingFunction->SaveModel(modelFilePath, usinglegacyModelFormat);
+        m_combinedTrainingFunction->SaveModel(modelFilePath);
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
         auto ckpStream = GetFstream(trainerStateCheckpointFilePath, false);
         *ckpStream << state;
@@ -351,7 +351,7 @@ namespace CNTK
     void Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
     {
         // Restore the model's parameters
-         m_combinedTrainingFunction->RestoreModel(modelFilePath);
+        m_combinedTrainingFunction->RestoreModel(modelFilePath);
 
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
         auto ckpStream = GetFstream(trainerStateCheckpointFilePath, true);

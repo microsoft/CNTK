@@ -175,19 +175,12 @@ namespace CNTK
         }
     }
 
-    void Function::SaveModel(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
+    void Function::SaveModel(const std::wstring& modelFilePath)
     {
-        if (usinglegacyModelFormat)
-        {
-            Internal::SaveAsLegacyModel(shared_from_this(), modelFilePath);
-        }
-        else
-        {
-            Dictionary model = Serialize();
-            auto stream = GetFstream(modelFilePath, false);
-            *stream << model;
-            stream->flush();
-        }
+        Dictionary model = Serialize();
+        auto stream = GetFstream(modelFilePath, false);
+        *stream << model;
+        stream->flush();
     }
 
     /*static*/ FunctionPtr Function::LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice)

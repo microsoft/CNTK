@@ -12,7 +12,7 @@ import numpy as np
 from cntk.utils import *
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITE_SAMPLES
-from cntk import Trainer, persist, cntk_py, distributed
+from cntk import Trainer, cntk_py, distributed
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from _cntk_py import set_computation_network_trace_level
 
@@ -119,7 +119,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs, dist
         progress_printer.epoch_summary(with_metric=True)
         # save model only in worker0, otherwise there will be file write conflicts for multi GPU on the same machine
         if distributed_trainer.communicator().current_worker().global_rank == 0:
-            persist.save_model(z, os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
+            z.save_model(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
     
     # Evaluation parameters
     epoch_size     = 10000

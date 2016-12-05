@@ -385,6 +385,11 @@ namespace CNTK
 
     std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
     {
+        if (!readOnly)
+        {
+            msra::files::make_intermediate_dirs(filePath.c_str());
+        }
+
         std::shared_ptr<std::fstream> stream;
         std::ios_base::openmode mode = std::ios_base::binary | (readOnly ? std::ios_base::in : std::ios_base::out);
 #ifdef _MSC_VER
@@ -402,6 +407,11 @@ namespace CNTK
 
     int GetFileDescriptor(const std::wstring& filePath, bool readOnly)
     {
+        if (!readOnly)
+        {
+            msra::files::make_intermediate_dirs(filePath.c_str());
+        }
+
         auto mode = (readOnly ? O_RDONLY : ( O_CREAT | O_WRONLY));
         int fd;
 #ifdef _MSC_VER
