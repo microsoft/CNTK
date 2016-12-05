@@ -187,6 +187,8 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
             except AttributeError:
                 pass
 
+        visited.add(node)
+
     if visitor(node):
         accum.append(node)
 
