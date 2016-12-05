@@ -50,7 +50,7 @@
 
   <PropertyGroup>
 	<MathLibrary>MKL</MathLibrary>
-	<CNTKCustomMKLVersion>2</CNTKCustomMKLVersion>
+	<CNTKCustomMKLVersion>3</CNTKCustomMKLVersion>
 	<CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
 	<MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>
 	<MathDefine>USE_MKL</MathDefine>
