@@ -20,7 +20,7 @@ Have fun!
 
 Using the tiny-Shakespeare data (included) with a 2-layer LSTM and hidden-dim of 256:
 
-'''
+```
 KING up:
 low to it; for he's mistress that I might see,
 I spurn them in good words.
@@ -38,11 +38,11 @@ As with this carf's--God woo, to this! what tends?
 Till this unlewn bushes are but fourteen,
 Or sitter on our pyn; and on my better
 A drum and fitness of my bearing
-'''
+```
 
 Using the 20-newsgroup data with a 2-layer LSTM and hidden-dim of 256:
 
-'''
+```
 Newsgroups: ut.whuhroel
 Date: 20 Apr 93 15:03:08 GMT
 Lines: 19
@@ -62,4 +62,4 @@ Reply-To: jjlu@llo@minta.UU.NOT
 >>Adutions a road-Tell 9:20 AX   10516 PHKRS
 
 >BA
-'''
+```
