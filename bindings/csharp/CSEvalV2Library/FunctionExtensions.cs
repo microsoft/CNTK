@@ -15,7 +15,7 @@ namespace CNTK
             var argMap = new UnorderedMapVariableValuePtr();
             foreach (var p in arguments)
             {
-                var variable = func.Arguments().Where(v => string.Equals(v.Name(), p.Key)).FirstOrDefault();
+                var variable = func.Arguments.Where(v => string.Equals(v.Name, p.Key)).FirstOrDefault();
                 if (variable == null)
                 {
                     throw new KeyNotFoundException("No input variable '" + p.Key + "' found.");
@@ -26,7 +26,7 @@ namespace CNTK
             var outMap = new UnorderedMapVariableValuePtr();
             foreach (var p in outputs)
             {
-                var variable = func.Outputs().Where(v => string.Equals(v.Name(), p.Key)).FirstOrDefault();
+                var variable = func.Outputs.Where(v => string.Equals(v.Name, p.Key)).FirstOrDefault();
                 if (variable == null)
                 {
                     throw new KeyNotFoundException("No output variable '" + p.Key + "' found.");
@@ -38,7 +38,7 @@ namespace CNTK
 
             foreach (var p in outMap)
             {
-                outputs[p.Key.Name()] = p.Value;
+                outputs[p.Key.Name] = p.Value;
             }
         }
     }

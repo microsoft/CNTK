@@ -77,7 +77,7 @@ namespace CNTK
             var argMap = new UnorderedMapVariableValuePtr();
             foreach (var p in arguments)
             {
-                var variable = rootFunction.Arguments().Where(v => string.Equals(v.Name(), p.Key)).FirstOrDefault();
+                var variable = rootFunction.Arguments.Where(v => string.Equals(v.Name, p.Key)).FirstOrDefault();
                 if (variable == null)
                 {
                     throw new KeyNotFoundException("No input variable '" + p.Key + "' found.");
@@ -88,7 +88,7 @@ namespace CNTK
             var outMap = new UnorderedMapVariableValuePtr();
             foreach (var p in outputs)
             {
-                var variable = rootFunction.Outputs().Where(v => string.Equals(v.Name(), p.Key)).FirstOrDefault();
+                var variable = rootFunction.Outputs.Where(v => string.Equals(v.Name, p.Key)).FirstOrDefault();
                 if (variable == null)
                 {
                     throw new KeyNotFoundException("No output variable '" + p.Key + "' found.");
@@ -100,7 +100,7 @@ namespace CNTK
 
             foreach (var p in outMap)
             {
-                outputs[p.Key.Name()] = p.Value;
+                outputs[p.Key.Name] = p.Value;
             }
         }
 
@@ -111,7 +111,7 @@ namespace CNTK
         public Value CreateValue<T>(string varName, List<List<T>> sequences, DeviceDescriptor computeDevice)
         {
             var variable = getVariableByName(varName);
-            var dim = variable.Shape().TotalSize();
+            var dim = variable.Shape.TotalSize;
 
             if (typeof(T).Equals(typeof(float)))
             {
@@ -125,7 +125,7 @@ namespace CNTK
                     var samples = new FloatVector(seq);
                     inputSeqVector.Add(samples);
                 }
-                var inputValue = Value.CreateDenseFloat(variable.Shape(), inputSeqVector, computeDevice);
+                var inputValue = Value.CreateDenseFloat(variable.Shape, inputSeqVector, computeDevice);
                 return inputValue;
             }
             else if (typeof(T).Equals(typeof(double)))
@@ -140,7 +140,7 @@ namespace CNTK
                     var samples = new DoubleVector(seq);
                     inputSeqVector.Add(samples);
                 }
-                var inputValue = Value.CreateDenseDouble(variable.Shape(), inputSeqVector, computeDevice);
+                var inputValue = Value.CreateDenseDouble(variable.Shape, inputSeqVector, computeDevice);
                 return inputValue;
             }
             else
@@ -171,7 +171,7 @@ namespace CNTK
         public void CopyValueTo<T>(string varName, Value value, List<List<T>> sequences)
         {
             // Todo: deal with GPUDevice.
-            if (value.Device() != DeviceDescriptor.CPUDevice())
+            if (value.Device() != DeviceDescriptor.CPUDevice)
             {
                 throw new InvalidOperationException("Currently only CPU device is supported.");
             }
@@ -193,11 +193,11 @@ namespace CNTK
             var outputNDArrayView = value.Data();
             var outputShape = outputNDArrayView.Shape();
 
-            var varRank = variable.Shape().Rank();
-            var valueRank = outputNDArrayView.Shape().Rank();
+            var varRank = variable.Shape.Rank;
+            var valueRank = outputNDArrayView.Shape().Rank;
 
             Debug.Assert(varRank + 2 == valueRank);
-            var numOfElementsInSample = variable.Shape().TotalSize();
+            var numOfElementsInSample = variable.Shape.TotalSize;
             var numOfSamplesInSequence = outputShape.GetDimensionSize(varRank);
             var numOfSequences = outputShape.GetDimensionSize(varRank+1);
 
@@ -207,16 +207,16 @@ namespace CNTK
             // Todo: directly access the data in output buffer?
             // Todo: need to map DataBuffer() to C#
             NDArrayView cpuOutputNDArrayView;
-            uint numOfOutputData = outputNDArrayView.Shape().TotalSize();
+            uint numOfOutputData = outputNDArrayView.Shape().TotalSize;
             Debug.Assert(numOfElementsInSample * numOfSamplesInSequence * numOfSequences == numOfOutputData);
             T[] outputData = new T[numOfOutputData];
             if (value.GetDataType() == DataType.Float)
             {
-                cpuOutputNDArrayView = new NDArrayView(outputNDArrayView.Shape(), outputData as float[], numOfOutputData, DeviceDescriptor.CPUDevice());
+                cpuOutputNDArrayView = new NDArrayView(outputNDArrayView.Shape(), outputData as float[], numOfOutputData, DeviceDescriptor.CPUDevice);
             }
             else if (value.GetDataType() == DataType.Double)
             {
-                cpuOutputNDArrayView = new NDArrayView(outputNDArrayView.Shape(), outputData as double[], numOfOutputData, DeviceDescriptor.CPUDevice());
+                cpuOutputNDArrayView = new NDArrayView(outputNDArrayView.Shape(), outputData as double[], numOfOutputData, DeviceDescriptor.CPUDevice);
             }
             else
             {
@@ -255,10 +255,10 @@ namespace CNTK
 
         public Variable getVariableByName(string name)
         {
-            var v = rootFunction.Arguments().Where(variable => string.Equals(variable.Name(), name)).FirstOrDefault();
+            var v = rootFunction.Arguments.Where(variable => string.Equals(variable.Name, name)).FirstOrDefault();
             if (v == null)
             {
-                v = rootFunction.Outputs().Where(variable => string.Equals(variable.Name(), name)).FirstOrDefault();
+                v = rootFunction.Outputs.Where(variable => string.Equals(variable.Name, name)).FirstOrDefault();
             }
 
             return v;
@@ -273,11 +273,11 @@ namespace CNTK
             IEnumerable<Variable> varList;
             if (nodeKind == VariableKind.Input)
             {
-                varList = rootFunction.Arguments();
+                varList = rootFunction.Arguments;
             }
             else if (nodeKind == VariableKind.Output)
             {
-                varList = rootFunction.Outputs();
+                varList = rootFunction.Outputs;
             }
             else 
             {
@@ -287,18 +287,18 @@ namespace CNTK
 
             foreach (var arg in varList)
             {
-                if (retVal.ContainsKey(arg.Name()))
+                if (retVal.ContainsKey(arg.Name))
                 {
-                    throw new Exception("duplicated name '" + arg.Name() + "'.");
+                    throw new Exception("duplicated name '" + arg.Name + "'.");
                 }
                 var dim = new List<ulong>();
                 // The Dimensions is IEnumerable<uint>
                 // Todo: fix the swig to output IEnumberable<ulong>
-                foreach (var d in arg.Shape().Dimensions())
+                foreach (var d in arg.Shape.Dimensions)
                 {
-                    dim.Add(d);
+                    dim.Add((ulong)d);
                 }
-                retVal.Add(arg.Name(), dim);
+                retVal.Add(arg.Name, dim);
             }
 
             return retVal;
@@ -311,11 +311,11 @@ namespace CNTK
             IEnumerable<Variable> varList;
             if (nodeKind == VariableKind.Input)
             {
-                varList = rootFunction.Arguments();
+                varList = rootFunction.Arguments;
             }
             else if (nodeKind == VariableKind.Output)
             {
-                varList = rootFunction.Outputs();
+                varList = rootFunction.Outputs;
             }
             else
             {
@@ -325,12 +325,12 @@ namespace CNTK
 
             foreach (var arg in varList)
             {
-                if (retVal.ContainsKey(arg.Name()))
+                if (retVal.ContainsKey(arg.Name))
                 {
-                    throw new Exception("duplicated name '" + arg.Name() + "'.");
+                    throw new Exception("duplicated name '" + arg.Name + "'.");
                 }
 
-                retVal.Add(arg.Name(), arg.Shape().TotalSize());
+                retVal.Add(arg.Name, arg.Shape.TotalSize);
             }
 
             return retVal;

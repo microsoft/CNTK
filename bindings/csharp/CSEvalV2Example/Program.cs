@@ -33,16 +33,16 @@ namespace CSEvalV2Example
             // var inputVariables = new List<Variable>();
             // SetEvaluationOutput(new List<string>() { outputNodeName }, inputVariables);
 
-            Variable outputVar = myFunc.Outputs().Where(variable => string.Equals(variable.Name(), outputNodeName)).FirstOrDefault();
-            Variable inputVar = myFunc.Arguments().Where(variable => string.Equals(variable.Name(), inputNodeName)).FirstOrDefault();
+            Variable outputVar = myFunc.Outputs.Where(variable => string.Equals(variable.Name, outputNodeName)).FirstOrDefault();
+            Variable inputVar = myFunc.Arguments.Where(variable => string.Equals(variable.Name, inputNodeName)).FirstOrDefault();
 
             // Get shape data for the input variable
-            NDShape inputShape = inputVar.Shape();
+            NDShape inputShape = inputVar.Shape;
             // Todo: add property to Shape
-            uint imageWidth = inputShape.GetDimensionSize(0);
-            uint imageHeight = inputShape.GetDimensionSize(1);
-            uint imageChannels = inputShape.GetDimensionSize(2);
-            uint imageSize = inputShape.TotalSize();
+            uint imageWidth = inputShape[0];
+            uint imageHeight = inputShape[1];
+            uint imageChannels = inputShape[2];
+            uint imageSize = inputShape.TotalSize;
 
             // Number of sequences for this batch
             int numOfSequences = 2;
@@ -52,7 +52,7 @@ namespace CSEvalV2Example
             // inputData contains mutliple sequences. Each sequence has multiple samples.
             // Each sample has the same tensor shape.
             // The outer List is the sequences. Its size is numOfSequences.
-            // The inner List is the inputs for one sequence. Its size is inputShape.TotalSize() * numberOfSampelsInSequence
+            // The inner List is the inputs for one sequence. Its size is inputShape.TotalSize * numberOfSampelsInSequence
             var inputData = new List<List<float>>();
             var fileList = new List<string>() { "00000.png", "00001.png", "00002.png", "00003.png", "00004.png", "00005.png" };
             int fileIndex = 0;
@@ -75,25 +75,25 @@ namespace CSEvalV2Example
             // Create input map
             var inputMap = new Dictionary<string, Value>();
             // void Create<T>(Shape shape, List<List<T>> data, DeviceDescriptor computeDevice)
-            inputMap.Add(inputVar.Name(), Value.Create<float>(inputVar.Shape(), inputData, DeviceDescriptor.CPUDevice()));
+            inputMap.Add(inputVar.Name, Value.Create<float>(inputVar.Shape, inputData, DeviceDescriptor.CPUDevice));
 
             // Create ouput map. Using null as Value to indicate using system allocated memory.
             var outputMap = new Dictionary<string, Value>();
-            outputMap.Add(outputVar.Name(), null);
+            outputMap.Add(outputVar.Name, null);
 
             // Evalaute
             // Todo: test on GPUDevice()?
-            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice());
+            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
 
             // The buffer for storing output for this batch
             var outputData = new List<List<float>>();
-            Value outputVal = outputMap[outputVar.Name()];
+            Value outputVal = outputMap[outputVar.Name];
             // Get output result as dense output
             // void CopyTo(List<List<T>>
             outputVal.CopyTo(outputVar, outputData);
 
             // Output results
-            var numOfElementsInSample = outputVar.Shape().TotalSize();
+            var numOfElementsInSample = outputVar.Shape.TotalSize;
             ulong seqNo = 0;
             foreach (var seq in outputData)
             {
@@ -132,9 +132,9 @@ namespace CSEvalV2Example
             uint numOfSamples = 1;
 
             const string inputNodeName = "features";
-            var inputVar = myFunc.Arguments().Where(variable => string.Equals(variable.Name(), inputNodeName)).FirstOrDefault();
+            var inputVar = myFunc.Arguments.Where(variable => string.Equals(variable.Name, inputNodeName)).FirstOrDefault();
             // Todo: get size directly from inputVar.
-            uint numOfInputData = inputVar.Shape().TotalSize() * numOfSamples;
+            uint numOfInputData = inputVar.Shape.TotalSize * numOfSamples;
             float[] inputData = new float[numOfInputData];
             for (uint i = 0; i < numOfInputData; ++i)
             {
@@ -143,8 +143,8 @@ namespace CSEvalV2Example
 
             // Todo: create value directly from data.
             var dynamicAxisShape = new global::SizeTVector() { 1, numOfSamples };
-            var inputShape = inputVar.Shape().AppendShape(new NDShape(dynamicAxisShape));
-            var inputNDArrayView = new NDArrayView(inputShape, inputData, numOfInputData, DeviceDescriptor.CPUDevice());
+            var inputShape = inputVar.Shape.AppendShape(new NDShape(dynamicAxisShape));
+            var inputNDArrayView = new NDArrayView(inputShape, inputData, numOfInputData, DeviceDescriptor.CPUDevice);
             var inputValue = new Value(inputNDArrayView);
 
             // Create input map
@@ -154,18 +154,18 @@ namespace CSEvalV2Example
 
             // Prepare output
             const string outputNodeName = "out.z_output";
-            var outputVar = myFunc.Outputs().Where(variable => string.Equals(variable.Name(), outputNodeName)).FirstOrDefault();
-            var outputShape = outputVar.Shape().AppendShape(new NDShape(dynamicAxisShape));
+            var outputVar = myFunc.Outputs.Where(variable => string.Equals(variable.Name, outputNodeName)).FirstOrDefault();
+            var outputShape = outputVar.Shape.AppendShape(new NDShape(dynamicAxisShape));
 
             // Create output buffer
             // Todo: use the system created buffer?
-            uint numOfOutputData = outputVar.Shape().TotalSize() * numOfSamples;
+            uint numOfOutputData = outputVar.Shape.TotalSize * numOfSamples;
             float[] outputData = new float[numOfOutputData];
             for (uint i = 0; i < numOfOutputData; ++i)
             {
                 outputData[i] = (float)0.0;
             }
-            var outputNDArrayView = new NDArrayView(outputShape, outputData, numOfOutputData, DeviceDescriptor.CPUDevice());
+            var outputNDArrayView = new NDArrayView(outputShape, outputData, numOfOutputData, DeviceDescriptor.CPUDevice);
             var outputValue = new Value(outputNDArrayView);
 
             // Create ouput map
@@ -174,7 +174,7 @@ namespace CSEvalV2Example
 
             // Evalaute
             // Todo: test on GPUDevice()?
-            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice());
+            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
 
             // Output results
             Console.WriteLine("Evaluation results:");
@@ -196,9 +196,9 @@ namespace CSEvalV2Example
             uint numOfSamples = 1;
 
             // The z.model has only one input
-            var inputVar = myFunc.Arguments().FirstOrDefault();
+            var inputVar = myFunc.Arguments.FirstOrDefault();
             // Todo: get size directly from inputVar.
-            uint numOfInputData = inputVar.Shape().TotalSize() * numOfSamples;
+            uint numOfInputData = inputVar.Shape.TotalSize * numOfSamples;
             float[] inputData = new float[numOfInputData];
             for (uint i = 0; i < numOfInputData; ++i)
             {
@@ -207,8 +207,8 @@ namespace CSEvalV2Example
 
             // Todo: create value directly from data.
             var dynamicAxisShape = new global::SizeTVector() { 1, numOfSamples };
-            var inputShape = inputVar.Shape().AppendShape(new NDShape(dynamicAxisShape));
-            var inputNDArrayView = new NDArrayView(inputShape, inputData, numOfInputData, DeviceDescriptor.CPUDevice());
+            var inputShape = inputVar.Shape.AppendShape(new NDShape(dynamicAxisShape));
+            var inputNDArrayView = new NDArrayView(inputShape, inputData, numOfInputData, DeviceDescriptor.CPUDevice);
             var inputValue = new Value(inputNDArrayView);
 
             // Create input map
@@ -217,18 +217,18 @@ namespace CSEvalV2Example
             inputMap.Add(inputVar, inputValue);
 
             // The z.model has only one output.
-            var outputVar = myFunc.Output();
-            var outputShape = outputVar.Shape().AppendShape(new NDShape(dynamicAxisShape));
+            var outputVar = myFunc.Output;
+            var outputShape = outputVar.Shape.AppendShape(new NDShape(dynamicAxisShape));
 
             // Create output buffer
             // Todo: use the system created buffer?
-            uint numOfOutputData = outputVar.Shape().TotalSize() * numOfSamples;
+            uint numOfOutputData = outputVar.Shape.TotalSize * numOfSamples;
             float[] outputData = new float[numOfOutputData];
             for (uint i = 0; i < numOfOutputData; ++i)
             {
                 outputData[i] = (float)0.0;
             }
-            var outputNDArrayView = new NDArrayView(outputShape, outputData, numOfOutputData, DeviceDescriptor.CPUDevice());
+            var outputNDArrayView = new NDArrayView(outputShape, outputData, numOfOutputData, DeviceDescriptor.CPUDevice);
             var outputValue = new Value(outputNDArrayView);
 
             // Create ouput map
@@ -237,7 +237,7 @@ namespace CSEvalV2Example
 
             // Evalaute
             // Todo: test on GPUDevice()?
-            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice());
+            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
 
             // Output results
             Console.WriteLine("Evaluation results:");
@@ -259,9 +259,9 @@ namespace CSEvalV2Example
             uint numOfSamples = 1;
 
             // Only one input for the model.
-            var inputVar = myFunc.Arguments().First(); 
+            var inputVar = myFunc.Arguments.First(); 
             // Todo: get size directly from inputVar.
-            uint numOfInputData = inputVar.Shape().TotalSize() * numOfSamples;
+            uint numOfInputData = inputVar.Shape.TotalSize * numOfSamples;
             float[] inputData = new float[numOfInputData];
             for (uint i = 0; i < numOfInputData; ++i)
             {
@@ -270,8 +270,8 @@ namespace CSEvalV2Example
 
             // Todo: create value directly from data.
             var dynamicAxisShape = new global::SizeTVector() { 1, numOfSamples };
-            var inputShape = inputVar.Shape().AppendShape(new NDShape(dynamicAxisShape));
-            var inputNDArrayView = new NDArrayView(inputShape, inputData, numOfInputData, DeviceDescriptor.CPUDevice());
+            var inputShape = inputVar.Shape.AppendShape(new NDShape(dynamicAxisShape));
+            var inputNDArrayView = new NDArrayView(inputShape, inputData, numOfInputData, DeviceDescriptor.CPUDevice);
             var inputValue = new Value(inputNDArrayView);
 
             // Create input map
@@ -280,7 +280,7 @@ namespace CSEvalV2Example
             inputMap.Add(inputVar, inputValue);
 
             // Prepare output. The model has only one output.
-            var outputVar = myFunc.Output();
+            var outputVar = myFunc.Output;
 
             // Create ouput map. Using null as Value to indicate using system allocated memory.
             var outputMap = new UnorderedMapVariableValuePtr();
@@ -288,18 +288,18 @@ namespace CSEvalV2Example
 
             // Evalaute
             // Todo: test on GPUDevice()?
-            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice());
+            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
 
             // Get output value after evaluation
             var outputValue = outputMap[outputVar];
             var outputNDArrayView = outputValue.Data();
-            var outputShape = outputVar.Shape().AppendShape(new NDShape(dynamicAxisShape));
+            var outputShape = outputVar.Shape.AppendShape(new NDShape(dynamicAxisShape));
             
             // Copy the data from the output buffer.
             // Todo: directly access the data in output buffer if it is on CPU?
-            uint numOfOutputData = outputNDArrayView.Shape().TotalSize();
+            uint numOfOutputData = outputNDArrayView.Shape().TotalSize;
             float[] outputData = new float[numOfOutputData];
-            var cpuOutputNDArrayView = new NDArrayView(outputShape, outputData, numOfOutputData, DeviceDescriptor.CPUDevice());
+            var cpuOutputNDArrayView = new NDArrayView(outputShape, outputData, numOfOutputData, DeviceDescriptor.CPUDevice);
             cpuOutputNDArrayView.CopyFrom(outputNDArrayView);
 
             // Output results
@@ -322,9 +322,9 @@ namespace CSEvalV2Example
             uint numOfSamples = 1;
 
             const string inputNodeName = "features";
-            var inputVar = myFunc.Arguments().Where(variable => string.Equals(variable.Name(), inputNodeName)).FirstOrDefault();
+            var inputVar = myFunc.Arguments.Where(variable => string.Equals(variable.Name, inputNodeName)).FirstOrDefault();
             // Todo: get size directly from inputVar.
-            uint numOfInputData = inputVar.Shape().TotalSize();
+            uint numOfInputData = inputVar.Shape.TotalSize;
             var inputData = new List<float>();
             for (uint i = 0; i < numOfInputData; ++i)
             {
@@ -334,7 +334,7 @@ namespace CSEvalV2Example
             var inputVector = new FloatVector(inputData); 
             var data = new FloatVectorVector() {inputVector};
             // Create value directly from data.
-            var inputValue = Value.CreateDenseFloat(inputVar.Shape(), data, DeviceDescriptor.CPUDevice());
+            var inputValue = Value.CreateDenseFloat(inputVar.Shape, data, DeviceDescriptor.CPUDevice);
 
             // Create input map
             // Todo: create a Dictionary wrapper?
@@ -343,7 +343,7 @@ namespace CSEvalV2Example
 
             // Prepare output
             const string outputNodeName = "out.z_output";
-            var outputVar = myFunc.Outputs().Where(variable => string.Equals(variable.Name(), outputNodeName)).FirstOrDefault();
+            var outputVar = myFunc.Outputs.Where(variable => string.Equals(variable.Name, outputNodeName)).FirstOrDefault();
 
             // Create ouput map. Using null as Value to indicate using system allocated memory.
             var outputMap = new UnorderedMapVariableValuePtr();
@@ -351,20 +351,20 @@ namespace CSEvalV2Example
 
             // Evalaute
             // Todo: test on GPUDevice()?
-            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice());
+            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
 
             // Get output value after evaluation
             var outputValue = outputMap[outputVar];
             var outputNDArrayView = outputValue.Data();
 
             var dynamicAxisShape = new global::SizeTVector() { 1, numOfSamples };
-            var outputShape = outputVar.Shape().AppendShape(new NDShape(dynamicAxisShape));
+            var outputShape = outputVar.Shape.AppendShape(new NDShape(dynamicAxisShape));
 
             // Copy the data from the output buffer.
             // Todo: directly access the data in output buffer if it is on CPU?
-            uint numOfOutputData = outputNDArrayView.Shape().TotalSize();
+            uint numOfOutputData = outputNDArrayView.Shape().TotalSize;
             float[] outputData = new float[numOfOutputData];
-            var cpuOutputNDArrayView = new NDArrayView(outputShape, outputData, numOfOutputData, DeviceDescriptor.CPUDevice());
+            var cpuOutputNDArrayView = new NDArrayView(outputShape, outputData, numOfOutputData, DeviceDescriptor.CPUDevice);
             cpuOutputNDArrayView.CopyFrom(outputNDArrayView);
 
             // Output results
@@ -381,7 +381,7 @@ namespace CSEvalV2Example
             // Load the model
             var model = new CNTK.Evaluation();
 
-            model.LoadModel("z.model", DeviceDescriptor.CPUDevice());
+            model.LoadModel("z.model", DeviceDescriptor.CPUDevice);
 
             // prepare input for evaluation
             int numOfSamples = 1;
@@ -396,7 +396,7 @@ namespace CSEvalV2Example
                 inputData[0].Add(i % 255);
             }
 
-            var inputValue = model.CreateValue<float>(inputNodeName, inputData, DeviceDescriptor.CPUDevice());
+            var inputValue = model.CreateValue<float>(inputNodeName, inputData, DeviceDescriptor.CPUDevice);
 
             // Create input map
             // Todo: create a Dictionary wrapper?
@@ -410,7 +410,7 @@ namespace CSEvalV2Example
 
             // Evalaute
             // Todo: test on GPUDevice()?
-            model.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice());
+            model.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
 
             var output = new List<List<float>>();
             var outputDims = model.GetOutputSizes();
@@ -468,18 +468,18 @@ namespace CSEvalV2Example
             System.Console.WriteLine("Function Name:" + (string.IsNullOrEmpty(name) ? "(empty)" : name));
 
             // Todo: directly return List() or use a wrapper?
-            var argList = func.Arguments().ToList();
+            var argList = func.Arguments.ToList();
             Console.WriteLine("Function arguments:");
             foreach (var arg in argList)
             {
-                Console.WriteLine("    name=" + arg.Name() + ", kind=" + arg.Kind() + ", DataType=" + arg.GetDataType() + ", TotalSize=" + arg.Shape().TotalSize());
+                Console.WriteLine("    name=" + arg.Name + ", kind=" + arg.Kind() + ", DataType=" + arg.GetDataType() + ", TotalSize=" + arg.Shape.TotalSize);
             }
 
-            var outputList = func.Outputs().ToList();
+            var outputList = func.Outputs.ToList();
             Console.WriteLine("Function outputs:");
             foreach (var output in outputList)
             {
-                Console.WriteLine("    name=" + output.Name() + ", kind=" + output.Kind() + ", DataType=" + output.GetDataType() + ", TotalSize=" + output.Shape().TotalSize());
+                Console.WriteLine("    name=" + output.Name + ", kind=" + output.Kind() + ", DataType=" + output.GetDataType() + ", TotalSize=" + output.Shape.TotalSize);
             }
         }
     }

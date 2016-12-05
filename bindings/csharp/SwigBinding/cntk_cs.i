@@ -83,19 +83,151 @@
 %apply float INPUT[]  { float *dataBuffer }
 %apply double INPUT[]  { double *dataBuffer }
 
+%rename (GetAllDevices) CNTK::DeviceDescriptor::AllDevices;
+%rename (GetBestDevice) CNTK::DeviceDescriptor::BestDevice;
+%rename (GetDefaultDevice) CNTK::DeviceDescriptor::DefaultDevice;
+%rename (GetCPUDevice) CNTK::DeviceDescriptor::CPUDevice;
+%rename (GetDeviceType) CNTK::DeviceDescriptor::Type;
+// %rename (GetId) CNTK::DeviceDescriptor::Id;
 
-%typemap(csclassmodifiers) CNTK::Value "public partial class"
+%typemap(cscode) CNTK::DeviceDescriptor %{
 
-%pragma(csharp) moduleimports = %{
+// Todo: why mapped to uint??
+//    public int Id
+//    {
+//        get { return GetId(); }
+//    }
 
-using System;
-using System.Collections.Generic;
-
-public partial class Value
-{
-    public static Value Create<T>(NDShape shape, List<List<T>> sequences, DeviceDescriptor computeDevice)
+    public DeviceKind Type
     {
-        var dim = shape.TotalSize();
+        get { return GetDeviceType(); }
+    }
+
+    public static DeviceDescriptor CPUDevice
+    {
+        get { return GetCPUDevice(); }
+    }
+
+    public static DeviceDescriptor DefaultDevice
+    {
+        get { return GetDefaultDevice(); }
+    }
+
+    public static DeviceDescriptor BestDevice
+    {
+        get { return GetBestDevice(); }
+    }
+
+    public static System.Collections.Generic.List<DeviceDescriptor> AllDevices
+    {
+        get {
+            var devices = GetAllDevices();
+            var ret = new System.Collections.Generic.List<DeviceDescriptor>(devices.Count);
+            foreach (var d in devices)
+            {
+                ret.Add(d);
+            }
+            return ret;
+        }
+    }
+%}
+
+
+%rename (GetOutput) CNTK::Function::Output;
+%rename (GetOutputs) CNTK::Function::Outputs;
+%rename (GetArguments) CNTK::Function::Arguments;
+
+%typemap(cscode) CNTK::Function %{
+
+    public System.Collections.Generic.List<Variable> Outputs
+    {
+        get 
+        {
+            var vars = GetOutputs();
+            var ret = new System.Collections.Generic.List<Variable>(vars.Count);
+            foreach (var v in vars)
+            {
+                ret.Add(v);
+            }
+            return ret;
+        }
+    }
+
+    public Variable Output
+    {
+        get { return GetOutput(); }
+    }
+
+    public System.Collections.Generic.List<Variable> Arguments
+    {
+        get 
+        {
+            var vars = GetArguments();
+            var ret = new System.Collections.Generic.List<Variable>(vars.Count);
+            foreach (var v in vars)
+            {
+                ret.Add(v);
+            }
+            return ret;
+        }
+    }
+%}
+
+%rename (GetShape) CNTK::Variable::Shape;
+%rename (GetName) CNTK::Variable::Name;
+
+%typemap(cscode) CNTK::Variable %{
+
+    public NDShape Shape
+    {
+        get { return GetShape(); }
+    }
+
+    public string Name
+    {
+        get { return GetName(); }
+    }
+%}
+
+%rename (GetDimensions) CNTK::NDShape::Dimensions;
+%rename (GetRank) CNTK::NDShape::Rank;
+%rename (GetTotalSize) CNTK::NDShape::TotalSize;
+
+%typemap(cscode) CNTK::NDShape %{
+    public uint Rank
+    {
+        get { return GetRank(); }
+    }
+
+    public System.Collections.Generic.List<long> Dimensions
+    {
+        get 
+        { 
+            var ret = new System.Collections.Generic.List<long>((int)GetRank());
+            foreach (var dim in GetDimensions())
+            {
+                ret.Add(dim);
+            }
+            return ret;
+        }
+    }
+
+    public uint TotalSize
+    {
+        get { return GetTotalSize(); }
+    }
+
+    public uint this[int key]
+    {
+        get { return GetDimensionSize((uint)key); }
+    }
+%}
+
+%typemap(cscode) CNTK::Value %{
+
+    public static Value Create<T>(NDShape shape, System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences, DeviceDescriptor computeDevice)
+    {
+        var dim = shape.TotalSize;
 
         if (typeof(T).Equals(typeof(float)))
         {
@@ -104,7 +236,7 @@ public partial class Value
             {
                 if (seq.Count % dim != 0)
                 {
-                    throw new ArgumentException("the number of data in sequences does not match the input dimension");
+                    throw new System.ArgumentException("the number of data in sequences does not match the input dimension");
                 }
                 var samples = new FloatVector(seq);
                 inputSeqVector.Add(samples);
@@ -118,7 +250,7 @@ public partial class Value
             {
                 if (seq.Count % dim != 0)
                 {
-                    throw new ArgumentException("the number of data in sequences does not match the input dimension");
+                    throw new System.ArgumentException("the number of data in sequences does not match the input dimension");
                 }
                 var samples = new DoubleVector(seq);
                 inputSeqVector.Add(samples);
@@ -127,25 +259,24 @@ public partial class Value
         }
         else
         {
-            throw new ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
         }
     }
 
-    public static Value Create<T>(NDShape shape, List<List<long>> oneHotIndex, DeviceDescriptor computeDevice)
+    public static Value Create<T>(NDShape shape, System.Collections.Generic.List<System.Collections.Generic.List<long>> oneHotIndex, DeviceDescriptor computeDevice)
     {
-        throw new NotImplementedException("Not implemented");
+        throw new System.NotImplementedException("Not implemented");
     }
 
     // Create Value based on sparse input
     // Todo: could this be a extension to Value class??
     // Todo: use Variable instead of varName. VarName as extension method
-    public static Value Create<T>(NDShape shape, List<List<T>> data, List<List<long>> indexes, List<List<long>> nnzCounts, DeviceDescriptor computeDevice)
+    public static Value Create<T>(NDShape shape, System.Collections.Generic.List<System.Collections.Generic.List<T>> data, System.Collections.Generic.List<System.Collections.Generic.List<long>> indexes, System.Collections.Generic.List<System.Collections.Generic.List<long>> nnzCounts, DeviceDescriptor computeDevice)
     {
-        throw new NotImplementedException("Not implemented");
+        throw new System.NotImplementedException("Not implemented");
     }
-}
-
 %}
+
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
@@ -217,4 +348,7 @@ public partial class Value
         self->Forward(arguments, outputs, computeDevice, {});
     }
 }
+
+
+
 
