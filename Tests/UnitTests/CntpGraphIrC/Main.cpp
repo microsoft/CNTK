@@ -15,6 +15,8 @@
 
 #include "GraphIrExporter.h"
 
+#include <fstream>
+
 #ifndef CPUONLY
 #error "must use CPU Only"
 #endif
@@ -56,6 +58,18 @@ void DumpAsJson(const google::protobuf::Message& message, const std::string& fil
     fclose(fp);
 }
 
+void DumpAsBinary(const google::protobuf::Message& message, const std::string& filename)
+{
+    auto filePath = (filename + string(".pb"));
+
+    std::fstream fs;
+    fs.open(filePath, std::fstream::in | std::fstream::out | std::fstream::trunc);
+
+    message.SerializeToOstream(&fs);
+
+    fs.close();
+}
+
 int main()
 {
 	auto device = DeviceDescriptor::CPUDevice();
@@ -69,9 +83,10 @@ int main()
 	auto modelFuncPtr = CNTK::Function::LoadModel(filenameW, device/*, LstmGraphNodeFactory*/);
 
     auto message = GRAPHIR::Serialize(modelFuncPtr);
-    DumpAsJson(*message, filename + string(".serialized.pb.json"));
+    DumpAsBinary(*message, filename + string(".serialized"));
+    DumpAsJson(*message, filename + string(".serialized_json"));
 
-    PrintDictionaryValue(L"ROOT", serializedFunc, 0);
+    //PrintDictionaryValue(L"ROOT", serializedFunc, 0);
 
     unordered_map<wstring, vector<float>> inputs;
     unordered_map<wstring, vector<float>> outputs;
