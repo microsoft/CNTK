@@ -15,16 +15,18 @@ from cntk.layers import Recurrence, Dense
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 
 # model hyperparameters
-hidden_dim = 256
-num_layers = 2
+hidden_dim = 128
+num_layers = 1
 minibatch_size = 100 # also how much time we unroll the RNN for
 
 # Get data
 def get_data(p, minibatch_size, data, char_to_ix, vocab_dim):
 
+    # the character LM predicts the next character so get sequences offset by 1
     xi = [char_to_ix[ch] for ch in data[p:p+minibatch_size]]
     yi = [char_to_ix[ch] for ch in data[p+1:p+minibatch_size+1]]
     
+    # a slightly inefficient way to get one-hot vectors but fine for low vocab (like char-lm)
     X = np.eye(vocab_dim, dtype=np.float32)[xi]
     Y = np.eye(vocab_dim, dtype=np.float32)[yi]
 
@@ -64,7 +66,8 @@ def sample(root, ix_to_char, vocab_dim, char_to_ix, prime_text='', use_hardmax=T
     x[0, prime] = 1
     arguments = ([x], [True])
 
-    output=[]
+    # setup a list for the output characters and add the initial prime text
+    output = []
     output.append(prime)
     
     # loop through prime text
@@ -108,15 +111,14 @@ def load_data_and_vocab(training_file):
     ix_to_char = { i:ch for i,ch in enumerate(chars) }
 
     # write vocab
-    ff = open(path + ".vocab", "w")
-    for c in chars:
-        ff.write("%s\n" % c) if c != '\n' else ff.write("\n")
-    ff.close()
+    with open(path + ".vocab", "w") as ff:
+        for c in chars:
+            ff.write("%s\n" % c) if c != '\n' else ff.write("\n")
     
     return data, char_to_ix, ix_to_char, data_size, vocab_size
 
 # Creates the model to train
-def create_model(x, vocab_dim):    
+def create_model(x, output_dim):    
 
     # LSTM
     encoder_output = Stabilizer()(x)
@@ -127,7 +129,7 @@ def create_model(x, vocab_dim):
     states = encoder_output.output
 
     # dense layer    
-    z = Dense(vocab_dim) (states)
+    z = Dense(output_dim) (states)
     
     return z
 
@@ -142,11 +144,8 @@ def train_lm(training_file):
     input_seq_axis = Axis('inputAxis')
 
     input_dynamic_axes = [batch_axis, input_seq_axis]
-    raw_input = input_variable(shape=(vocab_dim), dynamic_axes=input_dynamic_axes)
-    raw_labels = input_variable(shape=(vocab_dim), dynamic_axes=input_dynamic_axes)
-
-    input_sequence = raw_input
-    label_sequence = raw_labels
+    input_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
+    label_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
 
     # create the model
     z = create_model(input_sequence, vocab_dim)
@@ -193,7 +192,7 @@ def train_lm(training_file):
         mask = [False] 
         if p == 0:
             mask = [True]
-        arguments = ({raw_input : features, raw_labels : labels}, mask)
+        arguments = ({input_sequence : features, label_sequence : labels}, mask)
         trainer.train_minibatch(arguments)
 
         progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
@@ -227,4 +226,4 @@ if __name__=='__main__':
 
     # load and sample
     text = "T"
-    load_and_sample("models/shakespeare_epoch9.dnn", "tinyshakespeare.txt.vocab", prime_text=text, use_hardmax=False, length=100, temperature=1.0)
+    load_and_sample("models/shakespeare_epoch0.dnn", "tinyshakespeare.txt.vocab", prime_text=text, use_hardmax=False, length=100, temperature=0.95)
