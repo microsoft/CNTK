@@ -212,15 +212,22 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         'LSTM': 4
     }[type]
     cell_shape_stacked = tuple(cell_shape_list)  # patched dims with stack_axis duplicated 4 times
+    cell_shape_list[stack_axis] = stacked_dim * {
+        'RNNUnit': 1,
+        'GRU': 2,
+        'LSTM': 4
+    }[type]
+    cell_shape_stacked_H = tuple(cell_shape_list)  # patched dims with stack_axis duplicated 4 times
 
     # parameters
-    b  = Parameter(            cell_shape_stacked, init=init_bias, name='b')                              # bias
-    W  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='W')                              # input
-    A  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='A') if has_aux else None         # aux input (optional)  --TODO: remove
-    H  = Parameter(shape     + cell_shape_stacked, init=init,      name='H')                              # hidden-to-hidden
-    Ci = Parameter(            cell_shape,         init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Cf = Parameter(            cell_shape,         init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
-    Co = Parameter(            cell_shape,         init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    b  = Parameter(            cell_shape_stacked,   init=init_bias, name='b')                              # bias
+    W  = Parameter(_INFERRED + cell_shape_stacked,   init=init,      name='W')                              # input
+    A  = Parameter(_INFERRED + cell_shape_stacked,   init=init,      name='A') if has_aux else None         # aux input (optional)  --TODO: remove
+    H  = Parameter(shape     + cell_shape_stacked_H, init=init,      name='H')                              # hidden-to-hidden
+    H1 = Parameter(shape     + cell_shape,           init=init,      name='H') if type == 'GRU' else None   # hidden-to-hidden
+    Ci = Parameter(            cell_shape,           init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Cf = Parameter(            cell_shape,           init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
+    Co = Parameter(            cell_shape,           init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
 
     Wmr = Parameter(cell_shape + shape, init=init) if has_projection else None  # final projection
 
@@ -234,7 +241,13 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
     # define the model function itself
     # general interface for Recurrence():
-    #   (x, all previous outputs delayed) --> (out, other state vars)
+    #   (x, all previous outputs delayed) --> (outputs and state)
+    # where
+    #  - the first output is the main output, e.g. 'h' for LSTM
+    #  - the remaining outputs, if any, are additional state
+    #  - if for some reason output != state, then output is still fed back and should just be ignored by the recurrent block
+
+    # LSTM model function
     # in this case:
     #   (x, dh, dc) --> (h, c)
     def lstm(x, dh, dc):
@@ -257,6 +270,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
             return x + C * c if use_peepholes else x
 
         it = sigmoid (peep (it_proj, dcs, Ci))        # input gate(t)
+        # TODO: should both activations be replaced?
         bit = it * activation (bit_proj)              # applied to tanh of input network
 
         ft = sigmoid (peep (ft_proj, dcs, Cf))        # forget-me-not gate(t)
@@ -274,12 +288,41 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         # returns the new state as a tuple with names but order matters
         return OrderedDict([('h', h), ('c', c)])
 
+    # GRU model function
+    # in this case:
+    #   (x, dh) --> (h)
+    # e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
     def gru(x, dh, dc):
-        UntestedBranchError("gru")
-        return x
+
+        dhs = Sdh(dh)  # previous value, stabilized
+        # note: input does not get a stabilizer here, user is meant to do that outside
+
+        # projected contribution from input(s), hidden, and bias
+        projx3 = b + times(x, W) + times(aux, A) if has_aux else \
+                 b + times(x, W)
+        projh2  = times(dhs, H)
+
+        zt_proj = slice (projx3, stack_axis, 0*stacked_dim, 1*stacked_dim) + slice (projh2, stack_axis, 0*stacked_dim, 1*stacked_dim)
+        rt_proj = slice (projx3, stack_axis, 1*stacked_dim, 2*stacked_dim) + slice (projh2, stack_axis, 1*stacked_dim, 2*stacked_dim)
+        ct_proj = slice (projx3, stack_axis, 2*stacked_dim, 3*stacked_dim)
+
+        zt = sigmoid (zt_proj)        # update gate z(t)
+
+        rt = sigmoid (rt_proj)        # reset gate r(t)
+
+        rs = dhs * rt        # "cell" c
+        ct = activation (ct_proj + times(rs, H1))
+
+        ht = (1 - zt) * ct + zt * dhs # hidden state ht / output
+
+        h = times(Sht(ht), Wmr) if has_projection else \
+            ht
+
+        # returns the new state as a tuple with names but order matters
+        return dict(h=h)
 
     def rnn(x, dh):
-        dhs = Sdh(dh)  # previous values, stabilized
+        dhs = Sdh(dh)  # previous value, stabilized
         ht = activation (times(x, W) + times(dhs, H) + b)
         h = times(Sht(ht), Wmr) if has_projection else \
             ht
@@ -288,19 +331,18 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # return the corresponding lambda as a CNTK Function
     function = Block({
         'RNNUnit': rnn,
-        'GRU': gru,
-        'LSTM': lstm
+        'GRU':     gru,
+        'LSTM':    lstm
     }[type], type)
 
     # we already know our state input's shapes, so implant the shape there
     # This is part of the contract with Recurrence(), which relies on this.
     # BUGBUG: If V2 type inference could handle unknown shapes here, we would not need this.
-    arg_shapes = {
+    function.replace_placeholders({ function.placeholders[index] : Placeholder(shape=shape) for index, shape in {
         'RNNUnit': { 1: shape },
-        'GRU':     { 1: shape, 2: cell_shape },
+        'GRU':     { 1: shape },
         'LSTM':    { 1: shape, 2: cell_shape }
-    }[type]
-    function.replace_placeholders({ function.placeholders[index] : Placeholder(shape=shape) for index, shape in arg_shapes.items() })
+    }[type].items() })
 
     return function
 
@@ -328,8 +370,6 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
          enable_self_stabilization=default_override_or(False)): # (x, prev_h) -> (h)
 
-    #UntestedBranchError("RNNUnit")
-
     activation                = get_default_override(RNNUnit, activation=activation)
     init                      = get_default_override(RNNUnit, init=init)
     init_bias                 = get_default_override(RNNUnit, init_bias=init_bias)
@@ -338,11 +378,22 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
     return _RecurrentBlock ('RNNUnit', shape, cell_shape, activation=activation, use_peepholes=False,
                             init=init, init_bias=init_bias,
                             enable_self_stabilization=enable_self_stabilization)
-# GRU
-#...
+
+# GRU block
+def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
+         init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
+         enable_self_stabilization=default_override_or(False)): # (x, prev_h) -> (h)
+
+    activation                = get_default_override(GRU, activation=activation)
+    init                      = get_default_override(GRU, init=init)
+    init_bias                 = get_default_override(GRU, init_bias=init_bias)
+    enable_self_stabilization = get_default_override(GRU, enable_self_stabilization=enable_self_stabilization)
+
+    return _RecurrentBlock ('GRU', shape, cell_shape, activation=activation, use_peepholes=False,
+                            init=init, init_bias=init_bias,
+                            enable_self_stabilization=enable_self_stabilization)
 
 # TODO:
-#  - get GRU from core.bs, ad-hoc test
 #  - get last() to work
 
 # TODO in C++ code after next update:
