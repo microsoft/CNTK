@@ -245,9 +245,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
 # write action         #
 ########################
 
-def write(reader, model_filename, vocab, i2w):
-    
-    model = load_model(model_filename)
+def write(reader, model, vocab, i2w):
     
     minibatch_size = 1024
     progress_printer = ProgressPrinter(tag='Evaluation')
@@ -438,7 +436,9 @@ if __name__ == '__main__':
     # train
     train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
-    #write(valid_reader, "model_epoch0.cmf", vocab, i2w)
+    # write
+    #model = load_model("model_epoch0.cmf")
+    #write(valid_reader, model, vocab, i2w)
     
     # test the model out in an interactive session
     #print('loading model...')
