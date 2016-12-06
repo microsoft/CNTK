@@ -98,7 +98,7 @@ def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recu
 
     return (output_h, output_c)
 
-def create_model(inputs):
+def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word_sequence)
     
     # get inputs to the model (has to include labels for input to the decoder)
     raw_input, raw_labels = inputs

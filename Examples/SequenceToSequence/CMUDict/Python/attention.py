@@ -9,7 +9,7 @@
 ########################################
 
 from cntk.ops import times, constant, past_value, splice, softmax, reshape, \
-                     parameter, element_times, tanh, log, alias
+                     parameter, element_times, tanh, alias
 from cntk.ops.sequence import last, broadcast_as
 from cntk.initializer import glorot_uniform
 from cntk.blocks import Stabilizer, _INFERRED
@@ -88,9 +88,10 @@ def create_attention_augment_hook(attention_dim, attention_span, decoder_dynamic
         v = parameter(shape=(attention_dim, 1))
         
         u = times(Stabilizer()(element_times(tanh_out, valid)), v) # (attention_span, 1)
-        u_valid = u + (valid - 1) * 50
-
+        u_valid = u + (valid - 1) * 50                             # zero-out the unused elements
+         
         # we do two reshapes (20,1)->(20) and then (20)->(20,1) so that we can use the built-in softmax()
+        # TODO: we have to do the above because softmax() does not support "axis=" --> make sure this gets added
         attention_weights = alias(softmax(reshape(u_valid, shape=(attention_span))), name='attention_weights')
         
         # the window should be shape=(attention_span, output_dim)
