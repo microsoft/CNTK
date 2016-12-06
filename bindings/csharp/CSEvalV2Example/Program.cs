@@ -22,19 +22,19 @@ namespace CSEvalV2Example
         static void EvaluateWithConvenienceMethods()
         {
             // Load the model.
-            Function myFunc = Function.LoadModel("z.model");
+            Function modelFunc = Function.LoadModel("z.model");
 
             const string outputNodeName = "Plus2060_output";
-            // The model has empty node name.
-            // Todo: define the name for the input node, or use SetEvaluationOutput to get related input variables.
-            const string inputNodeName = "";
-            
+            // Todo: how to get a variable in the intermeidate layer by name?
+            Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputNodeName)).FirstOrDefault();
+          
             // Set desired output variables and get required inputVariables;
-            // var inputVariables = new List<Variable>();
-            // SetEvaluationOutput(new List<string>() { outputNodeName }, inputVariables);
-
-            Variable outputVar = myFunc.Outputs.Where(variable => string.Equals(variable.Name, outputNodeName)).FirstOrDefault();
-            Variable inputVar = myFunc.Arguments.Where(variable => string.Equals(variable.Name, inputNodeName)).FirstOrDefault();
+            Function evalFunc = Function.Combine(new List<Variable>() { outputVar });
+            var inputVarList = evalFunc.Arguments;
+            
+            // The model has empty input node name. Fortunatelly there is only one input node for the model.
+            const string inputNodeName = "";
+            Variable inputVar = inputVarList.Where(variable => string.Equals(variable.Name, inputNodeName)).FirstOrDefault();
 
             // Get shape data for the input variable
             NDShape inputShape = inputVar.Shape;
@@ -83,7 +83,7 @@ namespace CSEvalV2Example
 
             // Evalaute
             // Todo: test on GPUDevice()?
-            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
+            evalFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
 
             // The buffer for storing output for this batch
             var outputData = new List<List<float>>();
@@ -119,6 +119,74 @@ namespace CSEvalV2Example
             }
         }
 
+        static void EvaluateUsingCSEvalLib()
+        {
+            // Load the model
+            var model = new CNTK.Evaluation();
+
+            model.LoadModel("z.model", DeviceDescriptor.CPUDevice);
+
+            const string outputNodeName = "Plus2060_output";
+            // The model has empty node name.
+            // Todo: define the name for the input node, or use SetEvaluationOutput to get related input variables.
+            const string inputNodeName = "";
+
+            // Get shape data for the input variable
+            var inputDims = model.InputsDimensions[inputNodeName];
+            // Todo: add property to Shape
+            ulong imageWidth = inputDims[0];
+            ulong imageHeight = inputDims[1];
+            ulong imageChannels = inputDims[2];
+            ulong imageSize = model.InputsSize[inputNodeName];
+
+            // Number of sequences for this batch
+            int numOfSequences = 2;
+            // Number of samples in each sequence
+            int[] numOfSamplesInSequence = { 3, 3 };
+
+            // inputData contains mutliple sequences. Each sequence has multiple samples.
+            // Each sample has the same tensor shape.
+            // The outer List is the sequences. Its size is numOfSequences.
+            // The inner List is the inputs for one sequence. Its size is inputShape.TotalSize * numberOfSampelsInSequence
+            var inputData = new List<List<float>>();
+            var fileList = new List<string>() { "00000.png", "00001.png", "00002.png", "00003.png", "00004.png", "00005.png" };
+            int fileIndex = 0;
+            for (int seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
+            {
+                // Create a new data buffer for the new sequence
+                var seqData = new List<float>();
+                for (int sampleIndex = 0; sampleIndex < numOfSamplesInSequence[seqIndex]; sampleIndex++)
+                {
+                    Bitmap bmp = new Bitmap(Bitmap.FromFile(fileList[fileIndex++]));
+                    var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                    List<float> resizedCHW = resized.ParallelExtractCHW();
+                    // Aadd this sample to the data buffer of this sequence
+                    seqData.AddRange(resizedCHW);
+                }
+                // Add this sequence to the sequences list
+                inputData.Add(seqData);
+            }
+
+            // Create input map
+            var inputMap = new Dictionary<string, Value>();
+            // void Create<T>(Shape shape, List<List<T>> data, DeviceDescriptor computeDevice)
+            inputMap.Add(inputNodeName, model.CreateValue<float>(inputNodeName, inputData, DeviceDescriptor.CPUDevice));
+
+            // Create ouput map. Using null as Value to indicate using system allocated memory.
+            var outputMap = new Dictionary<string, Value>();
+            outputMap.Add(outputNodeName, null);
+
+            // Evalaute
+            // Todo: test on GPUDevice()?
+            model.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
+
+            // The buffer for storing output for this batch
+            var outputData = new List<List<float>>();
+            Value outputVal = outputMap[outputNodeName];
+            // Get output result as dense output
+            // void CopyTo(List<List<T>>
+            model.CopyValueTo<float>(outputNodeName, outputVal, outputData);
+        }
 
         static void EvaluateV1ModelUsingNDView()
         {
@@ -376,72 +444,6 @@ namespace CSEvalV2Example
         }
 
 
-        static void EvaluateUsingCSEvalLib()
-        {
-            // Load the model
-            var model = new CNTK.Evaluation();
-
-            model.LoadModel("z.model", DeviceDescriptor.CPUDevice);
-
-            // prepare input for evaluation
-            int numOfSamples = 1;
-
-            var inputDims = model.GetInputSizes();
-            const string inputNodeName = "features";
-            
-            ulong numOfInputData = inputDims[inputNodeName];
-            var inputData = new List<List<float>>(numOfSamples);
-            for (uint i = 0; i < numOfInputData; ++i)
-            {
-                inputData[0].Add(i % 255);
-            }
-
-            var inputValue = model.CreateValue<float>(inputNodeName, inputData, DeviceDescriptor.CPUDevice);
-
-            // Create input map
-            // Todo: create a Dictionary wrapper?
-            var inputMap = new Dictionary<string, Value>() { { inputNodeName, inputValue } }; 
-
-            // Prepare output
-            const string outputNodeName = "out.z_output";
-
-            // Create ouput map. Using null as Value to indicate using system allocated memory.
-            var outputMap = new Dictionary<string, Value>() { { outputNodeName, null } };
-
-            // Evalaute
-            // Todo: test on GPUDevice()?
-            model.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
-
-            var output = new List<List<float>>();
-            var outputDims = model.GetOutputSizes();
-            ulong numOfElementsInSample = outputDims[outputNodeName];
-
-            model.CopyValueTo<float>(outputNodeName, outputMap[outputNodeName], output);
-
-            ulong seqNo = 0;
-            foreach (var seq in output)
-            { 
-                var numOfSamplesInSequence = (ulong)seq.Count/numOfElementsInSample;
-                ulong elementIndex = 0;
-                ulong sampleIndex = 0;
-                Console.Write("Seq=" + seqNo + ", Sample=" + sampleIndex + ":");
-                foreach (var data in seq)
-                {
-                    if (elementIndex++ == 0) 
-                    {
-                        Console.Write("Seq=" + seqNo + ", Sample=" + sampleIndex + ":");
-                    }
-                    Console.Write(" " + data);
-                    if (elementIndex == numOfElementsInSample)
-                    {
-                        Console.WriteLine(".");
-                        elementIndex = 0;
-                        sampleIndex++;
-                    }
-                }
-                seqNo++;
-            }
-        }
 
         static void Main(string[] args)
         {

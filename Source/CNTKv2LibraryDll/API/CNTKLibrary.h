@@ -2949,6 +2949,7 @@ namespace CNTK
     /// Create an instance of the CNTK built-in splice operation to splice together all the specified tensor operands into a single output tensor
     ///
     CNTK_API FunctionPtr Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name = L"");
+#endif
 
     ///
     /// Create a new Function instance which just combines the outputs of the specified list of 'operands' Functions such that the 'Outputs' of the 
@@ -2963,6 +2964,7 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr Alias(const Variable& operand, const std::wstring& name = L"");
 
+#ifndef SWIGCSHARP
     namespace Sequence
     {
         CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");

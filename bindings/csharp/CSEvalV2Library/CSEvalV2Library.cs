@@ -33,25 +33,37 @@ namespace CNTK
         }
 
         // Todo: use ulong, uint or int?
-        public IDictionary<string, IEnumerable<ulong>> GetInputShapes()
+        public IDictionary<string, List<ulong>> InputsDimensions
         {
-            return GetNodeShapes(VariableKind.Input);
+            get
+            {
+                return GetNodeShapes(VariableKind.Input);
+            }
         }
 
-        public IDictionary<string, IEnumerable<ulong>> GetOutputShapes()
+        public IDictionary<string, List<ulong>> OutputsDimensions
         {
-            return GetNodeShapes(VariableKind.Output);
+            get
+            {
+                return GetNodeShapes(VariableKind.Output);
+            }
         }
         
         // Todo: Size_t to ulong/uint/init?? List.Count is int
-        public IDictionary<string, ulong> GetInputSizes()
+        public IDictionary<string, ulong> InputsSize
         {
-            return GetNodeSizes(VariableKind.Input);
+            get
+            {
+                return GetNodeSizes(VariableKind.Input);
+            }
         }
 
-        public IDictionary<string, ulong> GetOutputSizes()
+        public IDictionary<string, ulong> OutputsSize
         {
-            return GetNodeSizes(VariableKind.Output);
+            get
+            {
+                return GetNodeSizes(VariableKind.Output);
+            }
         }
 
         //
@@ -152,7 +164,7 @@ namespace CNTK
         // Create Value based on sparse input
         // Todo: could this be a extension to Value class??
         // Todo: use Variable instead of varName. VarName as extension method
-        public Value CreateValue<T>(string varName, List<T> data, List<long> index, List<long> colIndex, DeviceDescriptor computeDevice)
+        public Value CreateValue<T>(string varName, List<List<T>> data, List<List<long>> indexes, List<List<long>> nnzCounts, DeviceDescriptor computeDevice)
         {
             throw new NotImplementedException("Not implemented");
         }
@@ -236,9 +248,8 @@ namespace CNTK
             }
         }
 
-        // Copy Value to List<List<T>> for dense input
-        // Todo: could this be a extension to Value class??
-        public void CopyValueTo<T>(string varName, Value value, List<T> data, List<int> index, List<int> colIndex)
+        // Copy Value to List<List<T>> for sparse input
+        public void CopyValueTo<T>(string varName, Value value, List<List<T>> data, List<List<long>> indexes, List<List<long>> nnzCounts)
         {
             throw new NotImplementedException("Not implemented");
         }
@@ -266,9 +277,9 @@ namespace CNTK
 
         private Function rootFunction;
 
-        private IDictionary<string, IEnumerable<ulong>> GetNodeShapes(VariableKind nodeKind)
+        private IDictionary<string, List<ulong>> GetNodeShapes(VariableKind nodeKind)
         {
-            var retVal = new Dictionary<string, IEnumerable<ulong>>();
+            var retVal = new Dictionary<string, List<ulong>>();
 
             IEnumerable<Variable> varList;
             if (nodeKind == VariableKind.Input)

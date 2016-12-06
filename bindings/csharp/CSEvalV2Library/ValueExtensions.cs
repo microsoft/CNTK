@@ -8,6 +8,11 @@ namespace CNTK
 {
     public static class ValueExtensions
     {
+        public static void CopyTo<T>(this Value value, string name, List<List<T>> data)
+        {
+            throw new NotImplementedException("Not implemented");
+        }
+
         // The value represents a n-dimensional tensor with 2 dynamic axes: sequence and batch
         // It assumes that only the highest 2 axes are dynamic, and all the other axes are static. 
         public static void CopyTo<T>(this Value value, Variable variable, List<List<T>> data)
@@ -26,17 +31,22 @@ namespace CNTK
 
             var variableShape = variable.Shape;
             var valueShape = value.Shape();
-            if (variableShape.Rank != valueShape.Rank - 2)
+            if (variableShape != value.Shape().SubShape(0, valueShape.Rank - 2))
             {
                 throw new ArgumentException("The variable and value does not have same shape.");
             }
-            for (uint i = 0; i < variableShape.Rank; i++)
-            {
-                if (variableShape.GetDimensionSize(i) != valueShape.GetDimensionSize(i))
-                {
-                    throw new ArgumentException("The shape ranks of varaible and value does not match.");
-                }
-            }
+
+            //if (variableShape.Rank != valueShape.Rank - 2)
+            //{
+            //    throw new ArgumentException("The variable and value does not have same shape.");
+            //}
+            //for (uint i = 0; i < variableShape.Rank; i++)
+            //{
+            //    if (variableShape.GetDimensionSize(i) != valueShape.GetDimensionSize(i))
+            //    {
+            //        throw new ArgumentException("The shape ranks of varaible and value does not match.");
+            //    }
+            //}
 
             // Todo: transform sparse to dense
             // Currently only for dense
@@ -94,7 +104,7 @@ namespace CNTK
         }
 
         // The value represents a n-dimensional tensor with 2 dynamic axes: sequence and batch
-        public static void CopyTo<T>(List<List<T>> data, Variable variable, List<List<long>> indexes, List<List<long>> nnzCounts)
+        public static void CopyTo<T>(this Value value, Variable variable, List<List<T>> data, List<List<long>> indexes, List<List<long>> nnzCounts)
         {
             throw new NotImplementedException("Not implemented");
         }
