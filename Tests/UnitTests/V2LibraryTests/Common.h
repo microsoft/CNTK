@@ -450,10 +450,9 @@ inline CNTK::FunctionPtr LSTMSequenceClassiferNet(const CNTK::Variable& input, s
     return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
 }
 
-template <typename ElementType> 
 inline bool AreEqual(const CNTK::NDArrayViewPtr& view1, const CNTK::NDArrayViewPtr& view2)
 {
-    return AreEqual<ElementType>(*view1, *view2);
+    return CNTK::Internal::AreEqual(*view1, *view2);
 }
 
 inline bool AreEqual(const CNTK::Variable& var1, const CNTK::Variable& var2)
