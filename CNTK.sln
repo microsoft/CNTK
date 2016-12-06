@@ -1403,23 +1403,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNN", "RNN", "{6730F9BE-92A
 		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CSharp", "CSharp", "{1526F027-B007-472D-82E2-5A91340F3B62}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CSharpBindings", "bindings\csharp\Swig\CSharpBindings.vcxproj", "{277EBD9D-2504-49FA-AC72-59D5515130C3}"
-	ProjectSection(ProjectDependencies) = postProject
-		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
-	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalV2Example", "bindings\csharp\CSEvalV2Example\CSEvalV2Example.csproj", "{3500A847-E024-4E7D-92DD-CC587C17460B}"
-	ProjectSection(ProjectDependencies) = postProject
-		{50EF9EE6-5018-453E-A063-F77044EF1A97} = {50EF9EE6-5018-453E-A063-F77044EF1A97}
-	EndProjectSection
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalV2Library", "bindings\csharp\CSEvalV2Library\CSEvalV2Library.csproj", "{50EF9EE6-5018-453E-A063-F77044EF1A97}"
-	ProjectSection(ProjectDependencies) = postProject
-		{277EBD9D-2504-49FA-AC72-59D5515130C3} = {277EBD9D-2504-49FA-AC72-59D5515130C3}
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Video", "Video", "{2A95B23C-D91E-4DF9-B8F0-5E997608AB65}"
 	ProjectSection(ProjectDependencies) = postProject
 		{277EBD9D-2504-49FA-AC72-59D5515130C3} = {277EBD9D-2504-49FA-AC72-59D5515130C3}
@@ -1661,16 +1644,6 @@ Global
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602}.Release|x64.ActiveCfg = Release|x64
 		{F0A9637C-20DA-42F0-83D4-23B4704DE602}.Release|x64.Build.0 = Release|x64
-		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
-		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
-		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug|x64.ActiveCfg = Debug|x64
-		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Debug|x64.Build.0 = Debug|x64
-		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
-		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
-		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
-		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
-		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release|x64.ActiveCfg = Release|x64
-		{7FE16CBE-B717-45C9-97FB-FA3191039568}.Release|x64.Build.0 = Release|x64
 		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
 		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
 		{91973E60-A7BE-4C86-8FDB-59C88A0B3715}.Debug|x64.ActiveCfg = Debug|x64
