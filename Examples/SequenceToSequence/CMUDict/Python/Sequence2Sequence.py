@@ -14,7 +14,8 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.ops.functions import CloneMethod
 from cntk.ops.sequence import broadcast_as
 from cntk.graph import find_nodes_by_name
-from cntk.blocks import LSTM, Stabilizer
+#from cntk.blocks import LSTM, Stabilizer
+from localblocks import LSTM, Stabilizer
 from cntk.layers import Dense
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 from attention import create_attention_augment_hook
@@ -272,17 +273,15 @@ def write(reader, model, vocab, i2w):
 # test action         #
 #######################
 
-def test(reader, model_filename):
-
-    z = load_model(model_filename)
+def test(reader, model, num_minibatches=None):
     
     # we use the test_minibatch() function so need to setup a trainer
-    label_sequence = sequence.slice(find_arg_by_name('raw_labels', z), 1, 0)
+    label_sequence = sequence.slice(find_arg_by_name('raw_labels', model), 1, 0)
     lr = learning_rate_schedule(0.007, UnitType.sample)
     momentum = momentum_as_time_constant_schedule(1100)
-    ce = cross_entropy_with_softmax(z, label_sequence)
-    errs = classification_error(z, label_sequence)
-    trainer = Trainer(z, ce, errs, [momentum_sgd(z.parameters, lr, momentum)])
+    ce = cross_entropy_with_softmax(model, label_sequence)
+    errs = classification_error(model, label_sequence)
+    trainer = Trainer(model, ce, errs, [momentum_sgd(model.parameters, lr, momentum)])
 
     test_minibatch_size = 1024
 
@@ -292,10 +291,14 @@ def test(reader, model_filename):
     while True:
         mb = reader.next_minibatch(test_minibatch_size)
         if not mb: break
-        mb_error = trainer.test_minibatch({find_arg_by_name('raw_input' , z) : mb[reader.streams.features], 
-                                           find_arg_by_name('raw_labels', z) : mb[reader.streams.labels]})
+        mb_error = trainer.test_minibatch({find_arg_by_name('raw_input' , model) : mb[reader.streams.features], 
+                                           find_arg_by_name('raw_labels', model) : mb[reader.streams.labels]})
         total_error += mb_error
         i += 1
+        
+        if num_minibatches != None:
+            if i == num_minibatches:
+                break
 
     # and return the test error
     return total_error/i
@@ -446,6 +449,11 @@ if __name__ == '__main__':
     # write
     #model = load_model("model_epoch0.cmf")
     #write(valid_reader, model, vocab, i2w)
+    
+    # test
+    #model = load_model("model_epoch0.cmf")
+    #test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
+    #test(test_reader, model)
     
     # test the model out in an interactive session
     #print('loading model...')
