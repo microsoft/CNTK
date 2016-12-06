@@ -175,6 +175,8 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     ce = cross_entropy_with_softmax(model, label_sequence)
     errs = classification_error(model, label_sequence)
 
+    # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
+    # This does not need to be done in training generally though
     def clone_and_hook():
         # network output for decoder history
         net_output = hardmax(model)
@@ -238,6 +240,11 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
         
         # save the model every epoch
         model_filename = os.path.join(MODEL_DIR, "model_epoch%d.cmf" % epoch)
+        
+        # NOTE: we are saving the model with the greedy decoder wired-in. This is NOT necessary and in some
+        # cases it would be better to save the model without the decoder to make it easier to wire-in a 
+        # different decoder such as a beam search decoder. For now we save this one though so it's easy to 
+        # load up and start using.
         save_model(decoder_output_model, model_filename)
         print("Saved model to '%s'" % model_filename)
 
@@ -324,7 +331,7 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
         print(phoneme, end=' ')
     print()
     
-    # show attention window
+    # show attention window (requires matplotlib, seaborn, and pandas)
     if show_attention:
     
         import matplotlib.pyplot as plt
@@ -344,7 +351,7 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
         att_key = list(output[1].keys())[0]
         att_value = output[1][att_key]
         
-        # grad the attention data up to the length of the output (subset of the full window)
+        # get the attention data up to the length of the output (subset of the full window)
         X = att_value[0,:tlen,:len(w)]
         dframe = pd.DataFrame(data=np.fliplr(X.T), columns=columns, index=index)
     
