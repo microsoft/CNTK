@@ -15,8 +15,8 @@ from cntk.layers import Recurrence, Dense
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 
 # model hyperparameters
-hidden_dim = 128
-num_layers = 1
+hidden_dim = 256
+num_layers = 2
 minibatch_size = 100 # also how much time we unroll the RNN for
 
 # Get data
@@ -110,7 +110,7 @@ def load_data_and_vocab(training_file):
     char_to_ix = { ch:i for i,ch in enumerate(chars) }
     ix_to_char = { i:ch for i,ch in enumerate(chars) }
 
-    # write vocab
+    # write vocab for future use
     with open(path + ".vocab", "w") as ff:
         for c in chars:
             ff.write("%s\n" % c) if c != '\n' else ff.write("\n")
@@ -133,6 +133,17 @@ def create_model(x, output_dim):
     
     return z
 
+# Model inputs
+def create_inputs(vocab_dim):
+    batch_axis = Axis.default_batch_axis()
+    input_seq_axis = Axis('inputAxis')
+
+    input_dynamic_axes = [batch_axis, input_seq_axis]
+    input_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
+    label_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
+    
+    return input_sequence, label_sequence
+
 # Creates and trains a character-level language model
 def train_lm(training_file):
 
@@ -140,12 +151,7 @@ def train_lm(training_file):
     data, char_to_ix, ix_to_char, data_size, vocab_dim = load_data_and_vocab(training_file)
 
     # Model the source and target inputs to the model
-    batch_axis = Axis.default_batch_axis()
-    input_seq_axis = Axis('inputAxis')
-
-    input_dynamic_axes = [batch_axis, input_seq_axis]
-    input_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
-    label_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
+    input_sequence, label_sequence = create_inputs(vocab_dim)
 
     # create the model
     z = create_model(input_sequence, vocab_dim)
