@@ -149,6 +149,7 @@ namespace CNTK
 namespace CNTK
 {
     // Forward declarations
+    class Utils;
     class PrimitiveFunction;
     class CompositeFunction;
     class Function;
