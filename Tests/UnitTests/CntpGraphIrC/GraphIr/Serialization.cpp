@@ -48,7 +48,7 @@ namespace GRAPHIR
 #endif
     }
 
-    std::wstring ToWString(const std::string& string)
+    std::wstring ToWString2(const std::string& string)
     {
 #ifdef _MSC_VER
         std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
@@ -70,6 +70,8 @@ namespace GRAPHIR
         static proto::Graph* CreateGraphProto(const Dictionary& src, std::unordered_map<std::wstring, NDShape> outputShapes, Arena* arena = nullptr);
         static proto::Node* CreateNodeProto(const Dictionary& src, Arena* arena = nullptr);
         static proto::IOArg* CreateIOArgProto(const std::wstring& src, Arena* arena);
+
+        static Dictionary Serializer::CreateGraphDictionary(const proto::Graph& src, const FunctionPtr& templateGraph);
 
         template <typename T>
         static void CopyData(const NDArrayView& src, RepeatedField<T>* dst)
@@ -208,7 +210,7 @@ namespace GRAPHIR
 
                             auto initArg = CreateInitArgProto(arrayview);
                             (*node->mutable_init_attrs())[iuip] = *initArg;
-                            printf("  This is a parameter i need to embed: %s\n", initArg->data_base64().c_str());
+                            printf("  This is a parameter i need to embed: %p\n", initArg->data_base64().c_str());
                         }
                     }
                 }
@@ -292,7 +294,7 @@ namespace GRAPHIR
                 // lets add it here.
                 if (!hasOutput)
                 {
-                    auto ioArg3 = CreateIOArgProto(ToWString(input.name()), arena);
+                    auto ioArg3 = CreateIOArgProto(ToWString2(input.name()), arena);
 
                     // note: for these direct links between two nodes
                     //       we don't have the shape data in the static description
@@ -301,7 +303,7 @@ namespace GRAPHIR
 
                     // ...append the dimensions of the shape to the ioArg constructed previously
                     // note: no need to add the data here since we are generating it in the node.
-                    const auto& shape = outputShapes[ToWString(input.name())];
+                    const auto& shape = outputShapes[ToWString2(input.name())];
 
                     for (auto n6 = 0; n6 < shape.Rank(); n6++)
                     {
@@ -358,7 +360,66 @@ namespace GRAPHIR
         // note: outputs will be added in a second phase
         return dst;
     }
-    
+
+    /*static*/ Dictionary Serializer::CreateGraphDictionary(const proto::Graph& src, const FunctionPtr& templateGraph)
+    {
+        const auto& graphInfo = src.graph_info();
+        assert(graphInfo.framework_name() == "CNTK");
+        assert(graphInfo.framework_version() == "2.0beta3.0"); // TODO: call cntk function to retrieve version string
+        assert(graphInfo.framework_version() == "0.2");
+
+        auto& root = *(new Dictionary());
+        root[L"name"] = GRAPHIR::ToWString2(graphInfo.model_name());
+
+        // create the list of primitive functions
+        std::vector<DictionaryValue> primitiveFunctions;
+        root[L"primitive_functions"] = primitiveFunctions;
+        for (auto& node : src.nodes())
+        {
+            Dictionary primitiveNode;
+            
+            primitiveNode[L"uid"] = ToWString2(node.name());
+            primitiveNode[L"op"] = (size_t)atoi(node.op().c_str());
+
+            auto& ext = node.ext_attrs();
+            primitiveNode[L"version"] = (size_t)(ext.at("version")[0] - '0');
+            primitiveNode[L"type"] = ToWString2(ext.at("type"));
+            primitiveNode[L"name"] = ToWString2(ext.at("name"));
+        
+            primitiveFunctions.push_back(primitiveNode);
+        }
+
+        // create the list of variables and parameters
+        std::unordered_map<std::string, DictionaryValue> inputValues;
+//        root[L"inputs"] = inputValues.;
+        for (auto& node : src.nodes())
+        {
+            Dictionary variableNode;
+
+            for (auto& input : node.inputs())
+            {
+                auto& uid = input.name();
+                if (inputValues.find(uid) != inputValues.end())
+                {
+                    continue;
+                }
+
+                NDShape shape; // = CreateNDShapeFromProto(input.shape());
+                variableNode[L"kind"] = L"(size_t)atoi(input.kin)";
+
+                inputValues[uid] = variableNode;
+            }
+        }
+
+        return root;
+    }
+
+
+
+
+
+
+
     bool ParseMessage(io::CodedInputStream& input, Message& msg)
     {
         input.SetTotalBytesLimit(INT_MAX, INT_MAX);
