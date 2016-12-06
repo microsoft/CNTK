@@ -16,8 +16,8 @@ from cntk.models import LayerStack, Sequential
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 
 # model hyperparameters
-hidden_dim = 128
-num_layers = 1
+hidden_dim = 256
+num_layers = 2
 minibatch_size = 100 # also how much time we unroll the RNN for
 
 # Get data
@@ -126,6 +126,17 @@ def create_model(output_dim):
                    Sequential([Stabilizer(), Recurrence(LSTM(hidden_dim), go_backwards=False)])),
         Dense(output_dim)
     ])
+
+# Model inputs
+def create_inputs(vocab_dim):
+    batch_axis = Axis.default_batch_axis()
+    input_seq_axis = Axis('inputAxis')
+
+    input_dynamic_axes = [batch_axis, input_seq_axis]
+    input_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
+    label_sequence = input_variable(shape=vocab_dim, dynamic_axes=input_dynamic_axes)
+    
+    return input_sequence, label_sequence
 
 # Model inputs
 def create_inputs(vocab_dim):
