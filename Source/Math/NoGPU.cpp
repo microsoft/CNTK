@@ -2228,6 +2228,8 @@ void GranularGPUDataTransferer::WaitForSyncPointOnAssignStreamAsync() {}
 
 PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int /*deviceId*/) : GranularGPUDataTransferer() {}
 
+PrefetchGPUDataTransferer::~PrefetchGPUDataTransferer() {}
+
 GPUDataTransferer::GPUDataTransferer(int, bool){}
 GPUDataTransferer::~GPUDataTransferer(){}
 void GPUDataTransferer::CopyGPUToCPUAsync(void*, size_t, void*){}
