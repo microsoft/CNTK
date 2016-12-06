@@ -19,6 +19,8 @@ from .ops import *
 from .io import *
 from .debug import save_as_legacy_model
 from .device import *
+from .layers import *
+from .models import *
 
 DATATYPE = np.float32
 InferredDimension = cntk_py.InferredDimension
