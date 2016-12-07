@@ -46,7 +46,7 @@
 %template() std::pair<size_t, double>;
 %template() std::vector<std::pair<size_t, double>>;
 
-// Ignore things not exposed for C# Eval.
+// Ignore things in CNTKLibrary.h that are not exposed for C# Eval.
 %ignore CNTK::NDShape::NDShape(const std::initializer_list<size_t>& dimensions);
 
 %ignore CNTK::Internal::GenerateUid(std::wstring&& prefix);
@@ -379,6 +379,43 @@
 // Todo: add correct typemap as they might be useful for C# in future.
 %ignore CNTK::NDMask::DataBuffer() const;
 
+// Ignore things in CNTKLibraryInternals.h that are not exposed for C# Eval.
+%ignore CNTK::Internal::IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
+%ignore CNTK::Internal::PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
+%ignore CNTK::Internal::GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
+%ignore CNTK::Internal::ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name = L"");
+%ignore CNTK::Internal::ZeroesWithDynamicAxesLike(const Variable& operand);
+%ignore CNTK::Internal::Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
+%ignore CNTK::Internal::Gather(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
+%ignore CNTK::Internal::Gather(const Variable& operand, 
+                               const Variable& condition, 
+                               const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, 
+                               const std::wstring& name = L"");
+%ignore CNTK::Internal::Scatter(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
+%ignore CNTK::Internal::Scatter(const Variable& operand, 
+                                const Variable& condition, 
+                                const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, 
+                                const std::wstring& name = L"");
+%ignore CNTK::Internal::Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
+%ignore CNTK::Internal::ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
+
+%ignore CNTK::Internal::EnableReversingTensorShapesInErrorMessages();
+%ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+%ignore CNTK::Internal::AlwaysAllowSettingDefaultDevice();
+%ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed();
+%ignore CNTK::Internal::SetAutomaticUnpackingOfPackedValues(bool disable);
+%ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled();
+%ignore CNTK::Internal::SetComputationNetworkTraceLevel(int traceLevel);
+%ignore CNTK::Internal::GetComputationNetworkTraceLevel();
+%ignore CNTK::Internal::SetGPUMemoryAllocationTraceLevel(int traceLevel);
+%ignore CNTK::Internal::ForceSynchronousCUDAKernelExecutions();
+%ignore CNTK::Internal::ForceDeterministicAlgorithms();
+%ignore CNTK::Internal::SetFixedRandomSeed(unsigned long fixedRandomSeed);
+%ignore CNTK::Internal::EnableForwardValuesSharing();
+%ignore CNTK::Internal::EnableHyperMemoryCompress();
+%ignore CNTK::Internal::AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
+%ignore CNTK::Internal::AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
+%ignore CNTK::Internal::AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
 
 // map the pointer to array
 %apply float INPUT[]  { float *dataBuffer }
