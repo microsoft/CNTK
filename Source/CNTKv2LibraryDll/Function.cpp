@@ -175,7 +175,6 @@ namespace CNTK
         }
     }
 
-<<<<<<< HEAD
     void Function::Evaluate(const std::unordered_map<Variable, ValuePtr>& arguments,
                             std::unordered_map<Variable, ValuePtr>& outputs,
                             const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
@@ -183,10 +182,7 @@ namespace CNTK
         Forward(arguments, outputs, computeDevice, {});
     }
 
-    void Function::SaveModel(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
-=======
     void Function::SaveModel(const std::wstring& modelFilePath)
->>>>>>> origin/master
     {
         Dictionary model = Serialize();
         auto stream = GetFstream(modelFilePath, false);

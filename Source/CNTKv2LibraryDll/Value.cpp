@@ -116,11 +116,8 @@ namespace CNTK
     {
         size_t numElementsPerSample = sampleShape.TotalSize();
         NDMaskPtr deviceValueMask = CreateMask(numElementsPerSample, sequences, DeviceDescriptor::CPUDevice());
-<<<<<<< HEAD
-=======
         // If deviceValueMask is null, all the sequences have the same length.
         // The maxSequenceLength is the sequence length in samples.
->>>>>>> origin/master
         size_t maxSequenceLength = (deviceValueMask == nullptr) ? sequences[0].size()/numElementsPerSample: deviceValueMask->Shape()[0];
 
         size_t numSequences = sequences.size();
