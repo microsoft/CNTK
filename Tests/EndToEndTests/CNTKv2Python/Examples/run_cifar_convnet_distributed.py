@@ -48,6 +48,7 @@ def run_cifar_convnet_distributed():
     return convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, max_epochs=1)
 
 if __name__=='__main__':
+    assert distributed.Communicator.rank() < distributed.Communicator.num_workers()
     set_default_device(gpu(0)) # force using GPU-0 in test for speed
     run_cifar_convnet_distributed()
     distributed.Communicator.finalize()
