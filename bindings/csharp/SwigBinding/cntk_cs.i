@@ -43,8 +43,6 @@
 %template(UnorderedMapVariableValuePtr) std::unordered_map<CNTK::Variable, std::shared_ptr<CNTK::Value>>;
 %template(UnorderedMapVariableVariable) std::unordered_map<CNTK::Variable, CNTK::Variable>;
 
-%template() std::vector<std::shared_ptr<CNTK::Function>>;
-%template() std::vector<std::shared_ptr<CNTK::Learner>>;
 %template() std::pair<size_t, double>;
 %template() std::vector<std::pair<size_t, double>>;
 
@@ -324,6 +322,33 @@
                              double min, 
                              bool needAveMultiplier = true, 
                              AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+
+%ignore CNTK::DistributedLearner;
+%ignore CNTK::CreateDataParallelDistributedLearner(DistributedCommunicatorPtr communicator, 
+                                                   LearnerPtr learner, 
+                                                   size_t distributeAfterSamples, 
+                                                   bool useAsyncBufferedParameterUpdate = false);
+%ignore CNTK::CreateQuantizedDataParallelDistributedLearner(QuantizedDistributedCommunicatorPtr communicator, 
+                                                            LearnerPtr learner, 
+                                                            size_t distributeAfterSamples, 
+                                                            bool useAsyncBufferedParameterUpdate = false);
+%ignore CNTK::CreateBlockMomentumDistributedLearner(
+        DistributedCommunicatorPtr communicator,
+        LearnerPtr learner,
+        size_t distributeAfterSamples,
+        size_t blockSize,
+        double blockMomentumAsTimeConstant,
+        bool useNestrovMomentum = true,
+        bool resetSGDMomentumAfterAggregation = true,
+        double blockLearningRate = 1.0);
+%ignore CNTK::CreateBlockMomentumDistributedLearner(
+        DistributedCommunicatorPtr communicator,
+        LearnerPtr learner,
+        size_t distributeAfterSamples,
+        size_t blockSize,
+        bool useNestrovMomentum = true,
+        bool resetSGDMomentumAfterAggregation = true,
+        double blockLearningRate = 1.0);
 
 %ignore CNTK::Trainer;
 %ignore CNTK::StreamInformation;
