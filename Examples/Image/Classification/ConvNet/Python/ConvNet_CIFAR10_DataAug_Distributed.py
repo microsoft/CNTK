@@ -107,7 +107,7 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
         freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
-        distributed_trainer=distributed_trainer,
+        distributed_learner=learner,
         gen_heartbeat=gen_heartbeat)
 
     # perform model training
@@ -151,16 +151,16 @@ if __name__=='__main__':
     distributed_after_samples = 0
     num_quantization_bits = 32
 
-    create_dist_learner = lambda learner: distributed.data_parallel_distributed_trainer(learner,
-                                                                                        num_quantization_bits=num_quantization_bits,
-                                                                                        distributed_after=distributed_after_samples)
+    create_dist_learner = lambda learner: cntk.distributed.data_parallel_distributed_learner(learner,
+                                                                                             num_quantization_bits=num_quantization_bits,
+                                                                                             distributed_after=distributed_after_samples)
     mean=os.path.join(data_path, 'CIFAR-10_mean.xml')
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
 
     create_train_reader = lambda data_size: create_reader(train_data, mean, True, data_size, distributed_after_samples)
-    test_reader = create_reader(test_data, mean, False, FULL_DATA_SWEEP)
+    test_reader = create_reader(test_data, mean, False, cntk.io.FULL_DATA_SWEEP)
 
     convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False)
 
-    distributed.Communicator.finalize()
+    cntk.distributed.Communicator.finalize()

@@ -15,14 +15,14 @@ class ProgressPrinter:
     It provides the number of samples, average loss and average metric
     since the last print or since the start of accumulation.
     '''
-    def __init__(self, freq=None, first=0, tag='', log_to_file=None, distributed_trainer=None, gen_heartbeat=False):
+    def __init__(self, freq=None, first=0, tag='', log_to_file=None, distributed_learner=None, gen_heartbeat=False):
         '''
         Constructor. The optional ``freq`` parameter determines how often
         printing will occur. The value of 0 means an geometric
         schedule (1,2,4,...). A value > 0 means a arithmetic schedule
         (freq, 2*freq, 3*freq,...), and a value of None means no per-minibatch log.
         set log_to_file if you want the output to go file instead of stdout.
-        set distributed_trainer to your trainer if you are using distibuted parallelism -- each rank's log will go to seperate file.
+        set distributed_learner to your learner if you are using distibuted parallelism -- each rank's log will go to seperate file.
         '''
         from sys import maxsize
         if freq is None:
@@ -42,15 +42,15 @@ class ProgressPrinter:
         self.epoch_start_time = 0
         self.progress_timer_time = 0
         self.log_to_file = log_to_file
-        self.distributed_trainer = distributed_trainer
+        self.distributed_learner = distributed_learner
         self.gen_heartbeat = gen_heartbeat
 
         self.logfilename = None
         if self.log_to_file != None:
             self.logfilename = self.log_to_file
 
-            if self.distributed_trainer != None:
-                self.logfilename = self.logfilename + "rank" + str(self.distributed_trainer.communicator().current_worker().global_rank)
+            if self.distributed_learner != None:
+                self.logfilename = self.logfilename + "rank" + str(self.distributed_learner.communicator().current_worker().global_rank)
 
             # print to stdout
             print("Redirecting log to file " + self.logfilename)
