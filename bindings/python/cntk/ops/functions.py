@@ -168,7 +168,8 @@ class Function(cntk_py.Function):
              previous sequence, specify ``arguments`` as `tuple`: the
              first element will be used as ``arguments``, and the second one will
              be used as a list of bools, denoting whether a sequence is a new
-             one (`True`) or a continuation of the previous one (`False`).
+             one (`True`) or a continuation of the sequence in the same slot of
+             the previous minibatch (`False`).
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
@@ -212,7 +213,8 @@ class Function(cntk_py.Function):
              previous sequence, specify ``arguments`` as ``tuple``: the
              first element will be used as ``arguments``, and the second one will
              be used as a list of bools, denoting whether a sequence is a new
-             one (`True`) or a continuation of the previous one (`False`).
+             one (`True`) or a continuation of the sequence in the same slot of
+             the previous minibatch (`False`).
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
             outputs (iterable): outputs to fetch values for.

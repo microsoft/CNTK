@@ -483,10 +483,11 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
          of lists, ...), a combination of lists of NumPy arrays or SciPy
          sparse CSR matrices. Alternatively, it can also be the output of
          :func:`one_hot`.
-        seq_starts (list of bool or None): if None, every sequence is
+        seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
-         continuation of the previous one (`False`)
+         continuation of the sequence in the same slot of the previous
+         minibatch (`False`)
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
          this value should be put on
 
@@ -871,8 +872,9 @@ class Value(cntk_py.Value):
           A mask of ``[[2, 1, 1], [1, 1, 0]]`` describes a batch of two
           sequences. The first has three elements, of which the first element
           (2) signals the beginning of a sequence. The second sequence has two
-          elements (last element marked 'invalid' by '0'), which are both
-          continuations of the first sequence.
+          elements (last element marked 'invalid' by '0'). As it starts with
+          (1), it is a continuation of the 2nd sequence in the previous
+          minibatch.
         '''
         return np.asarray(super(Value, self).mask())
 
@@ -1029,7 +1031,8 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
         seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
-         continuation of the previous one (`False`)
+         continuation of the sequence in the same slot of the previous
+         minibatch (`False`)
         precision (str or None): precision being 'float32', 'float64', or
          None, in which case it will be determined by inspecting the operator
          (costly)
