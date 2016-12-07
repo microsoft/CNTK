@@ -125,7 +125,7 @@ else:
     os.environ["CXX"] = "mpic++"
 
 cntkV2LibraryInclude = os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API")
-cntkBindingCommon = os.path.join(CNTK_SOURCE_PATH, "bindings", "common")
+cntkBindingCommon = os.path.join(CNTK_PATH, "bindings", "common")
 
 cntk_module = Extension(
     name="_cntk_py",
