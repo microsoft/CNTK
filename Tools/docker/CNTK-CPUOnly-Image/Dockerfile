@@ -148,9 +148,10 @@ WORKDIR /cntk
 # Build CNTK
 RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     CONFIGURE_OPTS="\
+      --1bitsgd=yes \
       --with-kaldi=${KALDI_PATH} \
       --with-py34-path=/root/anaconda3/envs/cntk-py34" && \
-    git submodule update --init Source/Multiverso && \
+    git submodule update --init --recursive && \
     mkdir -p build/cpu/release && \
     cd build/cpu/release && \
     ../../../configure $CONFIGURE_OPTS --with-openblas=/usr/local/openblas && \
