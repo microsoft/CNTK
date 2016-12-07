@@ -222,7 +222,7 @@ namespace CNTK
         }
     }
 
-    /*virtual*/ bool LearnerBase::Update(const unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) /*override*/
+    /*virtual*/ bool LearnerBase::Update(unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) /*override*/
     {
         if (LearningRate(trainingSampleCount) == 0.0)
         {
@@ -293,7 +293,7 @@ namespace CNTK
 
     static const std::wstring s_learnerTypeValue = L"Learner";
 
-    /*virtual*/ Dictionary LearnerBase::Serialize() const /*override*/
+    /*virtual*/ Dictionary LearnerBase::CreateCheckpoint() /*override*/
     {
         Dictionary checkpoint;
 

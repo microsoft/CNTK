@@ -160,7 +160,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         if input_map:
             if not mb:
-                return None
+                return {}
             else:
                 return { key : mb[value] for (key, value) in input_map.items() }
         else:
