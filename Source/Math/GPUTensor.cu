@@ -258,44 +258,41 @@ struct TensorOps
     }
 };
 
-//----------------------------------------------------------------------------
-// For reductions we need the neutral elements of the corresponding binary ops
-//----------------------------------------------------------------------------
-template <typename ElemType> __device__ ElemType NeutralValue(ElementWiseOperator op)
-{
-    return 0; // error, only the explicit instantiations below should be used.
-};
-
-template<> __device__ float NeutralValue<float>(ElementWiseOperator op)
-{
-    switch (op)
-    {
-    case ElementWiseOperator::opSum:    return 0;
-    case ElementWiseOperator::opLogSum: return -INFINITY;
-    case ElementWiseOperator::opMin:    return FLT_MAX;
-    case ElementWiseOperator::opMax:    return FLT_MIN;
-    default:                            return 0; // error
-    }
-};
-
-template<> __device__ double NeutralValue<double>(ElementWiseOperator op)
-{
-    switch (op)
-    {
-    case ElementWiseOperator::opSum:    return 0;
-    case ElementWiseOperator::opLogSum: return -INFINITY;
-    case ElementWiseOperator::opMin:    return DBL_MAX;
-    case ElementWiseOperator::opMax:    return DBL_MIN;
-    default:                            return 0; // error
-    }
-};
-
-
 // ----------------------------------------------------------------------------
 // Function to update an aggregate value for the specifed reduction operation
 // ----------------------------------------------------------------------------
 
-template<typename ReductionType, class ElemType> __device__ void UpdateAggregate(ReductionType& aggregate, ElemType val, ElementWiseOperator reductionOp)
+template <typename ElemType> __device__ ElemType AggregateNeutralValue(ElementWiseOperator op)
+{
+    return 0; // error, only the explicit instantiations below should be used.
+};
+
+template<> __device__ float AggregateNeutralValue<float>(ElementWiseOperator op)
+{
+    switch (op)
+    {
+    case ElementWiseOperator::opSum:    return 0;
+    case ElementWiseOperator::opLogSum: return -FLT_MAX; // log zero  --TODO: unify all those LZERO, LSMALL, LOGZERO, ::infty()
+    case ElementWiseOperator::opMin:    return FLT_MAX;
+    case ElementWiseOperator::opMax:    return FLT_MIN;
+    default:                            return 0;        // error
+    }
+};
+
+template<> __device__ double AggregateNeutralValue<double>(ElementWiseOperator op)
+{
+    switch (op)
+    {
+    case ElementWiseOperator::opSum:    return 0;
+    case ElementWiseOperator::opLogSum: return -DBL_MAX; // log zero
+    case ElementWiseOperator::opMin:    return DBL_MAX;
+    case ElementWiseOperator::opMax:    return DBL_MIN;
+    default:                            return 0;        // error
+    }
+};
+
+
+template<typename ReductionType, class ElemType> __device__ void Aggregate(ReductionType& aggregate, ElemType val, ElementWiseOperator reductionOp)
 {
     switch (reductionOp)
     {
@@ -315,7 +312,6 @@ template<typename ReductionType, class ElemType> __device__ void UpdateAggregate
         break;
     }
 };
-
 
 // -----------------------------------------------------------------------
 // function to compute the value for a given output location (including reduction)
@@ -342,7 +338,7 @@ struct TensorOpReduce
             for (C_size_t i = 0; i < N - 1; i++) // N-1 because output is not used here
                 pointers[i] += reducingStrides(i, (C_size_t) m);
             ElemType val = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
-            UpdateAggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
+            Aggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
         }
         return (ElemType) aggregate;
     }
@@ -501,23 +497,23 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         CUDA_LONG reductionEnd = min(reductionBegin + reductionChunkSize, reductionDim);
 
         // compute the operation for this input coordinate
-        ReduceElemType aggregate = NeutralValue<ReduceElemType>(reductionOp);
+        ReduceElemType aggregate = AggregateNeutralValue<ReduceElemType>(reductionOp);
 
         for (CUDA_LONG redId = reductionBegin + tid; redId < reductionEnd; redId += tids)
         {
             auto val = TensorOpParallelReduce<ElemType, N, M, M - 1>::Compute(redId, pointers, op, reducingOpDims, reducingStrides);
-            UpdateAggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
+            Aggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
         }
 
         // reduce    --cf https://docs.nvidia.com/cuda/samples/6_Advanced/reduction/doc/reduction.pdf
-        __shared__ ReduceElemType volatile accumulators[GridDim::maxThreadsPerBlock /*tids*/];
+        __shared__ ReduceElemType volatile accumulators[GridDim::maxThreadsPerBlock /*tids == blockDim.x, as specified at launch*/];
         accumulators[tid] = aggregate;
         __syncthreads();
         static_assert(GridDim::maxThreadsPerBlock <= 1024, "GridDim::maxThreadsPerBlock too large, need to add manually unrolled steps");
         for (CUDA_LONG i = 512; i; i >>= 1)
         {
             if (tid < i && tid + i < tids)
-                UpdateAggregate<volatile ReduceElemType, volatile ReduceElemType>(accumulators[tid], accumulators[tid + i], reductionOp);
+                Aggregate<volatile ReduceElemType, volatile ReduceElemType>(accumulators[tid], accumulators[tid + i], reductionOp);
 
             if (0 + i < tids)
                 __syncthreads(); // sync if condition true for at least one thread
