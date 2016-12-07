@@ -409,6 +409,87 @@ void TestTimesNodeShapeInference()
     timesNodeShapeInferenceTest(3, 2, 2);
 }
 
+template <typename ElementType>
+void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
+{
+    size_t maxDimSize = 15;
+    NDShape shape(rank);
+    for (size_t i = 0; i < rank; ++i)
+        shape[i] = (rand() % maxDimSize) + 1;
+
+    auto numElements = shape.TotalSize();
+
+    auto param = Parameter(shape, AsDataType<ElementType>(), GlorotUniformInitializer(), device);
+    auto plus = Plus(param, param);
+    
+
+    std::vector<ElementType> outputData(numElements);
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape, outputData, false));
+
+    std::unordered_map<Variable, ValuePtr> outputs = { { plus->Output(), outputValue } };
+    plus->Forward({}, outputs, device);
+
+    NDArrayViewPtr cpuView;
+    auto getParameterData = [&cpuView](const Parameter& p) -> const ElementType*
+    {
+          cpuView = (p.Value()->Device() != DeviceDescriptor::CPUDevice()) ?
+                     p.Value()->DeepClone(DeviceDescriptor::CPUDevice()) : p.Value();
+          return cpuView->DataBuffer<ElementType>();
+    };
+
+    auto parameterData = getParameterData(param);
+
+    for (int i = 0; i < numElements; i++)
+    {
+        FloatingPointCompare<ElementType>(outputData[i], 2 * parameterData[i],
+                                          "Function output does not match the expected value.");
+    }
+
+    // Change parameter values element-wise, through a pointer to the writable data buffer.
+    // This only works in CPU mode. In GPU mode the buffer needs to be copied over to a cpuView,
+    // modified there, and then copied back again by calling CopyFrom. The latter is essentially 
+    // what SetValue below does. 
+    if (device == DeviceDescriptor::CPUDevice())
+    {
+        auto data = param.Value()->WritableDataBuffer<ElementType>();
+
+        for (int i = 0; i < numElements; i++)
+        {
+            data[i] *= i;
+        }
+
+        param.RecordValueUpdate();
+        plus->Forward({}, outputs, device);
+        parameterData = getParameterData(param);
+        for (int i = 0; i < numElements; i++)
+        {
+
+            FloatingPointCompare<ElementType>(outputData[i], 2 * parameterData[i],
+                                              "Function output does not match the expected value.");
+        }
+    }
+
+    // Change parameter values directly by calling Parameter::SetValue.
+    std::vector<ElementType> newValues(numElements);
+    for (int i = 0; i < numElements; i++)
+    {
+        newValues[i] = ElementType(1.0) / (i + ElementType(1.0));
+    }
+    auto newValuesNDarray = MakeSharedObject<NDArrayView>(shape, newValues, false);
+
+    param.SetValue(newValuesNDarray);
+    plus->Forward({}, outputs, device);
+    parameterData = getParameterData(param);
+    for (int i = 0; i < numElements; i++)
+    {
+        auto denom = (i + ElementType(1.0));
+        FloatingPointCompare<ElementType>(parameterData[i], ElementType(1.0) / denom, 
+                                          "Parameter valued does not match the expected value.");
+        FloatingPointCompare<ElementType>(outputData[i], ElementType(2.0) / denom, 
+                                          "Function output does not match the expected value.");
+    }
+}
+
 void TestRecurrenceShapeInference()
 {
     auto testShapeInferenceInRecurrence = [](size_t inputRank, size_t outputRank) {
@@ -462,6 +543,16 @@ void FunctionTests()
 {
     fprintf(stderr, "\nFunctionTests..\n");
 
+    TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
+    if (IsGPUAvailable())
+    {
+        TestChangingParameterValues<double>(3, DeviceDescriptor::GPUDevice(0));
+    } 
+    else
+    {
+        TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+    }
+
     TestTimesNodeShapeInference();
     TestRecurrenceShapeInference();
 
@@ -485,3 +576,4 @@ void FunctionTests()
         TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
     }
 }
+

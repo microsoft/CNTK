@@ -215,6 +215,9 @@ namespace CNTK
         CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
 
+        // This is meant for debugging purposes only and is very likely to be deprecated in the future.
+        CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
+
         CNTK_API size_t NewUniqueId();
 
         // Internal hooks for testing and higher-level bindings

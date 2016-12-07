@@ -27,10 +27,11 @@ CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
 
     try
     {
+        auto corpus = make_shared<CorpusDescriptor>(true);
         if (configHelper.GetElementType() == ElementType::tfloat)
-            m_deserializer = make_shared<TextParser<float>>(configHelper);
+            m_deserializer = make_shared<TextParser<float>>(corpus, configHelper, true);
         else
-            m_deserializer = make_shared<TextParser<double>>(configHelper);
+            m_deserializer = make_shared<TextParser<double>>(corpus, configHelper, true);
 
         if (configHelper.ShouldKeepDataInMemory())
             m_deserializer = make_shared<ChunkCache>(m_deserializer);

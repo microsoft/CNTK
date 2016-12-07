@@ -7,10 +7,12 @@
 
 #include "V2SimpleDistGradAggregator.h"
 
+#include "AccumulatorAggregation.h"
 #include "Basics.h"
 #include "DataReader.h"
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
+#include "LinearAlgebraNodes.h"
 #include "DataReaderHelpers.h"
 #include "TrainingNodes.h" // TODO: we should move the functions that depend on these to the .cpp
 #include "ProgressTracing.h"
@@ -270,6 +272,15 @@ public:
             DisplayEvalStatistics(numMBsRunLastLogged + 1, numMBsRun, numSamplesLastLogged, evalNodes, evalResults, evalResultsLastLogged);
         }
 
+        if (useParallelTrain && !evalNodesWhichAccumulateResult.empty())
+        {
+            // Each worker contains accumulated values for part of the data set, we have to aggregate accumulated values
+            // and recalculate evaluation errors based on accumulators.
+            AggregateAccumulatorValuesAndUpdateEpochEvaluation<ElemType>(
+                m_net, evalNodesWhichAccumulateResult, m_gradHeader, m_mpi, evalResults, evalNodes,
+                localEpochEvalErrors, ContainsAccumulatedResult);
+        }
+
         // final statistics
         for (int i = 0; i < evalResultsLastLogged.size(); i++)
             evalResultsLastLogged[i] = EpochCriterion(0); // clear this since statistics display will subtract the previous value
@@ -290,7 +301,7 @@ protected:
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastLogged, const vector<ComputationNodeBasePtr>& evalNodes,
                                const vector<EpochCriterion>& evalResults, const vector<EpochCriterion>& evalResultsLastLogged, bool displayConvertedValue = false, bool isFinal = false)
     {
-        LOGPRINTF(stderr, "%sMinibatch[%lu-%lu]: ", isFinal ? "Final Results: " : "", startMBNum, endMBNum);
+        LOGPRINTF(stderr, "%sMinibatch[%lu-%lu]: ", isFinal ? "Final Results: " : "", (unsigned long)startMBNum, (unsigned long)endMBNum);
 
         for (size_t i = 0; i < evalResults.size(); i++)
         {

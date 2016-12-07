@@ -12,6 +12,13 @@ from cntk.blocks import default_options, Placeholder, Placeholders, identity
 from cntk.layers import Convolution, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense
 from cntk.models import Sequential, For
 from cntk.utils import *
+#from cntk.layers import *
+#from cntk.models import Sequential, LayerStack
+#from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
+#from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
+#from cntk import Trainer, cntk_py
+#from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
+#from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.initializer import glorot_uniform
 from cntk import Trainer, Evaluator
@@ -73,14 +80,14 @@ def create_convnet_cifar10_model(num_classes):
     with default_options(activation=relu, pad=True):
         return Sequential([
             For(range(2), lambda : [
-                Convolution((3,3), 64),
-                Convolution((3,3), 64),
+                Convolution((3,3), 64), 
+                Convolution((3,3), 64), 
                 MaxPooling((3,3), (2,2))
-            ]),
+            ]), 
             For(range(2), lambda i: [
-                Dense([256,128][i]),
+                Dense([256,128][i]), 
                 Dropout(0.5)
-            ]),
+            ]), 
             Dense(num_classes, activation=None)
         ])
 
@@ -125,7 +132,7 @@ def train_and_evaluate(reader, reader_test, model, max_epochs):
                            lr       = learning_rate_schedule([0.0015625]*20+[0.00046875]*20+[0.00015625]*20+[0.000046875]*10+[0.000015625], unit=UnitType.sample, epoch_size=epoch_size),
                            momentum = momentum_as_time_constant_schedule([0]*20+[600]*20+[1200], epoch_size=epoch_size),
                            l2_regularization_weight = 0.002)
-
+    
     # trainer object
     trainer = Trainer(model, criterion.outputs[0], criterion.outputs[1], learner)
 
@@ -144,10 +151,11 @@ def train_and_evaluate(reader, reader_test, model, max_epochs):
             sample_count += mb[reader.streams.labels].num_samples                     # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
+        z.save_model(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
 
     #return metric_numer/metric_denom
 
-
+    
     # evaluate with current Trainer instance; just to make sure we save and load the model correctly and BN works now --TODO: delete once confirmed
     epoch_size     = 10000
     minibatch_size = 16

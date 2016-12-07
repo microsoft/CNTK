@@ -6,7 +6,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Utils.h"
-#include "Function.h"
+#include "CompositeFunction.h"
 #include <tuple>
 #include "ComputationNetworkBuilder.h"
 

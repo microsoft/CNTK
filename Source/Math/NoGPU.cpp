@@ -2232,7 +2232,7 @@ void GPUDataTransferer::WaitForCopyCPUToGPUAsync(){}
 
 #pragma region GPURNGHandle functions
 
-GPURNGHandle::GPURNGHandle(int deviceId, unsigned long seed)
+GPURNGHandle::GPURNGHandle(int deviceId, unsigned long seed, unsigned long long offset)
     : RNGHandle(deviceId)
 {
 }

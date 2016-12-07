@@ -534,7 +534,7 @@ GPUMatrix<ElemType>::~GPUMatrix(void)
 template <class ElemType>
 void GPUMatrix<ElemType>::Clear()
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
     //if (OwnBuffer() && m_pArray != NULL)
     if (m_sob != nullptr)
     {
@@ -1517,7 +1517,7 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
 
-    VerifyResizable(__func__);
+    VerifyResizable(__FUNCTION__);
     bool isForceResize = (!growOnly) || cachedResize;
 
     size_t numElements = numRows * numCols;

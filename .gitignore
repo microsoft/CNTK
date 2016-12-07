@@ -246,3 +246,6 @@ Tutorials/dqn.mod
 Tutorials/pg.mod
 Tutorials/query.wl
 Tutorials/slots.wl
+/packages
+/CNTK.VC.db
+/CNTK.VC.VC.opendb

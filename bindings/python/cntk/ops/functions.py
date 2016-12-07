@@ -1,6 +1,9 @@
 from cntk import cntk_py
+from cntk.device import DeviceDescriptor
 from ..utils import typemap, sanitize_var_map, value_to_seq
 from enum import Enum, unique
+import numpy as np
+
 
 @unique
 class CloneMethod(Enum):
@@ -269,7 +272,6 @@ class Function(cntk_py.Function):
              BackpropState is a handle taken by :func:`backward`.
         '''
         if device is None:
-            from cntk import DeviceDescriptor
             device = DeviceDescriptor.use_default_device()
 
         in_var_map = sanitize_var_map(self.arguments, arguments,
@@ -290,11 +292,13 @@ class Function(cntk_py.Function):
         '''
         Backpropagates supplied ``root_gradients`` for one or more of the output
         variables of the Function, to calculate gradients with respect to
-        ``variables``.
+        ``variables``. Formally, multiplies the values of ``root_gradients`` by
+        the Jacobian of the Function and returns the subset of the output that
+        corresponds to ``variables``.
 
         Example:
             >>> # compute the value and the derivative of the sigmoid at 0
-            >>> v = C.input_variable(shape=(1,))
+            >>> v = C.input_variable(shape=(1,), needs_gradient=True)
             >>> f = C.sigmoid(v)
             >>> df, fv = f.forward({v:[[0]]}, [f.output], set([f.output]))
             >>> value = list(fv.values())[0]
@@ -315,7 +319,9 @@ class Function(cntk_py.Function):
         Returns:
             dict: mapping of ``variables`` to NumPy arrays
         '''
-        root_gradients = sanitize_var_map(self.outputs, root_gradients)
+        device = state.device()
+        root_gradients = sanitize_var_map(self.outputs, root_gradients,
+                                          None, device)
 
         var_gradients = dict((var, None) for var in variables)
 
@@ -325,6 +331,50 @@ class Function(cntk_py.Function):
             var_gradients[var] = value_to_seq(value)
 
         return var_gradients
+
+    @typemap
+    def grad(self, at, wrt=None, device=None):
+        '''
+        Computes the gradient of this Function at location ``at`` with respect to ``wrt``.
+        The Function must have a single output.
+
+        Example:
+            >>> x = C.input_variable(shape=(1,), needs_gradient=True)
+            >>> y = C.sqrt(x)
+            >>> a = np.asarray([1,4,16],dtype=np.float32).reshape(3,1,1)
+            >>> y.grad({x:a})
+            [array([[[ 0.5  ]],
+            <BLANKLINE>
+                   [[ 0.25 ]],
+            <BLANKLINE>
+                   [[ 0.125]]], dtype=float32)]
+
+        Args:
+            at (dict) : mapping of the Function's arguments to values
+            wrt (list optional): list of Variables with respect to which the
+             gradient will be computed. If omitted, the gradients with
+             respect to all arguments will be computed. If a variable
+             is repeated in this list, the gradient will be repeated
+             in the output as a shallow copy.
+
+        Returns:
+            list: list containing the gradients in the same order as
+            the variables in ``wrt``. Each element has the same shape as
+            ``wrt`` including dynamic axes (such as the minibatch axis).
+        '''
+
+        if len(self.outputs) != 1 :
+            raise InvalidArgumentException('function must return a single tensor')
+
+        if wrt is None:
+            wrt = self.arguments
+
+        unique_wrt = set(wrt)
+        output = [self.output]
+        df, f = self.forward(at, output, set(output), device)
+        ones = {self.output: np.ones_like(v) for v in f.values()}
+        grad_dict = self.backward(df, ones, unique_wrt)
+        return [grad_dict[v] for v in wrt]
 
     @property
     @typemap
@@ -381,6 +431,22 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).placeholders()
 
+    @property
+    @typemap
+    def root_function(self):
+        '''
+        The primitive function at the root of the graph of functions underlying this function.
+        '''
+        return super(Function, self).root_function()
+
+    @property
+    @typemap
+    def uid(self):
+        '''
+        The internally generated unique name of the function.
+        '''
+        return super(Function, self).uid()
+
     @typemap
     def replace_placeholders(self, substitutions):
         '''
@@ -403,7 +469,7 @@ class Function(cntk_py.Function):
 
         Args:
             substitution (:class:`~cntk.ops.variables.Variable`): the variable
-             that will replace the placeholder 
+             that will replace the placeholder
 
         Returns:
             :class:`Function`: itself
@@ -413,43 +479,42 @@ class Function(cntk_py.Function):
         return super(Function, self).replace_placeholder(substitution)
 
     @typemap
-    def save_model(self, filename, use_legacy_format=True):
+    def save_model(self, filename):
         '''
-        Save this function graph into a model file
+        Save this function graph into a model file using protobuf-based serialization.
 
         Args:
             filename (str): model path
-            use_legacy_format (str): if 'True', model is stored using legacy format.
-             Otherwise, it's stored using protobuf-based protocol serialization.
         '''
-        return super(Function, self).save_model(filename, use_legacy_format)
+        return super(Function, self).save_model(filename)
 
     @typemap
     def restore_model(self, filename):
         '''
-        Restore the models parameters from a saved model file
+        Restore the models parameters (in-place) from a saved model file
 
         Args:
-            filename (str): saved model path 
+            filename (str): saved model path
 
         Returns:
             `None`: this method only has the side-effect of loading the model parameters from the file
         '''
         return super(Function, self).restore_model(filename)
 
-    @property
-    @typemap
-    def root_function(self):
-        '''
-        The primitive function at the root of the graph of functions underlying this function.
-        '''
-        return super(Function, self).root_function()
+@typemap
+def load_model(filename, device=None):
+    '''
+    Load the model in ``filename``, that has been saved using
+    `:func:save_model`.
 
-    @property
-    @typemap
-    def uid(self):
-        '''
-        The internally generated unique name of the function.
-        '''
-        return super(Function, self).uid()
+    Args:
+        filename (str): filename to load the model from
+        device (:class:`~cntk.DeviceDescriptor`, default is the default device):
+         instance of DeviceDescriptor
 
+    Returns:
+        root node
+    '''
+    if not device:
+        device = DeviceDescriptor.use_default_device()
+    return cntk_py.Function.load_model(filename, device)

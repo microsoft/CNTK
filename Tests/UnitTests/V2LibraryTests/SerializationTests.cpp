@@ -118,12 +118,12 @@ DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t maxSize
     }
     case DictionaryValue::Type::Vector:
     {   
-        auto type = GetType();
+        auto type2 = GetType();
         size_t size = rng() % maxSize + 1;
         vector<DictionaryValue> vector(size);
         for (auto i = 0; i < size; i++)
         {
-            vector[i] = CreateDictionaryValue(type, maxSize-1, maxDepth-1);
+            vector[i] = CreateDictionaryValue(type2, maxSize-1, maxDepth-1);
         }
         return DictionaryValue(vector);
     }
@@ -317,7 +317,11 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::OptimizedRNNStack) == 49 &&
                   static_cast<size_t>(PrimitiveOpType::ReconcileDynamicAxis) == 50 &&
                   static_cast<size_t>(PrimitiveOpType::LogSoftmax) == 51 &&
-                  static_cast<size_t>(PrimitiveOpType::LogPlus) == 52,
+                  static_cast<size_t>(PrimitiveOpType::LogPlus) == 52 &&
+                  static_cast<size_t>(PrimitiveOpType::CosDistance) == 53 &&
+                  static_cast<size_t>(PrimitiveOpType::Sin) == 54 &&
+                  static_cast<size_t>(PrimitiveOpType::Cos) == 55 &&
+                  static_cast<size_t>(PrimitiveOpType::Pass) == 56,
                   "PrimitiveOpType enum value was modified.");
 }
 
@@ -445,21 +449,21 @@ void TestFunctionSerializationDuringTraining(const FunctionPtr& function, const 
 
     for (int i = 0; i < 3; ++i)
     {
-        Dictionary model = classifierOutput1->Serialize();
+        Dictionary model2 = classifierOutput1->Serialize();
 
-        auto classifierOutput2 = Function::Deserialize(model, device);
+        auto classifierOutput3 = Function::Deserialize(model2, device);
 
-        if (!AreEqual(classifierOutput1, classifierOutput2))
+        if (!AreEqual(classifierOutput1, classifierOutput3))
         {
             throw std::runtime_error("TestModelSerialization: original and reloaded functions are not identical.");
         }
       
-        Trainer trainer2 = BuildTrainer(classifierOutput2, labels);
+        Trainer trainer2 = BuildTrainer(classifierOutput3, labels);
 
         for (int j = 0; j < 3; ++j)
         {
             trainer1.TrainMinibatch({ { classifierOutput1->Arguments()[0], minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-            trainer2.TrainMinibatch({ { classifierOutput2->Arguments()[0], minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+            trainer2.TrainMinibatch({ { classifierOutput3->Arguments()[0], minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
 
             double mbLoss1 = trainer1.PreviousMinibatchLossAverage();
             double mbLoss2 = trainer2.PreviousMinibatchLossAverage();
@@ -503,7 +507,7 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
 
     const size_t minibatchSize = 50;
     auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
-     auto actualMBSize = minibatchData[labelStreamInfo].m_numSamples;
+    auto actualMBSize = minibatchData[labelStreamInfo].m_numSamples;
 
     LearningRatePerSampleSchedule learningRateSchedule({ { 2, 0.005 }, { 2, 0.0025 }, { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
     MomentumAsTimeConstantSchedule momentumValues({ { 2, 100 }, { 2, 200 }, { 2, 400 }, { 2, 800 } }, actualMBSize);
@@ -514,7 +518,7 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
 
     assert(AreEqual(function1, function2));
 
-    trainer2.SaveCheckpoint(L"trainer.v2.checkpoint", false);
+    trainer2.SaveCheckpoint(L"trainer.v2.checkpoint");
     trainer2.RestoreFromCheckpoint(L"trainer.v2.checkpoint");
 
     if (!AreEqual(function1, function2))
@@ -538,7 +542,7 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
 
     for (int i = 0; i < 3; ++i)
     {
-        trainer2.SaveCheckpoint(L"trainer.v2.checkpoint", false);
+        trainer2.SaveCheckpoint(L"trainer.v2.checkpoint");
         trainer2.RestoreFromCheckpoint(L"trainer.v2.checkpoint");
 
         if (!AreEqual(function1, function2))
@@ -646,8 +650,8 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
 
-    const wchar_t* modelFile = L"seq2seq.model";
-    classifierOutput->SaveModel(modelFile);
+    const wchar_t* modelFile = L"seq2seq.legacy.model";
+    Internal::SaveAsLegacyModel(classifierOutput, modelFile);
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     auto MB2Loss = trainer.PreviousMinibatchLossAverage();
@@ -660,7 +664,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 
     classifierOutput->RestoreModel(modelFile);
-    classifierOutput->SaveModel(modelFile);
+    Internal::SaveAsLegacyModel(classifierOutput, modelFile);
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
@@ -670,6 +674,33 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
+
+
+    LearningRatePerSampleSchedule learningRateSchedule2({ { 0.04, 0.02, 0.01, 0.008, 0.004, 0.002, 0.001 } }, actualMBSize);
+    MomentumAsTimeConstantSchedule momentumSchedule({ { 900, 800, 700, 600, 500 } }, actualMBSize);
+    auto learner2 = AdamLearner(classifierOutput->Parameters(), learningRateSchedule, momentumSchedule);
+    Trainer trainer2(classifierOutput, trainingLoss, prediction, { learner });
+
+
+    classifierOutput->RestoreModel(modelFile);
+
+    vector<double> expectedLoss;
+    for (int i = 0; i < 10; i++)
+    {
+        trainer.SaveCheckpoint(L"trainer.checkpoint" + std::to_wstring(i));
+        Internal::SaveAsLegacyModel(classifierOutput, modelFile + std::to_wstring(i));
+        trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        expectedLoss.push_back(trainer.PreviousMinibatchLossAverage());
+}
+
+    for (int i = 0; i < 10; i++)
+    {
+        trainer.RestoreFromCheckpoint(L"trainer.checkpoint" + std::to_wstring(i));
+        classifierOutput->RestoreModel(modelFile + std::to_wstring(i));
+        trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        double loss = trainer.PreviousMinibatchLossAverage();
+        FloatingPointCompare(loss, expectedLoss[i], "Post checkpoint restoration training loss does not match expectation");
+    }
 }
 
 void TestThatExceptionsAreRaisedForNonExistentPaths()
@@ -679,18 +710,18 @@ void TestThatExceptionsAreRaisedForNonExistentPaths()
     }, "Was able to open file 'This.File.Does.Not.Exist' for reading.");
 
     VerifyException([]() {
-        auto f = FullyConnectedLinearLayer(InputVariable({ 1 }, false, DataType::Float, L"i"), 1, DeviceDescriptor::CPUDevice());
-        f->SaveModel(L"This/Path/Does/Not/Exist", false);
-    }, "Was able to open file 'This/Path/Does/Not/Exist' for writing.");
-
-    VerifyException([]() {
         Dictionary::Load(L"This.File.Does.Not.Exist");
     }, "Was able to open file 'This.File.Does.Not.Exist' for reading.");
 
     VerifyException([]() {
-        Dictionary dict;
-        dict.Save(L"This/Path/Does/Not/Exist");
-    }, "Was able to open file 'This/Path/Does/Not/Exist' for writing.");
+        Function::LoadModel(L"This_Path_Does_Not_Exist/Models/model.file");
+    }, "Was able to open file 'This_Path_Does_Not_Exist/Models/model.file' for reading.");
+
+
+    VerifyException([]() {
+        Dictionary::Load(L"This_Path_Does_Not_Exist/Dictionaries/dict.file");
+    }, "Was able to open file 'This_Path_Does_Not_Exist/Dictionaries/dict.file' for reading.");
+
 }
 
 void TestLoadingDictionariesGeneratedFromPresentPastAndFutureProtos() 
@@ -719,6 +750,47 @@ void TestLoadingDictionariesGeneratedFromPresentPastAndFutureProtos()
     assert(futureDict.Size() > 0);
 }
 
+
+void TestCheckpointingWithStatefulNodes(const DeviceDescriptor& device)
+{
+    auto featureStreamName = L"features";
+    auto labelsStreamName = L"labels";
+
+    size_t inputDim = 784;
+    size_t numOutputClasses = 10;
+    auto features = InputVariable({ inputDim }, false /*isSparse*/, DataType::Float, featureStreamName);
+    auto labels = InputVariable({ numOutputClasses }, DataType::Float, labelsStreamName);
+    //auto net = BuildFFClassifierNet(features, numOutputClasses, device, 1);
+    auto net = Dropout(BuildFFClassifierNet(features, numOutputClasses, device, 1), 0.5);
+
+    auto trainer = BuildTrainer(net, labels);
+
+    const size_t minibatchSize = 50;
+    const size_t epochSize = 150;
+    auto minibatchSource = TextFormatMinibatchSource(L"Train-28x28_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },  epochSize, false);    
+    auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+    auto featureStreamInfo = minibatchSource->StreamInfo(features);
+    auto labelStreamInfo = minibatchSource->StreamInfo(labels);
+
+    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+
+    vector<double> expectedLoss;
+    for (int i = 0; i < epochSize / minibatchSize; i++)
+    {
+        trainer.SaveCheckpoint(L"stateful_nodes.model" + std::to_wstring(i));
+        trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        expectedLoss.push_back(trainer.PreviousMinibatchLossAverage());
+    }
+
+    for (int i = 0; i < epochSize / minibatchSize; i++)
+    {
+        trainer.RestoreFromCheckpoint(L"stateful_nodes.model" + std::to_wstring(i));
+        trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        double loss = trainer.PreviousMinibatchLossAverage();
+        FloatingPointCompare(loss, expectedLoss[i], "Post checkpoint restoration training loss does not match expectation");
+    }
+}
+
 void SerializationTests()
 {
     fprintf(stderr, "\nSerializationTests..\n");
@@ -745,6 +817,8 @@ void SerializationTests()
     TestCheckpointing(DeviceDescriptor::CPUDevice());
     TestLegacyModelSaving(DeviceDescriptor::CPUDevice());
 
+    TestCheckpointingWithStatefulNodes(DeviceDescriptor::CPUDevice());
+
     if (IsGPUAvailable())
     {
         TestLearnerSerialization<float>(5, DeviceDescriptor::GPUDevice(0));
@@ -754,6 +828,7 @@ void SerializationTests()
         TestCheckpointing(DeviceDescriptor::GPUDevice(0));
         TestLegacyModelSaving(DeviceDescriptor::GPUDevice(0));
 
+        TestCheckpointingWithStatefulNodes(DeviceDescriptor::GPUDevice(0));
     }
 
 }

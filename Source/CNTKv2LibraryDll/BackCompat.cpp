@@ -6,7 +6,8 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "BackCompat.h"
-#include "Function.h"
+#include "PrimitiveFunction.h"
+#include "CompositeFunction.h"
 #include "ComputationNetworkBuilder.h"
 #include "Utils.h"
 #include "ComputationNode.h"
@@ -127,6 +128,12 @@ namespace CNTK
                     opType = PrimitiveOpType::Sigmoid;
                 else if (node->OperationName() == OperationNameOf(TanhNode))
                     opType = PrimitiveOpType::Tanh;
+                else if (node->OperationName() == OperationNameOf(CosineNode))
+                    opType = PrimitiveOpType::Cos;
+                else if (node->OperationName() == OperationNameOf(SinNode))
+                    opType = PrimitiveOpType::Sin;
+                else if (node->OperationName() == OperationNameOf(PassNode))
+                    opType = PrimitiveOpType::Pass;
                 else if (node->OperationName() == OperationNameOf(RectifiedLinearNode))
                     opType = PrimitiveOpType::ReLU;
                 else if (node->OperationName() == OperationNameOf(ExpNode))
@@ -267,6 +274,8 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOffset] = (size_t)node->As<FutureValueNode<ElementType>>()->TimeStep();
                     opType = PrimitiveOpType::FutureValue;
                 }
+                else if (node->OperationName() == OperationNameOf(CosDistanceNode))
+                    opType = PrimitiveOpType::CosDistance;
                 else if (node->OperationName() == OperationNameOf(LogisticNode))
                     opType = PrimitiveOpType::Logistic;
                 else if (node->OperationName() == OperationNameOf(SquareErrorNode))
@@ -347,6 +356,25 @@ namespace CNTK
 
                     opType = PrimitiveOpType::Pooling;
                 }
+                // Legacy pooling node.
+                else if ((node->OperationName() == OperationNameOf(MaxPoolingNode)) ||
+                         (node->OperationName() == OperationNameOf(AveragePoolingNode)))
+                {
+                    auto poolingNode = node->As<PoolingNodeBase<ElementType>>();
+                    if (poolingNode->IsImageLayoutCHW())
+                    {
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingType] = (size_t)(AsPoolingType(poolingNode->PoolingKind()));
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingWindowShape] = AsNDShape(poolingNode->KernelShape());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(poolingNode->Strides());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(poolingNode->AutoPad());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(poolingNode->LowerPad());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(poolingNode->UpperPad());
+
+                        opType = PrimitiveOpType::Pooling;
+                    }
+                    else
+                        LogicError("Unsupported data layout for ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
+                }
                 else if (node->OperationName() == OperationNameOf(BatchNormalizationNode))
                 {
                     auto batchNormalizationNode = node->As<BatchNormalizationNode<ElementType>>();
@@ -391,6 +419,13 @@ namespace CNTK
                 }
                 else
                     LogicError("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
+
+                if (node->Is<RngUser>())
+                {
+                    auto rngUserNode = node->As<RngUser>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRngSeed] = static_cast<size_t>(rngUserNode->GetRngSeed());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRngOffset] = static_cast<size_t>(rngUserNode->GetRngOffset());
+                }
 
                 // Let's reorder inputVars properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
                 ReorderAsPrimitiveFunctionInputs(opType, inputVars);
@@ -476,10 +511,10 @@ namespace CNTK
             switch (dataType)
             {
             case DataType::Float:
-                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, false);
+                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, {}, false);
                 break;
             case DataType::Double:
-                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, false);
+                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, {}, false);
                 break;
             default:
                 LogicError("Unknown DataType %s", DataTypeName(dataType));

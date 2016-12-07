@@ -14,7 +14,8 @@ import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE
 import cntk as C
 from cntk.axis import Axis
-from ...utils import sanitize_dtype_cntk
+from ...utils import sanitize_dtype_cntk, cntk_device
+from .. import constant
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 # the backward result returned by CNTK log() for epsilon
@@ -28,12 +29,9 @@ RESHAPE_TEST_CASES = [
     ((2, 3),    (6, 1), (6, 1)),
     ((6, 1),    (2, 3), (2, 3)),
     ((2, 3, 5), (5, 6), (5, 6)),
-    # now we test the feature that we can set one dimension of the output_shape to 0 meaning that it's value is inferred
-    # FIXME 0 is for some reason not supported yet
-    #((2, 3, 5), (0, 6), (5, 6)),
-    #((2, 3, 5), (5, 0), (5, 6)),
+    ((2, 3, 5), (C.InferredDimension, 6), (5, 6)),
+    ((2, 3, 5), (5, C.InferredDimension), (5, 6)),
 ]
-
 
 @pytest.mark.parametrize("input_shape, output_shape, expected_output_shape", RESHAPE_TEST_CASES)
 def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id, precision):
@@ -42,7 +40,7 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
     # For testing the gradients we want to have different gradients for each input index otherwise we can't
     # test if they get wrongly permuted during test. To this end we multiply
     # the reshaping result with itself.
-
+    dev = cntk_device(device_id)
     from ...utils import sanitize_dtype_cntk
     from .. import reshape, element_times
 
@@ -58,7 +56,8 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
 
     a_reshaped = reshape(a, output_shape)
 
-    input_op = element_times(a_reshaped, input_reshaped)
+    const_input_reshaped = constant(input_reshaped, device=dev)
+    input_op = element_times(a_reshaped, const_input_reshaped)
 
     expected_forward = [[input_reshaped**2]]
     expected_backward = {a: input_tensor}
@@ -73,12 +72,43 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
                     device_id=device_id, precision=precision)
 
 
-def test_op_reshape_bad_input():
+# Test that reshape accumulates the gradient in its input operand
+# instead of overwriting the input operand gradient
+def test_op_reshape_gradient_accumulation(device_id, precision):
+    from ...utils import sanitize_dtype_cntk
     from .. import reshape
 
-    a = I(shape=(4, 5))
-    with pytest.raises(ValueError):
-        reshape(a, (-1, 2, 3))
+    input_shape = (2,3)
+    output_shape = (3,2)
+    expected_output_shape = (3,2)
+
+    num_tensor_elements = np.multiply.reduce(input_shape)
+    input_tensor = np.arange(
+        num_tensor_elements, dtype=PRECISION_TO_TYPE[precision])
+    input_reshaped = input_tensor.reshape(expected_output_shape)
+
+    a = I(shape=input_tensor.shape,
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          needs_gradient=True,
+          name='a')
+
+    a_reshaped1 = reshape(a, output_shape)
+    a_reshaped2 = reshape(a, output_shape)
+
+    input_op = a_reshaped1 + a_reshaped2
+
+    resulting_multiplicative_factor = 2
+    expected_forward = [[input_reshaped * resulting_multiplicative_factor]]
+
+    # create batch
+    input_tensor.shape = (1, 1) + input_tensor.shape
+    expected_backward = {a: np.full(input_tensor.shape, resulting_multiplicative_factor, dtype=PRECISION_TO_TYPE[precision])}
+
+    forward_input = {a: input_tensor}
+
+    unittest_helper(input_op,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
 
 
 SLICE_TEST_CASES_STATIC = [

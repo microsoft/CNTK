@@ -10,7 +10,6 @@
 #include "MinibatchSource.h"
 #include "HeapMemoryProvider.h"
 #include "ReaderShim.h"
-#include "Function.h"
 #include <tuple>
 #include "Value.h"
 #include "MPIWrapper.h"

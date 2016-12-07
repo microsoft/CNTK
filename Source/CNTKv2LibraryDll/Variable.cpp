@@ -5,8 +5,8 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
+#include "CompositeFunction.h"
 #include "Serialization.h"
-#include "Function.h"
 #include "InputAndParamNodes.h"
 
 namespace CNTK
@@ -69,6 +69,37 @@ namespace CNTK
 
         assert(m_dataFields->m_value != nullptr);
         return m_dataFields->m_value;
+    }
+
+    void Variable::SetValue(const NDArrayViewPtr& value)
+    {
+        if (!IsParameter())
+            LogicError("Variable::SetValue can be only invoked on a Parameter variable!");
+        else if (GetDataType() != value->GetDataType()) 
+            LogicError("Variable::SetValue: 'source' and 'destination' have different data types!");
+        else if (Shape() != value->Shape() && (AsTensorShape(Shape()) != AsTensorShape(value->Shape())))
+            LogicError("Variable::SetValue: 'source' and 'destination' have different shapes!");
+
+        bool alreadySet = false;
+        if (m_dataFields->m_initValueFlag)
+        {
+            // In the case of lazy initialization, try to avoid the redundant call to the initializer. 
+            std::call_once(*m_dataFields->m_initValueFlag, [=, &value, &alreadySet] {
+                // If the variable hasn't been initialized yet, clone the content of the supplied value and delete the initializer.
+                m_dataFields->m_value = value->DeepClone(*m_dataFields->m_valueInitializationDevice, false);
+                m_dataFields->m_valueInitializer = nullptr;
+                m_dataFields->m_valueInitializationDevice = nullptr;
+                alreadySet = true;
+            });
+        }
+
+        assert(m_dataFields->m_value != nullptr);
+        if (!alreadySet)
+        {
+            // alreadySet is false, the lambda above wasn't called and the variable has been initialized before,
+            // get a pointer to its value and simply copy the content of the supplied value.
+            m_dataFields->m_value->CopyFrom(*value);
+        }
     }
 
     static const std::wstring InitializerTypeAttributeName = L"initializerType";

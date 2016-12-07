@@ -8,7 +8,6 @@
 #include "ComputationNode.h"
 #include "Matrix.h"
 #include "TensorView.h"
-
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -19,6 +18,9 @@
 #include <algorithm>
 #include <utility>
 #include <assert.h>
+#include <set>
+#include "Quantizers.h"
+#include "InputAndParamNodes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -288,7 +290,7 @@ public:
             m_inferInputRankToMap = -1;
     }
 
-private:
+protected:
     // if the left argument of the matrix product (A) has a time axis, it can only be applied sample by sample
     // where each sample is treated as a separate matrix object (as a consequence, it then also applies to B and the result as well)
     TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
@@ -304,6 +306,7 @@ private:
         return TensorView<ElemType>(data, tensorShape);
     }
 
+private:
     // Check if TimesNodeBase could be simplified to ElementTimes to avoid unroll when:
     // 1. input0: DENSE, is rank-1 and transposed, or is rank-2 with Dim(0)==1
     // 2. input1: DENSE, is rank-1
@@ -360,7 +363,7 @@ public:
         auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
         auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
         auto output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
-        output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
+        output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/, 1.0f, this->m_pQuantizedMultiplier);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -583,6 +586,9 @@ public:
     size_t OutputRank() const { return m_outputRank; }
     int InferInputRankToMap() const { return m_inferInputRankToMap; }
 
+protected: 
+    shared_ptr<QuantizedMultiplier<ElemType>> m_pQuantizedMultiplier;
+
 private:
     size_t m_outputRank;
     int m_inferInputRankToMap;  // -1 (not specified) or says how to expand shape of W, to keep this many mapping dims
@@ -654,6 +660,96 @@ public:
 
 template class TransposeTimesNode<float>;
 template class TransposeTimesNode<double>;
+
+// Fixed-point matrix product. This scales inputs to 16bit signed integers by Symmetric quantizers, performs
+// integer multiplication using SSE/AVX2, and transforms the results back.
+// Only dense untransposed matrix multiplication will be quantized. If at least one matrix is sparse then it will fall back to un-quantized default evaluation
+// Currently it works for CPU only. On GPU logicError will be thrown.
+// One way to include this node to the network is with the Edit command:
+// ...
+// node => if node.name == 'LSTMoutput1.output' then QuantizedTimes(node.inputs[0], node.inputs[1], bitShiftA=1, bitShiftB=2) else node,
+// ...
+// bitShift(A|B) - bit shift parameters of quantizers for matrices A and B, see the quantizers for more details. Decreases the maximum range of quantziation by 2^bitShift to prevent integer overflow during BLAS routines.
+// bitShift=0 doesn't change the range; higher bitShift will decrease precision of quantization, but will make BLAS routines less prone to overflow.
+// Other parameters - refer to the base multiplication class
+template <class ElemType>
+class QuantizedTimesNode : public TimesNodeBase<ElemType, false>
+{
+    typedef TimesNodeBase<ElemType, false> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"QuantizedTimes";
+    }
+
+private:
+    // Quantizer bit shift for matrices A and B
+    size_t m_bitShiftA; 
+    size_t m_bitShiftB; 
+
+public:
+    QuantizedTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t bitShiftA = 1, size_t bitShiftB = 1, size_t outputRank = 1, int inferInputRankToMap = -1)
+        : Base(deviceId, name, outputRank, inferInputRankToMap), m_bitShiftA(bitShiftA), m_bitShiftB(bitShiftB)
+    {
+        // TODO support multiplication on GPUs as well.
+        if (deviceId != CPUDEVICE)
+            LogicError("Quantized operation is supposed to be used on CPU device only.");
+
+        shared_ptr<SymmetricQuantizer<ElemType, short>> pQA(new SymmetricQuantizer<ElemType, short>(m_bitShiftA));
+        shared_ptr<SymmetricQuantizer<ElemType, short>> qQB(new SymmetricQuantizer<ElemType, short>(m_bitShiftB));
+        this->m_pQuantizedMultiplier = shared_ptr<QuantizedMultiplier<ElemType>>(new QuantizedMultiplier<ElemType>(pQA, qQB));
+    }
+
+    QuantizedTimesNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : QuantizedTimesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"bitShiftA"), configp->Get(L"bitShiftB"), configp->Get(L"outputRank"), configp->Get(L"inferInputRankToMap"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<QuantizedTimesNode<ElemType>>(nodeP);
+            node->m_bitShiftA = m_bitShiftA;
+            node->m_bitShiftB = m_bitShiftB;
+        }
+    }
+
+    void Save(File& fstream) const
+    {
+        Base::Save(fstream);
+        fstream << m_bitShiftA;
+        fstream << m_bitShiftB;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_bitShiftA;
+        fstream >> m_bitShiftB;
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        if (dynamic_pointer_cast<LearnableParameter<ElemType>>(Input(0)))
+            this->m_pQuantizedMultiplier->SetIsAConstant(true);
+        if (dynamic_pointer_cast<LearnableParameter<ElemType>>(Input(1)))
+            this->m_pQuantizedMultiplier->SetIsBConstant(true);
+
+        Base::ForwardProp(fr);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& /*fr*/) override
+    {
+        // This operation is intended only for inference
+        NOT_IMPLEMENTED;
+    }
+};
+
+template class QuantizedTimesNode<float>;
+template class QuantizedTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // SumElementsNode (input)
@@ -1282,6 +1378,16 @@ template <class ElemType>
 void UpdateRunningAverage(ComputationNode<ElemType>& newInput, TensorView<ElemType>& runningAverage,
                           size_t& runningCount);
 
+class MPIWrapper;
+struct DistGradHeader;
+
+template <typename ElemType>
+void AggregateAccumulatorValuesAndUpdateEvaluation(
+    shared_ptr<ComputationNetwork> net,
+    set<shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
+    shared_ptr<DistGradHeader> gradHeader,
+    shared_ptr<MPIWrapper> mpi);
+
 // -----------------------------------------------------------------------
 // EpochAccumulatorNode calculates mean values of all samples used in forward pass.
 // During training, mean sample value is calculated in each epoch. Value of the node will contain mean sample value of
@@ -1326,7 +1432,20 @@ public:
     // We don't release accumulator as it is needed after forward pass.
 
 protected:
+
+    friend void AggregateAccumulatorValuesAndUpdateEvaluation<ElemType>(
+        shared_ptr<ComputationNetwork> net,
+        set<shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
+        shared_ptr<DistGradHeader> gradHeader,
+        shared_ptr<MPIWrapper> mpi);
+
     void Reset();
+
+    size_t GetNumberOfSamples() const { return m_numSamples; }
+    void SetNumberOfSamples(size_t samples) { m_numSamples = samples; }
+    shared_ptr<Matrix<ElemType>> GetAccumulator() { return m_accumulator; }
+    // Copies internal accumulator to the output.
+    void CopyAccumulatorToValue();
 
     shared_ptr<Matrix<ElemType>> m_accumulator;
     size_t m_numSamples;

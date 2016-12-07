@@ -237,8 +237,6 @@ namespace CNTK
 
     inline void AddConfigString(std::wstringstream& s, const std::wstring& key, const DictionaryValue& value, size_t numIndentationSpaces)
     {
-        static const size_t perLevelIndentSize = 4;
-
         AddIndentation(s, numIndentationSpaces);
         s << key << L" = ";
         AddConfigString(s, value, numIndentationSpaces);

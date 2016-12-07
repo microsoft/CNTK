@@ -65,7 +65,7 @@ def nb(tmpdir_factory, request, device_id):
     outPath = str(tmpdir_factory.mktemp('notebook').join('out.ipynb'))
     assert os.path.isfile(inPath)
     args = ["jupyter", "nbconvert", "--to", "notebook", "--execute",
-            "--ExecutePreprocessor.timeout=60", "--output", outPath, inPath]
+            "--ExecutePreprocessor.timeout=300", "--output", outPath, inPath]
     subprocess.check_call(args)
     nb = nbformat.read(outPath, nbformat.current_nbformat)
     return nb

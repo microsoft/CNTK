@@ -20,6 +20,20 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// For old config, we have to emulate the same behavior as the old reader.
+template<class ElemType>
+class HTKMLFReaderShim : public ReaderShim<ElemType>
+{
+public:
+    explicit HTKMLFReaderShim(ReaderFactory f) : ReaderShim<ElemType>(f) {}
+
+    bool IsLegacyReader() const override
+    {
+        return true;
+    }
+};
+
+
 // Factory methods for the reader.
 // TODO: Must be removed when SGD is moved to an untyped matrix.
 auto factory = [](const ConfigParameters& parameters) -> ReaderPtr
@@ -29,12 +43,12 @@ auto factory = [](const ConfigParameters& parameters) -> ReaderPtr
 
 extern "C" DATAREADER_API void GetReaderF(IDataReader** preader)
 {
-    *preader = new ReaderShim<float>(factory);
+    *preader = new HTKMLFReaderShim<float>(factory);
 }
 
 extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 {
-    *preader = new ReaderShim<double>(factory);
+    *preader = new HTKMLFReaderShim<double>(factory);
 }
 
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.

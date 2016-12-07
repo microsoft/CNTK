@@ -19,6 +19,8 @@
 
 using namespace Microsoft::MSR::CNTK;
 
+#pragma warning(disable: 4459) // declaration of 'boost_scope_exit_aux_args' hides global declaration
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 // A thin wrapper around CNTK text format reader
@@ -32,7 +34,7 @@ public:
 
     CNTKTextFormatReaderTestRunner(const string& filename,
         const vector<StreamDescriptor>& streams, unsigned int maxErrors) :
-        m_parser(std::make_shared<CorpusDescriptor>(), wstring(filename.begin(), filename.end()), streams)
+        m_parser(std::make_shared<CorpusDescriptor>(true), wstring(filename.begin(), filename.end()), streams, true)
     {
         m_parser.SetMaxAllowedErrors(maxErrors);
         m_parser.SetTraceLevel(TextParser<ElemType>::TraceLevel::Info);

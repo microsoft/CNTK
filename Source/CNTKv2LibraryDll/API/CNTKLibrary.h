@@ -1704,6 +1704,7 @@ namespace CNTK
 
     protected:
         CNTK_API NDArrayViewPtr Value() const;
+        CNTK_API void SetValue(const NDArrayViewPtr& value);
 
     private:
 #ifdef SWIG
@@ -1998,6 +1999,16 @@ private:
             return Variable::Value();
         }
 
+        ///
+        /// Copies the contents of the 'value' NDArrayView into the view backing 'this' 
+        /// parameter's value. The shapes of both views must be identical.
+        ///
+        void SetValue(const NDArrayViewPtr& value)
+        {
+            Variable::SetValue(value);
+            RecordValueUpdate();
+        }
+
         size_t CurrentValueTimeStamp() const { return m_dataFields->m_valueTimeStamp.load(); }
 
         void RecordValueUpdate()
@@ -2159,13 +2170,17 @@ namespace CNTK
         /// Returns the Function that 'this' BackPropState belongs to
         ///
         FunctionPtr Function() const { return m_function; }
+        DeviceDescriptor Device() const { return m_forwardComputeDevice; }
         virtual ~BackPropState() {}
 
     protected:
-        BackPropState(const FunctionPtr& function) : m_function(function) {}
+        BackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice) 
+            : m_function(function), m_forwardComputeDevice(computeDevice)
+        {}
 
     protected:
         FunctionPtr m_function;
+        DeviceDescriptor m_forwardComputeDevice;
     };
     typedef std::shared_ptr<BackPropState> BackPropStatePtr;
 
@@ -2371,9 +2386,9 @@ namespace CNTK
         CNTK_API FunctionPtr ReplacePlaceholder(const Variable& placeholderReplacement);
 
         ///
-        /// Save this function graph into a model file
+        /// Save this function graph into a model file.
         ///
-        CNTK_API void SaveModel(const std::wstring& modelFile, bool useLegacyModelFormat = true);
+        CNTK_API void SaveModel(const std::wstring& modelFile);
 
         ///
         /// Restore the models parameters (in-place) from a model file
@@ -2476,6 +2491,16 @@ namespace CNTK
     /// Create an instance of the CNTK built-in elementwise tanh operation with the specified input operand.
     ///
     CNTK_API FunctionPtr Tanh(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise sine operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Sin(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise cosine operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr Cos(const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in elementwise linear rectifier operation with the specified input operand.
@@ -2688,6 +2713,12 @@ namespace CNTK
     {
         return TransposeTimes(leftOperand, rightOperand, /*outputRank =*/ 1, name);
     }
+
+
+    ///
+    /// Create an instance of the CNTK built-in operation to compute the cosine distance for the specified input operands.
+    ///
+    CNTK_API FunctionPtr CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation to compute binary cross-entropy for specified input operands.
@@ -3319,7 +3350,7 @@ namespace CNTK
         ///
         /// Checkpoint the model and other Trainer state at the specified file location
         ///
-        CNTK_API void SaveCheckpoint(const std::wstring& filePath, bool usingLegacyModelFormat = true);
+        CNTK_API void SaveCheckpoint(const std::wstring& filePath);
 
         ///
         /// Restore the model and trainer state from a previously saved model and checkpoint from the specified file location
@@ -3364,7 +3395,7 @@ namespace CNTK
         CNTK_API ~Trainer();
 
     private:
-        void Save(const std::wstring& modelFilePath, bool usingLegacyModelFormat, const Dictionary& state);
+        void Save(const std::wstring& modelFilePath, const Dictionary& state);
         bool UpdateLearners(const std::unordered_map<Parameter, NDArrayViewPtr>& gradients);
         bool HandleEmptyMinibatch(bool atEndOfData);
 
