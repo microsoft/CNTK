@@ -35,6 +35,6 @@ extern void PrintDictionaryValue(
 
 namespace GRAPHIR
 {
-    const google::protobuf::Message* Serialize(const CNTK::FunctionPtr& modelFuncPtr);
-    const CNTK::FunctionPtr Deserialize(const CNTK::FunctionPtr& modelFuncPtr, graphIR::Graph* message);
+    const graphIR::Graph* Serialize(const CNTK::FunctionPtr& modelFuncPtr);
+    const CNTK::FunctionPtr Deserialize(const graphIR::Graph* message, const CNTK::FunctionPtr& modelFuncPtr);
 }

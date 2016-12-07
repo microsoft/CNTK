@@ -44,13 +44,15 @@ void DumpAsBinary(const google::protobuf::Message& message, const std::string& f
 int main()
 {
 	auto device = DeviceDescriptor::CPUDevice();
-	string filename = "\\BrainWaveCntk\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn";
+	string filename = "\\Cntk\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn";
     wstring filenameW = wstring(filename.begin(), filename.end());
 
 	// The model file will be trained and copied to the current runtime directory first.
 	auto modelFuncPtr = CNTK::Function::LoadModel(filenameW, device/*, LstmGraphNodeFactory*/);
 
     auto message = GRAPHIR::Serialize(modelFuncPtr);
+    auto result = GRAPHIR::Deserialize(message, modelFuncPtr);
+
     DumpAsBinary(*message, filename + string(".serialized"));
     DumpAsJson(*message, filename + string(".serialized_json"));
 

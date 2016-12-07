@@ -17,6 +17,7 @@
 extern "C"
 {
 #include <b64/cencode.h>
+#include <b64/cdecode.h>
 }
 
 using namespace CNTK;
@@ -73,6 +74,17 @@ std::string EncodeBase64(const char *buf, size_t len)
 	delete[] sout;
 
 	return result;
+}
+
+std::vector<char> DecodeBase64(const std::string str)
+{
+    base64_decodestate state;
+    char *sout = new char[str.length()];
+
+    base64_init_decodestate(&state);
+    auto len = base64_decode_block(str.c_str(), (int)str.size(), sout, &state);
+
+    return std::vector<char>(sout, sout + len);
 }
 
 graphIR::Graph* CntkGraphToGraphIr(std::wstring filename, FunctionPtr evalFunc)
