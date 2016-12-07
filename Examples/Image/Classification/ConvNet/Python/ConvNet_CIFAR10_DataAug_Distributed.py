@@ -49,7 +49,7 @@ def create_reader(map_file, mean_file, train, total_number_of_samples, distribut
         distributed_after = distributed_after)
 
 # Train and evaluate the network.
-def convnet_cifar10_dataaugcreate_train_reader, test_reader, create_dist_learner, max_epochs=80, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
+def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, max_epochs=80, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
     _cntk_py.set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
