@@ -75,9 +75,6 @@
     <Compile Include="..\SwigBinding\AxisVector.cs">
       <Link>GeneratedFiles\AxisVector.cs</Link>
     </Compile>
-    <Compile Include="..\SwigBinding\BackPropState.cs">
-      <Link>GeneratedFiles\BackPropState.cs</Link>
-    </Compile>
     <Compile Include="..\SwigBinding\BoolVector.cs">
       <Link>GeneratedFiles\BoolVector.cs</Link>
     </Compile>
@@ -140,9 +137,6 @@
     </Compile>
     <Compile Include="..\SwigBinding\StorageFormat.cs">
       <Link>GeneratedFiles\StorageFormat.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t.cs">
-      <Link>GeneratedFiles\SWIGTYPE_p_std__unordered_setT_CNTK__Variable_t.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\SWIGTYPE_p_void.cs">
       <Link>GeneratedFiles\SWIGTYPE_p_void.cs</Link>

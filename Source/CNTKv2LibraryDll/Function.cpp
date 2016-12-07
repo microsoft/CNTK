@@ -175,6 +175,13 @@ namespace CNTK
         }
     }
 
+    void Function::Evaluate(const std::unordered_map<Variable, ValuePtr>& arguments,
+                            std::unordered_map<Variable, ValuePtr>& outputs,
+                            const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        Forward(arguments, outputs, computeDevice, {});
+    }
+
     void Function::SaveModel(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
     {
         if (usinglegacyModelFormat)
