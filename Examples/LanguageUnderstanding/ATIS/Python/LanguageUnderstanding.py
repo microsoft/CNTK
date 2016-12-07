@@ -8,14 +8,14 @@ import os
 import math
 from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
-from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
+from cntk.models import *  # higher abstraction level, e.g. entire standard models and also orsisrators like Sequential()
 from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer, Evaluator
 from cntk.learner import adam_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk.ops import cross_entropy_with_softmax, classification_error, splice
+from cntk.ops import cross_entropy_with_softmax, classification_error, splice, relu
 from cntk.trainer import create_trainer
-from cntk.persist import load_model, save_model
+#from cntk.persist import load_model, save_model
 
 ########################
 # variables and stuff  #
@@ -47,14 +47,37 @@ def create_reader(path, is_training):
 ########################
 
 def create_model_function():
+  softplus = Function(lambda x: log (1 + exp (x)))
+
+  softmux = Function(lambda sel, a, b: a)   # sel * a + (1-sel) * b)
+  rnn = RNNUnit(hidden_dim, activation=relu)
+  #gate = Dense(hidden_dim, activation=sigmoid)
+  #pr_rnn = Function(lambda x, h: softmux(gate(x), x, rnn(x, h)))
+  def pr_rnn_f(x, prev_h):
+      r = rnn(x, prev_h)
+      return r + x
+      #selx = Dense(hidden_dim)(x)
+      #selh = Dense(hidden_dim, bias=False)(prev_h)
+      #sel = sigmoid (selx + selh)
+      #return (1-sel) * r + sel * x
+      #return sel * r + (1-sel) * x
+      #return softmux(sel, r, x) #sel * r + (1-sel) * x
+  pr_rnn = Function(pr_rnn_f)
+
   from cntk.ops.sequence import last
   with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
         Embedding(emb_dim),
         Recurrence(LSTM(hidden_dim), go_backwards=False),
-        Dense(num_labels)
-        #last,
-        #Dense(num_intents)
+        #Recurrence(GRU(hidden_dim), go_backwards=False),
+        #Recurrence(GRU(hidden_dim, activation=relu), go_backwards=False),
+        #Recurrence(RNNUnit(hidden_dim, activation=relu), go_backwards=False),
+        #Recurrence(RNNUnit(hidden_dim, activation=softplus), go_backwards=False),
+        #Recurrence(pr_rnn, go_backwards=False),
+        #Recurrence(RNNUnit(hidden_dim, activation=relu) >> Dense(hidden_dim, activation=relu), go_backwards=False),
+        #Dense(num_labels)
+        last,
+        Dense(num_intents)
     ])
 
 ########################
@@ -98,13 +121,12 @@ def train(reader, model, max_epochs):
     criterion = create_criterion_function(model)
 
     # TODO: num_intents --> get from reader?
-    labels = reader.streams.slot_labels
-    #labels = reader.streams.intent_labels
-    #labels.m_sampleLayout # .shape BUGBUG: both fail with unknwon attribute
+    #labels = reader.streams.slot_labels
+    labels = reader.streams.intent_labels
 
     # declare argument types
-    criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_labels, is_sparse=True))
-    #criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
+    #criterion.set_signature(Input(vocab_size, is_sparse=False), Input(num_labels, is_sparse=True))
+    criterion.set_signature(Input(vocab_size, is_sparse=False), Input(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
@@ -113,7 +135,8 @@ def train(reader, model, max_epochs):
 
     # SGD parameters
     learner = adam_sgd(criterion.parameters,
-                       lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
+                       #lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
+                       lr         = learning_rate_schedule(0, UnitType.sample),
                        momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
                        low_memory = True,
                        gradient_clipping_threshold_per_sample = 15,
@@ -172,8 +195,11 @@ def evaluate(reader, model):
 if __name__=='__main__':
     # TODO: leave these in for now as debugging aids; remove for beta
     # TODO: try cntk_py without _ (feedback from Willi)
+    from cntk import DeviceDescriptor
+    DeviceDescriptor.set_default_device(cntk_device(-1)) # force CPU
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
+    #set_computation_network_trace_level(1000000)  # TODO: remove debugging facilities once this all works
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     force_deterministic_algorithms()
 
@@ -184,7 +210,7 @@ if __name__=='__main__':
 
     # save and load (as an illustration)
     path = data_dir + "/model.cmf"
-    save_model(model, path)
+    model.save_model(path)
     # BUGBUG: fails with "AttributeError: 'super' object has no attribute 'save_model'"
     model = load_model(path)
 

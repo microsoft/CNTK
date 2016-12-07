@@ -124,16 +124,16 @@ def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_
                                      dynamic_axes=dynamic_axes, name=name), 'input')
 
 # use this for set_signature()
-variable_of_type = Input
+#variable_of_type = Input
 
-def variable_type_of(*args, **kwargs):
-    return _name_node(input_variable(*args, **kwargs), 'input')
+#def variable_type_of(*args, **kwargs):
+#    return _name_node(input_variable(*args, **kwargs), 'input')
 
-def Placeholder(shape=None, name='placeholder'):
-    if shape is not None:
-        p = placeholder_variable(shape=shape, name=name) # TODO: use (*args, **kwargs)?
-    else:
-        p = placeholder_variable(name=name) # TODO: use (*args, **kwargs)?
+def Placeholder(shape=None, dynamic_axes=None, name='placeholder'):
+    #if shape is not None:
+    p = placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
+    #else:
+    #    p = placeholder_variable(name=name) # TODO: use (*args, **kwargs)?
     _name_node(p, name)
     if _trace_layers:
         print("new " + _node_description(p))
@@ -292,6 +292,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # in this case:
     #   (x, dh) --> (h)
     # e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
+    # BUGBUG: the 'dc' below is superfluous. Why does this throw an error Function.in __call__()??
     def gru(x, dh, dc):
 
         dhs = Sdh(dh)  # previous value, stabilized
