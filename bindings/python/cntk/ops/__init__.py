@@ -6,7 +6,7 @@
 from __future__ import division
 import numpy as np
 from . import sequence
-from .functions import Function
+from .functions import CloneMethod, Function, load_model
 from .variables import Variable, Parameter, Constant
 from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes, typemap
 
