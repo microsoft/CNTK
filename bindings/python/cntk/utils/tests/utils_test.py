@@ -201,3 +201,62 @@ def test_sanitize_batch_contiguity():
     batch = [[a1],[a2]]
     b = sanitize_batch(var, batch)
     assert b.shape == (2,1,2,2)
+
+@pytest.mark.parametrize("data, expected_csr_shape", [
+    ([[AA([4., 5, 6., 7., 8.])], # dense sequences with different lengths
+      [AA([4., 5, 6., 7., 8.]), AA([4., 5, 6., 7., 8.])]], [(1,5),(2,5)]),
+    ([AA([4., 5, 6., 7., 8.]), # dense sequence with two samples
+      AA([4., 5, 6., 7., 8.])], [(2,5)]),
+    ([[AA([4., 5, 6., 7., 8.])], # dense sequences with same length
+      [AA([4., 5, 6., 7., 8.])]], [(1,5), (1,5)]),
+])
+
+def test_dense_value_to_csr(data, expected_csr_shape):
+    shape = (5,)
+    var = input_variable(shape)
+    val = sanitize_batch(var, data)
+
+    csr_val = val.to_csr()
+
+    csr_val_shapes = [ v.shape for v in csr_val]
+
+    assert csr_val_shapes == expected_csr_shape
+
+@pytest.mark.parametrize("data, expected_csr_shape", [
+    ([[csr([1,0,2]), csr([2,3,0])], # sparse sequences with different lengths
+      [csr([5,0,1])]], [(2,3),(1,3)]),
+    ([[csr([1,0,2])], # sparse sequences with same length
+      [csr([5,0,1])]], [(1,3),(1,3)]),
+    (csr([[1,0,2],[2,3,4]]), [(2,3)]) # sparse squence with two samples
+])
+
+def test_sparse_value_to_csr(data, expected_csr_shape):
+    shape = (3,)
+    var = input_variable(shape, is_sparse=True)
+    val = sanitize_batch(var, data)
+
+    csr_val = val.to_csr()
+
+    csr_val_shapes = [ v.shape for v in csr_val]
+
+    assert csr_val_shapes == expected_csr_shape
+
+def test_one_hot_val_to_csr():
+    one_hot_val = one_hot([[1,2,0,4,3],[3,4]],5)
+    expected_csr_shape = [(5,5), (2,5)]
+
+    csr_val = one_hot_val.to_csr()
+
+    csr_val_shapes = [ v.shape for v in csr_val]
+
+    assert csr_val_shapes == expected_csr_shape
+
+def test_invalid_to_csr():
+    data = [[AA(np.reshape(np.arange(12.0), (3,4)))]]
+    shape = (3,4)
+    var = input_variable(shape)
+
+    val = sanitize_batch(var, data)
+
+    with pytest.raises(ValueError):
+        val.to_csr()
