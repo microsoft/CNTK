@@ -2,6 +2,10 @@
 
 ## Python
 
+### Getting the data
+
+MNIST and CIFAR-10 datasets are not included in the CNTK distribution but can be easily downloaded and converted by following the instructions in [DataSets/MNIST](../../../DataSets/MNIST) and [DataSets/CIFAR-10](../../../DataSets/CIFAR-10). We recommend you to keep the downloaded data in the respective folder while downloading, as the scripts in this folder assume that by default.
+
 ### ConvNet_MNIST.py
 
 Our first example applies CNN on the MNIST dataset. The network we use contains three convolution layers and two dense layers. Dropout is applied after the first dense layer. No data augmentation is used in this example.

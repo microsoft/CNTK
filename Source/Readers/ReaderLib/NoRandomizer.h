@@ -62,7 +62,8 @@ private:
     std::vector<size_t> m_chunkSampleOffset;
 
     // Current chunk data.
-    ChunkPtr m_currentChunk;
+    std::map<ChunkIdType, ChunkPtr> m_chunks;
+
     // Current chunk data id.
     ChunkIdType m_currentChunkId;
 

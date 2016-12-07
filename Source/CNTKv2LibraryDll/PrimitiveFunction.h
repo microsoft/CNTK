@@ -84,7 +84,7 @@ namespace CNTK
         {PrimitiveOpType::CosDistance, L"CosDistance"},
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
-        {PrimitiveOpType::Cos, L"Pass"},
+        {PrimitiveOpType::Pass, L"Pass"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -208,6 +208,8 @@ namespace CNTK
         static const std::wstring AttributeNameBeginIndex;
         static const std::wstring AttributeNameEndIndex;
         static const std::wstring AttributeNameReductionOpName;
+        static const std::wstring AttributeNameRngSeed;
+        static const std::wstring AttributeNameRngOffset;
         static const std::wstring AttributeNameBidirectional;
         static const std::wstring AttributeNameNumLayers;
         static const std::wstring AttributeNameHiddenSize;
@@ -250,6 +252,13 @@ namespace CNTK
         PrimitiveOpType OpType() const
         {
             return m_op;
+        }
+
+        bool IsStateful() const
+        {
+            return (OpType() == PrimitiveOpType::Dropout) ||
+                   (OpType() == PrimitiveOpType::RandomSample) ||
+                   (OpType() == PrimitiveOpType::RandomSampleInclusionFrequency);
         }
 
     private:

@@ -7,6 +7,7 @@
 from . import cntk_py
 from .device import use_default_device
 from .utils import sanitize_var_map, sanitize_function, typemap, value_to_seq
+from .io import _py_dict_to_cntk_dict
 
 __doc__= '''\
 A trainer encapsulates the overall training process and employs one or more
@@ -27,9 +28,8 @@ class Trainer(cntk_py.Trainer):
        loss_function (:class:`~cntk.ops.functions.Function`): loss function 
        eval_function (:class:`~cntk.ops.functions.Function`): evaluation function
        parameter_learners (list): list of learners from :mod:`cntk.learner`
-       distributed_trainer (:class:`~cntk.distributed.distributed_trainer`): distributed trainer
     '''
-    def __init__(self, model, loss_function, eval_function, parameter_learners, distributed_trainer=None):
+    def __init__(self, model, loss_function, eval_function, parameter_learners):
         # TODO sanitizing should be removed once Swig's typemaps are in place
         model = sanitize_function(model)
         loss_function = sanitize_function(loss_function)
@@ -37,12 +37,7 @@ class Trainer(cntk_py.Trainer):
         if not isinstance(parameter_learners, list):
             parameter_learners = [parameter_learners]
 
-        if distributed_trainer:
-            super(Trainer, self).__init__(model, loss_function, eval_function,
-                parameter_learners, distributed_trainer)
-        else:
-            super(Trainer, self).__init__(model, loss_function, eval_function,
-                parameter_learners)
+        super(Trainer, self).__init__(model, loss_function, eval_function, parameter_learners)
 
     def train_minibatch(self, arguments, outputs=None, device=None):
         '''
@@ -50,8 +45,8 @@ class Trainer(cntk_py.Trainer):
 
         Args:
             arguments: maps variables to their
-             input data. The interpretation depends on the input type:
-
+             input data. Empty map signifies end of local training data.
+             The interpretation depends on the input type:
                * `dict`: keys are input variable or names, and values are the input data. 
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
@@ -78,7 +73,9 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device = use_default_device()
-        arguments = sanitize_var_map(self.model.arguments, arguments)
+
+        if arguments:
+            arguments = sanitize_var_map(self.model.arguments, arguments)
 
         if outputs:
             output_map = {v: None for v in outputs}
@@ -127,18 +124,16 @@ class Trainer(cntk_py.Trainer):
 
         return super(Trainer, self).test_minibatch(arguments, device)
 
-    def save_checkpoint(self, filename, use_legacy_format=True):
+    def save_checkpoint(self, filename, external_state={}):
         '''
         Saves a checkpoint of the model and other Trainer state at the
         specified file location.
 
         Args:
-            filename (str): filename to store the checkpoint
-            use_legacy_format (str): if 'True', model is stored using legacy format.
-             Otherwise, it's stored using protobuf-based protocol serialization.
+            filename (str): filename to store the checkpoint.
         '''
 
-        super(Trainer, self).save_checkpoint(filename, use_legacy_format)
+        super(Trainer, self).save_checkpoint(filename, _py_dict_to_cntk_dict(external_state))
 
     def restore_from_checkpoint(self, filename):
         '''
@@ -205,8 +200,8 @@ class Trainer(cntk_py.Trainer):
         return super(Trainer, self).previous_minibatch_sample_count()
 
     @property
-    def is_running_distributed(self):
+    def total_number_of_samples_seen(self):
         '''
-        Whether the trainer is running distributed
+        The number of samples seen globally between all workers from the beginning of training.
         '''
-        return super(Trainer, self).is_running_distributed()
+        return super(Trainer, self).total_number_of_samples_seen()

@@ -47,6 +47,7 @@
 %template() std::vector<CNTK::StreamConfiguration>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 %template() std::vector<std::shared_ptr<CNTK::Learner>>;
+%template() std::vector<std::shared_ptr<CNTK::DistributedLearner>>;
 %template() std::pair<size_t, double>;
 %template() std::vector<std::pair<size_t, double>>;
 
@@ -934,7 +935,7 @@ public:
 %shared_ptr(CNTK::MinibatchSource)
 %shared_ptr(CNTK::DistributedCommunicator)
 %shared_ptr(CNTK::QuantizedDistributedCommunicator)
-%shared_ptr(CNTK::DistributedTrainer)
+%shared_ptr(CNTK::DistributedLearner)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"

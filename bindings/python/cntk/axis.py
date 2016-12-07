@@ -93,12 +93,34 @@ class Axis(cntk_py.Axis):
     @typemap
     def all_static_axes():
         '''
-        Returns an Axis object representing all the static axes of an operand.
+        Axis object representing all the static axes of an operand.
 
         Returns:
             :class:`Axis`: all static axes
         '''
         return cntk_py.Axis.all_static_axes()
+
+    @staticmethod
+    @typemap
+    def default_input_variable_dynamic_axes():
+        '''
+        Default dynamic axes of the input variable
+
+        Returns:
+            tuple of :class:`Axis`: instances
+        '''
+        return tuple(reversed(cntk_py.Axis.default_input_variable_dynamic_axes()))
+
+    @staticmethod
+    @typemap
+    def unknown_dynamic_axes():
+        '''
+        Unknown dynamic axes
+
+        Returns:
+            tuple of :class:`Axis`: instances
+        '''
+        return tuple(reversed(cntk_py.Axis.unknown_dynamic_axes()))
 
     @staticmethod
     @typemap

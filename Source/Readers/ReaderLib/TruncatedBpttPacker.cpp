@@ -319,10 +319,6 @@ void TruncatedBPTTPacker::ReadSequencesToSlot(size_t slotIndex)
         // We need a single sequence, potentially we can request (m_truncationSize - slot.AvailableNumberOfSamples())
         // to be more efficient. In reality the truncation size usually is less the sequence size.
         auto s = m_sequenceEnumerator->GetNextSequences(1);
-        if (s.m_endOfEpoch)
-        {
-            break;
-        }
 
         // Adding sequence to the slot for all streams.
         for (size_t i = 0; i < s.m_data.size(); ++i)
@@ -336,6 +332,11 @@ void TruncatedBPTTPacker::ReadSequencesToSlot(size_t slotIndex)
             }
 
             m_sequenceBufferPerStream[i]->m_slots[slotIndex].PushSequence(s.m_data[i].front());
+        }
+
+        if (s.m_endOfEpoch)
+        {
+            break;
         }
     }
 }

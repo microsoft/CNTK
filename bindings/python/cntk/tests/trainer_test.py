@@ -105,10 +105,11 @@ def test_eval_sparse_dense(tmpdir, device_id):
         name='raw_input', is_sparse=True)
 
     mb_valid = mbs.next_minibatch(minibatch_size_in_samples=100, 
-            input_map={raw_input : mbs.streams.features})
+            input_map={raw_input : mbs.streams.features}, 
+            device=cntk_device(device_id))
 
     z = times(raw_input, np.eye(input_vocab_dim))
-    e_reader = z.eval(mb_valid)
+    e_reader = z.eval(mb_valid, device=cntk_device(device_id))
 
     # CSR with the raw_input encoding in ctf_data
     one_hot_data = [
@@ -121,7 +122,7 @@ def test_eval_sparse_dense(tmpdir, device_id):
     assert np.all([np.allclose(a, b) for a,b in zip(e_reader, e_csr)])
 
     # One-hot with the raw_input encoding in ctf_data
-    data = one_hot(one_hot_data, num_classes=input_vocab_dim)
+    data = one_hot(one_hot_data, num_classes=input_vocab_dim, device=cntk_device(device_id))
     e_hot = z.eval({raw_input: data}, device=cntk_device(device_id))
     assert np.all([np.allclose(a, b) for a,b in zip(e_reader, e_hot)])
 

@@ -356,6 +356,25 @@ namespace CNTK
 
                     opType = PrimitiveOpType::Pooling;
                 }
+                // Legacy pooling node.
+                else if ((node->OperationName() == OperationNameOf(MaxPoolingNode)) ||
+                         (node->OperationName() == OperationNameOf(AveragePoolingNode)))
+                {
+                    auto poolingNode = node->As<PoolingNodeBase<ElementType>>();
+                    if (poolingNode->IsImageLayoutCHW())
+                    {
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingType] = (size_t)(AsPoolingType(poolingNode->PoolingKind()));
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingWindowShape] = AsNDShape(poolingNode->KernelShape());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(poolingNode->Strides());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(poolingNode->AutoPad());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(poolingNode->LowerPad());
+                        primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(poolingNode->UpperPad());
+
+                        opType = PrimitiveOpType::Pooling;
+                    }
+                    else
+                        LogicError("Unsupported data layout for ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
+                }
                 else if (node->OperationName() == OperationNameOf(BatchNormalizationNode))
                 {
                     auto batchNormalizationNode = node->As<BatchNormalizationNode<ElementType>>();
@@ -400,6 +419,13 @@ namespace CNTK
                 }
                 else
                     LogicError("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
+
+                if (node->Is<RngUser>())
+                {
+                    auto rngUserNode = node->As<RngUser>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRngSeed] = static_cast<size_t>(rngUserNode->GetRngSeed());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameRngOffset] = static_cast<size_t>(rngUserNode->GetRngOffset());
+                }
 
                 // Let's reorder inputVars properly since the ordering of inputs of CNTK internal ComputationNode may be different from the PrimitiveFunction inputs ordering
                 ReorderAsPrimitiveFunctionInputs(opType, inputVars);

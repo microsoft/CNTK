@@ -175,6 +175,7 @@ namespace CNTK
         }
     }
 
+<<<<<<< HEAD
     void Function::Evaluate(const std::unordered_map<Variable, ValuePtr>& arguments,
                             std::unordered_map<Variable, ValuePtr>& outputs,
                             const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
@@ -183,18 +184,14 @@ namespace CNTK
     }
 
     void Function::SaveModel(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
+=======
+    void Function::SaveModel(const std::wstring& modelFilePath)
+>>>>>>> origin/master
     {
-        if (usinglegacyModelFormat)
-        {
-            Internal::SaveAsLegacyModel(shared_from_this(), modelFilePath);
-        }
-        else
-        {
-            Dictionary model = Serialize();
-            auto stream = GetFstream(modelFilePath, false);
-            *stream << model;
-            stream->flush();
-        }
+        Dictionary model = Serialize();
+        auto stream = GetFstream(modelFilePath, false);
+        *stream << model;
+        stream->flush();
     }
 
     /*static*/ FunctionPtr Function::LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice)
@@ -258,7 +255,7 @@ namespace CNTK
         auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
         removePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
 
-        auto trainerModelCompositeFunction = dynamic_cast<const CompositeFunction*>(this);
+        auto trainerModelCompositeFunction = dynamic_cast<CompositeFunction*>(this);
         removePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
 
         // Now update the trainer's model parameters and constants with those from the loaded model
@@ -282,6 +279,8 @@ namespace CNTK
                 trainerModelVarValue->CopyFrom(*loadedModelVarValue);
             }
         }
+
+        trainerModelCompositeFunction->CopyState(*loadedModelCompositeFunction);
     }
 
     static Variable GetCorrespondingOutputVariableFromClone(const Variable& cloneeOutput, const FunctionPtr& cloneeFunction, const FunctionPtr& clonedFunction)
@@ -525,6 +524,9 @@ namespace CNTK
 
             parameters[i].Value()->CopyFrom(*(restoredParameters[i].Value().get()));
         }
+
+        auto restoredCompositeFunction = dynamic_cast<const CompositeFunction*>(restoredFunction.get());
+        compositeFunction->CopyState(*restoredCompositeFunction);
     }
 
     /*static*/ FunctionPtr Function::Deserialize(const Dictionary& modelDictionary, const CNTK::DeviceDescriptor& device)

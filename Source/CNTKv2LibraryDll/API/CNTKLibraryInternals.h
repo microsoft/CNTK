@@ -185,6 +185,9 @@ namespace CNTK
     class Learner;
     typedef std::shared_ptr<Learner> LearnerPtr;
 
+    class Learners;
+    typedef std::shared_ptr<Learners> LearnersPtr;
+
     class Dictionary;
     typedef std::shared_ptr<Dictionary> DictionaryPtr;
 
@@ -197,8 +200,8 @@ namespace CNTK
     class QuantizedDistributedCommunicator;
     typedef std::shared_ptr<QuantizedDistributedCommunicator> QuantizedDistributedCommunicatorPtr;
 
-    class DistributedTrainer;
-    typedef std::shared_ptr<DistributedTrainer> DistributedTrainerPtr;
+    class DistributedLearner;
+    typedef std::shared_ptr<DistributedLearner> DistributedLearnerPtr;
 
     namespace Internal
     {
@@ -216,6 +219,9 @@ namespace CNTK
         CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
 #endif
+
+        // This is meant for debugging purposes only and is very likely to be deprecated in the future.
+        CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
         CNTK_API size_t NewUniqueId();
 
 #ifndef SWIGCSHARP

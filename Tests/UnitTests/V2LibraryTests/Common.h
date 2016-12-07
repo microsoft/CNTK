@@ -207,13 +207,13 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
         return CNTK::Parameter({ dim }, (ElementType)0.0, device);
     };
 
-    unsigned long seed = 1;
-    auto createProjectionParam = [device, &seed](size_t outputDim) {
-        return CNTK::Parameter({ outputDim, CNTK::NDShape::InferredDimension }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed++), device);
+    unsigned long seed2 = 1;
+    auto createProjectionParam = [device, &seed2](size_t outputDim) {
+        return CNTK::Parameter({ outputDim, CNTK::NDShape::InferredDimension }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed2++), device);
     };
 
-    auto createDiagWeightParam = [device, &seed](size_t dim) {
-        return CNTK::Parameter({ dim }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed++), device);
+    auto createDiagWeightParam = [device, &seed2](size_t dim) {
+        return CNTK::Parameter({ dim }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed2++), device);
     };
 
     auto stabilizedPrevOutput = Stabilize<ElementType>(prevOutput, device);
@@ -383,7 +383,7 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
 
 inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
 {
-    if ((minibatchIdx % outputFrequencyInMinibatches) == 0)
+    if ((minibatchIdx % outputFrequencyInMinibatches) == 0 && trainer.PreviousMinibatchSampleCount() != 0)
     {
         double trainLossValue = trainer.PreviousMinibatchLossAverage();
         double evaluationValue = trainer.PreviousMinibatchEvaluationAverage();
@@ -450,10 +450,9 @@ inline CNTK::FunctionPtr LSTMSequenceClassiferNet(const CNTK::Variable& input, s
     return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
 }
 
-template <typename ElementType> 
 inline bool AreEqual(const CNTK::NDArrayViewPtr& view1, const CNTK::NDArrayViewPtr& view2)
 {
-    return AreEqual<ElementType>(*view1, *view2);
+    return CNTK::Internal::AreEqual(*view1, *view2);
 }
 
 inline bool AreEqual(const CNTK::Variable& var1, const CNTK::Variable& var2)

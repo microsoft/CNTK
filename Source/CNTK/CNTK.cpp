@@ -428,7 +428,7 @@ void PrintGpuInfo()
     for (GpuData& data : gpusData)
     {
         LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
-                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), data.totalMemory);
+                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 #endif
@@ -528,12 +528,12 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     auto valpp = config.Find(L"deviceId");
     if (valpp)
     {
-        auto valp = *valpp;
-        if (!valp.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
+        auto valp2 = *valpp;
+        if (!valp2.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
         {
-            if (static_cast<int>(valp) >= 0) // gpu (id >= 0)
+            if (static_cast<int>(valp2) >= 0) // gpu (id >= 0)
             {
-                CheckSupportForGpu(valp); // throws if gpu is not supported
+                CheckSupportForGpu(valp2); // throws if gpu is not supported
             }
         }
     }

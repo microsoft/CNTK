@@ -290,13 +290,13 @@ inline FunctionPtr SetupFullyConnectedDNNLayer(Variable input, size_t outputDim,
 void OutputFunctionInfo(FunctionPtr func)
 {
     auto inputVariables = func->Arguments();
-    fprintf(stderr, "Function '%S': Input Variables (count=%lu)\n", func->Name().c_str(), inputVariables.size());
+    fprintf(stderr, "Function '%S': Input Variables (count=%lu)\n", func->Name().c_str(), (unsigned long)inputVariables.size());
     for_each(inputVariables.begin(), inputVariables.end(), [](const Variable v) {
         fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), static_cast<int>(v.Kind()));
     });
 
     auto outputVariables = func->Outputs();
-    fprintf(stderr, "Function '%S': Output Variables (count=%lu)\n", func->Name().c_str(), outputVariables.size());
+    fprintf(stderr, "Function '%S': Output Variables (count=%lu)\n", func->Name().c_str(), (unsigned long)outputVariables.size());
     for_each(outputVariables.begin(), outputVariables.end(), [](const Variable v) {
         fprintf(stderr, "    name=%S, kind=%d\n", v.Name().c_str(), static_cast<int>(v.Kind()));
     });
@@ -379,7 +379,7 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
         auto outputDim = outputVar.Shape()[0];
         for (size_t i = 0; i < numSamples; i++)
         {
-            fprintf(stderr, "Iteration:%lu, Sample %lu:\n", t, i);
+            fprintf(stderr, "Iteration:%lu, Sample %lu:\n", (unsigned long)t, (unsigned long)i);
             fprintf(stderr, "    ");
             dataIndex = i * outputDim;
             for (size_t j = 0; j < std::min((size_t)10, outputDim); j++)
@@ -432,7 +432,7 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
         std::unordered_map<Variable, ValuePtr> outputs = {{outputVar, outputValue}};
         evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
 
-        outputValue = outputs[outputVar];        
+        outputValue = outputs[outputVar];
         NDShape outputShape = outputVar.Shape().AppendShape({1, numSamples});
         std::vector<float> outputData(outputShape.TotalSize());
         NDArrayViewPtr cpuArrayOutput = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
@@ -444,7 +444,7 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
         auto outputDim = outputVar.Shape()[0];
         for (size_t i = 0; i < numSamples; i++)
         {
-            fprintf(stderr, "Iteration:%lu, Sample %lu:\n", t, i);
+            fprintf(stderr, "Iteration:%lu, Sample %lu:\n", (unsigned long)t, (unsigned long)i);
             fprintf(stderr, "Ouput:");
             for (size_t j = 0; j < outputDim; j++)
             {

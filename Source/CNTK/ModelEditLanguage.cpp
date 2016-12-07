@@ -317,11 +317,11 @@ void MELScript<ElemType>::CallFunction(const std::string& p_name, const ConfigPa
             RuntimeError("CopyInputs requires two symbols from the same network, %s and %s belong to different networks", params[0].c_str(), params[1].c_str());
 
         ProcessNDLScript(netNdlFrom, ndlPassAll);
-        for (GenNameValue name : names)
+        for (GenNameValue name2 : names)
         {
-            auto& node = name.first;
+            auto& node = name2.first;
             std::wstring nodeName = node->NodeName();
-            std::wstring toNodeName = name.second;
+            std::wstring toNodeName = name2.second;
 
             netNdlTo->cn->CopyNode(*netNdlFrom->cn, nodeName, toNodeName, CopyNodeFlags::copyNodeInputLinks);
         }

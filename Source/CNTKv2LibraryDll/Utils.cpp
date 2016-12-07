@@ -385,6 +385,11 @@ namespace CNTK
 
     std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
     {
+        if (!readOnly)
+        {
+            msra::files::make_intermediate_dirs(filePath.c_str());
+        }
+
         std::shared_ptr<std::fstream> stream;
         std::ios_base::openmode mode = std::ios_base::binary | (readOnly ? std::ios_base::in : std::ios_base::out);
 #ifdef _MSC_VER
@@ -402,6 +407,11 @@ namespace CNTK
 
     int GetFileDescriptor(const std::wstring& filePath, bool readOnly)
     {
+        if (!readOnly)
+        {
+            msra::files::make_intermediate_dirs(filePath.c_str());
+        }
+
         auto mode = (readOnly ? O_RDONLY : ( O_CREAT | O_WRONLY));
         int fd;
 #ifdef _MSC_VER
@@ -459,4 +469,96 @@ namespace CNTK
     template void DictionaryValue::FreePtrAsType<NDArrayView>();
 
     template class TrainingParameterSchedule<double>;
+
+    Learners::Learners(const std::vector<LearnerPtr>& learners) :
+        m_learners(learners),
+        m_isDistributed(false)
+    {
+        if (learners.empty())
+            InvalidArgument("Please specify learners.");
+
+        std::unordered_set<Parameter> learnerParameters;
+        for (const auto& learner : m_learners)
+        {
+            if (dynamic_pointer_cast<DistributedLearner>(learner) != nullptr)
+                m_isDistributed = true;
+
+            const auto& currentLearnerParameters = learner->Parameters();
+            for (const auto& parameter : currentLearnerParameters)
+            {
+                auto insertRetVal = learnerParameters.insert(parameter);
+                if (!insertRetVal.second)
+                    InvalidArgument("Parameter named %S is covered by 2 different learners", parameter.Name().c_str());
+            }
+        }
+
+        if (m_isDistributed)
+            CheckDistributedLearners();
+    }
+
+    void Learners::CheckDistributedLearners()
+    {
+        for (const auto& learner : m_learners)
+        {
+            if (dynamic_pointer_cast<DistributedLearner>(learner) == nullptr)
+                InvalidArgument("Distributed and local learners cannot be used side by side.");
+        }
+    }
+
+    void Learners::GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients)
+    {
+        const auto& learnerParameters = learner->Parameters();
+        for (const auto& parameter : learnerParameters)
+        {
+            auto value = allGradients.find(parameter);
+            if (value == allGradients.end())
+                LogicError("Learner contains parameter that does not exists in the model");
+
+            learnerGradients[parameter] = value->second;
+        }
+    }
+
+    bool Learners::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t sampleInMinibatch)
+    {
+        bool anyUpdatesPerformed = false;
+        for (auto learner : m_learners)
+        {
+            std::unordered_map<Parameter, NDArrayViewPtr> learnerGradients;
+            GetLearnerGradients(learner, gradientValues, learnerGradients);
+            anyUpdatesPerformed |= learner->Update(learnerGradients, sampleInMinibatch);
+        }
+        return anyUpdatesPerformed;
+    }
+
+    bool Learners::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatch)
+    {
+        bool anyUpdatesPerformed = false;
+        for (auto l : m_learners)
+        {
+            auto learner = dynamic_pointer_cast<DistributedLearner>(l);
+            std::unordered_map<Parameter, NDArrayViewPtr> learnerGradients;
+            GetLearnerGradients(learner, gradientValues, learnerGradients);
+            anyUpdatesPerformed |= learner->Update(learnerGradients, minibatch);
+        }
+        return anyUpdatesPerformed;
+    }
+
+    std::vector<DictionaryValue> Learners::CreateCheckpoint()
+    {
+        std::vector<DictionaryValue> state;
+        for (auto l : m_learners)
+            state.push_back(l->CreateCheckpoint());
+        return state;
+    }
+
+    void Learners::RestoreFromCheckpoint(const std::vector<DictionaryValue>& state)
+    {
+        if (m_learners.size() != state.size())
+            RuntimeError("Number of learners does not match the checkpoint state.");
+
+        for (size_t i = 0; i < m_learners.size(); ++i)
+        {
+            m_learners[i]->RestoreFromCheckpoint(state[i].Value<Dictionary>());
+        }
+    }
 }

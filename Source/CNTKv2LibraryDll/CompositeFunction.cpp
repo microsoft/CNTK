@@ -116,6 +116,23 @@ namespace CNTK
 
         dict[functionsKey] = std::move(functionDictionaries);
         
+        // Now, collect and store the internal state for all non-pure (stateful) functions in the graph 
+        // (with the corresponding nodes that subclass from RngUser: Dropout, RandomSample, etc).
+        Dictionary stateDictionary; 
+        for (const auto& kv : m_variableToNodeMap)
+        {
+            if (kv.second->Is<RngUser>()) 
+            {
+                auto rng = kv.second->As<RngUser>();
+                Dictionary state;
+                state[rngSeedKey] = static_cast<size_t>(rng->GetRngSeed());
+                state[rngOffsetKey] = static_cast<size_t>(rng->GetRngOffset());
+                stateDictionary[kv.first.Owner()->Uid()] = state;
+            }
+        }
+
+        dict[stateKey] = std::move(stateDictionary);
+
         return dict;
     }
 
@@ -145,6 +162,12 @@ namespace CNTK
             uidToInputMap[inputVar.Uid()] = inputVar;
         }
 
+        Dictionary stateDictionary;
+        if (dict.Contains(stateKey))
+        {
+            stateDictionary = dict[stateKey].Value<Dictionary>();
+        }
+
         const auto& functions = dict[functionsKey].Value<vector<DictionaryValue>>();
 
         FunctionPtr root;
@@ -155,12 +178,32 @@ namespace CNTK
             root = PrimitiveFunction::Deserialize(dictionaryValue.Value<Dictionary>(), uidToInputMap, device);
             allPrimitiveFunctions.insert(root);
 
-            auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(root.get());
+            auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(root.get());
             // Since Combine simply forwards other functions' outputs, all of its outputs
             // should already be in the uidToInputMap.
-            if (primitiveFunction->OpType() == PrimitiveOpType::Combine)
+            auto opType = primitiveFunction->OpType();
+            if (opType == PrimitiveOpType::Combine)
             {
                 continue;
+            }
+
+            if (primitiveFunction->IsStateful())
+            {
+                if (stateDictionary.Contains(primitiveFunction->Uid()))
+                {
+                    auto state = stateDictionary[primitiveFunction->Uid()].Value<Dictionary>();
+                    auto seed = state[rngSeedKey].Value<size_t>();
+                    auto offset = state[rngOffsetKey].Value<size_t>();
+                    primitiveFunction->m_attributes[PrimitiveFunction::AttributeNameRngSeed] = seed;
+                    primitiveFunction->m_attributes[PrimitiveFunction::AttributeNameRngOffset] = offset;
+                }  
+                else if (Internal::GetComputationNetworkTraceLevel() > 0)
+                {
+                    // TODO: all logging functionality should be refactored to live in a logging utility class. 
+                    fprintf(stderr, "WARNING: no state information found for the stateful function (%ls) "
+                            "when deserializing from a dictionary (version=%zu). "
+                            "Reproducibility not guaranteed.", primitiveFunction->OpName().c_str(), version);
+                }
             }
 
             for (const auto& output : root->Outputs())
@@ -196,6 +239,64 @@ namespace CNTK
         return CompositeFunction::Create(root, name, uid);
     }
 
+    void CompositeFunction::CopyState(const CompositeFunction& source)
+    {
+        // Create a map with all non-pure (stateful) functions in the function graph.
+        auto collectStatefulFunctions = [](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions) -> std::map<std::wstring, FunctionPtr> {
+            std::map<std::wstring, FunctionPtr> functionMap;
+            for (auto funcPtr : allPrimitiveFunctions)
+            {
+                auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
+                if (primitiveFunction->IsStateful())
+                {
+                    functionMap[primitiveFunction->Uid()] = funcPtr;
+                }
+            }
+            return functionMap;
+        };
+
+        std::map<std::wstring, FunctionPtr> statefulFunctionsTo = collectStatefulFunctions(m_allPrimitiveFunctions);
+        std::map<std::wstring, FunctionPtr> statefulFunctionsFrom = collectStatefulFunctions(source.m_allPrimitiveFunctions);
+
+        assert(statefulFunctionsTo.size() == statefulFunctionsFrom.size());
+        if (statefulFunctionsFrom.size() == 0)
+        {
+            return;
+        }
+
+        // Copy state captured in the attributes dictionaries.
+        for (const auto& kv : statefulFunctionsFrom)
+        {
+            statefulFunctionsTo[kv.first]->m_attributes = kv.second->Attributes();
+        }
+
+        UpdateInternalNetworkState();
+    }
+
+    void CompositeFunction::UpdateInternalNetworkState()
+    {
+        if (!m_computationNetwork)
+        {
+            return;
+        }
+
+        for (const auto& function : m_allPrimitiveFunctions)
+        {
+            auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(function.get());
+            if (primitiveFunction->IsStateful())
+            {
+                for (const auto& output : function->Outputs())
+                {
+                    auto node = m_variableToNodeMap[output];
+                    auto attributes = function->Attributes();
+                    auto seed = attributes[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
+                    auto offset = attributes[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
+                    node->As<RngUser>()->SetRngState(seed, offset);
+                }
+            }
+        }
+    }
+
     // Names of the dynamic axes in the CNTK engine for some special sets of dynamic axes values
     // Note: The no sequence axis corresponds to a special case where there is no sequence axis (i.e. has been reduced over)
     // and the special name is used to identify this when loading back a model saved in CNTK v1 format. This will not really be needed
@@ -218,11 +319,11 @@ namespace CNTK
             if (replacingVariable.IsOutput())
             {
                 auto ownerFunc = replacingVariable.Owner();
-                std::unordered_set<FunctionPtr> visitedFunctions;
-                Collect(ownerFunc, visitedFunctions);
+                std::unordered_set<FunctionPtr> visitedFunctions2;
+                Collect(ownerFunc, visitedFunctions2);
 
                 // Add the newly visited functions to 'm_allPrimitiveFunctions' set
-                m_allPrimitiveFunctions.insert(visitedFunctions.begin(), visitedFunctions.end());
+                m_allPrimitiveFunctions.insert(visitedFunctions2.begin(), visitedFunctions2.end());
             }
         }
         std::unordered_map<const Function*, size_t> functionVisitCounts;
@@ -652,6 +753,20 @@ namespace CNTK
                            (int)computationNodeExpectedInputCount);
         }
 
+        if (computationNodePtr->Is<RngUser>())
+        {
+            if (functionConfig.Contains(PrimitiveFunction::AttributeNameRngSeed))
+            {
+                auto seed = functionConfig[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
+                unsigned long long offset = 0;
+                if (functionConfig.Contains(PrimitiveFunction::AttributeNameRngOffset))
+                {
+                    offset = functionConfig[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
+                }
+                computationNodePtr->As<RngUser>()->SetRngState(seed, offset);
+            }
+        }
+
         network->AddNodeToNetAndAttachInputs(computationNodePtr, inputNodesBasePtrs);
 
         return computationNodePtr;
@@ -760,7 +875,14 @@ namespace CNTK
             for (auto output : outputs)
             {
                 if (!m_isVariableRootMap[output])
-                    m_computationNetwork->AddToNodeGroup(L"output", m_variableToNodeMap[output]);
+                {
+                    auto computationNode = m_variableToNodeMap[output];
+
+                    if (!computationNode)
+                        InvalidArgument("One of the requested outputs for the Function forward computation is not part of the graph underlying the Function");
+
+                    m_computationNetwork->AddToNodeGroup(L"output", computationNode);
+                }
             }
 
             m_currentBackpropRoots = backpropRoots;

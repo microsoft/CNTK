@@ -4,7 +4,7 @@ The CIFAR-10 dataset (http://www.cs.toronto.edu/~kriz/cifar.html) is a popular d
 
 The CIFAR-10 dataset consists of 60,000 32x32 color images in 10 classes, with 6,000 images per class. There are 50,000 training images and 10,000 test images. The 10 classes are: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, and truck.
 
-The CIFAR-10 dataset is not included in the CNTK distribution but can be easily downloaded and converted to CNTK-supported format by running the following Python command:
+The CIFAR-10 dataset is not included in the CNTK distribution but can be easily downloaded and converted to CNTK-supported format by cd to this directory, Examples/Image/DataSets/CIFAR-10 and running the following Python command:
 
 ```
 python install_cifar10.py

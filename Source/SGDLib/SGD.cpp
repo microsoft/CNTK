@@ -15,6 +15,7 @@
 #include "DataReaderHelpers.h"
 #include "MatrixQuantizerImpl.h"
 #include "InputAndParamNodes.h"
+#include "AccumulatorAggregation.h"
 
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
@@ -525,7 +526,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             chosenMinibatchSize = m_mbSize[i];
         }
 
-        actualMinibatchSize = FixUpEffectiveMBSize(chosenMinibatchSize /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequencesForFixingBPTTMode());
+        // For legacy readers, in BPTT mode the minibatch size was not the real minibatch size but truncation.
+        // Because of that we have to fix up the real minibatch size multiplying the number of parallel sequences by the truncation lenght.
+        // This is not require any more for the new readers.
+        if (trainSetDataReader->IsLegacyReader())
+            actualMinibatchSize = FixUpEffectiveMBSize(chosenMinibatchSize /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequencesForFixingBPTTMode());
+        else
+            actualMinibatchSize = chosenMinibatchSize;
 
         double momentumPerSample = GetMomentumPerSample(i /*BUGBUG workaround:*/, trainSetDataReader->GetNumParallelSequencesForFixingBPTTMode());
         // time constant = number of samples after which a contribution has been reduced to e^-1
@@ -1504,6 +1511,16 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // 3. modify return value 
         totalEpochSamples = totalEpochSamplesOfAllWorkers;
     }
+
+    if (useGradientAggregation && !evaluationNodesWhichAccumulateResult.empty())
+    {
+        // Each worker contains accumulated values for part of the data set, we have to aggregate accumulated values
+        // and recalculate evaluation errors based on accumulators.
+        AggregateAccumulatorValuesAndUpdateEpochEvaluation<ElemType>(
+            net, evaluationNodesWhichAccumulateResult, m_gradHeader, m_mpi, epochEvalErrors, evaluationNodes,
+            localEpochEvalErrors, ContainsAccumulatedResult);
+    }
+
     return totalEpochSamples;
 }
 
@@ -2481,11 +2498,11 @@ template <class ElemType>
 bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
                                   const std::vector<ComputationNodeBasePtr>& criterionNodes,
                                   const std::list<ComputationNodeBasePtr>& learnableNodes,
-                                  int npos)
+                                  int npos2)
 {
     ScopedNetworkOperationMode modeGuard(net, NetworkOperationMode::training);
 
-    net->StartEvaluateMinibatchLoop(criterionNodes[npos]);
+    net->StartEvaluateMinibatchLoop(criterionNodes[npos2]);
 
     vector<string> errMsgs; // TODO: These are created but actually not returned, only their count is checked.
 
@@ -2511,8 +2528,8 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
 
             node->BumpEvalTimeStamp();
 
-            net->ForwardProp(criterionNodes[npos]);
-            net->Backprop(criterionNodes[npos]);
+            net->ForwardProp(criterionNodes[npos2]);
+            net->Backprop(criterionNodes[npos2]);
 
             if (node->Gradient().GetMatrixType() == MatrixType::SPARSE)
             {
@@ -2522,7 +2539,7 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
             // double mbEvalCri =
             // criterionNode should be a scalar
             // TODO: why is this value not used?
-            criterionNodes[npos]->Get00Element();
+            criterionNodes[npos2]->Get00Element();
             double eGradErr = node->Gradient()(irow, icol);
             node->Gradient().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
@@ -2533,19 +2550,19 @@ bool SGD<ElemType>::GradientCheck(ComputationNetworkPtr net,
             node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
             node->BumpEvalTimeStamp();
-            net->ForwardProp(criterionNodes[npos]);
+            net->ForwardProp(criterionNodes[npos2]);
             // criterionNode should be a scalar
 
-            double mbEvalCriPos = criterionNodes[npos]->Get00Element(); // TODO: make Get00Element() a function of ComputationNodeBase
+            double mbEvalCriPos = criterionNodes[npos2]->Get00Element(); // TODO: make Get00Element() a function of ComputationNodeBase
 
             node->Value()(irow, icol) = (ElemType) eNeg;
             node->Value().TransferToDeviceIfNotThere(net->GetDeviceId(), true);
 
             node->BumpEvalTimeStamp();
-            net->ForwardProp(criterionNodes[npos]);
+            net->ForwardProp(criterionNodes[npos2]);
 
             // criterionNode should be a scalar
-            double mbEvalCriNeg = criterionNodes[npos]->Get00Element();
+            double mbEvalCriNeg = criterionNodes[npos2]->Get00Element();
 
             // back to its original parameter value
             node->Value()(irow, icol) = (ElemType) eOrg;
