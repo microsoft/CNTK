@@ -17,11 +17,11 @@ using namespace std;
 int main()
 {
 	auto device = DeviceDescriptor::CPUDevice();
-	string filename = "\\Cntk\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn";
-    wstring filenameW = wstring(filename.begin(), filename.end());
+	auto filename = std::string("v:\\BingModelRoot\\Out\\proto2.dnn");
+    auto filenameW = wstring(filename.begin(), filename.end());
 
 	// The model file will be trained and copied to the current runtime directory first.
-	auto modelFuncPtr = CNTK::Function::LoadModel(filenameW, device/*, LstmGraphNodeFactory*/);
+	auto modelFuncPtr = CNTK::Function::LoadModel(filenameW, device);
 
     // json dump does not contain entire raw array data
     // because the output would be too big.
