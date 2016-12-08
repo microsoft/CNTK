@@ -74,7 +74,7 @@ class Communicator(cntk_py.DistributedCommunicator):
         '''
         Indicates if the current communicator is instantiated on the main node. The node with rank 0 is considered the main.
         '''
-        return super().current_worker().is_main()
+        return super(Communicator, self).current_worker().is_main()
 
     @staticmethod
     def finalize():
@@ -95,7 +95,7 @@ class Communicator(cntk_py.DistributedCommunicator):
         '''
         Returns rank of current process.
         '''
-        return cntk_py.mpicommunicator().current_worker().global_rank
+        return cntk_py.mpicommunicator().current_worker().m_global_rank
 
 class DistributedLearner(cntk_py.DistributedLearner):
     '''
