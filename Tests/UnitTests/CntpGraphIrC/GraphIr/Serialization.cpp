@@ -69,12 +69,15 @@ namespace GRAPHIR
 
     private:
         static proto::Graph* CreateGraphProto(const Dictionary& src, std::unordered_map<std::wstring, NDShape> outputShapes, Arena* arena = nullptr);
-        static proto::Node* CreateNodeProto(const Dictionary& src, Arena* arena = nullptr);
+        static proto::Node* CreateFunctionProto(const Dictionary& src, Arena* arena = nullptr);
         static proto::Node* CreateVariableProto(const Dictionary& src, Arena* arena = nullptr);
         static proto::IOArg* CreateIOArgProto(const std::wstring& src, Arena* arena);
         static void UpdateConnectionShapes(proto::Graph* dst, const std::wstring& uip, const NDShape& shape);
 
         static Dictionary Serializer::CreateGraphDictionary(const proto::Graph& src, const FunctionPtr& templateGraph);
+        
+        static void Copy(std::string prefix, const DictionaryValue& src, proto::Node& dst);
+        static void Serializer::Copy(std::string prefix, const proto::Node& src, DictionaryValue& dst);
 
         template <typename T>
         static void CopyData(const NDArrayView& src, RepeatedField<T>* dst)
@@ -128,6 +131,8 @@ namespace GRAPHIR
                 {
                     auto outputUid = f->Uid() + L"_Output_" + std::to_wstring(index++);
                     auto shape = output.Shape();
+
+                    outputShapes[outputUid] = shape;
                 }
             });
         }
@@ -221,7 +226,7 @@ namespace GRAPHIR
         auto graphInfo = new graphIR::GraphInfo();
         graphInfo->set_framework_name("CNTK");
         graphInfo->set_framework_version("2.0beta3.0"); // TODO: call cntk function to retrieve version string
-        graphInfo->set_graph_version("0.2");
+        graphInfo->set_graph_version("0.3");
         graphInfo->set_description("Exported by the Graph Ir Exporter from CNTK");
         graphInfo->set_model_name(ToString(src[L"name"].Value<std::wstring>()));
         (*graphInfo->mutable_attrs())["type"] = ToString(src[L"type"].Value<std::wstring>());
@@ -237,7 +242,7 @@ namespace GRAPHIR
             auto value = funct.Value<Dictionary>();
             printf("function: %S\n", value[L"uid"].Value<std::wstring>().c_str());
 
-            dst->mutable_nodes()->AddAllocated(CreateNodeProto(value, arena));
+            dst->mutable_nodes()->AddAllocated(CreateFunctionProto(value, arena));
         }
 
         // PassFindVariableNodes
@@ -250,7 +255,7 @@ namespace GRAPHIR
 
             printf("input: %S\n", uid.c_str());
 
-            if (kind == (size_t)VariableKind::Constant || kind == (size_t)VariableKind::Parameter)
+            //if (kind == (size_t)VariableKind::Constant || kind == (size_t)VariableKind::Parameter)
             {
                 // add the parameter as a node
                 dst->mutable_nodes()->AddAllocated(CreateVariableProto(value, arena));
@@ -285,7 +290,7 @@ namespace GRAPHIR
         return dst;
     }
 
-    /*static*/ proto::Node* Serializer::CreateNodeProto(const Dictionary& src, Arena* arena)
+    /*static*/ proto::Node* Serializer::CreateFunctionProto(const Dictionary& src, Arena* arena)
     {
         proto::Node* dst = /*(arena != nullptr) ?
                             Arena::CreateMessage<proto::Node>(arena) :*/ new proto::Node();
@@ -299,6 +304,7 @@ namespace GRAPHIR
         ext["type"]     = ToString(src[L"type"].Value<std::wstring>());
         ext["name"]     = ToString(src[L"name"].Value<std::wstring>());
 
+        Copy("attributes", src[L"attributes"], *dst);
 
         auto inputs = src[L"inputs"].Value<std::vector<DictionaryValue>>();
         dst->mutable_inputs()->Reserve((int)inputs.size());
@@ -329,10 +335,23 @@ namespace GRAPHIR
         dst->set_op("Parameter");
 
         auto &ext = *dst->mutable_ext_attrs();
-        ext["version"]  = std::to_string(src[L"version"].Value<size_t>());
-        ext["kind"]     = std::to_string(kind);
-        ext["type"]     = ToString(src[L"type"].Value<std::wstring>());
-        ext["name"]     = ToString(name);
+        ext["version"]        = std::to_string(src[L"version"].Value<size_t>());
+        ext["type"]           = ToString(src[L"type"].Value<std::wstring>());
+        ext["kind"]           = std::to_string(kind);
+        ext["data_type"]      = std::to_string(src[L"data_type"].Value<size_t>());
+        ext["is_sparse"]      = std::to_string(src[L"is_sparse"].Value<bool>());
+        ext["name"]           = ToString(name);
+        ext["needs_gradient"] = std::to_string(src[L"needs_gradient"].Value<bool>());
+
+        auto axis = src[L"dynamic_axis"].Value<std::vector<DictionaryValue>>();
+        ext["dynamic_axis.count"]   = std::to_string(axis.size());
+        for (size_t n = 0; n < axis.size(); n++)
+        {
+            auto a = axis[n].Value<Axis>();
+            ext[std::string("dynamic_axis.") + std::to_string(n) + ".static_axis_idx"] = std::to_string(a.StaticAxisIndex(false));
+            ext[std::string("dynamic_axis.") + std::to_string(n) + ".name"] = ToString(a.Name());
+            ext[std::string("dynamic_axis.") + std::to_string(n) + ".is_ordered_dynamic_axis"] = std::to_string(a.IsOrdered() ? 1 : 0);
+        }
 
         printf("output: %S\n", uid.c_str());
 
@@ -346,7 +365,8 @@ namespace GRAPHIR
         dst->mutable_outputs()->AddAllocated(ioarg);
 
         // now check if the data is already part of the serialized stream
-        assert(kind == (int)VariableKind::Constant || kind == (int)VariableKind::Parameter);
+   //     assert(kind == (int)VariableKind::Constant || kind == (int)VariableKind::Parameter);
+        if (src.Contains(L"value"))
         {
             const auto& arrayview = src[L"value"].Value<NDArrayView>();
 
@@ -365,7 +385,7 @@ namespace GRAPHIR
         const auto& graphInfo = src.graph_info();
         assert(graphInfo.framework_name() == "CNTK");
         assert(graphInfo.framework_version() == "2.0beta3.0"); // TODO: call cntk function to retrieve version string
-        assert(graphInfo.graph_version() == "0.2");
+        assert(graphInfo.graph_version() == "0.3");
 
         auto& root = *(new Dictionary());
         root[L"type"] = GRAPHIR::ToWString2(src.graph_info().attrs().at("type"));
@@ -376,82 +396,226 @@ namespace GRAPHIR
 
         // create the list of primitive functions
         std::vector<DictionaryValue> primitiveFunctions;
-        root[L"primitive_functions"] = primitiveFunctions;
+        std::vector<DictionaryValue> inputVariables;
         for (auto& node : src.nodes())
         {
-            Dictionary primitiveNode;
-            
+            Dictionary subNode;
             auto& ext = node.ext_attrs();
-            primitiveNode[L"uid"]     = ToWString2(node.name());
-            primitiveNode[L"op"]      = (size_t)atoi(node.op().c_str());
-            primitiveNode[L"version"] = (size_t)(ext.at("version")[0] - '0');
-            primitiveNode[L"type"]    = ToWString2(ext.at("type"));
-            primitiveNode[L"name"]    = ToWString2(ext.at("name"));
 
-            primitiveFunctions.push_back(primitiveNode);
-        }
+            auto op = node.op();
+            subNode[L"uid"] = ToWString2(node.name());
+            subNode[L"type"] = ToWString2(ext.at("type"));
+            subNode[L"name"] = ToWString2(ext.at("name"));
+            subNode[L"version"] = (size_t)(ext.at("version")[0] - '0');
 
-        // create the list of variables and parameters
-        std::unordered_map<std::string, DictionaryValue> inputValues;
-        for (auto& node : src.nodes())
-        {
-            Dictionary variableNode;
+            if (op == "Parameter")
+            {                
+                subNode[L"kind"] = (size_t)atoi(ext.at("kind").c_str());
+                subNode[L"data_type"] = (size_t)atoi(ext.at("data_type").c_str());
+                subNode[L"is_sparse"] = (bool)atoi(ext.at("is_sparse").c_str());
+                subNode[L"needs_gradient"] = (bool)atoi(ext.at("needs_gradient").c_str());
 
-            for (const auto& input : node.inputs())
+                auto numaxis = atoi(ext.at("dynamic_axis.count").c_str());
+                std::vector<DictionaryValue> axisvec;
+                for (size_t n = 0; n < numaxis; n++)
+                {
+                    Axis *a;
+                    auto sai = atoi(ext.at(std::string("dynamic_axis.") + std::to_string(n) + ".static_axis_idx").c_str());
+                    if (!Axis(sai).IsDynamicAxis())
+                    {
+                        a = new Axis(sai);
+                    }
+                    else
+                    {
+                        auto name = ext.at(std::string("dynamic_axis.") + std::to_string(n) + ".name");
+                        auto ida = atoi(ext.at(std::string("dynamic_axis.") + std::to_string(n) + ".is_ordered_dynamic_axis").c_str()) != 0 ? true : false;
+
+                        a = new Axis(ToWString2(name), ida);
+                    }
+
+                    axisvec.push_back(*a);
+                    //delete a;
+                }
+                subNode[L"dynamic_axis"] = axisvec; //TODO (size_t)atoi(ext.at("dynamic_axis").c_str());
+
+
+                for (const auto& output : node.outputs())
+                {
+                    const auto& outputName = output.name();
+               
+                    std::vector<size_t> shape; // NDShape = CreateNDShapeFromProto(input.shape());
+                    for (auto& dim : output.shape())
+                    {
+                        shape.push_back(dim);
+                    }
+                    subNode[L"shape"] = (NDShape)shape;
+
+                    auto x = node.init_attrs().find(outputName);
+                    if (x != node.init_attrs().end())
+                    {
+                        const auto& initData = node.init_attrs().at(outputName).data_base64();
+
+                        auto dataBuffer = DecodeBase64(initData);
+                        NDArrayView av(::CNTK::DataType::Float, (NDShape)shape, &dataBuffer[0], dataBuffer.size(), DeviceDescriptor::CPUDevice());
+
+                        subNode[L"value"] = av;
+                    }
+                }
+
+                inputVariables.push_back(subNode);
+            }
+            else
             {
-                const auto& name = input.name();
-                if (name.find("_Output_") != std::string::npos)
+                subNode[L"op"] = (size_t)atoi(op.c_str());
+                subNode[L"attributes"] = Dictionary(); //TODO (size_t)atoi(ext.at("attributes").c_str());
+
+                std::vector<DictionaryValue> inputs;
+
+                for (auto input : node.inputs())
                 {
-                    // value is output of another computation
-                    // node, safe to skip
-                    continue;
+                    inputs.push_back(ToWString2(input.name()));
                 }
 
-                if (inputValues.find(name) != inputValues.end())
-                {
-                    // value already recorded,
-                    // safe to skip.
-                    continue;
-                }
+                subNode[L"inputs"] = inputs;
 
-                std::vector<size_t> shape; // NDShape = CreateNDShapeFromProto(input.shape());
-                for (auto& dim : input.shape())
-                {
-                    shape.push_back(dim);
-                }
-
-                auto x = node.init_attrs().find(name);
-                if (x != node.init_attrs().end())
-                {
-                    const auto& initData = node.init_attrs().at(name).data_base64();
-
-                    auto dataBuffer = DecodeBase64(initData);
-                    NDArrayView av(::CNTK::DataType::Float, (NDShape)shape, &dataBuffer[0], dataBuffer.size(), DeviceDescriptor::CPUDevice());
-
-                    variableNode[L"value"] = av;
-                }
-
-                variableNode[L"uid"] = GRAPHIR::ToWString2(name);
-                variableNode[L"shape"] = (NDShape)shape;
-                variableNode[L"kind"] = (size_t)VariableKind::Input;
-
-                // update list
-                inputValues[name] = variableNode;
+                primitiveFunctions.push_back(subNode);
             }
         }
 
-        std::vector<DictionaryValue> inputVariables;
-        for (const auto&tuple : inputValues)
-        {
-            inputVariables.push_back(tuple.second);
-        }
-
+        root[L"primitive_functions"] = primitiveFunctions;
         root[L"inputs"] = inputVariables;
 
         return root;
     }
 
+    /*static*/ void Serializer::Copy(std::string prefix, const DictionaryValue& src, proto::Node& dst)
+    {
+        size_t n = 0;
+        auto valueType = src.ValueType();
+        switch (valueType)
+        {
+        case DictionaryValue::Type::None:
+            break;
+        case DictionaryValue::Type::Bool:
+            (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<bool>() ? 1 : 0);
+            break;
+        case DictionaryValue::Type::Int:
+            (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<int>());
+            break;
+        case DictionaryValue::Type::SizeT:
+            (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<size_t>());
+            break;
+        case DictionaryValue::Type::Float:
+            (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<float>());
+            break;
+        case DictionaryValue::Type::Double:
+            (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<double>());
+            break;
+        case DictionaryValue::Type::String:
+            (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + ToString(src.Value<std::wstring>());
+            break;
+        case DictionaryValue::Type::Axis:
+            (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#Axis");
+            (*dst.mutable_attrs())[prefix + ".Axis.static_axis_idx"] = std::to_string(src.Value<Axis>().StaticAxisIndex(false));
+            (*dst.mutable_attrs())[prefix + ".Axis.name"] = ToString(src.Value<Axis>().Name());
+            (*dst.mutable_attrs())[prefix + ".Axis.is_ordered_dynamic_axis"] = std::to_string(src.Value<Axis>().IsOrdered() ? 1 : 0);
+            break;
+        case DictionaryValue::Type::Vector:
+            (*dst.mutable_attrs())[prefix + ".Vector"] = std::to_string((unsigned int)valueType) + std::string("#std::vector");
+            n = 0;
+            for (auto node : src.Value<std::vector<DictionaryValue>>())
+            {
+                Copy(prefix + ".Vector." + std::to_string(n++), node, dst);
+            }
+            break;
+        case DictionaryValue::Type::Dictionary:
+            (*dst.mutable_attrs())[prefix + ".Dictionary"] = std::to_string((unsigned int)valueType) + std::string("#Dictionary");
+            for (auto node : src.Value<Dictionary>())
+            {
+                Copy(prefix + ".Dictionary." + ToString(node.first), node.second, dst);
+            }
+            break;
+        ////case DictionaryValue::Type::NDShape:
+        ////    (*dst.mutable_attrs()).set_allocated_nd_shape_value(CreateProto(src.Value<NDShape>(), arena));
+        ////case DictionaryValue::Type::Vector:
+        ////    (*dst.mutable_attrs()).set_allocated_vector_value(CreateProto(src.Value<std::vector<DictionaryValue>>(), arena));
+        ////    break;
+        ////case DictionaryValue::Type::NDArrayView:
+        ////    (*dst.mutable_attrs()).set_allocated_nd_array_view_value(CreateProto(src.Value<NDArrayView>(), arena));
+        ////    break;
+        default:
+            NOT_IMPLEMENTED
+        }
+    }
 
+
+    /*static*/ void Serializer::Copy(std::string prefix, const proto::Node& src, DictionaryValue& dst)
+    {
+        auto wprefix = ToWString2(prefix);
+        std::string line = src.attrs().at(prefix);
+        auto idx = line.find('#');
+
+//        assert(idx != line.end());
+        auto valueType = (DictionaryValue::Type)atoi(line.substr(0, idx).c_str());
+        
+
+        //size_t n = 0;
+        //auto valueType = src.ValueType();
+        //switch (valueType)
+        //{
+        //case DictionaryValue::Type::None:
+        //    break;
+        //case DictionaryValue::Type::Bool:
+        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<bool>() ? 1 : 0);
+        //    break;
+        //case DictionaryValue::Type::Int:
+        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<int>());
+        //    break;
+        //case DictionaryValue::Type::SizeT:
+        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<size_t>());
+        //    break;
+        //case DictionaryValue::Type::Float:
+        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<float>());
+        //    break;
+        //case DictionaryValue::Type::Double:
+        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<double>());
+        //    break;
+        //case DictionaryValue::Type::String:
+        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + ToString(src.Value<std::wstring>());
+        //    break;
+        //case DictionaryValue::Type::Axis:
+        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#Axis");
+        //    (*dst.mutable_attrs())[prefix + ".Axis.static_axis_idx"] = std::to_string(src.Value<Axis>().StaticAxisIndex(false));
+        //    (*dst.mutable_attrs())[prefix + ".Axis.name"] = ToString(src.Value<Axis>().Name());
+        //    (*dst.mutable_attrs())[prefix + ".Axis.is_ordered_dynamic_axis"] = std::to_string(src.Value<Axis>().IsOrdered() ? 1 : 0);
+        //    break;
+        //case DictionaryValue::Type::Vector:
+        //    (*dst.mutable_attrs())[prefix + ".Vector"] = std::to_string((unsigned int)valueType) + std::string("#std::vector");
+        //    n = 0;
+        //    for (auto node : src.Value<std::vector<DictionaryValue>>())
+        //    {
+        //        Copy(prefix + ".Vector." + std::to_string(n++), node, dst);
+        //    }
+        //    break;
+        //case DictionaryValue::Type::Dictionary:
+        //    (*dst.mutable_attrs())[prefix + ".Dictionary"] = std::to_string((unsigned int)valueType) + std::string("#Dictionary");
+        //    for (auto node : src.Value<Dictionary>())
+        //    {
+        //        Copy(prefix + ".Dictionary." + ToString(node.first), node.second, dst);
+        //    }
+        //    break;
+        //    ////case DictionaryValue::Type::NDShape:
+        //    ////    (*dst.mutable_attrs()).set_allocated_nd_shape_value(CreateProto(src.Value<NDShape>(), arena));
+        //    ////case DictionaryValue::Type::Vector:
+        //    ////    (*dst.mutable_attrs()).set_allocated_vector_value(CreateProto(src.Value<std::vector<DictionaryValue>>(), arena));
+        //    ////    break;
+        //    ////case DictionaryValue::Type::NDArrayView:
+        //    ////    (*dst.mutable_attrs()).set_allocated_nd_array_view_value(CreateProto(src.Value<NDArrayView>(), arena));
+        //    ////    break;
+        //default:
+        //    NOT_IMPLEMENTED
+        //}
+    }
 
 
 
