@@ -36,10 +36,15 @@ class Function(cntk_py.Function):
 
     If it has only one output, one can invoke Variable methods on it, which it
     will relay to its only output.
+
+    BUGBUG: This ^^ is not correct. It is also the base of composites and multi-valued functions.
     '''
 
     # construct a Function from a Python lambda
     # where the Function's input signature is defined by the lambda
+    # Use this as a decorator, e.g.:
+    #   @Function
+    #   def f(x): x * x
     def __new__(cls, f, members = {}):
         from inspect import signature
         params = signature(f).parameters
@@ -74,6 +79,7 @@ class Function(cntk_py.Function):
         # don't call the base class, since Function is abstract in C++
         pass
 
+    # TODO: get by with placeholders only, do NOT replace with Input but rather Placeholder(shape).
     def _get_arguments(self):
         return [arg for arg in self.inputs if arg.is_input or arg.is_placeholder]
 
@@ -95,27 +101,25 @@ class Function(cntk_py.Function):
         args = [to_input(arg) for arg in arg_types]
         #self.replace_placeholders(dict(zip(placeholders, args)))
         for pair in zip(placeholders, args):
-            #try:
-                if pair[1] is not None:
-                    self.replace_placeholders({pair[0]: pair[1]})
-                # BUGBUG: fails with "At least one of the placeholders specified for replacement was not found in the function"
-            #except:
-            #    pass # workaround
-
+            #if pair[1] is not None: # passing None will keep it as a Placeholder, partial application. Not very nice. Just pass another Placeholder().
+            self.replace_placeholders({pair[0]: pair[1]})
 
     # call a function, i.e. clone with all placeholders/inputs replaced
-    # TODO: if all inputs are actual data, this should eval() instead
-    def __call__(self, *args):
-        if not isinstance(args, tuple):  # normalize single argument into tuple
-            args = (args,)
-        # flatten args to a list. Note it may be a a tuple or even a nested tree of tuples, e.g. LSTM (x, (h, c))
-        def flatten_tuple(args):
-            if not isinstance(args, tuple): # not a tuple: singleton; create a singleton tuple
-                return (args,)
-            from operator import add
-            from functools import reduce
-            return reduce(add, [(flatten_tuple(item)) for item in args])
-        args = list(flatten_tuple(args))  # normalize nested arg tuples into flat tuple  --TODO: is there a standard function to do this?
+    # TODO: if all inputs are actual data, this should eval() instead.
+    # TODO: if passed an actual Python function, construct a Function from it. ...how does that affect the function signature??
+    # TODO: implement kwargs.
+    # TODO: remove tuple flattening. 'args' are a list.
+    def __call__(self, *args, **kwargs):
+        #if not isinstance(args, tuple):  # normalize single argument into tuple
+        #    args = (args,)
+        ## flatten args to a list. Note it may be a a tuple or even a nested tree of tuples, e.g. LSTM (x, (h, c))
+        #def flatten_tuple(args):
+        #    if not isinstance(args, tuple): # not a tuple: singleton; create a singleton tuple
+        #        return (args,)
+        #    from operator import add
+        #    from functools import reduce
+        #    return reduce(add, [(flatten_tuple(item)) for item in args])
+        #args = list(flatten_tuple(args))  # normalize nested arg tuples into flat tuple  --TODO: is there a standard function to do this?
         # TODO: This should not be necessary, or go into Function.replace_placeholders()
         def _output_of(arg):  # helper to get the output of an arg; use arg itself if no output() method (that'd be a Variable)
             try:
@@ -482,6 +486,7 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).replace_placeholder(substitution)
 
+    # TODO: why not just call it save()? Now we get things like model.save_model(). Also, Functions are not always models.
     @typemap
     def save_model(self, filename):
         '''
@@ -505,20 +510,29 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).restore_model(filename)
 
+    @staticmethod
+    def load(filename, device=None):
+        '''
+        Load the model in ``filename``, that has been saved using
+        `:func:save_model`.
+    
+        Args:
+            filename (str): filename to load the model from
+            device (:class:`~cntk.DeviceDescriptor`, default is the default device):
+             instance of DeviceDescriptor
+    
+        Returns:
+            root node
+        '''
+        if not device:
+            device = DeviceDescriptor.use_default_device()
+        function = cntk_py.Function.load_model(filename, device)
+        function.__class__ = Function
+        return function
+
 @typemap
 def load_model(filename, device=None):
     '''
-    Load the model in ``filename``, that has been saved using
-    `:func:save_model`.
-
-    Args:
-        filename (str): filename to load the model from
-        device (:class:`~cntk.DeviceDescriptor`, default is the default device):
-         instance of DeviceDescriptor
-
-    Returns:
-        root node
+    Alias for `Function.load`.
     '''
-    if not device:
-        device = DeviceDescriptor.use_default_device()
-    return cntk_py.Function.load_model(filename, device)
+    return Function.load(filename, device)

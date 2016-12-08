@@ -88,6 +88,7 @@ def create_model_function():
 #  returns: Function: (features, labels) -> (loss, metric)
 # This function is generic and could be a stock function create_ce_classification_criterion().
 def create_criterion_function(model):
+    @Function
     def criterion(x, y):
         z = model(x)
         ce   = cross_entropy_with_softmax(z, y)
@@ -95,7 +96,8 @@ def create_criterion_function(model):
         #return Record(loss=ce, metric=errs)
         # BUGBUG: parameters passed to Record are not ordered. This pattern is not correct.
         return Record(ce=ce, errs=errs)
-    return Function(criterion)
+    return criterion
+    #return Function(criterion)
 
 # alternative way of doing it, e.g. for use with Beta2
 def create_criterion_function1(model):
@@ -170,7 +172,7 @@ def train(reader, model, max_epochs):
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
     #criterion.set_signature(None, variable_of_type(num_labels, is_sparse=True))
-    criterion.set_signature(variable_of_type(vocab_size, is_sparse=False), variable_of_type(num_labels, is_sparse=True))
+    criterion.set_signature(Input(vocab_size, is_sparse=False), Input(num_labels, is_sparse=True))
 
     # process minibatches and perform evaluation
     evaluator = Evaluator(model, criterion.outputs[0], criterion.outputs[1])
@@ -202,16 +204,17 @@ if __name__=='__main__':
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     force_deterministic_algorithms()
 
-    reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
+    reader = create_reader(data_dir + "/atis.train.ctf", is_training=True) 
     model = create_model_function()
     # train
     train(reader, model, max_epochs=8)
 
     # save and load (as an illustration)
     path = data_dir + "/model.cmf"
-    model.save_model(path)
-    # BUGBUG: fails with "AttributeError: 'super' object has no attribute 'save_model'"
-    model = load_model(path)
+    #model.save_model(path)
+    model = Function.load(path)
+    #from cntk.ops.functions import load_model
+    #model = load_model(path)
 
     # test
     reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)

@@ -123,17 +123,10 @@ def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_
     return _name_node(input_variable(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
                                      dynamic_axes=dynamic_axes, name=name), 'input')
 
-# use this for set_signature()
-#variable_of_type = Input
-
-#def variable_type_of(*args, **kwargs):
-#    return _name_node(input_variable(*args, **kwargs), 'input')
-
-def Placeholder(shape=None, dynamic_axes=None, name='placeholder'):
-    #if shape is not None:
+def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder'):
+    #p = placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, is_sparse=is_sparse, name=name) # TODO: use (*args, **kwargs)?
+    # BUGBUG: placeholder does not know is_sparse
     p = placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
-    #else:
-    #    p = placeholder_variable(name=name) # TODO: use (*args, **kwargs)?
     _name_node(p, name)
     if _trace_layers:
         print("new " + _node_description(p))
@@ -160,6 +153,9 @@ def Placeholders(num_positional, *named_names):
 # there is only one identity function
 # TODO: This should become a C++-side Function, e.g. like sigmoid
 identity = Function(lambda x: combine([x]))   # BUGBUG: there should be no need for combine()
+# TODO: @Function
+#@Function
+#def identity(x): combine([x])
 
 # This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
 def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True)):
@@ -175,6 +171,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True))
     # TODO: compute this strange value directly in Python
 
     # expression
+    # TODO: change to @Fuyction
     x = Placeholder(name='stabilizer_arg')
 
     # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
@@ -250,6 +247,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # LSTM model function
     # in this case:
     #   (x, dh, dc) --> (h, c)
+    @Function
     def lstm(x, dh, dc):
 
         dhs = Sdh(dh)  # previous values, stabilized
@@ -294,6 +292,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
     # TODO: Is this the same definition as NVidia's? Should we enable multiple definitions of this?
     # BUGBUG: gru(x,dh,dc) passes, too. Since 'dc' is not referenced, it is just ignored. Also when routing it through combine().
+    @Function
     def gru(x, dh):
 
         dhs = Sdh(dh)  # previous value, stabilized
@@ -323,6 +322,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         # returns the new state as a tuple with names but order matters
         return dict(h=h)
 
+    @Function
     def rnn(x, dh):
         dhs = Sdh(dh)  # previous value, stabilized
         ht = activation (times(x, W) + times(dhs, H) + b)
@@ -340,6 +340,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # we already know our state input's shapes, so implant the shape there
     # This is part of the contract with Recurrence(), which relies on this.
     # BUGBUG: If V2 type inference could handle unknown shapes here, we would not need this.
+    # BUGBUG: This fails if recurrent cells are composed, since we won't know the true feedback dimension. V2 inference should just handle this.
     function.replace_placeholders({ function.placeholders[index] : Placeholder(shape=shape) for index, shape in {
         'RNNUnit': { 1: shape },
         'GRU':     { 1: shape },
