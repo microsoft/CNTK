@@ -814,7 +814,35 @@ namespace CNTK
         /// The created Value object contains a copy of the specified 'sequences' data.
         ///
         template <typename ElementType>
-        CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<std::vector<ElementType>>& sequences, const DeviceDescriptor& device, bool readOnly = false);
+        CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<std::vector<ElementType>>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly = false);
+
+        ///
+        /// Create a new Value object containing a collection of variable length sequences.
+        /// The created Value object contains a copy of the specified 'sequences' data.
+        ///
+        template <typename ElementType>
+        static ValuePtr Create(const NDShape& sampleShape, const std::vector<std::vector<ElementType>>& sequences, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return Create(sampleShape, sequences, {}, device, readOnly);
+        }
+
+        ///
+        /// Create a new Value object containing a collection of variable length sequences.
+        /// The created Value object contains a copy of the specified 'sequences' data.
+        ///
+        static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return Create(sampleShape, sequences, sequenceStartFlags, device, readOnly, /*createNewCopy =*/ false);
+        }
+
+        ///
+        /// Create a new Value object containing a collection of variable length sequences.
+        /// The created Value object contains a copy of the specified 'sequences' data.
+        ///
+        static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return Create(sampleShape, sequences, {}, device, readOnly);
+        }
 
         ///
         /// Create a new Value object containing a collection of variable length sequences of one hot vectors
@@ -904,6 +932,8 @@ namespace CNTK
         virtual void CopyFrom(const Value& source);
 
     private:
+        CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly, bool createNewCopy);
+
         // Disallow copy and move construction and assignment
         Value(const Value&) = delete; Value& operator=(const Value&) = delete; Value(Value&&) = delete; Value& operator=(Value&&) = delete;
 
