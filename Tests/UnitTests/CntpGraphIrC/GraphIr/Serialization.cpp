@@ -77,7 +77,7 @@ namespace GRAPHIR
         static Dictionary Serializer::CreateGraphDictionary(const proto::Graph& src, const FunctionPtr& templateGraph);
         
         static void Copy(std::string prefix, const DictionaryValue& src, proto::Node& dst);
-        static void Serializer::Copy(std::string prefix, const proto::Node& src, DictionaryValue& dst);
+        static void Copy(std::string prefix, const proto::Node& src, DictionaryValue& dst);
 
         template <typename T>
         static void CopyData(const NDArrayView& src, RepeatedField<T>* dst)
@@ -467,10 +467,12 @@ namespace GRAPHIR
             else
             {
                 subNode[L"op"] = (size_t)atoi(op.c_str());
-                subNode[L"attributes"] = Dictionary(); //TODO (size_t)atoi(ext.at("attributes").c_str());
+
+                DictionaryValue attributes;
+                Copy("attributes", node, attributes);
+                subNode[L"attributes"] = attributes; //TODO (size_t)atoi(ext.at("attributes").c_str());
 
                 std::vector<DictionaryValue> inputs;
-
                 for (auto input : node.inputs())
                 {
                     inputs.push_back(ToWString2(input.name()));
@@ -521,7 +523,7 @@ namespace GRAPHIR
             (*dst.mutable_attrs())[prefix + ".Axis.is_ordered_dynamic_axis"] = std::to_string(src.Value<Axis>().IsOrdered() ? 1 : 0);
             break;
         case DictionaryValue::Type::Vector:
-            (*dst.mutable_attrs())[prefix + ".Vector"] = std::to_string((unsigned int)valueType) + std::string("#std::vector");
+            (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<std::vector<DictionaryValue>>().size());
             n = 0;
             for (auto node : src.Value<std::vector<DictionaryValue>>())
             {
@@ -529,16 +531,19 @@ namespace GRAPHIR
             }
             break;
         case DictionaryValue::Type::Dictionary:
-            (*dst.mutable_attrs())[prefix + ".Dictionary"] = std::to_string((unsigned int)valueType) + std::string("#Dictionary");
-            for (auto node : src.Value<Dictionary>())
             {
-                Copy(prefix + ".Dictionary." + ToString(node.first), node.second, dst);
+                std::string keys = "";
+                for (auto node : src.Value<Dictionary>())
+                {
+                    keys += ToString(node.first) + ",";
+
+                    Copy(prefix + ".Dictionary." + ToString(node.first), node.second, dst);
+                }
+                (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + keys;
             }
             break;
         ////case DictionaryValue::Type::NDShape:
         ////    (*dst.mutable_attrs()).set_allocated_nd_shape_value(CreateProto(src.Value<NDShape>(), arena));
-        ////case DictionaryValue::Type::Vector:
-        ////    (*dst.mutable_attrs()).set_allocated_vector_value(CreateProto(src.Value<std::vector<DictionaryValue>>(), arena));
         ////    break;
         ////case DictionaryValue::Type::NDArrayView:
         ////    (*dst.mutable_attrs()).set_allocated_nd_array_view_value(CreateProto(src.Value<NDArrayView>(), arena));
@@ -552,69 +557,101 @@ namespace GRAPHIR
     /*static*/ void Serializer::Copy(std::string prefix, const proto::Node& src, DictionaryValue& dst)
     {
         auto wprefix = ToWString2(prefix);
-        std::string line = src.attrs().at(prefix);
+        auto line = src.attrs().at(prefix);
         auto idx = line.find('#');
 
-//        assert(idx != line.end());
         auto valueType = (DictionaryValue::Type)atoi(line.substr(0, idx).c_str());
-        
+        auto valueValue = line.substr(idx + 1);
 
-        //size_t n = 0;
-        //auto valueType = src.ValueType();
-        //switch (valueType)
-        //{
-        //case DictionaryValue::Type::None:
-        //    break;
-        //case DictionaryValue::Type::Bool:
-        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<bool>() ? 1 : 0);
-        //    break;
-        //case DictionaryValue::Type::Int:
-        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<int>());
-        //    break;
-        //case DictionaryValue::Type::SizeT:
-        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<size_t>());
-        //    break;
-        //case DictionaryValue::Type::Float:
-        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<float>());
-        //    break;
-        //case DictionaryValue::Type::Double:
-        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + std::to_string(src.Value<double>());
-        //    break;
-        //case DictionaryValue::Type::String:
-        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#") + ToString(src.Value<std::wstring>());
-        //    break;
-        //case DictionaryValue::Type::Axis:
-        //    (*dst.mutable_attrs())[prefix] = std::to_string((unsigned int)valueType) + std::string("#Axis");
-        //    (*dst.mutable_attrs())[prefix + ".Axis.static_axis_idx"] = std::to_string(src.Value<Axis>().StaticAxisIndex(false));
-        //    (*dst.mutable_attrs())[prefix + ".Axis.name"] = ToString(src.Value<Axis>().Name());
-        //    (*dst.mutable_attrs())[prefix + ".Axis.is_ordered_dynamic_axis"] = std::to_string(src.Value<Axis>().IsOrdered() ? 1 : 0);
-        //    break;
-        //case DictionaryValue::Type::Vector:
-        //    (*dst.mutable_attrs())[prefix + ".Vector"] = std::to_string((unsigned int)valueType) + std::string("#std::vector");
-        //    n = 0;
-        //    for (auto node : src.Value<std::vector<DictionaryValue>>())
-        //    {
-        //        Copy(prefix + ".Vector." + std::to_string(n++), node, dst);
-        //    }
-        //    break;
-        //case DictionaryValue::Type::Dictionary:
-        //    (*dst.mutable_attrs())[prefix + ".Dictionary"] = std::to_string((unsigned int)valueType) + std::string("#Dictionary");
-        //    for (auto node : src.Value<Dictionary>())
-        //    {
-        //        Copy(prefix + ".Dictionary." + ToString(node.first), node.second, dst);
-        //    }
-        //    break;
-        //    ////case DictionaryValue::Type::NDShape:
-        //    ////    (*dst.mutable_attrs()).set_allocated_nd_shape_value(CreateProto(src.Value<NDShape>(), arena));
-        //    ////case DictionaryValue::Type::Vector:
-        //    ////    (*dst.mutable_attrs()).set_allocated_vector_value(CreateProto(src.Value<std::vector<DictionaryValue>>(), arena));
-        //    ////    break;
-        //    ////case DictionaryValue::Type::NDArrayView:
-        //    ////    (*dst.mutable_attrs()).set_allocated_nd_array_view_value(CreateProto(src.Value<NDArrayView>(), arena));
-        //    ////    break;
-        //default:
-        //    NOT_IMPLEMENTED
-        //}
+        switch (valueType)
+        {
+        case DictionaryValue::Type::None:
+            break;
+        case DictionaryValue::Type::Bool:
+            dst = atoi(valueValue.c_str()) != 0;
+            break;
+        case DictionaryValue::Type::Int:
+            dst = (int)atoi(valueValue.c_str());
+            break;
+        case DictionaryValue::Type::SizeT:
+            dst = (size_t)atoi(valueValue.c_str());
+            break;
+        case DictionaryValue::Type::String:
+            dst = ToWString2(valueValue);
+            break;
+        case DictionaryValue::Type::Float:
+            {
+                float floatValue;
+                std::sscanf(valueValue.c_str(), "%f", &floatValue);
+                dst = floatValue;
+            }
+            break;
+        case DictionaryValue::Type::Double:
+            {
+                double doubleValue;
+                std::sscanf(valueValue.c_str(), "%lf", &doubleValue);
+                dst = doubleValue;
+            }
+            break;
+        case DictionaryValue::Type::Vector:
+            {
+                std::vector<DictionaryValue> v;
+                for (auto n = 0; n < atoi(valueValue.c_str()); n++)
+                {
+                    DictionaryValue vv;
+                    Copy(prefix + ".Vector." + std::to_string(n), src, vv);
+                    v.push_back(vv);
+                }
+                dst = v;
+            }
+            break;
+        case DictionaryValue::Type::Axis:
+            {
+                size_t static_axis_idx = atoi(src.attrs().at(prefix + ".Axis.static_axis_idx").c_str());
+
+                if (!Axis(static_axis_idx).IsDynamicAxis())
+                {
+                    dst = Axis(static_axis_idx);
+                }
+                else
+                {
+                    auto axisname = ToWString2(src.attrs().at(prefix + ".Axis.name"));
+                    auto is_ordered_dynamic_axis = atoi(src.attrs().at(prefix + ".Axis.is_ordered_dynamic_axis").c_str()) ? true : false;
+
+                    dst = Axis(axisname, is_ordered_dynamic_axis);
+                }
+            }
+            break;
+        case DictionaryValue::Type::Dictionary:
+            {
+                Dictionary dict;
+                size_t wstart = 0;
+                size_t wend = valueValue.find(',', wstart + 1);
+                while (wend != string::npos)
+                {
+                    auto dictkey = valueValue.substr(wstart, wend - wstart);
+
+                    DictionaryValue dictvalue;
+                    Copy(prefix + ".Dictionary." + dictkey, src, dictvalue);
+
+                    dict[ToWString2(dictkey)] = dictvalue;
+
+                    wstart = wend + 1;
+                    wend = valueValue.find(',', wstart + 1);
+                }
+
+                dst = dict;
+            }
+            break;
+            ////case DictionaryValue::Type::NDShape:
+            ////    (*dst.mutable_attrs()).set_allocated_nd_shape_value(CreateProto(src.Value<NDShape>(), arena));
+            ////    break;
+            ////case DictionaryValue::Type::NDArrayView:
+            ////    (*dst.mutable_attrs()).set_allocated_nd_array_view_value(CreateProto(src.Value<NDArrayView>(), arena));
+            ////    break;
+        default:
+            NOT_IMPLEMENTED
+        }
     }
 
 

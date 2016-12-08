@@ -17,6 +17,8 @@
 using namespace CNTK;
 using namespace std;
 
+extern int MAX_BASE64_EXPORT_LENGTH;
+
 void DumpAsJson(const google::protobuf::Message& message, const std::string& filename)
 {
     // save it out to disk in json format.
@@ -50,11 +52,21 @@ int main()
 	// The model file will be trained and copied to the current runtime directory first.
 	auto modelFuncPtr = CNTK::Function::LoadModel(filenameW, device/*, LstmGraphNodeFactory*/);
 
+    // json dump does not contain entire raw array data
+    // because the output would be too big.
+    MAX_BASE64_EXPORT_LENGTH = 100;
     auto message = GRAPHIR::Serialize(modelFuncPtr);
-    auto result = GRAPHIR::Deserialize(message, modelFuncPtr);
-
-    DumpAsBinary(*message, filename + string(".serialized"));
     DumpAsJson(*message, filename + string(".serialized_json"));
+
+    // re-serialize with entire array buffers to dump
+    // in binary format.
+    MAX_BASE64_EXPORT_LENGTH = INT_MAX;
+    auto message2 = GRAPHIR::Serialize(modelFuncPtr);
+    DumpAsBinary(*message2, filename + string(".serialized"));
+
+    // note: must use the binary serialization since json
+    // does not contain full array data.
+    auto result = GRAPHIR::Deserialize(message2, modelFuncPtr);
 
     //PrintDictionaryValue(L"ROOT", serializedFunc, 0);
 

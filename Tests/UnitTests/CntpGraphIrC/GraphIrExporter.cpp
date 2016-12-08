@@ -22,7 +22,7 @@ extern "C"
 
 using namespace CNTK;
 
-#define MAX_BASE64_EXPORT_LENGTH (100 /** 1024 * 1024*/)
+int MAX_BASE64_EXPORT_LENGTH = 100;
 
 template <typename FunctionType>
 void Traverse(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor)
@@ -63,7 +63,7 @@ std::string EncodeBase64(const char *buf, size_t len)
     *temp++ = '\0';
 
 	// TODO: remove once we export everything.
-    static_assert(MAX_BASE64_EXPORT_LENGTH > 10, "base64 export should at least be 10");
+    assert(MAX_BASE64_EXPORT_LENGTH > 10, "base64 export should at least be 10");
     if (strlen(sout) > MAX_BASE64_EXPORT_LENGTH)
 	{
 		strcpy_s(sout + MAX_BASE64_EXPORT_LENGTH - 8, len * 2 - MAX_BASE64_EXPORT_LENGTH, "...");
