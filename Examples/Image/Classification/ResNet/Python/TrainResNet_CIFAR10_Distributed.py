@@ -135,9 +135,8 @@ def train_and_evaluate(create_train_reader, create_test_reader, network_name, ma
     sample_count    = 0
     minibatch_index = 0
 
-    test_reader=create_test_reader(epoch_size)
     while True:
-        data = test_reader.next_minibatch(minibatch_size, input_map=input_map)
+        data = create_test_reader.next_minibatch(minibatch_size, input_map=input_map)
         if not data: break;
 
         local_mb_samples=data[label_var].num_samples
