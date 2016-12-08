@@ -7,41 +7,12 @@
 #include <functional>
 #include "LSTM/LstmGraphNode.h"
 
-
-#include <fstream>
-
 #ifndef CPUONLY
 #error "must use CPU Only"
 #endif
 
 using namespace CNTK;
 using namespace std;
-
-extern int MAX_BASE64_EXPORT_LENGTH;
-
-void DumpAsJson(const google::protobuf::Message& message, const std::string& filename)
-{
-    // save it out to disk in json format.
-    string jsonstring;
-    auto serialized = google::protobuf::util::MessageToJsonString(message, &jsonstring);
-    auto fp = fopen((filename + string(".pb.json")).c_str(), "w+");
-    auto written = fwrite(jsonstring.c_str(), sizeof(char), jsonstring.length(), fp);
-
-    assert(written == jsonstring.length());
-    fclose(fp);
-}
-
-void DumpAsBinary(const google::protobuf::Message& message, const std::string& filename)
-{
-    auto filePath = (filename + string(".pb"));
-
-    std::fstream fs;
-    fs.open(filePath, std::fstream::in | std::fstream::out | std::fstream::trunc);
-
-    message.SerializeToOstream(&fs);
-
-    fs.close();
-}
 
 int main()
 {
