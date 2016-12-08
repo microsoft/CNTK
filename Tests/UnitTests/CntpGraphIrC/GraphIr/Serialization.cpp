@@ -470,7 +470,7 @@ namespace GRAPHIR
 
                 DictionaryValue attributes;
                 Copy("attributes", node, attributes);
-                subNode[L"attributes"] = attributes; //TODO (size_t)atoi(ext.at("attributes").c_str());
+                subNode[L"attributes"] = attributes;
 
                 std::vector<DictionaryValue> inputs;
                 for (auto input : node.inputs())
