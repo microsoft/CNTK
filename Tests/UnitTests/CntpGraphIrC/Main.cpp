@@ -66,13 +66,11 @@ int main()
 
     // note: must use the binary serialization since json
     // does not contain full array data.
-    auto result = GRAPHIR::Deserialize(message2, modelFuncPtr);
-
-    //PrintDictionaryValue(L"ROOT", serializedFunc, 0);
+    auto evalFunction = GRAPHIR::Deserialize(message2, modelFuncPtr);
 
     unordered_map<wstring, vector<float>> inputs;
     unordered_map<wstring, vector<float>> outputs;
-    RetrieveInputBuffers(modelFuncPtr, inputs);
+    RetrieveInputBuffers(evalFunction, inputs);
 
     for (auto inputTuple : inputs)
     {
@@ -87,7 +85,7 @@ int main()
         fprintf(stderr, "Input  %S #%lu elements.\n", inputTuple.first.c_str(), (unsigned long)inputTuple.second.size());
     }
 
-    ExecuteModel(modelFuncPtr, inputs, outputs);
+    ExecuteModel(evalFunction, inputs, outputs);
 
     for (auto outputTuple : outputs)
     {
@@ -96,13 +94,13 @@ int main()
     }
 
 	// convert cntk to graphir
-	auto graphIrPtr = CntkGraphToGraphIr(filenameW, modelFuncPtr);
+	auto graphIrPtr = CntkGraphToGraphIr(filenameW, evalFunction);
 
 	// save it out to disk in json format.
     DumpAsJson(*graphIrPtr, filename + string(".pb.json"));
 
 	// convert graphir back to cntk (with the original cntk model as template)
-	auto modelImportFuncPtr = GraphIrToCntkGraph(graphIrPtr, modelFuncPtr);
+	auto modelImportFuncPtr = GraphIrToCntkGraph(graphIrPtr, evalFunction);
 
 	// TODO: verify that roundtrip is completed.
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
