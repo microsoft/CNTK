@@ -63,7 +63,7 @@
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="Exists('$(SWIG_PATH)\swig.exe')">
     <Compile Include="..\..\..\Examples\Evaluation\CSEvalClient\CntkBitmapExtensions.cs">
       <Link>CntkBitmapExtensions.cs</Link>
     </Compile>

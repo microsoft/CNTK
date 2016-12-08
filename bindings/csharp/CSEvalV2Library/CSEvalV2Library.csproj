@@ -62,7 +62,7 @@
   <ItemGroup>
     <Reference Include="System" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="Exists('$(SWIG_PATH)\swig.exe')">
     <Compile Include="..\Swig\Axis.cs">
       <Link>GeneratedFiles\Axis.cs</Link>
     </Compile>
