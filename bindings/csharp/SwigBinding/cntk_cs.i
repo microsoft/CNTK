@@ -1,4 +1,4 @@
-%module(directors="1") CSharpBindings
+%module(directors="1") CNTKLib
 //%feature("autodoc", "1");
 
 %include <stl.i>
@@ -31,7 +31,6 @@
 %shared_ptr(std::vector<float>);
 
 %template(SizeTVector) std::vector<size_t>;
-%template(BoolVector) std::vector<bool>;
 %template(DoubleVector) std::vector<double>;
 %template(FloatVector) std::vector<float>;
 %template(SizeTVectorVector) std::vector<std::vector<size_t>>;
@@ -43,6 +42,7 @@
 %template(UnorderedMapVariableValuePtr) std::unordered_map<CNTK::Variable, std::shared_ptr<CNTK::Value>>;
 %template(UnorderedMapVariableVariable) std::unordered_map<CNTK::Variable, CNTK::Variable>;
 
+%template() std::vector<bool>;
 %template() std::pair<size_t, double>;
 %template() std::vector<std::pair<size_t, double>>;
 
@@ -380,6 +380,9 @@
 %ignore CNTK::NDMask::DataBuffer() const;
 
 // Ignore things in CNTKLibraryInternals.h that are not exposed for C# Eval.
+%ignore CNTK::Internal::PrimitiveFunction;
+%ignore CNTK::Internal::CompositeFunction;
+%ignore CNTK::PrimitiveOpType;
 %ignore CNTK::Internal::IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
 %ignore CNTK::Internal::PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
 %ignore CNTK::Internal::GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
@@ -518,7 +521,7 @@
         {
             varVect.Add(v);
         }
-        return CSharpBindings.Combine(varVect);        
+        return CNTKLib.Combine(varVect);        
     }
 %}
 
@@ -588,7 +591,7 @@
         }
 
         // Return true if the fields match:
-        return CSharpBindings.AreEqualShape(this, p);
+        return CNTKLib.AreEqualShape(this, p);
     }
 
     public bool Equals(NDShape p)
@@ -600,7 +603,7 @@
         }
 
         // Return true if the fields match:
-        return CSharpBindings.AreEqualShape(this, p);
+        return CNTKLib.AreEqualShape(this, p);
     }
 
     public static bool operator ==(NDShape first, NDShape second)
@@ -618,7 +621,7 @@
         }
 
         // Return true if the fields match:
-        return CSharpBindings.AreEqualShape(first, second);
+        return CNTKLib.AreEqualShape(first, second);
     }
 
     public static bool operator !=(NDShape first, NDShape second)

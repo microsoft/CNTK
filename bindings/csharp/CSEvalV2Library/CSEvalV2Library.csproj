@@ -75,14 +75,11 @@
     <Compile Include="..\SwigBinding\AxisVector.cs">
       <Link>GeneratedFiles\AxisVector.cs</Link>
     </Compile>
-    <Compile Include="..\SwigBinding\BoolVector.cs">
-      <Link>GeneratedFiles\BoolVector.cs</Link>
+    <Compile Include="..\SwigBinding\CNTKLib.cs">
+      <Link>GeneratedFiles\CNTKLib.cs</Link>
     </Compile>
-    <Compile Include="..\SwigBinding\CSharpBindings.cs">
-      <Link>GeneratedFiles\CSharpBindings.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\CSharpBindingsPINVOKE.cs">
-      <Link>GeneratedFiles\CSharpBindingsPINVOKE.cs</Link>
+    <Compile Include="..\SwigBinding\CNTKLibPINVOKE.cs">
+      <Link>GeneratedFiles\CNTKLibPINVOKE.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\DataType.cs">
       <Link>GeneratedFiles\DataType.cs</Link>
@@ -125,9 +122,6 @@
     </Compile>
     <Compile Include="..\SwigBinding\ParameterCloningMethod.cs">
       <Link>GeneratedFiles\ParameterCloningMethod.cs</Link>
-    </Compile>
-    <Compile Include="..\SwigBinding\PrimitiveOpType.cs">
-      <Link>GeneratedFiles\PrimitiveOpType.cs</Link>
     </Compile>
     <Compile Include="..\SwigBinding\SizeTVector.cs">
       <Link>GeneratedFiles\SizeTVector.cs</Link>

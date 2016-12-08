@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CNTK;
 
 namespace CSEvalV2Example
 {
@@ -17,7 +18,7 @@ namespace CSEvalV2Example
         public static void EvaluateV1ModelUsingNDView()
         {
             // Load the model
-            var myFunc = global::Function.LoadModel("01_OneHidden");
+            var myFunc = Function.LoadModel("01_OneHidden");
 
             // Ouput funciton info.
             OutputFunctionInfo(myFunc);
@@ -36,7 +37,7 @@ namespace CSEvalV2Example
             }
 
             // Todo: create value directly from data.
-            var dynamicAxisShape = new global::SizeTVector() { 1, numOfSamples };
+            var dynamicAxisShape = new SizeTVector() { 1, numOfSamples };
             var inputShape = inputVar.Shape.AppendShape(new NDShape(dynamicAxisShape));
             var inputNDArrayView = new NDArrayView(inputShape, inputData, numOfInputData, DeviceDescriptor.CPUDevice);
             var inputValue = new Value(inputNDArrayView);
@@ -81,7 +82,7 @@ namespace CSEvalV2Example
         public static void EvaluateV2ModelUsingNDView()
         {
             // Load the model
-            var myFunc = global::Function.LoadModel("z.model");
+            var myFunc = Function.LoadModel("z.model");
 
             // Ouput funciton info.
             OutputFunctionInfo(myFunc);
@@ -100,7 +101,7 @@ namespace CSEvalV2Example
             }
 
             // Todo: create value directly from data.
-            var dynamicAxisShape = new global::SizeTVector() { 1, numOfSamples };
+            var dynamicAxisShape = new SizeTVector() { 1, numOfSamples };
             var inputShape = inputVar.Shape.AppendShape(new NDShape(dynamicAxisShape));
             var inputNDArrayView = new NDArrayView(inputShape, inputData, numOfInputData, DeviceDescriptor.CPUDevice);
             var inputValue = new Value(inputNDArrayView);
@@ -144,7 +145,7 @@ namespace CSEvalV2Example
         public static void EvaluateUsingSystemAllocatedMemory()
         {
             // Load the model
-            var myFunc = global::Function.LoadModel("z.model");
+            var myFunc = Function.LoadModel("z.model");
 
             // Ouput funciton info.
             OutputFunctionInfo(myFunc);
@@ -163,7 +164,7 @@ namespace CSEvalV2Example
             }
 
             // Todo: create value directly from data.
-            var dynamicAxisShape = new global::SizeTVector() { 1, numOfSamples };
+            var dynamicAxisShape = new SizeTVector() { 1, numOfSamples };
             var inputShape = inputVar.Shape.AppendShape(new NDShape(dynamicAxisShape));
             var inputNDArrayView = new NDArrayView(inputShape, inputData, numOfInputData, DeviceDescriptor.CPUDevice);
             var inputValue = new Value(inputNDArrayView);
@@ -207,7 +208,7 @@ namespace CSEvalV2Example
         public static void EvaluateUsingCreateValue()
         {
             // Load the model
-            var myFunc = global::Function.LoadModel("01_OneHidden");
+            var myFunc = Function.LoadModel("01_OneHidden");
 
             // Ouput funciton info.
             OutputFunctionInfo(myFunc);
@@ -251,7 +252,7 @@ namespace CSEvalV2Example
             var outputValue = outputMap[outputVar];
             var outputNDArrayView = outputValue.Data();
 
-            var dynamicAxisShape = new global::SizeTVector() { 1, numOfSamples };
+            var dynamicAxisShape = new SizeTVector() { 1, numOfSamples };
             var outputShape = outputVar.Shape.AppendShape(new NDShape(dynamicAxisShape));
 
             // Copy the data from the output buffer.
@@ -269,7 +270,7 @@ namespace CSEvalV2Example
             }
         }
 
-        private static void OutputFunctionInfo(global::Function func)
+        private static void OutputFunctionInfo(Function func)
         {
             var uid = func.Uid();
             System.Console.WriteLine("Function id:" + (string.IsNullOrEmpty(uid) ? "(empty)" : uid));
