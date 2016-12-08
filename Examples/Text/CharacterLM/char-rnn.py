@@ -123,7 +123,7 @@ def create_model(output_dim):
     
     return Sequential([        
         LayerStack(num_layers, lambda: 
-                   Recurrence(LSTM(hidden_dim), go_backwards=False)),
+                   Sequential([Stabilizer(), Recurrence(LSTM(hidden_dim), go_backwards=False)])),
         Dense(output_dim)
     ])
 
