@@ -36,5 +36,5 @@ extern void PrintDictionaryValue(
 namespace GRAPHIR
 {
     const graphIR::Graph* Serialize(const CNTK::FunctionPtr& modelFuncPtr);
-    const CNTK::FunctionPtr Deserialize(const graphIR::Graph* message, const CNTK::FunctionPtr& modelFuncPtr);
+    const CNTK::FunctionPtr Deserialize(const graphIR::Graph* message);
 }

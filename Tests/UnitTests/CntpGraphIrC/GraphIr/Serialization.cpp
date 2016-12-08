@@ -65,7 +65,7 @@ namespace GRAPHIR
     class Serializer
     {
         friend const proto::Graph* Serialize(const FunctionPtr& modelFuncPtr);
-        friend const FunctionPtr Deserialize(const proto::Graph* graph, const FunctionPtr& modelFuncPtr);
+        friend const FunctionPtr Deserialize(const proto::Graph* graph);
 
     private:
         static proto::Graph* CreateGraphProto(const Dictionary& src, std::unordered_map<std::wstring, NDShape> outputShapes, Arena* arena = nullptr);
@@ -74,7 +74,7 @@ namespace GRAPHIR
         static proto::IOArg* CreateIOArgProto(const std::wstring& src, Arena* arena);
         static void UpdateConnectionShapes(proto::Graph* dst, const std::wstring& uip, const NDShape& shape);
 
-        static Dictionary Serializer::CreateGraphDictionary(const proto::Graph& src, const FunctionPtr& templateGraph);
+        static Dictionary Serializer::CreateGraphDictionary(const proto::Graph& src);
         
         static void Copy(std::string prefix, const DictionaryValue& src, proto::Node& dst);
         static void Copy(std::string prefix, const proto::Node& src, DictionaryValue& dst);
@@ -380,7 +380,7 @@ namespace GRAPHIR
         return dst;
     }
 
-    /*static*/ Dictionary Serializer::CreateGraphDictionary(const proto::Graph& src, const FunctionPtr& templateGraph)
+    /*static*/ Dictionary Serializer::CreateGraphDictionary(const proto::Graph& src)
     {
         const auto& graphInfo = src.graph_info();
         assert(graphInfo.framework_name() == "CNTK");
@@ -721,13 +721,11 @@ namespace GRAPHIR
         return proto;
     }
 
-    const FunctionPtr Deserialize(const proto::Graph* graph, const FunctionPtr& modelFuncPtr)
+    const FunctionPtr Deserialize(const proto::Graph* graph)
     {
         UsingUTF8 locale;
 
-        const auto& templateGraph = modelFuncPtr->Serialize();
-
-        auto state = Serializer::CreateGraphDictionary(*graph, modelFuncPtr);
+        auto state = Serializer::CreateGraphDictionary(*graph);
         //proto::Dictionary proto;
         //stream >> proto;
         //dictionary.m_dictionaryData->reserve(proto.data_size());

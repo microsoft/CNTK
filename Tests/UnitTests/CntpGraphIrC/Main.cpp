@@ -66,7 +66,7 @@ int main()
 
     // note: must use the binary serialization since json
     // does not contain full array data.
-    auto evalFunction = GRAPHIR::Deserialize(message2, modelFuncPtr);
+    auto evalFunction = GRAPHIR::Deserialize(message2);
 
     unordered_map<wstring, vector<float>> inputs;
     unordered_map<wstring, vector<float>> outputs;
@@ -92,15 +92,6 @@ int main()
         // tell the user what we received.
         fprintf(stderr, "Output %S #%lu elements.\n", outputTuple.first.c_str(), (unsigned long)outputTuple.second.size());
     }
-
-	// convert cntk to graphir
-	auto graphIrPtr = CntkGraphToGraphIr(filenameW, evalFunction);
-
-	// save it out to disk in json format.
-    DumpAsJson(*graphIrPtr, filename + string(".pb.json"));
-
-	// convert graphir back to cntk (with the original cntk model as template)
-	auto modelImportFuncPtr = GraphIrToCntkGraph(graphIrPtr, evalFunction);
 
 	// TODO: verify that roundtrip is completed.
     fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
