@@ -75,6 +75,12 @@ namespace Microsoft {
                     return m_deserializer->GetStreamDescriptions();
                 }
 
+				size_t GetCurrentSamplePosition() override;
+
+				void SetCurrentSamplePosition(size_t currentSamplePosition) override;
+
+				void SetConfiguration(const ReaderConfiguration& config) override;
+
             private:
                 // Gets next sequence descriptions with total size less than sampleCount.
                 std::vector<SequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);

@@ -40,7 +40,7 @@ CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
         size_t window = configHelper.GetRandomizationWindow();
         size_t cagegory_based_sampling = configHelper.useCategoryBasedSampling();
         if (cagegory_based_sampling) {
-            m_randomizer = make_shared<CategoryBasedRandomizer>(m_deserializer, configHelper.GetSamplerPerCategory(), configHelper.GetCategoryInfoName(), true);
+			m_sequenceEnumerator = make_shared<CategoryBasedRandomizer>(m_deserializer, configHelper.GetSamplerPerCategory(), configHelper.GetCategoryInfoName(), true);
         }
         else if (window > 0)
         {
