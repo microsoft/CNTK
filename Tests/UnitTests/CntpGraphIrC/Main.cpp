@@ -17,7 +17,7 @@ using namespace std;
 int main()
 {
 	auto device = DeviceDescriptor::CPUDevice();
-	auto filename = std::string("v:\\BingModelRoot\\Out\\proto2.dnn");
+	auto filename = std::string("\\BrainWaveCntk\\Tests\\UnitTests\\CntpGraphIrC\\BingModelRoot\\Out\\proto2.dnn");
     auto filenameW = wstring(filename.begin(), filename.end());
 
 	// The model file will be trained and copied to the current runtime directory first.
@@ -35,13 +35,12 @@ int main()
     auto message2 = GRAPHIR::Serialize(modelFuncPtr);
     DumpAsBinary(*message2, filename + string(".serialized"));
 
-    // note: must use the binary serialization since json
-    // does not contain full array data.
-    auto evalFunction = GRAPHIR::Deserialize(message2);
+    //
+    // Execute the original function
+    //
 
     unordered_map<wstring, vector<float>> inputs;
-    unordered_map<wstring, vector<float>> outputs;
-    RetrieveInputBuffers(evalFunction, inputs);
+    RetrieveInputBuffers(modelFuncPtr, inputs);
 
     for (auto inputTuple : inputs)
     {
@@ -56,15 +55,43 @@ int main()
         fprintf(stderr, "Input  %S #%lu elements.\n", inputTuple.first.c_str(), (unsigned long)inputTuple.second.size());
     }
 
-    ExecuteModel(evalFunction, inputs, outputs);
+    unordered_map<wstring, vector<float>> outputs1;
+    ExecuteModel(modelFuncPtr, inputs, outputs1);
 
-    for (auto outputTuple : outputs)
+    for (auto outputTuple : outputs1)
     {
         // tell the user what we received.
-        fprintf(stderr, "Output %S #%lu elements.\n", outputTuple.first.c_str(), (unsigned long)outputTuple.second.size());
+        fprintf(stderr, "ORIG Output %S #%lu elements.\n", outputTuple.first.c_str(), (unsigned long)outputTuple.second.size());
+    }
+
+    //
+    // Execute the original function
+    //
+
+    // note: must use the binary serialization since json
+    // does not contain full array data.
+    auto importedFunction = GRAPHIR::Deserialize(message2);
+
+    unordered_map<wstring, vector<float>> outputs2;
+    ExecuteModel(importedFunction, inputs, outputs2);
+
+    for (auto outputTuple : outputs2)
+    {
+        // tell the user what we received.
+        fprintf(stderr, "IMPT Output %S #%lu elements.\n", outputTuple.first.c_str(), (unsigned long)outputTuple.second.size());
     }
 
 	// TODO: verify that roundtrip is completed.
-    fprintf(stderr, "\nCNTKv2Library tests: Passed\n");
+    assert(outputs2.size() == outputs1.size());
+    for (auto n1 : outputs1)
+    {
+        auto n2 = *outputs2.find(n1.first);
+        assert(outputs2.find(n1.first) != outputs2.end());
+
+        assert(n1.second.size() == n2.second.size());
+        assert(memcmp(&n1.second[0], &n2.second[0], n1.second.size() * sizeof(float)) == 0);
+    }
+
+    fprintf(stderr, "Export/Import completed, both functions executed, results match.\n");
     fflush(stderr);
 }

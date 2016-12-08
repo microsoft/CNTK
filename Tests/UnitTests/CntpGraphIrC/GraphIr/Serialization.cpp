@@ -14,7 +14,7 @@
 #include <limits>
 
 #ifdef _MSC_VER
-#include <io.h>
+#include <io.h> // _close()
 #endif
 
 #pragma warning(push)
@@ -26,7 +26,6 @@
 
 #pragma warning(disable : 4100) // unreferenced formal parameter
 
-#define ToWstring(a) std::to_wstring(a)
 extern std::string EncodeBase64(const char *buf, size_t len);
 extern std::vector<char> DecodeBase64(const std::string str);
 
