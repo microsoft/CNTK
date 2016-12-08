@@ -292,8 +292,9 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # in this case:
     #   (x, dh) --> (h)
     # e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
-    # BUGBUG: the 'dc' below is superfluous. Why does this throw an error Function.in __call__()??
-    def gru(x, dh, dc):
+    # TODO: Is this the same definition as NVidia's? Should we enable multiple definitions of this?
+    # BUGBUG: gru(x,dh,dc) passes, too. Since 'dc' is not referenced, it is just ignored. Also when routing it through combine().
+    def gru(x, dh):
 
         dhs = Sdh(dh)  # previous value, stabilized
         # note: input does not get a stabilizer here, user is meant to do that outside

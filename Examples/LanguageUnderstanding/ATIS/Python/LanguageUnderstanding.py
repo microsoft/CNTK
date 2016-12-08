@@ -15,7 +15,6 @@ from cntk import Trainer, Evaluator
 from cntk.learner import adam_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.ops import cross_entropy_with_softmax, classification_error, splice, relu
 from cntk.trainer import create_trainer
-#from cntk.persist import load_model, save_model
 
 ########################
 # variables and stuff  #
@@ -75,9 +74,9 @@ def create_model_function():
         #Recurrence(RNNUnit(hidden_dim, activation=softplus), go_backwards=False),
         #Recurrence(pr_rnn, go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=relu) >> Dense(hidden_dim, activation=relu), go_backwards=False),
-        #Dense(num_labels)
-        last,
-        Dense(num_intents)
+        Dense(num_labels)
+        #last,
+        #Dense(num_intents)
     ])
 
 ########################
@@ -121,12 +120,12 @@ def train(reader, model, max_epochs):
     criterion = create_criterion_function(model)
 
     # TODO: num_intents --> get from reader?
-    #labels = reader.streams.slot_labels
-    labels = reader.streams.intent_labels
+    labels = reader.streams.slot_labels
+    #labels = reader.streams.intent_labels
 
     # declare argument types
-    #criterion.set_signature(Input(vocab_size, is_sparse=False), Input(num_labels, is_sparse=True))
-    criterion.set_signature(Input(vocab_size, is_sparse=False), Input(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
+    criterion.set_signature(Input(vocab_size, is_sparse=False), Input(num_labels, is_sparse=True))
+    #criterion.set_signature(Input(vocab_size, is_sparse=False), Input(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
@@ -135,8 +134,8 @@ def train(reader, model, max_epochs):
 
     # SGD parameters
     learner = adam_sgd(criterion.parameters,
-                       #lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
-                       lr         = learning_rate_schedule(0, UnitType.sample),
+                       lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
+                       #lr         = learning_rate_schedule(0, UnitType.sample),
                        momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
                        low_memory = True,
                        gradient_clipping_threshold_per_sample = 15,
@@ -195,8 +194,8 @@ def evaluate(reader, model):
 if __name__=='__main__':
     # TODO: leave these in for now as debugging aids; remove for beta
     # TODO: try cntk_py without _ (feedback from Willi)
-    from cntk import DeviceDescriptor
-    DeviceDescriptor.set_default_device(cntk_device(-1)) # force CPU
+    #from cntk import DeviceDescriptor
+    #DeviceDescriptor.set_default_device(cntk_device(-1)) # force CPU
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
     #set_computation_network_trace_level(1000000)  # TODO: remove debugging facilities once this all works

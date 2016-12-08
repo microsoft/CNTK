@@ -46,7 +46,11 @@ class Function(cntk_py.Function):
         f_name = f.__name__
         from cntk import placeholder_variable, combine, alias
         args = [placeholder_variable(name=arg_name) for arg_name in list(params.keys())]
-        ordered_args = combine(args).outputs # force them into the right order
+        # force them into the right order
+        # Placeholders are ordered in depth-first traversal order.
+        # By routing them through combine(), we force their traversal order to be first to last.
+        # TODO: Get evidence that this is actually doing what it is meant to do.
+        args = combine(args).outputs
         # execute the lambda with placeholders as inputs, which creates a piece of graph
         out = f(*args)
         if isinstance(out, dict): # multi-value function, returned as a dictionary
