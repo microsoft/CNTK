@@ -22,7 +22,7 @@ extern "C"
 
 using namespace CNTK;
 
-#define MAX_BASE64_EXPORT_LENGTH (100 /** 1024 * 1024*/)
+#define MAX_BASE64_EXPORT_LENGTH (100 * 1024 * 1024)
 
 template <typename FunctionType>
 void Traverse(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor)

@@ -77,7 +77,7 @@ namespace GRAPHIR
         static Dictionary Serializer::CreateGraphDictionary(const proto::Graph& src, const FunctionPtr& templateGraph);
         
         static void Copy(std::string prefix, const DictionaryValue& src, proto::Node& dst);
-        static void Serializer::Copy(std::string prefix, const proto::Node& src, DictionaryValue& dst);
+        static void Copy(std::string prefix, const proto::Node& src, DictionaryValue& dst);
 
         template <typename T>
         static void CopyData(const NDArrayView& src, RepeatedField<T>* dst)
@@ -467,10 +467,12 @@ namespace GRAPHIR
             else
             {
                 subNode[L"op"] = (size_t)atoi(op.c_str());
-                subNode[L"attributes"] = Dictionary(); //TODO (size_t)atoi(ext.at("attributes").c_str());
+
+                DictionaryValue attributes;
+                Copy("attributes", node, attributes);
+                subNode[L"attributes"] = attributes;
 
                 std::vector<DictionaryValue> inputs;
-
                 for (auto input : node.inputs())
                 {
                     inputs.push_back(ToWString2(input.name()));
