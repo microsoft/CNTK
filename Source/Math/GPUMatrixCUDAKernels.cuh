@@ -5330,14 +5330,17 @@ __global__ void _assignAlphaScore_m(
             {
                 if (phoneid == totalphonenum - 1 )
                 {
-                    t_l = max(phoneboundid_l - delayConstraint - 1, (LONG64)0);
-                    if (t > phoneboundid_r + delayConstraint - 1 || t < t_l)
+                    /*t_l = max(phoneboundid_l - delayConstraint - 1, (LONG64)0);
+                    if (t > phoneboundid_r + delayConstraint - 1 || t < t_l)*/
+                    //only constraint right side
+                    if (t > phoneboundid_r + delayConstraint - 1)
                         Alphascore[alphaid] = LZERO;
                 }
                 else if (phoneid != totalphonenum - 1)
                 {
-                    t_l = max(phoneboundid_l - delayConstraint, (LONG64)0);
-                    if (t > phoneboundid_r + delayConstraint || t < t_l)
+                    /*t_l = max(phoneboundid_l - delayConstraint, (LONG64)0);
+                    if (t > phoneboundid_r + delayConstraint || t < t_l)*/
+                    if (t > phoneboundid_r + delayConstraint)
                         Alphascore[alphaid] = LZERO;
                 }
             }          
@@ -5429,14 +5432,16 @@ __global__ void _assignBetaScore_m(
             {
                 if (phoneid == totalphonenum - 1)
                 {
-                    t_l = max(phoneboundid_l - delayConstraint - 1, (LONG64)0);
-                    if (t > phoneboundid_r + delayConstraint - 1 || t < t_l)
+                    /*t_l = max(phoneboundid_l - delayConstraint - 1, (LONG64)0);
+                    if (t > phoneboundid_r + delayConstraint - 1 || t < t_l)*/
+                    if (t > phoneboundid_r + delayConstraint - 1)
                         Betascore[betaid] = LZERO;
                 }
                 else if (phoneid != totalphonenum - 1)
                 {
-                    t_l = max(phoneboundid_l - delayConstraint, (LONG64)0);
-                    if (t > phoneboundid_r + delayConstraint || t < t_l)
+                    /*t_l = max(phoneboundid_l - delayConstraint, (LONG64)0);
+                    if (t > phoneboundid_r + delayConstraint || t < t_l)*/
+                    if (t > phoneboundid_r + delayConstraint)
                         Betascore[betaid] = LZERO;
                 }
             }
