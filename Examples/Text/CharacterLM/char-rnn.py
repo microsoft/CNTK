@@ -9,9 +9,10 @@ import os
 from cntk import Trainer, Axis
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
-from cntk.persist import load_model, save_model
+from cntk.ops.functions import load_model
 from cntk.blocks import LSTM, Stabilizer
 from cntk.layers import Recurrence, Dense
+from cntk.models import LayerStack, Sequential
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 
 # model hyperparameters
@@ -118,20 +119,13 @@ def load_data_and_vocab(training_file):
     return data, char_to_ix, ix_to_char, data_size, vocab_size
 
 # Creates the model to train
-def create_model(x, output_dim):    
-
-    # LSTM
-    encoder_output = Stabilizer()(x)
-    for i in range(0, num_layers):
-        encoder_output = Recurrence(LSTM(hidden_dim, enable_self_stabilization=True)) (encoder_output.output)
-
-    # get output of the LSTM
-    states = encoder_output.output
-
-    # dense layer    
-    z = Dense(output_dim) (states)
+def create_model(output_dim):
     
-    return z
+    return Sequential([        
+        LayerStack(num_layers, lambda: 
+                   Recurrence(LSTM(hidden_dim), go_backwards=False)),
+        Dense(output_dim)
+    ])
 
 # Model inputs
 def create_inputs(vocab_dim):
@@ -154,7 +148,10 @@ def train_lm(training_file):
     input_sequence, label_sequence = create_inputs(vocab_dim)
 
     # create the model
-    z = create_model(input_sequence, vocab_dim)
+    model = create_model(vocab_dim)
+    
+    # and apply it to the input sequence    
+    z = model(input_sequence)
 
     # setup the criterions (loss and metric)
     ce = cross_entropy_with_softmax(z, label_sequence)
@@ -187,7 +184,7 @@ def train_lm(training_file):
             p = 0
             e += 1
             model_filename = "models/shakespeare_epoch%d.dnn" % e
-            save_model(z, model_filename)
+            z.save_model(model_filename)
             print("Saved model to '%s'" % model_filename)
 
         # get the data            
