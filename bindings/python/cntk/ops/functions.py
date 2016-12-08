@@ -107,32 +107,35 @@ class Function(cntk_py.Function):
     # call a function, i.e. clone with all placeholders/inputs replaced
     # TODO: if all inputs are actual data, this should eval() instead.
     # TODO: if passed an actual Python function, construct a Function from it. ...how does that affect the function signature??
-    # TODO: implement kwargs.
-    # TODO: remove tuple flattening. 'args' are a list.
     def __call__(self, *args, **kwargs):
-        #if not isinstance(args, tuple):  # normalize single argument into tuple
-        #    args = (args,)
-        ## flatten args to a list. Note it may be a a tuple or even a nested tree of tuples, e.g. LSTM (x, (h, c))
-        #def flatten_tuple(args):
-        #    if not isinstance(args, tuple): # not a tuple: singleton; create a singleton tuple
-        #        return (args,)
-        #    from operator import add
-        #    from functools import reduce
-        #    return reduce(add, [(flatten_tuple(item)) for item in args])
-        #args = list(flatten_tuple(args))  # normalize nested arg tuples into flat tuple  --TODO: is there a standard function to do this?
-        # TODO: This should not be necessary, or go into Function.replace_placeholders()
+        params    = self._get_arguments()     # function parameters
+        names = [arg.name for arg in params]
+        if len(args) + len(kwargs) != len(params):
+            raise TypeError("CNTK Function expected {} arguments, got {}".format(len(params), len(args)))
+        # build the argument map
+        # This mimics Python's interpretation of positional and keyword arguments, except that we have no defaults.
+        arg_map = dict(zip(params, args)) # start with positional arguments
+        if len(kwargs) != 0:              # now look up keyword arguments
+            params_dict = { arg.name: arg for arg in params }
+        for name, arg in kwargs.items():
+            # look up by name
+            if name not in params_dict:
+                raise TypeError("got an unexpected keyword argument '%s'" % name)
+            param = params_dict[name]
+            if param in arg_map:
+                raise SyntaxError("got multiple values for argument '%s'" % name)
+            arg_map[param] = arg
+        assert len(arg_map) == len(params)
+        # normalize args to their outputs  --BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
         def _output_of(arg):  # helper to get the output of an arg; use arg itself if no output() method (that'd be a Variable)
             try:
                 return arg.output
             except AttributeError:
                 return arg  # Variables have no output()
-        args = [_output_of(arg) for arg in args]  # normalize args to their outputs  --BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
+        arg_map = { param: _output_of(arg) for param, arg in arg_map.items() }
         #from cntk.ops import combine
         #args = [combine([arg]) for arg in args]  # BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
-        arguments    = self._get_arguments()     # function inputs (bound or unbound)
-        if len(args) != len(arguments):
-            raise TypeError("CNTK Function expected {} arguments, got {}".format(len(arguments), len(args)))
-        return self.clone(CloneMethod.share, dict(zip(arguments, args)))
+        return self.clone(CloneMethod.share, arg_map)
 
     # forward function composition (other o self)
     def __rshift__(self, other):

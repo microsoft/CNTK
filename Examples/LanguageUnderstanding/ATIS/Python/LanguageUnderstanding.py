@@ -90,7 +90,7 @@ def create_model_function():
 def create_criterion_function(model):
     @Function
     def criterion(x, y):
-        z = model(x)
+        z = model(x=x)
         ce   = cross_entropy_with_softmax(z, y)
         errs = classification_error      (z, y)
         #return Record(loss=ce, metric=errs)
@@ -114,8 +114,9 @@ def create_criterion_function1(model):
 def train(reader, model, max_epochs):
 
     # declare the model's input dimension
-    model.replace_placeholders({model.placeholders[0]: input_variable(vocab_size)})
+    model.replace_placeholders({model.placeholders[0]: input_variable(vocab_size, name=model.placeholders[0].name)})
     # BUGBUG: ^^ Trainer requires this, although the criterion roots are not part of this.
+    # BUGBUG: replace_placeholders() looses the input's name
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)
@@ -205,7 +206,10 @@ if __name__=='__main__':
     force_deterministic_algorithms()
 
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True) 
-    model = create_model_function()
+    model1 = create_model_function()
+    @Function
+    def model(x): return model1(x)
+    names = [arg.name for arg in model.placeholders]
     # train
     train(reader, model, max_epochs=8)
 

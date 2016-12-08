@@ -139,23 +139,11 @@ def Placeholders(num_positional, *named_names):
     combined_args = combine(args) # create a compound that traverses in the defined order
     return tuple([output for output in combined_args.outputs])
 
-#SymbolicArgument = Placeholder  # Placeholder is too overloaded; we should use this instead everywhere
-
-# If we have C++-side Function identity, in same pattern as e.g. sigmoid, then that would suffice.
-#def _Identity(name='identity_arg'):
-#    x = Placeholder(name=name)
-#    apply_x = combine([x])
-#    # TODO: Let's not encourage users to use combine([f]) as a workaround for identity/pass, but rather have it as a first-class operator implemented that we then use. [Willi]
-#    #apply_x = alias(x) # TODO: does not work. Should it?
-#    #_name_and_extend_Function(apply_x, 'Identity')
-#    return Block(apply_x, 'Identity')
-
 # there is only one identity function
 # TODO: This should become a C++-side Function, e.g. like sigmoid
-identity = Function(lambda x: combine([x]))   # BUGBUG: there should be no need for combine()
-# TODO: @Function
-#@Function
-#def identity(x): combine([x])
+@Function
+def identity(keep):
+    return combine([keep])
 
 # This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
 def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True)):
