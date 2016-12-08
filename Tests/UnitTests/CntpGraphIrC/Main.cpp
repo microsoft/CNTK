@@ -30,7 +30,7 @@ int main()
     DumpAsJson(*message, filename + string(".serialized_json"));
 
     // re-serialize with entire array buffers to dump
-    // in binary format.
+    // in binary format. this includes full array data.
     MAX_BASE64_EXPORT_LENGTH = INT_MAX;
     auto message2 = GRAPHIR::Serialize(modelFuncPtr);
     DumpAsBinary(*message2, filename + string(".serialized"));
