@@ -120,17 +120,6 @@ namespace CNTK
             DistributedLearnerBase::RestoreFromCheckpoint(checkpoint[L"base"].Value<Dictionary>());
         }
 
-        ~BlockMomentumDistributedLearner()
-        {
-            if (!m_shutdown)
-            {
-                // It is better to throw from the destructor and crash in this case.
-                RuntimeError(
-                    "Block Momentum Learner was not properly shut down, your training loop is probably wrong, this could lead to hangs."
-                    "Please have a look at the canonical training loop and follow the pattern.");
-            }
-        }
-
     private:
         // Optional override that gets called per minibatch after finishing gradient computation but before updating model parameters
         bool PerformDistributedUpdateIfNeeded(std::vector<Parameter>& parameters, MinibatchInfo& info)
