@@ -249,6 +249,9 @@ namespace CNTK
         CNTK_API void EnableForwardValuesSharing();
         CNTK_API void EnableHyperMemoryCompress();
 
+        CNTK_API void EnableGradientAccumulationOptimization();
+        CNTK_API void DisableGradientAccumulationOptimization();
+
         CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 

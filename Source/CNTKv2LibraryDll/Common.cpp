@@ -70,6 +70,16 @@ namespace CNTK
             Microsoft::MSR::CNTK::Globals::EnableHyperCompressMemory();
         }
 
+        void EnableGradientAccumulationOptimization()
+        {
+            Microsoft::MSR::CNTK::Globals::EnableGradientAccumulationOptimization();
+        }
+
+        void DisableGradientAccumulationOptimization()
+        {
+            Microsoft::MSR::CNTK::Globals::DisableGradientAccumulationOptimization();
+        }
+
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
         {
             bool areDynamicAxesCompatible = (var1.DynamicAxes().size() == var2.DynamicAxes().size());
