@@ -970,7 +970,7 @@ public:
 // FIXME ignore is ignored
 %ignore CNTK::NDMask::DataBuffer();
 %extend CNTK::NDMask {
-    PyObject* to_numpy() {
+    PyObject* to_ndarray() {
         std::vector<size_t> cntk_dims = (*self).Shape().Dimensions();
         static_assert(cntk_dims.size()==2, "mask requires exactly two dimensions");
         std::vector<size_t> dimensions = {cntk_dims[1], cntk_dims[0]};
@@ -1143,7 +1143,7 @@ public:
         return view;
     }
 
-    PyObject* to_numpy() {
+    PyObject* to_ndarray() {
         PyObject *NDArrayViewToNumPy(const CNTK::NDArrayView*);
         return NDArrayViewToNumPy(self);
     }

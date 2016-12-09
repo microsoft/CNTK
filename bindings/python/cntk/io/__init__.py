@@ -54,7 +54,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         sequence, `1` marks a sequence element as valid, and `0` marks it as
         invalid.
         '''
-        return self.m_data.mask().to_numpy()
+        return self.m_data.mask().to_ndarray()
 
     @property
     def is_sparse(self):
