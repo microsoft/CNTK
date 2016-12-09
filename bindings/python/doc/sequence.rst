@@ -1,4 +1,4 @@
-Understanding Sequences
+Working with Sequences
 =======================
 
 CNTK Concepts
@@ -123,12 +123,12 @@ concentrate on the central feature of the LSTM model: the `memory cell`.
     An LSTM cell.
 
 The LSTM cell is associated with three gates that control how information is stored / 
-remembered in the LSTM. The "forget gate" determines what information should be kept 
+remembered in the LSTM. The *forget gate* determines what information should be kept 
 after a single element has flowed through the network. It makes this determination 
 using data for the current time step and the previous hidden state. 
 
-The "input gate" uses the same information as the forget gate, but passes it through 
-a `tanh` to determine what to add to the state. The final gate is the "output gate" 
+The *input gate* uses the same information as the forget gate, but passes it through 
+a `tanh` to determine what to add to the state. The final gate is the *output gate* 
 and it modulates what information should be output from the LSTM cell. This time we 
 also take the previous state's value into account in addition to the previous hidden 
 state and the data of the current state. We have purposely left the full details out 
