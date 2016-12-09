@@ -150,7 +150,8 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     '''
     Converts ``batch`` into a :class:`Value` object of ``dtype``
     such that the integer data in ``batch`` is interpreted as the indices
-    representing one-hot vectors.
+    representing one-hot vectors. Additionally, a SciPy CSR matrix can be obtained
+    by calling :meth:`~cntk.utils.Value.to_csr`.
 
     Example:
         >>> num_classes = 6
@@ -910,7 +911,7 @@ class Value(cntk_py.Value):
         '''
         Converts value to a list of SciPy arrays if the storage format is sparse
         '''
-        if not self.is_sparse:
+        if not self.is_sparse():
             raise ValueError('value with storage format dense cannot be converted to CSR')
 
         if len(self.shape) > 3:
@@ -927,18 +928,17 @@ class Value(cntk_py.Value):
 
     def to_ndarray(self):
         '''
-        Converts this value to a list of NumPy arrays if the storage format is dense
+        Converts this value to a NumPy array if the storage format is dense
         '''
-        if self.is_sparse:
+        if self.is_sparse():
             raise ValueError('value with storage format sparse cannot be converted to NDArray')
-
         return np.asarray(self)
 
     def asarray(self):
         '''
-        Converts value to a list of SciPy or NumPy arrays depending on the underlying storage format
+        Converts value to a list of SciPy or to a NumPy array depending on the underlying storage format
         '''
-        if self.is_sparse:
+        if self.is_sparse():
             return self.to_csr()
 
         return self.to_ndarray()
