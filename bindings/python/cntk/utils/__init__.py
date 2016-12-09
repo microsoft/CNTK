@@ -724,6 +724,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
             applied to all batches. 
 
          Data should be either NumPy arrays or a
+         :class:`~cntk.io.MinibatchData` instance.
         precision (str or `np.float32` or `np.float64`): if string it can be
          one of 'float' 'float32, 'double', 'float64', or None
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
