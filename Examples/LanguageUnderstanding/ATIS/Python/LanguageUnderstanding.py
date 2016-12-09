@@ -127,8 +127,8 @@ def train(reader, model, max_epochs):
     #labels = reader.streams.intent_labels
 
     # declare argument types
-    criterion.set_signature(Input(vocab_size, is_sparse=False), Input(num_labels, is_sparse=True))
-    #criterion.set_signature(Input(vocab_size, is_sparse=False), Input(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
+    criterion.set_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
+    #criterion.set_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
@@ -172,8 +172,7 @@ def train(reader, model, max_epochs):
 
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
-    #criterion.set_signature(None, variable_of_type(num_labels, is_sparse=True))
-    criterion.set_signature(Input(vocab_size, is_sparse=False), Input(num_labels, is_sparse=True))
+    criterion.set_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
 
     # process minibatches and perform evaluation
     evaluator = Evaluator(model, criterion.outputs[0], criterion.outputs[1])
@@ -215,10 +214,8 @@ if __name__=='__main__':
 
     # save and load (as an illustration)
     path = data_dir + "/model.cmf"
-    #model.save_model(path)
+    model.save_model(path)
     model = Function.load(path)
-    #from cntk.ops.functions import load_model
-    #model = load_model(path)
 
     # test
     reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)

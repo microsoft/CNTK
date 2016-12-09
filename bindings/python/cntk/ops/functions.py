@@ -88,54 +88,62 @@ class Function(cntk_py.Function):
     # model.set_signature(42)
     # pass a list of objects that define the dimensions etc. of the placeholders
     # Currently you can pass either
-    def set_signature(self, *arg_types):
-        placeholders = self._get_arguments()  # the function arguments to fill in
-        if len(arg_types) != len(placeholders):
-            raise TypeError("CNTK Function.declare_inputs() expected {} arguments, got {}".format(len(placeholders), len(arg_types)))
+    # TODO: honor the names
+    def set_signature(self, *arg_types, **kwarg_types):
+        params = self._get_arguments()  # the function arguments to fill in
+        if len(arg_types) != len(params):
+            raise TypeError("CNTK Function.set_signature() expected {} arguments, got {}".format(len(params), len(arg_types)))
         def to_input(arg):
             if arg is None or isinstance(arg, cntk_py.Variable):
                 return arg
             else:
                 from cntk import input_variable
-                return input_variable(arg)
+                return input_variable(**arg)
         args = [to_input(arg) for arg in arg_types]
-        #self.replace_placeholders(dict(zip(placeholders, args)))
-        for pair in zip(placeholders, args):
-            #if pair[1] is not None: # passing None will keep it as a Placeholder, partial application. Not very nice. Just pass another Placeholder().
-            self.replace_placeholders({pair[0]: pair[1]})
+        #self.replace_placeholders(dict(zip(params, args)))
+        for pair in zip(params, args):
+            if pair[1] is not None: # passing None will not update the signature of this argument
+                self.replace_placeholders({pair[0]: pair[1]})
 
-    # call a function, i.e. clone with all placeholders/inputs replaced
-    # TODO: if all inputs are actual data, this should eval() instead.
-    # TODO: if passed an actual Python function, construct a Function from it. ...how does that affect the function signature??
-    def __call__(self, *args, **kwargs):
-        params    = self._get_arguments()     # function parameters
-        names = [arg.name for arg in params]
+    # determine the {placeholder: variable} map for use with various call operations
+    # Accepted are both positional and keyword arguments.
+    # This mimics Python's argument interpretation, except that keyword arguments are not optional.
+    def argument_map(self, *args, **kwargs):
+        params = self._get_arguments()    # function parameters
         if len(args) + len(kwargs) != len(params):
             raise TypeError("CNTK Function expected {} arguments, got {}".format(len(params), len(args)))
-        # build the argument map
-        # This mimics Python's interpretation of positional and keyword arguments, except that we have no defaults.
-        arg_map = dict(zip(params, args)) # start with positional arguments
-        if len(kwargs) != 0:              # now look up keyword arguments
+
+        # start with positional arguments
+        arg_map = dict(zip(params, args))
+
+        # now look up keyword arguments
+        if len(kwargs) != 0:
             params_dict = { arg.name: arg for arg in params }
-        for name, arg in kwargs.items():
-            # look up by name
-            if name not in params_dict:
-                raise TypeError("got an unexpected keyword argument '%s'" % name)
-            param = params_dict[name]
-            if param in arg_map:
-                raise SyntaxError("got multiple values for argument '%s'" % name)
-            arg_map[param] = arg
+            for name, arg in kwargs.items():  # keyword args are matched by name
+                if name not in params_dict:
+                    raise TypeError("got an unexpected keyword argument '%s'" % name)
+                param = params_dict[name]
+                if param in arg_map:
+                    raise SyntaxError("got multiple values for argument '%s'" % name)
+                arg_map[param] = arg # add kw argument to dict
         assert len(arg_map) == len(params)
-        # normalize args to their outputs  --BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
+
+        # normalize args to their outputs
+        # BUGBUG: This is a workaround. Without, one gets "TypeError: cannot convert value of dictionary to CNTK::Variable".
         def _output_of(arg):  # helper to get the output of an arg; use arg itself if no output() method (that'd be a Variable)
             try:
                 return arg.output
             except AttributeError:
                 return arg  # Variables have no output()
         arg_map = { param: _output_of(arg) for param, arg in arg_map.items() }
-        #from cntk.ops import combine
-        #args = [combine([arg]) for arg in args]  # BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
-        return self.clone(CloneMethod.share, arg_map)
+
+        return arg_map
+
+    # call a function, i.e. clone with all placeholders/inputs replaced
+    # TODO: if all inputs are actual data, this should eval() instead.
+    # TODO: if passed an actual Python function, construct a Function from it. ...how does that affect the function signature??
+    def __call__(self, *args, **kwargs):
+        return self.clone(CloneMethod.share, self.argument_map(*args, **kwargs))
 
     # forward function composition (other o self)
     def __rshift__(self, other):
@@ -514,6 +522,7 @@ class Function(cntk_py.Function):
         return super(Function, self).restore_model(filename)
 
     @staticmethod
+    @typemap
     def load(filename, device=None):
         '''
         Load the model in ``filename``, that has been saved using
@@ -530,7 +539,6 @@ class Function(cntk_py.Function):
         if not device:
             device = DeviceDescriptor.use_default_device()
         function = cntk_py.Function.load_model(filename, device)
-        function.__class__ = Function
         return function
 
 @typemap

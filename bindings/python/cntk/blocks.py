@@ -74,6 +74,20 @@ def _initializer_for(init, rank_params=None):
 
     return init
 
+# create a type specifier; that is, all arguments to instantiate a Placeholder or Input
+# All are optional, meaning unspecified.
+def Type(shape=None, dtype=None, is_sparse=None, dynamic_axes=None):
+    r = dict()
+    if shape is not None:
+        r['shape'] = shape
+    if dtype is not None:
+        r['dtype'] = dtype
+    if is_sparse is not None:
+        r['is_sparse'] = is_sparse
+    if dynamic_axes is not None:
+        r['dynamic_axes'] = dynamic_axes
+    return Record(**r)
+
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
 # If passed function is an actual Python function, it will be executed with Placeholders as inputs.
 # All layers functions call this at the end.
