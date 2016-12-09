@@ -48,7 +48,7 @@ INCLUSION_FREQUENCY_TEST_CASES = [
 @pytest.mark.parametrize("weights, num_samples, allow_duplicates, expected, tolerance, raises_exception", INCLUSION_FREQUENCY_TEST_CASES)
 def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, expected, tolerance, raises_exception, device_id, precision):
 
-    weights = AA(weights)
+    weights = AA(weights, precision)
 
     if raises_exception:
         with pytest.raises(ValueError):
@@ -61,7 +61,7 @@ def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicate
         assert np.allclose(result.eval(), expected, atol=tolerance)
 
 RANDOM_SAMPLE_TEST_CASES_WITH_REPLACEMENT = [
-    ([1., 3., 5., 1.],  1000, 0.03, False),
+    ([1., 3., 5., 1.],  1000, 0.05, False),
     ([1., -1.],  100, 0.0, True),
 ]
 
@@ -69,7 +69,7 @@ RANDOM_SAMPLE_TEST_CASES_WITH_REPLACEMENT = [
 @pytest.mark.parametrize("weights, num_samples,  tolerance, raises_exception", RANDOM_SAMPLE_TEST_CASES_WITH_REPLACEMENT)
 def test_random_sample_with_replacement(weights, num_samples, tolerance, raises_exception, device_id, precision):
 
-    weights = AA(weights)
+    weights = AA(weights, precision)
     expected_relative_frequency = weights / np.sum(weights)
     num_calls = 10
     identity = np.identity(weights.size)
@@ -92,16 +92,15 @@ def test_random_sample_with_replacement(weights, num_samples, tolerance, raises_
 
 
 RANDOM_SAMPLE_TEST_CASES_WITHOUT_REPLACEMENT = [
-    ([1., 3, 50., 1., 0.], 4, (0.25, 0.25, 0.25, 0.25, 0), 0.0, False),
+    ([1., 3, 50., 1., 0.], 4, (1, 1, 1, 1, 0), 0.0, False),
     ([1., -1.],  1, None,   0.0, True),
 ]
 
 
-@pytest.mark.parametrize("weights, num_samples, expected_relative_frequency, tolerance, raises_exception", RANDOM_SAMPLE_TEST_CASES_WITHOUT_REPLACEMENT)
-def test_random_sample_without_replacement(weights, num_samples, expected_relative_frequency, tolerance, raises_exception, device_id, precision):
+@pytest.mark.parametrize("weights, num_samples, expected_count, tolerance, raises_exception", RANDOM_SAMPLE_TEST_CASES_WITHOUT_REPLACEMENT)
+def test_random_sample_without_replacement(weights, num_samples, expected_count, tolerance, raises_exception, device_id, precision):
 
-    weights = AA(weights)
-    num_calls = 1
+    weights = AA(weights, precision)
     identity = np.identity(weights.size)
     allow_duplicates = False  # sample without replacement
 
@@ -110,11 +109,7 @@ def test_random_sample_without_replacement(weights, num_samples, expected_relati
             result = random_sample(weights, num_samples, allow_duplicates)
             result.eval()
     else:
-        observed_frequency = np.zeros_like(weights)
-        for i in range(0, num_calls):
-            result = random_sample(weights, num_samples, allow_duplicates)
-            denseResult = times(result, identity)
-            observed_frequency += np.sum(denseResult.eval(), 0)
-        observed_frequency /= (num_calls * num_samples)
-        assert np.allclose(observed_frequency,
-                           expected_relative_frequency, atol=tolerance)
+        result = random_sample(weights, num_samples, allow_duplicates)
+        denseResult = times(result, identity)
+        observed_count = np.sum(denseResult.eval(), 0)
+        assert np.allclose(observed_count, expected_count, atol=tolerance)
