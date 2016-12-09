@@ -8,13 +8,12 @@
 Unit tests random sampling related operations
 """
 
-from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import AA, precision
-from cntk import random_sample_inclusion_frequency
+from  cntk import random_sample_inclusion_frequency, random_sample, times
 
-TEST_CASES = [
+INCLUSION_FREQUENCY_TEST_CASES = [
     # drawing 1 sample
     (np.full((4), 42.),                                                               1,     True,   np.full((4), 1/4),                                    0.0001, False),
 
@@ -38,7 +37,7 @@ TEST_CASES = [
     ([1,-1.],                                                                         1,     False,  [0],                                                  0.0001, True), 
 ]
 
-@pytest.mark.parametrize("weights, num_samples, allow_duplicates, expected, tolerance, raises_exception", TEST_CASES)
+@pytest.mark.parametrize("weights, num_samples, allow_duplicates, expected, tolerance, raises_exception", INCLUSION_FREQUENCY_TEST_CASES)
 def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicates, expected, tolerance, raises_exception, device_id, precision):
 
     weights = AA(weights);
@@ -51,4 +50,55 @@ def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicate
         result = random_sample_inclusion_frequency(weights, num_samples, allow_duplicates)
         assert np.allclose(result.eval(), expected, atol=tolerance)
 
-# BUGBUG add test for random_sample(...) too.
+RANDOM_SAMPLE_TEST_CASES_WITH_REPLACEMENT = [
+    ([1., 3., 5., 1.],  1000, 0.03, False),
+    ([1., -1.],  100, 0.0, True),
+]
+@pytest.mark.parametrize("weights, num_samples,  tolerance, raises_exception", RANDOM_SAMPLE_TEST_CASES_WITH_REPLACEMENT)
+def test_random_sample_with_replacement(weights, num_samples,  tolerance, raises_exception, device_id, precision):
+
+    weights = AA(weights);
+    expected_relative_frequency = weights / np.sum(weights)
+    num_calls = 10;
+    identity = np.identity(weights.size)
+    allow_duplicates = True # sample with replacement
+
+    if raises_exception:
+        with pytest.raises(ValueError):
+            result = random_sample(weights, num_samples, allow_duplicates)
+            result.eval()
+    else:
+        observed_frequency = np.empty_like(weights)
+        for i in range(0, num_calls):
+            result = random_sample(weights, num_samples, allow_duplicates)
+            denseResult = times(result, identity)
+            observed_frequency += np.sum(denseResult.eval(), 0)
+        observed_relative_frequency = observed_frequency / (num_calls * num_samples)
+        assert np.allclose(observed_relative_frequency, expected_relative_frequency, atol=tolerance)
+
+        
+
+RANDOM_SAMPLE_TEST_CASES_WITHOUT_REPLACEMENT = [
+    ([1., 3, 50., 1., 0.], 4, (0.25, 0.25, 0.25, 0.25, 0), 0.0, False),
+    ([1., -1.],  1, None,   0.0, True),
+]
+@pytest.mark.parametrize("weights, num_samples, expected_relative_frequency, tolerance, raises_exception", RANDOM_SAMPLE_TEST_CASES_WITHOUT_REPLACEMENT)
+def test_random_sample_without_replacement(weights, num_samples, expected_relative_frequency, tolerance, raises_exception, device_id, precision):
+
+    weights = AA(weights);
+    num_calls = 1;
+    identity = np.identity(weights.size)
+    allow_duplicates = False # sample without replacement
+
+    if raises_exception:
+        with pytest.raises(ValueError):
+            result = random_sample(weights, num_samples, allow_duplicates)
+            result.eval()
+    else:
+        observed_frequency = np.zeros_like(weights)
+        for i in range(0, num_calls):
+            result = random_sample(weights, num_samples, allow_duplicates)
+            denseResult = times(result, identity)
+            observed_frequency += np.sum(denseResult.eval(), 0)
+        observed_frequency /= (num_calls * num_samples)
+        assert np.allclose(observed_frequency, expected_relative_frequency, atol=tolerance)
