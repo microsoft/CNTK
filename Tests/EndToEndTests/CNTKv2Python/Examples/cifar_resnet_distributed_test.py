@@ -59,3 +59,4 @@ def test_cifar_resnet_distributed_error(device_id, is_1bit_sgd):
 
     assert np.allclose(test_error, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)
+    distributed.Communicator.finalize()
