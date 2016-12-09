@@ -97,7 +97,6 @@ def create_criterion_function(model):
         # BUGBUG: parameters passed to Record are not ordered. This pattern is not correct.
         return Record(ce=ce, errs=errs)
     return criterion
-    #return Function(criterion)
 
 # alternative way of doing it, e.g. for use with Beta2
 def create_criterion_function1(model):
@@ -114,9 +113,10 @@ def create_criterion_function1(model):
 def train(reader, model, max_epochs):
 
     # declare the model's input dimension
-    model.replace_placeholders({model.placeholders[0]: input_variable(vocab_size, name=model.placeholders[0].name)})
-    # BUGBUG: ^^ Trainer requires this, although the criterion roots are not part of this.
+    #model.replace_placeholders({model.placeholders[0]: input_variable(vocab_size, name=model.placeholders[0].name)})
     # BUGBUG: replace_placeholders() looses the input's name
+    model.update_signature(vocab_size)
+    # BUGBUG: ^^ Trainer requires this, although the criterion roots are not part of this.
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)
@@ -127,8 +127,8 @@ def train(reader, model, max_epochs):
     #labels = reader.streams.intent_labels
 
     # declare argument types
-    criterion.set_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
-    #criterion.set_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
+    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
+    #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
@@ -172,7 +172,7 @@ def train(reader, model, max_epochs):
 
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
-    criterion.set_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
+    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
 
     # process minibatches and perform evaluation
     evaluator = Evaluator(model, criterion.outputs[0], criterion.outputs[1])

@@ -20,12 +20,10 @@ from cntk.utils import *
 #from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
 #from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.initializer import glorot_uniform
 from cntk import Trainer, Evaluator
 from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu
-from cntk.ops import input_variable, constant, parameter, element_times, combine
-from cntk.persist import load_model, save_model
+from cntk.ops import Function, input_variable, constant, parameter, element_times, combine
 from _cntk_py import set_computation_network_trace_level
 
 ########################
@@ -95,11 +93,23 @@ def create_convnet_cifar10_model(num_classes):
 # define the criteria  #
 ########################
 
-# compose model function (with optional input normalization) and criterion primitives into a criterion function
+# compose model function and criterion primitives into a criterion function
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
 # This function is generic and could be a stock function create_ce_classification_criterion().
 def create_criterion_function(model, normalize=identity):
+    @Function
+    def criterion(x, y):
+        z = model(normalize(x))
+        ce   = cross_entropy_with_softmax(z, y)
+        errs = classification_error      (z, y)
+        #return Record(loss=ce, metric=errs)
+        # BUGBUG: parameters passed to Record are not ordered. This pattern is not correct.
+        return Record(ce=ce, errs=errs)
+    return criterion
+
+# alternative way of doing it, e.g. for use with Beta2
+def create_criterion_function1(model, normalize=identity):
     x, y = Placeholders(2)
     z = model(normalize(x))
     ce   = cross_entropy_with_softmax(z, y)
@@ -113,14 +123,15 @@ def create_criterion_function(model, normalize=identity):
 def train_and_evaluate(reader, reader_test, model, max_epochs):
 
     # declare the model's input dimension
-    model.replace_placeholders({model.placeholders[0]: input_variable((num_channels, image_height, image_width))})
+    #model.replace_placeholders({model.placeholders[0]: input_variable((num_channels, image_height, image_width))})
     # BUGBUG: ^^ Trainer requires this, although the criterion roots are not part of this.
+    model.update_signature((num_channels, image_height, image_width))
 
     # criterion function. This is what is being trained trained.
     # Model gets "sandwiched" between normalization (not part of model proper) and criterion.
-    criterion = create_criterion_function(model, normalize=
-                                          element_times(1.0 / 256.0, Placeholder()))
-    criterion.replace_placeholders({criterion.placeholders[0]: input_variable((num_channels, image_height, image_width)), criterion.placeholders[1]: input_variable((num_classes))})
+    criterion = create_criterion_function(model, normalize=element_times(1.0 / 256.0, Placeholder()))
+    #criterion.replace_placeholders({criterion.placeholders[0]: input_variable((num_channels, image_height, image_width)), criterion.placeholders[1]: input_variable((num_classes))})
+    criterion.update_signature((num_channels, image_height, image_width), num_classes)
 
     # iteration parameters
     epoch_size     = 50000
@@ -187,7 +198,8 @@ def evaluate(reader, model):
 
     # criterion function. This is what is being evaluated
     criterion = create_criterion_function(model, normalize=element_times(1.0 / 256.0, Placeholder()))
-    criterion.replace_placeholders({criterion.placeholders[0]: input_variable((num_channels, image_height, image_width)), criterion.placeholders[1]: input_variable((num_classes))})
+    #criterion.replace_placeholders({criterion.placeholders[0]: input_variable(), criterion.placeholders[1]: input_variable((num_classes))})
+    criterion.update_signature((num_channels, image_height, image_width), num_classes)
 
     # process minibatches and perform evaluation
     evaluator = Evaluator(model, criterion.outputs[0], criterion.outputs[1])
@@ -211,7 +223,7 @@ def evaluate(reader, model):
 
 if __name__=='__main__':
     # create model
-    model = create_convnet_cifar10_model(10)
+    model = create_convnet_cifar10_model(num_classes=10)
 
     # train
     reader      = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
@@ -220,8 +232,8 @@ if __name__=='__main__':
 
     # save and load (as an illustration)
     path = data_path + "/model.cmf"
-    save_model(model, path)
-    model1 = load_model(path)
+    model.save(path)
+    model1 = Function.load(path)
 
     # test
     reader = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)

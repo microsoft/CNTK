@@ -1,6 +1,6 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor
-from ..utils import typemap, sanitize_var_map, value_to_seq
+from ..utils import typemap, sanitize_var_map, value_to_seq, _as_tuple
 from enum import Enum, unique
 import numpy as np
 
@@ -80,30 +80,9 @@ class Function(cntk_py.Function):
         pass
 
     # TODO: get by with placeholders only, do NOT replace with Input but rather Placeholder(shape).
+    # TODO: move this inside argument_map()
     def _get_arguments(self):
         return [arg for arg in self.inputs if arg.is_input or arg.is_placeholder]
-
-    # define input shapes, in-place
-    # e.g.
-    # model.set_signature(42)
-    # pass a list of objects that define the dimensions etc. of the placeholders
-    # Currently you can pass either
-    # TODO: honor the names
-    def set_signature(self, *arg_types, **kwarg_types):
-        params = self._get_arguments()  # the function arguments to fill in
-        if len(arg_types) != len(params):
-            raise TypeError("CNTK Function.set_signature() expected {} arguments, got {}".format(len(params), len(arg_types)))
-        def to_input(arg):
-            if arg is None or isinstance(arg, cntk_py.Variable):
-                return arg
-            else:
-                from cntk import input_variable
-                return input_variable(**arg)
-        args = [to_input(arg) for arg in arg_types]
-        #self.replace_placeholders(dict(zip(params, args)))
-        for pair in zip(params, args):
-            if pair[1] is not None: # passing None will not update the signature of this argument
-                self.replace_placeholders({pair[0]: pair[1]})
 
     # determine the {placeholder: variable} map for use with various call operations
     # Accepted are both positional and keyword arguments.
@@ -128,32 +107,86 @@ class Function(cntk_py.Function):
                 arg_map[param] = arg # add kw argument to dict
         assert len(arg_map) == len(params)
 
-        # normalize args to their outputs
+        # normalize Function args to their outputs
         # BUGBUG: This is a workaround. Without, one gets "TypeError: cannot convert value of dictionary to CNTK::Variable".
+        # Warning: This function can also be used for minibatch data, Type() objects, and possibly more.
+        # This mapping should be removed once the TypeError has been fixed.
         def _output_of(arg):  # helper to get the output of an arg; use arg itself if no output() method (that'd be a Variable)
-            try:
+            if isinstance(arg, Function):
+            #try:
                 return arg.output
-            except AttributeError:
+            else:
+            #except AttributeError:
                 return arg  # Variables have no output()
         arg_map = { param: _output_of(arg) for param, arg in arg_map.items() }
 
         return arg_map
 
-    # call a function, i.e. clone with all placeholders/inputs replaced
+    def update_signature(self, *arg_types, **kwarg_types):
+        '''
+        define input shapes, in-place
+        e.g.
+        model.update_signature(42)
+        pass a list of objects that define the dimensions etc. of the placeholders
+        Currently you can pass either
+        TODO: honor the names
+        '''
+        arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
+        #params = self._get_arguments()  # the function arguments to fill in
+        #if len(arg_types) != len(params):
+        #    raise TypeError("CNTK Function.update_signature() expected {} arguments, got {}".format(len(params), len(arg_types)))
+        def to_input(arg, name):
+            from cntk import input_variable
+            #if arg is None or isinstance(arg, cntk_py.Variable):
+            #    return arg
+            if isinstance(arg, (int, tuple)): # just passed a shape
+                return input_variable(shape=_as_tuple(arg), name=name)
+            else:
+                return input_variable(name=name, **arg)
+        # map the given types:
+        #  - create an Input with the given Type or shape
+        #  - keep the name property of the Function parameter
+        #  - skip argument types passed as None
+        #  - TODO: should verify existing shape/axis information
+        arg_map = { param: to_input(arg, name=param.name) for param, arg in arg_map.items() if arg is not None }
+        self.replace_placeholders(arg_map)
+        #for pair in zip(params, args):
+        #    if pair[1] is not None: # passing None will not update the signature of this argument
+        #        self.replace_placeholders({pair[0]: pair[1]})
+
     # TODO: if all inputs are actual data, this should eval() instead.
     # TODO: if passed an actual Python function, construct a Function from it. ...how does that affect the function signature??
     def __call__(self, *args, **kwargs):
+        '''
+        Call a Function, i.e. clone with all placeholders/inputs replaced.
+
+        Args:
+            *args, **kwargs: The arguments to pass to the Function.
+
+        Returns:
+             If one or more arguments are CNTK Functions or Variables, then
+             this function returns another CNTK Function object with inputs bound to the arguments.
+             If all arguments are numbers or numpy arrays, then it performs the actual computation and returns the numeric result.
+        '''
+        # TODO: Implement the eval() case.
         return self.clone(CloneMethod.share, self.argument_map(*args, **kwargs))
 
-    # forward function composition (other o self)
     def __rshift__(self, other):
+        '''
+        Forward function composition (other o self), same as Sequential([self, other]).
+        '''
         return other(self)
 
-    # backward function composition (self o other)
     def __lshift__(self, other):
+        '''
+        Backward function composition (self o other)
+        '''
         return self(other)
 
     def __getattr__(self, name):
+        '''
+        Access a member inside this object.
+        '''
         try:
             return self.__dict__[name]
         except KeyError:

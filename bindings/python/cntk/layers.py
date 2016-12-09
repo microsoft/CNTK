@@ -78,7 +78,8 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     apply_x = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
     if b:
         apply_x = apply_x + b
-    apply_x = apply_x >> activation
+    if activation is not None:
+        apply_x = apply_x >> activation
     return Block(apply_x, 'Dense', Record(W=W, b=b))
 
 # Embedding -- create a linear embedding layer
@@ -182,7 +183,8 @@ def Convolution(rf_shape,        # e.g. (3,3)
                            max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
     if bias:
         apply_x = apply_x + b
-    apply_x = apply_x >> activation
+    if activation is not None:
+        apply_x = apply_x >> activation
     return Block(apply_x, 'Convolution', Record(W=W, b=b))
 
 # Create a Pooling layer with one of following types:
