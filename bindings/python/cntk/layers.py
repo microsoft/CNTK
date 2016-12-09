@@ -22,22 +22,22 @@ from cntk.ops.variables import Variable
 # this is what we initialize weight matrices from by default
 from cntk.blocks import _initializer_for, _INFERRED
 
-# Dense -- create a fully-connected linear projection layer with optional non-linear activation
-# Note: shape may describe a tensor as well.
-# input_rank given: number of inferred axes to add to W (map_rank must not be given)
-# map_rank   given: expand W to leave exactly mapRank axes (input_rank must not be given)
-# none       given: expand W to all (same as map_rank=0)
 def Dense(shape, activation=default_override_or(identity), init=default_override_or(glorot_uniform()),
           input_rank=None, map_rank=None,
           bias=default_override_or(True), init_bias=default_override_or(0)):
+    '''
+    Create a fully-connected linear projection layer with optional non-linear activation.
+    Note: shape may describe a tensor as well.
+    input_rank given: number of inferred axes to add to W (map_rank must not be given)
+    map_rank   given: expand W to leave exactly mapRank axes (input_rank must not be given)
+    none       given: expand W to all (same as map_rank=0)
+    '''
 
     activation = get_default_override(Dense, activation=activation)
     init       = get_default_override(Dense, init=init)
     bias       = get_default_override(Dense, bias=bias)
     init_bias  = get_default_override(Dense, init_bias=init_bias)
 
-    #activation = _resolve_activation(activation)
-    #bias       = bias if _is_given(bias) else _get_current_default_options().bias
     output_shape = _as_tuple(shape)
 
     if input_rank is not None and map_rank is not None:
@@ -74,13 +74,26 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     b = Parameter(              output_shape, init=init_bias,    name='b') if bias else None
 
     # expression of this function
+    # BUGBUG: This does not work, it messes up the dimensions. Need to fix that inference bug first.
+    @Function
+    def dense(x):
+        r = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
+        if b:
+            r = r + b
+        if activation is not None:
+            r = activation(r)
+        return r
+
+    # expression of this function
     x = Placeholder(name='dense_arg')
     apply_x = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
     if b:
         apply_x = apply_x + b
     if activation is not None:
         apply_x = apply_x >> activation
-    return Block(apply_x, 'Dense', Record(W=W, b=b))
+    dense = apply_x
+
+    return Block(dense, 'Dense', Record(W=W, b=b))
 
 # Embedding -- create a linear embedding layer
 # To create an embedding from a file, use this:
