@@ -11,7 +11,7 @@ import numpy as np
 import cntk
 import _cntk_py
 
-# defualt Paths relative to current python file.
+# default Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
 data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
