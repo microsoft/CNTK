@@ -7,7 +7,6 @@ Subpackages
 .. toctree::
 
     cntk.utils.debughelpers
-    cntk.utils.tests
 
 Submodules
 ----------
