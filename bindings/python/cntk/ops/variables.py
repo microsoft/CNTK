@@ -176,7 +176,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
         '''
         NumPy array of the value
         '''
-        return super(Parameter, self).value().to_numpy()
+        return super(Parameter, self).value().to_ndarray()
 
     @value.setter
     def value(self, val):
@@ -222,5 +222,5 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         '''
         NumPy array of the value
         '''
-        return super(Constant, self).value().to_numpy()
+        return super(Constant, self).value().to_ndarray()
 

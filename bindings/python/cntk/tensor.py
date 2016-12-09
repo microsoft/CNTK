@@ -166,10 +166,10 @@ class ArrayMixin(object):
     @property
     def __array_interface__(self):
         try:
-            np_array = self.to_numpy()
+            np_array = self.to_ndarray()
         except AttributeError:
             try:
-                np_array = self.data().to_numpy()
+                np_array = self.data().to_ndarray()
             except AttributeError:
                 try:
                     np_array = self.value

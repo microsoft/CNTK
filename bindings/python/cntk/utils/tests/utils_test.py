@@ -211,7 +211,7 @@ def test_sanitize_batch_contiguity():
       [AA([4., 5, 6., 7., 8.])]], [(1,5), (1,5)]),
 ])
 
-def test_dense_value_to_csr(data, expected_csr_shape):
+def test_dense_value_to_ndarray(data, expected_csr_shape):
     shape = (5,)
     var = input_variable(shape)
     val = sanitize_batch(var, data)

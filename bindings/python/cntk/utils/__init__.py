@@ -907,28 +907,40 @@ class Value(cntk_py.Value):
 
     def to_csr(self):
         '''
-        Converts sequences of 1-d samples in value to a list of scipy CSR matrices. If value corresponds only
-        to one sequence, a list with an unique element is returned.
+        Converts value to a list of SciPy arrays if the storage format is sparse
         '''
+        if not self.is_sparse:
+            raise ValueError('value with storage format dense cannot be converted to CSR')
+
         if len(self.shape) > 3:
-            raise ValueError('CSR matrix can be built only from samples of vectors')
+            raise ValueError('CSR matrix can be built only from samples of 1-d data or batches of 2-d data')
 
         from cntk.ops import times, input_variable
         import scipy.sparse as sparse
 
-        if self.is_sparse:
-            vector_dim = self.shape[-1]
-            temp_input = input_variable(vector_dim)
-            dense_data = times(temp_input, np.eye(vector_dim)).eval({temp_input: self}, self.device())
-        else:
-            if self.mask.shape == ():
-                dense_data = np.at_least_3d(self.data().to_numpy())
-            else:
-                np_value = np.asarray(self)
-                dense_data = [seq[self.mask[idx] != cntk_py.MaskKind_Invalid]
-                   for idx, seq in enumerate(np_data)]
+        vector_dim = self.shape[-1]
+        temp_input = input_variable(vector_dim)
+        dense_data = times(temp_input, np.eye(vector_dim)).eval({temp_input: self}, self.device())
 
         return [sparse.csr_matrix(seq) for seq in dense_data]
+
+    def to_ndarray(self):
+        '''
+        Converts this value to a list of NumPy arrays if the storage format is dense
+        '''
+        if self.is_sparse:
+            raise ValueError('value with storage format sparse cannot be converted to NDArray')
+
+        return np.asarray(self)
+
+    def asarray(self):
+        '''
+        Converts value to a list of SciPy or NumPy arrays depending on the underlying storage format
+        '''
+        if self.is_sparse:
+            return self.to_csr()
+
+        return self.to_ndarray()
 
 def sanitize_dtype_numpy(dtype):
     is_type = isinstance(dtype, type) or isinstance(dtype, np.dtype)
