@@ -120,19 +120,6 @@ class Function(cntk_py.Function):
                 arg_map[param] = arg # add kw argument to dict
         assert len(arg_map) == len(params)
 
-        # normalize Function args to their outputs
-        # BUGBUG: This is a workaround. Without, one gets "TypeError: cannot convert value of dictionary to CNTK::Variable".
-        # Warning: This function can also be used for minibatch data, Type() objects, and possibly more.
-        # This mapping should be removed once the TypeError has been fixed.
-        def _output_of(arg):  # helper to get the output of an arg; use arg itself if no output() method (that'd be a Variable)
-            if isinstance(arg, Function):
-            #try:
-                return arg.output
-            else:
-            #except AttributeError:
-                return arg  # Variables have no output()
-        arg_map = { param: _output_of(arg) for param, arg in arg_map.items() }
-
         return arg_map
 
     def update_signature(self, *arg_types, **kwarg_types):
@@ -181,7 +168,37 @@ class Function(cntk_py.Function):
              this function returns another CNTK Function object with inputs bound to the arguments.
              If all arguments are numbers or numpy arrays, then it performs the actual computation and returns the numeric result.
         '''
-        # TODO: Implement the eval() case.
+        # TODO: move the output processing back to here? Then ask Willi to help fix it.
+        # TODO: Implement the eval() case:
+        '''
+        Args:
+            arguments: maps variables to their input data. The interpretation depends on
+             the input type:
+
+               * dict: keys are input variable or names, and values are the input data.
+               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+                For nodes with more than one input, only dict is allowed.
+             In both cases, every every sample in the data will be interpreted
+             as a new sequence. To mark samples as continuations of the
+             previous sequence, specify ``arguments`` as `tuple`: the
+             first element will be used as ``arguments``, and the second one will
+             be used as a list of bools, denoting whether a sequence is a new
+             one (`True`) or a continuation of the previous one (`False`).
+             Data should be either NumPy arrays or a
+             :class:`~cntk.io.MinibatchData` instance.
+            device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
+             contains the type and id of the device on which the computation is
+             to be performed.
+
+        Returns:
+            `bool`: `True` if updates have been performed
+        '''
+
+        #_, output_map = self.forward(arguments, self.outputs, device=device)
+        #
+        #if len(output_map) > 1:
+        #    return output_map
+        #else:
         return self.clone(CloneMethod.share, self.argument_map(*args, **kwargs))
 
     def __rshift__(self, other):
@@ -249,6 +266,11 @@ class Function(cntk_py.Function):
                 'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
         if substitutions is None:
             substitutions = {}
+        # normalize Function args to their Function.output variable
+        # BUGBUG: This is a workaround, I think, since for other cases, this happens automatically.
+        #         Without, SWIG throws "TypeError: cannot convert value of dictionary".
+        #         This mapping should be removed once the TypeError has been fixed.
+        substitutions = { param: (arg.output if isinstance(arg, Function) else arg) for param, arg in substitutions.items() }
         return super(Function, self).clone(method, substitutions)
 
     @property
