@@ -266,14 +266,16 @@ def _has_seq_dim(var, data):
                         (drill_shape, var.name, var_shape))
 
     num_var_dyn_axes = len(var.dynamic_axes)
+
     if num_dyn_axes == num_var_dyn_axes:
-        return True
+        # num_dyn_axes is at least 1, in which case there's only a batch axis
+        return (num_dyn_axes > 1)
     elif num_dyn_axes == num_var_dyn_axes-1:
         return False
     else:
         raise ValueError(
         'data having %i axes is not compatible with the '
-        'input variable having %i axes'%(num_dyn_axes,len(var_shape)))
+        'input variable having %i axes'%(num_dyn_axes, num_var_dyn_axes))
 
 
 def sanitize_shape(shape):

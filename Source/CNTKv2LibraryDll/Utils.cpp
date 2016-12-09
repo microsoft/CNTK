@@ -474,10 +474,13 @@ namespace CNTK
 
         auto varShape = var.Shape();
         auto valueShape = value->Shape();
+        // TODO: is it really possible to have valueShape.Rank() == varShape.Rank() (no dynamic axis)?
         if (valueShape.Rank() < varShape.Rank())
             InvalidArgument("Value's rank should be >= the Variable's rank");
 
         size_t maxAddionalValueAxes = std::max<size_t>(2, var.DynamicAxes().size());
+        // TODO: do we allow the value shape to have extra dimensions, or should we verify instead, 
+        // that valueShape.Rank() - varShape.Rank() <=  var.DynamicAxes().size() (when var.DynamicAxes().size() == 1)?
         if (valueShape.Rank() > (varShape.Rank() + maxAddionalValueAxes))
             InvalidArgument("Value rank should be larger than the Variable%S rank at most by number of dynamic axes", ParanthesizedName(var.Name()).c_str());
 
@@ -499,14 +502,30 @@ namespace CNTK
         if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
             InvalidArgument("Invalid Value object; the sum of the rank of the mask and data does not equal the Variable's rank + number of dynamic axes");
 
-        auto getNumTimeStepsAndSequencesFunc = [](const NDShape& maskShape) {
+        auto numDynamicAxes = var.DynamicAxes().size();
+        auto getNumTimeStepsAndSequencesFunc = [numDynamicAxes](const NDShape& maskShape) {
             size_t maxNumTimeSteps = 1;
             size_t numSequences = 1;
-            if (maskShape.Rank() > 0)
-                maxNumTimeSteps = maskShape[0];
-
             if (maskShape.Rank() > 1)
+            {
+                // since only 2 axes are supported at the moment, sequence axis should be the first and batch axis -- the second.
+                // sequence axis dimension determines the maximum number of time steps (= maximum sequence length),
+                // batch axis dimension -- the number of sequences (= 'training units') in a batch.
+                maxNumTimeSteps = maskShape[0];
                 numSequences = maskShape[1];
+            }
+            else if (maskShape.Rank() > 0)
+            {
+                if (numDynamicAxes > 1)
+                {
+                    maxNumTimeSteps = maskShape[0];
+                }
+                else
+                {
+                    // there's only one axis (the default batch axis).
+                    numSequences = maskShape[0];
+                }
+            }
 
             return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
         };
