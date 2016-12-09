@@ -1391,8 +1391,9 @@ def future_value(x, initial_state=None, time_step=1, name=''):
 
     Example:
         >>> x = C.input_variable(shape=(3,2))
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
-        >>> y = C.future_value(x)
+        >>> # Create one sequence with 4 tensors of shape (3, 2)
+        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
+        >>> y = C.future_value(x) # using initial state of 0 by default
         >>> y.eval({x:x0})
         array([[[[  6.,   7.],
                  [  8.,   9.],
@@ -1442,8 +1443,9 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 
     Example:
         >>> x = C.input_variable(shape=(3,2))
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
-        >>> y = C.past_value(x)
+        >>> # Create one sequence with 4 tensors of shape (3, 2)
+        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
+        >>> y = C.past_value(x) # using initial state of 0 by default
         >>> y.eval({x:x0})
         array([[[[  0.,   0.],
                  [  0.,   0.],

@@ -11,10 +11,10 @@ Unit tests for reshaping operations.
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE
+from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
 import cntk as C
 from cntk.axis import Axis
-from ...utils import sanitize_dtype_cntk, cntk_device
+from ...utils import sanitize_dtype_cntk
 from .. import constant
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
@@ -41,7 +41,6 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
     # test if they get wrongly permuted during test. To this end we multiply
     # the reshaping result with itself.
     dev = cntk_device(device_id)
-    from ...utils import sanitize_dtype_cntk
     from .. import reshape, element_times
 
     num_tensor_elements = np.multiply.reduce(input_shape)
@@ -123,7 +122,6 @@ def test_op_reshape_subshape(input_shape, replacement_shape, begin_axis, end_axi
 # Test that reshape accumulates the gradient in its input operand
 # instead of overwriting the input operand gradient
 def test_op_reshape_gradient_accumulation(device_id, precision):
-    from ...utils import sanitize_dtype_cntk
     from .. import reshape
 
     input_shape = (2,3)

@@ -12,7 +12,7 @@ the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
+from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE
 from ...utils import sanitize_dtype_cntk, _ones_like, eval
 
 TENSOR_PAIRS = [
@@ -228,8 +228,6 @@ TRANSPOSE_TIMES_PAIRS = [
     (np.reshape(np.arange(24), (4, 3, 2)),
      np.array([[1, 3], [2, 4]])),
 ]
-
-# TODO: Handle sparse matrices (left_matrix_type, right_matrix_type)
 
 # adding a rank 3 operand for times operation
 TIMES_PAIRS = TRANSPOSE_TIMES_PAIRS + \
