@@ -1,5 +1,5 @@
 Working with Sequences
-=======================
+=======
 
 CNTK Concepts
 ~~~~~~~~~~~~~
