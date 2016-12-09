@@ -272,9 +272,9 @@ namespace CSEvalV2Example
 
         private static void OutputFunctionInfo(Function func)
         {
-            var uid = func.Uid();
+            var uid = func.Uid;
             System.Console.WriteLine("Function id:" + (string.IsNullOrEmpty(uid) ? "(empty)" : uid));
-            var name = func.Name();
+            var name = func.Name;
             System.Console.WriteLine("Function Name:" + (string.IsNullOrEmpty(name) ? "(empty)" : name));
 
             // Todo: directly return List() or use a wrapper?

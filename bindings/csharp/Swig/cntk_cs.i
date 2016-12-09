@@ -19,8 +19,6 @@
     #pragma warning(disable : 4100)
 %}
 
-%nspace CNTK;
-
 %shared_ptr(CNTK::BackPropState);
 %shared_ptr(CNTK::Function);
 %shared_ptr(CNTK::CompositeFunction);
@@ -361,7 +359,6 @@
 %ignore CNTK::TextFormatMinibatchSource;
 %ignore CNTK::ComputeInputPerDimMeansAndInvStdDevs;
 %ignore CNTK::DistributedWorkerDescriptor;
-%ignore CNTK::operator==(const DistributedWorkerDescriptor& left, const DistributedWorkerDescriptor& right);
 %ignore CNTK::DistributedCommunicator;
 %ignore CNTK::QuantizedDistributedCommunicator;
 %ignore CNTK::MPICommunicator();
@@ -430,6 +427,7 @@
 %rename (GetCPUDevice) CNTK::DeviceDescriptor::CPUDevice;
 %rename (GetDeviceType) CNTK::DeviceDescriptor::Type;
 // %rename (GetId) CNTK::DeviceDescriptor::Id;
+%rename (AreEqualDeviceDescriptor) operator==(const DeviceDescriptor& left, const DeviceDescriptor& right);
 
 %typemap(cscode) CNTK::DeviceDescriptor %{
 
@@ -471,14 +469,205 @@
             return ret;
         }
     }
+
+    public override bool Equals(System.Object obj)
+    {
+        // If parameter is null return false.
+        if (obj == null)
+        {
+            return false;
+        }
+
+        // If parameter cannot be cast to Point return false.
+        DeviceDescriptor p = obj as DeviceDescriptor;
+        if ((System.Object)p == null)
+        {
+            return false;
+        }
+
+        // Return true if the fields match:
+        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+    }
+
+    public bool Equals(DeviceDescriptor p)
+    {
+        // If parameter is null return false:
+        if ((object)p == null)
+        {
+            return false;
+        }
+
+        // Return true if the fields match:
+        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+    }
+
+    public static bool operator ==(DeviceDescriptor first, DeviceDescriptor second)
+    {
+        // If both are null, or both are same instance, return true.
+        if (System.Object.ReferenceEquals(first, second))
+        {
+            return true;
+        }
+
+        // If one is null, but not both, return false.
+        if (((object)first == null) || ((object)second == null))
+        {
+            return false;
+        }
+
+        // Return true if the fields match:
+        return CNTKLib.AreEqualDeviceDescriptor(first, second);
+    }
+
+    public static bool operator !=(DeviceDescriptor first, DeviceDescriptor second)
+    {
+        return !(first == second);
+    }
+
+    public override int GetHashCode()
+    {
+        return this.GetDeviceType().GetHashCode();
+    }
 %}
 
+%rename (GetName) CNTK::Axis::Name;
+%rename (IsOrderedAxis) CNTK::Axis::IsOrdered;
+%rename (AreEqualAxis) operator==(const Axis& first, const Axis& second);
 
+%typemap(cscode) CNTK::Axis %{
+
+    public string Name
+    {
+        get 
+        {
+            return GetName();
+        }
+    }
+
+    public bool IsStatic
+    {
+        get 
+        {
+            return IsStaticAxis();
+        }
+    }
+
+    public bool IsDynamic
+    {
+        get 
+        {
+            return IsDynamicAxis();
+        }
+    }
+
+    public bool IsOrdered
+    {
+        get 
+        {
+            return IsOrderedAxis();
+        }
+    }
+
+    public override bool Equals(System.Object obj)
+    {
+        // If parameter is null return false.
+        if (obj == null)
+        {
+            return false;
+        }
+
+        // If parameter cannot be cast to Point return false.
+        Axis p = obj as Axis;
+        if ((System.Object)p == null)
+        {
+            return false;
+        }
+
+        // Return true if the fields match:
+        return CNTKLib.AreEqualAxis(this, p);
+    }
+
+    public bool Equals(Axis p)
+    {
+        // If parameter is null return false:
+        if ((object)p == null)
+        {
+            return false;
+        }
+
+        // Return true if the fields match:
+        return CNTKLib.AreEqualAxis(this, p);
+    }
+
+    public static bool operator ==(Axis first, Axis second)
+    {
+        // If both are null, or both are same instance, return true.
+        if (System.Object.ReferenceEquals(first, second))
+        {
+            return true;
+        }
+
+        // If one is null, but not both, return false.
+        if (((object)first == null) || ((object)second == null))
+        {
+            return false;
+        }
+
+        // Return true if the fields match:
+        return CNTKLib.AreEqualAxis(first, second);
+    }
+
+    public static bool operator !=(Axis first, Axis second)
+    {
+        return !(first == second);
+    }
+
+    public override int GetHashCode()
+    {
+        if (this.IsDynamicAxis())
+        {
+            return this.GetName().GetHashCode();
+        }
+        else
+        {
+            return this.StaticAsixIndex().GetHashCode();
+        }
+    }
+%}
+
+%rename (GetName) CNTK::Function::Name;
+%rename (GetUid) CNTK::Function::Uid;
+%rename (GetRootFunction) CNTK::Function::RootFunction;
+%rename (GetInputs) CNTK::Function::Inputs;
 %rename (GetOutput) CNTK::Function::Output;
 %rename (GetOutputs) CNTK::Function::Outputs;
 %rename (GetArguments) CNTK::Function::Arguments;
 
 %typemap(cscode) CNTK::Function %{
+
+    public string Name
+    {
+        get 
+        {
+            return GetName();
+        }
+    }
+
+    public string Uid
+    {
+        get 
+        {
+            return GetUid();
+        }
+    }
+
+    public Function RootFunction
+    {
+        get 
+        {
+            return GetRootFunction();
+        }
+    }
 
     public System.Collections.Generic.List<Variable> Outputs
     {
