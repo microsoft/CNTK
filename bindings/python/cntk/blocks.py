@@ -236,7 +236,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     Sct = Stabilizer() if enable_self_stabilization else identity
     Sht = Stabilizer() if enable_self_stabilization else identity
 
-    from collections import OrderedDict
+    #from collections import OrderedDict
 
     # define the model function itself
     # general interface for Recurrence():
@@ -286,7 +286,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
             ht
 
         # returns the new state as a tuple with names but order matters
-        return OrderedDict([('h', h), ('c', c)])
+        return (Function.NamedOutput(h=h), Function.NamedOutput(c=c))
+        #return OrderedDict([('h', h), ('c', c)])
 
     # GRU model function
     # in this case:
@@ -322,7 +323,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
             ht
 
         # returns the new state as a tuple with names but order matters
-        return dict(h=h)
+        return Function.NamedOutput(h=h)
 
     @Function
     def rnn(x, dh):
@@ -330,7 +331,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         ht = activation (times(x, W) + times(dhs, H) + b)
         h = times(Sht(ht), Wmr) if has_projection else \
             ht
-        return dict(h=h)
+        return Function.NamedOutput(h=h)
 
     # return the corresponding lambda as a CNTK Function
     function = Block({

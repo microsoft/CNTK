@@ -270,9 +270,12 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
         # TODO: move this entire placeholder business to Function.__call__
         # compute the delayed state variable(s)
         _, *prev_state_args = over.placeholders
+
         if len(over.outputs) != len(prev_state_args):
             raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
         out_vars_fwd = [Placeholder(state_var.shape) for state_var in prev_state_args] # create list of placeholders for the state variables
+
+        #print('out_vars_fwd', [p.uid for p in out_vars_fwd])
 
         # previous function; that is, past or future_value with initial_state baked in
         # BUGBUG: If initial_state itself depends on a Placeholder at this point (e.g. seq2seq), previous_hook will be a binary function...
@@ -281,12 +284,15 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
             return past_value  (state, initial_state) if not go_backwards else \
                    future_value(state, initial_state)
         prev_out_vars = [previous_hook(s) for s in out_vars_fwd]  # delay (state vars)
+        #print('prev_out_vars', [p.uid for p in prev_out_vars])
 
         # apply the recurrent block ('over')
         out = over(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
+        #print('over.placeholders', [p.uid for p in over.placeholders])
 
         # connect the recurrent dependency
         replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)) }
+        #print('out.outputs', [p.uid for p in list(out.outputs)])
         out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
 
         return combine([out.outputs[0]])  # BUGBUG: Without this, it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?

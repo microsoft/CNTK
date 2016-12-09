@@ -90,12 +90,11 @@ def create_model_function():
 def create_criterion_function(model):
     @Function
     def criterion(x, y):
+        #print(x.name, x.uid, y.name, y.uid)
         z = model(x=x)
         ce   = cross_entropy_with_softmax(z, y)
         errs = classification_error      (z, y)
-        #return Record(loss=ce, metric=errs)
-        # BUGBUG: parameters passed to Record are not ordered. This pattern is not correct.
-        return Record(ce=ce, errs=errs)
+        return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
     return criterion
 
 # alternative way of doing it, e.g. for use with Beta2
@@ -122,11 +121,11 @@ def train(reader, model, max_epochs):
     #   here  (query, slot_labels) -> (ce, errs)
     criterion = create_criterion_function(model)
 
-    # TODO: num_intents --> get from reader?
     labels = reader.streams.slot_labels
     #labels = reader.streams.intent_labels
 
     # declare argument types
+    #print("###################", [arg.name for arg in criterion.placeholders])
     criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
     #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
@@ -171,11 +170,25 @@ def train(reader, model, max_epochs):
 ########################
 
 def evaluate(reader, model):
-    criterion = create_criterion_function(model)
-    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
+    #criterion = create_criterion_function(model)
+    #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
 
     # process minibatches and perform evaluation
-    evaluator = Evaluator(model, criterion.outputs[0], criterion.outputs[1])
+    #evaluator = Evaluator(model, criterion.outputs[1], criterion.outputs[1])
+
+    x = Placeholder(name='x')
+    y = Placeholder(name='y')
+    z = model(x)
+    #criterion = 0*cross_entropy_with_softmax(z, y) + classification_error (z, y)
+    criterion = classification_error (z, y)
+    print([arg.name for arg in criterion.placeholders])
+
+    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
+    #criterion.update_signature(x=Type(vocab_size, is_sparse=False), y=Type(num_labels, is_sparse=True))
+    evaluator = Evaluator(model, 0*criterion, criterion)
+
+
+
     #progress_printer = ProgressPrinter(freq=100, first=10, tag='Evaluation') # more detailed logging
     progress_printer = ProgressPrinter(tag='Evaluation')
     while True:

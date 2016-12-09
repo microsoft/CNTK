@@ -40,6 +40,12 @@ class Function(cntk_py.Function):
     BUGBUG: This ^^ is not correct. It is also the base of composites and multi-valued functions.
     '''
 
+    class NamedOutput:
+        def __init__(self, **kwargs):
+            for kw in kwargs:
+                self.name = kw
+                self.arg = kwargs[kw]
+
     # construct a Function from a Python lambda
     # where the Function's input signature is defined by the lambda
     # Use this as a decorator, e.g.:
@@ -51,6 +57,7 @@ class Function(cntk_py.Function):
         f_name = f.__name__
         from cntk import placeholder_variable, combine, alias
         args = [placeholder_variable(name=arg_name) for arg_name in list(params.keys())]
+        #print("===============================", [arg for arg in list(params.keys())])
         # force them into the right order
         # Placeholders are ordered in depth-first traversal order.
         # By routing them through combine(), we force their traversal order to be first to last.
@@ -58,15 +65,21 @@ class Function(cntk_py.Function):
         args = combine(args).outputs
         # execute the lambda with placeholders as inputs, which creates a piece of graph
         out = f(*args)
-        if isinstance(out, dict): # multi-value function, returned as a dictionary
-            # give outputs the names of the dictionary and make them unique (so that the same node may be output multiple times, as in LSTM)
-            #out = [alias(value, name=key) for key, value in out.items()]
-            # BUGBUG: Fails with "ValueError: Variable(ElementTimes64_output) with unknown shape detected when compiling the Function graph!"
-            out = [combine([value], name=key) for key, value in out.items()]
-            # BUGBUG: Without alias, the names are not propagated into outputs.
-            # BUGBUG: Forgetting [] in combine will hang combine().
-        if not isinstance(out, (tuple, list)): # multi-value function, returned a tuple
-            out = [out]
+        # resolve NamedOutputs
+        # TODO: check for duplicates
+        def resolve_named(output):
+            if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
+                output = combine([output.arg], name=output.name)
+                #out = alias(output.arg, name=output.name)
+                # BUGBUG: Fails with "ValueError: Variable(ElementTimes64_output) with unknown shape detected when compiling the Function graph!"
+                #  TODO: verify that this is still the case. Either way, alias() is slow.
+                # BUGBUG: Without alias, the names are not propagated into outputs.
+                # BUGBUG: Forgetting [] in combine will hang combine().
+            return output
+        if isinstance(out, tuple): # multi-value function, returned as a tuple
+            out = [resolve_named(output) for output in out]
+        else:
+            out = [resolve_named(out)]
         # implant the function name as the node name --TODO: should be op_name in a BlockFunction
         out = combine(out, name=f_name)
         # add all members to the Python class
