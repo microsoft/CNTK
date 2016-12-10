@@ -1,6 +1,6 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor
-from ..utils import typemap, sanitize_var_map, value_to_seq
+from cntk.utils import typemap, sanitize_var_map, value_to_seq
 from enum import Enum, unique
 import numpy as np
 
@@ -161,14 +161,29 @@ class Function(cntk_py.Function):
              the input type:
 
                * dict: keys are input variable or names, and values are the input data.
-               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
-                For nodes with more than one input, only dict is allowed.
+               * any other type: if node has an unique input, arguments is
+                 mapped to this input. 
+             For nodes with more than one input, only dict is allowed.
+
              In both cases, every every sample in the data will be interpreted
-             as a new sequence. To mark samples as continuations of the
-             previous sequence, specify ``arguments`` as `tuple`: the
-             first element will be used as ``arguments``, and the second one will
-             be used as a list of bools, denoting whether a sequence is a new
-             one (`True`) or a continuation of the previous one (`False`).
+             as a new sequence. 
+             
+             Sequences can be marked as continuations of the same sequence in
+             the previous minibatch (that is the sequence in the same slot).
+             There are two possibilities for this:
+             
+              * specifying arguments as a `tuple` where the first element is
+                used as arguments and the second one will be used as a list
+                of bools, denoting whether a sequence is a new one (`True`) or a
+                continuation of the sequence in the same slot of the previous
+                minibatch (`False`). This will be applied to all batches. 
+              * specifying arguments as a dictionary of variables to tuples 
+                where the first element is used as arguments and the second
+                one will be used as a list of bools, denoting whether a sequence
+                is a new one (`True`) or a continuation of the sequence in the
+                same slot of the previous minibatch (`False`). This will be
+                applied to all batches. 
+
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
@@ -201,18 +216,33 @@ class Function(cntk_py.Function):
             array([[[ 1.  ,  0.5 ,  0.25]]], dtype=float32)
 
         Args:
-            arguments: maps variables to their
-             input data. The interpretation depends on the input type:
+            arguments: maps variables to their input data. The interpretation depends on
+             the input type:
 
                * dict: keys are input variable or names, and values are the input data.
-               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
-                For nodes with more than one input, only dict is allowed.
+               * any other type: if node has an unique input, arguments is
+                 mapped to this input. 
+             For nodes with more than one input, only dict is allowed.
+
              In both cases, every every sample in the data will be interpreted
-             as a new sequence. To mark samples as continuations of the
-             previous sequence, specify ``arguments`` as ``tuple``: the
-             first element will be used as ``arguments``, and the second one will
-             be used as a list of bools, denoting whether a sequence is a new
-             one (`True`) or a continuation of the previous one (`False`).
+             as a new sequence. 
+             
+             Sequences can be marked as continuations of the same sequence in
+             the previous minibatch (that is the sequence in the same slot).
+             There are two possibilities for this:
+             
+              * specifying arguments as a `tuple` where the first element is
+                used as arguments and the second one will be used as a list
+                of bools, denoting whether a sequence is a new one (`True`) or a
+                continuation of the sequence in the same slot of the previous
+                minibatch (`False`). This will be applied to all batches. 
+              * specifying arguments as a dictionary of variables to tuples 
+                where the first element is used as arguments and the second
+                one will be used as a list of bools, denoting whether a sequence
+                is a new one (`True`) or a continuation of the sequence in the
+                same slot of the previous minibatch (`False`). This will be
+                applied to all batches. 
+
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
             outputs (iterable): outputs to fetch values for.
@@ -356,7 +386,6 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).op_name()
 
-
     @property
     @typemap
     def output(self):
@@ -435,6 +464,72 @@ class Function(cntk_py.Function):
         :raises ExceptionType: when the function has multiple placeholders.
         '''
         return super(Function, self).replace_placeholder(substitution)
+
+    @typemap
+    def find_all_with_name(self, name):
+        '''
+        Returns a list of primitive function with ``name`` in the graph
+        starting from this node. Throws an exceptoin if ``name`` occurs
+        multiple times. If you expect only one function to be returned, use
+        :func:`find_by_name`. 
+
+        Example:
+            >>> a = C.input_variable(shape=1, name='i')
+            >>> b = C.input_variable(shape=1, name='i')
+            >>> c = C.plus(a, b, name='c')
+            >>> len(c.find_all_with_name('i'))
+            2
+            >>> c.find_all_with_name('z')
+            []
+            
+        Args:
+            name (str): names to look for
+
+        Returns:
+            list of :class:`Function` objects matching ``name``
+
+        See also:
+            :func:`find_by_name`
+        '''
+        from .. import graph
+        return graph.find_all_with_name(self, name)
+
+    # TODO have a better name for combine() in this case
+    @typemap
+    def find_by_name(self, name):
+        '''
+        Returns a primitive function with ``name`` in the graph starting from
+        this node. Throws an exceptoin if ``name`` occurs multiple times. If
+        you expect multiple functions to be returned, use
+        :func:`find_all_with_name`.
+
+        Example:
+            >>> a = C.input_variable(shape=1, name='a')
+            >>> b = C.input_variable(shape=1, name='b')
+            >>> c = C.plus(a, b, name='c')
+            >>> c.find_by_name('b').name
+            'b'
+            >>> c.find_by_name('z') is None
+            True
+            
+            If you need a full function out of it that can be evaluated, you
+            need to upcast it (currently done via combine):
+
+            >>> d = c * 5
+            >>> C.combine([d.find_by_name('c')]).eval({a:[1], b:[2]})
+            array([[[ 3.]]], dtype=float32)
+
+        Args:
+            name (str): names to look for
+
+        Returns:
+            :class:`Function` object matching ``name``
+
+        See also:
+            :func:`find_all_with_name`
+        '''
+        from .. import graph
+        return graph.find_by_name(self, name)
 
     @typemap
     def save_model(self, filename):

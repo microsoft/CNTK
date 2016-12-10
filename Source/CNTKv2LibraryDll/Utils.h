@@ -491,8 +491,6 @@ namespace CNTK
 
     std::string ToString(const std::wstring& wstring);
     std::wstring ToWString(const std::string& string);
-
-
     // Helper class to manage a collection of learners.
     class Learners
     {
@@ -533,5 +531,18 @@ namespace CNTK
 
         std::vector<LearnerPtr> m_learners;
         bool m_isDistributed;
+    };
+
+    class Utils
+    {
+    public:
+        template <typename ElementType>
+        static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr> GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value);
+
+        template <typename ElementType>
+        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
+
+        template <typename ElementType>
+        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
     };
 }

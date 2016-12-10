@@ -25,6 +25,7 @@ void TrainTruncatedLSTMAcousticModelClassifer();
 void DeviceSelectionTests();
 void MultiThreadsEvaluation(bool);
 void MinibatchSourceTests();
+void UserDefinedFunctionTests();
 
 int main()
 {
@@ -57,6 +58,8 @@ int main()
 
     FeedForwardTests();
     RecurrentFunctionTests();
+
+    UserDefinedFunctionTests();
 
     SerializationTests();
     LearnerTests();

@@ -131,6 +131,7 @@
     <ClCompile Include="TensorTests.cpp" />
     <ClCompile Include="TrainerTests.cpp" />
     <ClCompile Include="TruncatedLSTMAcousticModel.cpp" />
+    <ClCompile Include="UserDefinedFunctionTests.cpp" />
     <ClCompile Include="ValueTests.cpp" />
   </ItemGroup>
   <ItemGroup>

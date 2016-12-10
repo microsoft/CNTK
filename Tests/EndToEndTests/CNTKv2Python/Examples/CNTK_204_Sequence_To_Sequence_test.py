@@ -20,5 +20,5 @@ expectedEvalError = 90
 
 def test_cntk_204_sequence_to_sequence_trainerror(nb):
     testCell = [cell for cell in nb.cells
-                if cell.cell_type == 'code' and re.search('#Print the training error', cell.source)]
+                if cell.cell_type == 'code' and re.search('# Print the training error', cell.source)]
     assert float((testCell[0].outputs[0])['text']) < expectedEvalError

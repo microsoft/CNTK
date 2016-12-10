@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include <vector>
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include "CNTKLibrary.h"
 #include "Common.h"

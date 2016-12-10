@@ -398,6 +398,7 @@ namespace CNTK
     class NDArrayView final : public std::enable_shared_from_this<NDArrayView>
     {
         friend class CompositeFunction;
+        friend class Utils;
         friend class LearnerBase;
         friend class Variable;
         friend class PackedValue;
@@ -811,7 +812,35 @@ namespace CNTK
         /// The created Value object contains a copy of the specified 'sequences' data.
         ///
         template <typename ElementType>
-        CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<std::vector<ElementType>>& sequences, const DeviceDescriptor& device, bool readOnly = false);
+        CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<std::vector<ElementType>>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly = false);
+
+        ///
+        /// Create a new Value object containing a collection of variable length sequences.
+        /// The created Value object contains a copy of the specified 'sequences' data.
+        ///
+        template <typename ElementType>
+        static ValuePtr Create(const NDShape& sampleShape, const std::vector<std::vector<ElementType>>& sequences, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return Create(sampleShape, sequences, {}, device, readOnly);
+        }
+
+        ///
+        /// Create a new Value object containing a collection of variable length sequences.
+        /// The created Value object contains a copy of the specified 'sequences' data.
+        ///
+        static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return Create(sampleShape, sequences, sequenceStartFlags, device, readOnly, /*createNewCopy =*/ false);
+        }
+
+        ///
+        /// Create a new Value object containing a collection of variable length sequences.
+        /// The created Value object contains a copy of the specified 'sequences' data.
+        ///
+        static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return Create(sampleShape, sequences, {}, device, readOnly);
+        }
 
         ///
         /// Create a new Value object containing a collection of variable length sequences of one hot vectors
@@ -901,6 +930,8 @@ namespace CNTK
         virtual void CopyFrom(const Value& source);
 
     private:
+        CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly, bool createNewCopy);
+
         // Disallow copy and move construction and assignment
         Value(const Value&) = delete; Value& operator=(const Value&) = delete; Value(Value&&) = delete; Value& operator=(Value&&) = delete;
 
@@ -2190,7 +2221,7 @@ namespace CNTK
         virtual ~BackPropState() {}
 
     protected:
-        BackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice) 
+        BackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice)
             : m_function(function), m_forwardComputeDevice(computeDevice)
         {}
 
@@ -2272,7 +2303,7 @@ namespace CNTK
         ///
         /// Returns the name of the operation that this Function denotes
         ///
-        virtual const std::wstring& OpName() = 0;
+        virtual const std::wstring& OpName() const = 0;
 
     public:
 
@@ -2453,9 +2484,9 @@ namespace CNTK
 
         void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified);
 
-        virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                                std::unordered_set<const Function*>& visitedFunctions,
-                                                std::unordered_set<Variable>& replacedPlaceholders);
+        CNTK_API virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                                         std::unordered_set<const Function*>& visitedFunctions,
+                                                         std::unordered_set<Variable>& replacedPlaceholders);
 
 
         static FunctionPtr Clone(const FunctionPtr& clonee,
@@ -2472,9 +2503,7 @@ namespace CNTK
         ///
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
         ///
-        Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"))
-            : Function(inputs, outputs, std::move(functionConfig), nullptr, name, uid)
-        {}
+        CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
         /// Restores the state of the 'this' function in place using the provided dictionary.
         /// Structurally, 'this' function graph has to be identical to the state captured in the dictionary.

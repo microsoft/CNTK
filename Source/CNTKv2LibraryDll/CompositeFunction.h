@@ -16,17 +16,17 @@ namespace CNTK
     class CNTKBackPropState final : public BackPropState
     {
     public:
-        CNTKBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, const std::pair<Variable, int64_t>& evalTimeStamp)
-            : BackPropState(function, computeDevice), m_evalTimeStamp(evalTimeStamp)
+        CNTKBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, const std::unordered_map<Variable, int64_t>& backpropRootsForwardTimeStamps)
+            : BackPropState(function, computeDevice), m_backpropRootsForwardTimeStamps(backpropRootsForwardTimeStamps)
         {}
 
-        std::pair<Variable, int64_t> EvalTimeStamp() const
+        const std::unordered_map<Variable, int64_t>& BackpropRootsForwardTimeStamps() const
         {
-            return m_evalTimeStamp;
+            return m_backpropRootsForwardTimeStamps; 
         }
 
     private:
-        std::pair<Variable, int64_t> m_evalTimeStamp;
+        std::unordered_map<Variable, int64_t> m_backpropRootsForwardTimeStamps;
     };
     typedef std::shared_ptr<CNTKBackPropState> CNTKBackPropStatePtr;
 
@@ -89,7 +89,7 @@ namespace CNTK
 
         static FunctionPtr Deserialize(const Dictionary& dictionary, const CNTK::DeviceDescriptor& device);
 
-        virtual const std::wstring& OpName() override
+        virtual const std::wstring& OpName() const override
         {
             return CompositeFunctionOpName;
         }
@@ -178,7 +178,7 @@ namespace CNTK
 
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr CreateComputationNode(const Variable& variable,
-                                                                                  PrimitiveFunction* primitiveFunction,
+                                                                                  Function* function,
                                                                                   const std::vector<std::shared_ptr<Microsoft::MSR::CNTK::ComputationNode<ElementType>>>& inputNodes,
                                                                                   Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                                   std::unordered_map<Variable, Microsoft::MSR::CNTK::ComputationNodeBasePtr>& variableToNodeMap);
@@ -208,15 +208,9 @@ namespace CNTK
         void GetNetworkOutputs(std::unordered_map<Variable, ValuePtr>& outputs);
         void GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients);
 
-        template <typename ElementType>
-        static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr> GetCNTKImplMatrixAndMBLayoutFromValueObject(Variable var, const ValuePtr& value);
-
-        template <typename ElementType>
-        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
-        template <typename ElementType>
-        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(Variable var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
-
         const std::vector<Variable>& GetArgumentDependencies(const Variable& output);
+
+        std::unordered_map<Variable, int64_t> GetCurrentBackpropRootsTimeStamps() const;
 
     private:
 

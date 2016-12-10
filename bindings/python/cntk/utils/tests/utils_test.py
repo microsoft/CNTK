@@ -201,3 +201,4 @@ def test_sanitize_batch_contiguity():
     batch = [[a1],[a2]]
     b = sanitize_batch(var, batch)
     assert b.shape == (2,1,2,2)
+

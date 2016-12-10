@@ -875,6 +875,29 @@ public:
 }
 %enddef
 
+// Trainer initializers.
+// Because SWIG cannot properly handle smart pointers to derived classes (causes memory leak during the check),
+// we need custom constructors.
+
+%extend CNTK::Trainer
+{
+    Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<DistributedLearnerPtr>& parameterLearners)
+    {
+        std::vector<LearnerPtr> learners;
+        learners.reserve(parameterLearners.size());
+        for(const auto& l : parameterLearners)
+            learners.push_back(l);
+        return new CNTK::Trainer(model, lossFunction, evaluationFunction, learners);
+    }
+
+    Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners)
+    {
+        return new CNTK::Trainer(model, lossFunction, evaluationFunction, parameterLearners);
+    }
+}
+
+%ignore CNTK::Trainer::Trainer;
+
 %unordered_set_conversion(CNTK::Variable, SWIGTYPE_p_CNTK__Variable)
 %unordered_set_conversion(CNTK::Constant, SWIGTYPE_p_CNTK__Constant)
 %unordered_set_conversion(CNTK::Parameter, SWIGTYPE_p_CNTK__Parameter)
@@ -947,7 +970,7 @@ public:
 // FIXME ignore is ignored
 %ignore CNTK::NDMask::DataBuffer();
 %extend CNTK::NDMask {
-    PyObject* to_numpy() {
+    PyObject* to_ndarray() {
         std::vector<size_t> cntk_dims = (*self).Shape().Dimensions();
         static_assert(cntk_dims.size()==2, "mask requires exactly two dimensions");
         std::vector<size_t> dimensions = {cntk_dims[1], cntk_dims[0]};
@@ -1097,7 +1120,7 @@ public:
         return view;
     }
 
-    PyObject* to_numpy() {
+    PyObject* to_ndarray() {
         PyObject *NDArrayViewToNumPy(const CNTK::NDArrayView*);
         return NDArrayViewToNumPy(self);
     }
