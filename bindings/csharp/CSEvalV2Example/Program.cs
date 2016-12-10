@@ -74,21 +74,23 @@ namespace CSEvalV2Example
             }
 
             // Create input map
-            var inputMap = new Dictionary<string, Value>();
+            var inputMap = new Dictionary<Variable, Value>();
             // void Create<T>(Shape shape, List<List<T>> data, DeviceDescriptor computeDevice)
-            inputMap.Add(inputVar.Name, Value.Create(inputVar.Shape, inputData, DeviceDescriptor.CPUDevice));
+            inputMap.Add(inputVar, Value.Create(inputVar.Shape, inputData, DeviceDescriptor.CPUDevice));
 
             // Create ouput map. Using null as Value to indicate using system allocated memory.
-            var outputMap = new Dictionary<string, Value>();
-            outputMap.Add(outputVar.Name, null);
+            var outputMap = new Dictionary<Variable, Value>();
+            outputMap.Add(outputVar, null);
 
             // Evalaute
             // Todo: test on GPUDevice()?
+            // Use Variables in input and output maps.
+            // It is also possible to use variable name in input and output maps.
             evalFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
 
             // The buffer for storing output for this batch
             var outputData = new List<List<float>>();
-            Value outputVal = outputMap[outputVar.Name];
+            Value outputVal = outputMap[outputVar];
             // Get output result as dense output
             // void CopyTo(List<List<T>>
             outputVal.CopyTo(outputVar, outputData);
