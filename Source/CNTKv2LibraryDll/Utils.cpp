@@ -474,13 +474,17 @@ namespace CNTK
 
         auto varShape = var.Shape();
         auto valueShape = value->Shape();
-        // TODO: is it really possible to have valueShape.Rank() == varShape.Rank() (no dynamic axis)?
+
         if (valueShape.Rank() < varShape.Rank())
             InvalidArgument("Value's rank should be >= the Variable's rank");
 
-        size_t maxAddionalValueAxes = std::max<size_t>(2, var.DynamicAxes().size());
-        // TODO: do we allow the value shape to have extra dimensions, or should we verify instead, 
-        // that valueShape.Rank() - varShape.Rank() <=  var.DynamicAxes().size() (when var.DynamicAxes().size() == 1)?
+        auto numDynamicAxes = var.DynamicAxes().size();
+
+        size_t maxAddionalValueAxes = std::max<size_t>(2, numDynamicAxes);
+        // max(2, numDynamicAxes) is needed for some backcompat scenarios, where even when there are no sequence axes
+        // the user can pass a value object with a dim of 1 for the sequence axis.
+        // TODO: try and remove support for this in the future, change the condition below to
+        // valueShape.Rank() - varShape.Rank() <=  var.DynamicAxes().size()
         if (valueShape.Rank() > (varShape.Rank() + maxAddionalValueAxes))
             InvalidArgument("Value rank should be larger than the Variable%S rank at most by number of dynamic axes", ParanthesizedName(var.Name()).c_str());
 
@@ -492,18 +496,17 @@ namespace CNTK
                 AsStringForErrorReporting(varShape).c_str());
         }
 
-        if (var.DynamicAxes().empty())
+        if (numDynamicAxes == 0)
             return{ value->Data()->GetMatrix<ElementType>(), nullptr };
 
-        if (var.DynamicAxes().size() > 2)
+        if (numDynamicAxes > 2)
             LogicError("More than 2 dynamic axis for a variable is currently unsupported");
 
         auto mask = value->Mask();
         if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
             InvalidArgument("Invalid Value object; the sum of the rank of the mask and data does not equal the Variable's rank + number of dynamic axes");
-
-        auto numDynamicAxes = var.DynamicAxes().size();
-        auto getNumTimeStepsAndSequencesFunc = [numDynamicAxes](const NDShape& maskShape) {
+        
+        auto getNumTimeStepsAndSequencesFunc = [numDynamicAxes](const NDShape& maskShape, size_t numDynamicAxes) {
             size_t maxNumTimeSteps = 1;
             size_t numSequences = 1;
             if (maskShape.Rank() > 1)
@@ -531,16 +534,16 @@ namespace CNTK
         };
 
         size_t maxNumTimeSteps, numSequences;
-        std::tie(maxNumTimeSteps, numSequences) = getNumTimeStepsAndSequencesFunc(valueShape.SubShape(varShape.Rank()));
+        std::tie(maxNumTimeSteps, numSequences) = getNumTimeStepsAndSequencesFunc(valueShape.SubShape(varShape.Rank()), numDynamicAxes);
 
-        auto getSequenceStartsAndLengthsFunc = [&getNumTimeStepsAndSequencesFunc](const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths) {
+        auto getSequenceStartsAndLengthsFunc = [&getNumTimeStepsAndSequencesFunc](const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes) {
             auto cpuMask = mask;
             if (mask->Device() != DeviceDescriptor::CPUDevice())
                 cpuMask = mask->DeepClone(DeviceDescriptor::CPUDevice());
 
             const MaskKind* maskBuffer = cpuMask->DataBuffer();
             size_t maxNumTimeSteps, numSequences;
-            std::tie(maxNumTimeSteps, numSequences) = getNumTimeStepsAndSequencesFunc(mask->Shape());
+            std::tie(maxNumTimeSteps, numSequences) = getNumTimeStepsAndSequencesFunc(mask->Shape(), numDynamicAxes);
 
             for (size_t i = 0; i < numSequences; ++i)
             {
@@ -592,7 +595,7 @@ namespace CNTK
 
                 std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
                 std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
-                getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths);
+                getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
 
                 for (size_t i = 0; i < numSequences; ++i)
                     layout->AddSequence(i, i, sequenceBeginIndices[i], sequenceLengths[i]);
@@ -605,7 +608,7 @@ namespace CNTK
             std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
             std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
             if (mask != nullptr)
-                getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths);
+                getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
 
             bool hasTruncatedSequences = std::find_if(sequenceBeginIndices.begin(), sequenceBeginIndices.end(), [](const int& val) { return (val < 0); }) != sequenceBeginIndices.end();
 
