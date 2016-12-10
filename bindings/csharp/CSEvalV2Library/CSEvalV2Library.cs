@@ -181,7 +181,7 @@ namespace CNTK
         public void CopyValueTo<T>(string varName, Value value, List<List<T>> sequences)
         {
             // Todo: deal with GPUDevice.
-            if (value.Device() != DeviceDescriptor.CPUDevice)
+            if (value.Device != DeviceDescriptor.CPUDevice)
             {
                 throw new InvalidOperationException("Currently only CPU device is supported.");
             }

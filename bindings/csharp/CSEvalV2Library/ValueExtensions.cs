@@ -35,8 +35,8 @@ namespace CNTK
             }
 
             var variableShape = variable.Shape;
-            var valueShape = value.Shape();
-            if (variableShape != value.Shape().SubShape(0, valueShape.Rank - 2))
+            var valueShape = value.Shape;
+            if (variableShape != value.Shape.SubShape(0, valueShape.Rank - 2))
             {
                 throw new ArgumentException("The variable and value does not have same shape.");
             }

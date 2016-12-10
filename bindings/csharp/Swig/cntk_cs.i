@@ -887,7 +887,69 @@
 
 %}
 
+%rename (GetDevice) CNTK::Value::Device;
+%rename (GetShape) CNTK::Value::Shape;
+%rename (_IsSparse) CNTK::Value::IsSparse;
+%rename (_IsReadOnly) CNTK::Value::IsReadOnly;
+%rename (_MaskedCount) CNTK::Value::MaskedCount;
+
 %typemap(cscode) CNTK::Value %{
+
+    public DeviceDescriptor Device
+    {
+        get
+        {
+            return GetDevice();
+        }
+    }
+
+    public DataType DataType
+    {
+        get
+        {
+            return GetDataType();
+        }
+    }
+
+    public StorageFormat StorgeFormat
+    {
+        get
+        {
+            return GetStorageFormat();
+        }
+    }
+
+    public NDShape Shape
+    {
+        get
+        {
+            return GetShape();
+        }
+    }
+
+    public bool IsSparse
+    {
+        get
+        {
+            return _IsSparse();
+        }
+    }
+
+    public bool IsReadOnly
+    {
+        get
+        {
+            return _IsReadOnly();
+        }
+    }
+
+    public int MaskedCount
+    {
+        get
+        {
+            return (int)_MaskedCount();
+        }
+    }
 
     public static Value Create<T>(NDShape shape, System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences, DeviceDescriptor computeDevice)
     {
