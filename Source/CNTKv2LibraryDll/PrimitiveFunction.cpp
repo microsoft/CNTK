@@ -535,7 +535,7 @@ namespace CNTK
                     outputShape = shape;
                 else
                 {
-                    vector<size_t> dimensions{ numSamples, numClasses };
+                    vector<size_t> dimensions{ numClasses, numSamples};
                     outputShape = NDShape(dimensions);
                 }
 
