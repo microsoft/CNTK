@@ -41,18 +41,6 @@ namespace CNTK
                 throw new ArgumentException("The variable and value does not have same shape.");
             }
 
-            //if (variableShape.Rank != valueShape.Rank - 2)
-            //{
-            //    throw new ArgumentException("The variable and value does not have same shape.");
-            //}
-            //for (uint i = 0; i < variableShape.Rank; i++)
-            //{
-            //    if (variableShape.GetDimensionSize(i) != valueShape.GetDimensionSize(i))
-            //    {
-            //        throw new ArgumentException("The shape ranks of varaible and value does not match.");
-            //    }
-            //}
-
             // Todo: transform sparse to dense
             // Currently only for dense
             if ((value.GetStorageFormat() != StorageFormat.Dense))

@@ -220,6 +220,7 @@ namespace CNTK
 
         // This is meant for debugging purposes only and is very likely to be deprecated in the future.
         CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
+
         CNTK_API size_t NewUniqueId();
 
         // Internal hooks for testing and higher-level bindings
@@ -253,6 +254,5 @@ namespace CNTK
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
 
         class VariableResolver;
-
     }
 }

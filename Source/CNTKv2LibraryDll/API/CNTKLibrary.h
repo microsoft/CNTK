@@ -1568,7 +1568,6 @@ namespace CNTK
             return prefix + std::to_wstring(Internal::NewUniqueId());
         }
 
-
         inline std::wstring GenerateUid(VariableKind varKind)
         {
             return GenerateUid(std::wstring(VariableKindName(varKind)));
@@ -1821,9 +1820,9 @@ private:
 #endif
 
     protected:
-        static const size_t s_serializationVersion = 1;
-
         VariableFieldsPtr m_dataFields;
+
+        static const size_t s_serializationVersion = 1;
     };
 
     // TODO: Variable equality should be based on uids.
@@ -2146,7 +2145,6 @@ namespace std {
         }
     };
 
-
     // TODO: Variable hash should be based on uid.
     template <> struct hash<::CNTK::Variable>
     {
@@ -2271,8 +2269,7 @@ namespace CNTK
         virtual void Backward(const BackPropStatePtr& state,
                               const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                               std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
- 
-        
+
         ///
         /// Returns the name of the operation that this Function denotes
         ///
@@ -2471,7 +2468,6 @@ namespace CNTK
 
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
-
 
     protected:
         ///
