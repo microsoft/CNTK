@@ -426,16 +426,15 @@
 %rename (GetDefaultDevice) CNTK::DeviceDescriptor::DefaultDevice;
 %rename (GetCPUDevice) CNTK::DeviceDescriptor::CPUDevice;
 %rename (GetDeviceType) CNTK::DeviceDescriptor::Type;
-// %rename (GetId) CNTK::DeviceDescriptor::Id;
+%rename (GetId) CNTK::DeviceDescriptor::Id;
 %rename (AreEqualDeviceDescriptor) CNTK::operator==(const DeviceDescriptor& left, const DeviceDescriptor& right);
 
 %typemap(cscode) CNTK::DeviceDescriptor %{
 
-// Todo: why mapped to uint??
-//    public int Id
-//    {
-//        get { return GetId(); }
-//    }
+    public uint Id
+    {
+        get { return GetId(); }
+    }
 
     public DeviceKind Type
     {
