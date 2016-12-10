@@ -165,13 +165,13 @@ def initializer_with_rank(initializer, output_rank=None, filter_rank=None):
     override output_rank and filter_rank specification in a random initializer
     constructed without an explicit output_rank and filter_rank specification
 
-    Args:'
+    Args:
         initializer: initializer whose output_rank and filter_rank parameters are to be overriden
         output_rank (int): new output rank value
         filter_rank (int): new filter rank value
 
     Returns:
-        new initializer for :class:`cntk.ops.variables.Parameter` with specified output_rank and filter_rank
+        new initializer for :class:`~cntk.ops.variables.Parameter` with specified output_rank and filter_rank
     '''
     if output_rank is None:
         output_rank = SentinelValueForInferParamInitRank
