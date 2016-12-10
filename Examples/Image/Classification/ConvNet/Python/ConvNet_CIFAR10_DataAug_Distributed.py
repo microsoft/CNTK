@@ -6,14 +6,16 @@
 
 import os
 import math
+import argparse
 import numpy as np
 import cntk
 import _cntk_py
 
-# Paths relative to current python file.
+# default Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
 data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
+log_dir = None
 
 # model dimensions
 image_height = 32
@@ -82,15 +84,16 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
     minibatch_size = 64
 
     # Set learning parameters
-    lr_per_sample          = [0.0015625]*20 + [0.00046875]*20 + [0.00015625]*20 + [0.000046875]*10 + [0.000015625]
-    lr_schedule            = cntk.learning_rate_schedule(lr_per_sample, unit=cntk.learner.UnitType.sample, epoch_size=epoch_size)
-    mm_time_constant       = [0]*20 + [600]*20 + [1200]
-    mm_schedule            = cntk.learner.momentum_as_time_constant_schedule(mm_time_constant, epoch_size=epoch_size)
-    l2_reg_weight          = 0.002
+    lr_per_sample     = [0.0015625]*20 + [0.00046875]*20 + [0.00015625]*20 + [0.000046875]*10 + [0.000015625]
+    lr_schedule       = cntk.learning_rate_schedule(lr_per_sample, unit=cntk.learner.UnitType.sample, epoch_size=epoch_size)
+    mm_time_constant  = [0]*20 + [600]*20 + [1200]
+    mm_schedule       = cntk.learner.momentum_as_time_constant_schedule(mm_time_constant, epoch_size=epoch_size)
+    l2_reg_weight     = 0.002
 
     # trainer object
     learner = create_dist_learner(
         cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight))
+
     trainer = cntk.Trainer(z, ce, pe, learner)
 
     total_number_of_samples = max_epochs * epoch_size
@@ -148,12 +151,31 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
     return metric_numer/metric_denom
 
 if __name__=='__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-datadir', help='only interested in changes to that file');
+    parser.add_argument('-logdir', help='only interested in changes by that user');
+    parser.add_argument('-outputdir',  help='go straight to provided changelist');
+
+    args = vars(parser.parse_args())
+
+    if args['datadir'] != None:
+        data_path = args['datadir']
+
+    if args['logdir'] != None:
+        log_dir = args['logdir']
+
+    if args['outputdir'] != None:
+        model_path = args['outputdir'] + "/models"
+
     distributed_after_samples = 0
     num_quantization_bits = 32
 
-    create_dist_learner = lambda learner: cntk.distributed.data_parallel_distributed_learner(learner,
-                                                                                             num_quantization_bits=num_quantization_bits,
-                                                                                             distributed_after=distributed_after_samples)
+    create_dist_learner = \
+        lambda learner: cntk.distributed.data_parallel_distributed_learner(learner,
+                                                                           num_quantization_bits=num_quantization_bits,
+                                                                           distributed_after=distributed_after_samples)
+
     mean=os.path.join(data_path, 'CIFAR-10_mean.xml')
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
@@ -161,6 +183,6 @@ if __name__=='__main__':
     create_train_reader = lambda data_size: create_reader(train_data, mean, True, data_size, distributed_after_samples)
     test_reader = create_reader(test_data, mean, False, cntk.io.FULL_DATA_SWEEP)
 
-    convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False)
+    convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, log_to_file=log_dir, num_mbs_per_log=None, gen_heartbeat=False)
 
     cntk.distributed.Communicator.finalize()
