@@ -137,8 +137,6 @@ class Function(cntk_py.Function):
         #    raise TypeError("CNTK Function.update_signature() expected {} arguments, got {}".format(len(params), len(arg_types)))
         def to_input(arg, name):
             from cntk import input_variable
-            #if arg is None or isinstance(arg, cntk_py.Variable):
-            #    return arg
             if isinstance(arg, (int, tuple)): # just passed a shape
                 return input_variable(shape=_as_tuple(arg), name=name)
             else:
@@ -154,52 +152,79 @@ class Function(cntk_py.Function):
         #    if pair[1] is not None: # passing None will not update the signature of this argument
         #        self.replace_placeholders({pair[0]: pair[1]})
 
+    class OrderedRecord(list):
+        '''
+        A container that behaves like a list and a class, in that the elements it stores
+        can be accessed by an index or as a named class member.
+        This is used as the return value of Function.__call__(numeric data)
+        '''
+        def __init__(self, item_list):
+            for item in item_list:
+                assert isinstance(item, tuple) and len(item)==2
+            super(Function.OrderedRecord, self).__init__(item_list)
+        def __getattr__(self, key):
+            for item in self: # linear search for name; assuming it's faster than a map since these tuples only have a handful of items
+                if item[0] == key:
+                    return item[1]
+            raise AttributeError("record has no attribute '{}'".format(key))
+        def __setattr__(self, key, value):
+            raise AttributeError('record is immutable')
+        def __getitem__(self, key):
+            return super(Function.OrderedRecord, self).__getitem__(key)[1]
+        def __setitem__(self, key, value):
+            raise AttributeError('record is immutable')
+        def __iter__(self):
+            class ValueIterator:
+                def __init__(self, base_iter):
+                    self.base_iter = base_iter
+                def __iter__(self):
+                    return self
+                def __next__(self):
+                    return self.base_iter.__next__()[1] # extract the values
+            return ValueIterator(super(Function.OrderedRecord, self).__iter__())
+        # __missing__, __iter__, __contains__, keys(), values(), __delitem__
+
     # TODO: if all inputs are actual data, this should eval() instead.
     # TODO: if passed an actual Python function, construct a Function from it. ...how does that affect the function signature??
     def __call__(self, *args, **kwargs):
         '''
-        Call a Function, i.e. clone with all placeholders/inputs replaced.
+        Call a Function, either on symbolic or numeric inputs.
+
+           * If at least one input is a CNTK Function or Variable, then
+             return another CNTK Function object with inputs bound to the arguments.
+             This is a short-hand for `f.clone(share, argument_map(*args, **kwargs))`.
+           * Otherwise, all arguments must be numbers, numpy arrays, or a :class:`~cntk.io.MinibatchData` instance.
+             Then perform the actual computation and return the numeric result.
+             This is a short-hand for `f.eval(argument_map(*args, **kwargs))`,
+             except that there is no `device` parameter. If you need that, use `eval()` directly.
 
         Args:
             *args, **kwargs: The arguments to pass to the Function.
 
         Returns:
-             If one or more arguments are CNTK Functions or Variables, then
-             this function returns another CNTK Function object with inputs bound to the arguments.
-             If all arguments are numbers or numpy arrays, then it performs the actual computation and returns the numeric result.
-        '''
-        # TODO: move the output processing back to here? Then ask Willi to help fix it.
-        # TODO: Implement the eval() case:
-        '''
-        Args:
-            arguments: maps variables to their input data. The interpretation depends on
-             the input type:
-
-               * dict: keys are input variable or names, and values are the input data.
-               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
-                For nodes with more than one input, only dict is allowed.
-             In both cases, every every sample in the data will be interpreted
-             as a new sequence. To mark samples as continuations of the
-             previous sequence, specify ``arguments`` as `tuple`: the
-             first element will be used as ``arguments``, and the second one will
-             be used as a list of bools, denoting whether a sequence is a new
-             one (`True`) or a continuation of the previous one (`False`).
-             Data should be either NumPy arrays or a
-             :class:`~cntk.io.MinibatchData` instance.
-            device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
-             contains the type and id of the device on which the computation is
-             to be performed.
-
-        Returns:
-            `bool`: `True` if updates have been performed
+             In case of symbolic inputs, returns another CNTK Function object with inputs bound to the arguments.
+             Otherwise returns an ordered record of numpy arrays for multi-output Functions, and a single numpy array otherwise.
         '''
 
-        #_, output_map = self.forward(arguments, self.outputs, device=device)
-        #
-        #if len(output_map) > 1:
-        #    return output_map
-        #else:
-        return self.clone(CloneMethod.share, self.argument_map(*args, **kwargs))
+        # parse argument list and map to the function's input
+        arg_map = self.argument_map(*args, **kwargs)
+
+        # determine whether this is eval() or clone()
+        from .variables import Variable
+        is_symbolic = any([isinstance(arg, (Function, Variable)) for arg in arg_map.values()])
+
+        # symbolic: return a cloned Function
+        if is_symbolic:
+            return self.clone(CloneMethod.share, arg_map)
+
+        # numeric: evaluate
+        outputs = self.outputs
+        _, output_map = self.forward(arg_map, outputs)
+        assert len(output_map) == len(outputs)
+        if len(output_map) > 1:
+            return Function.OrderedRecord([(output.name, output_map[output]) for output in outputs])
+        else: # single value: return numpy array and that's it
+            return list(output_map.values())[0]
 
     def __rshift__(self, other):
         '''
@@ -305,7 +330,7 @@ class Function(cntk_py.Function):
              to be performed.
 
         Returns:
-            `bool`: `True` if updates have been performed
+            map of outputs to NumPy arrays; or a single NumPy array if Function has only one output
         '''
 
         _, output_map = self.forward(arguments, self.outputs, device=device)

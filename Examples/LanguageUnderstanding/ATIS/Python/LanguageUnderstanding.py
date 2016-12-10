@@ -105,6 +105,33 @@ def create_criterion_function1(model):
     errs = classification_error      (z, y)
     return combine ([ce, errs]) # (features, labels) -> (loss, metric)
 
+###########################
+# helper to try the model #
+###########################
+
+query_wl = None
+slots_wl = None
+query_dict = None
+slots_dict = None
+
+def peek(model, epoch):
+    # load dictionaries
+    global query_wl, slots_wl, query_dict, slots_dict
+    if query_wl is None:
+        query_wl = [line.rstrip('\n') for line in open(data_dir + "/../BrainScript/query.wl")]
+        slots_wl = [line.rstrip('\n') for line in open(data_dir + "/../BrainScript/slots.wl")]
+        query_dict = {query_wl[i]:i for i in range(len(query_wl))}
+        slots_dict = {slots_wl[i]:i for i in range(len(slots_wl))}
+    # run a sequence through
+    seq = 'BOS flights from new york to seattle EOS'  # example string
+    w = [query_dict[w] for w in seq.split()]          # convert to word indices
+    z = model(one_hot([w], vocab_size))               # run it through the model
+    best = np.argmax(z,axis=2)                        # classify
+    # show result
+    print("Example Sentence After Epoch [{}]".format(epoch))
+    for query, slot_label in zip(seq.split(),[slots_wl[s] for s in best[0]]):
+        print("\t{}\t{}".format(query, slot_label))
+
 ########################
 # train action         #
 ########################
@@ -153,10 +180,12 @@ def train(reader, model, max_epochs):
 
     t = 0
     for epoch in range(max_epochs):         # loop over epochs
+        peek(model, epoch)                  # log some interesting info
         epoch_end = (epoch+1) * epoch_size
-        while t < epoch_end:               # loop over minibatches on the epoch
+        while t < epoch_end:                # loop over minibatches on the epoch
             # BUGBUG? The change of minibatch_size parameter vv has no effect.
             data = reader.next_minibatch(min(minibatch_size, epoch_end-t))     # fetch minibatch
+            #loss, metric = criterion(data[reader.streams.query], data[labels])  # update model with it
             trainer.train_minibatch_from_data(criterion, data[reader.streams.query], data[labels])  # update model with it
             t += data[labels].num_samples                  # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
