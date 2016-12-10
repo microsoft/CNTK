@@ -1811,6 +1811,14 @@ private:
         };
         typedef std::shared_ptr<VariableFields> VariableFieldsPtr;
 
+#ifdef SWIGCSHARP
+    public:
+        // Todo: a better way to get hash value?
+        size_t GetHashValue()
+        {
+            return std::hash<const void *>()(m_dataFields.get());
+        }
+#endif
 
     protected:
         static const size_t s_serializationVersion = 1;

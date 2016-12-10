@@ -427,7 +427,7 @@
 %rename (GetCPUDevice) CNTK::DeviceDescriptor::CPUDevice;
 %rename (GetDeviceType) CNTK::DeviceDescriptor::Type;
 // %rename (GetId) CNTK::DeviceDescriptor::Id;
-%rename (AreEqualDeviceDescriptor) operator==(const DeviceDescriptor& left, const DeviceDescriptor& right);
+%rename (AreEqualDeviceDescriptor) CNTK::operator==(const DeviceDescriptor& left, const DeviceDescriptor& right);
 
 %typemap(cscode) CNTK::DeviceDescriptor %{
 
@@ -532,7 +532,7 @@
 
 %rename (GetName) CNTK::Axis::Name;
 %rename (IsOrderedAxis) CNTK::Axis::IsOrdered;
-%rename (AreEqualAxis) operator==(const Axis& first, const Axis& second);
+%rename (AreEqualAxis) CNTK::operator==(const Axis& first, const Axis& second);
 
 %typemap(cscode) CNTK::Axis %{
 
@@ -630,7 +630,7 @@
         }
         else
         {
-            return this.StaticAsixIndex().GetHashCode();
+            return this.StaticAxisIndex().GetHashCode();
         }
     }
 %}
@@ -710,12 +710,13 @@
         {
             varVect.Add(v);
         }
-        return CNTKLib.Combine(varVect);        
+        return CNTKLib.Combine(varVect);
     }
 %}
 
 %rename (GetShape) CNTK::Variable::Shape;
 %rename (GetName) CNTK::Variable::Name;
+%rename (AreEqualVariable) CNTK::operator==(const Variable& first, const Variable& second);
 
 %typemap(cscode) CNTK::Variable %{
 
@@ -728,12 +729,72 @@
     {
         get { return GetName(); }
     }
+
+    public override bool Equals(System.Object obj)
+    {
+        // If parameter is null return false.
+        if (obj == null)
+        {
+            return false;
+        }
+
+        // If parameter cannot be cast to Point return false.
+        Variable p = obj as Variable;
+        if ((System.Object)p == null)
+        {
+            return false;
+        }
+
+        // Return true if the fields match:
+        return CNTKLib.AreEqualVariable(this, p);
+    }
+
+    public bool Equals(Variable p)
+    {
+        // If parameter is null return false:
+        if ((object)p == null)
+        {
+            return false;
+        }
+
+        // Return true if the fields match:
+        return CNTKLib.AreEqualVariable(this, p);
+    }
+
+    public static bool operator ==(Variable first, Variable second)
+    {
+        // If both are null, or both are same instance, return true.
+        if (System.Object.ReferenceEquals(first, second))
+        {
+            return true;
+        }
+
+        // If one is null, but not both, return false.
+        if (((object)first == null) || ((object)second == null))
+        {
+            return false;
+        }
+
+        // Return true if the fields match:
+        return CNTKLib.AreEqualVariable(first, second);
+    }
+
+    public static bool operator !=(Variable first, Variable second)
+    {
+        return !(first == second);
+    }
+
+    public override int GetHashCode()
+    {
+        // Todo: the hash value in C++ is size_t, but only in in C#
+        return (int)GetHashValue();
+    }
 %}
 
 %rename (GetDimensions) CNTK::NDShape::Dimensions;
 %rename (GetRank) CNTK::NDShape::Rank;
 %rename (GetTotalSize) CNTK::NDShape::TotalSize;
-%rename (AreEqualShape) operator==(const NDShape& first, const NDShape& second);
+%rename (AreEqualShape) CNTK::operator==(const NDShape& first, const NDShape& second);
 
 %typemap(cscode) CNTK::NDShape %{
     public uint Rank
@@ -910,6 +971,4 @@
         return (*self)[axisId];
     }
 }
-
-
 
