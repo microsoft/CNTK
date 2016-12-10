@@ -31,7 +31,7 @@ namespace CNTK
         }
 
         // Todo: use ulong, uint or int?
-        public IDictionary<string, List<ulong>> InputsDimensions
+        public IDictionary<string, List<uint>> InputsDimensions
         {
             get
             {
@@ -39,7 +39,7 @@ namespace CNTK
             }
         }
 
-        public IDictionary<string, List<ulong>> OutputsDimensions
+        public IDictionary<string, List<uint>> OutputsDimensions
         {
             get
             {
@@ -48,7 +48,7 @@ namespace CNTK
         }
         
         // Todo: Size_t to ulong/uint/init?? List.Count is int
-        public IDictionary<string, ulong> InputsSize
+        public IDictionary<string, uint> InputsSize
         {
             get
             {
@@ -56,7 +56,7 @@ namespace CNTK
             }
         }
 
-        public IDictionary<string, ulong> OutputsSize
+        public IDictionary<string, uint> OutputsSize
         {
             get
             {
@@ -247,12 +247,12 @@ namespace CNTK
         }
 
         // Copy Value to List<List<T>> for sparse input
-        public void CopyValueTo<T>(string varName, Value value, List<List<T>> data, List<List<long>> indexes, List<List<long>> nnzCounts)
+        public void CopyValueTo<T>(string varName, Value value, List<List<T>> data, List<List<uint>> indexes, List<List<uint>> nnzCounts)
         {
             throw new NotImplementedException("Not implemented");
         }
 
-        public void CopyValueTo<T>(string varName, Value value, List<List<int>> oneHotIndex)
+        public void CopyValueTo<T>(string varName, Value value, List<List<uint>> oneHotIndex)
         {
             throw new NotImplementedException("Not implemented");
         }
@@ -275,9 +275,9 @@ namespace CNTK
 
         private Function rootFunction;
 
-        private IDictionary<string, List<ulong>> GetNodeShapes(VariableKind nodeKind)
+        private IDictionary<string, List<uint>> GetNodeShapes(VariableKind nodeKind)
         {
-            var retVal = new Dictionary<string, List<ulong>>();
+            var retVal = new Dictionary<string, List<uint>>();
 
             IEnumerable<Variable> varList;
             if (nodeKind == VariableKind.Input)
@@ -300,12 +300,12 @@ namespace CNTK
                 {
                     throw new Exception("duplicated name '" + arg.Name + "'.");
                 }
-                var dim = new List<ulong>();
+                var dim = new List<uint>();
                 // The Dimensions is IEnumerable<uint>
                 // Todo: fix the swig to output IEnumberable<ulong>
                 foreach (var d in arg.Shape.Dimensions)
                 {
-                    dim.Add((ulong)d);
+                    dim.Add(d);
                 }
                 retVal.Add(arg.Name, dim);
             }
@@ -313,9 +313,9 @@ namespace CNTK
             return retVal;
         }
 
-        private IDictionary<string, ulong> GetNodeSizes(VariableKind nodeKind)
+        private IDictionary<string, uint> GetNodeSizes(VariableKind nodeKind)
         {
-            var retVal = new Dictionary<string, ulong>();
+            var retVal = new Dictionary<string, uint>();
 
             IEnumerable<Variable> varList;
             if (nodeKind == VariableKind.Input)

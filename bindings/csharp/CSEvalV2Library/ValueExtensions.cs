@@ -103,13 +103,13 @@ namespace CNTK
         }
 
         // The value represents a n-dimensional tensor with 2 dynamic axes: sequence and batch
-        public static void CopyTo<T>(this Value value, Variable variable, List<List<long>> data)
+        public static void CopyTo<T>(this Value value, Variable variable, List<List<uint>> data)
         {
             throw new NotImplementedException("Not implemented");
         }
 
         // The value represents a n-dimensional tensor with 2 dynamic axes: sequence and batch
-        public static void CopyTo<T>(this Value value, Variable variable, List<List<T>> data, List<List<long>> indexes, List<List<long>> nnzCounts)
+        public static void CopyTo<T>(this Value value, Variable variable, List<List<T>> data, List<List<uint>> indexes, List<List<uint>> nnzCounts)
         {
             throw new NotImplementedException("Not implemented");
         }

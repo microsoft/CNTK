@@ -802,14 +802,14 @@
         get { return GetRank(); }
     }
 
-    public System.Collections.Generic.List<long> Dimensions
+    public System.Collections.Generic.List<uint> Dimensions
     {
         get 
         { 
-            var ret = new System.Collections.Generic.List<long>((int)GetRank());
+            var ret = new System.Collections.Generic.List<uint>((int)GetRank());
             foreach (var dim in GetDimensions())
             {
-                ret.Add(dim);
+                ret.Add((uint)dim);
             }
             return ret;
         }
@@ -989,7 +989,9 @@
         }
     }
 
-    public static Value Create<T>(long vacabSize, System.Collections.Generic.List<System.Collections.Generic.List<long>> oneHotIndex, DeviceDescriptor computeDevice)
+    public static Value Create<T>(uint vacabSize, 
+                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> oneHotIndex, 
+                                  DeviceDescriptor computeDevice)
     {
         throw new System.NotImplementedException("Not implemented");
     }
@@ -997,7 +999,11 @@
     // Create Value based on sparse input
     // Todo: could this be a extension to Value class??
     // Todo: use Variable instead of varName. VarName as extension method
-    public static Value Create<T>(NDShape shape, System.Collections.Generic.List<System.Collections.Generic.List<T>> data, System.Collections.Generic.List<System.Collections.Generic.List<long>> indexes, System.Collections.Generic.List<System.Collections.Generic.List<long>> nnzCounts, DeviceDescriptor computeDevice)
+    public static Value Create<T>(NDShape shape, 
+                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> data, 
+                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> indexes, 
+                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> nnzCounts, 
+                                  DeviceDescriptor computeDevice)
     {
         throw new System.NotImplementedException("Not implemented");
     }
