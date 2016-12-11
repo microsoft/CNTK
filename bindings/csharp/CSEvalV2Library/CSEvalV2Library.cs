@@ -13,7 +13,7 @@ using System.Linq;
 
 namespace CNTK
 {
-    public class Evaluation
+    public sealed class Evaluation
     {
         public Evaluation()
         {

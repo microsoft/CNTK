@@ -13,6 +13,9 @@ using CNTK;
 
 namespace CSEvalV2Example
 {
+    //
+    // This example shows how to evaluate model using low-level APIs for evaluation.
+    //
     public class SampleUsingBasicClass
     {
         public static void EvaluateV1ModelUsingNDView()

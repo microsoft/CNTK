@@ -80,7 +80,10 @@
       <Name>CSEvalV2Library</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Compile Include="EvalClassSample.cs" />
+    <Compile Include="SequenceClassesSample.cs" />
+  </ItemGroup>
   <Target Name="Build" Condition="!Exists('$(SWIG_PATH)\swig.exe')">
     <Warning Condition="!Exists('$(SWIG_PATH)\swig.exe')" Text="The project requires SWIG to be installed." />
   </Target>
