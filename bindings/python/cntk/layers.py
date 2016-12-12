@@ -134,7 +134,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
 #    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape) )
 #    kernel : (                +  (output shape) +  (reduction shape) + (filte  shape)   )
 #    out    : ( (sample shape) +  (output shape) +                    + (shifting shape) )
-# TODO: Can we specify atrous convolution? How?
+# TODO: Can we specify atrous (dilated) convolution? How?
 # TODO: sharing = false?
 # TODO: conflict of parameter order: filter_shape or num_filters first?
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
@@ -260,6 +260,7 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
     initial_state = _get_initial_state_or_default(initial_state)
 
     # function that this layer represents
+    @Function
     def recurrence(x):
 
         # TODO: move this entire placeholder business to Function.__call__
@@ -357,11 +358,13 @@ def LayerNormalization(initial_scale=1, initial_bias=0):
     bias  = Parameter((1), init=initial_bias)
 
     # expression
-    x = Placeholder(name='layer_normalization_arg')
-    mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
-    x0 = x - mean;
-    std = sqrt (reduce_mean (x0 * x0))
-    #x_hat = element_divide (x0, std)
-    x_hat = x0 / std
-    apply_x = x_hat * scale + bias    # denormalize with learned parameters
-    return Block(apply_x, 'LayerNormalization', Record(scale=scale, bias=bias))
+    @Function
+    def layer_normalize(x):
+        mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
+        x0 = x - mean;
+        std = sqrt (reduce_mean (x0 * x0))
+        #x_hat = element_divide (x0, std)
+        x_hat = x0 / std
+        return x_hat * scale + bias    # denormalize with learned parameters
+
+    return Block(layer_normalize, 'LayerNormalization', Record(scale=scale, bias=bias))

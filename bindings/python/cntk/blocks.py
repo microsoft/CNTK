@@ -98,9 +98,9 @@ def Type(shape=None, dtype=None, is_sparse=None, dynamic_axes=None):
 # BUGBUG: combine like this won't work for functions with multiple outputs (LSTM)
 def Block(f, op_name, members={}):
 
-    from inspect import isfunction
-    if isfunction(f):
-        f = Function(f, members)
+    #from inspect import isfunction
+    #if isfunction(f):
+    #    f = Function(f, members)
 
     #f = combine([f], op_name)  # 'combine' to create a separate identity so we can reassign the debug name --BUGBUG: "Unknown DataType"
     #_name_node(f, op_name) ; _extend_Function(f)  # debugging
