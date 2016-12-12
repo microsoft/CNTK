@@ -286,7 +286,7 @@ namespace CNTK
                 deviceValueData = valueData;
         }
         else
-            deviceValueData = valueData->DeepClone(device, readOnly);
+        deviceValueData = valueData->DeepClone(device, readOnly);
 
         return MakeSharedObject<Value>(deviceValueData, deviceValueMask);
     }
@@ -305,7 +305,7 @@ namespace CNTK
                 InvalidArgument("Value::Create:: The number of elements in the vector containing sequence data must be a multiple of the size of specified sampel shape");
 
             auto sequenceLength = currentSequence.size() / numElementsPerSample;
-            auto sequenceDataShape = sampleShape.AppendShape({ sequenceLength });
+            auto sequenceDataShape = sampleShape.AppendShape({sequenceLength});
             sequencesData.push_back(MakeSharedObject<NDArrayView>(sequenceDataShape, currentSequence));
         }
 
@@ -359,6 +359,199 @@ namespace CNTK
         }
     }
 
+    // If outputData.size() is 0, CNTK will alocate stroage for data. Otherwise, the caller is reposible for allocating sufficient stroage space for saving the data.
+    template <typename ElementType>
+    void Value::CopyTo(const NDShape& sampleShape, std::vector<std::vector<ElementType>>& outputData)
+    {
+        // Check the data type matches
+        if (AsDataType<ElementType>() != GetDataType())
+            InvalidArgument("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(GetDataType()));
+
+        // Todo: convert sparse into dense.
+        if (GetStorageFormat() != StorageFormat::Dense)
+            InvalidArgument("Only the dense storage format is supported now.");
+
+        auto valueRank = Shape().Rank();
+        if ((valueRank <= 2) || (sampleShape != Shape().SubShape(0, valueRank - 2))
+            RuntimeError("The variable and the Value does not have the same tensor shape."); 
+
+        // Copy data to the CPU device if required.
+        NDArrayViewPtr cpuArrayView;
+        NDMaskPtr cpuNDMask;
+        if (Device() != DeviceDescriptor::CPUDevice())
+        {
+            cpuArrayView = m_data->DeepClone(DeviceDescriptor::CPUDevice());
+            cpuNDMask = m_mask->DeepClone(DeviceDescriptor::CPUDevice());
+        }
+        else
+        {
+            cpuArrayView = m_data;
+            cpuNDMask = m_mask;
+        }
+
+        auto maskData = cpuNDMask->DataBuffer();
+        auto valueData = cpuArrayView->DataBuffer<ElementType>();
+        auto numOfSequences = Shape()[valueRank - 1];
+        auto maxSequenceLen = Shape()[valueRank - 2];
+        auto sampleSize = sampleShape.TotalSize();
+        bool needStorage = false;
+
+        if (outputData.size() == 0)
+        {
+            needStorage = true;
+        }
+        else if (numOfSequences > outputData.size())
+        {
+            RuntimeError("The size of the output buffer is smaller than the number of sequences.");
+        }
+
+        const ElementType *first, *last;
+        ElementType *dest;
+        std::vector<ElementType> seqBuf;
+        size_t count, current;
+        for (auto seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
+        {
+            size_t seqStart = seqIndex * maxSequenceLen;
+
+            // Check the number of valid elements. 
+            // Not using MaskedCount() to avoid extra data copy.
+            count = 0;
+            for (int i = 0; i < maxSequenceLen; i++)
+            {
+                if (maskData[seqStart + i] != MaskKind::Invalid)
+                    count++;
+            }
+
+            if (needStorage)
+            {
+                auto p = new std::vector<ElementType>(count * sampleSize);
+                outputData.push_back(*p);
+            }
+
+            seqBuf = outputData[seqIndex];
+            if (count * sampleSize > seqBuf.size())
+            {
+                RuntimeError("The sequenth %lu contains more data than the size of the provided vector.\n", (unsigned long)seqIndex);
+            }
+
+            dest = seqBuf.data();
+            current = 0;
+            while (current < maxSequenceLen)
+            {
+                // find first valid mask.
+                while ((maskData[seqStart + current] == MaskKind::Invalid) && (current < maxSequenceLen))
+                    current++;
+                first = valueData + (seqStart + current) * sampleSize;
+
+                // find the next invalid mask.
+                while ((maskData[seqStart + current] != MaskKind::Invalid) && (current < maxSequenceLen))
+                    current++;
+                last = valueData + (seqStart + current) * sampleSize;
+
+                if (last > first)
+                {
+                    std::copy(first, last, dest);
+                    dest += last - first;
+                    assert(dest <= seqBuf.data() + count);
+                }
+            }
+            assert(dest == seqBuf.data() + count);
+        }
+    }
+
+    void Value::CopyTo(const NDShape& sampleShape, std::vector<std::vector<size_t>>& outputData)
+    {
+
+        if (sampleShape.Rank() != 1)
+            RuntimeError("Only data of 1-D tensor can be copied to OneHot vector.");
+
+        auto valueRank = Shape().Rank();
+        // Check the shape matches.
+        if (sampleShape != Shape().SubShape(0, valueRank - 2))
+            InvalidArgument("The variable and the value does not have the same tensor shape.");
+
+        //// Todo: convert sparse into dense.
+        //if (GetStorageFormat() != StorageFormat::Dense)
+        //    InvalidArgument("Only the dense storage format is supported now.");
+
+        //// Copy data to the CPU device if required.
+        //NDArrayViewPtr cpuArrayView;
+        //NDMaskPtr cpuNDMask;
+        //if (Device != DeviceDescriptor::CPUDevice())
+        //{
+        //    cpuArrayView = m_data->DeepClone(DeviceDescriptor::CPUDevice());
+        //    cpuNDMask = m_mask->DeepClone(DeviceDescriptor::CPUDevice());
+        //}
+        //else
+        //{
+        //    cpuArrayView = m_data;
+        //    cpuNDMask = m_mask;
+        //}
+
+        //auto maskData = cpuNDMask->DataBuffer();
+        //auto valueData = cpuArrayView->DataBuffer();
+        //auto numOfSequences = Shape[valueRank - 1];
+        //auto maxSequenceLen = Shape[valueRank - 2];
+        //auto sampleSize = variable.Shape().TotalSize();
+
+        //if (outputData == nullptr)
+        //{
+        //    outputData = new std::vector<std::vector<size_t>>(numOfSequences);
+        //}
+        //if (numOfSequences > outputData.size())
+        //{
+        //    RuntimeError("The size of output buffer is smaller than the number of sequences.");
+        //}
+
+        //ElementType *first, *last, *dest;
+        //size_t count;
+        //for (auto seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
+        //{
+        //    size_t seqStart = seqIndex * maxSequenceLen;
+
+        //    // Check the number of valid elements. 
+        //    // Not using MaskedCount() to avoid extra data copy.
+        //    count = 0;
+        //    for (int i = 0; i < maxSequenceLen; i++)
+        //    {
+        //        if (maskData[seqStart + i] != MaskKind::Invalid)
+        //            count++;
+        //    }
+
+        //    auto seqBuf = outputData[seqIndex];
+        //    if (seqBuf == nullptr)
+        //    {
+        //        outputData[seqIndex] = seqBuf = new std::vector<ElementType>(count * sampleSize);
+        //    }
+        //    if (count * sampleSize > seqBuf.size())
+        //    {
+        //        RuntimeError("The sequenth %lu contains more data than the buffer size.\n", (unsigned long)seqIndex);
+        //    }
+        //    dest = seqBuf;
+
+        //    while (current < maxSequenceLen)
+        //    {
+        //        // find first valid mask.
+        //        while ((maskData[seqStart + current] == MaskKind::Invalid) && (current < maxSequenceLen))
+        //            current++;
+        //        first = valueData + (seqStart + current) * sampleSize;
+
+        //        // find the next invalid mask.
+        //        while ((maskData[seqStart + current] != MaskKind::Invalid) && (current < maxSequenceLen))
+        //            current++;
+        //        last = valueData + (seqStart + current) * sampleSize;
+
+        //        if (last > first)
+        //        {
+        //            std::copy(first, last, dest);
+        //            dest += last - first;
+        //            assert(dest <= seqBuf + count);
+        //        }
+        //    }
+        //    assert(dest == seqBuf + count);
+        //}
+    }
+
     void PackedValue::Unpack() const
     {
         if (m_packedDataLayout && (m_packedDataLayout->GetNumTimeSteps() != 1) && (m_packedDataLayout->GetNumSequences() != 1) && Internal::IsAutomaticUnpackingOfPackedValuesDisabled())
@@ -397,4 +590,6 @@ namespace CNTK
     template /*static*/ CNTK_API ValuePtr Value::Create<double>(const NDShape& sampleShape, const std::vector<std::vector<double>>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template /*static*/ CNTK_API ValuePtr Value::Create<float>(size_t vocabSize, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template /*static*/ CNTK_API ValuePtr Value::Create<double>(size_t vocabSize, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
+    template CNTK_API void Value::CopyTo<float>(const NDShape& sampleShape, std::vector<std::vector<float>>& sequences);
+    template CNTK_API void Value::CopyTo<double>(const NDShape& sampleShape, std::vector<std::vector<double>>& sequences);
 }
