@@ -74,24 +74,16 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     b = Parameter(              output_shape, init=init_bias,    name='b') if bias else None
 
     # expression of this function
-    # BUGBUG: This does not work, it messes up the dimensions. Need to fix that inference bug first.
-    @Function
+    #@Function
     def dense(x):
         r = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
         if b:
             r = r + b
         if activation is not None:
-            r = activation(r)
+            r = r >> activation#activation(r)
         return r
-
-    # expression of this function
-    x = Placeholder(name='dense_arg')
-    apply_x = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
-    if b:
-        apply_x = apply_x + b
-    if activation is not None:
-        apply_x = apply_x >> activation
-    dense = apply_x
+    # BUGBUG: the 'out = combine(out, name=f_name)' in Function() messes up the parameter order. Need to fix that first.
+    dense = dense(Placeholder(name='x')) # same as Function() without the combine()
 
     return Block(dense, 'Dense', Record(W=W, b=b))
 
@@ -130,9 +122,12 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
         E = Constant(weights, name='E')
 
     # expression
-    x = Placeholder(name='embedding_arg')
-    apply_x = times(x, E)
-    return Block(apply_x, 'Embedding', Record(E=E))
+    @Function
+    def embed(x):
+        return times(x,E)
+    #x = Placeholder(name='embedding_arg')
+    #apply_x = times(x, E)
+    return Block(embed, 'Embedding', Record(E=E))
 
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape) )

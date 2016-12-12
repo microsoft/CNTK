@@ -76,6 +76,7 @@ def _initializer_for(init, rank_params=None):
 
 # create a type specifier; that is, all arguments to instantiate a Placeholder or Input
 # All are optional, meaning unspecified.
+# TODO: move to class Value?
 def Type(shape=None, dtype=None, is_sparse=None, dynamic_axes=None):
     r = dict()
     if shape is not None:
@@ -145,13 +146,6 @@ def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholde
     if _trace_layers:
         print("new " + _node_description(p))
     return p
-
-# e.g.
-# x, y = Placeholders(2)
-def Placeholders(num_positional, *named_names):
-    args = [Placeholder() for i in range(num_positional)]
-    combined_args = combine(args) # create a compound that traverses in the defined order
-    return tuple([output for output in combined_args.outputs])
 
 # there is only one identity function
 # TODO: This should become a C++-side Function, e.g. like sigmoid
