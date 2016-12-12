@@ -19,7 +19,7 @@ extern "C"
 
 using namespace CNTK;
 
-int MAX_BASE64_EXPORT_LENGTH = 100;
+static int MAX_BASE64_EXPORT_LENGTH = 100;
 
 std::string EncodeBase64(const char *buf, size_t len)
 {
@@ -33,7 +33,7 @@ std::string EncodeBase64(const char *buf, size_t len)
     *temp++ = '\0';
 
 	// TODO: remove once we export everything.
-    assert(MAX_BASE64_EXPORT_LENGTH > 10, "base64 export should at least be 10");
+    assert(MAX_BASE64_EXPORT_LENGTH > 10); // base64 export should at least be 10
     if (strlen(sout) > MAX_BASE64_EXPORT_LENGTH)
 	{
 		strcpy_s(sout + MAX_BASE64_EXPORT_LENGTH - 8, len * 2 - MAX_BASE64_EXPORT_LENGTH, "...");
@@ -57,27 +57,86 @@ std::vector<char> DecodeBase64(const std::string str)
     return std::vector<char>(sout, sout + len);
 }
 
-void DumpAsJson(const google::protobuf::Message& message, const std::string& filename)
+std::wstring TransformCntkToGraphIr(const std::string& name, const CNTK::DeviceDescriptor& device)
 {
-    // save it out to disk in json format.
-    std::string jsonstring;
-    auto serialized = google::protobuf::util::MessageToJsonString(message, &jsonstring);
-    auto fp = fopen((filename + std::string(".pb.json")).c_str(), "w+");
-    auto written = fwrite(jsonstring.c_str(), sizeof(char), jsonstring.length(), fp);
+    auto filename = name;
+    auto filenameW = std::wstring(filename.begin(), filename.end());
 
-    assert(written == jsonstring.length());
-    fclose(fp);
+    // The model file will be trained and copied to the current runtime directory first.
+    auto modelFuncPtr = CNTK::Function::LoadModel(filenameW, device);
+
+    // construct default output name by stripping extension.
+    auto idx = filename.find_last_of('.');
+    if (idx != std::string::npos && idx > 0)
+    {
+        filename = filename.substr(0, idx);
+    }
+
+    // json dump does not contain entire raw array data
+    // because the output would be too big.
+    MAX_BASE64_EXPORT_LENGTH = 100;
+    auto jsonfilename = filename + std::string(".graphir_json");
+    auto message = GRAPHIR::Serialize(modelFuncPtr);
+    {
+        std::string jsonstring;
+        auto serialized = google::protobuf::util::MessageToJsonString(*message, &jsonstring);
+        auto fp = fopen(jsonfilename.c_str(), "w+");
+        auto written = fwrite(jsonstring.c_str(), sizeof(char), jsonstring.length(), fp);
+
+        assert(written == jsonstring.length());
+        fclose(fp);
+    }
+
+    // re-serialize with entire array buffers to dump
+    // in binary format. this includes full array data.
+    MAX_BASE64_EXPORT_LENGTH = INT_MAX;
+    auto pbfilename = filename + std::string(".graphir_model");
+    auto message2 = GRAPHIR::Serialize(modelFuncPtr);
+    {
+        std::fstream fs;
+        fs.open(pbfilename, std::ios::in | std::ios::out | std::ios::trunc | std::ios::binary);
+
+        message2->SerializeToOstream(&fs);
+        fs.close();
+    }
+
+    // return the name of the saved graph-ir model.
+    return std::wstring(pbfilename.begin(), pbfilename.end());
 }
 
-void DumpAsBinary(const google::protobuf::Message& message, const std::string& filename)
+std::wstring TransformGraphIrToCntk(const std::string& filename, const CNTK::DeviceDescriptor& device)
 {
-    auto filePath = (filename + std::string(".pb"));
+    auto filenameW = std::wstring(filename.begin(), filename.end());
 
     std::fstream fs;
-    fs.open(filePath, std::fstream::in | std::fstream::out | std::fstream::trunc);
+    fs.open(filenameW, std::ios::in | std::ios::binary);
 
-    message.SerializeToOstream(&fs);
+    //
+    // Import the original function
+    //
+
+    graphIR::Graph message2;
+    if (!message2.ParseFromIstream(&fs))
+    {
+        throw std::string("Cannot load/parse.");
+    }
+
+    // construct default output name by stripping extension.
+    auto idx = filenameW.find_last_of(L'.');
+    if (idx != std::string::npos && idx > 0)
+    {
+        filenameW = filenameW.substr(0, idx);
+    }
+
+    // note: must use the binary serialization since json
+    // does not contain full array data.
+    auto importedFunction = GRAPHIR::Deserialize(&message2);
 
     fs.close();
-}
 
+    auto cntkfilename = filenameW + L".cntk_model";
+    importedFunction->SaveModel(cntkfilename);
+
+    // return the name of the saved cntk model.
+    return cntkfilename;
+}

@@ -134,13 +134,13 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Cntk.Export.cpp" />
     <ClCompile Include="EvalMultithreads.cpp" />
     <ClCompile Include="GraphIrExporter.cpp" />
     <ClCompile Include="GraphIr\cpp\GraphIrWrapper.cpp" />
     <ClCompile Include="GraphIr\libb64\cdecode.c" />
     <ClCompile Include="GraphIr\libb64\cencode.c" />
     <ClCompile Include="GraphIr\Serialization.cpp" />
-    <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GraphIrExporter.h" />
@@ -149,6 +149,8 @@
     <ClInclude Include="GraphIr\libb64\b64\cencode.h" />
     <ClInclude Include="GraphIr\libb64\b64\decode.h" />
     <ClInclude Include="GraphIr\libb64\b64\encode.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="GraphIr\graphid.proto" />

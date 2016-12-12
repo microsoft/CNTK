@@ -3,7 +3,8 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
-#include "stdafx.h"
+#pragma warning(disable: 4800 4267 4244)
+#define _CRT_SECURE_NO_WARNINGS
 #include "CNTKLibrary.h"
 #include <istream>
 #include <ostream>
@@ -19,7 +20,7 @@
 
 #pragma warning(push)
 #pragma warning(disable : 4800 4267 4610 4512 4100 4510)
-#include "GraphId.pb.h"
+#include "GraphIr.pb.h"
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/arena.h>
 #pragma warning(pop)
@@ -228,6 +229,7 @@ namespace GRAPHIR
         graphInfo->set_graph_version("0.3");
         graphInfo->set_description("Exported by the Graph Ir Exporter from CNTK");
         graphInfo->set_model_name(ToString(src[L"name"].Value<std::wstring>()));
+
         (*graphInfo->mutable_attrs())["type"] = ToString(src[L"type"].Value<std::wstring>());
         (*graphInfo->mutable_attrs())["root"] = ToString(src[L"root"].Value<std::wstring>());
         (*graphInfo->mutable_attrs())["version"] = std::to_string(src[L"version"].Value<size_t>());
@@ -333,6 +335,7 @@ namespace GRAPHIR
         dst->set_name(ToString(uid));
         dst->set_op("Parameter");
 
+        // TODO: use serializer, not replicate functionality here.
         auto &ext = *dst->mutable_ext_attrs();
         ext["version"]        = std::to_string(src[L"version"].Value<size_t>());
         ext["type"]           = ToString(src[L"type"].Value<std::wstring>());
@@ -343,14 +346,7 @@ namespace GRAPHIR
         ext["needs_gradient"] = std::to_string(src[L"needs_gradient"].Value<bool>());
 
         auto axis = src[L"dynamic_axis"].Value<std::vector<DictionaryValue>>();
-        ext["dynamic_axis.count"]   = std::to_string(axis.size());
-        for (size_t n = 0; n < axis.size(); n++)
-        {
-            auto a = axis[n].Value<Axis>();
-            ext[std::string("dynamic_axis.") + std::to_string(n) + ".static_axis_idx"] = std::to_string(a.StaticAxisIndex(false));
-            ext[std::string("dynamic_axis.") + std::to_string(n) + ".name"] = ToString(a.Name());
-            ext[std::string("dynamic_axis.") + std::to_string(n) + ".is_ordered_dynamic_axis"] = std::to_string(a.IsOrdered() ? 1 : 0);
-        }
+        Copy("dynamic_axis", axis, *dst);
 
         printf("output: %S\n", uid.c_str());
 
@@ -408,35 +404,15 @@ namespace GRAPHIR
             subNode[L"version"] = (size_t)(ext.at("version")[0] - '0');
 
             if (op == "Parameter")
-            {                
+            {
                 subNode[L"kind"] = (size_t)atoi(ext.at("kind").c_str());
                 subNode[L"data_type"] = (size_t)atoi(ext.at("data_type").c_str());
                 subNode[L"is_sparse"] = (bool)atoi(ext.at("is_sparse").c_str());
                 subNode[L"needs_gradient"] = (bool)atoi(ext.at("needs_gradient").c_str());
 
-                auto numaxis = atoi(ext.at("dynamic_axis.count").c_str());
-                std::vector<DictionaryValue> axisvec;
-                for (size_t n = 0; n < numaxis; n++)
-                {
-                    Axis *a;
-                    auto sai = atoi(ext.at(std::string("dynamic_axis.") + std::to_string(n) + ".static_axis_idx").c_str());
-                    if (!Axis(sai).IsDynamicAxis())
-                    {
-                        a = new Axis(sai);
-                    }
-                    else
-                    {
-                        auto name = ext.at(std::string("dynamic_axis.") + std::to_string(n) + ".name");
-                        auto ida = atoi(ext.at(std::string("dynamic_axis.") + std::to_string(n) + ".is_ordered_dynamic_axis").c_str()) != 0 ? true : false;
-
-                        a = new Axis(ToWString2(name), ida);
-                    }
-
-                    axisvec.push_back(*a);
-                    //delete a;
-                }
-                subNode[L"dynamic_axis"] = axisvec; //TODO (size_t)atoi(ext.at("dynamic_axis").c_str());
-
+                DictionaryValue axisvector;
+                Copy("dynamic_axis", node, axisvector);
+                subNode[L"dynamic_axis"] = axisvector;
 
                 for (const auto& output : node.outputs())
                 {
@@ -653,35 +629,6 @@ namespace GRAPHIR
         }
     }
 
-
-
-
-
-    bool ParseMessage(io::CodedInputStream& input, Message& msg)
-    {
-        input.SetTotalBytesLimit(INT_MAX, INT_MAX);
-        return msg.ParseFromCodedStream(&input) && input.ConsumedEntireMessage();
-    }
-
-    void ReadFromFile(std::wstring filename, Message& msg)
-    {
-        auto fd = 0; //TODO GetFileDescriptor(filename, true);
-        {
-            io::FileInputStream raw_input(fd);
-            io::CodedInputStream coded_input(&raw_input);
-            if (!ParseMessage(coded_input, msg)) 
-            {
-                RuntimeError("Failed to parse protobuf %s from file %ls.", 
-                             msg.GetTypeName().c_str(), filename.c_str());
-            }
-        }
-#ifdef _MSC_VER
-        _close(fd);
-#else
-        close(fd);
-#endif
-    }
-
     static void SetUTF8Locale()
     {
 #ifndef _MSC_VER
@@ -711,11 +658,15 @@ namespace GRAPHIR
         UsingUTF8 locale;
         Arena arena;
 
+        // first let cntk serialize the function into its state
         auto dictionary = modelFuncPtr->Serialize();
 
+        // second, get the output shapes of those nodes, not in the state data.
+        // TODO: make cntk export this information as well
         std::unordered_map<std::wstring, NDShape> outputShapes;
         Serializer::CollectOutputShapes(modelFuncPtr, outputShapes);
 
+        // third, create the graphir state
         proto::Graph* proto = Serializer::CreateGraphProto(dictionary, outputShapes, &arena);
         return proto;
     }
@@ -724,15 +675,10 @@ namespace GRAPHIR
     {
         UsingUTF8 locale;
 
+        // first, get the cntk serialized state of the function
         auto state = Serializer::CreateGraphDictionary(*graph);
-        //proto::Dictionary proto;
-        //stream >> proto;
-        //dictionary.m_dictionaryData->reserve(proto.data_size());
-        //for (const auto& kv : proto.data())
-        //{
-        //    Serializer::Copy(kv.second, dictionary[ToWString(kv.first)]);
-        //}
 
+        // second, let cntk deserialize the state into a function
         auto result = Function::Deserialize(state, DeviceDescriptor::CPUDevice());
 
         return result;

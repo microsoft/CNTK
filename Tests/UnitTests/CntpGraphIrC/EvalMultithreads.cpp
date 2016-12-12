@@ -21,21 +21,18 @@ void RetrieveInputBuffers(
     }
 }
 
-void ExecuteModel(
+void ExecuteModelOnGivenData(
     FunctionPtr evalFunc,
     unordered_map<wstring, vector<float>>& inputs,
-    unordered_map<wstring, vector<float>>& outputs)
+    unordered_map<wstring, vector<float>>& outputs,
+    const DeviceDescriptor& device)
 {
-    auto device = DeviceDescriptor::CPUDevice();
-
     // Prepare inputs
     unordered_map<Variable, ValuePtr> inputsVars;
     for (auto& input : evalFunc->Arguments())
     {
         // Todo: add convenience APIs to simplify data preparation here.
         ValuePtr value = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(input.Shape(), inputs[input.Name()], true /* isReadOnly */));
-
-        fprintf(stderr, "  input: %S %S (#%lu elements)\n", input.Name().c_str(), value->Shape().AsString().c_str(), (unsigned long)inputs[input.Name()].size());
         inputsVars[input] = value;
     }
 
@@ -57,8 +54,42 @@ void ExecuteModel(
         // TODO: HERE is our OUTPUT VECTOR
         // TODO: add convenience APIs to simplify data retrieval here.
         vector<float> outputData(value->Data()->DataBuffer<float>(), value->Data()->DataBuffer<float>() + value->Data()->Shape().TotalSize());
-
-        fprintf(stderr, "  output: %S %S (#%lu elements)\n", output.first.Name().c_str(), value->Shape().AsString().c_str(), (unsigned long)outputData.size());
         outputs[output.first.Name()] = outputData;
     }
+}
+
+void ExecuteModelOnRandomData(
+    std::string filename,
+    std::unordered_map<std::wstring, std::vector<float>>& inputs,
+    std::unordered_map<std::wstring, std::vector<float>>& outputs,
+    const CNTK::DeviceDescriptor& device)
+{
+    auto filenameW = std::wstring(filename.begin(), filename.end());
+    auto modelFuncPtr = CNTK::Function::LoadModel(filenameW, device);
+
+    if (inputs.size() == 0)
+    {
+        fprintf(stderr, "No input data given. Filling with random data.\n");
+
+        RetrieveInputBuffers(modelFuncPtr, inputs);
+
+        for (auto& inputTuple : inputs)
+        {
+            auto& inputData = inputTuple.second;
+
+            // add some random data to the input vector
+            for (size_t i = 0; i < inputData.size(); ++i)
+            {
+                inputData[i] = ((float)rand()) / RAND_MAX;
+            }
+
+            fprintf(stderr, "Input  %S #%lu elements.\n", inputTuple.first.c_str(), (unsigned long)inputTuple.second.size());
+        }
+    }
+
+    //
+    // Execute the original function
+    //
+
+    ExecuteModelOnGivenData(modelFuncPtr, inputs, outputs, device);
 }

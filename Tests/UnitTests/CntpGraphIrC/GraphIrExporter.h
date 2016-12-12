@@ -10,28 +10,30 @@
 #include <string>
 
 #pragma warning(push, 0)
-#include <graphid.pb.h>
+#include <graphir.pb.h>
 #include <google/protobuf/util/json_util.h>
 #pragma warning(pop)
 
-extern void RetrieveInputBuffers(
-    CNTK::FunctionPtr evalFunc,
-    std::unordered_map<std::wstring, std::vector<float>>& inputs);
+extern std::wstring TransformCntkToGraphIr(
+    const std::string& filename,
+    const CNTK::DeviceDescriptor& device);
 
-extern void ExecuteModel(
+extern std::wstring TransformGraphIrToCntk(
+    const std::string& filename,
+    const CNTK::DeviceDescriptor& device);
+
+extern void ExecuteModelOnRandomData(
+    std::string filename,
+    std::unordered_map<std::wstring, std::vector<float>>& inputs,
+    std::unordered_map<std::wstring, std::vector<float>>& outputs,
+    const CNTK::DeviceDescriptor& device);
+
+extern void ExecuteModelOnGivenData(
     CNTK::FunctionPtr evalFunc,
     std::unordered_map<std::wstring, std::vector<float>>& inputs,
-    std::unordered_map<std::wstring, std::vector<float>>& outputs);
+    std::unordered_map<std::wstring, std::vector<float>>& outputs,
+    const CNTK::DeviceDescriptor& device);
 
-extern void DumpAsJson(
-    const google::protobuf::Message& message,
-    const std::string& filename);
-
-extern void DumpAsBinary(
-    const google::protobuf::Message& message,
-    const std::string& filename);
-
-extern int MAX_BASE64_EXPORT_LENGTH;
 
 namespace GRAPHIR
 {
