@@ -46,7 +46,19 @@ def create_reader(path, is_training):
 ########################
 
 def create_model_function():
-  softplus = Function(lambda x: log (1 + exp (x)))
+  @Function
+  def softplus(x):
+    from cntk.ops import greater, element_select
+    #big = x > 14
+    # BUGBUG: not overloaded
+    big = greater(x, 8)
+    sp = log(1 + exp(x))
+    sw = element_select(big, x, sp)
+    return sw
+
+  @Function
+  def softplus4(x):
+      return softplus(4.5*x)/4.5
 
   softmux = Function(lambda sel, a, b: a)   # sel * a + (1-sel) * b)
   rnn = RNNUnit(hidden_dim, activation=relu)
@@ -72,6 +84,7 @@ def create_model_function():
         #Recurrence(GRU(hidden_dim, activation=relu), go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=relu), go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=softplus), go_backwards=False),
+        #Recurrence(RNNUnit(hidden_dim, activation=softplus4), go_backwards=False),
         #Recurrence(pr_rnn, go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=relu) >> Dense(hidden_dim, activation=relu), go_backwards=False),
         Dense(num_labels)
@@ -199,24 +212,22 @@ def train(reader, model, max_epochs):
 ########################
 
 def evaluate(reader, model):
-    #criterion = create_criterion_function(model)
-    #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
+    criterion = create_criterion_function(model)
+    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
 
     # process minibatches and perform evaluation
-    #evaluator = Evaluator(model, criterion.outputs[1], criterion.outputs[1])
+    evaluator = Evaluator(model, criterion.outputs[1], criterion.outputs[1])
 
-    x = Placeholder(name='x')
-    y = Placeholder(name='y')
-    z = model(x)
-    #criterion = 0*cross_entropy_with_softmax(z, y) + classification_error (z, y)
-    criterion = classification_error (z, y)
-    print([arg.name for arg in criterion.placeholders])
-
-    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
-    #criterion.update_signature(x=Type(vocab_size, is_sparse=False), y=Type(num_labels, is_sparse=True))
-    evaluator = Evaluator(model, 0*criterion, criterion)
-
-
+    #x = Placeholder(name='x')
+    #y = Placeholder(name='y')
+    #z = model(x)
+    ##criterion = 0*cross_entropy_with_softmax(z, y) + classification_error (z, y)
+    #criterion = classification_error (z, y)
+    #print([arg.name for arg in criterion.placeholders])
+    #
+    #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
+    ##criterion.update_signature(x=Type(vocab_size, is_sparse=False), y=Type(num_labels, is_sparse=True))
+    #evaluator = Evaluator(model, 0*criterion, criterion)
 
     #progress_printer = ProgressPrinter(freq=100, first=10, tag='Evaluation') # more detailed logging
     progress_printer = ProgressPrinter(tag='Evaluation')
