@@ -235,7 +235,8 @@ private:
 // This node copies data from 'dataInput' while it propagates the minibatch-layout information from 'layoutInput'.
 // It does perform a runtime check to enforce that the layout of 'dataInput' is compatible (identical content) to that of 'layoutInput'.
 // This node is meant to be used from BrainScript macros that bracket expand/reduce pairs of nodes. It is not meant to really be used directly.
-// TODO: What to do with sequence-boundary flags?
+// 'dataInput' can also be without MBLayout, so that we can implement OnesLike().
+// TODO: also allow dataInput to have a dynamic axis of length 1, which will broadcast it per sequence. Trickier to do.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -255,22 +256,26 @@ public:
     {
         // enforce compatibility of 'dataInput' with 'layoutInput'
         // TODO: how to deal with boundary flags?
-        if (*m_pMBLayout != *InputRef(0).GetMBLayout()) // this does a deep value-level comparison
+        if (InputRef(0).HasMBLayout() && *m_pMBLayout != *InputRef(0).GetMBLayout()) // this does a deep value-level comparison
             InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompatible with that of %ls %ls.",
                             NodeName().c_str(), OperationName().c_str(),
                             InputRef(0).NodeName().c_str(), InputRef(0).OperationName().c_str(),
                             InputRef(1).NodeName().c_str(), InputRef(1).OperationName().c_str());
 
         // copy the data from 'dataInput'
-        ValueFor(fr).AssignValuesOf(InputRef(0).ValueFor(fr.WithLayout(InputRef(0).GetMBLayout()))); // just propagate through
-        // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
+        // If Input(0) has no MBLayout, then this will broadcast.
+        size_t rank = DetermineElementwiseTensorRank();
+        ValueTensorFor(rank, fr).AssignCopyOf(InputRef(0).ValueTensorFor(rank, fr.WithLayout(InputRef(0).GetMBLayout()))); // just propagate through
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex == 0)
-            InputRef(0).GradientFor(fr.WithLayout(InputRef(0).GetMBLayout())) += GradientFor(fr);
-        // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
+        {
+            // If Input(0) has no MBLayout, then this will reduce.
+            size_t rank = DetermineElementwiseTensorRank();
+            InputRef(0).GradientTensorFor(rank, fr.WithLayout(InputRef(0).GetMBLayout())).AddCopyOf(GradientTensorFor(rank, fr));
+        }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -279,12 +284,11 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        if (isFinalValidationPass && (!InputRef(0).HasMBLayout() || !InputRef(1).HasMBLayout()))
-            RuntimeError("%ls %ls operation requires two inputs that both have an associated MB layout.", NodeName().c_str(), OperationName().c_str());
+        if (isFinalValidationPass && !InputRef(1).HasMBLayout())
+            RuntimeError("%ls %ls operation requires that the second argument has a dynamic axis.", NodeName().c_str(), OperationName().c_str());
         m_pMBLayout = InputRef(1).GetMBLayout(); // output layout is that of 'layoutInput'
-        // Note: We could also enforce that both inputs in fact have different layouts. But maybe there are edge cases where it isn't. Then this just becomes a nop. Also OK.
 
-        SetDims(Input(0));
+        SetDims(Input(0)->GetSampleLayout(), HasMBLayout());
     }
 };
 

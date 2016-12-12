@@ -1150,8 +1150,17 @@ namespace CNTK
             return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ScatterPacked, operands, Dictionary(), name), name);
         }
 
+        FunctionPtr ReconcileDynamicAxis(const Variable& operand, const Variable& layout, const std::wstring& name)
+        {
+            return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, layout, Dictionary(), name);
+        }
+
         FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand)
         {
+#if 1
+            return ReconcileDynamicAxis(Constant({ 1 }, operand.GetDataType(), 0.0), operand/*acts as layout input*/);
+#else
+            // ^^ a simple fix to ReconcileDynamicAxisNode to accept data without dynamic axes makes this easy an efficient
             if (operand.IsSparse())
             {
                 if (operand.Shape().Rank() > 1)
@@ -1166,6 +1175,7 @@ namespace CNTK
                 auto reduceAllStaticAxesFunc = Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, Axis::AllStaticAxes());
                 return Minus(reduceAllStaticAxesFunc, reduceAllStaticAxesFunc);
             }
+#endif
         }
 
         FunctionPtr Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name)
