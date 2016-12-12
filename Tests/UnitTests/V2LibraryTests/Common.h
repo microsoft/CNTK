@@ -383,7 +383,7 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
 
 inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
 {
-    if ((minibatchIdx % outputFrequencyInMinibatches) == 0)
+    if ((minibatchIdx % outputFrequencyInMinibatches) == 0 && trainer.PreviousMinibatchSampleCount() != 0)
     {
         double trainLossValue = trainer.PreviousMinibatchLossAverage();
         double evaluationValue = trainer.PreviousMinibatchEvaluationAverage();
@@ -450,10 +450,9 @@ inline CNTK::FunctionPtr LSTMSequenceClassiferNet(const CNTK::Variable& input, s
     return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
 }
 
-template <typename ElementType> 
 inline bool AreEqual(const CNTK::NDArrayViewPtr& view1, const CNTK::NDArrayViewPtr& view2)
 {
-    return AreEqual<ElementType>(*view1, *view2);
+    return CNTK::Internal::AreEqual(*view1, *view2);
 }
 
 inline bool AreEqual(const CNTK::Variable& var1, const CNTK::Variable& var2)

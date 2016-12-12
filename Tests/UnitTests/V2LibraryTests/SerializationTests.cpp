@@ -208,7 +208,7 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
     learner1->Update(gradientValues, 1);
 
     {
-        auto checkpoint = learner1->Serialize();
+        auto checkpoint = learner1->CreateCheckpoint();
         fstream stream;
         OpenStream(stream, tempFilePath, false);
         stream << checkpoint;
@@ -235,8 +235,8 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
     learner1->Update(gradientValues, 1);
     learner2->Update(gradientValues, 1);
 
-     auto checkpoint1 = learner1->Serialize();
-     auto checkpoint2 = learner2->Serialize();
+     auto checkpoint1 = learner1->CreateCheckpoint();
+     auto checkpoint2 = learner2->CreateCheckpoint();
     
     if (checkpoint1 != checkpoint2)
         throw std::runtime_error("TestLearnerSerialization: original and restored from a checkpoint learners diverge.");
@@ -518,7 +518,7 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
 
     assert(AreEqual(function1, function2));
 
-    trainer2.SaveCheckpoint(L"trainer.v2.checkpoint", false);
+    trainer2.SaveCheckpoint(L"trainer.v2.checkpoint");
     trainer2.RestoreFromCheckpoint(L"trainer.v2.checkpoint");
 
     if (!AreEqual(function1, function2))
@@ -542,7 +542,7 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
 
     for (int i = 0; i < 3; ++i)
     {
-        trainer2.SaveCheckpoint(L"trainer.v2.checkpoint", false);
+        trainer2.SaveCheckpoint(L"trainer.v2.checkpoint");
         trainer2.RestoreFromCheckpoint(L"trainer.v2.checkpoint");
 
         if (!AreEqual(function1, function2))
@@ -650,8 +650,8 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
 
-    const wchar_t* modelFile = L"seq2seq.model";
-    classifierOutput->SaveModel(modelFile);
+    const wchar_t* modelFile = L"seq2seq.legacy.model";
+    Internal::SaveAsLegacyModel(classifierOutput, modelFile);
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     auto MB2Loss = trainer.PreviousMinibatchLossAverage();
@@ -664,7 +664,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 
     classifierOutput->RestoreModel(modelFile);
-    classifierOutput->SaveModel(modelFile);
+    Internal::SaveAsLegacyModel(classifierOutput, modelFile);
 
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
@@ -674,6 +674,33 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
+
+
+    LearningRatePerSampleSchedule learningRateSchedule2({ { 0.04, 0.02, 0.01, 0.008, 0.004, 0.002, 0.001 } }, actualMBSize);
+    MomentumAsTimeConstantSchedule momentumSchedule({ { 900, 800, 700, 600, 500 } }, actualMBSize);
+    auto learner2 = AdamLearner(classifierOutput->Parameters(), learningRateSchedule, momentumSchedule);
+    Trainer trainer2(classifierOutput, trainingLoss, prediction, { learner });
+
+
+    classifierOutput->RestoreModel(modelFile);
+
+    vector<double> expectedLoss;
+    for (int i = 0; i < 10; i++)
+    {
+        trainer.SaveCheckpoint(L"trainer.checkpoint" + std::to_wstring(i));
+        Internal::SaveAsLegacyModel(classifierOutput, modelFile + std::to_wstring(i));
+        trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        expectedLoss.push_back(trainer.PreviousMinibatchLossAverage());
+}
+
+    for (int i = 0; i < 10; i++)
+    {
+        trainer.RestoreFromCheckpoint(L"trainer.checkpoint" + std::to_wstring(i));
+        classifierOutput->RestoreModel(modelFile + std::to_wstring(i));
+        trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        double loss = trainer.PreviousMinibatchLossAverage();
+        FloatingPointCompare(loss, expectedLoss[i], "Post checkpoint restoration training loss does not match expectation");
+    }
 }
 
 void TestThatExceptionsAreRaisedForNonExistentPaths()
@@ -683,18 +710,18 @@ void TestThatExceptionsAreRaisedForNonExistentPaths()
     }, "Was able to open file 'This.File.Does.Not.Exist' for reading.");
 
     VerifyException([]() {
-        auto f = FullyConnectedLinearLayer(InputVariable({ 1 }, false, DataType::Float, L"i"), 1, DeviceDescriptor::CPUDevice());
-        f->SaveModel(L"This/Path/Does/Not/Exist", false);
-    }, "Was able to open file 'This/Path/Does/Not/Exist' for writing.");
-
-    VerifyException([]() {
         Dictionary::Load(L"This.File.Does.Not.Exist");
     }, "Was able to open file 'This.File.Does.Not.Exist' for reading.");
 
     VerifyException([]() {
-        Dictionary dict;
-        dict.Save(L"This/Path/Does/Not/Exist");
-    }, "Was able to open file 'This/Path/Does/Not/Exist' for writing.");
+        Function::LoadModel(L"This_Path_Does_Not_Exist/Models/model.file");
+    }, "Was able to open file 'This_Path_Does_Not_Exist/Models/model.file' for reading.");
+
+
+    VerifyException([]() {
+        Dictionary::Load(L"This_Path_Does_Not_Exist/Dictionaries/dict.file");
+    }, "Was able to open file 'This_Path_Does_Not_Exist/Dictionaries/dict.file' for reading.");
+
 }
 
 void TestLoadingDictionariesGeneratedFromPresentPastAndFutureProtos() 
@@ -724,7 +751,7 @@ void TestLoadingDictionariesGeneratedFromPresentPastAndFutureProtos()
 }
 
 
-void TestCheckpointingWithStatefulNodes(bool useLegacyModelFormat, const DeviceDescriptor& device)
+void TestCheckpointingWithStatefulNodes(const DeviceDescriptor& device)
 {
     auto featureStreamName = L"features";
     auto labelsStreamName = L"labels";
@@ -750,7 +777,7 @@ void TestCheckpointingWithStatefulNodes(bool useLegacyModelFormat, const DeviceD
     vector<double> expectedLoss;
     for (int i = 0; i < epochSize / minibatchSize; i++)
     {
-        trainer.SaveCheckpoint(L"stateful_nodes.model" + std::to_wstring(i), useLegacyModelFormat);
+        trainer.SaveCheckpoint(L"stateful_nodes.model" + std::to_wstring(i));
         trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
         expectedLoss.push_back(trainer.PreviousMinibatchLossAverage());
     }
@@ -790,8 +817,7 @@ void SerializationTests()
     TestCheckpointing(DeviceDescriptor::CPUDevice());
     TestLegacyModelSaving(DeviceDescriptor::CPUDevice());
 
-    TestCheckpointingWithStatefulNodes(true, DeviceDescriptor::CPUDevice());
-    TestCheckpointingWithStatefulNodes(false, DeviceDescriptor::CPUDevice());;
+    TestCheckpointingWithStatefulNodes(DeviceDescriptor::CPUDevice());
 
     if (IsGPUAvailable())
     {
@@ -802,8 +828,7 @@ void SerializationTests()
         TestCheckpointing(DeviceDescriptor::GPUDevice(0));
         TestLegacyModelSaving(DeviceDescriptor::GPUDevice(0));
 
-        TestCheckpointingWithStatefulNodes(true, DeviceDescriptor::GPUDevice(0));
-        TestCheckpointingWithStatefulNodes(false, DeviceDescriptor::GPUDevice(0));
+        TestCheckpointingWithStatefulNodes(DeviceDescriptor::GPUDevice(0));
     }
 
 }

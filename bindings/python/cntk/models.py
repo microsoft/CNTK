@@ -12,11 +12,12 @@ import numpy as np
 import sys
 import os
 import time
-from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
+
+from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 #from cntk.layers import *
-from cntk.utils import Record
+from .utils import Record
 from cntk import combine
-from cntk.blocks import identity, Block
+from .blocks import identity, Block
 
 # Sequential -- composite that applies a sequence of layers (or any functions) onto an input
 # Sequential ([F, G, H]) === F >> G >> H

@@ -1,14 +1,12 @@
-Understanding Sequences
-=======================
+Working with Sequences
+=======
 
 CNTK Concepts
 ~~~~~~~~~~~~~
 
-CNTK inputs, outputs and parameters are organized as *tensors* which is a fancy 
-word for multidimensional array. Each tensor has a *rank*: 
+CNTK inputs, outputs and parameters are organized as *tensors*. Each tensor has a *rank*:
 A scalar is a tensor of rank 0, a vector is a tensor of rank 1, a matrix is a tensor 
-of rank 2, a cube of numbers is a tensor of rank 3 and so on. We refer to these
-different dimensions as *axes* (also known as modes).
+of rank 2, and so on. We refer to these different dimensions as *axes*.
 
 Every CNTK tensor has some *static axes* and some *dynamic axes*.
 The static axes have the same length throughout the life of the network.
@@ -21,11 +19,11 @@ The dynamic axes are like static axes in that they define a meaningful grouping 
 A minibatch is also a tensor. Therefore, it has a dynamic axis, called the *batch axis*,
 whose length can change from minibatch to minibatch. At the time of this writing 
 CNTK supports a single additional dynamic axis. It is sometimes referred to as the sequence 
-axis but it doesn't really have a dedicated name. This axis enables working with 
-sequences in a high level way. When operations on sequences are performed CNTK 
+axis but it doesn't have a dedicated name. This axis enables working with
+sequences in a high-level way. When operations on sequences are performed, CNTK
 does a simple type-checking to determine if combining two sequences is always safe.
 
-To make this more concrete, let's consider two examples. First let's see 
+To make this more concrete, let's consider two examples. First, let's see
 how a minibatch of short video clips is represented in CNTK. 
 Suppose that the video clips are all 640x480 in 
 resolution and they are shot in color which is typically encoded with three channels.
@@ -37,12 +35,12 @@ tensor.
 
 Another example where dynamic axes provide an elegant solution is in learning to rank documents
 given a query. Typically, the training data in this scenario consist of a set of 
-queries, with each query having a variable number of associated documents along with
-relevance labels from experts (e.g. whether the document is relevant for that query 
+queries, with each query having a variable number of associated documents. Each of the query-document
+pairs includes a relevance judgment or label (e.g. whether the document is relevant for that query
 or not). Now depending on how we treat the words in each document we can either place
 them on a static axis or a dynamic axis. To place them on a static axis we can process
-each document as a (sparse) vector of size equal to the size of our vocabulary 
-containing for each word (or short phrase) the number of times it appears in the 
+each document as a (sparse) vector of size equal to the size of our vocabulary
+containing for each word (or short phrase) the number of times it appears in the
 document. However we can also process the document to be a sequence of words
 in which case we use another dynamic axis. In this case we have the following nesting:
 
@@ -125,12 +123,12 @@ concentrate on the central feature of the LSTM model: the `memory cell`.
     An LSTM cell.
 
 The LSTM cell is associated with three gates that control how information is stored / 
-remembered in the LSTM. The "forget gate" determines what information should be kept 
+remembered in the LSTM. The *forget gate* determines what information should be kept 
 after a single element has flowed through the network. It makes this determination 
 using data for the current time step and the previous hidden state. 
 
-The "input gate" uses the same information as the forget gate, but passes it through 
-a `tanh` to determine what to add to the state. The final gate is the "output gate" 
+The *input gate* uses the same information as the forget gate, but passes it through 
+a `tanh` to determine what to add to the state. The final gate is the *output gate* 
 and it modulates what information should be output from the LSTM cell. This time we 
 also take the previous state's value into account in addition to the previous hidden 
 state and the data of the current state. We have purposely left the full details out 
@@ -147,7 +145,7 @@ word embeddings each word is represented by a learned vector that has some meani
 example, the vector representing the word "cat" may somehow be close, in some sense, to 
 the vector for "dog", and each dimension is encoding some similarities or differences 
 between those words that were learned usually by analyzing a large corpus. In our task, 
-we will use a pre-computed word embedding model (e.g. from `GloVe <http://nlp.stanford.edu/projects/glove/>`_) 
+we will use a pre-computed word embedding model using `GloVe <http://nlp.stanford.edu/projects/glove/>`_
 and each of the words in the sequences will be replaced by their respective GloVe vector.
 
 Now that we've decided on our word representation and the type of recurrent neural 
@@ -207,11 +205,11 @@ key parts of the code::
         print_training_progress(trainer, i, training_progress_output_freq)
         i += 1
 
-Let's go through some of the intricacies of the network definition above. As usual, we first set the parameters of our model. In this case we 
-have a vocab (input dimension) of 2000, LSTM hidden and cell dimensions of 25, an embedding layer with dimension 50, and we have 5 possible 
-classes for our sequences. As before, we define two input variables: one for the features, and for the labels. We then instantiate our model. The 
-``LSTM_sequence_classifier_net`` is a simple function which looks up our input in an embedding matrix and returns the embedded representation, puts 
-that input through an LSTM recurrent neural network layer, and returns a fixed-size output from the LSTM by selecting the last hidden state of the 
+Let's go through some of the intricacies of the network definition above. As usual, we first set the parameters of our model. In this case we
+have a vocab (input dimension) of 2000, LSTM hidden and cell dimensions of 25, an embedding layer with dimension 50, and we have 5 possible
+classes for our sequences. As before, we define two input variables: one for the features, and for the labels. We then instantiate our model. The
+``LSTM_sequence_classifier_net`` is a simple function which looks up our input in an embedding matrix and returns the embedded representation, puts
+that input through an LSTM recurrent neural network layer, and returns a fixed-size output from the LSTM by selecting the last hidden state of the
 LSTM::
 
     embedding_function = embedding(input, embedding_dim)
@@ -220,7 +218,7 @@ LSTM::
 
     return linear_layer(thought_vector, num_output_classes)
 
-That is the entire network definition. We now simply setup our criterion nodes and then setup our training loop. In the above example we use a minibatch 
+That is the entire network definition. We now simply set up our criterion nodes and then our training loop. In the above example we use a minibatch
 size of 200 and use basic SGD with the default parameters and a small learning rate of 0.0005. This results in a powerful state-of-the-art model for 
 sequence classification that can scale with huge amounts of training data. Note that as your training data size grows, you should give more capacity to 
 your LSTM by increasing the number of hidden dimensions. Further, you can get an even more complex network by stacking layers of LSTMs. This is also easy 

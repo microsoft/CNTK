@@ -7,7 +7,7 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, persist
+from cntk import Trainer
 from cntk.utils import *
 from cntk.layers import *
 from cntk.models import Sequential, LayerStack
@@ -100,7 +100,7 @@ def convnet_cifar10(debug_output=False):
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
-        persist.save_model(z, os.path.join(model_path, "ConvNet_CIFAR10_{}.dnn".format(epoch)))
+        z.save_model(os.path.join(model_path, "ConvNet_CIFAR10_{}.dnn".format(epoch)))
     
     # Load test data
     reader_test = create_reader(os.path.join(data_path, 'Test_cntk_text.txt'), False, input_dim, num_output_classes)

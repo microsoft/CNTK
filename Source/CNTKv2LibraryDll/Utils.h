@@ -491,4 +491,58 @@ namespace CNTK
 
     std::string ToString(const std::wstring& wstring);
     std::wstring ToWString(const std::string& string);
+    // Helper class to manage a collection of learners.
+    class Learners
+    {
+    public:
+        explicit Learners(const std::vector<LearnerPtr>& learners);
+
+        bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount);
+        bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatchInfo);
+
+        std::vector<DictionaryValue> CreateCheckpoint();
+
+        void RestoreFromCheckpoint(const std::vector<DictionaryValue>&);
+
+        const std::vector<LearnerPtr>& ParameterLearners() const
+        {
+            return m_learners;
+        }
+
+        std::unordered_set<Parameter> GetParameters() const
+        {
+            std::unordered_set<Parameter> result;
+            for (auto l : m_learners)
+            {
+                const auto& p = l->Parameters();
+                result.insert(p.begin(), p.end());
+            }
+            return result;
+        }
+
+        bool IsDistributed() const
+        {
+            return m_isDistributed;
+        }
+
+    private:
+        void GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients);
+        void CheckDistributedLearners();
+
+        std::vector<LearnerPtr> m_learners;
+        bool m_isDistributed;
+    };
+
+    class Utils
+    {
+    public:
+        template <typename ElementType>
+        static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr> GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value);
+
+        template <typename ElementType>
+        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
+
+        template <typename ElementType>
+        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
+    };
 }

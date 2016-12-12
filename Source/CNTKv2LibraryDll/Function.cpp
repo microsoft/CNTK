@@ -24,6 +24,10 @@ namespace CNTK
         return std::shared_ptr<std::vector<Variable>>(new std::vector<Variable>(std::move(inputs)), [](std::vector<Variable>* ptr) { delete ptr; });
     }
 
+    Function::Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name, const std::wstring& uid)
+        : Function(inputs, outputs, std::move(functionConfig), nullptr, name, uid)
+    {}
+
     Function::Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid)
         : m_rootFunction(rootFunction), m_name(name != L"" ? name : uid), m_uid(uid), m_attributes(std::move(functionConfig))
     {
@@ -175,19 +179,12 @@ namespace CNTK
         }
     }
 
-    void Function::SaveModel(const std::wstring& modelFilePath, bool usinglegacyModelFormat)
+    void Function::SaveModel(const std::wstring& modelFilePath)
     {
-        if (usinglegacyModelFormat)
-        {
-            Internal::SaveAsLegacyModel(shared_from_this(), modelFilePath);
-        }
-        else
-        {
-            Dictionary model = Serialize();
-            auto stream = GetFstream(modelFilePath, false);
-            *stream << model;
-            stream->flush();
-        }
+        Dictionary model = Serialize();
+        auto stream = GetFstream(modelFilePath, false);
+        *stream << model;
+        stream->flush();
     }
 
     /*static*/ FunctionPtr Function::LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice)

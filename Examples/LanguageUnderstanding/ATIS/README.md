@@ -150,7 +150,7 @@ To run locally,
 ```sh
 > mkdir work              # the default work_dir
 > open ATIS.cntk and update the value of deviceId: -1 for CPU, auto for GPU
-> cntk.exe configFile=ATIS.cntk
+> cntk configFile=ATIS.cntk
 ```
 
 By default, the maxEpochs is set to 1 to save training time. One can change it to larger value such as 20 in order to get a good model accuracy. 

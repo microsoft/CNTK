@@ -6,7 +6,7 @@
 from __future__ import division
 import numpy as np
 from . import sequence
-from .functions import Function
+from .functions import CloneMethod, Function, load_model
 from .variables import Variable, Parameter, Constant
 from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes, typemap
 
@@ -1408,8 +1408,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
 
     Args:
         x: the tensor (or its name) from which the future value is obtained.
-        initial_state: tensor or scalar representing the initial value to be
-        used when the input tensor is shifted in time.
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
         time_step (int): the number of time steps to look into the future (default 1)
         name (str, optional): the name of the Function instance in the network
     Returns:
@@ -1460,8 +1459,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 
     Args:
         x: the tensor (or its name) from which the past value is obtained
-        initial_state: tensor or scalar representing the initial value to be
-        used when the input tensor is shifted in time.
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
         time_step (int): the number of time steps to look into the past (default 1)
         name (str, optional): the name of the Function instance in the network
 

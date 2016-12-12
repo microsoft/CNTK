@@ -243,7 +243,7 @@ namespace CNTK
                                        const std::unordered_map<std::wstring, Variable>& uidToVariableMap, 
                                        const CNTK::DeviceDescriptor& device);
 
-        virtual const std::wstring& OpName() override
+        virtual const std::wstring& OpName() const override
         {
             return PrimitiveOpTypeName(OpType());
         }

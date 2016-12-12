@@ -9,18 +9,18 @@
 
 # TODO: clean up the dependencies
 import numpy as np
-from cntk.ops import parameter, input_variable, placeholder_variable, combine
-from cntk.ops import times, convolution, pooling, batch_normalization, dropout
-from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
-from cntk.utils import Record, _as_tuple
-from cntk.blocks import *  # TODO: reduce to what we actually use
-from cntk.blocks import _trace_layers  # (debugging)
+from .ops import parameter, input_variable, placeholder_variable, combine
+from .ops import times, convolution, pooling, batch_normalization, dropout
+from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
+from .utils import Record, _as_tuple
+from .blocks import *  # TODO: reduce to what we actually use
+from .blocks import _trace_layers  # (debugging)
 
-from cntk.ops.functions import Function
-from cntk.ops.variables import Variable
+from .ops.functions import Function
+from .ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-from cntk.blocks import _get_current_default_options, _is_given, _initializer_for, _resolve_activation, _INFERRED
+from .blocks import _get_current_default_options, _is_given, _initializer_for, _resolve_activation, _INFERRED
 
 # Dense -- create a fully-connected linear projection layer with optional non-linear activation
 # Note: shape may describe a tensor as well.

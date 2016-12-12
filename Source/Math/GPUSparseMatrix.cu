@@ -947,6 +947,42 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
     }
 }
 
+#if 0 // add it back with test
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t* blockIds, const ElemType* val, const size_t numBlocks, const size_t numRows, const size_t numCols)
+{
+    VerifyWritable(__FUNCTION__);
+
+    if (blockIds == nullptr || val == nullptr)
+        LogicError("SetMatrixFromSBCFormat: nullptr passed in.");
+
+    SetFormat(matrixFormatSparseBlockCol);
+    SetBlockSize(numBlocks);
+
+    if (numBlocks == 0) return; // ====>
+
+    size_t nz = numBlocks * numRows;
+    RequireSizeAndAllocate(numRows, numCols, nz, true, false);
+
+    static std::vector<GPUSPARSE_INDEX_TYPE> gpuBlockId2Col(numBlocks);
+    static std::vector<GPUSPARSE_INDEX_TYPE> gpuCol2BlockId(numCols);
+
+    std::fill(gpuBlockId2Col.begin(), gpuBlockId2Col.end(), Id_NotAssigned);
+    std::fill(gpuCol2BlockId.begin(), gpuCol2BlockId.end(), Id_NotAssigned);
+
+    #pragma omp parallel for
+    for (int i = 0; i < numBlocks; ++i)
+    {
+        gpuBlockId2Col[i] = (GPUSPARSE_INDEX_TYPE)blockIds[i];
+        gpuCol2BlockId[blockIds[i]] = i;
+    }
+
+    CUDA_CALL(cudaMemcpy(Data(), val, nz * sizeof(ElemType), cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(BlockId2ColOrRow(), &gpuBlockId2Col[0], numBlocks * sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(ColOrRow2BlockId(), &gpuCol2BlockId[0], numBlocks * sizeof(GPUSPARSE_INDEX_TYPE), cudaMemcpyHostToDevice));
+}
+#endif
+
 // this function will allocate memory while the caller needs to release it
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::GetMatrixFromCSCFormat(GPUSPARSE_INDEX_TYPE*& h_CSCCol, GPUSPARSE_INDEX_TYPE*& h_Row, ElemType*& h_Val, size_t& numElemAllocated, size_t& nz, size_t& numRows, size_t& numCols) const
@@ -1223,68 +1259,51 @@ void GPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const GPUMatrix<E
 
         // based on the size of m_nz in rhs and numCols in the resulted matrix we use different approaches
         size_t rhs_nz = rhs.NzCount();
-        if (n * 10 < GridDim::maxThreadsPerBlock * rhs_nz)
+
+        size_t blockSizePrev = c.GetBlockSize();
+        if (blockSizePrev == 0)
         {
-            c.RequireSizeAndAllocate(m, n, 1, true, false); // reserve memory for BlockId2ColOrRow() and ColOrRow2BlockId()
+            c.Resize(m, n, 0);
+            CUDA_CALL(cudaMemset(c.ColOrRow2BlockId(), Id_NotAssigned, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
+            CUDA_CALL(cudaMemset(c.BlockId2ColOrRow(), Id_NotAssigned, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
+        }
 
-            size_t* blockSize = TracingGPUMemoryAllocator::Allocate<size_t>(lhs.GetComputeDeviceId(), 1);
-            CUDA_CALL(cudaMemset(blockSize, 0, sizeof(size_t)));
+        size_t* blockSize = TracingGPUMemoryAllocator::Allocate<size_t>(lhs.GetComputeDeviceId(), 1);
+        CUDA_CALL(cudaMemcpy(blockSize, &blockSizePrev, sizeof(size_t), cudaMemcpyHostToDevice));
 
-            CUDA_CALL(cudaMemset(c.BlockId2ColOrRow(), 0, sizeof(GPUSPARSE_INDEX_TYPE) * (n)));
-
-            blocksPerGrid = (int) ceil(((double) rhs_nz) / GridDim::maxThreadsPerBlock);
-            _findColsWithValues<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-                rhs.RowLocation(), c.BlockId2ColOrRow(), rhs_nz);
+        blocksPerGrid = (int) ceil(((double) rhs_nz) / GridDim::maxThreadsPerBlock);
+        _findColsWithValues<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
+            rhs.RowLocation(), c.ColOrRow2BlockId(), rhs_nz);
                 
-            blocksPerGrid = (int) ceil(((double) n) / GridDim::maxThreadsPerBlock);
-            _determineBlockIds<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-                c.BlockId2ColOrRow(), c.ColOrRow2BlockId(), n, blockSize);
+        blocksPerGrid = (int) ceil(((double) n) / GridDim::maxThreadsPerBlock);
+        _determineBlockIds<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
+            c.BlockId2ColOrRow(), c.ColOrRow2BlockId(), n, blockSize);
 
-                
-            size_t block = c.GetBlockSize();
-            CUDA_CALL(cudaMemcpy(&block, blockSize, sizeof(size_t), cudaMemcpyDeviceToHost));
-            TracingGPUMemoryAllocator::Free<size_t>(lhs.GetComputeDeviceId(), blockSize);
-            c.SetBlockSize(block);
+        size_t blockSizeCurr;
+        CUDA_CALL(cudaMemcpy(&blockSizeCurr, blockSize, sizeof(size_t), cudaMemcpyDeviceToHost));
+        TracingGPUMemoryAllocator::Free<size_t>(lhs.GetComputeDeviceId(), blockSize);
+        c.SetBlockSize(blockSizeCurr);
 
-            size_t nnz = m * c.GetBlockSize();
+        if (blockSizeCurr > blockSizePrev)
+        {
+            // zero initialize new blocks
+            size_t nnz = m * blockSizeCurr;
             c.RequireSizeAndAllocate(m, n, nnz, true, true); // we need to keep the col2blockid and blockid2col info when resizing.
-            CUDA_CALL(cudaMemset(c.Data(), 0, sizeof(ElemType) * (c.GetSizeAllocated())));
-
-            LONG64 N = (LONG64) lhs.GetNumElements(); // here we process for each row in lhs and each column in rhs (==columns in lhs)
-            blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
-            _denseMulSparseCSCTransposeToSparseBlockCol2<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-                alpha,
-                lhs.Data(),
-                m,
-                l,
-                rhs.Data(),
-                rhs.RowLocation(),
-                rhs.ColLocation(),
-                c.ColOrRow2BlockId(),
-                c.Data());
+            CUDA_CALL(cudaMemset(c.Data() + m * blockSizePrev, 0, sizeof(ElemType) * m * (blockSizeCurr - blockSizePrev)));
         }
-        else
-        {
-            c.SetBlockSize(rhs.IdentifyRowsWithValues());
-            size_t nnz = m * c.GetBlockSize();
-            c.RequireSizeAndAllocate(m, n, nnz, true, false);
-            CUDA_CALL(cudaMemset(c.Data(), 0, sizeof(ElemType) * (c.GetSizeAllocated())));
-            CUDA_CALL(cudaMemset(c.BlockId2ColOrRow(), 0, sizeof(GPUSPARSE_INDEX_TYPE) * (c.GetBlockSize())));
 
-            LONG64 N = (LONG64) lhs.GetNumElements(); // here we process for each row in lhs and each column in rhs (==columns in lhs)
-            blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
-            _denseMulSparseCSCTransposeToSparseBlockCol<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
-                alpha,
-                lhs.Data(),
-                m,
-                l,
-                rhs.Data(),
-                rhs.RowLocation(),
-                rhs.ColLocation(),
-                rhs.GetTempDeviceBuffer(),
-                c.Data(),
-                c.BlockId2ColOrRow());
-        }
+        LONG64 N = (LONG64) lhs.GetNumElements(); // here we process for each row in lhs and each column in rhs (==columns in lhs)
+        blocksPerGrid = (int) ceil(((double) N) / GridDim::maxThreadsPerBlock);
+        _denseMulSparseCSCTransposeToSparseBlockCol2<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
+            alpha,
+            lhs.Data(),
+            m,
+            l,
+            rhs.Data(),
+            rhs.RowLocation(),
+            rhs.ColLocation(),
+            c.ColOrRow2BlockId(),
+            c.Data());
     }
     else if (transposeA && !transposeB)
     {
