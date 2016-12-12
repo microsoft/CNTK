@@ -12,7 +12,7 @@ import numpy as np
 from cntk.utils import *
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-from cntk import Trainer, persist, cntk_py
+from cntk import Trainer, cntk_py
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from _cntk_py import set_computation_network_trace_level
 
@@ -108,7 +108,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
-        persist.save_model(z, os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
+        z.save_model(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
     
     # Evaluation parameters
     epoch_size     = 10000

@@ -8,7 +8,7 @@ import numpy as np
 import os
 import sys
 import platform
-from cntk.io import ReaderConfig, ImageDeserializer
+from cntk.io import ReaderConfig, ImageDeserializer, FULL_DATA_SWEEP
 from cntk import distributed
 from cntk.device import set_default_device, gpu
 
@@ -35,18 +35,20 @@ def run_cifar_convnet_distributed():
     #force_deterministic_algorithms()
     # TODO: do the above; they lead to slightly different results, so not doing it for now
 
-    reader_train = create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True, 0)
-    reader_test  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
+    create_train_reader = lambda data_size: create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True, data_size, 0)
+    test_reader = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False, FULL_DATA_SWEEP)
 
     distributed_after_samples = 0
     num_quantization_bits = 32
-    distributed_trainer = distributed.data_parallel_distributed_trainer(
+    create_dist_learner = lambda learner: distributed.data_parallel_distributed_learner(
+        learner=learner,
         num_quantization_bits=num_quantization_bits,
         distributed_after=distributed_after_samples)
 
-    return convnet_cifar10_dataaug(reader_train, reader_test, distributed_trainer, max_epochs=1)
+    return convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, max_epochs=1)
 
 if __name__=='__main__':
+    assert distributed.Communicator.rank() < distributed.Communicator.num_workers()
     set_default_device(gpu(0)) # force using GPU-0 in test for speed
     run_cifar_convnet_distributed()
     distributed.Communicator.finalize()

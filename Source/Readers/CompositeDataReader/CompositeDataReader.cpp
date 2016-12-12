@@ -105,15 +105,21 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         // By default randomizing the whole data set.
         size_t randomizationWindow = requestDataSize;
 
+        BlockRandomizer::DecimationMode mode = BlockRandomizer::DecimationMode::chunk;
         // Currently in case of images, a single chunk is a single image. So no need to randomize, chunks will be randomized anyway.
+        // Performing decimation based on sequence position in the minibatch to be evenly distributed among workers.
+        // TODO: this won't matter when readers switch to local timeline.
         if (ContainsDeserializer(config, L"ImageDeserializer") && m_deserializers.size() == 1)
+        {
             randomizationWindow = 1;
+            mode = BlockRandomizer::DecimationMode::sequence;
+        }
 
         randomizationWindow = config(L"randomizationWindow", randomizationWindow);
 
         // By default using STL random number generator.
         bool useLegacyRandomization = config(L"useLegacyRandomization", false);
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, true /* should Prefetch */, BlockRandomizer::DecimationMode::chunk, useLegacyRandomization, multiThreadedDeserialization);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, true /* should Prefetch */, mode, useLegacyRandomization, multiThreadedDeserialization);
     }
     else
     {

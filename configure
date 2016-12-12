@@ -102,8 +102,7 @@ default_openblas=""
 
 default_boost="boost-1.60.0"
 
-# NOTE: Will get compilation errors with cuda-6.0
-default_cudas="cuda-7.5 cuda-7.0 cuda-6.5"
+default_cudas="cuda-8.0 cuda-7.5"
 default_nccls="nccl"
 default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdk_includes="include/nvidia/gdk"

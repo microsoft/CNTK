@@ -19,7 +19,8 @@ testCases:
       - ^MPI Rank {{integer}}
       - Finished Epoch[{{integer}} of {{integer}}]
       - CE = {{float,tolerance=2}}
-      - Err = {{float,tolerance=2}
+      - Err = {{float,tolerance=2}}
+
   # Due to the unstableness of ASGD at early stage, we should enlarge the tolerance.
   Per-minibatch training results must match for each MPI Rank:
     patterns:

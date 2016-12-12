@@ -7,15 +7,8 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, persist
-from cntk.utils import *
-from cntk.layers import *
-from cntk.models import Sequential, LayerStack
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, minus, element_times, constant
-from _cntk_py import set_computation_network_trace_level
+import cntk
+import _cntk_py
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -24,15 +17,15 @@ model_path = os.path.join(abs_path, "Models")
 
 # Define the reader for both training and evaluation action.
 def create_reader(path, is_training, input_dim, label_dim):
-    return MinibatchSource(CTFDeserializer(path, StreamDefs(
-        features  = StreamDef(field='features', shape=input_dim),
-        labels    = StreamDef(field='labels',   shape=label_dim)
-    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+    return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(path, cntk.io.StreamDefs(
+        features  = cntk.io.StreamDef(field='features', shape=input_dim),
+        labels    = cntk.io.StreamDef(field='labels',   shape=label_dim)
+    )), randomize=is_training, epoch_size = cntk.io.INFINITELY_REPEAT if is_training else cntk.io.FULL_DATA_SWEEP)
 
 
 # Creates and trains a feedforward classification model for MNIST images
 def convnet_cifar10(debug_output=False):
-    set_computation_network_trace_level(0)
+    _cntk_py.set_computation_network_trace_level(0)
 
     image_height = 32
     image_width  = 32
@@ -41,28 +34,29 @@ def convnet_cifar10(debug_output=False):
     num_output_classes = 10
 
     # Input variables denoting the features and label data
-    input_var = input_variable((num_channels, image_height, image_width), np.float32)
-    label_var = input_variable(num_output_classes, np.float32)
+    input_var = cntk.ops.input_variable((num_channels, image_height, image_width), np.float32)
+    label_var = cntk.ops.input_variable(num_output_classes, np.float32)
 
     # Instantiate the feedforward classification model
-    input_removemean = minus(input_var, constant(128))
-    scaled_input = element_times(constant(0.00390625), input_removemean)
-    with default_options (activation=relu, pad=True): 
-        z = Sequential([
-            LayerStack(2, lambda : [
-                Convolution((3,3), 64), 
-                Convolution((3,3), 64), 
-                MaxPooling((3,3), (2,2))
+    input_removemean = cntk.ops.minus(input_var, cntk.ops.constant(128))
+    scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_removemean)
+
+    with cntk.layers.default_options(activation=cntk.ops.relu, pad=True): 
+        z = cntk.models.Sequential([
+            cntk.models.LayerStack(2, lambda : [
+                cntk.layers.Convolution((3,3), 64), 
+                cntk.layers.Convolution((3,3), 64), 
+                cntk.layers.MaxPooling((3,3), (2,2))
             ]), 
-            LayerStack(2, lambda i: [
-                Dense([256,128][i]), 
-                Dropout(0.5)
+            cntk.models.LayerStack(2, lambda i: [
+                cntk.layers.Dense([256,128][i]), 
+                cntk.layers.Dropout(0.5)
             ]), 
-            Dense(num_output_classes, activation=None)
+            cntk.layers.Dense(num_output_classes, activation=None)
         ])(scaled_input)
     
-    ce = cross_entropy_with_softmax(z, label_var)
-    pe = classification_error(z, label_var)
+    ce = cntk.ops.cross_entropy_with_softmax(z, label_var)
+    pe = cntk.ops.classification_error(z, label_var)
 
     reader_train = create_reader(os.path.join(data_path, 'Train_cntk_text.txt'), True, input_dim, num_output_classes)
 
@@ -71,15 +65,15 @@ def convnet_cifar10(debug_output=False):
     minibatch_size = 64
 
     # Set learning parameters
-    lr_per_sample          = [0.0015625]*10+[0.00046875]*10+[0.00015625]
-    lr_schedule            = learning_rate_schedule(lr_per_sample, UnitType.sample, epoch_size)
-    mm_time_constant       = [0]*20+[-minibatch_size/np.log(0.9)]
-    mm_schedule            = momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
+    lr_per_sample          = [0.0015625]*10 + [0.00046875]*10 + [0.00015625]
+    lr_schedule            = cntk.learning_rate_schedule(lr_per_sample, cntk.learner.UnitType.sample, epoch_size)
+    mm_time_constant       = [0]*20 + [-minibatch_size/np.log(0.9)]
+    mm_schedule            = cntk.learner.momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
     l2_reg_weight          = 0.002
 
     # Instantiate the trainer object to drive the model training
-    learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule, l2_regularization_weight = l2_reg_weight)
-    trainer     = Trainer(z, ce, pe, learner)
+    learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule, l2_regularization_weight = l2_reg_weight)
+    trainer = cntk.Trainer(z, ce, pe, learner)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -87,8 +81,8 @@ def convnet_cifar10(debug_output=False):
         label_var  : reader_train.streams.labels
     }
 
-    log_number_of_parameters(z) ; print()
-    progress_printer = ProgressPrinter(tag='Training')
+    cntk.utils.log_number_of_parameters(z) ; print()
+    progress_printer = cntk.utils.ProgressPrinter(tag='Training')
 
     # Get minibatches of images to train with and perform model training
     max_epochs = 30
@@ -99,8 +93,9 @@ def convnet_cifar10(debug_output=False):
             trainer.train_minibatch(data)                                   # update model with it
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
+
         progress_printer.epoch_summary(with_metric=True)
-        persist.save_model(z, os.path.join(model_path, "ConvNet_CIFAR10_{}.dnn".format(epoch)))
+        z.save_model(os.path.join(model_path, "ConvNet_CIFAR10_{}.dnn".format(epoch)))
     
     # Load test data
     reader_test = create_reader(os.path.join(data_path, 'Test_cntk_text.txt'), False, input_dim, num_output_classes)

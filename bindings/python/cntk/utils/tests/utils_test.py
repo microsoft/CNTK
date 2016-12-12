@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-import numpy
+import numpy as np
 import scipy.sparse as sparse
 csr = sparse.csr_matrix
 import pytest
@@ -85,6 +85,15 @@ def test_sanitize_input(data, dtype):
     assert np.allclose(inp.value, data)
     assert inp.dtype == dtype
 
+def test_axes():
+    axes = [Axis.default_batch_axis(), Axis.default_dynamic_axis()]
+    assert tuple(axes) == Axis.default_input_variable_dynamic_axes()
+    assert sanitize_dynamic_axes(axes) == \
+            tuple(reversed(Axis.default_input_variable_dynamic_axes()))
+
+    assert (Axis.default_dynamic_axis(),) == \
+            sanitize_dynamic_axes(Axis.default_dynamic_axis())
+    
 def test_get_data_type():
     pa32 = parameter(init=np.asarray(2, dtype=np.float32))
     pa64 = parameter(init=np.asarray(2, dtype=np.float64))
@@ -160,15 +169,19 @@ def test_sanitize_batch_sparse():
     assert b.shape == (2,2,3)
 
 @pytest.mark.parametrize("batch, seq_starts, expected_mask", [
-    ([[5, 6, 7],
-       [8]],
+    ([[5, 6, 7], [8]],
        [True, False],
        [[2, 1, 1], [1, 0, 0]]),
 
-    ([[5],
-       [8]],
+    ([[AA([5]), AA([6]), AA([7])], [AA([8])]],
+       [True, False],
+       [[2, 1, 1], [1, 0, 0]]),
+
+    ([[5], [8]],
        [True, False],
        [[2], [1]]),
+
+
 ])
 def test_mask(batch, seq_starts, expected_mask):
     shape = (1,)
@@ -188,3 +201,4 @@ def test_sanitize_batch_contiguity():
     batch = [[a1],[a2]]
     b = sanitize_batch(var, batch)
     assert b.shape == (2,1,2,2)
+

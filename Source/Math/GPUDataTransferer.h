@@ -53,6 +53,17 @@ private:
     const cudaStream_t& m_assignStream;
 
 protected:
+
+    virtual const cudaStream_t& GetAssignStream() const
+    {
+        return m_assignStream;
+    }
+
+    virtual const cudaStream_t& GetFetchStream() const
+    {
+        return m_fetchStream;
+    }
+
     mutable cudaEvent_t m_fetchCompleteEvent;
     mutable cudaEvent_t m_assignCompleteEvent;
     mutable cudaEvent_t m_syncEvent;
@@ -109,6 +120,8 @@ public:
 
 private:
 #ifndef CPUONLY
+
+    // TODO: this needs to be refactored to get rid of all statics
     static void SyncEvent(cudaEvent_t ev);
 
     static cudaStream_t s_fetchStream;
@@ -120,11 +133,16 @@ class PrefetchGPUDataTransferer : public GranularGPUDataTransferer
 {
 public:
     PrefetchGPUDataTransferer(int deviceId);
+    ~PrefetchGPUDataTransferer();
 
 private:
 #ifndef CPUONLY
-    static cudaStream_t s_prefetchStream;
-    static cudaStream_t s_gpuToCpuStream;
+    cudaStream_t m_stream;
+
+    virtual const cudaStream_t& GetAssignStream() const override
+    {
+        return m_stream;
+    }
 #endif
 
     DISABLE_COPY_AND_MOVE(PrefetchGPUDataTransferer);

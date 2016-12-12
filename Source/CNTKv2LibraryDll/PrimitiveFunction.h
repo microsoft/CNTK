@@ -84,7 +84,7 @@ namespace CNTK
         {PrimitiveOpType::CosDistance, L"CosDistance"},
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
-        {PrimitiveOpType::Cos, L"Pass"},
+        {PrimitiveOpType::Pass, L"Pass"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -243,7 +243,7 @@ namespace CNTK
                                        const std::unordered_map<std::wstring, Variable>& uidToVariableMap, 
                                        const CNTK::DeviceDescriptor& device);
 
-        virtual const std::wstring& OpName() override
+        virtual const std::wstring& OpName() const override
         {
             return PrimitiveOpTypeName(OpType());
         }

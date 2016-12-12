@@ -212,6 +212,13 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 {
 }
 
+#if 0
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t*, const ElemType*, const size_t, const size_t, const size_t)
+{
+}
+#endif
+
 // forward pass from feature to hidden layer
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
@@ -2220,6 +2227,8 @@ void GranularGPUDataTransferer::WaitForSyncPointOnFetchStreamAsync() {}
 void GranularGPUDataTransferer::WaitForSyncPointOnAssignStreamAsync() {}
 
 PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int /*deviceId*/) : GranularGPUDataTransferer() {}
+
+PrefetchGPUDataTransferer::~PrefetchGPUDataTransferer() {}
 
 GPUDataTransferer::GPUDataTransferer(int, bool){}
 GPUDataTransferer::~GPUDataTransferer(){}

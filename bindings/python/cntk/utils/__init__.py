@@ -150,7 +150,8 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     '''
     Converts ``batch`` into a :class:`Value` object of ``dtype``
     such that the integer data in ``batch`` is interpreted as the indices
-    representing one-hot vectors.
+    representing one-hot vectors. Additionally, a SciPy CSR matrix can be obtained
+    by calling :meth:`~cntk.utils.Value.to_csr`.
 
     Example:
         >>> num_classes = 6
@@ -175,6 +176,9 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     '''
     if device is None:
         device = use_default_device()
+
+    if isinstance(batch, np.ndarray):
+        batch = batch.tolist()
 
     if dtype in [np.float32, None]:
         value = cntk_py.Value.create_one_hot_float(num_classes, batch, device, False)
@@ -259,17 +263,20 @@ def _has_seq_dim(var, data):
 
     if drill_shape != var_shape:
         raise ValueError('could not match the data with shape %s to the '
-                'input variable with shape %s'%(drill_shape, var_shape))
+                'input variable (name="%s") with shape %s'%\
+                        (drill_shape, var.name, var_shape))
 
     num_var_dyn_axes = len(var.dynamic_axes)
+
     if num_dyn_axes == num_var_dyn_axes:
-        return True
+        # num_dyn_axes is at least 1, in which case there's only a batch axis
+        return (num_dyn_axes > 1)
     elif num_dyn_axes == num_var_dyn_axes-1:
         return False
     else:
         raise ValueError(
         'data having %i axes is not compatible with the '
-        'input variable having %i axes'%(num_dyn_axes,len(var_shape)))
+        'input variable having %i axes'%(num_dyn_axes, num_var_dyn_axes))
 
 
 def sanitize_shape(shape):
@@ -417,7 +424,7 @@ def _pad_dense_to_max_len(var, batch, max_seq_len):
     Z = np.zeros((len(batch), max_seq_len) +
                  (data_point.shape), dtype=data_point.dtype)
     for idx, seq in enumerate(batch):
-        elem_shape = seq[0].shape if hasattr(seq, 'shape') else ()
+        elem_shape = seq[0].shape if hasattr(seq[0], 'shape') else ()
         if elem_shape != data_point.shape:
             raise ValueError('shape mismatch: expected %s but got %s'
                              % (str(data_point.shape), str(elem_shape)))
@@ -479,10 +486,11 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
          of lists, ...), a combination of lists of NumPy arrays or SciPy
          sparse CSR matrices. Alternatively, it can also be the output of
          :func:`one_hot`.
-        seq_starts (list of bool or None): if None, every sequence is
+        seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
-         continuation of the previous one (`False`)
+         continuation of the sequence in the same slot of the previous
+         minibatch (`False`)
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
          this value should be put on
 
@@ -495,6 +503,11 @@ def sanitize_batch(var, batch, seq_starts=None, dtype=None, device=None):
     if isinstance(batch, list):
         if len(batch) == 0:
             raise ValueError('batch is empty')
+
+    if isinstance(batch, np.ndarray) and batch.dtype == object:
+        raise ValueError('dtype object is not supported. If this is a batch '
+                'of sequences, you need to pass them as a pure-Python list '
+                'of NumPy arrays')
 
     # We need to figure out whether the data has a sequence axis. Note that
     # it is not enough to check whether the variable's dynamic axes include the
@@ -686,17 +699,33 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          :meth:`~cntk.ops.functions.Function.forward` pass it is typically
          `op.arguments`, in :meth:`~cntk.ops.functions.Function.backward` pass it is
          `op.outputs`
-        arguments: maps variables to their
-         input data. The interpretation depends on the input type:
-          * `dict`: keys are input variable or names and values are the input data.
-          * any other type: if node has an unique input, ``arguments`` is mapped to this input.
-            For nodes with more than one input, only `dict` is allowed.
-         In both cases, every sample in the data will be interpreted
-         as a new sequence. To mark samples as continuations of the
-         previous sequence, specify ``arguments`` as `tuple`: the
-         first element will be used as ``arguments``, and the second one will
-         be used as a list of bools, denoting whether a sequence is a new
-         one (`True`) or a continuation of the previous one (`False`).
+        arguments: maps variables to their input data. The interpretation depends on
+         the input type:
+
+           * dict: keys are input variable or names, and values are the input data.
+           * any other type: if node has an unique input, arguments is
+             mapped to this input. 
+         For nodes with more than one input, only dict is allowed.
+
+         In both cases, every every sample in the data will be interpreted
+         as a new sequence. 
+         
+         Sequences can be marked as continuations of the same sequence in
+         the previous minibatch (that is the sequence in the same slot).
+         There are two possibilities for this:
+         
+          * specifying arguments as a `tuple` where the first element is
+            used as arguments and the second one will be used as a list
+            of bools, denoting whether a sequence is a new one (`True`) or a
+            continuation of the sequence in the same slot of the previous
+            minibatch (`False`). This will be applied to all batches. 
+          * specifying arguments as a dictionary of variables to tuples 
+            where the first element is used as arguments and the second
+            one will be used as a list of bools, denoting whether a sequence
+            is a new one (`True`) or a continuation of the sequence in the
+            same slot of the previous minibatch (`False`). This will be
+            applied to all batches. 
+
          Data should be either NumPy arrays or a
          :class:`~cntk.io.MinibatchData` instance.
         precision (str or `np.float32` or `np.float64`): if string it can be
@@ -737,21 +766,6 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
         else:
             raise ValueError('non-dict argument (%s) is not supported for nodes with more than one input' % type(arguments).__name__)
 
-    sample_sizes = [v.shape[0] if hasattr(v, 'shape') else len(v) for v in arguments.values()]
-    if len(set(sample_sizes)) != 1:
-        raise ValueError('not all inputs have the same number of samples: ' +
-                         ", ".join([str(s) for s in sample_sizes]))
-
-    if seq_starts is not None:
-        if not isinstance(seq_starts, (tuple, list)):
-            raise ValueError(
-                'if you specify seq_starts, it needs to be a list')
-
-        sample_size = sample_sizes.pop()
-        if len(seq_starts) != sample_size:
-            raise ValueError('you have %i samples, but seq_starts has only %i' +
-                             'elements' % (sample_sizes, len(seq_starts)))
-
     if precision is not None:
         precision = sanitize_precision(precision)
 
@@ -769,6 +783,26 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
             except KeyError:
                 raise KeyError("no input with the name '%s' was found.  Available: %s" % (
                     var, ", ".join(var_name_map.keys())))
+
+        if isinstance(batch, tuple):
+            if seq_starts is not None:
+                raise ValueError('you cannot provide sequence start '
+                        'information globally and for individual batches '
+                        'at the same time')
+
+            batch, seq_starts = batch
+
+            if seq_starts is not None:
+                if not isinstance(seq_starts, (tuple, list)):
+                    raise ValueError(
+                        'if you specify sequence begin markers, it needs to be a list')
+
+                sample_size = batch.shape[0] if hasattr(batch, 'shape') else len(batch)
+
+                if len(seq_starts) != sample_size:
+                    raise ValueError('you have %i sequences, but only %i '
+                            'sequence begin markers' % (sample_sizes, len(seq_starts)))
+
 
         if isinstance(batch, MinibatchData):
             batch = batch.m_data
@@ -862,8 +896,9 @@ class Value(cntk_py.Value):
           A mask of ``[[2, 1, 1], [1, 1, 0]]`` describes a batch of two
           sequences. The first has three elements, of which the first element
           (2) signals the beginning of a sequence. The second sequence has two
-          elements (last element marked 'invalid' by '0'), which are both
-          continuations of the first sequence.
+          elements (last element marked 'invalid' by '0'). As it starts with
+          (1), it is a continuation of the 2nd sequence in the previous
+          minibatch.
         '''
         return np.asarray(super(Value, self).mask())
 
@@ -928,11 +963,12 @@ def sanitize_axis(axis):
 
 
 def sanitize_dynamic_axes(axes):
-    if axes != cntk_py.Axis.default_input_variable_dynamic_axes():
-        if not type(axes) in (list, tuple):
-            axes = [axes]
-        else:
-            axes = tuple(reversed(axes))
+    if not type(axes) in (list, tuple):
+        axes = [axes]
+    for ax in axes:
+        if not isinstance(ax, cntk_py.Axis):
+            raise TypeError('type Axis expected, got %s instead'%type(ax))
+    axes = tuple(reversed(axes))
     return axes
 
 
@@ -1019,7 +1055,8 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
         seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
-         continuation of the previous one (`False`)
+         continuation of the sequence in the same slot of the previous
+         minibatch (`False`)
         precision (str or None): precision being 'float32', 'float64', or
          None, in which case it will be determined by inspecting the operator
          (costly)

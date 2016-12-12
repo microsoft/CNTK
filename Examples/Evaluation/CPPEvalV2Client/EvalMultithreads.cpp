@@ -432,7 +432,7 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
         std::unordered_map<Variable, ValuePtr> outputs = {{outputVar, outputValue}};
         evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
 
-        outputValue = outputs[outputVar];        
+        outputValue = outputs[outputVar];
         NDShape outputShape = outputVar.Shape().AppendShape({1, numSamples});
         std::vector<float> outputData(outputShape.TotalSize());
         NDArrayViewPtr cpuArrayOutput = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
