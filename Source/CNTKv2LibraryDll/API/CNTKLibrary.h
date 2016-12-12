@@ -940,6 +940,16 @@ namespace CNTK
         ///
         virtual void CopyFrom(const Value& source);
 
+        ///
+        /// Copy the data stored in the Value object to the buffer 'sequences' as a collection of variable length sequences.
+        /// The sequence buffer is on CPU.
+        /// The Value should have the same axes as variable.
+        ///
+        template <typename ElementType>
+        CNTK_API void CopyTo(const NDShape& sampleShape, std::vector<std::vector<ElementType>>& outputData);
+
+        CNTK_API void CopyTo(const NDShape& sampleShape, std::vector<std::vector<size_t>>& outputData);
+
     private:
         template <typename ElementType>
         static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLength);
