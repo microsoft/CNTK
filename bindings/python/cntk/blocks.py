@@ -169,19 +169,17 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True))
 
     # parameters bound to this Function
     param = Parameter((1), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
-    #param = Parameter((1), init=1, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
     # TODO: compute this strange value directly in Python
+    beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething   --TODO: change in Python
 
     # expression
-    # TODO: change to @Fuyction
-    x = Placeholder(name='stabilizer_arg')
-
-    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
-    # this behaves linear for weights around 1, yet guarantees positiveness
-    # TODO: risk of confusion; can these functions be namespaced?
-    beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething
-    apply_x = beta * x
-    return Block(apply_x, 'Stabilizer', Record(beta=beta))
+    @Function
+    def stabilize(x):
+        # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
+        # this behaves linear for weights around 1, yet guarantees positiveness
+        # TODO: risk of confusion; can these functions be namespaced?
+        return beta * x
+    return Block(stabilize, 'Stabilizer', Record(beta=beta))
 
 # recurrent block of type 'LSTM', 'GRU', or RNNUnit
 def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
