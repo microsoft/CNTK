@@ -351,6 +351,17 @@ namespace CNTK
         {
             Microsoft::MSR::CNTK::Globals::ForceDeterministicAlgorithms();
         }
+
+        bool ShouldForceDeterministicAlgorithms()
+        {
+            return Microsoft::MSR::CNTK::Globals::ShouldForceDeterministicAlgorithms();
+        }
+
+        static std::atomic<bool> s_theadsAreSet(false);
+        bool MaxNumCPUThreadsSet()
+        {
+            return s_theadsAreSet;
+        }
     }
 
     /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);
@@ -490,21 +501,19 @@ namespace CNTK
         return s_allStaticAxes;
     }
 
-
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {
         s_uniqueDynamicAxisNames.RegisterAxisName(axisName);
     }
 
-    std::atomic<size_t> s_maxNumCPUThreads(std::thread::hardware_concurrency());
     void SetMaxNumCPUThreads(size_t numCPUThreads)
     {
-        s_maxNumCPUThreads.store(numCPUThreads);
+        Internal::s_theadsAreSet = true;
         Microsoft::MSR::CNTK::CPUMatrix<float>::SetNumThreads((int)numCPUThreads);
     }
 
     size_t GetMaxNumCPUThreads()
     {
-        return s_maxNumCPUThreads.load();
+        return Microsoft::MSR::CNTK::CPUMatrix<float>::GetMaxNumThreads();
     }
 }
