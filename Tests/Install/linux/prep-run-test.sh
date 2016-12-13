@@ -20,7 +20,9 @@ TEST_DEVICE_ID=-1
 which cntk
 MODULE_DIR="\$(python -c "import cntk, os, sys; sys.stdout.write(os.path.dirname(os.path.abspath(cntk.__file__)))")"
 [ \$? -eq 0 ]
-pytest "\$MODULE_DIR" --deviceid \$TEST_DEVICE --doctest-modules
+
+[ "\$TEST_DEVICE" = "gpu" ] && pytest "\$MODULE_DIR" --deviceid \$TEST_DEVICE --doctest-modules
+# TODO not all (doc) tests run on CPU
 
 # Installation validation example from CNTK.wiki (try from two different paths):
 cd "$CNTK_DROP/Tutorials"
@@ -38,6 +40,16 @@ python install_cifar10.py
 # TODO run some examples
 
 # TODO actually do different device and syntax.
+
+if [ "\$TEST_DEVICE" = "gpu" ]; then
+  cd "$CNTK_DROP/Tutorials"
+  for f in *.ipynb; do
+    # TODO 203 fails when run without GUI?
+    if [ "\$f" != "CNTK_203_Reinforcement_Learning_Basics.ipynb" ]; then
+      jupyter nbconvert --to notebook --execute --ExecutePreprocessor.timeout=1200 --output \$(basename \$f .ipynb)-out.ipynb \$f
+    fi
+  done
+fi
 
 # CNTK.wiki example:
 cd "$CNTK_DROP/Tutorials/HelloWorld-LogisticRegression"
