@@ -6,7 +6,7 @@ Highlights of this Release:
 * Both Windows and Linux packages are now created using NVIDIA CUDA 8.0 toolkit.
 * Linux version now supports Python 3.5 (Windows support is coming soon).
 * Support for training on one-hot and sparse arrays via NumPy.
-* New Examples and Tutorials.
+* New Examples and Tutorials: [Video action recognition](https://github.com/Microsoft/CNTK/tree/v2.0.beta6.0/Examples/Video/GettingStarted), [Finance Timeseries with Pandas/Numpy](https://github.com/Microsoft/CNTK/blob/v2.0.beta6.0/Tutorials/CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy.ipynb), [Neural Character Language Models](https://github.com/Microsoft/CNTK/tree/v2.0.beta6.0/Examples/Text/CharacterLM/README.md)
 * Stability Improvements and bug fixes.
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_6_Release_Notes)  
