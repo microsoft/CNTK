@@ -275,6 +275,7 @@ protected:
     intargvector m_numGradientBits;
     bool m_bufferedAsyncGradientAggregation;
     bool m_zeroThresholdFor1Bit;
+    float m_minQuantizationCompressionRatio;
 
     // Parallel training related with MA / BM
     size_t m_modelAggregationBlockSize;

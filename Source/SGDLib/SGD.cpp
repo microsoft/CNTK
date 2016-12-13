@@ -2102,7 +2102,8 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
             m_distGradAgg = std::make_shared<V2AllReduceDistGradAggregator<ElemType>>(communicator, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
         }
         else
-            m_distGradAgg = std::make_shared<AllReduceDistGradAggregator<ElemType>>(m_mpi, numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/, m_bufferedAsyncGradientAggregation, traceLevel, m_syncStatsTrace);
+            m_distGradAgg = std::make_shared<AllReduceDistGradAggregator<ElemType>>(m_mpi, numGradientBits, m_zeroThresholdFor1Bit, true /*useQuantizationForSelfStripe*/,
+                                                                                    m_bufferedAsyncGradientAggregation, m_minQuantizationCompressionRatio, traceLevel, m_syncStatsTrace);
 #else
         RuntimeError("Gradient quantization is unsupported in CNTK binaries built without quantized gradient aggregation support!");
 #endif // !CNTK_PARALLEL_TRAINING_SUPPORT
@@ -2935,6 +2936,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             m_numGradientBits = configDataParallelSGD(L"gradientBits", ConfigRecordType::Array(intargvector(vector<int>{defaultGradientBits})));
             m_zeroThresholdFor1Bit = configDataParallelSGD(L"useZeroThresholdFor1BitQuantization", true);
             m_bufferedAsyncGradientAggregation = configDataParallelSGD(L"useBufferedAsyncGradientAggregation", false);
+            m_minQuantizationCompressionRatio = configDataParallelSGD(L"minQuantizationCompressionRatio", 2.0f);
             for (size_t i = 0; i < m_numGradientBits.size(); i++)
             {
                 if (m_numGradientBits[i] < 1 || m_numGradientBits[i] > defaultGradientBits)
