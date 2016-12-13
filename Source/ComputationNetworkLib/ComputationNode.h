@@ -152,7 +152,7 @@ struct ComputationNetworkOwnedNodeState
     friend class ComputationNetwork;
 
     ComputationNetworkOwnedNodeState()
-        : m_needsGradient(false), m_valueSharable(true)
+        : m_needsGradient(false), m_valueSharable(true), m_parentOverwritesGradient(false)
     {
         PurgeStateForFormingRecurrentLoops();
         m_isPartOfLoop = false;
@@ -168,9 +168,13 @@ struct ComputationNetworkOwnedNodeState
         other.m_traceNodeValueSparse          = m_traceNodeValueSparse;
         other.m_traceNodeValueUpToDim         = m_traceNodeValueUpToDim;
         other.m_traceNodeValueUpToT           = m_traceNodeValueUpToT;
+        other.m_parentOverwritesGradient = m_parentOverwritesGradient;
     }
 
     bool IsPartOfLoop() const { return m_isPartOfLoop; }
+
+    void MarkParentOverwritesGradient() { m_parentOverwritesGradient = true; }
+    bool ParentOverwritesGradient() const { return m_parentOverwritesGradient; }
 
     virtual void MarkValueNonSharable() { m_valueSharable = false; }
     virtual void MarkValueSharable() { m_valueSharable = true; }
@@ -186,12 +190,17 @@ struct ComputationNetworkOwnedNodeState
     size_t m_traceNodeValueUpToT = 8;   // 8 time steps fit comfortably into a normal-sized console
     void EnableNodeTracing(bool asReal, bool asCategoryLabel, bool asSparse) { m_traceNodeValueReal = asReal; m_traceNodeValueAsCategoryLabel = asCategoryLabel; m_traceNodeValueSparse = asSparse; }
 
+    virtual bool ImplementsGradientOverwriteOptimization() const { return false; }
+
 protected:                // TODO: should be fully encapsulated here
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     bool m_valueSharable; // a flag is needed for memory share.
                           // If it is false (e.g., LearnableParameters/InputValue and those nodes are solely induced by LearnableParameters),
                           // it will never be released to memory pool
+
+    bool m_parentOverwritesGradient; // flag indicating whether the parent of this node overwrites the gradient of this node instead of accumulating to it
+
 private:
     bool m_isPartOfLoop; // true if this loop is part of a recurrent loop
 
@@ -1717,7 +1726,10 @@ public:
     void ResetGradient(ElemType val)
     {
         UpdateDataSize(Gradient());
-        Gradient().SetValue(val);
+
+        // No need to zero initialize the gradient if the node's parent is going to overwrite it anyways
+        if ((val != 0) || !ParentOverwritesGradient())
+            Gradient().SetValue(val);
 
         m_gradientInitialized = true;
     }

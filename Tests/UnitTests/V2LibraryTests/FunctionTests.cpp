@@ -348,6 +348,110 @@ void TestTranspose(size_t numAxes, int axis1, int axis2, const DeviceDescriptor&
     FloatingPointVectorCompare(outputData, expectedOutputValues, "TestTimesAndPlus: Forward prop results do not match expected results");
 }
 
+// We test splice by comparing against a reference implementation that transposes 
+// the axis to splice with axis 0 for each of the inputs and then splices along axis0
+void TestSplice(size_t numInputs, size_t maxNumInputAxes, size_t spliceAxis, const DeviceDescriptor& device)
+{
+    size_t maxDimSize = 15;
+    size_t minDimSize = 3;
+    NDShape maxRankInputShape(maxNumInputAxes);
+    for (size_t i = 0; i < maxNumInputAxes; ++i)
+        maxRankInputShape[i] = (rand() % maxDimSize) + minDimSize; // We have each axis dimensionality be at least 2
+
+    size_t numSequences = 5;
+    size_t maxAllowedSequenceLength = 9;
+    auto sequenceLengths = GenerateSequenceLengths(numSequences, maxAllowedSequenceLength);
+
+    size_t maxRankInputIndex = rand() % numInputs;
+    std::vector<NDShape> inputShapes(numInputs);
+    std::vector<Variable> inputVars(numInputs);
+    std::vector<std::vector<std::vector<float>>> inputsData(numInputs);
+    std::unordered_map<Variable, ValuePtr> argumentValues;
+    //std::vector<ValuePtr> inputsValue(numInputs);
+    for (size_t i = 0; i < numInputs; ++i)
+    {
+        if (i == maxRankInputIndex)
+            inputShapes[i] = maxRankInputShape;
+        else
+        {
+            size_t rank = (rand() % maxNumInputAxes) + 1;
+            inputShapes[i] = maxRankInputShape.SubShape(0, rank);
+            if (rank > spliceAxis)
+                inputShapes[i][spliceAxis] = (rand() % maxDimSize) + 2;
+        }
+
+        inputVars[i] = InputVariable(inputShapes[i], DataType::Float, true);
+        inputsData[i] = GenerateSequences<float>(sequenceLengths, inputShapes[i]);
+        argumentValues.insert({ inputVars[i], Value::Create(inputShapes[i], inputsData[i], device, true) });
+    }
+
+    auto spliceFunc = Splice(inputVars, Axis((int)spliceAxis), L"splice");
+    std::unordered_map<Variable, ValuePtr> spliceOutputs = { { spliceFunc->Output(), nullptr } };
+    auto spliceFuncBackpropState = spliceFunc->Forward(argumentValues, spliceOutputs, device, { spliceFunc->Output() });
+
+    FunctionPtr spliceUsingTransposeFunc;
+    std::vector<FunctionPtr> transposeInputFuncs(numInputs);
+    std::vector<Variable> transposedInputs(numInputs);
+    for (size_t i = 0; i < numInputs; ++i)
+    {
+        transposeInputFuncs[i] = TransposeAxes(inputVars[i], Axis(0), Axis((int)spliceAxis));
+        transposedInputs[i] = transposeInputFuncs[i];
+    }
+    
+    auto spliceTransposedFunc = Splice(transposedInputs, Axis(0));
+    spliceUsingTransposeFunc = TransposeAxes(spliceTransposedFunc, Axis(0), Axis((int)spliceAxis));
+    std::unordered_map<Variable, ValuePtr> spliceUsingTransposeOutputs = { { spliceUsingTransposeFunc->Output(), nullptr } };
+    auto spliceUsingTransposeFuncBackpropState = spliceUsingTransposeFunc->Forward(argumentValues, spliceUsingTransposeOutputs, device, { spliceUsingTransposeFunc->Output() });
+
+    // Verify the results
+    // Temporarily enable the unpacking of packed value objects for result verification
+    auto automaticUnpackingOfPackedValuesDisabled = Internal::IsAutomaticUnpackingOfPackedValuesDisabled();
+    Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ false);
+
+    if (!CNTK::Internal::AreEqual(*spliceOutputs.begin()->second, *spliceUsingTransposeOutputs.begin()->second, relativeTolerance, absoluteTolerance))
+        ReportFailure("Splice actual output does not match expectation");
+
+    // Test backprop
+    std::unordered_map<Variable, ValuePtr> sliceInputGradients;
+    std::unordered_map<Variable, ValuePtr> sliceUsingTransposeInputGradients;
+    for (size_t i = 0; i < numInputs; ++i)
+    {
+        sliceInputGradients.insert({ inputVars[i], nullptr });
+        sliceUsingTransposeInputGradients.insert({ inputVars[i], nullptr });
+    }
+
+    std::unordered_map<Variable, ValuePtr> sliceRootGradients = { { spliceFunc->Output(), MakeSharedObject<Value>(spliceOutputs.begin()->second->Data(), spliceOutputs.begin()->second->Mask()) } };
+    spliceFunc->Backward(spliceFuncBackpropState, sliceRootGradients, sliceInputGradients);
+
+    std::unordered_map<Variable, ValuePtr> sliceUsingTransposeRootGradients = { { spliceUsingTransposeFunc->Output(), MakeSharedObject<Value>(spliceOutputs.begin()->second->Data(), spliceOutputs.begin()->second->Mask()) } };
+    spliceUsingTransposeFunc->Backward(spliceUsingTransposeFuncBackpropState, sliceUsingTransposeRootGradients, sliceUsingTransposeInputGradients);
+    for (size_t i = 0; i < numInputs; ++i)
+    {
+        auto actualInputGradientValue = sliceInputGradients[inputVars[i]];
+        auto expectedInputGradientValue = sliceUsingTransposeInputGradients[inputVars[i]];
+        if (!CNTK::Internal::AreEqual(*actualInputGradientValue, *expectedInputGradientValue, relativeTolerance, absoluteTolerance))
+            ReportFailure("Splice actual gradient does not match expectation");
+    }
+
+    Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ automaticUnpackingOfPackedValuesDisabled);
+}
+
+void TestSplice()
+{
+    srand(1);
+
+    TestSplice(4, 2, 0, DeviceDescriptor::CPUDevice());
+    TestSplice(3, 3, 2, DeviceDescriptor::CPUDevice());
+    TestSplice(2, 3, 3, DeviceDescriptor::CPUDevice());
+
+    if (IsGPUAvailable())
+    {
+        TestSplice(4, 3, 1, DeviceDescriptor::GPUDevice(0));
+        TestSplice(3, 4, 2, DeviceDescriptor::GPUDevice(0));
+        TestSplice(3, 5, 6, DeviceDescriptor::GPUDevice(0));
+    }
+}
+
 void TestTimesNodeShapeInference()
 {
     auto timesNodeShapeInferenceTest = [](size_t inputRank, size_t outputRank, int inputRankToMap) {
@@ -543,37 +647,29 @@ void FunctionTests()
 {
     fprintf(stderr, "\nFunctionTests..\n");
 
+    TestSplice();
+
     TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())
-    {
         TestChangingParameterValues<double>(3, DeviceDescriptor::GPUDevice(0));
-    } 
     else
-    {
         TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
-    }
 
     TestTimesNodeShapeInference();
     TestRecurrenceShapeInference();
 
     TestSlice(2, DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())
-    {
         TestSlice(1, DeviceDescriptor::GPUDevice(0));
-    }
 
     TestReduceSum(1, DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())
-    {
         TestReduceSum(2, DeviceDescriptor::GPUDevice(0));
-    }
 
     TestRecurrentFunctionCloning();
 
     TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())
-    {
         TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
-    }
 }
 

@@ -565,6 +565,8 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         Globals::EnableShareNodeValueMatrices();
     if (config(L"hyperCompressMemory", false))
         Globals::EnableHyperCompressMemory();
+    if (config(L"optimizeGradientAccumulation", true))
+        Globals::EnableGradientAccumulationOptimization();
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -710,6 +712,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         Globals::EnableShareNodeValueMatrices();
     if (config(L"hyperCompressMemory", false))
         Globals::EnableHyperCompressMemory();
+    if (config(L"optimizeGradientAccumulation", true))
+        Globals::EnableGradientAccumulationOptimization();
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 

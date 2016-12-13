@@ -233,7 +233,7 @@ namespace CNTK
         bool IsSettingDefaultDeviceAlwaysAllowed();
 
         CNTK_API void SetAutomaticUnpackingOfPackedValues(bool disable);
-        bool IsAutomaticUnpackingOfPackedValuesDisabled();
+        CNTK_API bool IsAutomaticUnpackingOfPackedValuesDisabled();
 
         CNTK_API void SetComputationNetworkTraceLevel(int traceLevel);
         int GetComputationNetworkTraceLevel();
@@ -249,10 +249,14 @@ namespace CNTK
         CNTK_API void EnableForwardValuesSharing();
         CNTK_API void EnableHyperMemoryCompress();
 
+        CNTK_API void EnableGradientAccumulationOptimization();
+        CNTK_API void DisableGradientAccumulationOptimization();
+
         CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
+        CNTK_API bool AreEqual(const ::CNTK::Value& value1, const ::CNTK::Value& value2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
 
         class VariableResolver;
     }
