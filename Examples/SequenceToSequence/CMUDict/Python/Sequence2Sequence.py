@@ -6,16 +6,18 @@
 
 import numpy as np
 import os
-from cntk import Trainer, Axis, save_model, load_model
+from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
-                     element_select, alias, hardmax, placeholder_variable, combine
-from cntk.ops.functions import CloneMethod
+                     element_select, alias, hardmax, placeholder_variable, combine, parameter, times
+from cntk.ops.functions import CloneMethod, load_model
 from cntk.ops.sequence import broadcast_as
 from cntk.graph import find_nodes_by_name
-from cntk.blocks import LSTM, Stabilizer
+#from cntk.blocks import LSTM, Stabilizer
+from localblocks import LSTM, Stabilizer
 from cntk.layers import Dense
+from cntk.initializer import glorot_uniform
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 from attention import create_attention_augment_hook
 
@@ -38,6 +40,8 @@ num_layers = 2
 attention_dim = 128
 attention_span = 20
 use_attention = True
+use_embedding = True
+embedding_dim = 200
 
 ########################
 # define the reader    #
@@ -106,19 +110,25 @@ def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word
     # Set up sequences...
     input_sequence = raw_input
 
-    # Drop the sentence start token from the label, for decoder training
+    # Drop the sequence start token from the label, for decoder training
     label_sequence = sequence.slice(raw_labels, 1, 0, 
                                     name='label_sequence') # <s> A B C </s> --> A B C </s>
-    label_sentence_start = sequence.first(raw_labels)      # <s>
+    label_sequence_start = sequence.first(raw_labels)      # <s>
+
+    # Embedding (right now assumes shared embedding and shared vocab size)
+    embedding = parameter(shape=(input_vocab_dim, embedding_dim), init=glorot_uniform(), name='embedding')
+    input_embedded = times(input_sequence, embedding) if use_embedding else input_sequence
+    label_embedded = times(label_sequence, embedding) if use_embedding else label_sequence
 
     # Setup primer for decoder
     is_first_label = sequence.is_first(label_sequence)  # 1 0 0 0 ...
-    label_sentence_start_scattered = sequence.scatter(
-        label_sentence_start, is_first_label)
+    label_sequence_start_embedded = times(label_sequence_start, embedding) if use_embedding else label_sequence_start
+    label_sequence_start_embedded_scattered = sequence.scatter(label_sequence_start_embedded,
+                                                               is_first_label)
 
     # Encoder: create multiple layers of LSTMs by passing the output of the i-th layer
     # to the (i+1)th layer as its input
-    encoder_output_h, encoder_output_c = LSTM_stack(input_sequence, num_layers, hidden_dim, 
+    encoder_output_h, encoder_output_c = LSTM_stack(input_embedded, num_layers, hidden_dim, 
                                                     recurrence_hook_h=future_value, recurrence_hook_c=future_value)
 
     # Prepare encoder output to be used in decoder
@@ -126,24 +136,24 @@ def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word
     thought_vector_c = sequence.first(encoder_output_c)
 
     # Here we broadcast the single-time-step thought vector along the dynamic axis of the decoder
-    thought_vector_broadcast_h = broadcast_as(thought_vector_h, label_sequence)
-    thought_vector_broadcast_c = broadcast_as(thought_vector_c, label_sequence)
+    thought_vector_broadcast_h = broadcast_as(thought_vector_h, label_embedded)
+    thought_vector_broadcast_c = broadcast_as(thought_vector_c, label_embedded)
 
     # Decoder: during training we use the ground truth as input to the decoder. During model execution,
     # we need to redirect the output of the network back in as the input to the decoder. We do this by
     # setting up a 'hook' whose output will be changed during model execution
-    decoder_history_hook = alias(label_sequence, name='decoder_history_hook') # copy label_sequence
+    decoder_history_hook = alias(label_embedded, name='decoder_history_hook') # copy label_embedded
 
-    # The input to the decoder always starts with the special label sentence start token.
+    # The input to the decoder always starts with the special label sequence start token.
     # Then, use the previous value of the label sequence (for training) or the output (for execution)
-    decoder_input = element_select(is_first_label, label_sentence_start_scattered, past_value(
+    decoder_input = element_select(is_first_label, label_sequence_start_embedded_scattered, past_value(
         decoder_history_hook))
 
     # Parameters to the decoder stack depend on the model type (use attention or not)
     augment_input_hook = None
     if use_attention:
         augment_input_hook = create_attention_augment_hook(attention_dim, attention_span, 
-                                                           label_sequence, encoder_output_h)
+                                                           label_embedded, encoder_output_h)
         recurrence_hook_h = past_value
         recurrence_hook_c = past_value
     else:
@@ -170,7 +180,12 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     # do some hooks so that we can direct data to the right place
     label_sequence = find_nodes_by_name(model, 'label_sequence')[0]    
     decoder_history_hook = find_nodes_by_name(model, 'decoder_history_hook')[0]  
-        
+
+    embedding = find_nodes_by_name(model, 'embedding')
+    embed_param = 1
+    if len(embedding) > 0:
+        embed_param = embedding[0]
+
     # Criterion nodes
     ce = cross_entropy_with_softmax(model, label_sequence)
     errs = classification_error(model, label_sequence)
@@ -179,7 +194,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     # This does not need to be done in training generally though
     def clone_and_hook():
         # network output for decoder history
-        net_output = hardmax(model)
+        net_output = times(hardmax(model), embed_param)
 
         # make a clone of the graph where the ground truth is replaced by the network output
         return model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
@@ -245,7 +260,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
         # cases it would be better to save the model without the decoder to make it easier to wire-in a 
         # different decoder such as a beam search decoder. For now we save this one though so it's easy to 
         # load up and start using.
-        save_model(decoder_output_model, model_filename)
+        decoder_output_model.save_model(model_filename)
         print("Saved model to '%s'" % model_filename)
 
 ########################
