@@ -46,7 +46,7 @@ CNTK_EXAMPLES_PATH="$PWD/Examples"
 CNTK_TUTORIALS_PATH="$PWD/Tutorials"
 CNTK_BINARY="$CNTK_BIN_PATH/cntk"
 CNTK_PY_ENV_FILE="$SCRIPT_DIR/conda-linux-cntk-py$PY_VERSION-environment.yml"
-CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta5.0-cp$PY_VERSION-cp${PY_VERSION}m-linux_x86_64.whl"
+CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta6.0-cp$PY_VERSION-cp${PY_VERSION}m-linux_x86_64.whl"
 test -d "$CNTK_BIN_PATH" && test -d "$CNTK_LIB_PATH" && test -d "$CNTK_DEP_LIB_PATH" && 
 test -d "$CNTK_TUTORIALS_PATH" &&
 test -d "$CNTK_EXAMPLES_PATH" && test -x "$CNTK_BINARY" &&
