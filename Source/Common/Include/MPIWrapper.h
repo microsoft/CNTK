@@ -515,6 +515,15 @@ public:
     {
         MPI_Waitall((int)requests.size(), &requests[0], MPI_STATUSES_IGNORE) || MpiFail("waitall: MPI_Waitall");
     }
+
+    bool IsCudaAware() const
+    {
+#ifdef __unix__
+        return true;
+#else
+        return false;
+#endif
+    }
 };
 
 }}}

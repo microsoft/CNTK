@@ -141,19 +141,23 @@ private:
         // When called the first time let's setup the intermediateCPU buffers for gradient aggregation if needed
         if (!m_initialized)
         {
-            m_initialized = true;
             int deviceId = gradients[0]->GetDeviceId();
+            bool useCudaAwareAggregation = m_mpi->IsCudaAware() && (deviceId != CPUDEVICE) && !m_nccl.IsSupported();
+            m_initialized = true;
 
-            if (!m_nccl.IsSupported() && deviceId != CPUDEVICE)
+            if (!useCudaAwareAggregation && !m_nccl.IsSupported() && (deviceId != CPUDEVICE))
                 m_allocator.reset(new CUDAPageLockedMemAllocator(deviceId));
 
+            size_t totalGradientsSizeInElements = 0;
             for (size_t i = 0; i < gradients.size(); i++)
             {
+                totalGradientsSizeInElements += gradients[i]->GetNumElements();
+
                 // Make sure none of the gradient matrixes are sparse - we currently do not support aggregation of sparse gradient matrices
                 if (gradients[i]->GetMatrixType() != DENSE)
                     RuntimeError("Gradient aggregation for sparse gradient matrices is currently unsupported!");
 
-                if (!m_nccl.IsSupported() && deviceId != CPUDEVICE)
+                if (!useCudaAwareAggregation && !m_nccl.IsSupported() && deviceId != CPUDEVICE)
                 {
                     m_gpuDataTransferers.push_back(std::make_unique<GPUDataTransferer>(deviceId, m_useAsyncAggregation));
                     m_intermediateCPUBuffers.push_back(AllocateIntermediateBuffer(deviceId, gradients[i]->GetNumElements()));
@@ -174,6 +178,9 @@ private:
                 for (size_t i = 0; i < NumProc() - 1; ++i)
                     m_recvHeaders.push_back(DistGradHeader::Create(numEvalNodes));
             }
+
+            if (useCudaAwareAggregation)
+                m_cudaAwareAggregationBuffer.reset(new Matrix<ElemType>(1, totalGradientsSizeInElements, deviceId));
         }
         else if (resetState)
         {
@@ -196,6 +203,7 @@ private:
     {
         Timer aggregationTimer;
         int deviceId = gradients[0]->GetDeviceId();
+        bool useCudaAwareAggregation = m_mpi->IsCudaAware() && (deviceId != CPUDEVICE) && !m_nccl.IsSupported();
         if (showSyncPerfStats)
         {
             std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(deviceId));
@@ -224,10 +232,20 @@ private:
         }
 
         // Initiate transfer of the gradient matrices to the CPU if needed
-        if (!m_nccl.IsSupported() && deviceId >= 0)
+        if (!useCudaAwareAggregation && !m_nccl.IsSupported() && deviceId >= 0)
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
                 m_gpuDataTransferers[i]->CopyGPUToCPUAsync(gradients[i]->Data(), gradients[i]->GetNumElements(), m_intermediateCPUBuffers[i].get());
+        }
+        else if (useCudaAwareAggregation)
+        {
+            // Copy all gradient data into a single contiguous buffer
+            size_t offset = 0;
+            for (size_t i = 0; i < numGradMatrices; ++i)
+            {
+                m_cudaAwareAggregationBuffer->ColumnSlice(offset, gradients[i]->GetNumElements()).AssignValuesOf(gradients[i]->Reshaped(1, gradients[i]->GetNumElements()));
+                offset += gradients[i]->GetNumElements();
+            }
         }
 
         // Initiate receive of the header on the main node
@@ -249,7 +267,7 @@ private:
 
         // Perform async allreduce on the gradient data
         std::vector<MPI_Request> allReduceRequests(numGradMatrices);
-        if (!m_nccl.IsSupported())
+        if (!useCudaAwareAggregation && !m_nccl.IsSupported())
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
             {
@@ -262,12 +280,18 @@ private:
 
                 // On Windows this async MPI_Iallreduce call requires MS MPI v7 or higher to be installed
                 MPI_Iallreduce(MPI_IN_PLACE, reductionBuffer, gradients[i]->GetNumElements(),
-                               MPIWrapper::GetDataType(reductionBuffer), MPI_SUM,
-                               m_mpi->Communicator(), &allReduceRequests[i]) || MpiFail("MPI_Iallreduce");
+                    MPIWrapper::GetDataType(reductionBuffer), MPI_SUM,
+                    m_mpi->Communicator(), &allReduceRequests[i]) || MpiFail("MPI_Iallreduce");
             }
-        }
-        else
+        } 
+        else if (m_nccl.IsSupported())
             m_nccl.AllReduce(gradients);
+        else
+        {
+            // Currently OpenMPI does not have CUDA aware async MPI collective primitives implemented
+            MPI_Allreduce(MPI_IN_PLACE, m_cudaAwareAggregationBuffer->Data(), m_cudaAwareAggregationBuffer->GetNumElements(),
+                          MPIWrapper::GetDataType(m_cudaAwareAggregationBuffer->Data()), MPI_SUM, m_mpi->Communicator()) || MpiFail("MPI_Allreduce");
+        }
 
         // On the main node wait for the headers to arrive and aggregate
         if (m_mpi->IsMainNode())
@@ -308,13 +332,23 @@ private:
         }
 
         // Wait for the allreduce operations to finish and initiate transfer back to the GPU if needed
-        if (!m_nccl.IsSupported())
+        if (!useCudaAwareAggregation && !m_nccl.IsSupported())
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
             {
                 MPI_Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
                 if (deviceId >= 0)
                     m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
+            }
+        }
+        else if (useCudaAwareAggregation)
+        {
+            // Copy all gradient data back from the single contiguous buffer used for aggregation
+            size_t offset = 0;
+            for (size_t i = 0; i < numGradMatrices; ++i)
+            {
+                gradients[i]->AssignValuesOf(m_cudaAwareAggregationBuffer->ColumnSlice(offset, gradients[i]->GetNumElements()).Reshaped(gradients[i]->GetNumRows(), gradients[i]->GetNumCols()));
+                offset += gradients[i]->GetNumElements();
             }
         }
 
@@ -325,7 +359,7 @@ private:
         // Wait for all the transfers to finish
         if (m_nccl.IsSupported())
             m_nccl.Sync();
-        else if (deviceId >= 0)
+        else if (!useCudaAwareAggregation && (deviceId >= 0))
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
                 m_gpuDataTransferers[i]->WaitForCopyCPUToGPUAsync();
@@ -362,6 +396,8 @@ private:
     // Buffered gradients that we asynchronously aggregate
     std::unordered_map<Matrix<ElemType>*, std::unique_ptr<Matrix<ElemType>>> m_bufferedGradients;
     DistGradHeader* m_bufferedGradHeader;
+
+    std::unique_ptr<Matrix<ElemType>> m_cudaAwareAggregationBuffer;
 
     int m_syncStatsTrace;
 
