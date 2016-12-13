@@ -211,7 +211,7 @@ class Function(cntk_py.Function):
 
         # determine whether this is eval() or clone()
         from .variables import Variable
-        is_symbolic = any([isinstance(arg, (Function, Variable)) for arg in arg_map.values()])
+        is_symbolic = any(isinstance(arg, (cntk_py.Function, cntk_py.Variable)) for arg in arg_map.values())
 
         # symbolic: return a cloned Function
         if is_symbolic:
