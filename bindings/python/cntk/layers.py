@@ -175,25 +175,28 @@ def Convolution(rf_shape,        # e.g. (3,3)
     # parameters bound to this Function
     #init_kernel = glorot_uniform(filter_rank=-filter_rank, output_rank=1)
     init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
-    # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag
+    # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag?
     W = Parameter(output_channels_shape + kernel_shape,         init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
     b = Parameter(output_channels_shape + (1,) * len(rf_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
     # expression
-    x = Placeholder(name='convolution_arg')
-    # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
-    apply_x = convolution (W, x,
-                           strides=_as_tuple(strides),
-                           sharing=_as_tuple(sharing),
-                           auto_padding=_as_tuple(pad),
-                           # TODO: can we rename auto_padding to pad?
-                           transpose=transpose,
-                           max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
-    if bias:
-        apply_x = apply_x + b
-    if activation is not None:
-        apply_x = apply_x >> activation
-    return Block(apply_x, 'Convolution', Record(W=W, b=b))
+    @Function
+    def convolve(x):
+        # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
+        r = convolution (W, x,
+                         strides=_as_tuple(strides),
+                         sharing=_as_tuple(sharing),
+                         auto_padding=_as_tuple(pad),
+                         # TODO: can we rename auto_padding to pad?
+                         transpose=transpose,
+                         max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+        if bias:
+            r = r + b
+        if activation is not None:
+            r = activation(r)
+        return r
+
+    return Block(convolve, 'Convolution', Record(W=W, b=b))
 
 # Create a Pooling layer with one of following types:
 #
@@ -207,8 +210,11 @@ def _Pooling(op,      # PoolingType_Max or _Average
             strides=1,
             pad=False):
 
-    x = Placeholder(name='pooling_arg')
-    apply_x = pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
+    @Function
+    def pool(x):
+        return pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
+    #x = Placeholder(name='pooling_arg')
+    #pool = pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
 
     if op == PoolingType_Average:
         op_name = 'AveragePooling'
@@ -216,7 +222,7 @@ def _Pooling(op,      # PoolingType_Max or _Average
         op_name = 'MaxPooling'
     else:
         raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
-    return Block(apply_x, op_name)
+    return Block(pool, op_name)
 
 # MaxPooling
 def MaxPooling(rf_shape,  # e.g. (3,3)
@@ -304,21 +310,23 @@ def Delay(T=1, initial_state=default_override_or(0)):
     UntestedBranchError("Delay")
 
     # expression
-    x = Placeholder(name='delay_arg')
-    if T > 0:
-        apply_x = past_value  (x, time_step=T, initial_state=initial_state)
-    elif T < 0:
-        apply_x = future_value(x, time_step=T, initial_state=initial_state)
-    else:
-        apply_x = x
-    return Block(apply_x, 'Delay')
+    @Function
+    def delay(x):
+        if T > 0:
+            return past_value  (x, time_step=T, initial_state=initial_state)
+        elif T < 0:
+            return future_value(x, time_step=T, initial_state=initial_state)
+        else:
+            return x
+    return Block(delay, 'Delay')
 
 # Dropout -- create a drop-out layer
 def Dropout(prob):
-    # expression
-    x = Placeholder(name='dropout_arg')
-    apply_x = dropout(x, dropout_rate=prob)
-    return Block(apply_x, 'Dropout')
+    @Function
+    def dropout(x):
+        from cntk.ops import dropout # avoid scope mixup
+        return dropout(x, dropout_rate=prob)
+    return Block(dropout, 'Dropout')
 
 # BatchNormalization -- create a batch-normalization layer
 # TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
@@ -343,10 +351,12 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     run_count    = Constant(0, shape=(1,))
 
     # expression
-    x = Placeholder(name='batch_normalization_arg')
-    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, run_count, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
-                                  use_cudnn_engine=not use_cntk_engine)
-    return Block(apply_x, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
+    @Function
+    def batch_normalize(x):
+        #x = Placeholder(name='batch_normalization_arg')
+        return batch_normalization(x, scale, bias, run_mean, run_variance, run_count, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
+                                   use_cudnn_engine=not use_cntk_engine)
+    return Block(batch_normalize, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
 # LayerNormalization -- create a layer-normalization layer
 # TODO: add an epsilon [CR comment by Nikos]
