@@ -16,17 +16,17 @@ namespace CNTK
     class CNTKBackPropState final : public BackPropState
     {
     public:
-        CNTKBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, const std::unordered_map<Variable, int64_t>& backpropRootsForwardTimeStamps)
+        CNTKBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, const std::unordered_map<Variable, uint64_t>& backpropRootsForwardTimeStamps)
             : BackPropState(function, computeDevice), m_backpropRootsForwardTimeStamps(backpropRootsForwardTimeStamps)
         {}
 
-        const std::unordered_map<Variable, int64_t>& BackpropRootsForwardTimeStamps() const
+        const std::unordered_map<Variable, uint64_t>& BackpropRootsForwardTimeStamps() const
         {
             return m_backpropRootsForwardTimeStamps; 
         }
 
     private:
-        std::unordered_map<Variable, int64_t> m_backpropRootsForwardTimeStamps;
+        std::unordered_map<Variable, uint64_t> m_backpropRootsForwardTimeStamps;
     };
     typedef std::shared_ptr<CNTKBackPropState> CNTKBackPropStatePtr;
 
@@ -210,7 +210,7 @@ namespace CNTK
 
         const std::vector<Variable>& GetArgumentDependencies(const Variable& output);
 
-        std::unordered_map<Variable, int64_t> GetCurrentBackpropRootsTimeStamps() const;
+        std::unordered_map<Variable, uint64_t> GetCurrentBackpropRootsTimeStamps() const;
 
     private:
 
