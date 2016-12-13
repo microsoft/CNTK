@@ -14,7 +14,6 @@ from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INF
 from cntk import Trainer, Evaluator
 from cntk.learner import adam_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.ops import cross_entropy_with_softmax, classification_error, splice, relu
-from cntk.trainer import create_trainer
 
 ########################
 # variables and stuff  #
@@ -76,9 +75,10 @@ def create_model_function():
   pr_rnn = Function(pr_rnn_f)
 
   from cntk.ops.sequence import last
-  with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
+  with default_options(initial_state=0.1, enable_self_stabilization=False):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
         Embedding(emb_dim),
+        #Stabilizer(),
         Recurrence(LSTM(hidden_dim), go_backwards=False),
         #Recurrence(GRU(hidden_dim), go_backwards=False),
         #Recurrence(GRU(hidden_dim, activation=relu), go_backwards=False),
@@ -87,9 +87,10 @@ def create_model_function():
         #Recurrence(RNNUnit(hidden_dim, activation=softplus4), go_backwards=False),
         #Recurrence(pr_rnn, go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=relu) >> Dense(hidden_dim, activation=relu), go_backwards=False),
-        Dense(num_labels)
-        #last,
-        #Dense(num_intents)
+        #Stabilizer(),
+        #Dense(num_labels)
+        last,
+        Dense(num_intents)
     ])
 
 ########################
@@ -103,7 +104,6 @@ def create_model_function():
 def create_criterion_function(model):
     @Function
     def criterion(x, y):
-        #print(x.name, x.uid, y.name, y.uid)
         z = model(x=x)
         ce   = cross_entropy_with_softmax(z, y)
         errs = classification_error      (z, y)
@@ -161,18 +161,17 @@ def train(reader, model, max_epochs):
     #   here  (query, slot_labels) -> (ce, errs)
     criterion = create_criterion_function(model)
 
-    labels = reader.streams.slot_labels
-    #labels = reader.streams.intent_labels
+    #labels = reader.streams.slot_labels
+    labels = reader.streams.intent_labels  # needs 3 changes to switch to this
 
     # declare argument types
-    #print("###################", [arg.name for arg in criterion.placeholders])
-    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
-    #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
+    #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
+    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
     minibatch_size = 70
-    #epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
+    epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
 
     # SGD parameters
     learner = adam_sgd(criterion.parameters,
@@ -184,7 +183,7 @@ def train(reader, model, max_epochs):
                        gradient_clipping_with_truncation = True)
 
     # trainer
-    trainer = create_trainer(model, criterion, learner)
+    trainer = Trainer(model, criterion, learner)
 
     # process minibatches and perform model training
     log_number_of_parameters(model) ; print()
@@ -193,7 +192,7 @@ def train(reader, model, max_epochs):
 
     t = 0
     for epoch in range(max_epochs):         # loop over epochs
-        peek(model, epoch)                  # log some interesting info
+        #peek(model, epoch)                  # log some interesting info
         epoch_end = (epoch+1) * epoch_size
         while t < epoch_end:                # loop over minibatches on the epoch
             # BUGBUG? The change of minibatch_size parameter vv has no effect.
@@ -216,7 +215,7 @@ def evaluate(reader, model):
     criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
 
     # process minibatches and perform evaluation
-    evaluator = Evaluator(model, criterion.outputs[1], criterion.outputs[1])
+    evaluator = Evaluator(model, criterion)
 
     #x = Placeholder(name='x')
     #y = Placeholder(name='y')
