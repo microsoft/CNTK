@@ -24,12 +24,27 @@ class Trainer(cntk_py.Trainer):
 
     Args:
        model (:class:`~cntk.ops.functions.Function`): root node of the function to train
-       loss_function (:class:`~cntk.ops.functions.Function`): loss function 
-       eval_function (:class:`~cntk.ops.functions.Function`): evaluation function
+       criterion (:class:`~cntk.ops.functions.Function`): Function with one or two outputs,
+        representing loss and evaluation metric (in this order).
+        Alternatively, a tuple(loss Function, evaluation Function) is also accepted.
        parameter_learners (list): list of learners from :mod:`cntk.learner`
        distributed_trainer (:class:`~cntk.distributed.distributed_trainer`): distributed trainer
     '''
-    def __init__(self, model, loss_function, eval_function, parameter_learners, distributed_trainer=None):
+
+    @staticmethod
+    def _get_loss_metric(criterion): # helper to interpret criterion parameter
+        if isinstance(criterion, cntk_py.Function): # input can be a tuple of Functions of a tuple Function
+            criterion = criterion.outputs
+        if not isinstance(criterion, tuple): # input can be a single value or a tuple (loss, metric)
+            criterion = (criterion, None)    # if single then pad with None for the metric
+        if len(criterion) == 1:
+            criterion = criterion + (None,) # tuple of 1 value: pad with None
+        if len(criterion) != 2:
+            raise ValueError("criterion parameter must be a singleton or a tuple of 2 elements")
+        return criterion
+
+    def __init__(self, model, criterion, parameter_learners, distributed_trainer=None):
+        loss_function, eval_function = Trainer._get_loss_metric(criterion)
         # TODO sanitizing should be removed once Swig's typemaps are in place
         model = sanitize_function(model)
         loss_function = sanitize_function(loss_function)
@@ -223,31 +238,13 @@ class Trainer(cntk_py.Trainer):
         args = get_args(self.loss_function, stream_values)
         return self.test_minibatch(args)
 
-
-# criterion_function = Function: (model args, labels) --> (loss, metric)
-def create_trainer(model_function, criterion_function, parameter_learners, distributed_trainer=None):
+def Evaluator(model, criterion):
     '''
-    Create a trainer to train the specified ``criterion_function`` for ``model``, using the
-    specified set of ``parameter_learners`` for updating the model's parameters
-    using computed gradients.
-
-    Args:
-       model (:class:`cntk.ops.functions.Function`): root node of the function to train
-       criterion (:class:`cntk.ops.functions.Function`): root node of the criterion function to train
-       parameter_learners (`list`): list of learners from :mod:`cntk.learner`
-       distributed_trainer (:class:`cntk.distributed.distributed_trainer`): distributed trainer
+    Create an evaluator. This is really a Trainer object with dummy SGD parameters that we can call test_minibatch() on.
     '''
-    outputs = criterion_function.outputs
-    if len(outputs) != 1 and len(outputs) != 2:
-        raise ValueError('criterion_function must have one (loss) or two (loss, metric) outputs')
-    loss_function   = outputs[0]
-    metric_function = outputs[1] if len(outputs) == 2 else None
-    return Trainer(model_function, loss_function, metric_function, parameter_learners, distributed_trainer)
-
-# create an evaluator; that is really a Trainer object with dummy SGD parameters that we can call test_minibatch() on
-def Evaluator(model, loss, metric):
+    loss, metric = Trainer._get_loss_metric(criterion)
     from .learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
     dummy_learner = momentum_sgd(model.parameters, 
                                  lr = learning_rate_schedule(1, UnitType.minibatch),
                                  momentum = momentum_as_time_constant_schedule(0))
-    return Trainer(model, loss, metric, dummy_learner)
+    return Trainer(model, (loss, metric), dummy_learner)

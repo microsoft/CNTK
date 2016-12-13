@@ -8,22 +8,15 @@ import os
 import math
 import numpy as np
 
-from cntk.blocks import default_options, Placeholder, Placeholders, identity
+from cntk.blocks import default_options, Placeholder, identity
 from cntk.layers import Convolution, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense
 from cntk.models import Sequential, For
 from cntk.utils import *
-#from cntk.layers import *
-#from cntk.models import Sequential, LayerStack
-#from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
-#from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-#from cntk import Trainer, cntk_py
-#from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
-#from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer, Evaluator
 from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu
-from cntk.ops import Function, input_variable, constant, parameter, element_times, combine
+from cntk.ops import Function
 from _cntk_py import set_computation_network_trace_level
 
 ########################
@@ -32,8 +25,6 @@ from _cntk_py import set_computation_network_trace_level
 
 # paths (are relative to current python file)
 abs_path   = os.path.dirname(os.path.abspath(__file__))
-#cntk_path  = os.path.normpath(os.path.join(abs_path, "..", "..", "..", "..", ".."))
-#data_path  = os.path.join(cntk_path, "Examples", "Image", "DataSets", "CIFAR-10")
 data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
 
@@ -73,14 +64,12 @@ def create_reader(map_file, mean_file, is_training):
 ########################
 
 def create_convnet_cifar10_model(num_classes):
-    set_computation_network_trace_level(1)  # TODO: Does not seem to do anything.
-
     with default_options(activation=relu, pad=True):
         return Sequential([
             For(range(2), lambda : [
                 Convolution((3,3), 64), 
                 Convolution((3,3), 64), 
-                MaxPooling((3,3), (2,2))
+                MaxPooling((3,3), strides=(2,2))
             ]), 
             For(range(2), lambda i: [
                 Dense([256,128][i]), 
@@ -103,17 +92,16 @@ def create_criterion_function(model, normalize=identity):
         z = model(normalize(x))
         ce   = cross_entropy_with_softmax(z, y)
         errs = classification_error      (z, y)
-        #return Record(loss=ce, metric=errs)
-        # BUGBUG: parameters passed to Record are not ordered. This pattern is not correct.
-        return Record(ce=ce, errs=errs)
+        return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
     return criterion
 
 # alternative way of doing it, e.g. for use with Beta2
 def create_criterion_function1(model, normalize=identity):
-    x, y = Placeholders(2)
+    x, y = (Placeholder(), Placeholder())
     z = model(normalize(x))
     ce   = cross_entropy_with_softmax(z, y)
     errs = classification_error      (z, y)
+    from cntk.ops import combine
     return combine ([ce, errs]) # (features, labels) -> (loss, metric)
 
 ########################
@@ -129,8 +117,7 @@ def train_and_evaluate(reader, reader_test, model, max_epochs):
 
     # criterion function. This is what is being trained trained.
     # Model gets "sandwiched" between normalization (not part of model proper) and criterion.
-    criterion = create_criterion_function(model, normalize=element_times(1.0 / 256.0, Placeholder()))
-    #criterion.replace_placeholders({criterion.placeholders[0]: input_variable((num_channels, image_height, image_width)), criterion.placeholders[1]: input_variable((num_classes))})
+    criterion = create_criterion_function(model, normalize=Placeholder() / 256)
     criterion.update_signature((num_channels, image_height, image_width), num_classes)
 
     # iteration parameters
@@ -145,7 +132,7 @@ def train_and_evaluate(reader, reader_test, model, max_epochs):
                            l2_regularization_weight = 0.002)
     
     # trainer object
-    trainer = Trainer(model, criterion.outputs[0], criterion.outputs[1], learner)
+    trainer = Trainer(model, criterion, learner)
 
     # perform model training
     log_number_of_parameters(model) ; print()
@@ -162,7 +149,7 @@ def train_and_evaluate(reader, reader_test, model, max_epochs):
             sample_count += mb[reader.streams.labels].num_samples                     # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
-        z.save_model(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
+        model.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
 
     #return metric_numer/metric_denom
 
@@ -197,12 +184,11 @@ def train_and_evaluate(reader, reader_test, model, max_epochs):
 def evaluate(reader, model):
 
     # criterion function. This is what is being evaluated
-    criterion = create_criterion_function(model, normalize=element_times(1.0 / 256.0, Placeholder()))
-    #criterion.replace_placeholders({criterion.placeholders[0]: input_variable(), criterion.placeholders[1]: input_variable((num_classes))})
+    criterion = create_criterion_function(model, normalize=Placeholder() / 256)
     criterion.update_signature((num_channels, image_height, image_width), num_classes)
 
     # process minibatches and perform evaluation
-    evaluator = Evaluator(model, criterion.outputs[0], criterion.outputs[1])
+    evaluator = Evaluator(model, criterion)
 
     progress_printer = ProgressPrinter(tag='Evaluation')
 

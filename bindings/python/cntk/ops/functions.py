@@ -251,6 +251,8 @@ class Function(cntk_py.Function):
         raise AttributeError("'%s' object has no attribute '%s'" %
                              (type(self), name))
 
+    _ = "(argument placeholder)" # pass Function._ to any expression to create a Scala-like lambda
+
     @property
     @typemap
     def arguments(self):
@@ -590,9 +592,8 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).replace_placeholder(substitution)
 
-    # TODO: why not just call it save()? Now we get things like model.save_model(). Also, Functions are not always models.
     @typemap
-    def save_model(self, filename):
+    def save(self, filename):
         '''
         Save this function graph into a model file using protobuf-based serialization.
 
@@ -600,6 +601,9 @@ class Function(cntk_py.Function):
             filename (str): model path
         '''
         return super(Function, self).save_model(filename)
+
+    def save_model(self, filename): # legacy name
+        return self.save(filename)
 
     @typemap
     def restore_model(self, filename):
