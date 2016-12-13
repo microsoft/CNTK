@@ -46,6 +46,9 @@
     <HasMultiverso>false</HasMultiverso>
     <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
 
+    <HasSwig>false</HasSwig>
+    <HasSwig Condition="Exists('$(SWIG_PATH)\swig.exe')">true</HasSwig>
+
   </PropertyGroup>
 
   <PropertyGroup>
