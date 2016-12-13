@@ -383,7 +383,7 @@ public:
     // --- access functions
 
     template <class C>
-    bool Is() const
+    bool Is() const // note: also works with null pointers (will return false)
     {
         EnsureIsResolved();
         const auto p = dynamic_cast<C *>(get());
@@ -713,14 +713,9 @@ public:
         : paramNames(move(paramNames)), namedParams(move(namedParams)), f(f)
     {
     }
-    size_t GetNumParams() const
-    {
-        return paramNames.size();
-    }
-    const std::vector<std::wstring> &GetParamNames() const
-    {
-        return paramNames;
-    } // used for expression naming
+    size_t GetNumParams() const { return paramNames.size(); }
+    const std::vector<std::wstring>& GetParamNames() const { return paramNames; } // used for expression naming and function composition
+    const NamedParams& GetNamedParams() const { return namedParams; } // used for function composition
     // what this function does is call f() held in this object with the given arguments except optional arguments are verified and fall back to their defaults if not given
     // The arguments are rvalue references, which allows us to pass Thunks, which is important to allow stuff with circular references like CNTK's DelayedNode.
     ConfigValuePtr Apply(std::vector<ConfigValuePtr> &&args, NamedParams &&namedArgs, const std::wstring &exprName) const

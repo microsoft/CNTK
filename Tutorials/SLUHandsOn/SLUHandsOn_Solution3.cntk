@@ -20,17 +20,17 @@ TrainTagger = {
         hiddenDim = 150
 
         BiRecurrentLSTMLayer {outDim} = {
-            F = RecurrentLSTMLayer {outDim, goBackwards=false, init='uniform'}
-            G = RecurrentLSTMLayer {outDim, goBackwards=true, init='uniform'}
+            F = RecurrentLSTMLayer {outDim, goBackwards=false}
+            G = RecurrentLSTMLayer {outDim, goBackwards=true}
             apply (x) = Splice (F(x):G(x))
         }.apply
 
         model = Sequential (
-            EmbeddingLayer {embDim, init='uniform'} :
-            BatchNormalizationLayer {normalizationTimeConstant=2048} :
+            EmbeddingLayer {embDim} :
+            BatchNormalizationLayer {} :
             BiRecurrentLSTMLayer {hiddenDim} :
-            BatchNormalizationLayer {normalizationTimeConstant=2048} :
-            DenseLayer {labelDim, init='uniform', initValueScale=7}
+            BatchNormalizationLayer {} :
+            DenseLayer {labelDim}
         )
 
         # features
@@ -56,8 +56,8 @@ TrainTagger = {
 
         minibatchSize = 70
 
-        learningRatesPerSample = 0.01*2:0.005*12:0.001
-        gradUpdateType = "FSAdaGrad"
+        learningRatesPerSample = 0.003*2:0.0015*12:0.0003
+        gradUpdateType = "fsAdaGrad"
         gradientClippingWithTruncation = true ; clippingThresholdPerSample = 15.0
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 100

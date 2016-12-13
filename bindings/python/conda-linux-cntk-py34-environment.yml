@@ -1,0 +1,38 @@
+name: cntk-py34
+dependencies:
+- libgfortran=3.0.0=1
+- mkl=11.3.3=0
+- numpy=1.11.1=py34_0
+- openssl=1.0.2j=0
+- pip=8.1.2=py34_0
+- python=3.4.4=5
+- readline=6.2=2
+- scipy=0.18.1=np111py34_0
+- setuptools=27.2.0=py34_0
+- sqlite=3.13.0=0
+- tk=8.5.18=0
+- wheel=0.29.0=py34_0
+- xz=5.2.2=0
+- zlib=1.2.8=3
+- pip:
+  - alabaster==0.7.9
+  - args==0.1.0
+  - babel==2.3.4
+  - clint==0.5.1
+  - docutils==0.12
+  - imagesize==0.7.1
+  - jinja2==2.8
+  - markupsafe==0.23
+  - pkginfo==1.3.2
+  - py==1.4.31
+  - pygments==2.1.3
+  - pytest==3.0.2
+  - pytz==2016.6.1
+  - requests==2.11.1
+  - requests-toolbelt==0.7.0
+  - six==1.10.0
+  - snowballstemmer==1.2.1
+  - sphinx==1.4.6
+  - sphinx-rtd-theme==0.1.9
+  - twine==1.8.1
+

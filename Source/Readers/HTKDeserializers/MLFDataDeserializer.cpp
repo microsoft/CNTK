@@ -9,9 +9,11 @@
 #include <limits>
 #include "MLFDataDeserializer.h"
 #include "ConfigHelper.h"
+#include "SequenceData.h"
 #include "../HTKMLFReader/htkfeatio.h"
 #include "../HTKMLFReader/msra_mgram.h"
 #include "latticearchive.h"
+
 
 #undef max // max is defined in minwindef.h
 
@@ -201,7 +203,7 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
     m_categoryIndices.reserve(dimension);
     for (size_t i = 0; i < dimension; ++i)
     {
-        SparseSequenceDataPtr category = make_shared<SparseSequenceData>();
+        auto category = make_shared<CategorySequenceData>();
         m_categoryIndices.push_back(static_cast<IndexType>(i));
         category->m_indices = &(m_categoryIndices[i]);
         category->m_nnzCounts.resize(1);
@@ -283,7 +285,11 @@ struct MLFSequenceData : SparseSequenceData
         m_numberOfSamples = (uint32_t) numberOfSamples;
         m_totalNnzCount = static_cast<IndexType>(numberOfSamples);
         m_indices = m_indicesPtr.get();
-        m_data = m_values.data();
+    }
+
+    const void* GetDataBuffer() override
+    {
+        return m_values.data();
     }
 };
 

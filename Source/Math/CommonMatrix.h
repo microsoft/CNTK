@@ -40,6 +40,9 @@ typedef unsigned char byte;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+MATH_API void SetMathLibTraceLevel(int traceLevel);
+int GetMathLibTraceLevel();
+
 class MATH_API TracingGPUMemoryAllocator
 {
 private:
@@ -405,17 +408,19 @@ protected:
 template <class ElemType>
 class MATH_API BaseMatrix
 {
-public:
-    
-    BaseMatrix()
+protected:    
+    // Default constructor. Copy/Move constructors might set doNotInitialize to true to avoid double initialization.
+    BaseMatrix(bool doNotInitializeFields = false)
     {
-        ZeroInit();
+        if (!doNotInitializeFields)
+            ZeroInit();
     }
+
     virtual ~BaseMatrix()
     {
         ZeroValues();
     }
-
+public:
     void VerifyResizable(const char* function) const 
     { 
         if (!m_sob.unique())

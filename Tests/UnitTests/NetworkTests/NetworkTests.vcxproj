@@ -43,7 +43,6 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(OutDir)\UnitTests\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -61,7 +60,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>math.lib;common.lib;actionslib.lib;computationnetworklib.lib;sequencetraininglib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir)..;$(BOOST_LIB_PATH);$(NvmlLibPath)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir);$(BOOST_LIB_PATH);$(NvmlLibPath)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>math.dll;msmpi.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -92,17 +91,11 @@
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(CudaLibPath)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>%(DelayLoadDLLs);nvml.dll;$(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
-    <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)\..\CNTKTextFormatReader.dll" "$(TargetDir)"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
     <ClCompile>
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <PostBuildEvent>
-      <Command>copy /Y "$(TargetDir)\..\CNTKTextFormatReader.dll" "$(TargetDir)"</Command>
-    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Common\NetworkTestHelper.h" />
@@ -127,16 +120,5 @@
   <ImportGroup Label="ExtensionTargets" />
   <Target Name="CheckDependencies">
     <Warning Condition="!$(HasBoost)" Text="NetworkTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
-  </Target>
-  <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
-    <PropertyGroup>
-      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
-    </PropertyGroup>
-    <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(UnitTestDlls);$(CuDnnDll)" />
-    </ItemGroup>
-    <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
-      <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
-    </Copy>
   </Target>
 </Project>

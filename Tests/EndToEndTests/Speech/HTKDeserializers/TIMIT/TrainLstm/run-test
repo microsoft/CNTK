@@ -15,4 +15,4 @@ if [ $? != 0 ]; then
 fi
 
 # Running only 3 epochs (~1000s gpu release), because full run takes a lot of time.
-cntkrun TIMIT_TrainLSTM.cntk "$CntkArguments TIMIT_TrainLSTM=[cvReader=[readerType=HTKDeserializers]] TIMIT_TrainLSTM=[reader=[readerType=HTKDeserializers]] TIMIT_TrainLSTM=[SGD=[maxEpochs=3]]" || exit $?
+cntkrun TIMIT_TrainLSTM_ndl_deprecated.cntk "$CntkArguments TIMIT_TrainLSTM=[cvReader=[readerType=HTKDeserializers]] TIMIT_TrainLSTM=[reader=[readerType=HTKDeserializers]] TIMIT_TrainLSTM=[SGD=[maxEpochs=3]]" || exit $?

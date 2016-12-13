@@ -35,6 +35,6 @@ testCases:
       - ^MPI Rank {{integer}}
       - Starting minibatch loop
       - DataParallelSGD training
-      - MyRank = {{integer}}
-      - NumNodes = 4
-      - NumGradientBits = 32
+      - myRank = {{integer}}
+      - numNodes = 4
+      - numGradientBits = 32

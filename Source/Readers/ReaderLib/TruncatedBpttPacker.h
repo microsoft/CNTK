@@ -21,13 +21,13 @@ class TruncatedBPTTPacker : public PackerBase
 {
 public:
     TruncatedBPTTPacker(
-        MemoryProviderPtr memoryProvider,
         SequenceEnumeratorPtr sequenceEnumerator,
-        const std::vector<StreamDescriptionPtr>& streams);
+        const std::vector<StreamDescriptionPtr>& streams,
+        size_t numberOfBuffers = 2);
 
     virtual Minibatch ReadMinibatch() override;
 
-    virtual void StartEpoch(const EpochConfiguration& config) override;
+    virtual void StartEpoch(const EpochConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) override;
 
 private:
     // Reads sequences to slot with the specified index.

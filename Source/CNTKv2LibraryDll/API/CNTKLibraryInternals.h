@@ -11,6 +11,7 @@
 #define final
 #define explicit
 #define static_assert(condition, message)
+#define __attribute__(x)
 #endif
 
 #ifdef _WIN32
@@ -53,6 +54,9 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     template <typename ElementType>
     class ComputationNode;
+
+    class ComputationNodeBase;
+    typedef std::shared_ptr<ComputationNodeBase> ComputationNodeBasePtr;
 }}}
 
 // TODO: The following should be reconciled with the equivalent code in the CNTK implementation
@@ -182,12 +186,26 @@ namespace CNTK
 
     namespace Internal
     {
+        // Create a new Function instance which just passes through specified list of 'operands'.
+        CNTK_API FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name = L"");
+
+        CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
         CNTK_API FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
         CNTK_API FunctionPtr GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
-        CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand);
         CNTK_API FunctionPtr Where(const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
         CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::vector<Axis>& newDynamicAxes, const std::wstring& name = L"");
         CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
+
+        CNTK_API size_t NewUniqueId();
+
+        CNTK_API void EnableReversingTensorShapesInErrorMessages();
+        bool IsReversingTensorShapesInErrorMessagesEnabled();
+
+        CNTK_API void AlwaysAllowSettingDefaultDevice();
+        bool IsSettingDefaultDeviceAlwaysAllowed();
     }
 }

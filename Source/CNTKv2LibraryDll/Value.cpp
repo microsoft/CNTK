@@ -3,7 +3,14 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#include "stdafx.h"
+
+#ifdef _WIN32
+#define _SCL_SECURE_NO_WARNINGS
+#endif
+
 #include "CNTKLibrary.h"
+#include "Utils.h"
 
 namespace CNTK
 {
@@ -20,11 +27,11 @@ namespace CNTK
             auto dataShape = data->Shape();
             auto maskShape = mask->Shape();
 
-            if (maskShape.NumAxes() > dataShape.NumAxes())
-                InvalidArgument("The number of axes (%d) of the mask of a Value object cannot exceed the number of axes (%d) of the data NDArrayView object", (int)maskShape.NumAxes(), (int)dataShape.NumAxes());
+            if (maskShape.Rank() > dataShape.Rank())
+                InvalidArgument("The number of axes (%d) of the mask of a Value object cannot exceed the number of axes (%d) of the data NDArrayView object", (int)maskShape.Rank(), (int)dataShape.Rank());
 
-            if (dataShape.SubShape(dataShape.NumAxes() - maskShape.NumAxes()) != maskShape)
-                InvalidArgument("Invalid Value object; the data and mask are incompatible. The trailing dimensions of the data (%S) do not match the dimensions of the mask (%S)", dataShape.AsString().c_str(), maskShape.AsString().c_str());
+            if (dataShape.SubShape(dataShape.Rank() - maskShape.Rank()) != maskShape)
+                InvalidArgument("Invalid Value object; the data and mask are incompatible. The trailing dimensions of the data with shape %S do not match the dimensions of the mask with shape %S", AsStringForErrorReporting(dataShape).c_str(), AsStringForErrorReporting(maskShape).c_str());
         }
     }
 

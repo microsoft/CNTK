@@ -62,10 +62,10 @@ TrainConvNet = {
         firstMBsToShowResult = 5 ; numMBsToShowResult = 50
     }
 
-    # The reader is a composite reader that uses the ImageReader to read imageShape
-    # and the CNTKTextFormatReader to reade the regression ground truth labels.
+    # The reader is a composite reader that uses the ImageReader to read images
+    # and the CNTKTextFormatReader to read the regression ground truth labels.
     # It does so by defining an array of deserializers (using {...} : {...} below)
-    # and assiging the inputs as defined in the network above (cf. features and regrLabels).
+    # and assigning the inputs as defined in the network above (cf. features and regrLabels).
     reader = {
         verbosity = 0 ; randomize = true
         deserializers = ({

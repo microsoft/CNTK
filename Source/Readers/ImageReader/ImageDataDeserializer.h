@@ -64,8 +64,8 @@ private:
     // Mapping of logical sequence key into sequence description.
     std::map<size_t, size_t> m_keyToSequence;
 
-    // Element type of the feature/label stream (currently float/double only).
-    ElementType m_featureElementType;
+    // Precision required by the network.
+    ElementType m_precision;
 
     // whether images shall be loaded in grayscale 
     bool m_grayscale;

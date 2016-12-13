@@ -32,7 +32,7 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
     // time step of the sequence, have not yet received a gradient from a parent
     // and thus may not have had their gradient matrices allocated.
 #if 1 // keep enabled once this works
-#if 1 // log the cases where this is needed
+#if 0 // log the cases where this is needed
     if (m_needsGradient && !m_gradientInitialized)
     {
         static size_t c = 0;
@@ -389,7 +389,7 @@ TensorShape ComputationNodeBase::GetTensorSliceFor(size_t rank, const FrameRange
 
     // determine the slice dimensions described by the FrameRange
     // Note: These are dimensions without strides.
-    auto slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), fr, GetMBLayout());
+    let slice = TensorSliceWithMBLayoutFor(tensorShape.GetDims(), fr, GetMBLayout());
 
     // narrow the tensor
     // Note: Strides are honored correctly.
@@ -524,8 +524,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
     if (!pMBLayout) // no MBLayout: We are printing aggregates (or LearnableParameters?)
     {
         pMBLayout = make_shared<MBLayout>();
-        pMBLayout->InitAsFrameMode(1); // treat this as if we have one single sample
-        // TODO: This can be done more efficiently, if ever needed.
+        pMBLayout->Init(1, outputValues.GetNumCols()); // treat this as if we have one single sequence consisting of the columns
+        pMBLayout->AddSequence(0, 0, 0, outputValues.GetNumCols());
     }
     let& sequences = pMBLayout->GetAllSequences();
     let  width     = pMBLayout->GetNumTimeSteps();

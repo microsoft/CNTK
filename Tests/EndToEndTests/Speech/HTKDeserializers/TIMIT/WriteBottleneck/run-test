@@ -15,7 +15,7 @@ if [ $? != 0 ]; then
 fi
 
 # Train:
-cntkrun TIMIT_TrainAutoEncoder.cntk "TIMIT_TrainAutoEncoder=[reader=[readerType=HTKDeserializers]]  $CntkArguments" || exit $?
+cntkrun TIMIT_TrainAutoEncoder_ndl_deprecated.cntk "TIMIT_TrainAutoEncoder=[reader=[readerType=HTKDeserializers]]  $CntkArguments" || exit $?
 
 # Copy the test data to the test run directory, so that we do not damage anything
 DataDir=$TEST_RUN_DIR/TestData

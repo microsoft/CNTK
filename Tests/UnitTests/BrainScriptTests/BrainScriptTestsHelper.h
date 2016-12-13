@@ -14,8 +14,8 @@ public:
         wstring parentPath = boost::filesystem::canonical(path.parent_path()).generic_wstring();
 
 #ifdef _WIN32
-        // The executable path on Windows is e.g. <cntk>/x64/Debug/Unittests/
-        m_testDataPath = parentPath + L"/../../../Tests/UnitTests/BrainScriptTests";
+        // The executable path on Windows is e.g. <cntk>/x64/Debug/
+        m_testDataPath = parentPath + L"/../../Tests/UnitTests/BrainScriptTests";
 #else
         // The executable path on Linux is e.g. <cntk>/build/cpu/release/bin/
         m_testDataPath = parentPath + L"/../../../../Tests/UnitTests/BrainScriptTests";

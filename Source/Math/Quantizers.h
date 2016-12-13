@@ -98,7 +98,7 @@ private:
             LogicError("The absolute max element in the sequence to be quantized is 0.");
         }
         m_absMax = absoluteMax;
-        m_quantizeFactor = rangeMax / shiftedMax;
+        m_quantizeFactor = this->rangeMax / shiftedMax;
         m_inverseQuantizerFactor = 1 / m_quantizeFactor;
     }
 };

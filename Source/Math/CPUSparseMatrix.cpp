@@ -95,13 +95,13 @@ template <class ElemType>
     SetComputeDeviceId(CPUDEVICE);
 
     SetCompIndexSize(0);
-	SetColIdx(-1);
-	SetBuffer(nullptr, 0, false);
-	SetUnCompIndex(nullptr);
-	SetCompIndex(nullptr);
-	SetBlockSize(0);
-	SetBlockIdShift(0);
-	SetBlockIds(nullptr);
+    SetColIdx(-1);
+    SetBuffer(nullptr, 0, false);
+    SetUnCompIndex(nullptr);
+    SetCompIndex(nullptr);
+    SetBlockSize(0);
+    SetBlockIdShift(0);
+    SetBlockIds(nullptr);
 }
 
 //should only be used by constructors.
@@ -230,7 +230,7 @@ void CPUSparseMatrix<ElemType>::SetValue(const size_t row, const size_t col, con
         SecondaryIndexLocation()[c] = CPUSPARSE_INDEX_TYPE(nz);
         SetColIdx((int) c);
     }
-	// Note we don't have m_nz anymore. In order for the change from m_nz to
+    // Note we don't have m_nz anymore. In order for the change from m_nz to
     // NzCount to make sense, we need to propogate nz+1 to all col slices.
     for (size_t max = c + 1; max < m_numCols + 1; max++)
     {
@@ -674,9 +674,9 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
             if (keepExistingValues && (NzCount() > numNZElemToReserve || GetCompIndexSize() > newCompIndexSize))
                 LogicError("Allocate: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
 
-			memset(pArray, 0, sizeof(ElemType) * numNZElemToReserve);
-			memset(unCompIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * numNZElemToReserve);
-			memset(compIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * newCompIndexSize);
+            memset(pArray, 0, sizeof(ElemType) * numNZElemToReserve);
+            memset(unCompIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * numNZElemToReserve);
+            memset(compIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * newCompIndexSize);
 
             if (keepExistingValues && NzCount() > 0)
             {
@@ -764,12 +764,12 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 {
     VerifyResizable(__func__);
 
-	m_sliceViewOffset = 0;
+    m_sliceViewOffset = 0;
     m_numRows = numRows;
     m_numCols = numCols;
-	SetNumStorageRows(numRows);
-	SetNumStorageCols(numCols);
-	SetFormat(matrixFormat);
+    SetNumStorageRows(numRows);
+    SetNumStorageCols(numCols);
+    SetFormat(matrixFormat);
 
     size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
     bool reallocate = (GetCompIndexSize() < newCompIndexSize);
@@ -785,7 +785,7 @@ void CPUSparseMatrix<ElemType>::Resize(const size_t numRows, const size_t numCol
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::Reset()
 {
-	// This is equivalent to setting m_nz = 0; Note we can only do this for sparse CSC/CSR because CompIndexSize is overloaded.
+    // This is equivalent to setting m_nz = 0; Note we can only do this for sparse CSC/CSR because CompIndexSize is overloaded.
     if (GetFormat() == MatrixFormat::matrixFormatSparseCSC || GetFormat() == MatrixFormat::matrixFormatSparseCSR)
         memset(GetCompIndex(), 0, sizeof(CPUSPARSE_INDEX_TYPE) * GetCompIndexSize());
     SetColIdx(-1);
@@ -793,128 +793,148 @@ void CPUSparseMatrix<ElemType>::Reset()
     SetBlockIdShift(0);
 }
 
-// c = alpha*op(lhs) * op(rhs) + beta*c
-// dense x sparse = dense
-template <class ElemType>
-void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
-                                                       const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
-{
-    if (lhs.IsEmpty() || rhs.IsEmpty())
-        LogicError("MultiplyAndWeightedAdd:  one of the input matrix is empty.");
-
-    int m = transposeA ? (int) lhs.GetNumCols() : (int) lhs.GetNumRows();
-    int k = transposeA ? (int) lhs.GetNumRows() : (int) lhs.GetNumCols();
-    int l = transposeB ? (int) rhs.GetNumCols() : (int) rhs.GetNumRows();
-    int n = transposeB ? (int) rhs.GetNumRows() : (int) rhs.GetNumCols();
-
-    assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
-    assert(k == l);
-    if (k != l)
+// Implements product of one sparse and one dense matrix updating a third dense matrix. Input matrices are optionally transposed.
+// NOTE: The only for using a class template instead of a function template was that I couldn't make the function template compile.
+template <class ElemType, bool denseTimesSparse /* false means SparseTimesDense */, bool transposeA, bool transposeB>
+class MultiplyDenseAndSparse{
+public:
+    // Note: Below the ordering of the matrix parameters 'sparse' and 'dense' does not imply the order of the matrices in the product which is instead controlled
+    // by the value of the boolean template parameter 'denseTimesSparse'.
+    static void MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& sparse, const CPUMatrix<ElemType>& dense, ElemType beta, CPUMatrix<ElemType>& c)
     {
-        InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a and b must match.");
-    }
+        const BaseMatrix<ElemType>* lhs = denseTimesSparse ? (const BaseMatrix<ElemType>*) &dense  : (const BaseMatrix<ElemType>*) &sparse;
+        const BaseMatrix<ElemType>* rhs = denseTimesSparse ? (const BaseMatrix<ElemType>*) &sparse : (const BaseMatrix<ElemType>*) &dense;
 
-    if (beta == 0)
-        c.RequireSize(m, n);
-    else
-        c.VerifySize(m, n); // Can't resize if beta != 0
+        // C(m:n) is the product of matrices X * Y where we have the shapes X(m:k) and Y(l:n)
+        size_t m = transposeA ? lhs->GetNumCols() : lhs->GetNumRows();
+        size_t k = transposeA ? lhs->GetNumRows() : lhs->GetNumCols();
+        size_t l = transposeB ? rhs->GetNumCols() : rhs->GetNumRows();
+        size_t n = transposeB ? rhs->GetNumRows() : rhs->GetNumCols();
 
+        if (k != l)
+            InvalidArgument("CPUSparseMatrix::MultiplyAndWeightedAdd: The inner dimensions of a (= %lu) and b (= %lu) don't match.", k, l);
 
-    if (beta == 0)
-    {
-        memset(c.Data(), 0, sizeof(ElemType) * c.GetNumElements());
-    }
-    else if (beta != 1)
-    {
+        // Determine the dimension of the outer index of the dense matrix.
+        size_t outerDimensionDense;
+        if      ( denseTimesSparse && !transposeA) outerDimensionDense = dense.GetNumRows();
+        else if ( denseTimesSparse &&  transposeA) outerDimensionDense = dense.GetNumCols();
+        else if (!denseTimesSparse && !transposeB) outerDimensionDense = dense.GetNumCols();
+        else if (!denseTimesSparse &&  transposeB) outerDimensionDense = dense.GetNumRows();
+
+        if (beta == 0)
+            c.RequireSize(m, n);
+        else
+            c.VerifySize(m, n); // Can't resize if beta != 0
+
+        if (beta == 0)
+            memset(c.Data(), 0, sizeof(ElemType)* c.GetNumElements());
+        else if (beta != 1)
+        {
 #pragma omp parallel for
-        foreach_coord (i, j, c)
-        {
-            c(i, j) = beta * c(i, j);
-        }
-    }
-
-    // TODO: Implement CSR as a transposition of b, like we do for GPU.
-    if (rhs.GetFormat() != matrixFormatSparseCSC)
-        NOT_IMPLEMENTED;
-
-    // Do the actual multiplication.
-    ElemType* valueBuffer = rhs.Buffer() + *rhs.SecondaryIndexLocation(); // Points to the value buffer of the current  view (i.e. buffer containing indices of non-zero elements)
-    int* rowIndexBuffer   = rhs.MajorIndexLocation();                     // Points to the index buffer of the current view. (i.e. buffer containing indices of non-zero elements)
-    int iNonzero          = 0;                                            // Number of nonzero elements handled so far for curent slice view.
-    int numPreviosNonzero = rhs.SecondaryIndexLocation()[0];              // Total number of nonzero values handled in previous slices.
-    if (!transposeA && !transposeB)
-    {
-        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
-        {
-            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
-            for (; iNonzero < end; iNonzero++)
+            foreach_coord(i, j, c)
             {
-                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
-                ElemType val = valueBuffer[iNonzero];
+                c(i, j) = beta * c(i, j);
+            }
+        }
+        else /* beta == 1*/
+            ; // We keep the previous value of c before adding the matrix product.
 
-                for (size_t rowA = 0; rowA < lhs.GetNumRows(); rowA++)
+        // In case one factor in the matrix product is empty there is nothing to add to the output c so we can exit here.
+        if (sparse.IsEmpty() || dense.IsEmpty())
+            return;
+
+        // TODO: Implement CSR as a transposition of b, like we do for GPU.
+        if (sparse.GetFormat() != matrixFormatSparseCSC)
+            NOT_IMPLEMENTED;
+
+        // Up to here we have:
+        // * checked that the matrices are compatible in size
+        // * Initialized the output matrix c
+
+        // Now do the actual multiplication.
+        ElemType* valueBuffer = sparse.Buffer() + *sparse.SecondaryIndexLocation(); // Points to the value buffer of the current view (i.e. buffer containing values of non-zero elements).
+        int* rowIndexBuffer = sparse.MajorIndexLocation();                          // Points to the index buffer of the current view (i.e. buffer containing indices of non-zero elements).
+        size_t iNonzero = 0;                                                           // Number of nonzero elements handled so far for curent slice view.
+        int numPreviosNonzero = sparse.SecondaryIndexLocation()[0];                 // Total number of nonzero values handled in previous slices.
+
+        // Loop over columns of the sparse matrix
+        for (size_t colSparse = 0; colSparse < sparse.GetNumCols(); colSparse++)
+        {
+            size_t numNonzeroInSparseCol = sparse.SecondaryIndexLocation()[colSparse + 1] - numPreviosNonzero;
+            // Loop over the nonzero rows of the current column of the sparse matrix
+            for (; iNonzero < numNonzeroInSparseCol; iNonzero++)
+            {
+                size_t rowSparse = rowIndexBuffer[iNonzero]; // RowLocation
+                ElemType sparseVal = valueBuffer[iNonzero];
+
+                // Determine the index of the 'outer' dimension of the sparse matrix and the common inner index.
+                size_t outerIndexSparse;
+                size_t innerIndex;
+                // Below if-statements are evaluated at compile time.
+                if      ( denseTimesSparse && !transposeB) { outerIndexSparse = colSparse; innerIndex = rowSparse; }
+                else if ( denseTimesSparse &&  transposeB) { outerIndexSparse = rowSparse; innerIndex = colSparse; }
+                else if (!denseTimesSparse && !transposeA) { outerIndexSparse = rowSparse; innerIndex = colSparse; }
+                else if (!denseTimesSparse &&  transposeA) { outerIndexSparse = colSparse; innerIndex = rowSparse; }
+
+                // Loop over the outer index of the dense matrix
+                for (size_t outerIndexDense = 0; outerIndexDense < outerDimensionDense; outerIndexDense++)
                 {
-                    c(rowA, colB) += alpha * lhs(rowA, rowB) * val;
+                    // Determine the row index of the dense input matrix.
+                    // Below if-statements are evaluated at compile time.
+                    ElemType denseVal;
+                    if      ( denseTimesSparse && !transposeA) denseVal = dense(outerIndexDense,      innerIndex);
+                    else if ( denseTimesSparse &&  transposeA) denseVal = dense(     innerIndex, outerIndexDense);
+                    else if (!denseTimesSparse && !transposeB) denseVal = dense(     innerIndex, outerIndexDense);
+                    else if (!denseTimesSparse &&  transposeB) denseVal = dense(outerIndexDense,      innerIndex);
+                    
+
+                    // Update matrix c.
+                    if (denseTimesSparse)
+                        c(outerIndexDense, outerIndexSparse) += alpha * denseVal * sparseVal;
+                    else /*Sparse times dense */
+                        c(outerIndexSparse, outerIndexDense) += alpha * denseVal * sparseVal;
                 }
             }
         }
     }
-    else if (!transposeA && transposeB)
-    {
-        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
-        {
-            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
-            for (; iNonzero < end; iNonzero++)
-            {
-                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
-                ElemType val = valueBuffer[iNonzero];
+};
 
-                for (size_t rowA = 0; rowA < lhs.GetNumRows(); rowA++)
-                {
-                    c(rowA, rowB) += alpha * lhs(rowA, colB) * val;
-                }
-            }
-        }
-    }
-    // the transposeA case is copy-paste from above with rows/cols of lhs swapped
-    else if (transposeA && !transposeB)
-    {
-        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
-        {
-            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
-            for (; iNonzero < end; iNonzero++)
-            {
-                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
-                ElemType val = valueBuffer[iNonzero];
-
-                for (size_t colA = 0; colA < lhs.GetNumCols(); colA++)
-                {
-                    c(colA, colB) += alpha * lhs(rowB, colA) * val;
-                }
-            }
-        }
-    }
-    else if (transposeA && transposeB)
-    {
-        for (size_t colB = 0; colB < rhs.GetNumCols(); colB++)
-        {
-            size_t end = rhs.SecondaryIndexLocation()[colB + 1] - numPreviosNonzero;
-            for (; iNonzero < end; iNonzero++)
-            {
-                size_t rowB = rowIndexBuffer[iNonzero]; // RowLocation
-                ElemType val = valueBuffer[iNonzero];
-
-                for (size_t colA = 0; colA < lhs.GetNumCols(); colA++)
-                {
-                    c(colA, rowB) += alpha * lhs(colB, colA) * val;
-                }
-            }
-        }
-    }
+// c = alpha * lhs * rhs + beta * c
+// dense * sparse -> dense
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA,
+                                                       const CPUSparseMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    // Mapping variables to compile time template parameters for efficiency
+    if      ( transposeA &&  transposeB)
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */,  true /* transposeA */,  true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
+    else if ( transposeA && !transposeB)
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */,  true /* transposeA */, false  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
+    else if (!transposeA &&  transposeB)
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, false /* transposeA */,  true  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
+    else if (!transposeA && !transposeB)
+        MultiplyDenseAndSparse<ElemType, true /* dense times sparse */, false /* transposeA */, false  /*transposeB*/>::MultiplyAndWeightedAdd(alpha, b /*sparse*/, a /* dense */, beta, c /* matrix beeing updated */);
 }
 
-// dense x sparse = sparse
-// c = alpha * op(lhs) * op(rhs)
+// c = alpha * lhs * rhs + beta * c
+// sparse * dense -> dense
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& a, const bool transposeA,
+    const CPUMatrix<ElemType>& b, const bool transposeB, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    // Mapping variables to compile time template parameters for efficiency
+    if (transposeA &&  transposeB)
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */,  true /* transposeA */,  true /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
+    else if (transposeA && !transposeB)
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */,  true /* transposeA */, false /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
+    else if (!transposeA &&  transposeB)
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, false /* transposeA */,  true /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
+    else if (!transposeA && !transposeB)
+        MultiplyDenseAndSparse<ElemType, false /* dense times sparse */, false /* transposeA */, false /*transposeB*/>::MultiplyAndWeightedAdd(alpha, a /*sparse*/, b /* dense */, beta, c /* matrix beeing updated */);
+}
+
+// c = alpha * lhs * rhs
+// dense * sparse -> sparse
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<ElemType>& lhs, const bool transposeA,
                                                const CPUSparseMatrix<ElemType>& rhs, const bool transposeB, CPUSparseMatrix<ElemType>& c)
@@ -936,7 +956,7 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
     assert(k == l);
     if (k != l)
     {
-        InvalidArgument("CPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a and b must match.");
+        InvalidArgument("CPUSparseMatrix::MultiplyAndAdd: The inner dimensions of a (= %lu) and b (= %lu) don't match.", k, l);
     }
 
     c.Reset();
@@ -1491,7 +1511,7 @@ MATH_API File& operator<<(File& stream, const CPUSparseMatrix<ElemType>& us)
 
     stream.PutMarker(fileMarkerBeginSection, std::wstring(L"BMAT"));
     stream << sizeof(ElemType);
-	stream << std::wstring(L"nnmatrix"); // Note this is needed for compatability, and could potentially be an empty string
+    stream << std::wstring(L"nnmatrix"); // Note this is needed for compatability, and could potentially be an empty string
 
     size_t nz, numRows, numCols;
     size_t compressedSize = us.SecondaryIndexCount();

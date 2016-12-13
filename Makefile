@@ -261,10 +261,12 @@ READER_SRC =\
 	$(SOURCEDIR)/Readers/ReaderLib/TruncatedBpttPacker.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/PackerBase.cpp \
 	$(SOURCEDIR)/Readers/ReaderLib/FramePacker.cpp \
+	$(SOURCEDIR)/Readers/ReaderLib/ReaderBase.cpp \
     $(SOURCEDIR)/Readers/ReaderLib/ChunkCache.cpp \
 
 COMMON_SRC =\
 	$(SOURCEDIR)/Common/Config.cpp \
+	$(SOURCEDIR)/Common/Globals.cpp \
 	$(SOURCEDIR)/Common/DataReader.cpp \
 	$(SOURCEDIR)/Common/DataWriter.cpp \
 	$(SOURCEDIR)/Common/ExceptionWithCallStack.cpp \
@@ -272,6 +274,7 @@ COMMON_SRC =\
 	$(SOURCEDIR)/Common/File.cpp \
 	$(SOURCEDIR)/Common/TimerUtility.cpp \
 	$(SOURCEDIR)/Common/fileutil.cpp \
+	$(SOURCEDIR)/Common/Sequences.cpp \
 
 MATH_SRC =\
 	$(SOURCEDIR)/Math/BatchNormalizationEngine.cpp \
@@ -285,6 +288,7 @@ MATH_SRC =\
 	$(SOURCEDIR)/Math/MatrixQuantizerCPU.cpp \
 	$(SOURCEDIR)/Math/Matrix.cpp \
 	$(SOURCEDIR)/Math/QuantizedMatrix.cpp \
+	$(SOURCEDIR)/Math/DataTransferer.cpp \
 	$(SOURCEDIR)/Math/RNGHandle.cpp \
 	$(SOURCEDIR)/Math/TensorView.cpp \
 
@@ -341,6 +345,7 @@ COMPUTATION_NETWORK_LIB_SRC =\
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNode.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ComputationNodeScripting.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/InputAndParamNodes.cpp \
+	$(SOURCEDIR)/ComputationNetworkLib/RecurrentNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/ReshapingNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/RNNNodes.cpp \
 	$(SOURCEDIR)/ComputationNetworkLib/SpecialPurposeNodes.cpp \
@@ -370,6 +375,7 @@ endif
 CNTKLIBRARY_SRC =\
 	$(SOURCEDIR)/CNTKv2LibraryDll/BackCompat.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Common.cpp \
+	$(SOURCEDIR)/CNTKv2LibraryDll/ComputeInputStatistics.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/Function.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/MinibatchSource.cpp \
 	$(SOURCEDIR)/CNTKv2LibraryDll/NDArrayView.cpp \
@@ -415,6 +421,9 @@ CNTKLIBRARY_TESTS_SRC =\
 	Tests/UnitTests/V2LibraryTests/LearnerTests.cpp \
 	Tests/UnitTests/V2LibraryTests/FunctionTests.cpp \
 	Tests/UnitTests/V2LibraryTests/SequenceClassification.cpp \
+	Tests/UnitTests/V2LibraryTests/Seq2Seq.cpp \
+	Tests/UnitTests/V2LibraryTests/DeviceSelectionTests.cpp \
+	Examples/Evaluation/CPPEvalV2Client/EvalMultithreads.cpp \
 
 CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
 CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
@@ -905,6 +914,8 @@ UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/CPUMatrixTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/CPUSparseMatrixTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/fixtures.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/MathTests/QuantizersTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/MathTests/TensorTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/GPUMatrixCudaBlasTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/GPUMatrixTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/GPUSparseMatrixTests.cpp \

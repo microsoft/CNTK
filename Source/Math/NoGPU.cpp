@@ -208,7 +208,7 @@ void GPUSparseMatrix<ElemType>::Reset()
 // copy features to GPU matrix
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
-                                                       const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/)
+                                                       const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice /*= false*/, const DEVICEID_TYPE devId /*= -1*/, DataTransferer* transferer)
 {
 }
 
@@ -1014,7 +1014,7 @@ void GPUMatrix<ElemType>::SetValue(GPUSparseMatrix<ElemType> const&)
 #endif
 
 template <class ElemType>
-void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags)
+void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags, DataTransferer* transferer)
 {
 }
 
@@ -2187,6 +2187,28 @@ void GPUMatrixComputeStreamEvent::SynchronizeDataTransferFetchStreamWithEvent<do
 
 #pragma region GPUDataTransferer functions
 
+GranularGPUDataTransferer::~GranularGPUDataTransferer() {}
+
+void GranularGPUDataTransferer::CopyGPUToCPUAsync(const void* /*gpuBuffer*/, size_t /*numElements*/, size_t /*elementSize*/, void* /*cpuBuffer*/) {}
+
+void GranularGPUDataTransferer::RecordGPUToCPUCopy() {}
+
+void GranularGPUDataTransferer::WaitForCopyGPUToCPU() {}
+
+void GranularGPUDataTransferer::CopyCPUToGPUAsync(const void* /*cpuBuffer*/, size_t /*numElements*/, size_t /*elementSize*/, void* /*gpuBuffer*/) {}
+
+void GranularGPUDataTransferer::RecordCPUToGPUCopy() {}
+
+void GranularGPUDataTransferer::WaitForCopyCPUToGPU() {}
+
+void GranularGPUDataTransferer::RecordComputeStreamSyncPoint() {}
+
+void GranularGPUDataTransferer::WaitForSyncPointOnFetchStreamAsync() {}
+
+void GranularGPUDataTransferer::WaitForSyncPointOnAssignStreamAsync() {}
+
+PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int /*deviceId*/) : GranularGPUDataTransferer() {}
+
 template <class ElemType>
 GPUDataTransferer<ElemType>::GPUDataTransferer(int, bool)
 {
@@ -2255,7 +2277,7 @@ void* GPUMatrix<ElemType>::s_curandGenerator = NULL;
 
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemType>::Create(ConvolveGeometryPtr, DEVICEID_TYPE,
-                                                                                             ImageLayoutKind, size_t, PoolKind)
+                                                                                             ImageLayoutKind, size_t, PoolKind, bool)
 {
     RuntimeError("The code is compiled with CPUONLY macro.");
 }

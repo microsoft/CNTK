@@ -73,12 +73,11 @@ public:
 
 private:
     // Load data for chunks if needed.
-    // Returns the next chunk id to prefetch.
-    ChunkIdType LoadDataChunks();
+    void LoadDataChunks(const ClosedOpenChunkInterval& windowRange);
 
     // Get next sequence descriptions that do not exceed sample count.
     // Returns true if epoch end is reached.
-    bool GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result);
+    bool GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result, ClosedOpenChunkInterval& windowRange);
 
     // Decimates sequence descriptions and loads chunks of data.
     void Decimate(const std::vector<RandomizedSequenceDescription>& all, std::vector<RandomizedSequenceDescription>& decimated);
@@ -90,8 +89,7 @@ private:
     void Prefetch(ChunkIdType chunkId);
 
     // Returns next candidate for the prefetch in the given range.
-    template<class Iter>
-    ChunkIdType GetChunkToPrefetch(const Iter& begin, const Iter& end);
+    ChunkIdType GetChunkToPrefetch(const ClosedOpenChunkInterval& windowRange);
 
     // Global sample position on the timeline.
     size_t m_globalSamplePosition;
@@ -128,9 +126,6 @@ private:
     // A map of data chunks from original chunk id into chunk.
     std::map<size_t, ChunkPtr> m_chunks;
 
-    // Last seen data chunk id.
-    ChunkIdType m_lastSeenChunkId;
-
     // Decimation mode.
     DecimationMode m_decimationMode;
 
@@ -156,6 +151,9 @@ private:
     launch m_launchType;
     // Prefetched original chunk id.
     ChunkIdType m_prefetchedChunk;
+
+    // Current loaded chunks.
+    ClosedOpenChunkInterval m_currentWindowRange;
 };
 
 }}}

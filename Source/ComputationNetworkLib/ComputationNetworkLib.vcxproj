@@ -122,6 +122,7 @@
     <ClCompile Include="ComputationNode.cpp" />
     <ClCompile Include="ComputationNodeScripting.cpp" />
     <ClCompile Include="InputAndParamNodes.cpp" />
+    <ClCompile Include="RecurrentNodes.cpp" />
     <ClCompile Include="ReshapingNodes.cpp" />
     <ClCompile Include="RNNNodes.cpp" />
     <ClCompile Include="SpecialPurposeNodes.cpp" />

@@ -52,11 +52,11 @@ public:
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        FrameRange fr(Input(0)->GetMBLayout());
-        Input(0)->ValueFor(fr).VectorMax(*m_maxIndexes0, *m_maxValues, true);
-        Input(1)->ValueFor(fr).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
-        MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), fr);
-        MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), fr);
+        FrameRange fr(InputRef(0).GetMBLayout());
+        InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes0, *m_maxValues, true);
+        InputRef(1).ValueFor(fr).VectorMax(*m_maxIndexes1, *m_maxValues, true, m_topK);
+        MaskMissingColumnsToZero(*m_maxIndexes0, InputRef(0).GetMBLayout(), fr);
+        MaskMissingColumnsToZero(*m_maxIndexes1, InputRef(1).GetMBLayout(), fr);
         Value().AssignNumOfDiff(*m_maxIndexes0, *m_maxIndexes1, m_topK > 1);
 #if NANCHECK
         Value().HasNan("ClassificationError");
@@ -216,9 +216,9 @@ public:
     // compute posterior probability of label y at position t
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
-        DecideStartEndingOutputLab(Input(0)->Value(), mStartLab, mEndLab);
-        ForwardPropS(mAlpha, mBacktrace, Value(), Input(1)->Value(),
-                     Input(2)->Value(), mStartLab, mEndLab);
+        DecideStartEndingOutputLab(InputRef(0).Value(), mStartLab, mEndLab);
+        ForwardPropS(mAlpha, mBacktrace, Value(), InputRef(1).Value(),
+                     InputRef(2).Value(), mStartLab, mEndLab);
     }
 
     // compute forward backward algorithm

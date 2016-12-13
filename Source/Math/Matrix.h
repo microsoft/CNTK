@@ -14,6 +14,7 @@
 #include "CommonMatrix.h"
 #include "TensorShape.h" // only for SmallVector; I was hoping to keep this out
 #include "RNGHandle.h"
+#include "DataTransferer.h"
 #include <limits.h>
 #include <memory> // for shared_ptr
 #include <array>
@@ -48,6 +49,8 @@ template <class ElemType> class DeviceBoundNumber;
 struct /*interface*/ MATH_API MatrixBase
 {
     virtual int GetDeviceId() const = 0;
+    virtual MatrixType GetMatrixType() const = 0;
+    virtual MatrixFormat GetFormat() const = 0;
     // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
     virtual ~MatrixBase();
 };
@@ -60,7 +63,7 @@ class MATH_API Matrix : public MatrixBase
 {
     typedef MatrixBase Base;
 private:
-    mutable shared_ptr<BaseMatrix     <ElemType>> m_baseMatrix;
+    mutable BaseMatrix<ElemType>*                 m_baseMatrix;
     mutable shared_ptr<GPUMatrix      <ElemType>> m_GPUMatrix;
     mutable shared_ptr<CPUMatrix      <ElemType>> m_CPUMatrix;
     mutable shared_ptr<GPUSparseMatrix<ElemType>> m_GPUSparseMatrix;
@@ -131,7 +134,7 @@ private:
     Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, const MatrixFormat matrixFormat, DEVICEID_TYPE deviceID); // only used internally to initialize a blank matrix
     Matrix(const MatrixFlags matrixFlags, const MatrixType matrixType, DEVICEID_TYPE deviceID);                                  // only used internally to initialize a blank matrix
     Matrix(const MatrixFlags matrixFlags, DEVICEID_TYPE deviceID);                                                               // only used internally to initialize a blank matrix
-    void Init(DEVICEID_TYPE deviceID);                                                                                           // only used internally to initialize a blank matrix
+    void Init(DEVICEID_TYPE deviceID);
     void SetDataLocation(CurrentDataLocation location, MatrixType type = UNDETERMINED) const;
     void ShallowCopyFrom(const Matrix<ElemType>& other);
 
@@ -146,8 +149,8 @@ public:
         return node;
     }
 
-    MatrixType GetMatrixType() const { return m_matrixType; }
-    MatrixFormat GetFormat() const { return m_baseMatrix->GetFormat(); }
+    MatrixType GetMatrixType() const override;
+    MatrixFormat GetFormat() const override;
     bool OwnBuffer() const { return m_baseMatrix->OwnBuffer(); }
     int GetDeviceId() const; // -1 if CPU, otherwise GPU CUDA device id
     DEVICEID_TYPE GetPreferredDeviceId() const { return m_preferredDeviceId; }; // -1 if CPU, otherwise GPU CUDA device id
@@ -192,7 +195,10 @@ public:
     // TODO: all these scalars should be passed as doubles and cast down inside
     void NormalGrad(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum, const bool useNAG);
     ElemType Adagrad(Matrix<ElemType>& gradients, const bool needAveMultiplier);
-    void FSAdagrad(size_t mbSize, Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, const ElemType learnRatePerSample, const ElemType momentum);
+    void FSAdagradUpdate(size_t mbSize,
+                         Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
+                         const double learnRatePerSample, const double targetAdagradAvDenom,
+                         const double meanMomentum, const double varMomentum);
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow
@@ -242,7 +248,7 @@ public:
     void SetValue      (const Matrix<ElemType>& deepCopyFrom);
     // AssignValuesOf respects the target matrix's information. It copies the values from the target into the memory of the source.
     void AssignValuesOf(const Matrix<ElemType>& deepCopyFrom);
-    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal);
+    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr);
     void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); // set matrix sparsely
     void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l) // SetValue(2,3, {1,2,3,  4,5,6});
     {
@@ -256,7 +262,7 @@ public:
         SetValue(MakeNan(__LINE__));
     }
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
-                                const size_t nz, const size_t numRows, const size_t numCols);
+        const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer = nullptr);
 
     void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val);
 

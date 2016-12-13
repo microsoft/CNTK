@@ -32,17 +32,14 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
     const size_t numHiddenLayers = 6;
     const size_t hiddenLayersDim = 2048;
 
-    Variable inputVar({ inputDim }, DataType::Float, L"features");
-    auto classifierOutputFunction = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, std::bind(Sigmoid, _1, L""), L"classifierOutput");
-    Variable classifierOutput = classifierOutputFunction;
+    auto inputVar = InputVariable({ inputDim }, DataType::Float, L"features");
+    auto classifierOutput = FullyConnectedFeedForwardClassifierNet(inputVar, numOutputClasses, hiddenLayersDim, numHiddenLayers, device, std::bind(Sigmoid, _1, L""), L"classifierOutput");
 
-    Variable labelsVar({ numOutputClasses }, DataType::Float, L"Labels");
-    auto trainingLossFunction = CNTK::CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"LossFunction");
-    Variable trainingLoss = trainingLossFunction;
-    auto predictionFunction = CNTK::ClassificationError(classifierOutput, labelsVar, L"ClassificationError");
-    Variable prediction = predictionFunction;
+    auto labelsVar = InputVariable({ numOutputClasses }, DataType::Float, L"Labels");
+    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labelsVar, L"LossFunction");
+    auto prediction = CNTK::ClassificationError(classifierOutput, labelsVar, L"ClassificationError");
 
-    auto ffNet = CNTK::Combine({ trainingLoss.Owner(), prediction.Owner(), classifierOutput.Owner() }, L"ClassifierModel");
+    auto ffNet = CNTK::Combine({ trainingLoss, prediction, classifierOutput }, L"ClassifierModel");
 
     // Now test the structure
     if (ffNet->Parameters().size() != ((numHiddenLayers * 2) + 1))
@@ -55,7 +52,17 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
         throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Output count");
 
     if (testSaveAndReLoad)
-        SaveAndReloadModel<float>(ffNet, { &inputVar, &labelsVar, &trainingLoss, &prediction, &classifierOutput }, device);
+    {
+        Variable classifierOutputVar = classifierOutput;
+        Variable trainingLossVar = trainingLoss;
+        Variable predictionVar = prediction;
+
+        SaveAndReloadModel<float>(ffNet, { &inputVar, &labelsVar, &trainingLossVar, &predictionVar, &classifierOutputVar }, device);
+
+        classifierOutput = classifierOutputVar;
+        trainingLoss = trainingLossVar;
+        prediction = predictionVar;
+    }
 
     // Run Forward and backward a few times
     size_t iterationCount = 4;
@@ -83,14 +90,13 @@ void TestFeedForwardNetworkCreation(const DeviceDescriptor& device, bool testSav
         auto backpropState = ffNet->Forward({ { inputVar, inputValue }, { labelsVar, labelValue } }, outputs, device, { trainingLoss });
 
         // Perform backprop
-        NDShape outputShape = trainingLoss.Shape();
+        NDShape outputShape = trainingLoss->Output().Shape();
         std::vector<float> rootGradientsData(outputShape.TotalSize(), 1);
         ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true));
         std::unordered_map<Variable, ValuePtr> paramGradients;
         auto allParams = ffNet->Parameters();
         for (auto iter = allParams.begin(); iter != allParams.end(); ++iter)
             paramGradients[*iter] = nullptr;
-        
         ffNet->Backward(backpropState, { { trainingLoss, rootGradientValue } }, paramGradients);
     }
 }
@@ -109,7 +115,7 @@ void TestTimesAndPlus(size_t inputDim,
     Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device), L"timesParameters");
     Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)1.2, std::initializer_list<size_t>({ outputDim }), device), L"plusParameters");
 
-    Variable inputVar({ inputDim }, AsDataType<ElementType>(), L"input");
+    auto inputVar = InputVariable({ inputDim }, AsDataType<ElementType>(), L"input");
     auto timesAndPlusFunc = Plus(plusParam, Times(timesParam, inputVar));
 
     if (testSaveAndReLoad)

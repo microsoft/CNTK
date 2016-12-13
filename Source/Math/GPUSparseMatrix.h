@@ -101,16 +101,16 @@ public:
         return Data();
     }
 
-	GPUSPARSE_INDEX_TYPE NzCount() const
+    GPUSPARSE_INDEX_TYPE NzCount() const
     {
         if (GetFormat() == matrixFormatSparseCSC)
-			return SecondaryIndexValueAt(GetNumCols()) - SecondaryIndexValueAt(0);
+            return SecondaryIndexValueAt(GetNumCols()) - SecondaryIndexValueAt(0);
         if (GetFormat() == matrixFormatSparseCSR )
-			return SecondaryIndexValueAt(GetNumRows()) - SecondaryIndexValueAt(0);
+            return SecondaryIndexValueAt(GetNumRows()) - SecondaryIndexValueAt(0);
         else if (GetFormat() == matrixFormatSparseBlockCol)
             return (int)(GetNumRows() * GetBlockSize());
         else
-			NOT_IMPLEMENTED;
+            NOT_IMPLEMENTED;
 
     }
     inline size_t NzSize() const { return sizeof(ElemType) * NzCount(); } // actual number of element bytes in use
@@ -118,26 +118,26 @@ public:
     inline size_t GetNumNZElements() const { return NzCount(); }
 
     void ClearNzCount();
-	// The sparse matrix representation of CSC/CSR uses one large matrix (m_pArray) with offsets to the Major/Secondary index location.
-	// m_pArray [0,nz] are the nz elements, [nz+1,2*nz+1] is the major index location, and [2*nz+2,2*nz+2+ numcols/rows] is the secondary
-	// index location.
+    // The sparse matrix representation of CSC/CSR uses one large matrix (m_pArray) with offsets to the Major/Secondary index location.
+    // m_pArray [0,nz] are the nz elements, [nz+1,2*nz+1] is the major index location, and [2*nz+2,2*nz+2+ numcols/rows] is the secondary
+    // index location.
     GPUSPARSE_INDEX_TYPE* MajorIndexLocation() const // row/col ids in CSC/CSR format, blockId2col/blockId2row in BlockCol/BlockRow format
     {
         return (GPUSPARSE_INDEX_TYPE*) (Buffer() + GetSizeAllocated());
     }
 
-	// Note: Data is already offset by the sliceViewOffset, so we can just add the allocated size to get the start of the MajorIndexLoc
+    // Note: Data is already offset by the sliceViewOffset, so we can just add the allocated size to get the start of the MajorIndexLoc
     GPUSPARSE_INDEX_TYPE* MajorIndexLocationWithSliceViewOffset() const
     {
         return (GPUSPARSE_INDEX_TYPE*) (Data() + GetSizeAllocated());
     }
 
-	// MajorIndexCount depends on the format.
-	//     1. SparseBlockCol: numCols
-	//     2. SparseBlockRow: numRows
-	//     3. SparseCSC/CSR : nnz
-	// Note that NzCount is the number of non-zero elements currently in use. GetSizeAllocated is the number
-	//    of nz values that will fit in the current buffer.
+    // MajorIndexCount depends on the format.
+    //     1. SparseBlockCol: numCols
+    //     2. SparseBlockRow: numRows
+    //     3. SparseCSC/CSR : nnz
+    // Note that NzCount is the number of non-zero elements currently in use. GetSizeAllocated is the number
+    //    of nz values that will fit in the current buffer.
     size_t MajorIndexCount() const
     {
         return MajorIndexCount(GetNumRows(), GetNumCols(), NzCount(), GetFormat());
@@ -172,7 +172,7 @@ public:
             NOT_IMPLEMENTED;
     }
 
-	// Since the m_sliceViewOffset effects Data and MajorIndexLocation differently than SecondaryIndexLocation, we compute it fully here.
+    // Since the m_sliceViewOffset effects Data and MajorIndexLocation differently than SecondaryIndexLocation, we compute it fully here.
     GPUSPARSE_INDEX_TYPE* SecondaryIndexLocation() const // compressed index, col/row in CSC/CSR format, col2blockId/row2blockId in BlockCol/BlockRow format
     {
         if (GetFormat() == matrixFormatSparseBlockCol)
@@ -217,7 +217,7 @@ public:
         return sizeof(ElemType) * numNZ + sizeof(GPUSPARSE_INDEX_TYPE) * (MajorIndexCount(numRows, numCols, numNZ, format) + SecondaryIndexCount(numRows, numCols, numNZ, format));
     }
 
-	// SecondaryIndexValueAt calls SecondaryIndexLocation which is already appropriately offset by m_sliceViewOffset
+    // SecondaryIndexValueAt calls SecondaryIndexLocation which is already appropriately offset by m_sliceViewOffset
     inline ElemType* Data() const
     {
         return (Buffer() +
@@ -338,7 +338,7 @@ public:
     void SetMatrixFromCSRFormat(const CPUSPARSE_INDEX_TYPE* h_CSRRow, const CPUSPARSE_INDEX_TYPE* h_Col, const ElemType* h_Val,
                                 const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1);
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
-                                const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1);
+        const size_t nz, const size_t numRows, const size_t numCols, const bool IsOnDevice = false, const DEVICEID_TYPE devId = -1, DataTransferer* transferer = nullptr);
 
     // Gets sparse matrix in CSR format. this acts as deep copy. All passed pointers must be NULL. the function will allocate memory itself.
     void GetMatrixFromCSRFormat(CPUSPARSE_INDEX_TYPE*& h_CSRRow, CPUSPARSE_INDEX_TYPE*& h_Col, ElemType*& h_Val, size_t& numElemAllocated, size_t& nz, size_t& numRows, size_t& numCols) const;

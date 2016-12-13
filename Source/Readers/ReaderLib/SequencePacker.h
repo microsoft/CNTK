@@ -15,13 +15,11 @@ class SequencePacker : public PackerBase
 {
 public:
     SequencePacker(
-        MemoryProviderPtr memoryProvider,
         SequenceEnumeratorPtr sequenceEnumerator,
-        const std::vector<StreamDescriptionPtr>& streams) :
-        PackerBase(memoryProvider, sequenceEnumerator, streams)
-    {
-
-    }
+        const std::vector<StreamDescriptionPtr>& streams,
+        size_t numberOfBuffers = 2) :
+        PackerBase(sequenceEnumerator, streams, numberOfBuffers)
+    {}
 
     virtual Minibatch ReadMinibatch() override;
 

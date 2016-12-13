@@ -48,6 +48,10 @@ public:
         : m_sob(other.m_sob), m_shape(other.m_shape)
     {
     }
+    // dummy constructor; this is an invalid object
+    TensorView()
+    {
+    }
 
     // reshaped view
     TensorView<ElemType> Reshaped(const TensorShape& shape) const

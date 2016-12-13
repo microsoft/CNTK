@@ -85,8 +85,47 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             Console.WriteLine("\n====== EvaluateModelImageInput ========");
             EvaluateImageClassificationModel();
 
-            Console.WriteLine("Press <Enter> to terminate.");
-            Console.ReadLine();
+            // This pattern is used by End2EndTests to check whether the program runs to complete.
+            Console.WriteLine("\n====== Evaluation Complete ========");
+        }
+
+        /// <summary>
+        /// Checks whether the file exists. If not, write the error message on the console and throw FileNotFoundException.
+        /// </summary>
+        /// <param name="filePath">The file to check.</param>
+        /// <param name="errorMsg">The message to write on console if the file does not exist.</param>
+        private static void ThrowIfFileNotExist(string filePath, string errorMsg)
+        {
+            if (!File.Exists(filePath))
+            {                
+                if (!string.IsNullOrEmpty(errorMsg))
+                {
+                    Console.WriteLine(errorMsg);
+                }
+                throw new FileNotFoundException(string.Format("File '{0}' not found.", filePath));
+            }
+        }
+
+        /// <summary>
+        /// Handle CNTK exceptions.
+        /// </summary>
+        /// <param name="ex">The exception to be handled.</param>
+        private static void OnCNTKException(CNTKException ex)
+        {
+            // The pattern "Inner Exception" is used by End2EndTests to catch test failure.
+            Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            throw ex;
+        }
+
+        /// <summary>
+        /// Handle general exceptions.
+        /// </summary>
+        /// <param name="ex">The exception to be handled.</param>
+        private static void OnGeneralException(Exception ex)
+        {
+            // The pattern "Inner Exception" is used by End2EndTests to catch test failure.
+            Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+            throw ex;
         }
 
         /// <summary>
@@ -110,6 +149,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 {
                     // Load model
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
+                    ThrowIfFileNotExist(modelFilePath, 
+                        string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath));
+
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
 
                     // Generate random input values in the appropriate structure and size
@@ -127,11 +169,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 
@@ -154,11 +196,14 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Desired output layers
-                    const string hiddenLayerName = "h1.z";
-                    const string outputLayerName = "ol.z";
+                    const string hiddenLayerName = "out.h1";
+                    const string outputLayerName = "out.z";
 
                     // Load model
                     string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\01_OneHidden");
+                    ThrowIfFileNotExist(modelFilePath,
+                        string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath));
+
                     var desiredOutputLayers = new List<string>() { hiddenLayerName, outputLayerName };
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1, outputNodeNames: desiredOutputLayers);
 
@@ -182,11 +227,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 
@@ -208,9 +253,12 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Create the network
-                    // This network (AddOperatorConstant.cntk) is a simple network consisting of a single binary operator (Plus)
+                    // This network (AddOperatorConstant_ndl_deprecated.cntk) is a simple network consisting of a single binary operator (Plus)
                     // operating over a single input and a constant
-                    string networkDescription = File.ReadAllText(Path.Combine(workingDirectory, @"AddOperatorConstant.cntk"));
+                    string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstant_ndl_deprecated.cntk");
+                    ThrowIfFileNotExist(networkFilePath, string.Format("Error: The network configuration file '{0}' does not exist.", networkFilePath));
+
+                    string networkDescription = File.ReadAllText(networkFilePath);
                     model.CreateNetwork(networkDescription, deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
@@ -226,11 +274,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 
@@ -251,9 +299,12 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     // Create the network
-                    // This network (AddOperatorConstantNoInput.cntk) is a simple network consisting of a single binary operator (Plus)
+                    // This network (AddOperatorConstantNoInput_ndl_deprecated.cntk) is a simple network consisting of a single binary operator (Plus)
                     // operating over a two constants, therefore no input is necessary.
-                    string networkDescription = File.ReadAllText(Path.Combine(workingDirectory, @"AddOperatorConstantNoInput.cntk"));
+                    string networkFilePath = Path.Combine(workingDirectory, @"AddOperatorConstantNoInput_ndl_deprecated.cntk");
+                    ThrowIfFileNotExist(networkFilePath, string.Format("Error: The network configuration file '{0}' does not exist.", networkFilePath));
+
+                    string networkDescription = File.ReadAllText(networkFilePath);
                     model.CreateNetwork(networkDescription, deviceId: -1);
 
                     // We can call the evaluate method and get back the results (single layer)...
@@ -264,11 +315,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 
@@ -289,16 +340,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             try
             {
-                // The examples assume the executable is running from the data folder
-                // We switch the current directory to the data folder (assuming the executable is in the <CNTK>/x64/Debug|Release folder
-                string workingDirectory = Path.Combine(initialDirectory, @"..\..\Examples\Other\Simple2d\Config");
-                Environment.CurrentDirectory = initialDirectory;
-
                 using (var model = new ModelEvaluationExtendedF())
                 {
                     // Create the network
-                    // This network (AddOperatorConstantNoInput.cntk) is a simple network consisting of a single binary operator (Plus)
-                    // operating over a two constants, therefore no input is necessary.
                     model.CreateNetwork(modelDefinition);
 
                     VariableSchema outputSchema = model.GetOutputSchema();
@@ -321,11 +365,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 
@@ -355,11 +399,16 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
             // Load model
             string modelFilePath = Path.Combine(Environment.CurrentDirectory, @"..\Output\Models\02_Convolution");
+            ThrowIfFileNotExist(modelFilePath, 
+                string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to create the model.", modelFilePath));
 
             // Initializes the model instances
             ModelEvaluator.Initialize(numConcurrentModels, modelFilePath);
 
             string testfile = Path.Combine(Environment.CurrentDirectory, @"Test-28x28_cntk_text.txt");
+            ThrowIfFileNotExist(testfile, 
+                string.Format("Error: The test file '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/MNIST to download the data.", testfile));
+
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
@@ -403,11 +452,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
 
             sw.Stop();
@@ -436,6 +485,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 using (var model = new IEvaluateModelManagedF())
                 {
                     string modelFilePath = Path.Combine(workingDirectory, "ResNet_18.model");
+                    ThrowIfFileNotExist(modelFilePath, 
+                        string.Format("Error: The model '{0}' does not exist. Please download the model from https://www.cntk.ai/resnet/ResNet_18.model and save it under ..\\..\\Examples\\Image\\Miscellaneous\\ImageNet\\ResNet.", modelFilePath));
+                        
                     model.CreateNetwork(string.Format("modelPath=\"{0}\"", modelFilePath), deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
@@ -447,6 +499,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                     // Transform the image
                     string imageFileName = Path.Combine(workingDirectory, "zebra.jpg");
+                    ThrowIfFileNotExist(imageFileName, string.Format("Error: The test image file '{0}' does not exist.", imageFileName));
+
                     Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
 
                     var resized = bmp.Resize(224, 224, true);
@@ -467,11 +521,11 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
             }
             catch (CNTKException ex)
             {
-                Console.WriteLine("Error: {0}\nNative CallStack: {1}\n Inner Exception: {2}", ex.Message, ex.NativeCallStack, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnCNTKException(ex);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                OnGeneralException(ex);
             }
         }
 

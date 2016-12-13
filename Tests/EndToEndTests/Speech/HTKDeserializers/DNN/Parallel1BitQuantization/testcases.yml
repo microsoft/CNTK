@@ -34,7 +34,7 @@ testCases:
       - ^MPI Rank {{integer}}
       - Starting minibatch loop
       - DataParallelSGD training
-      - MyRank = {{integer}}
-      - NumNodes = 3
-      - NumGradientBits = 1
+      - myRank = {{integer}}
+      - numNodes = 3
+      - numGradientBits = 1
       - distributed reading is ENABLED

@@ -38,18 +38,18 @@ https://code.google.com/p/cuda-convnet/source/browse/trunk/example-layers/layers
 The network produces 20.5% of error after training for about 3 minutes on GPU.
 To run the sample, navigate to the sample folder and run the following command:
 ```
-cntk configFile=01_Conv.cntk
+cntk configFile=01_Conv_ndl_deprecated.cntk
 ```
 2. 02_BatchNormConv.ndl is a convolutional network which uses batch normalization technique (http://arxiv.org/abs/1502.03167).
 To run the sample, navigate to the sample folder and run the following command:
 ```
-cntk configFile=02_BatchNormConv.cntk
+cntk configFile=02_BatchNormConv_ndl_deprecated.cntk
 ```
 
 3. 03_ResNet.ndl and 04_ResNet_56.ndl are very deep convolutional networks that use ResNet architecture and have 20 and 56 layers respectively (http://arxiv.org/abs/1512.03385).
-With 03_ResNet.cntk you should get around 8.2% of error after training for about 50 minutes. 04_ResNet_56.cntk should produce around 6.4% of error after training for about 3 hours (see log files in the Output directory).
+With 03_ResNet_ndl_deprecated.cntk you should get around 8.2% of error after training for about 50 minutes. 04_ResNet_56_ndl_deprecated.cntk should produce around 6.4% of error after training for about 3 hours (see log files in the Output directory).
 
-4. 05_ConvLocal.cntk uses locally-connected convolution layers (see `conv_local3` and `conv_local4` in `05_ConvLocal.cntk`) and resembles a network described here: https://code.google.com/p/cuda-convnet/source/browse/trunk/example-layers/layers-conv-local-11pct.cfg
+4. 05_ConvLocal_ndl_deprecated.cntk uses locally-connected convolution layers (see `conv_local3` and `conv_local4` in `05_ConvLocal_ndl_deprecated.cntk`) and resembles a network described here: https://code.google.com/p/cuda-convnet/source/browse/trunk/example-layers/layers-conv-local-11pct.cfg
 
 5. 06_RegressionSimple.cntk shows how to train a regression model on image data. It uses a very simple network and a composite reader using both the ImageReader and CNTKTextFormatReader and defines a the RMSE (root mean square error) as the loss function. The value that the network learns to predict are simply the average rgb values of an image normalized to [0, 1]. To generate the ground truth labels for regression you need to run the CifarConverter.py script (since this example was added later you might need to rerun it to generate the regression files). See also here: https://github.com/Microsoft/CNTK/wiki/Train-a-regression-model-on-images
 

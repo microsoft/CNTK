@@ -20,17 +20,17 @@ TrainTagger = {
         hiddenDim = 150
 
         BiRecurrentLSTMLayer {outDim} = {
-            F = RecurrentLSTMLayer {outDim, goBackwards=false, init='uniform'}
-            G = RecurrentLSTMLayer {outDim, goBackwards=true, init='uniform'}
+            F = RecurrentLSTMLayer {outDim, goBackwards=false}
+            G = RecurrentLSTMLayer {outDim, goBackwards=true}
             apply (x) = Splice (BS.Sequences.Last(F(x)):BS.Sequences.First(G(x)))
         }.apply
 
         model = Sequential (
-            EmbeddingLayer {embDim, init='uniform'} :
-            BatchNormalizationLayer {normalizationTimeConstant=2048} :
+            EmbeddingLayer {embDim} :
+            BatchNormalizationLayer {} :
             BiRecurrentLSTMLayer {hiddenDim} :
-            BatchNormalizationLayer {normalizationTimeConstant=2048} :
-            DenseLayer {intentDim, init='uniform', initValueScale=7}
+            BatchNormalizationLayer {} :
+            DenseLayer {intentDim}                      ##### different dimension
         )
 
         # features
@@ -55,19 +55,26 @@ TrainTagger = {
     SGD = {
         maxEpochs = 8 ; epochSize = 36000
 
-        minibatchSize = 800
+        minibatchSize = 70
 
-        learningRatesPerSample = 0.01*2:0.005*12:0.001
-        gradUpdateType = "FSAdaGrad"
+        learningRatesPerSample = 0.003*2:0.0015*12:0.0003
+        gradUpdateType = "fsAdaGrad"
         gradientClippingWithTruncation = true ; clippingThresholdPerSample = 15.0
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 100
-        parallelTrain = {
+        ParallelTrain = {
             parallelizationMethod = "DataParallelSGD"
-            parallelizationStartEpoch = 2
+            parallelizationStartEpoch = 1
             distributedMBReading = true
-            dataParallelSGD = { gradientBits = 1 }
+            dataParallelSGD = { gradientBits = 2 }
         }
+        # for larger configurations, use this:
+        #AutoAdjust = {
+        #    autoAdjustMinibatch = true        # enable automatic growing of minibatch size
+        #    minibatchSizeTuningFrequency = 10 # try to enlarge after this many epochs
+        #    numMiniBatch4LRSearch = 200
+        #    minibatchSizeTuningMax = 15000    # out of memory above this
+        #}
     }
 
     reader = {

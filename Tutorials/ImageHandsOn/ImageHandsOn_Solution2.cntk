@@ -20,17 +20,16 @@ TrainConvNet = {
         model (features) = {
             MyLayer (x, depth, initValueScale) =
             {
-                c = ConvolutionalLayer {depth, (5:5), pad = true, activation = ReLU,
-                                        init = "gaussian", initValueScale = initValueScale} (x)
+                c = ConvolutionalLayer {depth, (5:5), pad=true, activation=ReLU, initValueScale=initValueScale} (x)
                 p = MaxPoolingLayer {(3:3), stride = (2:2)} (c)
             }.p
-            featNorm = features - Constant (128)
-            p1 = MyLayer (featNorm, 32, 0.0043)
-            p2 = MyLayer (p1,       32, 1.414)
-            p3 = MyLayer (p2,       64, 1.414)
-            d1 = DenseLayer {64, activation=ReLU, init="gaussian", initValueScale=12} (p3)
-            d1_d = Dropout (d1)    ##### added
-            z  = LinearLayer {10, init = "gaussian", initValueScale = 1.5} (d1_d)  ##### d1 -> d1_d
+            featNorm = features - 128
+            p1 = MyLayer (featNorm, 32, 0.1557/256)
+            p2 = MyLayer (p1,       32, 0.2)
+            p3 = MyLayer (p2,       64, 0.2)
+            d1 = DenseLayer {64, activation=ReLU, initValueScale=1.697} (p3)
+            d1_d = Dropout (d1)
+            z  = LinearLayer {10, initValueScale = 0.212} (d1_d)
         }.z
 
         # inputs
@@ -42,7 +41,7 @@ TrainConvNet = {
 
         # connect to system
         ce       = CrossEntropyWithSoftmax (labels, z)
-        errs     = ClassificationError         (labels, z)
+        errs     = ClassificationError     (labels, z)
 
         featureNodes    = (features)
         labelNodes      = (labels)
@@ -58,7 +57,7 @@ TrainConvNet = {
         learningRatesPerSample = 0.00015625*7:0.000046875*10:0.000015625
         momentumAsTimeConstant = 600*20:6400
         L2RegWeight = 0.03
-        dropoutRate = 0*1:0.5   ##### added
+        dropoutRate = 0*1:0.5
 
         firstMBsToShowResult = 10 ; numMBsToShowResult = 100
     }

@@ -16,27 +16,22 @@ class SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
 
 public:
     SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int syncStatsTrace)
-        : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_currentEpochNumber(-1), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0)
-    {
-    }
+        : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0)
+    {}
 
     ~SimpleDistGradAggregator()
     {
         for (size_t i = 0; i < m_recvHeaders.size(); ++i)
-        {
             DistGradHeader::Destroy(m_recvHeaders[i]);
-        }
 
         if (m_bufferedGradHeader != nullptr)
-        {
             DistGradHeader::Destroy(m_bufferedGradHeader);
-        }
     }
 
     // Aggregate the gradient matrices across all nodes
-    bool AggregateGradients(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader* headerCPU, int epochNumber) override
+    bool AggregateGradients(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader* headerCPU, bool resetState) override
     {
-        bool isNewEpoch = ResetCurrentEpoch(gradients, headerCPU->numEvalNode, epochNumber);
+        ResetState(gradients, headerCPU->numEvalNode, resetState);
         bool showSyncPerfStats = (m_syncStatsTrace > 0) && ((m_iterationCount % m_syncStatsTrace) == 0);
         m_iterationCount++;
 
@@ -56,8 +51,8 @@ public:
                 if (showSyncPerfStats)
                 {
                     aggregationTimer.Stop();
-                    double epochTime = aggregationTimer.ElapsedSeconds();
-                    fprintf(stderr, "Async gradient aggregation wait time: %.6g\n", epochTime);
+                    double gradientAggregationTime = aggregationTimer.ElapsedSeconds();
+                    fprintf(stderr, "Async gradient aggregation wait time: %.6g\n", gradientAggregationTime);
                 }
             }
 
@@ -84,7 +79,7 @@ public:
             swap(*headerCPU, *m_bufferedGradHeader);
 
             // Initiate aggregation only if any samples were processed in previous iteration
-            if (isNewEpoch || (headerCPU->numSamples != 0))
+            if (resetState || (headerCPU->numSamples != 0))
             {
                 int deviceId = gradients[0]->GetDeviceId();
                 DistGradHeader* newGradHeader = m_bufferedGradHeader;
@@ -96,19 +91,18 @@ public:
                 // the gradient aggregation asynchronously on a separate stream
                 MatrixComputeStreamEvent* mainStreamSyncEvent = MatrixComputeStreamEvent::Create(deviceId);
 
-                m_pendingAsyncAggregation = std::async(std::launch::async, [=]
-                                                       {
-                                                           // We are starting on a new thread. Make sure the new thread is
-                                                           // setup to use the right device
-                                                           Matrix<ElemType>::SetDevice(deviceId);
+                m_pendingAsyncAggregation = std::async(std::launch::async, [=] {
+                    // We are starting on a new thread. Make sure the new thread is
+                    // setup to use the right device
+                    Matrix<ElemType>::SetDevice(deviceId);
 
-                                                           // Synchronize the Quantization compute stream with the completion of
-                                                           // compute of the gradient matrices on the main compute stream
-                                                           mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<ElemType>();
-                                                           delete mainStreamSyncEvent;
+                    // Synchronize the Quantization compute stream with the completion of
+                    // compute of the gradient matrices on the main compute stream
+                    mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<ElemType>();
+                    delete mainStreamSyncEvent;
 
-                                                           AggregateGradientsImpl(newGradients, newGradHeader, showSyncPerfStats);
-                                                       });
+                    AggregateGradientsImpl(newGradients, newGradHeader, showSyncPerfStats);
+                });
 
                 return true;
             }
@@ -135,18 +129,15 @@ private:
                                          });
     }
 
-    bool ResetCurrentEpoch(const std::vector<Matrix<ElemType>*>& gradients, int numEvalNode, int epochNumber)
+    void ResetState(const std::vector<Matrix<ElemType>*>& gradients, int numEvalNodes, bool resetState)
     {
-        bool isNewEpoch = (m_currentEpochNumber != epochNumber);
-
         // When called the first time let's setup the intermediateCPU buffers for gradient aggregation if needed
-        if (m_currentEpochNumber == -1)
+        if (!m_initialized)
         {
+            m_initialized = true;
             int deviceId = gradients[0]->GetDeviceId();
             if (deviceId != CPUDEVICE)
-            {
                 m_allocator.reset(new CUDAPageLockedMemAllocator(deviceId));
-            }
 
             for (size_t i = 0; i < gradients.size(); i++)
             {
@@ -161,49 +152,36 @@ private:
                 }
 
                 if (m_useAsyncAggregation)
-                {
                     m_bufferedGradients[gradients[i]].reset(new Matrix<ElemType>(gradients[i]->GetNumRows(), gradients[i]->GetNumCols(), deviceId));
-                }
             }
 
             if (m_useAsyncAggregation)
             {
-                m_bufferedGradHeader = DistGradHeader::Create(numEvalNode);
+                m_bufferedGradHeader = DistGradHeader::Create(numEvalNodes);
                 m_bufferedGradHeader->Clear();
             }
 
             if (m_mpi->IsMainNode())
             {
                 for (size_t i = 0; i < NumProc() - 1; ++i)
-                {
-                    m_recvHeaders.push_back(DistGradHeader::Create(numEvalNode));
-                }
+                    m_recvHeaders.push_back(DistGradHeader::Create(numEvalNodes));
             }
         }
-        else
+        else if (resetState)
         {
-            if (epochNumber != m_currentEpochNumber)
+            // Make sure there is no pending async aggregation
+            if (m_useAsyncAggregation && m_pendingAsyncAggregation.valid())
+                LogicError("Unexpected pending async gradient aggregation found when resetting aggregator state!");
+
+            // Zero out the buffered gradients if resetting state
+            if (m_useAsyncAggregation)
             {
-                // Make sure there is no pending async aggregation
-                if (m_useAsyncAggregation && m_pendingAsyncAggregation.valid())
-                    LogicError("Unexpected pending async gradient aggregation at the beginning of new epoch!");
+                for (size_t i = 0; i < gradients.size(); i++)
+                    m_bufferedGradients[gradients[i]]->SetValue(0);
 
-                // Zero out the buffered gradients at the beginning of a new epoch
-                if (m_useAsyncAggregation)
-                {
-                    for (size_t i = 0; i < gradients.size(); i++)
-                    {
-                        m_bufferedGradients[gradients[i]]->SetValue(0);
-                    }
-
-                    m_bufferedGradHeader->Clear();
-                }
+                m_bufferedGradHeader->Clear();
             }
         }
-
-        m_currentEpochNumber = epochNumber;
-
-        return isNewEpoch;
     }
 
     void AggregateGradientsImpl(const std::vector<Matrix<ElemType>*>& gradients, DistGradHeader* headerCPU, bool showSyncPerfStats)
@@ -221,15 +199,14 @@ private:
 
         if (headerCPU->numSamples == 0)
         {
-            headerCPU->criterion = 0.0;
+            assert(headerCPU->criterion == 0.0);
+            assert(headerCPU->numSamplesWithLabel == 0);
             for (int i = 0; i < headerCPU->numEvalNode; ++i)
-                headerCPU->evalErrors[i] = { 0.0, 0 };
+                assert(headerCPU->evalErrors[i].first == 0 && headerCPU->evalErrors[i].second == 0);
 
             // If the current node did not process any samples, the gradients should be zero'd
             for (size_t i = 0; i < numGradMatrices; ++i)
-            {
                 gradients[i]->SetValue(0);
-            }
 
             if (m_useAsyncAggregation)
             {
@@ -242,9 +219,7 @@ private:
         if (deviceId >= 0)
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
-            {
                 m_gpuDataTransferers[i]->CopyGPUToCPUAsync(gradients[i]->Data(), gradients[i]->GetNumElements(), m_intermediateCPUBuffers[i].get());
-            }
         }
 
         // Initiate receive of the header on the main node
@@ -262,9 +237,7 @@ private:
         // Send the headers from all nodes but the main node
         MPI_Request sendHeaderRequest;
         if (!m_mpi->IsMainNode())
-        {
             MPI_Isend(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank(), numGradMatrices, m_mpi->Communicator(), &sendHeaderRequest) || MpiFail("MPI_Isend");
-        }
 
         // Perform MPI async allreduce on the gradient data
         std::vector<MPI_Request> allReduceRequests(numGradMatrices);
@@ -302,12 +275,10 @@ private:
             assert(numNodesHeadersReceivedFrom == (NumProc() - 1));
         }
 
-        MPI_Request recvAggHeaderRequest;
         // Initiate receive of the aggregate header
+        MPI_Request recvAggHeaderRequest;
         if (!m_mpi->IsMainNode())
-        {
             MPI_Irecv(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank(), numGradMatrices + 1 + numGradMatrices, m_mpi->Communicator(), &recvAggHeaderRequest) || MpiFail("MPI_Irecv");
-        }
 
         // Intiate send of the aggregate header from main node
         std::vector<MPI_Request> sendAggHeaderRequests(NumProc() - 1);
@@ -326,41 +297,31 @@ private:
         {
             MPI_Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
             if (deviceId >= 0)
-            {
                 m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
-            }
         }
 
         // Wait to receive aggregate header
         if (!m_mpi->IsMainNode())
-        {
             MPI_Wait(&recvAggHeaderRequest, MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
-        }
 
         // Wait for all the transfers to finish
         if (deviceId >= 0)
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
-            {
                 m_gpuDataTransferers[i]->WaitForCopyCPUToGPUAsync();
-            }
         }
 
         // Wait for completion of the async send requests
         if (!m_mpi->IsMainNode())
-        {
             MPI_Wait(&sendHeaderRequest, MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
-        }
         else
-        {
             MPI_Waitall(sendAggHeaderRequests.size(), sendAggHeaderRequests.data(), MPI_STATUSES_IGNORE) || MpiFail("MPI_Waitall");
-        }
 
         if (showSyncPerfStats)
         {
             aggregationTimer.Stop();
-            double epochTime = aggregationTimer.ElapsedSeconds();
-            fprintf(stderr, "Actual gradient aggregation time: %.6g\n", epochTime);
+            double gradientAggregationTime = aggregationTimer.ElapsedSeconds();
+            fprintf(stderr, "Actual gradient aggregation time: %.6g\n", gradientAggregationTime);
         }
     }
 
@@ -387,6 +348,6 @@ private:
     // Only used for controlling frequency of measuring/showing gradient aggregation perf stats
     size_t m_iterationCount;
 
-    int m_currentEpochNumber;
+    bool m_initialized;
 };
 } } }

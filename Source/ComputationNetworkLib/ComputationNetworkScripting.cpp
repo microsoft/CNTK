@@ -45,7 +45,8 @@ ComputationNetwork::ComputationNetwork(const IConfigRecordPtr configp) :
 {
     let& config = *configp;
 
-    DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int) config[L"deviceId"];
+    SetTraceLevel(config[L"traceLevel"]);
+    DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
 
     deque<ComputationNodeBasePtr> workList;
 
@@ -176,7 +177,7 @@ void ComputationNetwork::ConstructFromRoots(DEVICEID_TYPE deviceId, deque<Comput
             workList.push_back(input); // (we could check whether c is in 'nodes' already here to optimize, but this way it is cleaner)
         }
     }
-    if (numRelinked > 0)
+    if (TraceLevel() > 0 && numRelinked > 0)
         fprintf(stderr, "ConstructFromRoots: %d references were remapped.", (int)numRelinked);
 
     // perform all necessary post-processing
@@ -242,11 +243,12 @@ public:
     {
         let& config = *configp;
 
-        DEVICEID_TYPE deviceId = (DEVICEID_TYPE)(int)config[L"deviceId"];
-        SetDeviceId(deviceId);
+        SetTraceLevel(config[L"traceLevel"]);
+        SetDeviceId((DEVICEID_TYPE)(int)config[L"deviceId"]);
 
         wstring pathName = config[L"pathName"];
-        fprintf(stderr, "Load: Loading model file: %ls", pathName.c_str());
+        if (TraceLevel() > 0)
+            fprintf(stderr, "Load: Loading model file: %ls", pathName.c_str());
         Load<ElemType>(pathName); // note that for CNTK_MODEL_VERSION_7 and above, 'ElemType' is ignored
     }
 };
@@ -294,6 +296,7 @@ public:
     {
         // get config parameters
         let& config = *configp;
+        SetTraceLevel(config[L"traceLevel"]);
         let& net = config[L"inputModel"].AsRef<ComputationNetwork>();
         let editFunctions = ScriptableObjects::ConfigArray::FlattenedVectorFrom<ConfigLambda>(config[L"editFunctions"]);
         let additionalRoots = ScriptableObjects::ConfigArray::FlattenedVectorFrom<ComputationNodeBasePtr>(config[L"additionalRoots"]);
@@ -314,7 +317,8 @@ public:
                 }
             }
         }
-        fprintf(stderr, "Edit: %d nodes were edited.\n", (int)replacements.size());
+        if (TraceLevel() > 0)
+            fprintf(stderr, "Edit: %d nodes were edited.\n", (int)replacements.size());
 #ifdef _DEBUG
         for (let& replacement : replacements)
             fprintf(stderr, "\t%ls = %ls() --> %ls = %ls()\n", replacement.first->NodeName().c_str(), replacement.first->OperationName().c_str(), replacement.second->NodeName().c_str(), replacement.second->OperationName().c_str());
@@ -347,7 +351,8 @@ public:
 #endif
             }
         }
-        fprintf(stderr, "Edit: %d out of %d nodes were either edited or need to be relinked.\n", (int)replacements.size(), (int)net.GetTotalNumberOfNodes());
+        if (TraceLevel() > 0)
+            fprintf(stderr, "Edit: %d out of %d nodes were either edited or need to be relinked.\n", (int)replacements.size(), (int)net.GetTotalNumberOfNodes());
         // Now the keys of replacements[] define the set of all nodes that must be relinked.
 
         // replacements may point to nodes that are replacements themselves
@@ -374,7 +379,8 @@ public:
         // also add new roots
         for (let& node : additionalRoots)
             roots.push_back(node);
-        fprintf(stderr, "Edit: %d roots to construct the network from.\n", (int)roots.size());
+        if (TraceLevel() > 0)
+            fprintf(stderr, "Edit: %d roots to construct the network from.\n", (int)roots.size());
 #ifdef _DEBUG
         for (let& node : roots)
             fprintf(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
@@ -657,7 +663,7 @@ private:
             auto record = make_shared<ConfigRecord>(nullptr, [](const std::wstring & msg){ RuntimeError("CloneFunction: %ls", msg.c_str()); });
             for (let& outputNodesKV : outputNodes)
                 record->Add(outputNodesKV.first, [](const wstring&){}, move(NodeToConfigValuePtr(clonedNodes.find(outputNodesKV.second)->second)));
-            auto valuep = ConfigValuePtr(record, [](const std::wstring &) { LogicError("CloneFunction: Unexpected failure."); }, exprName);
+            auto valuep = ConfigValuePtr(record, [](const std::wstring& msg) { LogicError("CloneFunction: Unexpected failure: %ls", msg.c_str()); }, exprName);
             return valuep;
         }
     }
@@ -665,7 +671,7 @@ private:
     ConfigValuePtr NodeToConfigValuePtr(ComputationNodeBasePtr node)
     {
         assert(node);
-        auto valuep = ConfigValuePtr(node, [](const std::wstring &) { LogicError("CloneFunction: Unexpected failure."); }, node->NodeName());
+        auto valuep = ConfigValuePtr(node, [](const std::wstring& msg) { LogicError("CloneFunction (NodeToConfigValuePtr): Unexpected failure: %ls", msg.c_str()); }, node->NodeName());
         return valuep;
     }
 

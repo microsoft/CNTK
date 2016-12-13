@@ -41,7 +41,7 @@ fi
 # setting the DataDir to the run dir, since the cntk config expects data and mapping files in '$dataDir$/cifar-10-batches-py/'
 DataDir=$TEST_RUN_DIR
 echo 'Starting cntk run'
-cntkrun 06_RegressionSimple.cntk "[command=TrainConvNet:Test] stderr=-"
+cntkrun 06_RegressionSimple.cntk "[command=TrainConvNet:Test] forceDeterministicAlgorithms=true stderr=-"
 ExitCode=$?
 
 # Delete the test data if copied

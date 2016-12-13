@@ -6,7 +6,7 @@
 . $TEST_DIR/../run-timit-test-common
 
 # Train:
-cntkrun TIMIT_TrainAutoEncoder.cntk "$CntkArguments TIMIT_TrainAutoEncoder=[reader=[useMersenneTwisterRand=true]]" || exit $?
+cntkrun TIMIT_TrainAutoEncoder_ndl_deprecated.cntk "$CntkArguments TIMIT_TrainAutoEncoder=[reader=[useMersenneTwisterRand=true]]" || exit $?
 
 # Copy the test data to the test run directory, so that we do not damage anything
 DataDir=$TEST_RUN_DIR/TestData

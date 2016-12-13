@@ -420,7 +420,11 @@ struct HTKFloatSequenceData : DenseSequenceData
         {
             RuntimeError("Maximum number of samples per sequence exceeded.");
         }
-        m_data = m_buffer.GetData();
+    }
+
+    const void* GetDataBuffer() override
+    {
+        return m_buffer.GetData();
     }
 
 private:
@@ -437,7 +441,11 @@ struct HTKDoubleSequenceData : DenseSequenceData
         {
             RuntimeError("Maximum number of samples per sequence exceeded.");
         }
-        m_data = m_buffer.data();
+    }
+
+    const void* GetDataBuffer() override
+    {
+        return m_buffer.data();
     }
 
 private:

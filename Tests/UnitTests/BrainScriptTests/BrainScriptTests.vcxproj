@@ -25,7 +25,7 @@
     <ProjectName>BrainScriptTests</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <Import Project="$(SolutionDir)\CNTK.Cpp.props" /> 
+  <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>v120</PlatformToolset>
@@ -43,7 +43,6 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(OutDir)\UnitTests\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -61,7 +60,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>ComputationNetworkLib.lib;Common.lib;Math.lib;kernel32.lib;user32.lib;shell32.lib;SequenceTrainingLib.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir)..;$(BOOST_LIB_PATH);</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir);$(BOOST_LIB_PATH);</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -112,22 +111,63 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Data\ComputationNetwork\01_OneHidden.dnn" />
+    <None Include="Data\ComputationNetwork\LR_reg.dnn" />
+    <None Include="Data\ComputationNetwork\MC.dnn" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Data\ComputationNetwork\01_OneHidden.dnn_Expected.txt" />
+    <Text Include="Data\ComputationNetwork\LR_reg.dnn_Expected.txt" />
+    <Text Include="Data\ComputationNetwork\MC.dnn_Expected.txt" />
+    <Text Include="Data\Parser\ExpectedOutput1.txt" />
+    <Text Include="Data\Parser\ExpectedOutput10.txt" />
+    <Text Include="Data\Parser\ExpectedOutput11.txt" />
+    <Text Include="Data\Parser\ExpectedOutput12.txt" />
+    <Text Include="Data\Parser\ExpectedOutput13.txt" />
+    <Text Include="Data\Parser\ExpectedOutput14.txt" />
+    <Text Include="Data\Parser\ExpectedOutput15.txt" />
+    <Text Include="Data\Parser\ExpectedOutput16.txt" />
+    <Text Include="Data\Parser\ExpectedOutput17.txt" />
+    <Text Include="Data\Parser\ExpectedOutput18.txt" />
+    <Text Include="Data\Parser\ExpectedOutput19.txt" />
+    <Text Include="Data\Parser\ExpectedOutput2.txt" />
+    <Text Include="Data\Parser\ExpectedOutput20.txt" />
+    <Text Include="Data\Parser\ExpectedOutput21.txt" />
+    <Text Include="Data\Parser\ExpectedOutput3.txt" />
+    <Text Include="Data\Parser\ExpectedOutput4.txt" />
+    <Text Include="Data\Parser\ExpectedOutput5.txt" />
+    <Text Include="Data\Parser\ExpectedOutput6.txt" />
+    <Text Include="Data\Parser\ExpectedOutput7.txt" />
+    <Text Include="Data\Parser\ExpectedOutput8.txt" />
+    <Text Include="Data\Parser\ExpectedOutput9.txt" />
+    <Text Include="Data\Parser\Input1.txt" />
+    <Text Include="Data\Parser\Input10.txt" />
+    <Text Include="Data\Parser\Input11.txt" />
+    <Text Include="Data\Parser\Input12.txt" />
+    <Text Include="Data\Parser\Input13.txt" />
+    <Text Include="Data\Parser\Input14.txt" />
+    <Text Include="Data\Parser\Input15.txt" />
+    <Text Include="Data\Parser\Input16.txt" />
+    <Text Include="Data\Parser\Input17.txt" />
+    <Text Include="Data\Parser\Input18.txt" />
+    <Text Include="Data\Parser\Input19.txt" />
+    <Text Include="Data\Parser\Input2.txt" />
+    <Text Include="Data\Parser\Input20.txt" />
+    <Text Include="Data\Parser\Input21.txt" />
+    <Text Include="Data\Parser\Input3.txt" />
+    <Text Include="Data\Parser\Input4.txt" />
+    <Text Include="Data\Parser\Input5.txt" />
+    <Text Include="Data\Parser\Input6.txt" />
+    <Text Include="Data\Parser\Input7.txt" />
+    <Text Include="Data\Parser\Input8.txt" />
+    <Text Include="Data\Parser\Input9.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <Target Name="CheckDependencies">
     <Warning Condition="!$(HasBoost)" Text="BrainScriptTests requires the Boost library to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#boost for installation instructions." />
-  </Target>
-  <Target Name="CopyUnitTestDependencies" AfterTargets="Build">
-    <PropertyGroup>
-      <CuDnnDll Condition="$(GpuBuild) And Exists('$(OutDir)..\cudnn64_4.dll')">$(OutDir)..\cudnn64_4.dll</CuDnnDll>
-    </PropertyGroup>
-    <ItemGroup>
-      <UnitTestDependencies Include="$(OutDir)..\Math.dll;$(CuDnnDll);$(UnitTestDlls)" />
-    </ItemGroup>
-    <Copy SourceFiles="@(UnitTestDependencies)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
-      <Output TaskParameter="DestinationFiles" ItemName="NewFileWrites" />
-    </Copy>
   </Target>
 </Project>

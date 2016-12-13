@@ -79,6 +79,15 @@
     <ClInclude Include="ExceptionCapture.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="ReaderBase.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="SequenceData.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="TransformBase.h">
+      <Filter>Transformers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">
@@ -112,6 +121,9 @@
       <Filter>Packers</Filter>
     </ClCompile>
     <ClCompile Include="ChunkCache.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="ReaderBase.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>
