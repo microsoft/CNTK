@@ -516,7 +516,7 @@ class Function(cntk_py.Function):
             need to upcast it (currently done via combine):
 
             >>> d = c * 5
-            >>> C.combine([d.find_by_name('c')]).eval({a:[1], b:[2]})
+            >>> C.combine([d.find_by_name('c')]).eval({a:[[1]], b:[[2]]})
             array([[[ 3.]]], dtype=float32)
 
         Args:
