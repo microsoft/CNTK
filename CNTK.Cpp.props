@@ -26,7 +26,6 @@
     <CudaVersion/>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V8_0)') And '$(CudaVersion)' == ''">8.0</CudaVersion>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V7_5)') And '$(CudaVersion)' == ''">7.5</CudaVersion>
-    <CudaVersion Condition="Exists('$(CUDA_PATH_V7_0)') And '$(CudaVersion)' == ''">7.0</CudaVersion>
 
     <NvmlInclude />
     <NvmlInclude Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
@@ -123,12 +122,6 @@
     <CudaPath>$(CUDA_PATH_V7_5)</CudaPath>
     <CudaRuntimeDll>cudart64_75.dll</CudaRuntimeDll>
     <CudaDlls>cublas64_75.dll;cusparse64_75.dll;curand64_75.dll;$(CudaRuntimeDll)</CudaDlls>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(CudaVersion)' == '7.0'">
-    <CudaPath>$(CUDA_PATH_V7_0)</CudaPath>
-    <CudaRuntimeDll>cudart64_70.dll</CudaRuntimeDll>
-    <CudaDlls>cublas64_70.dll;cusparse64_70.dll;curand64_70.dll;$(CudaRuntimeDll)</CudaDlls>
   </PropertyGroup>
 
   <PropertyGroup>
