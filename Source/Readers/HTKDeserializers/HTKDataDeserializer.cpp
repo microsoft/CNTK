@@ -62,10 +62,10 @@ HTKDataDeserializer::HTKDataDeserializer(
     m_dimension = config.GetFeatureDimension();
     m_dimension = m_dimension * (1 + context.first + context.second);
 
-    InitializeChunkDescriptions(config);
+    InitializeChunkDescriptions(config.GetSequencePaths());
     InitializeStreams(inputName);
     InitializeFeatureInformation();
-    InitializeAugmentationWindow(config);
+    InitializeAugmentationWindow(config.GetContextWindow());
 }
 
 HTKDataDeserializer::HTKDataDeserializer(
@@ -98,15 +98,15 @@ HTKDataDeserializer::HTKDataDeserializer(
         InvalidArgument("Cannot expand utterances of the primary stream %ls, please change your configuration.", featureName.c_str());
     }
 
-    InitializeChunkDescriptions(config);
+    InitializeChunkDescriptions(config.GetSequencePaths());
     InitializeStreams(featureName);
     InitializeFeatureInformation();
-    InitializeAugmentationWindow(config);
+    InitializeAugmentationWindow(config.GetContextWindow());
 }
 
-void HTKDataDeserializer::InitializeAugmentationWindow(ConfigHelper& config)
+void HTKDataDeserializer::InitializeAugmentationWindow(const std::pair<size_t, size_t>& augmentationWindow)
 {
-    m_augmentationWindow = config.GetContextWindow();
+    m_augmentationWindow = augmentationWindow;
 
     // If not given explicitly, we need to identify the required augmentation range from the expected dimension
     // and the number of dimensions in the file.
@@ -117,10 +117,9 @@ void HTKDataDeserializer::InitializeAugmentationWindow(ConfigHelper& config)
 }
 
 // Initializes chunks based on the configuration and utterance descriptions.
-void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
+void HTKDataDeserializer::InitializeChunkDescriptions(const vector<wstring>& paths)
 {
     // Read utterance descriptions.
-    vector<wstring> paths = config.GetSequencePaths();
     vector<UtteranceDescription> utterances;
     utterances.reserve(paths.size());
     size_t allUtterances = 0, allFrames = 0;
