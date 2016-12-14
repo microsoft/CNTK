@@ -51,7 +51,7 @@ Train = [             # command=Train --> CNTK will look for a parameter named T
         epochSize = 0                  # =0 means size of the training set
         minibatchSize = 25
         learningRatesPerSample = 0.04  # gradient contribution from each sample
-		momentumAsTimeConstant=0
+	momentumAsTimeConstant=900
         maxEpochs = 50
     ]
 
