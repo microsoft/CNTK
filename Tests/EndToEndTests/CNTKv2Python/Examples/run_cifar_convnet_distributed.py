@@ -53,6 +53,8 @@ def run_cifar_convnet_distributed(epochs, block_size, num_quantization_bits, dis
 
     # return convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, max_epochs=1)
 
+
+
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-q', '--quantize_bit', required=False, default=32, type=int)
