@@ -381,6 +381,7 @@
 // Ignore things in CNTKLibraryInternals.h that are not exposed for C# Eval.
 %ignore CNTK::Internal::PrimitiveFunction;
 %ignore CNTK::Internal::CompositeFunction;
+%ignore CNTK::Internal::MaxNumCPUThreadsSet;
 %ignore CNTK::PrimitiveOpType;
 %ignore CNTK::Internal::IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
 %ignore CNTK::Internal::PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");

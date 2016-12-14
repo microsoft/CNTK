@@ -357,10 +357,10 @@ namespace CNTK
             return Microsoft::MSR::CNTK::Globals::ShouldForceDeterministicAlgorithms();
         }
 
-        static std::atomic<bool> s_theadsAreSet(false);
+        static std::atomic<bool> s_threadsAreSet(false);
         bool MaxNumCPUThreadsSet()
         {
-            return s_theadsAreSet;
+            return s_threadsAreSet;
         }
     }
 
@@ -508,7 +508,7 @@ namespace CNTK
 
     void SetMaxNumCPUThreads(size_t numCPUThreads)
     {
-        Internal::s_theadsAreSet = true;
+        Internal::s_threadsAreSet = true;
         Microsoft::MSR::CNTK::CPUMatrix<float>::SetNumThreads((int)numCPUThreads);
     }
 
