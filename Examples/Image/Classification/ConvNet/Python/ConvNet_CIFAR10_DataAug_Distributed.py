@@ -157,19 +157,23 @@ def convnet_cifar10_dataaug(create_train_reader, create_test_reader, create_dist
 
     return metric_numer/metric_denom
 
-def train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs, distributed_after_samples, num_quantization_bits):
+def train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs=3, distributed_after_samples=0, num_quantization_bits=32, block_size=0):
 
-    create_dist_learner = \
-        lambda learner: cntk.distributed.data_parallel_distributed_learner(learner,
-                                                                           num_quantization_bits=num_quantization_bits,
-                                                                           distributed_after=distributed_after_samples)
+    if (block_size != 0):
+        create_dist_learner = \
+        lambda learner: cntk.distributed.block_momentum_distributed_learner(learner, block_size=block_size)
+    else:
+        create_dist_learner = \
+            lambda learner: cntk.distributed.data_parallel_distributed_learner(learner,
+                                                                               num_quantization_bits=num_quantization_bits,
+                                                                               distributed_after=distributed_after_samples)
 
     
 
     create_train_reader = lambda data_size: create_reader(train_data, mean, True, data_size, distributed_after_samples)
     create_test_reader = lambda data_size: create_reader(test_data, mean, True, data_size, distributed_after=cntk.io.FULL_DATA_SWEEP)
    
-    convnet_cifar10_dataaug(create_train_reader, create_test_reader, create_dist_learner, max_epochs=max_epochs, log_to_file=log_dir, num_mbs_per_log=None, gen_heartbeat=False)
+    return convnet_cifar10_dataaug(create_train_reader, create_test_reader, create_dist_learner, max_epochs=max_epochs, log_to_file=log_dir, num_mbs_per_log=None, gen_heartbeat=False)
 
 
 if __name__=='__main__':
@@ -196,8 +200,8 @@ if __name__=='__main__':
 
     distributed_after_samples = 0
     num_quantization_bits = 32
-    max_epochs = 80
+    max_epochs = 1
+    block_size = 0
     
-    train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs, distributed_after_samples, num_quantization_bits)
-
+    train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs=max_epochs, distributed_after_samples=distributed_after_samples, num_quantization_bits=num_quantization_bits, block_size=block_size)
     cntk.distributed.Communicator.finalize()
