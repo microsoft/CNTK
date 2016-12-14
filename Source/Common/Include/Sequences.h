@@ -453,6 +453,20 @@ public:
         LogicError("FindSequence: Requested sequence (id %u) not found.", (unsigned int) seqId);
     }
 
+    // find a sequence by SequenceInfo array and position
+    // Use this if sequences may be matching 1:1.
+    const SequenceInfo& FindMatchingSequence(const vector<SequenceInfo>& querySequences, size_t i) const
+    {
+        // TODO: What are our sorted-ness guarantees?
+        let seqId = querySequences[i].seqId; // the seq id we are looking for
+        if (seqId == GAP_SEQUENCE_ID)
+            LogicError("FindMatchingSequence: Cannot be applied go gaps.");
+        if (seqId == m_sequences[i].seqId)   // if both sequence arrays match 1:1 then we found it
+            return m_sequences[i];
+        else
+            return FindSequence(seqId);
+    }
+
     // -------------------------------------------------------------------
     // inquire about gaps or boundaries
     // -------------------------------------------------------------------

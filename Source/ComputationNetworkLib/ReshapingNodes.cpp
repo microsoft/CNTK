@@ -323,7 +323,7 @@ template <class ElemType>
     let& sourceMBLayout = InputRef(SOURCEDATA).GetMBLayout(); // only used for index conversion
     let& indexMBLayout  = InputRef(INDEXDATA).GetMBLayout();
     let&  index  = InputRef(INDEXDATA).Value(); // per-seq index values that are to be mapped
-    auto& result =                   Value(); // packed index values as mapped to sourceData's layout
+    auto& result =                     Value(); // packed index values as mapped to sourceData's layout
     // loop over sourceSequences
     // Input matrix contains time indices for each sequence that refer to frames inside that sequence.
     // We replace every per-sequence index by the resolved column index w.r.t. the same MBLayout.
@@ -333,8 +333,9 @@ template <class ElemType>
         let& sourceSeq = sourceSequences[i];
         if (sourceSeq.seqId == GAP_SEQUENCE_ID)
             continue;
-        let& indexSeq = indexMBLayout->FindSequence(sourceSeq.seqId);          // find corresponding entry in indexMBLayout
-        for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++) // map all index values in index sequence
+        //let& indexSeq = indexMBLayout->FindSequence(sourceSeq.seqId);          // find corresponding entry in indexMBLayout
+        let& indexSeq = indexMBLayout->FindMatchingSequence(sourceSequences, i); // find corresponding entry in indexMBLayout
+        for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++)   // map all index values in index sequence
         {
             let jIndex  = indexMBLayout->GetColumnIndex(indexSeq, tIndex);    // map time index to actual location in the matrix storage object
             let tSource = (size_t)index(0, jIndex);                           // the new time location (relative to source sequence)
