@@ -196,7 +196,7 @@ if __name__=='__main__':
 
     distributed_after_samples = 0
     num_quantization_bits = 32
-    max_epochs = 2
+    max_epochs = 80
     
     train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs, distributed_after_samples, num_quantization_bits)
 
