@@ -185,6 +185,7 @@ if __name__=='__main__':
     reader_train_factory = lambda data_size: create_reader(train_data, mean, True, data_size)
     reader_test_factory = lambda data_size: create_reader(test_data, mean, True, data_size)
 
+
     train_and_evaluate(reader_train_factory, reader_test_factory, network_name, epochs, create_dist_learner, scale_up)
 
     # Must call MPI finalize when process exit
