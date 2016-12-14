@@ -4,12 +4,15 @@
 # logistic regression cntk script -- using network description language BrainScript
 
 # which commands to run
-command=Train:Output:DumpNodeInfo:Test
+command=Train
 
 # required...
 modelPath = "Models/LR_reg.dnn"  # where to write the model to
 deviceId = -1                    # -1 means CPU; use 0 for your first GPU, 1 for the second etc.
 dimension = 2                    # input data dimensions
+
+truncated=true
+truncationLength=5
 
 # training config
 Train = [             # command=Train --> CNTK will look for a parameter named Train
@@ -48,69 +51,25 @@ Train = [             # command=Train --> CNTK will look for a parameter named T
         epochSize = 0                  # =0 means size of the training set
         minibatchSize = 25
         learningRatesPerSample = 0.04  # gradient contribution from each sample
+		momentumAsTimeConstant=0
         maxEpochs = 50
     ]
 
-    # configuration of data reading
-    reader = [
-
-        readerType = "CNTKTextFormatReader"
-        file = "Train_cntk_text.txt"
-
-        input = [
-            features = [
-                dim = $dimension$
-                format = "dense"
-            ]
-            labels = [
-                dim = 1
-                format = "dense"
-            ]
-        ]
-    ]
-]
-
-# test
-Test = [
-    action = "test"
-    reader = [
-        readerType = "CNTKTextFormatReader"
-        file = "Test_cntk_text.txt"
-        input = [
-            features = [
-                dim = $dimension$
-                format = "dense"
-            ]
-            labels = [
-                dim = 1
-                format = "dense"
-            ]
-        ]
-    ]
-]
-
-# output the results
-Output = [
-    action = "write"
-    reader = [
-        readerType = "CNTKTextFormatReader"
-        file = "Test_cntk_text.txt"
-        input = [
-            features = [
-                dim = $dimension$  # $$ means variable substitution
-                format = "dense"
-            ]
-            labels = [
-                dim = 1            # label has 1 dimension
-                format = "dense"
-            ]
-        ]
-    ]
-    outputPath = "LR.txt"  # dump the output to this text file
-]
-
-# dump parameter values
-DumpNodeInfo = [
-    action = "dumpNode"
-    printValues = true
+	reader = {
+        randomize = false
+        deserializers = ({
+            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
+            file = "Train_cntk_text.txt"
+            input = [
+				features = [
+					dim = $dimension$
+					format = "dense"
+				]
+				labels = [
+					dim = 1
+					format = "dense"
+				]
+			]
+        })
+    }
 ]

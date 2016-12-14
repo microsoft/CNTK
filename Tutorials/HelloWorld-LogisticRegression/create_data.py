@@ -7,6 +7,7 @@ Licensed under the MIT license. See LICENSE file in the project root for full li
 
 import numpy as np
 from sklearn.utils import shuffle
+import random
 
 # number of dimensions
 Dim = 2
@@ -45,7 +46,9 @@ def create_data_files(num_classes, diff, train_filename, test_filename, regressi
         # output in CNTK Text format
         with open(filename, "w") as dataset:
             num_labels = int((1 + np.amax(Y)))
-            for i in range(N):
+            for i in range(N):    
+                if i ==0 or random.randint(1,5) == 5:
+                    dataset.write("%d" % i) 
                 dataset.write("|features ")
                 for d in range(Dim):
                     dataset.write("%f " % X[i,d])
