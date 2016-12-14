@@ -125,6 +125,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(TransposeDimensionsNode))              return New<TransposeDimensionsNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(TransposeTimesNode))                   return New<TransposeTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(QuantizedTimesNode))                   return New<QuantizedTimesNode<ElemType>>(forward<_Types>(_Args)...);
+	else if (nodeType == OperationNameOf(SampledTimesNode))                     return New<SampledTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(WhereNode))                            return New<WhereNode<ElemType>>(forward<_Types>(_Args)...);
     // legacy names we also support for back compat of model-files
     else if (nodeType == L"ColumnElementTimes")                                 return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
@@ -698,6 +699,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::QuantizedTimes(const ComputationNodePtr a, const ComputationNodePtr b, size_t bitSmoothingA, size_t bitSmoothingB, size_t outputRank, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<QuantizedTimesNode<ElemType>>(net.GetDeviceId(), nodeName, bitSmoothingA, bitSmoothingB, outputRank), { a, b });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SampledTimes(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr c, size_t outputRank, const std::wstring nodeName)
+{
+	return net.AddNodeToNetAndAttachInputs(New<SampledTimesNode<ElemType>>(net.GetDeviceId(), nodeName, outputRank), { a, b, c });
 }
 
 template <class ElemType>

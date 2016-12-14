@@ -30,9 +30,10 @@ Train = [             # command=Train --> CNTK will look for a parameter named T
         w = Parameter (LDim, SDim)  # weights
 
         # operations
-        p = Sigmoid (w * features + b)    
+        #p = w * features + b
+	p = SampledTimes(w,features,labels) + b
     
-        lr = Logistic (labels, p)
+        lr = SquareError (labels, p)
         err = SquareError (labels, p)
 
         # root nodes
@@ -45,10 +46,10 @@ Train = [             # command=Train --> CNTK will look for a parameter named T
 
     # configuration parameters of the SGD procedure
     SGD = [
-        epochSize = 0                  # =0 means size of the training set
+        epochSize = 100                # =0 means size of the training set
         minibatchSize = 25
-        learningRatesPerSample = 0.04  # gradient contribution from each sample
-        maxEpochs = 50
+        learningRatesPerSample = 0.001  # gradient contribution from each sample
+        maxEpochs = 100
     ]
 
     # configuration of data reading

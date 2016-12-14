@@ -866,20 +866,7 @@ public:
 
 	void Validate(bool isFinalValidationPass)
 	{
-		if (m_sizeOfSampledSet == 0)
-		{
-			InvalidArgument("Number of requested samples is zero.");
-		}
 
-		if (isFinalValidationPass)
-		{
-			// Sampling without replacement does only work when the number of requested classes is <= number of classes.
-			let& shape = Input(0)->GetSampleLayout();
-			let dims = shape.GetDims();
-			size_t nClasses = dims[0];
-			if (!m_allowDuplicates && nClasses <= m_sizeOfSampledSet)
-				InvalidArgument("For sampling without duplicates the number of requested samples (%lu) needs to be less than the number of classes (%lu).", m_sizeOfSampledSet, nClasses);
-		}
 	}
 
 private:

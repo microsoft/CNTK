@@ -699,6 +699,12 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
     }
 
+	FunctionPtr TernaryOp(PrimitiveOpType op, const Variable& leftOperand, const Variable& rightOperand, const Variable& thirdOperand, Dictionary&& opConfig, const std::wstring& name)
+	{
+		std::vector<Variable> operands = { leftOperand, rightOperand, thirdOperand };
+		return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
+	}
+
     FunctionPtr Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::Plus, leftOperand, rightOperand, Dictionary(), name);
@@ -769,6 +775,14 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::TransposeTimes, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
+	FunctionPtr SampledTimes(const Variable& leftOperand, const Variable& rightOperand, const Variable& labels, size_t outputRank /*= 1*/, int inferInputRankToMap, const std::wstring& name)
+	{
+		auto additionalProperties = Dictionary();
+		additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
+		additionalProperties[PrimitiveFunction::AttributeNameInferInputRankToMap] = inferInputRankToMap;
+		return TernaryOp(PrimitiveOpType::SampledTimes, leftOperand, rightOperand, labels, std::move(additionalProperties), name);
+	}
+	
     FunctionPtr CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name)
     {
         return BinaryOp(PrimitiveOpType::CosDistance, leftOperand, rightOperand, Dictionary(), name);

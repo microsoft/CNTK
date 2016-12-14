@@ -389,6 +389,14 @@ namespace CNTK
 
                 break;
             }
+			case PrimitiveOpType::SampledTimes:
+			{
+				assert(inputs.size() == 3);
+				auto outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
+				auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
+				outputShape = TimesOpOutputShape(inputs[0], inputs[1], outputRank, inferInputRankToMap, inferDimensions);
+				break;
+			}
             case PrimitiveOpType::Convolution:
             {
                 assert(inputs.size() == 2);

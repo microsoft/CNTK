@@ -2703,6 +2703,23 @@ namespace CNTK
         return TransposeTimes(leftOperand, rightOperand, /*outputRank =*/ 1, name);
     }
 
+	///
+	/// Create an instance of the CNTK built-in matrix multiplication operation with the transpose of the left input operand
+	/// and the specified right operand. Only accepts left operands of ranks 1 or 2.
+	/// TODO: Specify the constraints on the shapes of the operands.
+	///
+	CNTK_API FunctionPtr SampledTimes(const Variable& leftOperand, const Variable& rightOperand, const Variable& labels, size_t outputRank, const std::wstring& name = L"");
+
+	///
+	/// Create an instance of the CNTK built-in matrix multiplication operation with the transpose of the left input operand
+	/// and the specified right operand. Only accepts left operands of ranks 1 or 2.
+	/// TODO: Specify the constraints on the shapes of the operands.
+	///
+	inline FunctionPtr SampledTimes(const Variable& leftOperand, const Variable& rightOperand, const Variable& labels, const std::wstring& name = L"")
+	{
+		return SampledTimes(leftOperand, rightOperand, labels, /*outputRank =*/ 1, name);
+	}
+
 
     ///
     /// Create an instance of the CNTK built-in operation to compute the cosine distance for the specified input operands.
