@@ -184,10 +184,12 @@ if __name__=='__main__':
     mean=os.path.join(data_path, 'CIFAR-10_mean.xml')
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
+    
+    distributed_after_samples = 0
+    num_quantization_bits = 32
+    max_epochs = 80
+    
+    train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs, distributed_after_samples, num_quantization_bits)
 
-    create_train_reader = lambda data_size: create_reader(train_data, mean, True, data_size, distributed_after_samples)
-    test_reader = create_reader(test_data, mean, False, cntk.io.FULL_DATA_SWEEP)
-
-    convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, log_to_file=log_dir, num_mbs_per_log=10, gen_heartbeat=False)
 
     cntk.distributed.Communicator.finalize()
