@@ -158,6 +158,8 @@ namespace CNTK
             outputDynamicAxes = inputs[1].DynamicAxes();
         else if (op == PrimitiveOpType::ReconcileDynamicAxis)
             outputDynamicAxes = inputs[1].DynamicAxes();
+        else if (op == PrimitiveOpType::PastValue || op == PrimitiveOpType::FutureValue)
+            outputDynamicAxes = inputs[0].DynamicAxes();
         else
         {
             auto allInputDynamicAxesEmpty = std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.DynamicAxes().empty(); }) == inputs.end();
@@ -353,8 +355,8 @@ namespace CNTK
                     if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))
                         LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
 
-                    if (!initialStateVar.DynamicAxes().empty())
-                        LogicError("Currently PastValue/FutureValue Function does not support initial state operand with dynamic axes!");
+                    //if (!initialStateVar.DynamicAxes().empty())
+                    //    LogicError("Currently PastValue/FutureValue Function does not support initial state operand with dynamic axes!");
                 }
 
                 outputShape = BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);

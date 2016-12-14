@@ -88,9 +88,9 @@ def create_model_function():
         #Recurrence(pr_rnn, go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=relu) >> Dense(hidden_dim, activation=relu), go_backwards=False),
         #Stabilizer(),
-        #Dense(num_labels)
-        last,
-        Dense(num_intents)
+        Dense(num_labels)
+        #last,
+        #Dense(num_intents)
     ])
 
 ########################
@@ -161,17 +161,17 @@ def train(reader, model, max_epochs):
     #   here  (query, slot_labels) -> (ce, errs)
     criterion = create_criterion_function(model)
 
-    #labels = reader.streams.slot_labels
-    labels = reader.streams.intent_labels  # needs 3 changes to switch to this
+    labels = reader.streams.slot_labels
+    #labels = reader.streams.intent_labels  # needs 3 changes to switch to this
 
     # declare argument types
-    #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
-    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
+    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
+    #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
     minibatch_size = 70
-    epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
+    #epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
 
     # SGD parameters
     learner = adam_sgd(criterion.parameters,
@@ -192,7 +192,7 @@ def train(reader, model, max_epochs):
 
     t = 0
     for epoch in range(max_epochs):         # loop over epochs
-        #peek(model, epoch)                  # log some interesting info
+        peek(model, epoch)                  # log some interesting info
         epoch_end = (epoch+1) * epoch_size
         while t < epoch_end:                # loop over minibatches on the epoch
             # BUGBUG? The change of minibatch_size parameter vv has no effect.
@@ -255,6 +255,28 @@ if __name__=='__main__':
     #set_computation_network_trace_level(1000000)  # TODO: remove debugging facilities once this all works
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     force_deterministic_algorithms()
+
+    # test per-sequence initial state
+    if True:
+        data = [
+            np.array([[31,42], [5,3]]),
+            np.array([[13,42], [5,3], [3,2], [6,7], [12,5], [3,22]]),
+            np.array([[14,43], [51,23], [2,1]])
+        ]
+        initial_state = [
+            np.array([[7.1,8.1]]),
+            np.array([[7.2,8.2]]),
+            np.array([[7.3,8.3], [7.31, 8.31]]),
+        ]
+        from cntk.ops import past_value, future_value
+        batch_axis = Axis.default_batch_axis()
+        data_seq_axis = Axis('inputAxis')
+        init_seq_axis = Axis('initAxis')
+        f = past_value(Input(2, dynamic_axes=[batch_axis, data_seq_axis]), time_step=2, initial_state=Input(2, dynamic_axes=[batch_axis, init_seq_axis]))
+        res = f(data, initial_state)
+        print(res)
+        pass
+
 
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True) 
     model1 = create_model_function()

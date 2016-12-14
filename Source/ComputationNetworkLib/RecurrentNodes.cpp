@@ -262,8 +262,8 @@ template<class ElemType, int direction>
                 // For example, for m_timeStep = 2 and PastValue direction, and an initial-state length of 13,
                 // the index sequence would be [12, 11, -1, -1, ...].
                 // If the initial-state length is 1, we will broadcast and instead get [0, 0, -1, -1, ...].
-                size_t tout =                 direction < 0 ? dt : Tout - 1 - dt;  // step index of boundary frame in output
-                size_t tin  = Tin == 1 ? 0 : (direction > 0 ? dt : Tin  - 1 - dt); // and where in the initial state it comes from (Tin=1: broadcasting)
+                size_t tout =                 direction < 0 ? dt                    : Tout      - 1 - dt;  // step index of boundary frame in output
+                size_t tin  = Tin == 1 ? 0 : (direction < 0 ? Tin - m_timeStep + dt : m_timeStep- 1 - dt); // and where in the initial state it comes from (Tin=1: broadcasting)
                 // now this must be mapped to matrix column indices relative to the respective MBLayout
                 size_t jout = outMBLayout->GetColumnIndex(outSeq, tout);
                 size_t jin  =  inMBLayout->GetColumnIndex(inSeq,  tin);
@@ -379,8 +379,8 @@ template<class ElemType, int direction>
     {
         let& idx  =              DataFor(*m_packedIndexMatrix, fr); // column indices that guide the copy operation
         auto tgt  =             ValueFor                      (fr); // output goes here
-        let& init = InputRef(0).Value();                            // source data is the initial state. Not sliced, but we only copy parts.
-        tgt.DoGatherColumnsOf(/*beta=*/1, idx, init, /*alpha=*/1);   // beta=1 so that we add to what we previously initialized to 0
+        let& init = InputRef(1).Value();                            // source data is the initial state. Not sliced, but we only copy parts.
+        tgt.DoGatherColumnsOf(/*beta=*/1, idx, init, /*alpha=*/1);  // beta=1 so that we add to what we previously initialized to 0
     }
 }
 
