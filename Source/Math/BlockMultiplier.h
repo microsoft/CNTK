@@ -584,7 +584,8 @@ template<typename BlockHandlerT> class BlockMultiplier
 };
 
 // Instantiate block multipliers
-template<> const int BlockMultiplier<BlockHandlerSSE>::MAXRANGE;
+// TODO fix this error C2086
+//template<> const int BlockMultiplier<BlockHandlerSSE>::MAXRANGE;
 #ifdef SUPPORT_AVX2
 template<> const int BlockMultiplier<BlockHandlerAVX>::MAXRANGE;
 #endif

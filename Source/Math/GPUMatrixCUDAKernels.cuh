@@ -27,6 +27,7 @@
 #pragma warning(disable : 4127)
 #pragma warning(disable : 4201)
 #pragma warning(disable : 4515)
+#pragma warning(disable : 4458)
 #endif
 #include <cub/cub.cuh>
 #ifdef _MSC_VER

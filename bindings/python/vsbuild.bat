@@ -49,7 +49,7 @@ if defined nothingToBuild echo Python support not configured to build.&exit /b 0
 
 if "%p_DebugBuild%" == "true" echo Currently no Python build for Debug configurations, exiting.&exit /b 0
 
-call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall" amd64
+call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall" amd64
 set CNTK_LIB_PATH=%p_OutDir%
 set DIST_DIR=%p_OutDir%\Python
 set PATH=%p_SWIG_PATH%;%PATH%

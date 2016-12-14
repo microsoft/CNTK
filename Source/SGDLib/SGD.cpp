@@ -21,8 +21,14 @@
 //static inline bool operator==(const std::pair<double,size_t>& a, double b) { assert(b==0); return a.first == b; }
 // ^^ workaround until this line in AggregateGradientsImpl() gets updated: assert(headerCPU->evalErrors[i] == 0);
 #include "AllReduceDistGradAggregator.h"
+
+// TODO: fix the reason for this warning!
+#pragma warning(push)
+#pragma warning(disable : 4457)
 #include "BlockMomentumSGD.h"
 #include "V2BlockMomentumSGD.h"
+#pragma warning(pop)
+
 #include "V2AllReduceDistGradAggregator.h"
 #endif
 

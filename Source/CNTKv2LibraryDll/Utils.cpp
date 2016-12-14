@@ -506,7 +506,7 @@ namespace CNTK
         if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
             InvalidArgument("Invalid Value object; the sum of the rank of the mask and data does not equal the Variable's rank + number of dynamic axes");
         
-        auto getNumTimeStepsAndSequencesFunc = [numDynamicAxes](const NDShape& maskShape, size_t numDynamicAxes) {
+        auto getNumTimeStepsAndSequencesFunc = [](const NDShape& maskShape, size_t numDynamicAxes) {
             size_t maxNumTimeSteps = 1;
             size_t numSequences = 1;
             if (maskShape.Rank() > 1)
