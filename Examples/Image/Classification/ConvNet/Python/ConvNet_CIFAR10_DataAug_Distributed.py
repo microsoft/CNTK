@@ -197,11 +197,12 @@ if __name__=='__main__':
     mean=os.path.join(data_path, 'CIFAR-10_mean.xml')
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
-
+    
     distributed_after_samples = 0
     num_quantization_bits = 32
     max_epochs = 1
     block_size = 0
     
     train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs=max_epochs, distributed_after_samples=distributed_after_samples, num_quantization_bits=num_quantization_bits, block_size=block_size)
+
     cntk.distributed.Communicator.finalize()
