@@ -172,7 +172,6 @@ if __name__=='__main__':
     # Create distributed trainer factory
     print("Start training: quantize_bit = {}, epochs = {}, distributed_after = {}".format(num_quantization_bits, epochs, distributed_after_samples))
    
-
     if (block_size != 0):
         create_dist_learner = lambda learner: distributed.block_momentum_distributed_learner(learner=learner, block_size=block_size)
     else:
