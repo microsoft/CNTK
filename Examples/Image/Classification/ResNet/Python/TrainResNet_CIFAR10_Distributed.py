@@ -153,10 +153,11 @@ def train_and_evaluate(create_train_reader, test_reader, network_name, max_epoch
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
-    parser.add_argument('-e', '--epochs', help='total epochs', type=int, required=False, default='160')
+    parser.add_argument('-e', '--epochs', help='total epochs', type=int, required=False, default='100')
     parser.add_argument('-q', '--quantize_bit', help='quantized bit', type=int, required=False, default='32')
     parser.add_argument('-s', '--scale_up', help='scale up minibatch size with #workers for better parallelism', type=bool, required=False, default='False')
     parser.add_argument('-a', '--distributed_after', help='number of samples to train with before running distributed', type=int, required=False, default='0')
+    parser.add_argument('-b', '--block_size', type=int, help="block size for block momentum distributed learner", required=False, default=0)
 
     args = vars(parser.parse_args())
     num_quantization_bits = int(args['quantize_bit'])
@@ -164,20 +165,26 @@ if __name__=='__main__':
     distributed_after_samples = int(args['distributed_after'])
     network_name = args['network']
     scale_up = bool(args['scale_up'])
+    block_size = int(args['block_size'])
 
     # Create distributed trainer factory
     print("Start training: quantize_bit = {}, epochs = {}, distributed_after = {}".format(num_quantization_bits, epochs, distributed_after_samples))
-    create_dist_learner = lambda learner: distributed.data_parallel_distributed_learner(learner=learner,
-                                                                                        num_quantization_bits=num_quantization_bits,
-                                                                                        distributed_after=distributed_after_samples)
+   
+
+    if (block_size != 0):
+        create_dist_learner = lambda learner: distributed.block_momentum_distributed_learner(learner=learner, block_size=block_size)
+    else:
+        create_dist_learner = lambda learner: distributed.data_parallel_distributed_learner(learner=learner, num_quantization_bits=num_quantization_bits, distributed_after=distributed_after_samples)
+
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
     mean=os.path.join(data_path, 'CIFAR-10_mean.xml')
 
-    create_train_reader=lambda data_size: create_reader(train_data, mean, True, data_size, distributed_after_samples)
-    test_reader=create_reader(test_data, mean, False, FULL_DATA_SWEEP)
+    reader_train_factory = lambda data_size: create_reader(train_data, mean, True, data_size)
+    reader_test_factory = lambda data_size: create_reader(test_data, mean, True, data_size)
 
-    train_and_evaluate(create_train_reader, test_reader, network_name, epochs, create_dist_learner, scale_up)
+
+    train_and_evaluate(reader_train_factory, reader_test_factory, network_name, epochs, create_dist_learner, scale_up)
 
     # Must call MPI finalize when process exit
     distributed.Communicator.finalize()
