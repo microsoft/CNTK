@@ -168,7 +168,9 @@ public:
     void TransferToDeviceIfNotThere(int id_to, bool isBeingMoved = false, bool emptyTransfer = false, bool updatePreferredDevice = true) const;
     CurrentDataLocation GetCurrentMatrixLocation() const { return m_currentDataLocation; };
     void SwitchToMatrixType(MatrixType newMatrixType, MatrixFormat newMatrixFormat, bool keepValues); // sets matrix type between dense and sparse
-    size_t GetNumRows() const;
+	size_t GetNumNonZeroElements() const;
+	int* GetNonZeroIndices() const;
+	size_t GetNumRows() const;
     size_t GetNumCols() const;
     size_t GetNumElements() const;
     bool HasNoElements() const { return GetNumElements() == 0; }

@@ -8,6 +8,9 @@
 #include "ComputationNode.h"
 #include "Matrix.h"
 #include "TensorView.h"
+#include "RNGHandle.h"
+#include "CPURNGHandle.h"
+#include "CPUSparseMatrix.h"
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -245,8 +248,8 @@ template class ElementTimesNode<double>;
 // TODO: allow outputRank < 0 meaning to denote "all but", from right
 // -----------------------------------------------------------------------
 
-template <class ElemType, bool m_transpose>
-class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
+template <class ElemType, bool m_transpose, size_t m_numInputs>
+class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<m_numInputs>
 {
     friend class ElementTimesNode<ElemType>;
 
@@ -263,7 +266,7 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<TimesNodeBase<ElemType, m_transpose>>(nodeP);
+            auto node = dynamic_pointer_cast<TimesNodeBase<ElemType, m_transpose, m_numInputs>>(nodeP);
             node->m_outputRank          = m_outputRank;
             node->m_inferInputRankToMap = m_inferInputRankToMap;
         }
@@ -610,9 +613,9 @@ private:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class TimesNode : public TimesNodeBase<ElemType, false>
+class TimesNode : public TimesNodeBase<ElemType, false, 2>
 {
-    typedef TimesNodeBase<ElemType, false> Base;
+    typedef TimesNodeBase<ElemType, false, 2> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"Times"; }
 
@@ -641,9 +644,9 @@ template class TimesNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class TransposeTimesNode : public TimesNodeBase<ElemType, true>
+class TransposeTimesNode : public TimesNodeBase<ElemType, true, 2>
 {
-    typedef TimesNodeBase<ElemType, true> Base;
+    typedef TimesNodeBase<ElemType, true, 2> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"TransposeTimes"; }
 
@@ -672,9 +675,9 @@ template class TransposeTimesNode<double>;
 // bitShift=0 doesn't change the range; higher bitShift will decrease precision of quantization, but will make BLAS routines less prone to overflow.
 // Other parameters - refer to the base multiplication class
 template <class ElemType>
-class QuantizedTimesNode : public TimesNodeBase<ElemType, false>
+class QuantizedTimesNode : public TimesNodeBase<ElemType, false, 2>
 {
-    typedef TimesNodeBase<ElemType, false> Base;
+    typedef TimesNodeBase<ElemType, false, 2> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
@@ -757,22 +760,25 @@ template class QuantizedTimesNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class SampledTimesNode : public TimesNodeBase<ElemType, false>
+class SampledTimesNode : public TimesNodeBase<ElemType, false, 3>, public RngUser
 {
-	typedef TimesNodeBase<ElemType, false> Base;
+	typedef TimesNodeBase<ElemType, false, 3> Base;
 	UsingComputationNodeMembersBoilerplate;
 	static const std::wstring TypeName() { return L"SampledTimes"; }
 
 public:
 	DeclareConstructorFromConfigWithNumInputs(SampledTimesNode);
-	SampledTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet, const std::vector<size_t>& weights, size_t outputRank = 1)
-		: Base(deviceId, name, outputRank, /*inferInputRankToMap=*/-1), m_sizeOfSampledSet(sizeOfSampledSet)
+	SampledTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, size_t outputRank = 1)
+		: Base(deviceId, name, outputRank, /*inferInputRankToMap=*/-1), m_sizeOfSampledSet(sizeOfSampledSet), 
+		m_sampleIdx(sizeOfSampledSet, 1, deviceId), m_sampledWeights(deviceId), m_sampledOutput(deviceId)
 	{
 		if (outputRank != 1)
 			LogicError("SampledTimes does not yet support outputRank other than 1");
 
-		UpdateWeightsPrefixSum(weights);
+		SetRngState((unsigned long)CreateUniqId());
 	}
+
+	void SetWeights(const std::vector<ElemType>& weights) { UpdateWeightsPrefixSum(weights); }
 
 	void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
 	{
@@ -782,7 +788,6 @@ public:
 			auto node = dynamic_pointer_cast<SampledTimesNode<ElemType>>(nodeP);
 			node->m_sizeOfSampledSet = m_sizeOfSampledSet;
 			node->m_allowDuplicates = m_allowDuplicates;
-			node->m_randomSeed = m_randomSeed;
 		}
 	}
 
@@ -791,7 +796,6 @@ public:
 		Base::Save(fstream);
 		fstream << m_sizeOfSampledSet;
 		fstream << m_allowDuplicates;
-		fstream << m_randomSeed;
 	}
 
 	void Load(File& fstream, size_t modelVersion) override
@@ -799,7 +803,6 @@ public:
 		Base::Load(fstream, modelVersion);
 		fstream >> m_sizeOfSampledSet;
 		fstream >> m_allowDuplicates;
-		fstream >> m_randomSeed;
 	}
 
 	void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
@@ -807,16 +810,23 @@ public:
 		// TensorView::DoMatrixProductOf() will reduce each tensor object into a 2D tensor (or fail if it cannot)
 		// and recreate actual Matrix objects (in case of sparse, they must be identical to the original tensor storage object).
 		// Transposition is applied after flattening into 2D, but only allowed if the input sample is 2D anyway.
-		auto input0 = Base::OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
-		auto input1 = Base::OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
-		auto idx = RunSampling();
-		auto sampledWeights = new Matrix<ElemType>();
-		sampledWeights.DoGatherColumnsOf(ElemType(0), idx, input0, ElemType(1)); // *sampledWeights[:,j] = a[:,idx[j]]
-		auto sampledOutput = new Matrix<ElemType>();
-		sampledOutput.AssignMatrixProductOf(false/*transC*/, sampledWeights, m_transpose/*transA*/, input1, false/*transB*/);
-		auto output = Base::OneSampleTensorFor(-1, /*gradient=*/false, fr);
-		output.SetValue(0);
-		output.DoScatterColumnsOf(ElemType(0), idx, sampledOutput, ElemType(0));
+		auto input0 = Base::OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
+		auto input1 = Base::OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
+		auto input2 = Base::OneSampleTensorFor(2,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
+		//RunSampling();
+		int* idx = input2->GetNonZeroIndices();
+		size_t numElements = input2->GetNumNonZeroElements();
+		ElemType* floatIdx = new ElemType[numElements];
+		for (size_t i = 0; i < numElements; ++i) {
+			floatIdx[i] = (ElemType)idx[i];
+		}
+
+		m_sampleIdx.SetValue(numElements, 1, GetDeviceId(), floatIdx, false /*matrixFormatRowMajor*/);
+		delete[] floatIdx;
+		m_sampledWeights.DoGatherColumnsOf(0, m_sampleIdx, *input0, 1); // *sampledWeights[:,j] = a[:,idx[j]]
+		m_sampledOutput.AssignProductOf(m_sampledWeights, false/*transA*/, *input1, false/*transB*/);
+		auto output = Base::OneSampleTensorFor(-1, /*gradient=*/false, fr).AsMatrix();
+		output->DoScatterColumnsOf(0, m_sampleIdx, m_sampledOutput, 0);
 	}
 
 	void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -829,27 +839,31 @@ public:
 
 		if (inputIndex == 0) // left derivative
 		{
-			// currently we only support one combination when the input is sparse
-			// If input data is sparse, then gradient is block sparse.
-			// BUGBUG: This does not accumulate into the InputRef(0).Gradient, which might cause problems elsewhere.
-			if (InputRef(1).Value().GetMatrixType() == SPARSE && InputRef(0).Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
-				InputRef(0).Gradient().SwitchToMatrixType(SPARSE, MatrixFormat::matrixFormatSparseBlockCol, false);
-			auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true, fr.AllowBroadcast());
-			auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
-			auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
-			input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
+			auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true, fr.AllowBroadcast()).AsMatrix();
+			m_sampledWeights.DoGatherColumnsOf(0, m_sampleIdx, *input0Gradient, 1);
+
+			auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr).AsMatrix();
+			m_sampledOutput.DoGatherColumnsOf(0, m_sampleIdx, *outputGradient, 1);
+
+			auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
+
+			m_sampledWeights.AssignProductOf(m_sampledOutput, false/*transA*/, *input1, true/*transB*/);
+			m_sampledWeights.Transpose();
+			input0Gradient->DoScatterColumnsOf(0, m_sampleIdx, m_sampledWeights, 0);
 		}
 		else if (inputIndex == 1) // right derivative
 		{
-			// BUGBUG: Above block produces case of sparse second input a sparse gradient gor first input. We should either have corresponding code here or not at all.
-			auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
-			auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true, fr.AllowBroadcast());
-			auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
-			input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
+			auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
+			m_sampledWeights.DoGatherColumnsOf(0, m_sampleIdx, *input0, 1);
+
+			auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr).AsMatrix();
+			m_sampledOutput.DoGatherColumnsOf(0, m_sampleIdx, *outputGradient, 1);
+
+			auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true, fr.AllowBroadcast()).AsMatrix();
+			input1Gradient->AssignProductOf(m_sampledWeights, true/*transA*/, m_sampledOutput, false/*transB*/);
 		}
 	}
 
-	template<class ElemType>
 	void Validate(bool isFinalValidationPass)
 	{
 		if (m_sizeOfSampledSet == 0)
@@ -869,11 +883,10 @@ public:
 	}
 
 private:
-	template<class ElemType>
-	void UpdateWeightsPrefixSum(const std::vector<size_t>& samplingWeights)
+	void UpdateWeightsPrefixSum(const std::vector<ElemType>& samplingWeights)
 	{
 		m_samplingWeightsPrefixSum.clear();
-		double runningWeightsSum = 0;
+		ElemType runningWeightsSum = 0;
 		for (int iClass = 0; iClass < samplingWeights.size(); iClass++)
 		{
 			ElemType currentWeight = samplingWeights[iClass];
@@ -888,33 +901,27 @@ private:
 	// Estimates the expected number of occurences of each class in the sampled set.
 	// For sampling without replacement we use estimate using average number of tries. (Inspired by TensorFlow)
 	// BUGBUG: Consider to reimplement using a less biased estimate as proposed by Nikos.
-	template<class ElemType>
 	ElemType EstimateInSampleFrequency(ElemType p) const
 	{
 		if (m_allowDuplicates)
 		{
-			return p * Base::m_sizeOfSampledSet;
+			return p * m_sizeOfSampledSet;
 		}
-		else /* No duplicates allowed. Estimated count is same as probability of inclusion. */
+		else /* Since each class appears at most once, E[#occurrences of c] = P(occurrence of c) = 1 - P(non-occurrence of c) = 1 - (1-p)^n */
 		{
-			return -expm1(estimatedNumTries * log1p(-p));
+			return ElemType( 1 - pow( 1-p, m_sizeOfSampledSet ));
 		}
 	}
 
 	// Runs the sampling returning a vector with the id's of the samples. 
-	template<class ElemType>
-	const std::vector<size_t> RunSampling()
+	void RunSampling()
 	{
 		std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
 		std::unordered_set<int> alreadySampled;
-		std::vector<size_t> samples;
-		CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));
+		std::vector<ElemType> samples;
+		CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(GetDeviceId()));
+		
 		// find random samples using the specified weight
-
-		if (m_allowDuplicates)
-			nTries = m_sizeOfSampledSet;
-		else
-			nTries = 0; // just initialize and count how many tries we need.
 
 		while (samples.size() < m_sizeOfSampledSet)
 		{
@@ -924,7 +931,7 @@ private:
 			int idx = (int)(lower - m_samplingWeightsPrefixSum.begin());
 
 			if (m_allowDuplicates)
-				samples.push_back(idx);
+				samples.push_back((ElemType)idx);
 			else
 			{
 				// Sampling without replacement: each value can be sampled at most once. 
@@ -934,25 +941,27 @@ private:
 				// * Weighted Random Sampling with Reservoir: http://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
 				// * Binary tree with classes as leafes and branch probs on non-leafes.
 				// * As in numpy: https://github.com/numpy/numpy/blob/master/numpy/random/mtrand/mtrand.pyx#L1440
-				nTries++;
 				if (alreadySampled.find(idx) != alreadySampled.end()) continue;
 				else
 				{
-					samples.push_back(idx);
+					samples.push_back((ElemType)idx);
 					alreadySampled.insert(idx);
 				}
 			}
 		}
-		return samples;
+		m_sampleIdx.SetValue(m_sizeOfSampledSet, 1, GetDeviceId(), samples.data(), false /*matrixFormatRowMajor*/);
 	}
 
 	size_t m_sizeOfSampledSet;
 	bool m_allowDuplicates;
 	std::vector<ElemType> m_samplingWeightsPrefixSum;
+	Matrix<ElemType> m_sampleIdx;
+	Matrix<ElemType> m_sampledWeights;
+	Matrix<ElemType> m_sampledOutput;
 };
 
-template class TransposeTimesNode<float>;
-template class TransposeTimesNode<double>;
+template class SampledTimesNode<float>;
+template class SampledTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // SumElementsNode (input)

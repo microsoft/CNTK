@@ -1679,6 +1679,42 @@ void Matrix<ElemType>::Reset()
 }
 
 template <class ElemType>
+size_t Matrix<ElemType>::GetNumNonZeroElements() const
+{
+	if (GetMatrixType() == MatrixType::SPARSE)
+	{
+		if (GetCurrentMatrixLocation() == CurrentDataLocation::GPU || GetCurrentMatrixLocation() == CurrentDataLocation::BOTH)
+			return m_GPUSparseMatrix->MajorIndexCount();
+		else if (GetCurrentMatrixLocation() == CurrentDataLocation::CPU)
+			return m_CPUSparseMatrix->MajorIndexCount();
+		else
+			RuntimeError("Matrices do not exist in either CPU or GPU.");
+	}
+	else
+	{
+		RuntimeError("Not supported for dense matrices.");
+	}
+}
+
+template <class ElemType>
+int* Matrix<ElemType>::GetNonZeroIndices() const
+{
+	if (GetMatrixType() == MatrixType::SPARSE)
+	{
+		if (GetCurrentMatrixLocation() == CurrentDataLocation::GPU || GetCurrentMatrixLocation() == CurrentDataLocation::BOTH)
+			return m_GPUSparseMatrix->MajorIndexLocation();
+		else if (GetCurrentMatrixLocation() == CurrentDataLocation::CPU)
+			return m_CPUSparseMatrix->MajorIndexLocation();
+		else
+			RuntimeError("Matrices do not exist in either CPU or GPU.");
+	}
+	else
+	{
+		RuntimeError("Not supported for dense matrices.");
+	}
+}
+
+template <class ElemType>
 size_t Matrix<ElemType>::GetNumRows() const
 {
     return m_baseMatrix->GetNumRows();

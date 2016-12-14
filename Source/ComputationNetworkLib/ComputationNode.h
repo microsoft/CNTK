@@ -21,6 +21,7 @@
 #include <stdexcept>
 #include <list>
 #include <memory>
+#include <random>
 #include <algorithm>
 #include <assert.h>
 #include <atomic>
@@ -65,13 +66,15 @@ enum CopyNodeFlags // flags to be passed to the CopyTo() function
 
 #pragma region base computation class
 
+
+
 // Nodes using a random number generators should derive from this interface.
 // One purpuose of this interface is to have a common interface for setting the seeds when setting up a network.
 class IRngUser
 {
 public:
 	virtual RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) = 0;
-	virtual void SetRandomSeed(const unsigned long val) = 0;
+	virtual void SetRngState(unsigned long seed, unsigned long long offset = 0) = 0;
 };
 
 // This implements IRngUser using RNGHandle.
@@ -81,21 +84,37 @@ public:
 	RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) override
 	{
 		if (!m_RNGHandle)
-			m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
+			m_RNGHandle = RNGHandle::Create(deviceId, m_rngSeed, m_rngOffset);
 
 		return *m_RNGHandle;
 	}
 
 	// E.g. called from ComputationNetwork to make sure that CNTK running on different nodes will have different seed.
-	void SetRandomSeed(const unsigned long val) override
+	void SetRngState(unsigned long seed, unsigned long long offset = 0) override
 	{
-		m_randomSeed = (unsigned long)val;
-
+		m_rngSeed = seed;
+		m_rngOffset = offset;
 		m_RNGHandle.reset(); // Reset handle. New handle will be generated with next call of GetRNGHandle(...).
 	}
 
+	unsigned long GetRngSeed() const
+	{
+		return m_rngSeed;
+	}
+
+	unsigned long long GetRngOffset() const
+	{
+		return m_rngOffset;
+	}
+
+	void UpdateRngOffset(unsigned long long val)
+	{
+		m_rngOffset = val;
+	}
+
 protected:
-	unsigned long m_randomSeed = 0;
+	unsigned long m_rngSeed = 0;
+	unsigned long long m_rngOffset = 0;
 	std::shared_ptr<RNGHandle> m_RNGHandle;
 };
 
