@@ -52,7 +52,7 @@ def create_reader(map_file, mean_file, train, total_number_of_samples, distribut
         distributed_after = distributed_after)
 
 # Train and evaluate the network.
-def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, max_epochs=80, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
+def convnet_cifar10_dataaug(create_train_reader, create_test_reader, create_dist_learner, max_epochs, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
     _cntk_py.set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
@@ -99,6 +99,7 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
 
     total_number_of_samples = max_epochs * epoch_size
     train_reader = create_train_reader(total_number_of_samples)
+    test_reader = create_test_reader(total_number_of_samples)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -156,6 +157,21 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
 
     return metric_numer/metric_denom
 
+def train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs, distributed_after_samples, num_quantization_bits):
+
+    create_dist_learner = \
+        lambda learner: cntk.distributed.data_parallel_distributed_learner(learner,
+                                                                           num_quantization_bits=num_quantization_bits,
+                                                                           distributed_after=distributed_after_samples)
+
+    
+
+    create_train_reader = lambda data_size: create_reader(train_data, mean, True, data_size, distributed_after_samples)
+    create_test_reader = lambda data_size: create_reader(test_data, mean, True, data_size, distributed_after=cntk.io.FULL_DATA_SWEEP)
+   
+    convnet_cifar10_dataaug(create_train_reader, create_test_reader, create_dist_learner, max_epochs=max_epochs, log_to_file=log_dir, num_mbs_per_log=None, gen_heartbeat=False)
+
+
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
 
@@ -174,21 +190,14 @@ if __name__=='__main__':
     if args['outputdir'] != None:
         model_path = args['outputdir'] + "/models"
 
-    distributed_after_samples = 0
-    num_quantization_bits = 32
-
-    create_dist_learner = \
-        lambda learner: cntk.distributed.data_parallel_distributed_learner(learner,
-                                                                           num_quantization_bits=num_quantization_bits,
-                                                                           distributed_after=distributed_after_samples)
-
     mean=os.path.join(data_path, 'CIFAR-10_mean.xml')
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
 
-    create_train_reader = lambda data_size: create_reader(train_data, mean, True, data_size, distributed_after_samples)
-    test_reader = create_reader(test_data, mean, False, cntk.io.FULL_DATA_SWEEP)
-
-    convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, log_to_file=log_dir, num_mbs_per_log=10, gen_heartbeat=False)
+    distributed_after_samples = 0
+    num_quantization_bits = 32
+    max_epochs = 2
+    
+    train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs, distributed_after_samples, num_quantization_bits)
 
     cntk.distributed.Communicator.finalize()
