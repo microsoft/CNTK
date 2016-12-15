@@ -547,14 +547,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                             : -1.0 / log(momentumPerSample);
         if (m_traceLevel > 0)
         {
-        fprintf(stderr, "\n");
-        LOGPRINTF(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
-                  i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
+            fprintf(stderr, "\n");
+            LOGPRINTF(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
+                      i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
         }
 
         EpochCriterion epochCriterion; // criterion values are returned in this
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
-
         TrainOneEpoch(net,
                       refNet,
                       refNode,
@@ -570,7 +569,6 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                       inputMatrices,
                       learnableNodes, smoothedGradients, smoothedCounts,
                       epochCriterion, epochEvalErrors);
-
         totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
 
         timer.Stop();
@@ -767,7 +765,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                 SaveCheckPointInfo(i, totalTrainingSamplesSeen, learnRatePerSample, smoothedGradients, smoothedCounts, prevCriterion, chosenMinibatchSize);
                 auto modelName = GetModelNameForEpoch(i);
                 if (m_traceLevel > 0)
-                LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
+                    LOGPRINTF(stderr, "SGD: Saving checkpoint model '%ls'\n", modelName.c_str());
                 net->Save(modelName);
                 if (!m_keepCheckPointFiles)
                 {
@@ -1016,14 +1014,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool isFirstMinibatch = true;
     for (;;)
     {
-        // Per-minibatch performance measurements; only enabled when perfTraceLevel > 0
-        Timer fineGrainedPerfMeasurementTimer;
-        double readTime = 0;
-        double computeTime = 0;
-        double parameterUpdateTime = 0;
-        double parameterSyncTime = 0; // perf communication time between syncs.
-        if (m_perfTraceLevel > 0)
-            fineGrainedPerfMeasurementTimer.Start();
         auto minibatchProfilerState = ProfilerTimeBegin();
 
         // get minibatch
@@ -1038,9 +1028,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             wasDataRead = false;
 
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
-        {
             break;                                                                // end of epoch
-        }
 
         // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to fill in are undefined.
         // Must not touch them.
@@ -1117,6 +1105,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // ===========================================================
                 // forward prop for training criterion
                 // ===========================================================
+
                 net->ForwardProp(criterionNodes[0]);
 
                 // ===========================================================
@@ -1124,9 +1113,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // ===========================================================
 
                 if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
-                {
                     net->Backprop(criterionNodes[0]);
-                }
 
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)
@@ -1134,7 +1121,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }                                                        // end sub-minibatch loop
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
-
         } // if (actualMBSize > 0)
         // WARNING: If actualMBSize == 0, then criterion nodes have NOT been updated, and contain garbage (last MB's) values.
 
@@ -1286,15 +1272,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
 
-        if (m_perfTraceLevel > 0)
-        {
-            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(net->GetDeviceId()));
-            mainStreamSyncEvent->SynchronizeEvent();
-            fineGrainedPerfMeasurementTimer.Stop();
-            parameterUpdateTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
-            fineGrainedPerfMeasurementTimer.Start();
-        }
-
         // aggregation by model averaging or block momentum 
         if (useModelAggregation)
         {
@@ -1330,21 +1307,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
 
-        if (m_perfTraceLevel > 0)
-        {
-            fineGrainedPerfMeasurementTimer.Stop();
-            parameterSyncTime = fineGrainedPerfMeasurementTimer.ElapsedSeconds();
-        }
-
         ProfilerTimeEnd(profilerState, profilerEvtMainWeights);
         profilerState = ProfilerTimeBegin();
-        
+
         timer.Stop();
-        if (m_perfTraceLevel > 0)
-        {
-            PREPENDTS(stderr);
-            fprintf(stderr, "Perf trace: Worker MB size = %d, Read = %.5gs; Compute = %.5gs; Parameter update = %.5gs; Parameter sync = %.5gs; Aggregate MB size = %d\n", (int)actualMBSize, readTime, computeTime, parameterUpdateTime, parameterSyncTime, (int)aggregateNumSamples);
-        }
 
         numMBsRun++;
         totalTimeInMBs += timer.ElapsedSeconds();
@@ -1467,7 +1433,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         profiler.NextSample();
         isFirstMinibatch = false;
-    
+
         ProfilerTimeEnd(profilerState, profilerEvtMainPost);
         ProfilerTimeEnd(minibatchProfilerState, profilerEvtMainMinibatch);
     }
@@ -2988,9 +2954,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                 fprintf(stderr, "WARNING: option syncPeroid in ModelAveragingSGD is going to be deprecated. Please use blockSizePerWorker instead in the future.\n");
             }
 #endif
-            }
-            if (configParallelTrain.Exists(L"BlockMomentumSGD"))
-            {
+        }
+        if (configParallelTrain.Exists(L"BlockMomentumSGD"))
+        {
 #ifndef CNTK_PARALLEL_TRAINING_SUPPORT
             InvalidArgument("BlockMomentumSGD is not enabled in this version.\n");
 #else
@@ -3016,9 +2982,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
                 fprintf(stderr, "WARNING: option syncPeroid in BlockMomentumSGD is going to be deprecated. Please use blockSizePerWorker instead in the future.\n");
             }
 #endif 
-                m_resetSGDMomentum = configBMSGD(L"resetSGDMomentum", true);
-                m_useNesterovBlockMomentum = configBMSGD(L"useNesterovMomentum", true);
-                m_blockLearningRate = configBMSGD(L"blockLearningRate", 1.0);
+            m_resetSGDMomentum = configBMSGD(L"resetSGDMomentum", true);
+            m_useNesterovBlockMomentum = configBMSGD(L"useNesterovMomentum", true);
+            m_blockLearningRate = configBMSGD(L"blockLearningRate", 1.0);
 
             if (configBMSGD.Exists(L"blockMomentumPerSync") && configBMSGD.Exists(L"blockMomentumAsTimeConstant"))
             {

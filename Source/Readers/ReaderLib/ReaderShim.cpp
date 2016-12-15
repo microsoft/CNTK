@@ -18,7 +18,6 @@
 #include "DataReader.h"
 #include "ReaderShim.h"
 #include "DataTransferer.h"
-
 #include "PerformanceProfiler.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
