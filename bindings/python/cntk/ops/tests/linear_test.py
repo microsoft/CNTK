@@ -55,6 +55,28 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
                     left_operand, right_operand,
                     expected_forward, expected_backward)
 
+def test_op_plus_gradient_accumulation(device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+
+    value = AA([[[1]]], dtype=dt_precision)
+
+    from cntk import times_transpose, Axis
+    a = I(shape=(1,),
+          needs_gradient=True,
+          name='a')
+
+    input_op = a + a
+
+    expected_forward = AA([[[2]]], dtype=dt_precision)
+    expected_backward = { a : [[[2]]], a : [[[2]]] }
+
+    forward_input = {a: value}
+
+    unittest_helper(input_op,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
+
+
 SEQ_TENSOR_PAIRS = [
     # two inputs each having sequences of length 1 and 2
     ([[[30.]], [[40], [50]]],  # first batch with two sequences
@@ -270,3 +292,4 @@ def test_op_transpose_times(left_operand, right_operand, device_id, precision):
 
     _test_binary_op(precision, device_id, times_transpose,
                     left_operand, right_operand, expected_forward, expected_backward)
+
