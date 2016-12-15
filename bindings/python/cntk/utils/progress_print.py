@@ -70,7 +70,7 @@ class ProgressPrinter:
 
     def end_progress_print(self, msg=""):
         self.___logprint('CNTKCommandTrainEnd: train')
-        if msg !="":
+        if msg !="" and self.log_to_file != None:
             self.___logprint(msg)
 
     def avg_loss_since_start(self):
