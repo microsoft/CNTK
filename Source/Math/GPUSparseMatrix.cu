@@ -2764,6 +2764,29 @@ template GPUSparseMatrix<short>& GPUSparseMatrix<short>::operator=(GPUSparseMatr
 template void GPUSparseMatrix<short>::Reshape(const size_t, const size_t);
 template void GPUSparseMatrix<short>::ScaleAndAdd(short, GPUSparseMatrix<short> const &, GPUMatrix<short> &);
 
+// Support <long>
+template GPUSparseMatrix<long>::GPUSparseMatrix(DEVICEID_TYPE, const MatrixFormat);
+template GPUSparseMatrix<long>::GPUSparseMatrix(const size_t, const size_t, const size_t, DEVICEID_TYPE, const MatrixFormat);
+template GPUSparseMatrix<long>::GPUSparseMatrix(GPUSparseMatrix<long> const&);
+template GPUSparseMatrix<long>::GPUSparseMatrix(GPUSparseMatrix<long>&&);
+template void GPUSparseMatrix<long>::SetValue(CPUSparseMatrix<long> const&);
+template void GPUSparseMatrix<long>::SetValue(GPUSparseMatrix<long> const&);
+template void GPUSparseMatrix<long>::SetValue(GPUMatrix<long> const&);
+//template void GPUSparseMatrix<long>::SetValue(CPUMatrix<long> const&);
+template void GPUSparseMatrix<long>::CopyToDenseMatrix(GPUMatrix<long>&) const;
+template void GPUSparseMatrix<long>::CopyToCPUSparseMatrix(CPUSparseMatrix<long>&) const;
+template void GPUSparseMatrix<long>::ChangeDeviceTo(int);
+template void GPUSparseMatrix<long>::Resize(const size_t, const size_t, const size_t, const bool);
+template void GPUSparseMatrix<long>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);
+template void GPUSparseMatrix<long>::Reset();
+template GPUSPARSE_INDEX_TYPE GPUSparseMatrix<long>::SecondaryIndexValueAt(size_t) const;
+template GPUSparseMatrix<long>::~GPUSparseMatrix();
+template GPUSparseMatrix<long> GPUSparseMatrix<long>::ColumnSlice(size_t, size_t) const;
+template GPUMatrix<long> GPUSparseMatrix<long>::CopyColumnSliceToDense(size_t, size_t) const;
+template GPUSparseMatrix<long>& GPUSparseMatrix<long>::operator=(GPUSparseMatrix<long>&&);
+template void GPUSparseMatrix<long>::Reshape(const size_t, const size_t);
+template void GPUSparseMatrix<long>::ScaleAndAdd(long, GPUSparseMatrix<long> const &, GPUMatrix<long> &);
+
 template GPUSparseMatrix<int>::GPUSparseMatrix(DEVICEID_TYPE, const MatrixFormat);
 template GPUSparseMatrix<int>::~GPUSparseMatrix();
 template void GPUSparseMatrix<int>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, const bool);

@@ -565,6 +565,333 @@ public:
 template class ClipNode<float>;
 template class ClipNode<double>;
 
+//// Forest Node
+template<class ElemType>
+struct treeleaf {
+    long featureIdx;
+    ElemType nodevalue;
+    long lchild;
+    long rchild;
+    long parent;
+    short isleftchild;
+};
+
+template <class ElemType>
+class ForestNode : public ComputationNode<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"Forest"; }
+
+    Matrix<ElemType> *nodevalue;
+    Matrix<long> *leftchild;
+    Matrix<long> *rightchild;
+    Matrix<long> *featureindex;
+    Matrix<long> *treeheads;
+    Matrix<long> *parent;
+    Matrix<short> *isleftchild;
+    Matrix<long> *leafheads;
+
+    long nLeafs = 0;
+    size_t nTrees = 0;
+    long *treeHead, *lchild, *rchild, *featureIdx, *mother, *firstleaf;
+    short *islchild;
+    ElemType *value;
+    wstring m_initFromFile;
+
+    void mysplit(const std::string &str, char sep, std::vector<std::string> & vec)
+    {
+        vec.clear();
+        std::string tmp = str;
+        while (!tmp.empty())
+        {
+            size_t end = tmp.find_first_of(sep);
+            vec.push_back(tmp.substr(0, end));
+            if (end == std::string::npos)
+                return;
+            tmp = tmp.substr(end + 1);
+        }
+    }
+
+    void InitFromFile(const wstring& initFromFilePath)
+    {
+        File myfile(initFromFilePath, FileOptions::fileOptionsText | FileOptions::fileOptionsRead);
+
+        std::vector<std::vector<treeleaf<ElemType>>> forest;
+        std::vector<treeleaf<ElemType>> mytree;
+        std::string line;
+        while (!myfile.IsEOF())
+        {
+            myfile.GetLine(line);
+            if (line.empty()) continue;
+
+            if (line.substr(0, 4) == "Tree")
+            {
+                if (!mytree.empty())
+                {
+                    forest.push_back(mytree);
+                    mytree.clear();
+                }
+            }
+            else
+            {
+                std::vector<std::string> fields;
+                mysplit(line, '\t', fields);
+
+                treeleaf<ElemType> tl =
+                {
+                    std::stol(fields[1]),
+                    (ElemType)std::stof(fields[2]),
+                    std::stol(fields[3]),
+                    std::stol(fields[4]),
+                    std::stol(fields[5]),
+                    (short)std::stoi(fields[6]),
+                };
+                mytree.push_back(tl);
+            }
+        }
+        forest.push_back(mytree);
+
+        nTrees = forest.size();
+        // Array of the index of the first element of each tree
+        treeHead = (long *)std::malloc(nTrees * sizeof(long));
+        for (int i = 0; i < nTrees; i++)
+        {
+            treeHead[i] = nLeafs;
+            nLeafs += forest[i].size();
+        }
+
+        lchild = (long *)std::malloc(nLeafs * sizeof(long));
+        rchild = (long *)std::malloc(nLeafs * sizeof(long));
+        featureIdx = (long *)std::malloc(nLeafs * sizeof(long));
+        value = (ElemType *)std::malloc(nLeafs * sizeof(ElemType));
+        mother = (long *)std::malloc(nLeafs * sizeof(long));
+        islchild = (short *)std::malloc(nLeafs * sizeof(short));
+
+        size_t icount = 0;
+        for (size_t i = 0; i < nTrees; i++)
+        {
+            for (size_t j = 0; j < forest[i].size(); j++)
+            {
+                lchild[icount] = forest[i][j].lchild;
+                rchild[icount] = forest[i][j].rchild;
+                featureIdx[icount] = forest[i][j].featureIdx;
+                value[icount] = forest[i][j].nodevalue;
+                mother[icount] = forest[i][j].parent;
+                islchild[icount] = forest[i][j].isleftchild;
+                icount++;
+            }
+        }
+
+        firstleaf = (long *)std::malloc(nTrees * sizeof(long));
+        for (int i = 0; i < nTrees; i++)
+        {
+            long idx = treeHead[i];
+            while (lchild[idx] != -1 || rchild[idx] != -1)
+                idx++;
+            firstleaf[i] = idx;
+        }
+
+        leftchild = new Matrix<long>(1, nLeafs, lchild, GetDeviceId());
+        rightchild = new Matrix<long>(1, nLeafs, rchild, GetDeviceId());
+        nodevalue = new Matrix<ElemType>(1, nLeafs, value, GetDeviceId());
+        featureindex = new Matrix<long>(1, nLeafs, featureIdx, GetDeviceId());
+        parent = new Matrix<long>(1, nLeafs, mother, GetDeviceId());
+        isleftchild = new Matrix<short>(1, nLeafs, islchild, GetDeviceId());
+        treeheads = new Matrix<long>(1, nTrees, treeHead, GetDeviceId());
+        leafheads = new Matrix<long>(1, nTrees, firstleaf, GetDeviceId());
+    }
+
+public:
+    //DeclareConstructorFromConfigWithNumInputs(TreeNode);
+    ForestNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    ForestNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : ForestNode(configp->Get(L"deviceId"), L"<placeholder>")
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs()); // (we have none; this checks that none are provided)
+        // initialization
+        wstring initFromFilePath = configp->Get(L"initFromFilePath");
+        m_initFromFile = initFromFilePath;
+        wstring inputFile = m_initFromFile;
+        InitFromFile(inputFile);
+    }
+
+    ~ForestNode()
+    {
+        free(treeHead);
+        free(featureIdx);
+        free(value);
+        free(lchild);
+        free(rchild);
+        free(mother);
+        free(islchild);
+        free(firstleaf);
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << nTrees << nLeafs;
+
+        for (size_t k = 0; k < nTrees; k++)
+            fstream << treeHead[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream << featureIdx[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream << value[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream << lchild[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream << rchild[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream << mother[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream << islchild[k];
+
+        for (size_t k = 0; k < nTrees; k++)
+            fstream << firstleaf[k];
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> nTrees >> nLeafs;
+
+        treeHead = (long *)std::malloc(nTrees * sizeof(long));
+        lchild = (long *)std::malloc(nLeafs * sizeof(long));
+        rchild = (long *)std::malloc(nLeafs * sizeof(long));
+        featureIdx = (long *)std::malloc(nLeafs * sizeof(long));
+        value = (ElemType *)std::malloc(nLeafs * sizeof(ElemType));
+        mother = (long *)std::malloc(nLeafs * sizeof(long));
+        islchild = (short *)std::malloc(nLeafs * sizeof(short));
+        firstleaf = (long *)std::malloc(nTrees * sizeof(long));
+
+        for (size_t k = 0; k < nTrees; k++)
+            fstream >> treeHead[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream >> featureIdx[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream >> value[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream >> lchild[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream >> rchild[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream >> mother[k];
+
+        for (size_t k = 0; k < nLeafs; k++)
+            fstream >> islchild[k];
+
+        for (size_t k = 0; k < nTrees; k++)
+            fstream >> firstleaf[k];
+
+        leftchild = new Matrix<long>(1, nLeafs, lchild, GetDeviceId());
+        rightchild = new Matrix<long>(1, nLeafs, rchild, GetDeviceId());
+        nodevalue = new Matrix<ElemType>(1, nLeafs, value, GetDeviceId());
+        featureindex = new Matrix<long>(1, nLeafs, featureIdx, GetDeviceId());
+        treeheads = new Matrix<long>(1, nTrees, treeHead, GetDeviceId());
+        parent = new Matrix<long>(1, nLeafs, mother, GetDeviceId());
+        isleftchild = new Matrix<short>(1, nLeafs, islchild, GetDeviceId());
+        leafheads = new Matrix<long>(1, nTrees, firstleaf, GetDeviceId());
+    }
+
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        Matrix<ElemType> result = ValueFor(fr);
+        //Matrix<ElemType>& input0 = InputRef(0).ValueAsMatrix();
+        //Matrix<ElemType> input0 = InputRef(0).ValueFor(fr);
+        size_t rank = DetermineElementwiseTensorRank();
+        TensorView<ElemType> input = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto shape = input.GetShape();
+        shape.FlattenTo2DInPlace(1, "Tree node forward prop");
+        auto input0 = input.Reshaped(shape).AsMatrix();
+        //fprintf(stderr, "input %d %d %d \n", input.GetShape()[0], input.GetShape()[1], input.GetShape()[2]);
+        //fprintf(stderr, "input matrx %d %d \n", inputM->GetNumCols(), inputM->GetNumRows());
+        Matrix<ElemType>& fuzzyU = InputRef(1).ValueAsMatrix();
+        Matrix<ElemType>& fuzzyB = InputRef(2).ValueAsMatrix();
+        Matrix<ElemType>::TreePrediction(*input0, result, *featureindex, *nodevalue, *leftchild, *rightchild, *treeheads, *parent, *isleftchild, *leafheads, fuzzyU, fuzzyB, nLeafs);
+        //void TreePrediction(const Matrix<ElemType>& a, Matrix<ElemType>& b, Matrix<long> featureindex, Matrix<ElemType> &nodevalue, Matrix<long> leftchild, Matrix<long> rightchild, Matrix<long> treeheads);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //if (inputIndex == 1)
+        //    return;
+        //fprintf(stderr, "backprop inputIndex %d\n", inputIndex);
+
+        Matrix<ElemType> gradient = GradientFor(fr);
+
+        size_t rank = DetermineElementwiseTensorRank();
+        TensorView<ElemType> input = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+        auto shape = input.GetShape();
+        shape.FlattenTo2DInPlace(1, "Tree node forward prop");
+        auto input0 = input.Reshaped(shape).AsMatrix();
+
+        Matrix<ElemType>& fuzzyU = InputRef(1).ValueAsMatrix();
+        Matrix<ElemType>& fuzzyB = InputRef(2).ValueAsMatrix();
+
+        if (inputIndex == 0)
+        {
+            TensorView<ElemType> inputGradTensor = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
+            auto shapeGrad = inputGradTensor.GetShape();
+            shapeGrad.FlattenTo2DInPlace(1, "Tree node backward prop");
+            auto inputGrad = inputGradTensor.Reshaped(shapeGrad).AsMatrix();
+
+            inputGrad->TreeBackPropEMB(*input0, gradient, *featureindex, *nodevalue, *leftchild, *rightchild, *treeheads, *parent, *isleftchild, *leafheads, fuzzyU, fuzzyB, nLeafs);
+        }
+        else if (inputIndex == 1)
+        {
+            //fprintf(stderr, "fuzzybacku\n");
+            Matrix<ElemType>& inputGrad = InputRef(inputIndex).GradientAsMatrix();
+            inputGrad.TreeBackPropFuzzyU(*input0, gradient, *featureindex, *nodevalue, *leftchild, *rightchild, *treeheads, *parent, *isleftchild, *leafheads, fuzzyU, fuzzyB, nLeafs);
+        }
+        else if (inputIndex == 2)
+        {
+            //fprintf(stderr, "fuzzybackb\n");
+            Matrix<ElemType>& inputGrad = InputRef(inputIndex).GradientAsMatrix();
+            inputGrad.TreeBackPropFuzzyB(*input0, gradient, *featureindex, *nodevalue, *leftchild, *rightchild, *treeheads, *parent, *isleftchild, *leafheads, fuzzyU, fuzzyB, nLeafs);
+            //inputGrad.SetValue(1);
+            //ElemType* arr = fuzzyB.CopyToArray();
+            //for (int i = 0; i < fuzzyB.GetNumElements(); i++)
+            //    fprintf(stderr, "Fuzzy b %d %f\n", i, arr[i]);
+            //free(arr);
+
+            //ElemType* arr = inputGrad.CopyToArray();
+            //for (int i = 0; i < inputGrad.GetNumElements(); i++)
+            //    fprintf(stderr, "partial b %d %f \n", i, arr[i]);
+            //fprintf(stderr, "\n");
+            //free(arr);
+        }
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        auto dims = Input(0)->GetSampleLayout().GetDims();
+        dims[0] = 1;
+        SetDims(TensorShape(dims), HasMBLayout());
+    }
+
+};
+
+template class ForestNode<float>;
+template class ForestNode<double>;
 
 // -----------------------------------------------------------------------
 // CompareNode(a,b)

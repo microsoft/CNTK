@@ -234,6 +234,32 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             nodePtr = builder.RowRepeat(NULL, num_repeat, name);
         }
     }
+    else if (cnNodeType == OperationNameOf(ForestNode))
+    {
+        if (parameter.size() != 3)
+            RuntimeError("ForestNode Usage: Tree(origNodeName, fuzzyU, fuzzyB, initFromFilePath="").");
+
+        nodeParamCount = 1;
+        nodeParamStart = 0;
+
+        if (pass == ndlPassInitial)
+        {
+            nodePtr = builder.Forest(NULL, NULL, NULL, name);
+        }
+        else if (pass == ndlPassFinal)
+        {
+            std::string initFromFilePath = node->GetOptionalParameter("initFromFilePath", "");
+            if (initFromFilePath == "")
+                RuntimeError("initFromFilePath must be set when using \"fromFile\" initialization method");
+            if (initFromFilePath[0] == '\"' && initFromFilePath[initFromFilePath.size() - 1] == '\"')
+                // remove the opening and closing double quotes
+                initFromFilePath = initFromFilePath.substr(1, initFromFilePath.size() - 2);
+            if (!fexists(initFromFilePath))
+                RuntimeError("File pointed to by initFromFilePath does not exist: %s", initFromFilePath.c_str());
+
+            dynamic_pointer_cast<ForestNode<ElemType>>(nodePtr)->InitFromFile(msra::strfun::utf16(initFromFilePath));
+        }
+    }
     else if (cnNodeType == OperationNameOf(DiagonalNode))
     {
         if (parameter.size() != 1)

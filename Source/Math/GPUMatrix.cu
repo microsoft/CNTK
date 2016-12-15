@@ -4451,6 +4451,112 @@ static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE dev
     return p;
 }
 
+// start of the supporting functions for the forest node
+template <class ElemType>
+void GPUMatrix<ElemType>::TreePrediction(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, GPUMatrix<long>& featureindex, GPUMatrix<ElemType>& nodevalue, GPUMatrix<long>& leftchild, GPUMatrix<long>& rightchild, GPUMatrix<long>& treeheads, GPUMatrix<long>& parent, GPUMatrix<short>& isleftchild, GPUMatrix<long>& leafheads, GPUMatrix<ElemType>& fuzzyU, GPUMatrix<ElemType>& fuzzyB, const long nLeafs)
+{
+    if (a.GetNumRows() <= 0 || b.GetNumCols() <= 0 || fuzzyU.GetNumElements() <= 0 || fuzzyB.GetNumElements() <= 0 || parent.GetNumElements() <= 0 || isleftchild.GetNumElements() <= 0 || leafheads.GetNumElements() <= 0)
+    {
+        NOT_IMPLEMENTED;
+    }
+    size_t nTrees = treeheads.GetNumCols();
+    size_t nSamples = b.GetNumCols();
+    // allocate CUDA memory to save temporal tree prediction for each sample each tree
+    ElemType *d_treepreds;
+    cudaMalloc((void**)&d_treepreds, nSamples * nTrees * sizeof(ElemType));
+
+    // launch kernal
+    CUDA_LONG N = (CUDA_LONG)nSamples * nTrees;
+    const size_t grid_size = (size_t)ceil(1.0*N / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _treeForwardProp<ElemType> << <grid_size, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), d_treepreds, fuzzyU.Data(), fuzzyB.Data(), treeheads.Data(), leftchild.Data(), rightchild.Data(), featureindex.Data(), nodevalue.Data(), parent.Data(), isleftchild.Data(), leafheads.Data(), nTrees, (CUDA_LONG)a.GetNumRows(), (CUDA_LONG)a.GetNumCols(), nLeafs);
+    const int grid_size_sum = (int)ceil(((double)nSamples) / GridDim::maxThreadsPerBlock);
+    _treeForwardPropSumTrees<ElemType> << <grid_size_sum, GridDim::maxThreadsPerBlock, 0, t_stream >> >(d_treepreds, b.Data(), nTrees, (CUDA_LONG)nSamples);
+
+    //ElemType *treepreds = new ElemType[nSamples * nTrees];
+    //cudaMemcpy(treepreds, d_treepreds, sizeof(ElemType) * nSamples * nTrees, cudaMemcpyDeviceToHost);
+    //for (int i = 0; i < N; i++)
+    //{
+    //    fprintf(stderr, "tree score %d %f \n", i, treepreds[i]);
+    //}
+
+
+    //version 3
+    /*size_t treeBlockSize = 512;
+    size_t SMSize = sizeof(double)*treeBlockSize;
+    _treeForwardPropReduction<ElemType><<<nSamples, treeBlockSize, SMSize, t_stream>>>(d_resultTmp, b.Data(), (CUDA_LONG)nTrees, (CUDA_LONG)nSamples);*/
+    cudaFree(d_treepreds);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::TreeBackPropFuzzyU(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& outgrad, const GPUMatrix<long>& featureindex, const GPUMatrix<ElemType>& nodevalue, const GPUMatrix<long>& leftchild, const GPUMatrix<long>& rightchild, const GPUMatrix<long>& treeheads, const GPUMatrix<long>& parent, const GPUMatrix<short>& isleftchild, const GPUMatrix<long>& leafheads, const GPUMatrix<ElemType>& fuzzyU, const GPUMatrix<ElemType>& fuzzyB, const long nLeafs)
+{
+    if (a.GetNumRows() <= 0 || outgrad.GetNumCols() <= 0 || fuzzyU.GetNumElements() <= 0 || fuzzyB.GetNumElements() <= 0 || parent.GetNumElements() <= 0 || isleftchild.GetNumElements() <= 0 || leafheads.GetNumElements() <= 0)
+    {
+        NOT_IMPLEMENTED;
+    }
+    size_t nTrees = treeheads.GetNumCols();
+    size_t nSamples = a.GetNumCols();
+
+    //ElemType* xb = b.CopyToArray();
+    //for (int i = 0; i < b.GetNumElements(); i++)
+    //    if (abs(xb[i]) > 0) fprintf(stderr, "non zero xb: %f ", xb[i]);
+    //free(xb);
+    // launch kernal
+    CUDA_LONG N = (CUDA_LONG)nSamples * nTrees;
+    const size_t grid_size = (size_t)ceil(1.0*N / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _treeBackPropFuzzyU<ElemType> << <grid_size, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), Data(), outgrad.Data(), fuzzyU.Data(), fuzzyB.Data(), treeheads.Data(), leftchild.Data(), rightchild.Data(), featureindex.Data(), nodevalue.Data(), parent.Data(), isleftchild.Data(), leafheads.Data(), nTrees, (CUDA_LONG)a.GetNumRows(), (CUDA_LONG)a.GetNumCols(), nLeafs);
+
+    //xb = b.CopyToArray();
+    //for (int i = 0; i < b.GetNumElements(); i++)
+    //    if (abs(xb[i]) > 0) fprintf(stderr, "next xb: %f ", xb[i]);
+    //free(xb);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::TreeBackPropFuzzyB(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& outgrad, const GPUMatrix<long>& featureindex, const GPUMatrix<ElemType>& nodevalue, const GPUMatrix<long>& leftchild, const GPUMatrix<long>& rightchild, const GPUMatrix<long>& treeheads, const GPUMatrix<long>& parent, const GPUMatrix<short>& isleftchild, const GPUMatrix<long>& leafheads, const GPUMatrix<ElemType>& fuzzyU, const GPUMatrix<ElemType>& fuzzyB, const long nLeafs)
+{
+    if (a.GetNumRows() <= 0 || outgrad.GetNumCols() <= 0 || fuzzyU.GetNumElements() <= 0 || fuzzyB.GetNumElements() <= 0 || parent.GetNumElements() <= 0 || isleftchild.GetNumElements() <= 0 || leafheads.GetNumElements() <= 0)
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    assert(nLeafs > 0);
+
+    size_t nTrees = treeheads.GetNumCols();
+    size_t nSamples = a.GetNumCols();
+
+
+    // launch kernal
+    CUDA_LONG N = (CUDA_LONG)nSamples * nTrees;
+    const size_t grid_size = (size_t)ceil(1.0*N / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    //    _treeForwardProp<ElemType> << <grid_size, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), d_treepreds, fuzzyU.Data(), fuzzyB.Data(), treeheads.Data(), leftchild.Data(), rightchild.Data(), featureindex.Data(), nodevalue.Data(), nTrees, (CUDA_LONG)a.GetNumRows(), (CUDA_LONG)a.GetNumCols());
+    _treeBackPropFuzzyB<ElemType> << <grid_size, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), Data(), outgrad.Data(), fuzzyU.Data(), fuzzyB.Data(), treeheads.Data(), leftchild.Data(), rightchild.Data(), featureindex.Data(), nodevalue.Data(), parent.Data(), isleftchild.Data(), leafheads.Data(), nTrees, (CUDA_LONG)a.GetNumRows(), (CUDA_LONG)a.GetNumCols(), nLeafs);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::TreeBackPropEMB(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& outgrad, const GPUMatrix<long>& featureindex, const GPUMatrix<ElemType>& nodevalue, const GPUMatrix<long>& leftchild, const GPUMatrix<long>& rightchild, const GPUMatrix<long>& treeheads, const GPUMatrix<long>& parent, const GPUMatrix<short>& isleftchild, const GPUMatrix<long>& leafheads, const GPUMatrix<ElemType>& fuzzyU, const GPUMatrix<ElemType>& fuzzyB, const long nLeafs)
+{
+    if (a.GetNumRows() <= 0 || outgrad.GetNumCols() <= 0 || fuzzyU.GetNumElements() <= 0 || fuzzyB.GetNumElements() <= 0 || parent.GetNumElements() <= 0 || isleftchild.GetNumElements() <= 0 || leafheads.GetNumElements() <= 0)
+    {
+        NOT_IMPLEMENTED;
+    }
+    assert(nLeafs > 0);
+    size_t nTrees = treeheads.GetNumCols();
+    size_t nSamples = a.GetNumCols();
+
+
+    // launch kernal
+    CUDA_LONG N = (CUDA_LONG)nSamples * nTrees;
+    const size_t grid_size = (size_t)ceil(1.0*N / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    //    _treeForwardProp<ElemType> << <grid_size, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), d_treepreds, fuzzyU.Data(), fuzzyB.Data(), treeheads.Data(), leftchild.Data(), rightchild.Data(), featureindex.Data(), nodevalue.Data(), nTrees, (CUDA_LONG)a.GetNumRows(), (CUDA_LONG)a.GetNumCols());
+    _treeBackPropEMB<ElemType> << <grid_size, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), Data(), outgrad.Data(), fuzzyU.Data(), fuzzyB.Data(), treeheads.Data(), leftchild.Data(), rightchild.Data(), featureindex.Data(), nodevalue.Data(), parent.Data(), isleftchild.Data(), leafheads.Data(), nTrees, (CUDA_LONG)a.GetNumRows(), (CUDA_LONG)a.GetNumCols(), nLeafs);
+}
+// end of the supporting functions for the forest node
+
 // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This binds the N-ariness to a template parameter N, and gets the data pointers out from the matrix objects.
 template <class ElemType>
@@ -4613,6 +4719,31 @@ template void GPUMatrix<short>::Reshape(const size_t, const size_t);
 template GPUMatrix<short>& GPUMatrix<short>::operator*=(short);
 template DEVICEID_TYPE GPUMatrix<short>::PrepareDevice(DEVICEID_TYPE deviceId) const;
 
+// Support <long>
+template GPUMatrix<long>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId);
+template GPUMatrix<long>::GPUMatrix(const size_t numRows, const size_t numCols, int deviceId, long* pArray, const size_t matrixFlags);
+template GPUMatrix<long>::GPUMatrix(const GPUMatrix<long>&);
+template GPUMatrix<long>::GPUMatrix(GPUMatrix<long>&&);
+template long* GPUMatrix<long>::CopyToArray() const;
+template void GPUMatrix<long>::ChangeDeviceTo(int);
+template void GPUMatrix<long>::Resize(size_t, size_t, bool, bool);
+template void GPUMatrix<long>::RequireSize(size_t, size_t, bool, bool);
+
+template GPUMatrix<long>::~GPUMatrix();
+template GPUMatrix<long> GPUMatrix<long>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template GPUMatrix<long>& GPUMatrix<long>::operator=(GPUMatrix<long>&&);
+template GPUMatrix<long>::GPUMatrix(int);
+template void GPUMatrix<long>::SetValue(const long);
+template void GPUMatrix<long>::SetValue(const size_t numRows, const size_t numCols, int deviceId, long* pArray, size_t matrixFlags, DataTransferer* transferer);
+//template void GPUMatrix<long>::SetValue(CPUMatrix<long> const&);
+template void GPUMatrix<long>::SetValue(GPUMatrix<long> const&);
+//template void GPUMatrix<long>::SetValue(CPUSparseMatrix<long> const&);
+//template void GPUMatrix<long>::SetValue(GPUSparseMatrix<long> const&);
+template void GPUMatrix<long>::CopySection(size_t numRows, size_t numCols, long* dst, size_t colStride) const;
+template void GPUMatrix<long>::Reshape(const size_t, const size_t);
+template GPUMatrix<long>& GPUMatrix<long>::operator*=(long);
+template DEVICEID_TYPE GPUMatrix<long>::PrepareDevice(DEVICEID_TYPE deviceId) const;
+
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();
 
@@ -4626,6 +4757,7 @@ template double* TracingGPUMemoryAllocator::Allocate<double>(int, size_t);
 
 template void TracingGPUMemoryAllocator::Free<int>(int, int*, bool);
 template void TracingGPUMemoryAllocator::Free<size_t>(int, size_t*, bool);
+template void TracingGPUMemoryAllocator::Free<long>(int, long*, bool);
 template void TracingGPUMemoryAllocator::Free<short>(int, short*, bool);
 template void TracingGPUMemoryAllocator::Free<char>(int, char*, bool);
 template void TracingGPUMemoryAllocator::Free<float>(int, float*, bool);

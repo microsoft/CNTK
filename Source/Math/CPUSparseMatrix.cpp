@@ -1612,6 +1612,28 @@ template CPUMatrix<short> CPUSparseMatrix<short>::CopyColumnSliceToDense(size_t 
 template void CPUSparseMatrix<short>::AssignColumnSliceToDense(CPUMatrix<short>&, size_t startColumn, size_t numCols) const;
 template CPUSparseMatrix<short>& CPUSparseMatrix<short>::operator=(const CPUSparseMatrix<short>& deepCopyFrom);
 
+// Support <long>
+template CPUSparseMatrix<long>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
+template CPUSparseMatrix<long>::CPUSparseMatrix(MatrixFormat);
+template CPUSparseMatrix<long>::CPUSparseMatrix(CPUSparseMatrix<long> const&);
+template CPUSparseMatrix<long>::CPUSparseMatrix(CPUSparseMatrix<long>&&);
+template CPUSparseMatrix<long>& CPUSparseMatrix<long>::operator=(CPUSparseMatrix<long>&& moveFrom);
+template void CPUSparseMatrix<long>::SetValue(size_t, size_t, long);
+//template void CPUSparseMatrix<long>::SetValue(CPUMatrix<long> const&);
+//template void CPUSparseMatrix<long>::SetValue(GPUMatrix<long> const&);
+template void CPUSparseMatrix<long>::SetValue(CPUSparseMatrix<long> const&);
+//template void CPUSparseMatrix<long>::SetValue(GPUSparseMatrix<long> const&);
+template long* CPUSparseMatrix<long>::Data() const;
+template void CPUSparseMatrix<long>::Reset(void);
+template void CPUSparseMatrix<long>::Resize(const size_t, const size_t, const size_t, const bool);
+template void CPUSparseMatrix<long>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const bool, bool);
+template void CPUSparseMatrix<long>::RequireSizeAndAllocate(const size_t, const size_t, const size_t, const MatrixFormat, const bool, bool);
+template CPUSparseMatrix<long>::~CPUSparseMatrix();
+template CPUSparseMatrix<long> CPUSparseMatrix<long>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template CPUMatrix<long> CPUSparseMatrix<long>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
+template void CPUSparseMatrix<long>::AssignColumnSliceToDense(CPUMatrix<long>&, size_t startColumn, size_t numCols) const;
+template CPUSparseMatrix<long>& CPUSparseMatrix<long>::operator=(const CPUSparseMatrix<long>& deepCopyFrom);
+
 template CPUSparseMatrix<int>::CPUSparseMatrix(const MatrixFormat, const size_t, const size_t, const size_t);
 template CPUSparseMatrix<int>::~CPUSparseMatrix();
 

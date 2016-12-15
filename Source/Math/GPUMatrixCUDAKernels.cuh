@@ -4837,6 +4837,287 @@ __global__ void _reductionLogAddSum(
         sum[0] = partialLogAddSum[0];
 }
 
+template <class ElemType>
+__global__ void _treeForwardProp(ElemType* a, ElemType* treepreds, ElemType* fuzzyU, ElemType* fuzzyB,
+    long* treeHead, long* lchild, long* rchild,
+    long* featureIdx, ElemType *value,
+    long* parent, short* isleftchild, long* leafheads,
+    CUDA_LONG nTrees, CUDA_LONG numRows, CUDA_LONG numCols, const long nLeafs)
+{
+    //printf("Hello from block %d, thread %d\n", blockIdx.x, threadIdx.x);
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= nTrees * numCols)
+        return;
+    CUDA_LONG iTree = id % nTrees;
+    CUDA_LONG iSample = id / nTrees;
+
+    //if (blockIdx.x == 30 && threadIdx.x == 6)
+    //{
+    //    printf("Tree %ld, Sample %ld\n", iTree, iSample);
+    //    printf("iPath %ld\n", treeStart[iTree]);
+    //}
+
+    // start from bottom to up 
+    ElemType score = 0;
+    long start_point = leafheads[iTree];
+    long end_point = (iTree < nTrees - 1) ? treeHead[iTree + 1] : nLeafs;
+    for (long ileaf = start_point; ileaf < end_point; ileaf++)
+    {
+        long iPath = ileaf;
+        if (lchild[iPath] != -1 || rchild[iPath] != -1) continue;
+        ElemType tmp = fuzzyB[iPath];
+        while (parent[iPath] != -1)
+        {
+            bool isleft = isleftchild[iPath] == 1;
+            iPath = treeHead[iTree] + parent[iPath];
+            ElemType sigm = 1. / (1. + expf(-fuzzyU[iPath] * (a[IDX2C(featureIdx[iPath], iSample, numRows)] - fuzzyB[iPath])));
+            tmp *= (isleft) ? sigm : (1 - sigm);
+
+            //if (blockIdx.x == 0 && threadIdx.x == 0)
+            //{
+            //    printf("iPath %d featureIdx %d iSample %d iTree %d isleft %d fuzzyU %f, fuzzyB %f value %f sigm %f \n", iPath, featureIdx[iPath], iSample, iTree, isleftchild[iPath], fuzzyU[iPath], fuzzyB[iPath], a[IDX2C(featureIdx[iPath], iSample, numRows)], sigm);
+            //}
+
+        }
+        //if (blockIdx.x == 0 && threadIdx.x == 0)
+        //{
+        //    printf("Tree %ld, Sample %ld iLeaf %d iPath %d \n", iTree, iSample, ileaf, iPath);
+        //    printf("Tmp %f\n", tmp);
+        //}
+
+        assert(parent[iPath] == -1);
+        score += tmp;
+    }
+    treepreds[id] = score;
+}
+
+template <class ElemType>
+__global__ void _treeBackPropFuzzyU(ElemType* a, ElemType* b, ElemType* outgrad, ElemType* fuzzyU, ElemType* fuzzyB,
+    long* treeHead, long* lchild, long* rchild, long* featureIdx, ElemType* value, long* parent, short* isleftchild, long* leafheads, CUDA_LONG nTrees, CUDA_LONG numRows,
+    CUDA_LONG numCols, const long nLeafs)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= nTrees * numCols)
+        return;
+    CUDA_LONG iTree = id % nTrees;
+    CUDA_LONG iSample = id / nTrees;
+
+    // start from bottom to up 
+    long start_point = leafheads[iTree];
+    long end_point = (iTree < nTrees - 1) ? treeHead[iTree + 1] : nLeafs;
+    for (long ileaf = start_point; ileaf < end_point; ileaf++)
+    {
+        long iPath = ileaf;
+        if (lchild[iPath] != -1 || rchild[iPath] != -1) continue;
+        ElemType tmp = fuzzyB[iPath];
+        while (parent[iPath] != -1)
+        {
+            bool isleft = isleftchild[iPath] == 1;
+            iPath = treeHead[iTree] + parent[iPath];
+            ElemType sigm = 1. / (1. + expf(-fuzzyU[iPath] * (a[IDX2C(featureIdx[iPath], iSample, numRows)] - fuzzyB[iPath])));
+            tmp *= (isleft) ? sigm : (1 - sigm);
+        }
+
+        // compute the gradients
+        iPath = ileaf;
+        while (parent[iPath] != -1)
+        {
+            bool isleft = isleftchild[iPath] == 1;
+            iPath = treeHead[iTree] + parent[iPath];
+            ElemType sigm = 1. / (1. + expf(-fuzzyU[iPath] * (a[IDX2C(featureIdx[iPath], iSample, numRows)] - fuzzyB[iPath])));
+            ElemType res = isleft ? tmp * (1 - sigm) * (a[IDX2C(featureIdx[iPath], iSample, numRows)] - fuzzyB[iPath]) * outgrad[iSample] : -1 * tmp * sigm * (a[IDX2C(featureIdx[iPath], iSample, numRows)] - fuzzyB[iPath]) * outgrad[iSample];
+            atomicAdd(&b[iPath], res);
+
+            //if (blockIdx.x == 0 && threadIdx.x == 0)
+            //{
+            //    printf("iPath %d featureIdx %d iSample %d iTree %d isleft %d fuzzyU %f, fuzzyB %f value %f sigm %f res %f\n", iPath, featureIdx[iPath], iSample, iTree, isleftchild[iPath], fuzzyU[iPath], fuzzyB[iPath], a[IDX2C(featureIdx[iPath], iSample, numRows)], sigm, res);
+            //}
+        }
+        //if (blockIdx.x == 0 && threadIdx.x == 0)
+        //{
+        //    printf("Tree %ld, Sample %ld iLeaf %d iPath %d \n", iTree, iSample, ileaf, iPath);
+        //    printf("Tmp %f\n", tmp);
+        //}
+        assert(parent[iPath] == -1);
+    }
+}
+
+template <class ElemType>
+__global__ void _treeBackPropFuzzyB(ElemType* a, ElemType* b, ElemType* outgrad, ElemType* fuzzyU, ElemType* fuzzyB,
+    long* treeHead, long* lchild, long* rchild, long* featureIdx, ElemType* value, long* parent, short* isleftchild, long* leafheads, CUDA_LONG nTrees, CUDA_LONG numRows,
+    CUDA_LONG numCols, const long nLeafs)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= nTrees * numCols)
+        return;
+    CUDA_LONG iTree = id % nTrees;
+    CUDA_LONG iSample = id / nTrees;
+
+    // start from bottom to up 
+    long start_point = leafheads[iTree];
+    long end_point = (iTree < nTrees - 1) ? treeHead[iTree + 1] : nLeafs;
+    for (long ileaf = start_point; ileaf < end_point; ileaf++)
+    {
+        long iPath = ileaf;
+        if (lchild[iPath] != -1 || rchild[iPath] != -1) continue;
+        ElemType tmp = fuzzyB[iPath];
+        while (parent[iPath] != -1)
+        {
+            bool isleft = isleftchild[iPath] == 1;
+            iPath = treeHead[iTree] + parent[iPath];
+            ElemType sigm = 1. / (1. + expf(-fuzzyU[iPath] * (a[IDX2C(featureIdx[iPath], iSample, numRows)] - fuzzyB[iPath])));
+            tmp *= (isleft) ? sigm : (1 - sigm);
+        }
+
+        // compute the gradients
+        iPath = ileaf;
+        atomicAdd(&b[iPath], tmp / fuzzyB[iPath] * outgrad[iSample]);
+        while (parent[iPath] != -1)
+        {
+            bool isleft = isleftchild[iPath] == 1;
+            iPath = treeHead[iTree] + parent[iPath];
+            ElemType sigm = 1. / (1. + expf(-fuzzyU[iPath] * (a[IDX2C(featureIdx[iPath], iSample, numRows)] - fuzzyB[iPath])));
+            if (isleft)
+                atomicAdd(&b[iPath], tmp * (sigm - 1) * fuzzyU[iPath] * outgrad[iSample]);
+            else
+                atomicAdd(&b[iPath], tmp * sigm * fuzzyU[iPath] * outgrad[iSample]);
+        }
+        assert(parent[iPath] == -1);
+    }
+}
+
+template <class ElemType>
+__global__ void _treeBackPropEMB(ElemType* a, ElemType* b, ElemType* outgrad, ElemType* fuzzyU, ElemType* fuzzyB,
+    long* treeHead, long* lchild, long* rchild, long* featureIdx, ElemType* value, long* parent, short* isleftchild, long* leafheads, CUDA_LONG nTrees, CUDA_LONG numRows,
+    CUDA_LONG numCols, const long nLeafs)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= nTrees * numCols)
+        return;
+    CUDA_LONG iTree = id % nTrees;
+    CUDA_LONG iSample = id / nTrees;
+
+    // start from bottom to up 
+    long start_point = leafheads[iTree];
+    long end_point = (iTree < nTrees - 1) ? treeHead[iTree + 1] : nLeafs;
+    for (long ileaf = start_point; ileaf < end_point; ileaf++)
+    {
+        long iPath = ileaf;
+        if (lchild[iPath] != -1 || rchild[iPath] != -1) continue;
+        ElemType tmp = fuzzyB[iPath];
+        while (parent[iPath] != -1)
+        {
+            bool isleft = isleftchild[iPath] == 1;
+            iPath = treeHead[iTree] + parent[iPath];
+            ElemType sigm = 1. / (1. + expf(-fuzzyU[iPath] * (a[IDX2C(featureIdx[iPath], iSample, numRows)] - fuzzyB[iPath])));
+            tmp *= (isleft) ? sigm : (1 - sigm);
+        }
+
+        // compute the gradients
+        iPath = ileaf;
+        while (parent[iPath] != -1)
+        {
+            bool isleft = isleftchild[iPath] == 1;
+            iPath = treeHead[iTree] + parent[iPath];
+            ElemType sigm = 1. / (1. + expf(-fuzzyU[iPath] * (a[IDX2C(featureIdx[iPath], iSample, numRows)] - fuzzyB[iPath])));
+            if (isleft)
+                atomicAdd(&b[IDX2C(featureIdx[iPath], iSample, numRows)], tmp * (1 - sigm) * fuzzyU[iPath] * outgrad[iSample]);
+            else
+                atomicAdd(&b[IDX2C(featureIdx[iPath], iSample, numRows)], -tmp * sigm * fuzzyU[iPath] * outgrad[iSample]);
+        }
+        assert(parent[iPath] == -1);
+    }
+}
+
+template <class ElemType>
+__global__ void _treeForwardPropSumTrees(ElemType* treepreds, ElemType* b, CUDA_LONG nTrees, CUDA_LONG nSamples)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= nSamples)
+        return;
+
+    ElemType tmp = 0;
+    for (CUDA_LONG iTree = 0; iTree < nTrees; iTree++)
+    {
+        tmp += treepreds[id * nTrees + iTree];
+    }
+    b[IDX2C(0, id, 1)] = tmp;
+}
+
+//template <class ElemType>
+//__global__ void _treeForwardPropReduction(ElemType* resultTmp, ElemType* b, CUDA_LONG nTrees, size_t iSample)
+//{
+//    extern __shared__ double sdata[];
+//    CUDA_LONG tid = threadIdx.x;
+//    CUDA_LONG i = tid;
+//    sdata[tid] = 0.;
+//    CUDA_LONG sample_entry = iSample*nTrees;
+//
+//    //assert(iSample < 1024);
+//    while (i < nTrees)
+//    {
+//        sdata[tid] += (double)resultTmp[i+sample_entry];
+//        i += blockDim.x;
+//    }
+//    __syncthreads();
+//
+//    for (CUDA_LONG s = blockDim.x / 2; s > 32; s >>= 1)
+//    {
+//        if (tid < s)
+//            sdata[tid] += sdata[tid + s];
+//        __syncthreads();
+//    }
+//
+//    if (tid < 32)
+//    {
+//        sdata[tid] += sdata[tid + 32];
+//        sdata[tid] += sdata[tid + 16];
+//        sdata[tid] += sdata[tid +  8];
+//        sdata[tid] += sdata[tid +  4];
+//        sdata[tid] += sdata[tid +  2];
+//        sdata[tid] += sdata[tid +  1];
+//    }
+//    if (tid == 0) b[IDX2C(0, iSample, 1)] = sdata[0];
+//}
+
+template <class ElemType>
+__global__ void _treeForwardPropReduction(ElemType* resultTmp, ElemType* b, CUDA_LONG nTrees, CUDA_LONG nSamples)
+{
+    extern __shared__ double sdata[];
+    CUDA_LONG tid = threadIdx.x;
+    CUDA_LONG i = tid;
+    //CUDA_LONG iSample = blockIdx.x;
+    //each block processes one sample
+    //assert(iSample < nSamples);
+    CUDA_LONG sample_entry = blockIdx.x*nTrees;
+
+    sdata[tid] = 0.;
+    while (i < nTrees)
+    {
+        sdata[tid] += (double)resultTmp[i + sample_entry];
+        i += blockDim.x;
+    }
+    __syncthreads();
+
+    for (CUDA_LONG s = blockDim.x / 2; s > 32; s >>= 1)
+    {
+        if (tid < s)
+            sdata[tid] += sdata[tid + s];
+        __syncthreads();
+    }
+
+    if (tid < 32) sdata[tid] += sdata[tid + 32];
+    if (tid < 16) sdata[tid] += sdata[tid + 16];
+    if (tid <  8) sdata[tid] += sdata[tid + 8];
+    if (tid <  4) sdata[tid] += sdata[tid + 4];
+    if (tid <  2) sdata[tid] += sdata[tid + 2];
+    if (tid <  1) sdata[tid] += sdata[tid + 1];
+
+    if (tid == 0) b[IDX2C(0, blockIdx.x, 1)] = sdata[0];
+}
+
+
+
 // set the value of certain columns to be zero
 // the column is decided by threshhold value
 // TODO: This kernel has very poor performace and needs to

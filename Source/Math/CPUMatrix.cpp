@@ -6489,6 +6489,27 @@ template short* CPUMatrix<short>::CopyToArray(void) const;
 template void CPUMatrix<short>::CopySection(size_t numRows, size_t numCols, short* dst, size_t colStride) const;
 template void CPUMatrix<short>::Reshape(const size_t, const size_t);
 
+// Support <long>
+template CPUMatrix<long>::CPUMatrix(const size_t numRows, const size_t numCols);
+template CPUMatrix<long>::CPUMatrix(const size_t numRows, const size_t numCols, long* pArray, const size_t matrixFlags);
+template CPUMatrix<long>::CPUMatrix();
+template CPUMatrix<long>::CPUMatrix(CPUMatrix<long> const&);
+template CPUMatrix<long>::CPUMatrix(CPUMatrix<long>&&);
+template size_t CPUMatrix<long>::LocateElement(size_t, size_t) const;
+template CPUMatrix<long> CPUMatrix<long>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template CPUMatrix<long>& CPUMatrix<long>::operator=(CPUMatrix<long>&&);
+template void CPUMatrix<long>::SetValue(const long);
+template void CPUMatrix<long>::SetValue(const size_t numRows, const size_t numCols, long* pArray, size_t matrixFlags);
+template void CPUMatrix<long>::SetValue(CPUMatrix<long> const&);
+//template void CPUMatrix<long>::SetValue(GPUMatrix<long> const&);
+//template void CPUMatrix<long>::SetValue(CPUSparseMatrix<long> const&);
+//template void CPUMatrix<long>::SetValue(GPUSparseMatrix<long> const&);
+template void CPUMatrix<long>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly);
+template void CPUMatrix<long>::Resize(const size_t numRows, const size_t numCols, bool growOnly);
+template long* CPUMatrix<long>::CopyToArray(void) const;
+template void CPUMatrix<long>::CopySection(size_t numRows, size_t numCols, long* dst, size_t colStride) const;
+template void CPUMatrix<long>::Reshape(const size_t, const size_t);
+
 template CPUMatrix<int>::CPUMatrix(const size_t, const size_t, int*, const size_t);
 
 }}}

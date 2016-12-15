@@ -2110,6 +2110,26 @@ ElemType GPUMatrix<ElemType>::LogSumOfElements() const
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::TreePrediction(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, GPUMatrix<long>& featureindex, GPUMatrix<ElemType>& nodevalue, GPUMatrix<long>& leftchild, GPUMatrix<long>& rightchild, GPUMatrix<long>& treeheads, GPUMatrix<long>& parent, GPUMatrix<short>& isleftchild, GPUMatrix<long>& leafheads, GPUMatrix<ElemType>& fuzzyU, GPUMatrix<ElemType>& fuzzyB, const long nLeafs)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::TreeBackPropFuzzyU(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& outgrad, const GPUMatrix<long>& featureindex, const GPUMatrix<ElemType>& nodevalue, const GPUMatrix<long>& leftchild, const GPUMatrix<long>& rightchild, const GPUMatrix<long>& treeheads, const GPUMatrix<long>& parent, const GPUMatrix<short>& isleftchild, const GPUMatrix<long>& leafheads, const GPUMatrix<ElemType>& fuzzyU, const GPUMatrix<ElemType>& fuzzyB, const long nLeafs)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::TreeBackPropFuzzyB(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& outgrad, const GPUMatrix<long>& featureindex, const GPUMatrix<ElemType>& nodevalue, const GPUMatrix<long>& leftchild, const GPUMatrix<long>& rightchild, const GPUMatrix<long>& treeheads, const GPUMatrix<long>& parent, const GPUMatrix<short>& isleftchild, const GPUMatrix<long>& leafheads, const GPUMatrix<ElemType>& fuzzyU, const GPUMatrix<ElemType>& fuzzyB, const long nLeafs)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::TreeBackPropEMB(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& outgrad, const GPUMatrix<long>& featureindex, const GPUMatrix<ElemType>& nodevalue, const GPUMatrix<long>& leftchild, const GPUMatrix<long>& rightchild, const GPUMatrix<long>& treeheads, const GPUMatrix<long>& parent, const GPUMatrix<short>& isleftchild, const GPUMatrix<long>& leafheads, const GPUMatrix<ElemType>& fuzzyU, const GPUMatrix<ElemType>& fuzzyB, const long nLeafs)
+{
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::RCRFBackwardCompute(
     const GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
     const GPUMatrix<ElemType>& lbls,

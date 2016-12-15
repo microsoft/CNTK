@@ -102,6 +102,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(ReshapeNode))                          return New<ReshapeNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowRepeatNode))                        return New<RowRepeatNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(RowStackNode))                         return New<RowStackNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(ForestNode))                           return New<ForestNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ScatterPackedNode))                    return New<ScatterPackedNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(SequenceWithSoftmaxNode))              return New<SequenceWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
 #ifdef COMING_SOON
@@ -839,6 +840,12 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowSt
     for (size_t i = 0; i < inputs.size(); i++)
         inputs[i] = pinputs[i]; // convert to ComputationNodeBasePtr
     return net.AddNodeToNetAndAttachInputs(New<RowStackNode<ElemType>>(net.GetDeviceId(), nodeName), { inputs });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Forest(const ComputationNodePtr a, const ComputationNodePtr fuzzyU, const ComputationNodePtr fuzzyB, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<ForestNode<ElemType>>(net.GetDeviceId(), nodeName), { a, fuzzyU, fuzzyB });
 }
 
 template <class ElemType>

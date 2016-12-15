@@ -172,6 +172,8 @@ template <>
 std::multimap<size_t, short*>& BufferManagement::BufferContainer<short>() { return m_bufferShortContainer; }
 template <>
 std::multimap<size_t, int*>& BufferManagement::BufferContainer<int>() { return m_bufferIntContainer; }
+template <>
+std::multimap<size_t, long*>& BufferManagement::BufferContainer<long>() { return m_bufferLongContainer; }
 
 #pragma endregion
 
@@ -1185,6 +1187,11 @@ template <>
 } // (needed for completeness and to pass unit tests)
 template <>
 /*static*/ short Matrix<short>::MakeNan(size_t)
+{
+    return 0;
+} // (needed for completeness and to pass unit tests)
+template <>
+/*static*/ long Matrix<long>::MakeNan(size_t)
 {
     return 0;
 } // (needed for completeness and to pass unit tests)
@@ -5528,6 +5535,98 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
 }
 #pragma endregion Static BLAS Functions
 
+// start of the supporting functions for the forest node
+template <class ElemType>
+void Matrix<ElemType>::TreePrediction(const Matrix<ElemType>& a, Matrix<ElemType>& b, Matrix<long>& featureindex, Matrix<ElemType>& nodevalue, Matrix<long>& leftchild, Matrix<long>& rightchild, Matrix<long>& treeheads, Matrix<long>& parent, Matrix<short>& isleftchild, Matrix<long>& leafheads, Matrix<ElemType>& fuzzyU, Matrix<ElemType>& fuzzyB, const long nLeafs)
+{
+    DecideAndMoveToRightDevice(a, b);
+    //fprintf(stderr, "Number of Rows: %d, Number of Cols: %d\n", a.GetNumRows(), a.GetNumCols());
+    //fprintf(stderr, "Number of Rows: %d, Number of Cols: %d\n", b.GetNumRows(), b.GetNumCols());
+
+    if (a.GetDeviceId() >= 0) // GPU
+    {
+        if (a.m_matrixType == MatrixType::DENSE  && b.m_matrixType == MatrixType::DENSE)
+        {
+            //NOT_IMPLEMENTED;
+            GPUMatrix<ElemType>::TreePrediction(*a.m_GPUMatrix, *b.m_GPUMatrix, *featureindex.m_GPUMatrix, *nodevalue.m_GPUMatrix, *leftchild.m_GPUMatrix, *rightchild.m_GPUMatrix, *treeheads.m_GPUMatrix, *parent.m_GPUMatrix, *isleftchild.m_GPUMatrix, *leafheads.m_GPUMatrix, *fuzzyU.m_GPUMatrix, *fuzzyB.m_GPUMatrix, nLeafs);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::TreeBackPropFuzzyU(const Matrix<ElemType>& a, const Matrix<ElemType>& outgrad, const Matrix<long>& featureindex, const Matrix<ElemType>& nodevalue, const Matrix<long>& leftchild, const Matrix<long>& rightchild, const Matrix<long>& treeheads, const Matrix<long>& parent, const Matrix<short>& isleftchild, const Matrix<long>& leafheads, const Matrix<ElemType>& fuzzyU, const Matrix<ElemType>& fuzzyB, const long nLeafs)
+{
+    if (a.GetDeviceId() >= 0) // GPU
+    {
+        if (a.m_matrixType == MatrixType::DENSE  && m_matrixType == MatrixType::DENSE)
+        {
+            //NOT_IMPLEMENTED;
+            m_GPUMatrix->TreeBackPropFuzzyU(*a.m_GPUMatrix, *outgrad.m_GPUMatrix, *featureindex.m_GPUMatrix, *nodevalue.m_GPUMatrix, *leftchild.m_GPUMatrix, *rightchild.m_GPUMatrix, *treeheads.m_GPUMatrix, *parent.m_GPUMatrix, *isleftchild.m_GPUMatrix, *leafheads.m_GPUMatrix, *fuzzyU.m_GPUMatrix, *fuzzyB.m_GPUMatrix, nLeafs);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::TreeBackPropFuzzyB(const Matrix<ElemType>& a, const Matrix<ElemType>& outgrad, const Matrix<long>& featureindex, const Matrix<ElemType>& nodevalue, const Matrix<long>& leftchild, const Matrix<long>& rightchild, const Matrix<long>& treeheads, const Matrix<long>& parent, const Matrix<short>& isleftchild, const Matrix<long>& leafheads, const Matrix<ElemType>& fuzzyU, const Matrix<ElemType>& fuzzyB, const long nLeafs)
+{
+    if (a.GetDeviceId() >= 0) // GPU
+    {
+        if (a.m_matrixType == MatrixType::DENSE  && m_matrixType == MatrixType::DENSE)
+        {
+            //NOT_IMPLEMENTED;
+            m_GPUMatrix->TreeBackPropFuzzyB(*a.m_GPUMatrix, *outgrad.m_GPUMatrix, *featureindex.m_GPUMatrix, *nodevalue.m_GPUMatrix, *leftchild.m_GPUMatrix, *rightchild.m_GPUMatrix, *treeheads.m_GPUMatrix, *parent.m_GPUMatrix, *isleftchild.m_GPUMatrix, *leafheads.m_GPUMatrix, *fuzzyU.m_GPUMatrix, *fuzzyB.m_GPUMatrix, nLeafs);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+
+template <class ElemType>
+void Matrix<ElemType>::TreeBackPropEMB(const Matrix<ElemType>& a, const Matrix<ElemType>& outgrad, const Matrix<long>& featureindex, const Matrix<ElemType>& nodevalue, const Matrix<long>& leftchild, const Matrix<long>& rightchild, const Matrix<long>& treeheads, const Matrix<long>& parent, const Matrix<short>& isleftchild, const Matrix<long>& leafheads, const Matrix<ElemType>& fuzzyU, const Matrix<ElemType>& fuzzyB, const long nLeafs)
+{
+    if (a.GetDeviceId() >= 0) // GPU
+    {
+        if (a.m_matrixType == MatrixType::DENSE  && m_matrixType == MatrixType::DENSE)
+        {
+            m_GPUMatrix->TreeBackPropEMB(*a.m_GPUMatrix, *outgrad.m_GPUMatrix, *featureindex.m_GPUMatrix, *nodevalue.m_GPUMatrix, *leftchild.m_GPUMatrix, *rightchild.m_GPUMatrix, *treeheads.m_GPUMatrix, *parent.m_GPUMatrix, *isleftchild.m_GPUMatrix, *leafheads.m_GPUMatrix, *fuzzyU.m_GPUMatrix, *fuzzyB.m_GPUMatrix, nLeafs);
+            //ElemType smax = m_GPUMatrix->Max();
+            ////ElemType smin = m_GPUMatrix->Min();
+            //fprintf(stderr, "Max Element %f \n", smax);
+        }
+        else
+        {
+            NOT_IMPLEMENTED;
+        }
+    }
+    else
+    {
+        NOT_IMPLEMENTED;
+    }
+}
+// end of the supporting functions for the forest node
+
 // TensorView currently does not interface with sparse matrices. For now, we just catch this and throw.
 template <class ElemType>
 static bool VerifyIsDense(const Matrix<ElemType>& a)
@@ -5645,6 +5744,31 @@ template bool Matrix<short>::IsEmpty() const;
 template void Matrix<short>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
 template void Matrix<short>::Reshape(const size_t, const size_t);
 template short* Matrix<short>::CopyToArray(void) const;
+
+// Matrix<long> methods
+template Matrix<long>::Matrix(DEVICEID_TYPE);
+template Matrix<long>::Matrix(Matrix<long>&&);
+template Matrix<long>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
+template Matrix<long>::Matrix(const size_t numRows, const size_t numCols, long* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
+template Matrix<long>::~Matrix();
+template Matrix<long>& Matrix<long>::operator=(Matrix<long>&& moveFrom);
+template long* Matrix<long>::Data() const;
+template int Matrix<long>::GetDeviceId() const;
+template size_t Matrix<long>::GetNumElements() const;
+template Matrix<long> Matrix<long>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template void Matrix<long>::_transferToDevice(int id_to, bool isBeingMoved, bool emptyTransfer) const;
+template void Matrix<long>::TransferToDeviceIfNotThere(int id_to, bool isBeingMoved, bool emptyTransfer, bool updatePreferredDevice) const;
+template size_t Matrix<long>::GetNumRows() const;
+template size_t Matrix<long>::GetNumCols() const;
+template void Matrix<long>::SetValue(const long);
+template void Matrix<long>::SetValue(size_t numRows, const size_t numCols, int deviceId, long* pArray, size_t matrixFlags, DataTransferer* transferer);
+//template void Matrix<long>::SetValue(const Matrix<long>&, MatrixFormat);
+template void Matrix<long>::SetValue(const Matrix<long>&);
+template void Matrix<long>::AssignValuesOf(const Matrix<long>&);
+template bool Matrix<long>::IsEmpty() const;
+template void Matrix<long>::Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, bool growOnly);
+template void Matrix<long>::Reshape(const size_t, const size_t);
+template long* Matrix<long>::CopyToArray(void) const;
 
 template Matrix<int>::Matrix(const size_t, const size_t, int*, DEVICEID_TYPE, const size_t, const size_t);
 

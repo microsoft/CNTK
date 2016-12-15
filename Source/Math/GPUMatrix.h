@@ -521,6 +521,11 @@ public:
 
     static bool AreEqual(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, const ElemType threshold = 1e-8);
 
+    static void TreePrediction(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, GPUMatrix<long>& featureindex, GPUMatrix<ElemType>& nodevalue, GPUMatrix<long>& leftchild, GPUMatrix<long>& rightchild, GPUMatrix<long>& treeheads, GPUMatrix<long>& parent, GPUMatrix<short>& isleftchild, GPUMatrix<long>& leafheads, GPUMatrix<ElemType>& fuzzyU, GPUMatrix<ElemType>& fuzzyB, const long nLeafs);
+    void TreeBackPropFuzzyU(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& outgrad, const GPUMatrix<long>& featureindex, const GPUMatrix<ElemType>& nodevalue, const GPUMatrix<long>& leftchild, const GPUMatrix<long>& rightchild, const GPUMatrix<long>& treeheads, const GPUMatrix<long>& parent, const GPUMatrix<short>& isleftchild, const GPUMatrix<long>& leafheads, const GPUMatrix<ElemType>& fuzzyU, const GPUMatrix<ElemType>& fuzzyB, const long nLeafs);
+    void TreeBackPropFuzzyB(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& outgrad, const GPUMatrix<long>& featureindex, const GPUMatrix<ElemType>& nodevalue, const GPUMatrix<long>& leftchild, const GPUMatrix<long>& rightchild, const GPUMatrix<long>& treeheads, const GPUMatrix<long>& parent, const GPUMatrix<short>& isleftchild, const GPUMatrix<long>& leafheads, const GPUMatrix<ElemType>& fuzzyU, const GPUMatrix<ElemType>& fuzzyB, const long nLeafs);
+    void TreeBackPropEMB(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& outgrad, const GPUMatrix<long>& featureindex, const GPUMatrix<ElemType>& nodevalue, const GPUMatrix<long>& leftchild, const GPUMatrix<long>& rightchild, const GPUMatrix<long>& treeheads, const GPUMatrix<long>& parent, const GPUMatrix<short>& isleftchild, const GPUMatrix<long>& leafheads, const GPUMatrix<ElemType>& fuzzyU, const GPUMatrix<ElemType>& fuzzyB, const long nLeafs);
+
     static void TensorShuffleScaleAndAdd(ElemType keepWeight, const GPUMatrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c);
 
     void TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,

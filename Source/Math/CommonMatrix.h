@@ -361,6 +361,7 @@ private:
     std::multimap<size_t, char*> m_bufferCharContainer;
     std::multimap<size_t, short*> m_bufferShortContainer;
     std::multimap<size_t, int*> m_bufferIntContainer;
+    std::multimap<size_t, long*> m_bufferLongContainer;
 };
 
 

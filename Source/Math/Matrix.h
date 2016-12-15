@@ -570,6 +570,11 @@ public:
     static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);
     static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 
+    static void TreePrediction(const Matrix<ElemType>& a, Matrix<ElemType>& b, Matrix<long>& featureindex, Matrix<ElemType>& nodevalue, Matrix<long>& leftchild, Matrix<long>& rightchild, Matrix<long>& treeheads, Matrix<long>& parent, Matrix<short>& isleftchild, Matrix<long>& leafheads, Matrix<ElemType>& fuzzyU, Matrix<ElemType>& fuzzyB, const long nLeafs);
+    void TreeBackPropFuzzyU(const Matrix<ElemType>& a, const Matrix<ElemType>& outgrad, const Matrix<long>& featureindex, const Matrix<ElemType>& nodevalue, const Matrix<long>& leftchild, const Matrix<long>& rightchild, const Matrix<long>& treeheads, const Matrix<long>& parent, const Matrix<short>& isleftchild, const Matrix<long>& leafheads, const Matrix<ElemType>& fuzzyU, const Matrix<ElemType>& fuzzyB, const long nLeafs);
+    void TreeBackPropFuzzyB(const Matrix<ElemType>& a, const Matrix<ElemType>& outgrad, const Matrix<long>& featureindex, const Matrix<ElemType>& nodevalue, const Matrix<long>& leftchild, const Matrix<long>& rightchild, const Matrix<long>& treeheads, const Matrix<long>& parent, const Matrix<short>& isleftchild, const Matrix<long>& leafheads, const Matrix<ElemType>& fuzzyU, const Matrix<ElemType>& fuzzyB, const long nLeafs);
+    void TreeBackPropEMB(const Matrix<ElemType>& a, const Matrix<ElemType>& outgrad, const Matrix<long>& featureindex, const Matrix<ElemType>& nodevalue, const Matrix<long>& leftchild, const Matrix<long>& rightchild, const Matrix<long>& treeheads, const Matrix<long>& parent, const Matrix<short>& isleftchild, const Matrix<long>& leafheads, const Matrix<ElemType>& fuzzyU, const Matrix<ElemType>& fuzzyB, const long nLeafs);
+
     static void TensorShuffleScaleAndAdd(ElemType keepWeight, const Matrix<ElemType>& a, size_t D, size_t S, size_t M, size_t K, size_t T, ElemType scaleFactor, const Matrix<ElemType>& b, Matrix<ElemType>& c);
 
     void TensorOp(ElemType beta, const Matrix<ElemType>& a, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
