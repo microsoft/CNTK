@@ -1038,9 +1038,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             wasDataRead = false;
 
         if (!wasDataRead && (!useDistributedMBReading || noMoreSamplesToProcess)) // in case of distributed reading, we do a few more loops until all ranks have completed
-        {
             break;                                                                // end of epoch
-        }
 
         // Note: If !wasDataRead then the data that GetMinibatchIntoNetwork() was supposed to fill in are undefined.
         // Must not touch them.
@@ -1117,6 +1115,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // ===========================================================
                 // forward prop for training criterion
                 // ===========================================================
+
                 net->ForwardProp(criterionNodes[0]);
 
                 // ===========================================================
@@ -1124,9 +1123,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 // ===========================================================
 
                 if (learnRatePerSample > 0.01 * m_minLearnRate) // only compute gradient when learning rate is large enough
-                {
                     net->Backprop(criterionNodes[0]);
-                }
 
                 // house-keeping for sub-minibatching
                 if (actualNumSubminibatches > 1)
@@ -1134,7 +1131,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }                                                        // end sub-minibatch loop
             if (actualNumSubminibatches > 1)
                 smbDispatcher.DoneWithCurrentMinibatch();
-
         } // if (actualMBSize > 0)
         // WARNING: If actualMBSize == 0, then criterion nodes have NOT been updated, and contain garbage (last MB's) values.
 
@@ -1338,7 +1334,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         ProfilerTimeEnd(profilerState, profilerEvtMainWeights);
         profilerState = ProfilerTimeBegin();
-        
+
         timer.Stop();
         if (m_perfTraceLevel > 0)
         {
@@ -1467,7 +1463,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         profiler.NextSample();
         isFirstMinibatch = false;
-    
+
         ProfilerTimeEnd(profilerState, profilerEvtMainPost);
         ProfilerTimeEnd(minibatchProfilerState, profilerEvtMainMinibatch);
     }

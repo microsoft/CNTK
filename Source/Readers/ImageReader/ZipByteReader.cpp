@@ -122,7 +122,6 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscal
         }
         assert(contents.size() >= size);
         zip_uint64_t bytesRead = zip_fread(file.get(), contents.data(), size);
-
         assert(bytesRead == size);
         if (bytesRead != size)
         {
@@ -140,4 +139,3 @@ cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscal
 }}}
 
 #endif
-
