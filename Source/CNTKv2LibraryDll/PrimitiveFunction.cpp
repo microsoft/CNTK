@@ -629,9 +629,9 @@ namespace CNTK
         // The hard requirement that the serialization depends on is that
         // new op type values are only added to the end of the list, after Combine.
         // This also applies to other enums (DataType, VariableKind, etc.)
-        if (op > PrimitiveOpType::Combine)
+        if (op > PrimitiveOpType::Pass)
         {
-            LogicError("Unexpected variable '%ls':'%u' (%s).", 
+            LogicError("Unexpected op '%ls':'%u' (%s).", 
                         opKey.c_str(), 
                         static_cast<std::underlying_type<CNTK::PrimitiveOpType>::type>(op),
                         GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());

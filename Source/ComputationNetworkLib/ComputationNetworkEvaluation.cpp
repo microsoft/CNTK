@@ -1045,7 +1045,12 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
             (keyValue.second.size() == 1) &&
             (*keyValue.second.begin())->ImplementsGradientOverwriteOptimization())
         {
-            keyValue.first->MarkParentOverwritesGradient();
+            // We cannot enable the gradient overwrite optimization if this node's (lone) parent
+            // has this same node as multiple of its inputs since, in that case the
+            // gradients will flow back from multiple paths of the same parent into the input
+            auto& allInputsOfParent = (*keyValue.second.begin())->GetInputs();
+            if (std::count(allInputsOfParent.begin(), allInputsOfParent.end(), keyValue.first) <= 1)
+                keyValue.first->MarkParentOverwritesGradient();
         }
     }
 
