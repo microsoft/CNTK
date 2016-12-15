@@ -1,4 +1,4 @@
-﻿# Copyright (c) Microsoft. All rights reserved.
+# Copyright (c) Microsoft. All rights reserved.
 
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
@@ -14,10 +14,10 @@ from cntk import distributed
 from cntk.device import set_default_device, gpu
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python"))
-from ConvNet_CIFAR10_DataAug_Distributed import train_and_test_cifar_convnet
+sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ResNet", "Python"))
+from TrainResNet_CIFAR10_Distributed import train_and_evaluate_cifar_resnet
 
-def run_cifar_convnet_distributed(epochs, block_samples, num_quantization_bits, distributed_after_samples):
+def run_cifar_resnet_distributed(epochs, block_samples, num_quantization_bits, distributed_after_samples):
     try:
         base_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
                                 *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
@@ -34,13 +34,19 @@ def run_cifar_convnet_distributed(epochs, block_samples, num_quantization_bits, 
     train_data=os.path.join(base_path, 'train_map.txt')
     test_data=os.path.join(base_path, 'test_map.txt')
 
+    # model dimensions
+    image_height = 32
+    image_width  = 32
+    num_channels = 3  # RGB
+    num_classes  = 10
+
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_computation_network_trace_level(1) 
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     #force_deterministic_algorithms()
     # TODO: do the above; they lead to slightly different results, so not doing it for now
 
-    return train_and_test_cifar_convnet(mean=mean, train_data=train_data, test_data=test_data, max_epochs=epochs, distributed_after_samples=distributed_after_samples, num_quantization_bits=num_quantization_bits, block_samples=block_samples)
+    return train_and_evaluate_cifar_resnet(train_data, test_data, mean, network_name='resnet20', max_epochs=epochs, scale_up=False, block_samples=block_samples, distributed_after=distributed_after_samples, num_quantization_bits=num_quantization_bits)
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
@@ -57,7 +63,7 @@ if __name__=='__main__':
 
     assert distributed.Communicator.rank() < distributed.Communicator.num_workers()
     set_default_device(gpu(0)) # force using GPU-0 in test for speed
-    run_cifar_convnet_distributed(epochs=epochs, block_samples=block_samples, num_quantization_bits=num_quantization_bits, distributed_after_samples=distributed_after_samples)
+    run_cifar_resnet_distributed(epochs=epochs, block_samples=block_samples, num_quantization_bits=num_quantization_bits, distributed_after_samples=distributed_after_samples)
     # print(error)
     distributed.Communicator.finalize()
     

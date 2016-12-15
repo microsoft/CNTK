@@ -30,6 +30,7 @@ def test_cifar_convnet_distributed_mpiexec(device_id):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     try:
         out = p.communicate(timeout=TIMEOUT_SECONDS)[0]  # in case we have a hang
+
     except subprocess.TimeoutExpired:
         os.kill(p.pid, signal.CTRL_C_EVENT)
         raise RuntimeError('Timeout in mpiexec, possibly hang')
@@ -37,6 +38,45 @@ def test_cifar_convnet_distributed_mpiexec(device_id):
     results = re.findall("Final Results: Minibatch\[.+?\]: errs = (.+?)%", str_out)
     assert len(results) == 2
     assert results[0] == results[1]
-    expected_test_error = 0.617
+    expected_test_error = 0.6093
+    assert np.allclose(float(results[0])/100, expected_test_error,
+                       atol=TOLERANCE_ABSOLUTE)
+
+def test_cifar_convnet_distributed_1bitsgd_mpiexec(device_id):
+    if cntk_device(device_id).type() != DeviceKind_GPU:
+        pytest.skip('test only runs on GPU')
+
+    cmd = ["mpiexec", "-n", "2", "python", os.path.join(abs_path, "run_cifar_convnet_distributed.py"), "-q", "1"]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    try:
+        out = p.communicate(timeout=TIMEOUT_SECONDS)[0]  # in case we have a hang
+    except subprocess.TimeoutExpired:
+        os.kill(p.pid, signal.CTRL_C_EVENT)
+        raise RuntimeError('Timeout in mpiexec, possibly hang')
+    str_out = out.decode(sys.getdefaultencoding())
+    results = re.findall("Final Results: Minibatch\[.+?\]: errs = (.+?)%", str_out)
+    assert len(results) == 2
+    assert results[0] == results[1]
+    expected_test_error = 0.603
+    assert np.allclose(float(results[0])/100, expected_test_error,
+                       atol=TOLERANCE_ABSOLUTE)
+
+def test_cifar_convnet_distributed_blockmomentum_mpiexec(device_id):
+    if cntk_device(device_id).type() != DeviceKind_GPU:
+        pytest.skip('test only runs on GPU')
+
+    cmd = ["mpiexec", "-n", "2", "python", os.path.join(abs_path, "run_cifar_convnet_distributed.py"), "-b", "32000"]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    try:
+        out = p.communicate(timeout=TIMEOUT_SECONDS)[0]  # in case we have a hang
+    except subprocess.TimeoutExpired:
+        os.kill(p.pid, signal.CTRL_C_EVENT)
+        raise RuntimeError('Timeout in mpiexec, possibly hang')
+    str_out = out.decode(sys.getdefaultencoding())
+    results = re.findall("Final Results: Minibatch\[.+?\]: errs = (.+?)%", str_out)
+    assert len(results) == 2
+    assert np.allclose(float(results[0])/100, float(results[1])/100,
+                       atol=TOLERANCE_ABSOLUTE)
+    expected_test_error = 0.6457
     assert np.allclose(float(results[0])/100, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)
