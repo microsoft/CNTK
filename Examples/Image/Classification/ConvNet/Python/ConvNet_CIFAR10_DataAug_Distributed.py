@@ -111,7 +111,8 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
         tag='Training',
         log_to_file=log_to_file,
         distributed_learner=learner,
-        gen_heartbeat=gen_heartbeat)
+        gen_heartbeat=gen_heartbeat,
+        num_epochs=max_epochs)
 
     # perform model training
     updated=True
@@ -143,6 +144,8 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
         metric_numer += trainer.test_minibatch(data) * local_mb_samples
         metric_denom += local_mb_samples
         minibatch_index += 1
+
+    progress_printer.end_progress_print()
 
     print("")
     print("Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
