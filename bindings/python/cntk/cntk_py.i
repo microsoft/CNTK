@@ -21,6 +21,7 @@
 %rename(times_transpose) CNTK::TransposeTimes;
 %rename(sequence_slice) CNTK::Sequence::Slice;
 %rename(sequence_reduce_sum) CNTK::Sequence::ReduceSum;
+%rename(uniform1_initializer) CNTK::Uniform1Initializer; 
 
 %rename(momentum_as_time_constant_schedule) CNTK::MomentumAsTimeConstantSchedule;
 

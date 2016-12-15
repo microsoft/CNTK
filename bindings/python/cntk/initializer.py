@@ -18,17 +18,18 @@ def uniform(scale=DefaultParamInitScale, seed=None):
         seed (int): random seed
 
     Returns:
-        initializer for :class:`~cntk.ops.variables.Parameter`
-        initialized to uniform distribution between $$scale*[-0.05, 0.05]$$.
+        initializer for :class:`cntk.variables.Parameter`
+        initialized to uniform distribution between `scale*[-1.0, 1.0]`
+        note this maps to the "uniform1" distribution in BrainScript. 
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
 
-    return cntk_py.uniform_initializer(scale, seed)
+    return cntk_py.uniform1_initializer(scale, seed)
 
-def gaussian(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, scale=DefaultParamInitScale, seed=None):
+def normal(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, scale=DefaultParamInitScale, seed=None):
     '''
-    Gaussian initializer
+    Normal initializer
 
     Args:
         output_rank (int): output rank
@@ -37,14 +38,13 @@ def gaussian(output_rank=SentinelValueForInferParamInitRank, filter_rank=Sentine
         seed (int): random seed
 
     Returns:
-        initializer for :class:`~cntk.ops.variables.Parameter`
-        initialized to Gaussian distribution with mean `0` and standard
-        deviation $$scale*0.2/sqrt(fanIn))$$ 
+        initializer for :class:`cntk.variables.Parameter`
+        initialized to normal distribution with mean `0` and standard deviation `scale`. 
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
 
-    return cntk_py.gaussian_initializer(output_rank, filter_rank, scale, seed)
+    return cntk_py.normal_initializer(output_rank, filter_rank, scale, seed)
 
 def xavier(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, scale=DefaultParamInitScale, seed=None):
     '''

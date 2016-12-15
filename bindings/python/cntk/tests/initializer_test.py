@@ -25,7 +25,7 @@ def test_initializer_init(device_id):
     set_default_device(cntk_device(device_id))
 
     _check(uniform(scale=10), 'uniform')
-    _check(gaussian(output_rank=1, filter_rank=2, scale=10), 'gaussian')
+    _check(normal(output_rank=1, filter_rank=2, scale=10), 'normal')
     _check(xavier(output_rank=1, filter_rank=2, scale=10), 'xavier')
     _check(glorot_uniform(output_rank=1, filter_rank=2, scale=10), 'glorot_uniform')
     _check(glorot_normal(output_rank=1, filter_rank=2, scale=10), 'glorot_normal')

@@ -1999,7 +1999,9 @@ private:
 
     CNTK_API ParameterInitializer ConstantInitializer(double value = 0.0);
     CNTK_API ParameterInitializer UniformInitializer(double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
+    CNTK_API ParameterInitializer Uniform1Initializer(double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer GaussianInitializer(int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
+    CNTK_API ParameterInitializer NormalInitializer(int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer XavierInitializer(int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer GlorotUniformInitializer(int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
     CNTK_API ParameterInitializer GlorotNormalInitializer(int outputRank = SentinelValueForInferParamInitRank, int filterRank = SentinelValueForInferParamInitRank, double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);

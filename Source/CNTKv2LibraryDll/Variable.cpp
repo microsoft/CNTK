@@ -171,9 +171,24 @@ namespace CNTK
         return initConfig;
     }
 
+    ParameterInitializer Uniform1Initializer(double scale, unsigned long seed)
+    {
+        Dictionary initConfig;
+        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::Uniform1InitializerTypeName;
+        initConfig[ScaleAttributeName] = scale;
+        initConfig[RandomSeedAttributeName] = (size_t)seed;
+
+        return initConfig;
+    }
+
     ParameterInitializer GaussianInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
     {
         return CreateInitializer(Microsoft::MSR::CNTK::GaussianInitializerTypeName, outputRank, filterRank, scale, seed);
+    }
+
+    ParameterInitializer NormalInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    {
+        return CreateInitializer(Microsoft::MSR::CNTK::NormalInitializerTypeName, outputRank, filterRank, scale, seed);
     }
 
     ParameterInitializer XavierInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
