@@ -41,7 +41,7 @@ trainNetwork = {
         # loss and error computation
         diff = labels - z
         sqerr = ReduceSum (diff.*diff, axis=1)
-        rmse =  SumElements (Sqrt (sqerr / labelDim))
+        rmse =  Sqrt (sqerr / labelDim)
 
         # declare special nodes
         featureNodes    = (features)

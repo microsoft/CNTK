@@ -38,7 +38,7 @@ TrainConvNet = {
         # define regression loss
         diff = regrLabels - ol
         sqerr = ReduceSum (diff.*diff, axis=1)
-        rmse =  SumElements (Sqrt (sqerr / labelDim))
+        rmse =  Sqrt (sqerr / labelDim)
 
         featureNodes    = (features)
         labelNodes      = (regrLabels)
