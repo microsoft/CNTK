@@ -38,7 +38,7 @@ MBLayoutPtr SequencePacker::CreateMBLayout(const StreamBatch& batch)
 
 Minibatch SequencePacker::ReadMinibatch()
 {
-    auto sequences = m_sequenceEnumerator->GetNextSequences(m_minibatchSize);
+    auto sequences = GetNextSequences();
     const auto& batch = sequences.m_data;
 
     Minibatch minibatch(sequences.m_endOfEpoch);
