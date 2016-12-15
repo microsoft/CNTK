@@ -53,15 +53,15 @@ class ProgressPrinter:
             if self.distributed_learner != None:
                 self.logfilename = self.logfilename + "rank" + str(self.distributed_learner.communicator().current_worker().global_rank)
 
-            self.___logprint('CNTKCommandTrainInfo: train : ' + str(num_epochs))
-            self.___logprint('CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : ' + str(num_epochs))
-            self.___logprint('CNTKCommandTrainBegin: train')
-
             # print to stdout
             print("Redirecting log to file " + self.logfilename)
 
             with open(self.logfilename, "w") as logfile:
                 logfile.write(self.logfilename + "\n")
+
+            self.___logprint('CNTKCommandTrainInfo: train : ' + str(num_epochs))
+            self.___logprint('CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : ' + str(num_epochs))
+            self.___logprint('CNTKCommandTrainBegin: train')
 
         if freq==0:
             self.___logprint(' average      since    average      since      examples')
