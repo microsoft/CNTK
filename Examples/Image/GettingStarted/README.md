@@ -46,7 +46,7 @@ There are five cntk configuration files in the current folder. These cntk config
 
 ### 01_OneHidden.cntk
 
-This is a simple, one hidden layer network that produces `1.76%` of error. Since this model does not assume any spatial relationships between the pixels, it is often referred as "permutation invariant". 
+This is a simple, one hidden layer network that produces `1.76%` of error. Since this model does not assume any spatial relationships between the pixels, it is often referred as "permutation invariant".
 
 To run this example, use the following command:
 
@@ -99,7 +99,7 @@ In the fifth example, we show how CNTK can be used to perform a regression task.
 
 `cntk configFile=05_OneConvRegr.cntk`
 
- The trained network achieves root-mean-square error (RMSE) of 0.0039. To see more sophisticated examples on regression tasks, please refer to [Regression](../Regression).
+ The trained network achieves root-mean-square error (RMSE) of around 0.05. To see more sophisticated examples on regression tasks, please refer to [Regression](../Regression).
 
 ### 06_OneConvRegrMultiNode.cntk
 
@@ -108,4 +108,3 @@ In the sixth example, we show how to train CNTK with multiple process(GPUs) for 
 `mpiexec -n 2 cntk configFile=06_OneConvRegrMultiNode.cntk parallelTrain=True parallelizationMethod=DataParallelSGD`
 
 You can change the parallelizationMethod to other three options. To see more detailed guide on multiple GPUs and machines tasks, please refer to [Multiple GPUs and machines](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines).
-
