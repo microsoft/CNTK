@@ -393,20 +393,16 @@ void TensorView<ElemType>::SparseAssignCopyOf(const TensorView& a, size_t* NzOff
 {
     bool transA = false;
     bool transB = false;
-
     // determine integration dimension offset
     auto shapeA = a.m_shape;
     auto shapeB = m_shape;
-
     // flatten. This updates shapeA etc.
     FlattenToMatrix(shapeA, transA, 1);
     FlattenToMatrix(shapeB, transB, 1);
-
     // create Matrix objects out of this
     let  A = a.Reshaped(shapeA).AsMatrix();
     auto B = Reshaped(shapeB).AsMatrix();
-
-    Matrix<ElemType>::AssignCopyOf(*B, *A, NzOffset, RowOffset);
+    Matrix<ElemType>::AssignSparseCopyOf(*B, *A, NzOffset, RowOffset);
 }
 
 template <class ElemType>
@@ -419,7 +415,6 @@ template <class ElemType>
     FlattenToMatrix(shapeA, transA, 1);
     // create Matrix objects out of this
     let  A = a.Reshaped(shapeA).AsMatrix();
-
     Matrix<ElemType>::AddSparseNumOfNZs(*A, numNZs);
 }
 
@@ -428,15 +423,12 @@ void TensorView<ElemType>::AddSparseColumnIndex(const TensorView& a)
 {
     bool transA = false;
     bool transB = false;
-
     // determine integration dimension offset
     auto shapeA = a.m_shape;
     auto shapeB = m_shape;
-
     // flatten. This updates shapeA etc.
     FlattenToMatrix(shapeA, transA, 1);
     FlattenToMatrix(shapeB, transB, 1);
-
     // create Matrix objects out of this
     let  A = a.Reshaped(shapeA).AsMatrix();
     auto B = Reshaped(shapeB).AsMatrix();
@@ -451,9 +443,8 @@ void TensorView<ElemType>::ResizeAsSparseMatrix(const size_t numRows, const size
     auto shapeA = m_shape;
     // flatten. This updates shapeA etc.
     FlattenToMatrix(shapeA, transA, 1);
-    //// create Matrix objects out of this
+    // create Matrix objects out of this
     let  A = Reshaped(shapeA).AsMatrix();
-
     Matrix<ElemType>::ResizeAsSparseMatrix(*A, numRows, numCols, numNZs);
 }
 

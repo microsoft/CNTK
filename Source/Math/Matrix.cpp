@@ -4495,7 +4495,7 @@ void Matrix<ElemType>::SVD(const Matrix<ElemType>& A, Matrix<ElemType>& SIGMA, M
 
 // AssginCopyOf matix b to a
 template <class ElemType>
-/*static*/ void Matrix<ElemType>::AssignCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
+/*static*/ void Matrix<ElemType>::AssignSparseCopyOf(Matrix<ElemType>& a, const Matrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
 {
     DecideAndMoveToRightDevice(a, b);
 
@@ -4504,11 +4504,11 @@ template <class ElemType>
 
         if (b.GetMatrixType() == MatrixType::SPARSE)
         {
-            GPUSparseMatrix<ElemType>::AssignCopyOf(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, NzOffset, RowOffset);
+            GPUSparseMatrix<ElemType>::AssignSparseCopyOf(*a.m_GPUSparseMatrix, *b.m_GPUSparseMatrix, NzOffset, RowOffset);
         }
         else
         {
-            GPUSparseMatrix<ElemType>::AssignCopyOf(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, NzOffset, RowOffset);
+            GPUSparseMatrix<ElemType>::AssignSparseCopyOf(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, NzOffset, RowOffset);
         }
     }
     else
@@ -4557,7 +4557,6 @@ template <class ElemType>
     {
         NOT_IMPLEMENTED;
     }
-
 }
 
 template <class ElemType>
@@ -4572,6 +4571,7 @@ template <class ElemType>
         a.m_GPUSparseMatrix->Resize(numRows, numCols, numNZs);
     }
 }
+
 /// <summary>Matrix-matrix multiply with col-major matrices (a and b may be transposed): c = alpha * op(a) * op(b) + beta*c</summary>
 /// <param name="alpha">Scalar</param>
 /// <param name="a">Input matrix</param>

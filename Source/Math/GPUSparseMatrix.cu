@@ -2115,7 +2115,7 @@ void GPUSparseMatrix<ElemType>::AddSparseColumnIndex(GPUSparseMatrix<ElemType>& 
 
 // row stack matrix b to matrix a
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
+void GPUSparseMatrix<ElemType>::AssignSparseCopyOf(GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
 {
     //fprintf(stderr, "A: Row: %d Col: %d NZ: %d RowOffset: %d\n", a.GetNumRows(), a.GetNumCols(), a.NzCount(), RowOffset);
     //fprintf(stderr, "B: Row: %d Col: %d NZ: %d\n", b.GetNumRows(), b.GetNumCols(), b.NzCount());
@@ -2157,7 +2157,7 @@ void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::AssignCopyOf(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
+void GPUSparseMatrix<ElemType>::AssignSparseCopyOf(GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, size_t* NzOffset, const size_t RowOffset)
 {
     b.PrepareDevice();
     //size_t* d_NzOffset;
