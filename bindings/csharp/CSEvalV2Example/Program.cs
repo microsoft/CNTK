@@ -50,6 +50,80 @@ namespace CSEvalV2Example
             uint imageHeight = inputShape[1];
             uint imageChannels = inputShape[2];
             uint imageSize = inputShape.TotalSize;
+            var inputMap = new Dictionary<Variable, Value>();
+            var outputMap = new Dictionary<Variable, Value>();
+
+            // Evaluate with single image
+            Console.WriteLine("Evaluate single image");
+
+            Bitmap bmp = new Bitmap(Bitmap.FromFile("00000.png"));
+            var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+            List<float> resizedCHW = resized.ParallelExtractCHW();
+
+            var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, DeviceDescriptor.CPUDevice);
+            // Create input map
+            // Create the Value from input data and add to the input map.
+            // void Create<T>(NDShape shape, List<List<T>> data, DeviceDescriptor computeDevice)
+            inputMap.Add(inputVar, inputVal);
+
+            // Create ouput map. Using null as Value to indicate using system allocated memory.
+            outputMap.Add(outputVar, null);
+
+            evalFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
+
+            // The buffer for storing output for this batch
+            var outputData = new List<List<float>>();
+            Value outputVal = outputMap[outputVar];
+            // Get output result as dense output
+            // void CopyTo(Variable, List<List<T>>
+            outputVal.CopyTo(outputVar, outputData);
+
+            // Evaluate with batch of images
+            Console.WriteLine("Evaluate batch of images");
+
+            var fileList = new List<string>() { "00000.png", "00001.png", "00002.png" };
+            var seqData = new List<float>();
+            for (int sampleIndex = 0; sampleIndex < fileList.Count; sampleIndex++)
+            {
+                bmp = new Bitmap(Bitmap.FromFile(fileList[sampleIndex++]));
+                resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                resizedCHW = resized.ParallelExtractCHW();
+                // Aadd this sample to the data buffer of this sequence
+                seqData.AddRange(resizedCHW);
+            }
+
+            inputVal = Value.CreateBatch(inputVar.Shape, seqData, DeviceDescriptor.CPUDevice);
+            inputMap[inputVar] = inputVal;
+            outputMap[outputVar] = null;
+            evalFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
+
+            // Evaluate with sequence of images
+            Console.WriteLine("Evaluate sequence of images");
+
+            fileList = new List<string>() { "00000.png", "00001.png", "00002.png" };
+            seqData = new List<float>();
+            bool seqStartFlag = true;
+            for (int sampleIndex = 0; sampleIndex < fileList.Count; sampleIndex++)
+            {
+                bmp = new Bitmap(Bitmap.FromFile(fileList[sampleIndex++]));
+                resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                resizedCHW = resized.ParallelExtractCHW();
+                // Aadd this sample to the data buffer of this sequence
+                seqData.AddRange(resizedCHW);
+            }
+
+            inputMap[inputVar] = Value.CreateSequence(inputVar.Shape, seqData, seqStartFlag, DeviceDescriptor.CPUDevice);
+            outputMap[outputVar] = null;
+            evalFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
+
+            outputData = new List<List<float>>();
+            outputVal = outputMap[outputVar];
+            // Get output result as dense output
+            // void CopyTo(Variable, List<List<T>>
+            outputVal.CopyTo(outputVar, outputData);
+
+            // Evalaute with batch of sequences 
+            Console.WriteLine("Evaluate batch of sequences of images");
 
             // Number of sequences for this batch
             int numOfSequences = 2;
@@ -60,49 +134,41 @@ namespace CSEvalV2Example
             // Each sample has the same tensor shape.
             // The outer List is the sequences. Its size is the number of qequences.
             // The inner List is the samples of one single sequence. Its size is inputShape.TotalSize * numberOfSampelsInSequence
-            var inputData = new List<List<float>>();
-            var fileList = new List<string>() { "00000.png", "00001.png", "00002.png", "00003.png", "00004.png", "00005.png" };
+            var inputBatch = new List<List<float>>();
+            var seqStartFlagBatch = new List<bool>();
+
+            fileList = new List<string>() { "00000.png", "00001.png", "00002.png", "00003.png", "00004.png", "00005.png" };
             int fileIndex = 0;
             for (int seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
             {
                 // Create a new data buffer for the new sequence
-                var seqData = new List<float>();
+                seqData = new List<float>();
                 for (int sampleIndex = 0; sampleIndex < numOfSamplesInSequence[seqIndex]; sampleIndex++)
                 {
-                    Bitmap bmp = new Bitmap(Bitmap.FromFile(fileList[fileIndex++]));
-                    var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
-                    List<float> resizedCHW = resized.ParallelExtractCHW();
+                    bmp = new Bitmap(Bitmap.FromFile(fileList[fileIndex++]));
+                    resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                    resizedCHW = resized.ParallelExtractCHW();
                     // Aadd this sample to the data buffer of this sequence
                     seqData.AddRange(resizedCHW);
                 }
                 // Add this sequence to the sequences list
-                inputData.Add(seqData);
+                inputBatch.Add(seqData);
+                seqStartFlagBatch.Add(true);
             }
-
-            // Create input map
-            var inputMap = new Dictionary<Variable, Value>();
 
             // Create the Value from input data and add to the input map.
             // void Create<T>(NDShape shape, List<List<T>> data, DeviceDescriptor computeDevice)
-            inputMap.Add(inputVar, Value.Create(inputVar.Shape, inputData, DeviceDescriptor.CPUDevice));
+            inputMap[inputVar] = Value.CreateBatchOfSequences(inputVar.Shape, inputBatch, seqStartFlagBatch, DeviceDescriptor.CPUDevice);
 
-            // Create ouput map. Using null as Value to indicate using system allocated memory.
-            var outputMap = new Dictionary<Variable, Value>();
-            outputMap.Add(outputVar, null);
-
-            // Evalaute
-            // Todo: test on GPUDevice()?
-            // Use Variables in input and output maps.
-            // It is also possible to use variable name in input and output maps.
+            outputMap[outputVar] = null;
             evalFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
 
-            // The buffer for storing output for this batch
-            var outputData = new List<List<float>>();
-            Value outputVal = outputMap[outputVar];
+            outputData = new List<List<float>>();
+            outputVal = outputMap[outputVar];
             // Get output result as dense output
             // void CopyTo(Variable, List<List<T>>
             outputVal.CopyTo(outputVar, outputData);
-
+            
             // Output results
             // Todo: add sample based iterator
             var numOfElementsInSample = outputVar.Shape.TotalSize;
@@ -151,40 +217,23 @@ namespace CSEvalV2Example
 
             uint vocabSize = inputVar.Shape.TotalSize;
 
-            // The input data. 
-            // Each sample is represented by a onehot vector, so the index of the non-zero value of each sample is saved in the inner list
-            // The outer list represents sequences of the batch.
-            var inputData = new List<List<uint>>();
-            var inputSentences = new List<string>() { 
-                "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS",
-                "BOS I want to book a flight from NewYork to Seattle EOS"
-            };
-
-            // The number of sequences in this batch
-            int numOfSequences = inputSentences.Count;
-
-            for (int seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
+            // Evalaute a single sequence
+            var inputSentence = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
+            // the input for one sequence 
+            var seqData = new List<uint>();
+            var seqStartFlag = true;
+            // Get the word from the sentence.
+            string[] substring = inputSentence.Split(' ');
+            foreach (var str in substring)
             {
-                // the input for one sequence 
-                var seqData = new List<uint>();
-                // Get the word from the sentence.
-                string[] substring = inputSentences[seqIndex].Split(' ');
-                foreach (var str in substring)
-                {
-                    // Get the index of the word
-                    var index = vocabToIndex[str];
-                    // Add the sample to the sequence
-                    seqData.Add(index);
-                }
-                // Add the sequence to the batch
-                inputData.Add(seqData);
+                // Get the index of the word
+                var index = vocabToIndex[str];
+                // Add the sample to the sequence
+                seqData.Add(index);
             }
 
-            // Create the Value representing the data.
-            // void CreateValue<T>(uint vocabularySize, List<List<uint> oneHotIndexes, DeviceDescriptor computeDevice) 
-            Value inputValue = Value.Create<float>(vocabSize, inputData, DeviceDescriptor.CPUDevice);
-
             // Create input map
+            var inputValue = Value.CreateSequence<float>(vocabSize, seqData, seqStartFlag, DeviceDescriptor.CPUDevice);
             var inputMap = new Dictionary<string, Value>();
             inputMap.Add(inputNodeName, inputValue);
 
@@ -202,6 +251,57 @@ namespace CSEvalV2Example
 
             var outputData = new List<List<uint>>();
             Value outputVal = outputMap[outputNodeName];
+
+            // Get output as onehot vector
+            // void CopyTo(Variable, List<List<uint>>)
+            outputVal.CopyTo(outputVar, outputData);
+
+            // Evaluate batch of sequences.
+
+            // The input data. 
+            // Each sample is represented by a onehot vector, so the index of the non-zero value of each sample is saved in the inner list
+            // The outer list represents sequences of the batch.
+            var inputBatch = new List<List<uint>>();
+            var seqStartFlagBatch = new List<bool>();
+            var inputSentences = new List<string>() { 
+                "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS",
+                "BOS I want to book a flight from NewYork to Seattle EOS"
+            };
+
+            // The number of sequences in this batch
+            int numOfSequences = inputSentences.Count;
+
+            for (int seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
+            {
+                // the input for one sequence 
+                seqData = new List<uint>();
+                // Get the word from the sentence.
+                substring = inputSentences[seqIndex].Split(' ');
+                foreach (var str in substring)
+                {
+                    // Get the index of the word
+                    var index = vocabToIndex[str];
+                    // Add the sample to the sequence
+                    seqData.Add(index);
+                }
+                // Add the sequence to the batch
+                inputBatch.Add(seqData);
+                seqStartFlagBatch.Add(true);
+            }
+
+            // Create the Value representing the data.
+            // void CreateValue<T>(uint vocabularySize, List<List<uint> oneHotIndexes, DeviceDescriptor computeDevice) 
+            inputValue = Value.CreateBatchOfSequences<float>(vocabSize, inputBatch, seqStartFlagBatch, DeviceDescriptor.CPUDevice);
+            inputMap[inputNodeName] = inputValue;
+
+            outputMap[outputNodeName] = null;
+
+            // Evalaute
+            // Todo: test on GPUDevice()?
+            myFunc.Evaluate(inputMap, outputMap, DeviceDescriptor.CPUDevice);
+
+            outputData = new List<List<uint>>();
+            outputVal = outputMap[outputNodeName];
 
             // Get output as onehot vector
             // void CopyTo(Variable, List<List<uint>>)
@@ -259,6 +359,7 @@ namespace CSEvalV2Example
             var dataOfSequences = new List<List<float>>();
             var indexOfSequences = new List<List<uint>>();
             var nnzCountOfSequences = new List<List<uint>>();
+            var seqStartFlagBatch = new List<bool>();
             // Assuming the images to be evlauated are quite sparse so using sparse input is a better option than dense input.
             var fileList = new List<string>() { "00000.png", "00001.png", "00002.png", "00003.png", "00004.png", "00005.png" };
             int fileIndex = 0;
@@ -296,11 +397,12 @@ namespace CSEvalV2Example
                 dataOfSequences.Add(dataList);
                 indexOfSequences.Add(indexList);
                 nnzCountOfSequences.Add(nnzCountList);
+                seqStartFlagBatch.Add(true);
             }
 
             // Create value object from data.
             // void Create<T>(Shape shape, List<List<T>> data, List<List<uint> indexes, List<List<uint>> nnzCounts, DeviceDescriptor computeDevice) 
-            Value inputValue = Value.Create<float>(inputVar.Shape, dataOfSequences, indexOfSequences, nnzCountOfSequences, DeviceDescriptor.CPUDevice);
+            Value inputValue = Value.CreateBatchOfSequences<float>(inputVar.Shape, dataOfSequences, indexOfSequences, nnzCountOfSequences, seqStartFlagBatch, DeviceDescriptor.CPUDevice);
 
             // Create input map
             var inputMap = new Dictionary<Variable, Value>();
