@@ -775,11 +775,10 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::TransposeTimes, leftOperand, rightOperand, std::move(additionalProperties), name);
     }
 
-	FunctionPtr SampledTimes(const Variable& leftOperand, const Variable& rightOperand, const Variable& labels, size_t outputRank /*= 1*/, int inferInputRankToMap, const std::wstring& name)
+	FunctionPtr SampledTimes(const Variable& leftOperand, const Variable& rightOperand, const Variable& labels, size_t outputRank /*= 1*/, const std::wstring& name)
 	{
 		auto additionalProperties = Dictionary();
 		additionalProperties[PrimitiveFunction::AttributeNameOutputRank] = outputRank;
-		additionalProperties[PrimitiveFunction::AttributeNameInferInputRankToMap] = inferInputRankToMap;
 		return TernaryOp(PrimitiveOpType::SampledTimes, leftOperand, rightOperand, labels, std::move(additionalProperties), name);
 	}
 	

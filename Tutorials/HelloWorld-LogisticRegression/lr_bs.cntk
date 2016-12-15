@@ -20,10 +20,10 @@ Train = [             # command=Train --> CNTK will look for a parameter named T
 
         # sample and label dimensions
         SDim = $dimension$
-        LDim = 1
+        LDim = 2
 
         features = Input (SDim)
-        labels   = Input (LDim)
+        labels   = Input (LDim, sparse=true)
 
         # parameters to learn
         b = Parameter (LDim, 1)     # bias
@@ -33,8 +33,9 @@ Train = [             # command=Train --> CNTK will look for a parameter named T
         #p = w * features + b
 	p = SampledTimes(w,features,labels) + b
     
-        lr = SquareError (labels, p)
-        err = SquareError (labels, p)
+        #lr = CrossEntropyWithSoftmax (labels, p)
+        lr = ReduceLogSum(p, axis=1) - TransposeTimes(labels,p)
+	err = lr
 
         # root nodes
         featureNodes    = (features)
@@ -56,7 +57,7 @@ Train = [             # command=Train --> CNTK will look for a parameter named T
     reader = [
 
         readerType = "CNTKTextFormatReader"
-        file = "Train_cntk_text.txt"
+        file = "Train_cntk_text_sparse_label.txt"
 
         input = [
             features = [
@@ -64,8 +65,8 @@ Train = [             # command=Train --> CNTK will look for a parameter named T
                 format = "dense"
             ]
             labels = [
-                dim = 1
-                format = "dense"
+                dim = 2
+                format = "sparse"
             ]
         ]
     ]
@@ -76,15 +77,15 @@ Test = [
     action = "test"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "Test_cntk_text.txt"
+        file = "Test_cntk_text_sparse_label.txt"
         input = [
             features = [
                 dim = $dimension$
                 format = "dense"
             ]
             labels = [
-                dim = 1
-                format = "dense"
+                dim = 2
+                format = "sparse"
             ]
         ]
     ]
@@ -95,15 +96,15 @@ Output = [
     action = "write"
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "Test_cntk_text.txt"
+        file = "Test_cntk_text_sparse_label.txt"
         input = [
             features = [
                 dim = $dimension$  # $$ means variable substitution
                 format = "dense"
             ]
             labels = [
-                dim = 1            # label has 1 dimension
-                format = "dense"
+                dim = 2            # label has 1 dimension
+                format = "sparse"
             ]
         ]
     ]

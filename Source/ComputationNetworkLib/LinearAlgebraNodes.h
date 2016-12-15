@@ -811,22 +811,16 @@ public:
 		// and recreate actual Matrix objects (in case of sparse, they must be identical to the original tensor storage object).
 		// Transposition is applied after flattening into 2D, but only allowed if the input sample is 2D anyway.
 		auto input0 = Base::OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
-		auto input1 = Base::OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
-		auto input2 = Base::OneSampleTensorFor(2,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
-		//RunSampling();
+		auto input1 = AsFlattenedMatrix( Base::OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()) );
+		auto input2 = AsFlattenedMatrix( Base::OneSampleTensorFor(2,  /*gradient=*/false, fr.AllowBroadcast()) );
+		auto output = AsFlattenedMatrix(Base::OneSampleTensorFor(-1, /*gradient=*/false, fr));
 		int* idx = input2->GetNonZeroIndices();
-		size_t numElements = input2->GetNumNonZeroElements();
-		ElemType* floatIdx = new ElemType[numElements];
-		for (size_t i = 0; i < numElements; ++i) {
-			floatIdx[i] = (ElemType)idx[i];
-		}
 
-		m_sampleIdx.SetValue(numElements, 1, GetDeviceId(), floatIdx, false /*matrixFormatRowMajor*/);
-		delete[] floatIdx;
+		m_sampleIdx.SetValue(idx, 1, input2->GetNumNonZeroElements(), GetDeviceId(), false /*matrixFormatRowMajor*/);
 		m_sampledWeights.DoGatherColumnsOf(0, m_sampleIdx, *input0, 1); // *sampledWeights[:,j] = a[:,idx[j]]
-		m_sampledOutput.AssignProductOf(m_sampledWeights, false/*transA*/, *input1, false/*transB*/);
-		auto output = Base::OneSampleTensorFor(-1, /*gradient=*/false, fr).AsMatrix();
-		output->DoScatterColumnsOf(0, m_sampleIdx, m_sampledOutput, 0);
+		m_sampledOutput.AssignProductOf(m_sampledWeights, true/*transA*/, *input1, false/*transB*/);
+		output->SetValue(0);
+		output->Transpose().DoScatterColumnsOf(0, m_sampleIdx, m_sampledOutput, 0);
 	}
 
 	void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -840,36 +834,36 @@ public:
 		if (inputIndex == 0) // left derivative
 		{
 			auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true, fr.AllowBroadcast()).AsMatrix();
-			m_sampledWeights.DoGatherColumnsOf(0, m_sampleIdx, *input0Gradient, 1);
+			auto outputGradient = AsFlattenedMatrix( OneSampleTensorFor(-1, /*gradient=*/true, fr) );
+			auto input1 = AsFlattenedMatrix(OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()));
 
-			auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr).AsMatrix();
-			m_sampledOutput.DoGatherColumnsOf(0, m_sampleIdx, *outputGradient, 1);
-
-			auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
-
+			m_sampledOutput.DoGatherColumnsOf(0, m_sampleIdx, outputGradient->Transpose(), 1);
 			m_sampledWeights.AssignProductOf(m_sampledOutput, false/*transA*/, *input1, true/*transB*/);
-			m_sampledWeights.Transpose();
-			input0Gradient->DoScatterColumnsOf(0, m_sampleIdx, m_sampledWeights, 0);
+			input0Gradient->DoScatterColumnsOf(0, m_sampleIdx, m_sampledWeights.Transpose(), 0);
 		}
 		else if (inputIndex == 1) // right derivative
 		{
 			auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
+			auto outputGradient = AsFlattenedMatrix(OneSampleTensorFor(-1, /*gradient=*/true, fr));
+			auto input1Gradient = AsFlattenedMatrix(OneSampleTensorFor(1,  /*gradient=*/true, fr.AllowBroadcast()));
+
 			m_sampledWeights.DoGatherColumnsOf(0, m_sampleIdx, *input0, 1);
-
-			auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr).AsMatrix();
-			m_sampledOutput.DoGatherColumnsOf(0, m_sampleIdx, *outputGradient, 1);
-
-			auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true, fr.AllowBroadcast()).AsMatrix();
+			m_sampledOutput.DoGatherColumnsOf(0, m_sampleIdx, outputGradient->Transpose(), 1);
 			input1Gradient->AssignProductOf(m_sampledWeights, true/*transA*/, m_sampledOutput, false/*transB*/);
 		}
 	}
 
-	void Validate(bool isFinalValidationPass)
-	{
-
-	}
-
 private:
+	shared_ptr<Matrix<ElemType>> AsFlattenedMatrix(TensorView<ElemType> a)
+	{
+		SmallVector<bool> dimsToDrop(3, false);
+		dimsToDrop[2] = true;
+
+		auto shape = a.GetShape();
+		shape.DropDimsInPlace(dimsToDrop);
+		return a.Reshaped(shape).AsMatrix();
+	}
+	
 	void UpdateWeightsPrefixSum(const std::vector<ElemType>& samplingWeights)
 	{
 		m_samplingWeightsPrefixSum.clear();

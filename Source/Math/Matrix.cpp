@@ -1324,6 +1324,19 @@ void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int 
 }
 
 template <class ElemType>
+void Matrix<ElemType>::SetValue(int* pArray, const size_t numRows, const size_t numCols, int deviceId, const size_t matrixFlags, DataTransferer* transferer)
+{
+	size_t numElements = numRows * numCols;
+	ElemType* float_p = new ElemType[numElements];
+	for (size_t i = 0; i < numElements; ++i) {
+		float_p[i] = (ElemType)pArray[i];
+	}
+
+	SetValue(1, numElements, deviceId, float_p, matrixFlags, transferer);
+	delete[] float_p;
+}
+
+template <class ElemType>
 void Matrix<ElemType>::SetValue(const size_t rIdx, const size_t cIdx, ElemType val)
 {
     DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this,

@@ -645,7 +645,7 @@ TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeRev
 Trace (node, say='', logFrequency=100, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [ operation = 'Trace' ; inputs = _AsNodes (node) ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
 QuantizedTimes(leftMatrix, rightMatrix, bitSmoothingA=1, bitSmoothingB=1, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'QuantizedTimes' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
-SampledTimes(x, y,z, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'SampledTimes' ; inputs = _AsNodes (x : y : z) /*plus the function args*/ ]
+SampledTimes(x, y, z, tag='') = new ComputationNode [ operation = 'SampledTimes' ; inputs = _AsNodes (x : y : z) /*plus the function args*/ ]
 Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = _AsNodes (cond) /*plus the function args*/ ]
 
 ##############################################################################

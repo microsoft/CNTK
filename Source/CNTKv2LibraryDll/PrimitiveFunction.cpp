@@ -393,8 +393,7 @@ namespace CNTK
 			{
 				assert(inputs.size() == 3);
 				auto outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-				auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
-				outputShape = TimesOpOutputShape(inputs[0], inputs[1], outputRank, inferInputRankToMap, inferDimensions);
+				outputShape = TimesOpOutputShape(inputs[0], inputs[1], outputRank, -1, inferDimensions);
 				break;
 			}
             case PrimitiveOpType::Convolution:
