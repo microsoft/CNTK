@@ -20,7 +20,7 @@ if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
     sys.exit(1)
 
 if IS_WINDOWS:
-    if os.system('cl /? -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
+    if os.system('cl 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
         print("Compiler was not found in path.\n"
               "Make sure you installed the C++ tools during Visual Studio 2015 install and \n"
               "run vcvarsall.bat from a DOS command prompt:\n"
