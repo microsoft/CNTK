@@ -15,7 +15,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class MATH_API RNGHandle
 {
 public:
-    static std::shared_ptr<RNGHandle> Create(DEVICEID_TYPE deviceId, unsigned long seed, unsigned long long offset = 0);
+    static std::shared_ptr<RNGHandle> Create(DEVICEID_TYPE deviceId, uint64_t seed, uint64_t offset = 0);
     
     virtual ~RNGHandle() {}
 

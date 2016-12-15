@@ -57,7 +57,7 @@
 %ignore CNTK::Internal::Gather;
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
-%ignore CNTK::DistributedCommunicator::AggregateAsync;
+%ignore CNTK::Internal::MaxNumCPUThreadsSet;
 
 // These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
@@ -1008,30 +1008,7 @@ public:
 
 // end NDMask
 
-//
-// Value
-//
-%extend CNTK::Value {
-    static CNTK::ValuePtr CNTK::Value::CreateDenseFloat(const CNTK::NDShape& sampleShape, const std::vector<std::vector<float>>& sequences, 
-        const CNTK::DeviceDescriptor& device, bool readOnly = false) {
-        return CNTK::Value::Create<float>(sampleShape, sequences, device, readOnly);
-    }
-
-    static CNTK::ValuePtr CNTK::Value::CreateDenseDouble(const CNTK::NDShape& sampleShape, const std::vector<std::vector<double>>& sequences, 
-        const CNTK::DeviceDescriptor& device, bool readOnly = false) {
-        return CNTK::Value::Create<double>(sampleShape, sequences, device, readOnly);
-    }
-
-    static CNTK::ValuePtr CNTK::Value::CreateOneHotFloat(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, 
-        const CNTK::DeviceDescriptor& device, bool readOnly = false) {
-        return CNTK::Value::Create<float>(vocabularySize, oneHotSequences, device, readOnly);
-    }
-
-    static CNTK::ValuePtr CNTK::Value::CreateOneHotDouble(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, 
-        const CNTK::DeviceDescriptor& device, bool readOnly = false) {
-        return CNTK::Value::Create<double>(vocabularySize, oneHotSequences, device, readOnly);
-    }
-}
+%include "CNTKValueExtend.i"
 
 //
 // NDArrayView
@@ -1059,7 +1036,7 @@ public:
         for (int i=0; i<rank; i++)
         {
             shape[rank-i-1] = np_shape[i];
-            num_elements *= np_shape[i];            
+            num_elements *= np_shape[i];
         }
 
         int typecode = PyArray_TYPE(array);

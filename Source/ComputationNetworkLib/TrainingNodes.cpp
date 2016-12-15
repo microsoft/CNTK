@@ -45,8 +45,7 @@ void RandomSampleNodeBase<ElemType>::Save(File& fstream) const
     Base::Save(fstream);
     fstream << m_allowDuplicates;
     fstream << m_sizeOfSampledSet;
-    fstream << GetRngSeed();
-    fstream << GetRngOffset();
+    RngUser::Save(fstream);
 }
 
 template<class ElemType>
@@ -55,14 +54,7 @@ void RandomSampleNodeBase<ElemType>::Load(File& fstream, size_t modelVersion)
     Base::Load(fstream, modelVersion);
     fstream >> m_allowDuplicates;
     fstream >> m_sizeOfSampledSet;
-    if (modelVersion >= CNTK_MODEL_VERSION_16)
-    {
-        unsigned long seed;
-        unsigned long long offset;
-        fstream >> seed;
-        fstream >> offset;
-        SetRngState(seed, offset);
-    }
+    RngUser::Load(fstream, modelVersion);
 }
 
 template<class ElemType>
@@ -275,23 +267,14 @@ template<class ElemType>
 void DropoutNode<ElemType>::Save(File& fstream) const
 {
     Base::Save(fstream);
-    fstream << GetRngSeed();
-    fstream << GetRngOffset();
+    RngUser::Save(fstream);
 }
 
 template<class ElemType>
 void DropoutNode<ElemType>::Load(File& fstream, size_t modelVersion)
 {
     Base::Load(fstream, modelVersion);
-    
-    if (modelVersion >= CNTK_MODEL_VERSION_16)
-    {
-        unsigned long seed;
-        unsigned long long offset;
-        fstream >> seed;
-        fstream >> offset;
-        SetRngState(seed, offset);
-    }
+    RngUser::Load(fstream, modelVersion);
 }
 
 template class DropoutNode<float>;
