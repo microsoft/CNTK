@@ -8,7 +8,10 @@
 #include <random>
 #include <numeric>
 #include <boost/random/normal_distribution.hpp>
+#pragma warning( push )
+#pragma warning( disable: 4724 )
 #include <boost/random/uniform_int_distribution.hpp>
+#pragma warning( pop )
 #include <boost/random/uniform_real_distribution.hpp>
 #include "../../../Source/Math/Matrix.h"
 #include "../../../Source/Math/CPUMatrix.h"

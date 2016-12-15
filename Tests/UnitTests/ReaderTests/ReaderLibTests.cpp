@@ -6,7 +6,10 @@
 #include "stdafx.h"
 #include <numeric>
 #include <random>
+#pragma warning( push )
+#pragma warning( disable: 4724 )
 #include <boost/random/uniform_int_distribution.hpp>
+#pragma warning( pop )
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
 #include "BlockRandomizer.h"

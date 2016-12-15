@@ -17,7 +17,10 @@
 #include <vector>
 #include <random>
 #ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable: 4724 )
 #include <boost/random/uniform_int_distribution.hpp>
+#pragma warning( pop )
 #include <boost/random/piecewise_constant_distribution.hpp>
 #endif
 

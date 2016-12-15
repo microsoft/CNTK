@@ -8,7 +8,10 @@
 #include <unordered_map>
 #include <random>
 #include <opencv2/opencv.hpp>
+#pragma warning( push )
+#pragma warning( disable: 4724 )
 #include <boost/random/uniform_int_distribution.hpp>
+#pragma warning( pop )
 #include <boost/random/uniform_real_distribution.hpp>
 
 #include "Transformer.h"
