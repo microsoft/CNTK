@@ -2,18 +2,16 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-
 #include "stdafx.h"
 #include <numeric>
 #include <random>
-#pragma warning( push )
-#pragma warning( disable: 4724 )
-#include <boost/random/uniform_int_distribution.hpp>
-#pragma warning( pop )
+
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
 #include "BlockRandomizer.h"
 #include "CorpusDescriptor.h"
+
+#pragma warning(disable:4724)
 #include "SequentialDeserializer.h"
 
 using namespace Microsoft::MSR::CNTK;
@@ -551,6 +549,7 @@ void BlockRandomizerChaosMonkeyTest(bool prefetch)
     vector<float> data(numChunks * numSequencesPerChunk);
     iota(data.begin(), data.end(), 0.0f);
     std::mt19937 rng(seed);
+
     boost::random::uniform_int_distribution<int> distr(1, 10);
 
     auto mockDeserializer = make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data, sequenceLength);
