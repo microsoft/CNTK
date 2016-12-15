@@ -10,7 +10,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-GPURNGHandle::GPURNGHandle(int deviceId, unsigned long seed, unsigned long long offset)
+GPURNGHandle::GPURNGHandle(int deviceId, uint64_t seed, uint64_t offset)
     : RNGHandle(deviceId)
 {
     unsigned long long cudaSeed = seed;

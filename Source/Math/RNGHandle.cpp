@@ -12,7 +12,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-/*static*/ std::shared_ptr<RNGHandle> RNGHandle::Create(DEVICEID_TYPE deviceId, unsigned long seed, unsigned long long offset)
+/*static*/ std::shared_ptr<RNGHandle> RNGHandle::Create(DEVICEID_TYPE deviceId, uint64_t seed, uint64_t offset)
 {
     if (deviceId == CPUDEVICE)
     {

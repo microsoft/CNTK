@@ -173,8 +173,6 @@ cp -r $buildPath/* $baseBinariesPath
 # General TODO: Implement White List of Binary Drop contents.
 # For the time being "cherry pick"  removal of unneeded files
 #
-# Remove Py 3.5 for the time being
-rm -f $baseBinariesPath/python/cntk*35*35*.whl
 rm -f $baseBinariesPath/bin/brainscripttests
 rm -f $baseBinariesPath/bin/cppevalclient
 rm -f $baseBinariesPath/bin/cppevalextendedclient

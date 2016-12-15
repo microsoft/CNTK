@@ -213,6 +213,8 @@ class ProgressPrinter:
             trainer (:class:`cntk.trainer.Trainer`): trainer from which information is gathered
             with_metric (`bool`): whether to update the metric accumulators
         '''
+        if trainer.previous_minibatch_sample_count == 0:
+            return
         self.update(
             trainer.previous_minibatch_loss_average,
             trainer.previous_minibatch_sample_count, 

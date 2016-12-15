@@ -527,10 +527,15 @@ class RowStackNode : public ComputationNode<ElemType> // note: not deriving from
     static const std::wstring TypeName() { return L"RowStack"; }
 
 public:
-    DeclareConstructorFromConfig(RowStackNode);
     RowStackNode(DEVICEID_TYPE deviceId, const wstring& name, int spliceDim = 1/*TODO: complete this*/)
         : Base(deviceId, name), m_spliceDim(spliceDim)
     {
+    }
+
+    RowStackNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : RowStackNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"axis"))
+    {
+        AttachInputsFromConfig(configp);
     }
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override

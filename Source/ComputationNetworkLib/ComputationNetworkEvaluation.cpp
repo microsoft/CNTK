@@ -1037,6 +1037,16 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     for (auto& keyValue : parentsMap)
     {
         parentCount[keyValue.first] = keyValue.second.size();
+
+        // Indicate on the node that it's parent overwrites its gradient if the node is not part of a loop
+        // and has exactly one parent who implements the gradient overwrite optimization
+        if (Globals::ShouldOptimizeGradientAccumulation() &&
+            !keyValue.first->IsPartOfLoop() &&
+            (keyValue.second.size() == 1) &&
+            (*keyValue.second.begin())->ImplementsGradientOverwriteOptimization())
+        {
+            keyValue.first->MarkParentOverwritesGradient();
+        }
     }
 
     // Construct the composite forward prop eval order by enumerating the

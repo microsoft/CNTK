@@ -317,7 +317,9 @@ namespace CNTK
 
             // Determine maximum rank (we can stack tensors with lower rank, which will have their dimensions paded to max automatically)
             auto maxInputRank = MaxInputRank(inputs);
-            size_t maxRank = std::max<size_t>(axis + 1, maxInputRank); // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
+
+            // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
+            size_t maxRank = std::max<size_t>(axis + 1, maxInputRank); 
 
             // The following loop does multiple things:
             //  - Count total dimension along index

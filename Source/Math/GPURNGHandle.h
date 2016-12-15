@@ -18,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class GPURNGHandle : public RNGHandle
 {
 public:
-    GPURNGHandle(int deviceId, unsigned long seed, unsigned long long offset = 0);
+    GPURNGHandle(int deviceId, uint64_t seed, uint64_t offset = 0);
     virtual ~GPURNGHandle();
 
 #ifndef CPUONLY

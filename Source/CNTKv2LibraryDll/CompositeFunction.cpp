@@ -763,7 +763,7 @@ namespace CNTK
                 if (functionConfig.Contains(PrimitiveFunction::AttributeNameRngSeed))
                 {
                     auto seed = functionConfig[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
-                    unsigned long long offset = 0;
+                    uint64_t offset = 0;
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameRngOffset))
                     {
                         offset = functionConfig[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
@@ -1191,9 +1191,9 @@ namespace CNTK
         return m_perOutputVarArgumentDependencies[output];
     }
 
-    std::unordered_map<Variable, int64_t> CompositeFunction::GetCurrentBackpropRootsTimeStamps() const
+    std::unordered_map<Variable, uint64_t> CompositeFunction::GetCurrentBackpropRootsTimeStamps() const
     {
-        std::unordered_map<Variable, int64_t> currentBackpropRootsTimeStamps;
+        std::unordered_map<Variable, uint64_t> currentBackpropRootsTimeStamps;
         assert(m_computationNetwork != nullptr);
 
         for (auto& backpropRoot : m_currentBackpropRoots)
@@ -1328,7 +1328,7 @@ namespace CNTK
             InvalidArgument("Invalid backprop state specified");
 
         // TODO: Support multiple concurrent backprop states
-        std::unordered_map<Variable, int64_t> currentBackpropRootTimeStamps = GetCurrentBackpropRootsTimeStamps();
+        std::unordered_map<Variable, uint64_t> currentBackpropRootTimeStamps = GetCurrentBackpropRootsTimeStamps();
         if (backpropState->BackpropRootsForwardTimeStamps() != currentBackpropRootTimeStamps)
             LogicError("The specified backprop state specified cannot be used for backpropagation as the Function's internal state was modified by subsequent Forward calls to the function."
                        "This is not a user error but a shortcoming of the current implementation where multiple independent backprop states are not simultaneously supported");
