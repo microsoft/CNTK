@@ -49,7 +49,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
+    <TargetName>CNTKLibrary-$(LibraryVersion)d</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
     <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
@@ -88,7 +88,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ComputationNetworkLib.lib;Math.lib;Common.lib;SequenceTrainingLib.lib;ReaderLib.lib;kernel32.lib;user32.lib;shell32.lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ComputationNetworkLibd.lib;Mathd.lib;Commond.lib;SequenceTrainingLibd.lib;ReaderLibd.lib;kernel32.lib;user32.lib;shell32.lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>

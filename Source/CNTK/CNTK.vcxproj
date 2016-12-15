@@ -81,7 +81,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>CNTKLibrary-2.0.lib;ActionsLib.lib; SGDLib.lib; ComputationNetworkLib.lib; Math.lib; Common.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>CNTKLibrary-2.0d.lib;ActionsLibd.lib; SGDLibd.lib; ComputationNetworkLibd.lib; Mathd.lib; Commond.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLibd.lib; %(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>Math.dll; msmpi.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
       <StackReserveSize>100000000</StackReserveSize>
     </Link>
