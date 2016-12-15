@@ -4729,6 +4729,21 @@ template void GPUMatrix<long>::ChangeDeviceTo(int);
 template void GPUMatrix<long>::Resize(size_t, size_t, bool, bool);
 template void GPUMatrix<long>::RequireSize(size_t, size_t, bool, bool);
 
+template GPUMatrix<long>::~GPUMatrix();
+template GPUMatrix<long> GPUMatrix<long>::ColumnSlice(size_t startColumn, size_t numCols) const;
+template GPUMatrix<long>& GPUMatrix<long>::operator=(GPUMatrix<long>&&);
+template GPUMatrix<long>::GPUMatrix(int);
+template void GPUMatrix<long>::SetValue(const long);
+template void GPUMatrix<long>::SetValue(const size_t numRows, const size_t numCols, int deviceId, long* pArray, size_t matrixFlags, DataTransferer* transferer);
+//template void GPUMatrix<long>::SetValue(CPUMatrix<long> const&);
+template void GPUMatrix<long>::SetValue(GPUMatrix<long> const&);
+//template void GPUMatrix<long>::SetValue(CPUSparseMatrix<long> const&);
+//template void GPUMatrix<long>::SetValue(GPUSparseMatrix<long> const&);
+template void GPUMatrix<long>::CopySection(size_t numRows, size_t numCols, long* dst, size_t colStride) const;
+template void GPUMatrix<long>::Reshape(const size_t, const size_t);
+template GPUMatrix<long>& GPUMatrix<long>::operator*=(long);
+template DEVICEID_TYPE GPUMatrix<long>::PrepareDevice(DEVICEID_TYPE deviceId) const;
+
 template GPUMatrix<int>::GPUMatrix(const size_t, const size_t, int, int*, const size_t);
 template GPUMatrix<int>::~GPUMatrix();
 
