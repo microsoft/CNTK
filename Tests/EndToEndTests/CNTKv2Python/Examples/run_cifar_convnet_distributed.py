@@ -45,7 +45,7 @@ def run_cifar_convnet_distributed():
         num_quantization_bits=num_quantization_bits,
         distributed_after=distributed_after_samples)
 
-    return convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, max_epochs=1)
+    return convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, max_epochs=1, num_mbs_per_log=None)
 
 if __name__=='__main__':
     assert distributed.Communicator.rank() < distributed.Communicator.num_workers()

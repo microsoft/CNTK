@@ -68,8 +68,10 @@ class ProgressPrinter:
             self.___logprint('    loss       last     metric       last              ')
             self.___logprint(' ------------------------------------------------------')
 
-    def end_progress_print(self):
-            self.___logprint('CNTKCommandTrainEnd: train')
+    def end_progress_print(self, msg=""):
+        self.___logprint('CNTKCommandTrainEnd: train')
+        if msg !="":
+            self.___logprint(msg)
 
     def avg_loss_since_start(self):
         '''
