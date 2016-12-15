@@ -10,6 +10,9 @@
 #include <vector>
 #include <functional>
 #include <iostream>
+#ifdef _MSC_VER
+#include <boost/random/uniform_real_distribution.hpp>
+#endif
 
 using namespace CNTK;
 using namespace std;
@@ -23,9 +26,13 @@ static const size_t maxDimSize = 5;
 
 
 static size_t keyCounter = 0;
-static uniform_real_distribution<double> double_dist = uniform_real_distribution<double>();
-static uniform_real_distribution<float> float_dist = uniform_real_distribution<float>();
-
+#ifdef _MSC_VER
+    static boost::random::uniform_real_distribution<double> double_dist = boost::random::uniform_real_distribution<double>();
+    static boost::random::uniform_real_distribution<float> float_dist = boost::random::uniform_real_distribution<float>();
+#else
+    static uniform_real_distribution<double> double_dist = uniform_real_distribution<double>();
+    static uniform_real_distribution<float> float_dist = uniform_real_distribution<float>();
+#endif
 static std::wstring tempFilePath = L"serialization.tmp";
 
 DictionaryValue CreateDictionaryValue(DictionaryValue::Type, size_t, size_t);

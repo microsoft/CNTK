@@ -4,6 +4,9 @@
 //
 
 #include "TrainingNodes.h"
+#ifdef _MSC_VER
+#include <boost/random/uniform_real_distribution.hpp>
+#endif
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -79,7 +82,11 @@ void RandomSampleNodeBase<ElemType>::UpdateWeightsPrefixSum()
 template<class ElemType>
 const std::vector<size_t> RandomSampleNodeBase<ElemType>::RunSampling(size_t& nTries)
 {
+#ifdef _MSC_VER
+    boost::random::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
+#else
     std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
+#endif
     std::unordered_set<int> alreadySampled;
     std::vector<size_t> samples;
     CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));

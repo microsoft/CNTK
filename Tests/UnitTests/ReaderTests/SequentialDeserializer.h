@@ -86,7 +86,11 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             : m_sampleLayout(make_shared<TensorShape>(1))
         {
             std::mt19937_64 engine(seed);
+#ifdef _MSC_VER
+            boost::random::uniform_int_distribution<int> length(1, maxSequenceLength);
+#else
             std::uniform_int_distribution<int> length(1, maxSequenceLength);
+#endif
 
             // Let's generate our data.
             float currentValue = 0;

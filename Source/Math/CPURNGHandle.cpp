@@ -13,8 +13,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 CPURNGHandle::CPURNGHandle(int deviceId, uint64_t seed, uint64_t offset)
     : RNGHandle(deviceId)
 {
-#ifdef _MSC_VER // TODO: check if available under GCC/Linux
-    m_generator.reset(new std::ranlux64_base_01());
+#ifdef _MSC_VER 
+    m_generator.reset(new std::mt19937_64());
     m_generator->seed((unsigned long)seed);
 #else
     m_generator.reset(new std::default_random_engine(seed));

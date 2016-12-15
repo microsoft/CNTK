@@ -9,6 +9,7 @@
 #include <numeric>
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/uniform_int_distribution.hpp>
+#include <boost/random/uniform_real_distribution.hpp>
 #include "../../../Source/Math/Matrix.h"
 #include "../../../Source/Math/CPUMatrix.h"
 #include "../../../Source/Math/GPUMatrix.h"
@@ -510,7 +511,12 @@ BOOST_AUTO_TEST_CASE(MaxUnpooling)
     boost::random::uniform_int_distribution<> batchSizeG(1, 8);
     // Using uniform distribution with positive values to avoid issues with
     // unpooling negative values.
+
+#ifdef _MSC_VER
+    boost::random::uniform_real_distribution<float> nd(0, 1);
+#else
     std::uniform_real_distribution<float> nd(0, 1);
+#endif
 
     auto initMat = [&](SingleMatrix& buf, size_t r, size_t c, vec& data) -> SingleMatrix
     {
