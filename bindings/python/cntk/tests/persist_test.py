@@ -11,7 +11,7 @@ from cntk.debug import save_as_legacy_model
 from cntk.ops.functions import load_model
 
 
-def test_load_save_constant(tmpdir):
+def TODO_VS15_test_load_save_constant(tmpdir):
     c = constant(value=[1,3])
     root_node = c * 5
 

@@ -76,7 +76,7 @@ def run_distributed_training(tmpdir, create_func):
     assert isinstance(trainer.model, Function)
     assert trainer.model.__doc__
 
-def test_distributed(tmpdir, is_1bit_sgd):
+def TODO_VS15_test_distributed(tmpdir, is_1bit_sgd):
     quantized=(True if is_1bit_sgd==1 else False)
 
     simple_aggregation=lambda learner: create_data_parallel_distributed_learner(learner, False, 0)
