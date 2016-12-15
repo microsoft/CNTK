@@ -50,19 +50,19 @@ Train = {
 
         # initValueScale are determined to generate Gaussians with variance of 0.01 and 0.005 (for the two DenseLayers)
         model = Sequential (
-            ConvolutionalLayer {96, (11:11), stride=(4:4), pad=false, init='gaussian', initValueScale=0.95265} : ReLU : 
+            ConvolutionalLayer {96, (11:11), stride=(4:4), pad=false, init='gaussian', initValueScale=0.95265} : ReLU : # effectively gaussian 0.01 
             LRN {1.0, 2, 0.0001, 0.75} : 
             MaxPoolingLayer    {(3:3), stride=(2:2)} :
-            ConvolutionalLayer {192, (5:5), pad = true, init='gaussian', initValueScale=2.44978, initBias=0.1} : ReLU : 
+            ConvolutionalLayer {192, (5:5), pad = true, init='gaussian', initValueScale=2.44978, initBias=0.1} : ReLU : # effectively gaussian 0.01 
             LRN {1.0, 2, 0.0001, 0.75} : 
             MaxPoolingLayer    {(3:3), stride=(2:2)} :
-            ConvolutionalLayer {384, (3:3), pad = true, init='gaussian', initValueScale=2.07857} : ReLU : 
-            ConvolutionalLayer {384, (3:3), pad = true, init='gaussian', initValueScale=2.93945, initBias=0.1} : ReLU : 
-            ConvolutionalLayer {256, (3:3), pad = true, init='gaussian', initValueScale=2.93945, initBias=0.1} : ReLU : 
+            ConvolutionalLayer {384, (3:3), pad = true, init='gaussian', initValueScale=2.07857} : ReLU :               # effectively gaussian 0.01 
+            ConvolutionalLayer {384, (3:3), pad = true, init='gaussian', initValueScale=2.93945, initBias=0.1} : ReLU : # effectively gaussian 0.01 
+            ConvolutionalLayer {256, (3:3), pad = true, init='gaussian', initValueScale=2.93945, initBias=0.1} : ReLU : # effectively gaussian 0.01 
             MaxPoolingLayer    {(3:3), stride=(2:2)} :
-            DenseLayer         {4096, activation=ReLU, init='gaussian', initValueScale=2.40038, initBias=0.1} : Dropout :
-            DenseLayer         {4096, activation=ReLU, init='gaussian', initValueScale=1.6, initBias=0.1} : Dropout :
-            LinearLayer        {labelDim, init='gaussian', initValueScale=3.2}
+            DenseLayer         {4096, activation=ReLU, init='gaussian', initValueScale=2.40038, initBias=0.1} : Dropout : # effectively gaussian 0.005 
+            DenseLayer         {4096, activation=ReLU, init='gaussian', initValueScale=1.6, initBias=0.1} : Dropout :     # effectively gaussian 0.005 
+            LinearLayer        {labelDim, init='gaussian', initValueScale=3.2}      # effectively gaussian 0.01 
         )
 
         # inputs
@@ -89,11 +89,12 @@ Train = {
     SGD = {
         epochSize = 0
         minibatchSize = 256
-        learningRatesPerMB = 0.01*25:0.001*25:0.0001*25:0.00001*25:0.000001
+        # CNTK weights new gradient by (1-momentum) for unit gain, thus we multiply Caffe's learning rate by (1-momentum)
+        learningRatesPerMB = 0.1*25:0.01*25:0.001*25:0.0001*25:0.00001
         momentumPerMB = 0.9
-        maxEpochs = 110
+        maxEpochs = 112
         gradUpdateType = None
-        L2RegWeight = 0.0005
+        L2RegWeight = 0.0005 # CNTK L2 regularization is per sample, thus same as Caffe
         dropoutRate = 0.5
         
         # TODO: try less bits?
