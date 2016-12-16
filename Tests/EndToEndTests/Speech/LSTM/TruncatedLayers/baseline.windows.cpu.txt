@@ -1,52 +1,55 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU W3565 @ 3.20GHz
+    Hardware threads: 8
+    Total Memory: 12580436 kB
 -------------------------------------------------------------------
-Build info: 
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu DeviceId=-1 timestamping=true modelSelector=1
+CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:29:34) on cntk-muc01 at 2016/12/15 08:48:52
 
-		Built time: Aug 24 2016 18:50:02
-		Last modified date: Mon Aug 22 13:48:06 2016
-		Build type: Release
-		Build target: GPU
-		With 1bit-SGD: yes
-		Math lib: mkl
-		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
-		CUB_PATH: c:\src\cub-1.4.1\
-		CUDNN_PATH: C:\NVIDIA\cudnn-5.0\cuda
-		Build Branch: fseide/cudnn5
-		Build SHA1: 5f14fcaea07dc1d87a1841115818ca6065ae69f8
-		Built by fseide on FSEIDE-GPU
-		Build Path: C:\work\cntk\Source\CNTK\
--------------------------------------------------------------------
--------------------------------------------------------------------
-GPU info:
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu  DeviceId=-1  timestamping=true  modelSelector=1
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+12/15/2016 08:48:52: -------------------------------------------------------------------
+12/15/2016 08:48:52: Build info: 
 
-		Device[0]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
-		Device[1]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
-		Device[2]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
-		Device[3]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
-		Device[4]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
-		Device[5]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
--------------------------------------------------------------------
+12/15/2016 08:48:52: 		Built time: Dec 15 2016 06:29:34
+12/15/2016 08:48:52: 		Last modified date: Wed Dec 14 12:53:20 2016
+12/15/2016 08:48:52: 		Build type: Release
+12/15/2016 08:48:52: 		Build target: GPU
+12/15/2016 08:48:52: 		With 1bit-SGD: no
+12/15/2016 08:48:52: 		With ASGD: yes
+12/15/2016 08:48:52: 		Math lib: mkl
+12/15/2016 08:48:52: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+12/15/2016 08:48:52: 		CUB_PATH: c:\src\cub-1.4.1
+12/15/2016 08:48:52: 		CUDNN_PATH: C:\local\cudnn-8.0-windows10-x64-v5.1
+12/15/2016 08:48:52: 		Build Branch: HEAD
+12/15/2016 08:48:52: 		Build SHA1: 5f1fabfe95e68af0787193f8849159f824d914d5 (modified)
+12/15/2016 08:48:52: 		Built by svcphil on liana-08-w
+12/15/2016 08:48:52: 		Build Path: C:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+12/15/2016 08:48:52: -------------------------------------------------------------------
+12/15/2016 08:48:52: -------------------------------------------------------------------
+12/15/2016 08:48:52: GPU info:
 
-Running on FSEIDE-GPU at 2016/08/24 19:47:06
-Command line: 
-..\..\..\..\x64\Release\CNTK.exe  currentDirectory=c:\work\CNTK\Tests\EndToEndTests\Speech\Data  configFile=c:\work\CNTK\Tests\EndToEndTests\Speech\LSTM\cntk.cntk  RunDir=c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance  DataDir=.  DeviceId=auto  makeMode=false  stderr=x  modelSelector=1
-
+12/15/2016 08:48:52: 		Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB
+12/15/2016 08:48:52: -------------------------------------------------------------------
 
 Configuration After Processing and Variable Resolution:
 
 configparameters: cntk.cntk:// Note: These options are overridden from the command line in some test cases.=true
-configparameters: cntk.cntk:command=speechTrain
-configparameters: cntk.cntk:currentDirectory=c:\work\CNTK\Tests\EndToEndTests\Speech\Data
-configparameters: cntk.cntk:DataDir=.
-configparameters: cntk.cntk:deviceId=auto
+configparameters: cntk.cntk:command=speechCreate:speechTrain
+configparameters: cntk.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM
+configparameters: cntk.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+configparameters: cntk.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+configparameters: cntk.cntk:deviceId=-1
 configparameters: cntk.cntk:frameMode=false
-configparameters: cntk.cntk:makeMode=false
+configparameters: cntk.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu/models/cntkSpeech.dnn
 configparameters: cntk.cntk:modelSelector=1
+configparameters: cntk.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu
 configparameters: cntk.cntk:parallelTrain=false
 configparameters: cntk.cntk:precision=float
-configparameters: cntk.cntk:RunDir=c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance
-configparameters: cntk.cntk:speechTrain={
-    action = "train"
-    modelPath = "c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance/models/cntkSpeech.dnn"
+configparameters: cntk.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu
+configparameters: cntk.cntk:speechCreate={
+    action = "edit"
+    outputModelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu/models/cntkSpeech.dnn.initial"
     BrainScriptNetworkBuilder = {
         useLayerNorm = true
         // dimensions (needed for both model and readers)
@@ -162,6 +165,11 @@ model = models[1]
         evaluationNodes = (err)
         outputNodes = (scaledLogLikelihood)
     }
+}
+
+configparameters: cntk.cntk:speechTrain={
+    action = "train"
+    BrainScriptNetworkBuilder = (BS.Network.Load("C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu/models/cntkSpeech.dnn.initial"))
     SGD = {
         epochSize = 20480 ; maxEpochs = 4 ; minibatchSize = 20
         learningRatesPerMB = 0.5 ; momentumAsTimeConstant = 2500
@@ -173,59 +181,24 @@ model = models[1]
         randomize = "auto" ; readMethod = "blockRandomize"
         nbruttsineachrecurrentiter = 32
         miniBatchMode = "partial" ; verbosity = 0 ; useMersenneTwisterRand = true
-        features = { dim =      363 ; type      = "real"     ; scpFile = "./glob_0000.scp" ; }
-        labels   = { labelDim = 132 ; labelType = "category" ; mlfFile = "./glob_0000.mlf" ; labelMappingFile = "./state.list" }
+        features = { dim =      363 ; type      = "real"     ; scpFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.scp" ; }
+        labels   = { labelDim = 132 ; labelType = "category" ; mlfFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf" ; labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list" }
     }
 }
 
-configparameters: cntk.cntk:stderr=x
+configparameters: cntk.cntk:timestamping=true
 configparameters: cntk.cntk:traceLevel=1
 configparameters: cntk.cntk:truncated=true
-Commands: speechTrain
-Precision = "float"
-CNTKModelPath: c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance/models/cntkSpeech.dnn
-CNTKCommandTrainInfo: speechTrain : 4
-CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 4
+12/15/2016 08:48:52: Commands: speechCreate speechTrain
+12/15/2016 08:48:52: precision = "float"
 
-##############################################################################
-#                                                                            #
-# Action "train"                                                             #
-#                                                                            #
-##############################################################################
+12/15/2016 08:48:52: ##############################################################################
+12/15/2016 08:48:52: #                                                                            #
+12/15/2016 08:48:52: # speechCreate command (edit action)                                         #
+12/15/2016 08:48:52: #                                                                            #
+12/15/2016 08:48:52: ##############################################################################
 
-CNTKCommandTrainBegin: speechTrain
-LockDevice: Locked GPU 0 to test availability.
-LockDevice: Unlocked GPU 0 after testing.
-LockDevice: Locked GPU 1 to test availability.
-LockDevice: Unlocked GPU 1 after testing.
-LockDevice: Locked GPU 2 to test availability.
-LockDevice: Unlocked GPU 2 after testing.
-LockDevice: Locked GPU 4 to test availability.
-LockDevice: Unlocked GPU 4 after testing.
-LockDevice: Locked GPU 5 to test availability.
-LockDevice: Unlocked GPU 5 after testing.
-LockDevice: Locked GPU 3 to test availability.
-LockDevice: Unlocked GPU 3 after testing.
-LockDevice: Locked GPU 0 for exclusive use.
-useParallelTrain option is not enabled. ParallelTrain config will be ignored.
-Creating virgin network.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[132 x 0] as heUniform later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 1.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 1.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 1.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[132] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[132] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 1.000000.
 
 Post-processing network...
 
@@ -282,8 +255,8 @@ Validating --> z.x.val.PlusArgs[0] = ElementTimes (z.x.xHat, modelUsingLayers.ar
 Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.bias = LearnableParameter() :  -> [1]
 Validating --> z.x.val = Plus (z.x.val.PlusArgs[0], modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.bias) : [33 x *], [1] -> [33 x *]
 Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [132 x 33].
-Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[132 x 33] <- heUniform(seed=1, init dims=[132 x 33], range=0.426401*0.333333, onCPU=true).
-Validating --> z.x.PlusArgs[0] = Times (modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W, z.x.val) : [132 x 33], [33 x *] -> [132 x *]
+Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[132 x 33] <- heUniform(seed=1, init dims=[132 x 33], range=0.142134(0.426401*0.333333), onCPU=true.
+)Validating --> z.x.PlusArgs[0] = Times (modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W, z.x.val) : [132 x 33], [33 x *] -> [132 x *]
 Validating --> modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b = LearnableParameter() :  -> [132]
 Validating --> z = Plus (z.x.PlusArgs[0], modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b) : [132 x *], [132] -> [132 x *]
 Validating --> ce.matrix.MinusArgs[0].r = ReduceElements (z) : [132 x *] -> [1 x *]
@@ -308,150 +281,244 @@ Validating network, final pass.
 
 
 
-15 out of 59 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-reading script file ./glob_0000.scp ... 948 entries
-total 132 state names in state list ./state.list
-htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+12/15/2016 08:48:52: 
+Model with 59 nodes saved as 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu/models/cntkSpeech.dnn.initial'.
+
+12/15/2016 08:48:52: Action "edit" complete.
+
+
+12/15/2016 08:48:52: ##############################################################################
+12/15/2016 08:48:52: #                                                                            #
+12/15/2016 08:48:52: # speechTrain command (train action)                                         #
+12/15/2016 08:48:52: #                                                                            #
+12/15/2016 08:48:52: ##############################################################################
+
+parallelTrain option is not enabled. ParallelTrain config will be ignored.
+12/15/2016 08:48:52: 
+Creating virgin network.
+Load: Loading model file: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu/models/cntkSpeech.dnn.initial
+Post-processing network...
+
+6 roots:
+	ce = SumElements()
+	err = SumElements()
+	logPrior._ = Mean()
+	scaledLogLikelihood = Pass()
+	z.x.x.invStdDev = InvStdDev()
+	z.x.x.mean = Mean()
+
+Validating network. 59 nodes to process in pass 1.
+
+Validating --> modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W = LearnableParameter() :  -> [132 x 33]
+Validating --> features = InputValue() :  -> [1 x 363 x *1]
+Validating --> realFeatures.x = TransposeDimensions (features) : [1 x 363 x *1] -> [363 x 1 x *1]
+Validating --> realFeatures = Reshape (realFeatures.x) : [363 x 1 x *1] -> [363 x *1]
+Validating --> feashift = Slice (realFeatures) : [363 x *1] -> [33 x *1]
+Validating --> z.x.x.mean = Mean (feashift) : [33 x *1] -> [33]
+Validating --> z.x.x.ElementTimesArgs[0] = Minus (feashift, z.x.x.mean) : [33 x *1], [33] -> [33 x *1]
+Validating --> z.x.x.invStdDev = InvStdDev (feashift) : [33 x *1] -> [33]
+Validating --> z.x.x = ElementTimes (z.x.x.ElementTimesArgs[0], z.x.x.invStdDev) : [33 x *1], [33] -> [33 x *1]
+Validating --> z.x.x.x.mean.r = ReduceElements (z.x.x) : [33 x *1] -> [1 x *1]
+Validating --> z.x.x.x.x0 = Minus (z.x.x, z.x.x.x.mean.r) : [33 x *1], [1 x *1] -> [33 x *1]
+Validating --> z.x.x.x.std.z._ = ElementTimes (z.x.x.x.x0, z.x.x.x.x0) : [33 x *1], [33 x *1] -> [33 x *1]
+Validating --> z.x.x.x.std.z.r = ReduceElements (z.x.x.x.std.z._) : [33 x *1] -> [1 x *1]
+Validating --> z.x.x.x.std = Sqrt (z.x.x.x.std.z.r) : [1 x *1] -> [1 x *1]
+Validating --> z.x.x.x.xHat.y = Reciprocal (z.x.x.x.std) : [1 x *1] -> [1 x *1]
+Validating --> z.x.x.x.xHat = ElementTimes (z.x.x.x.x0, z.x.x.x.xHat.y) : [33 x *1], [1 x *1] -> [33 x *1]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions.gain = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.val.PlusArgs[0] = ElementTimes (z.x.x.x.xHat, modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions.gain) : [33 x *1], [1] -> [33 x *1]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions.bias = LearnableParameter() :  -> [1]
+Validating --> z.x.x.x.val = Plus (z.x.x.x.val.PlusArgs[0], modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions.bias) : [33 x *1], [1] -> [33 x *1]
+Validating --> z.x.x.mean.r = ReduceElements (z.x.x.x.val) : [33 x *1] -> [1 x *1]
+Validating --> z.x.x.x0 = Minus (z.x.x.x.val, z.x.x.mean.r) : [33 x *1], [1 x *1] -> [33 x *1]
+Validating --> z.x.x.std.z._ = ElementTimes (z.x.x.x0, z.x.x.x0) : [33 x *1], [33 x *1] -> [33 x *1]
+Validating --> z.x.x.std.z.r = ReduceElements (z.x.x.std.z._) : [33 x *1] -> [1 x *1]
+Validating --> z.x.x.std = Sqrt (z.x.x.std.z.r) : [1 x *1] -> [1 x *1]
+Validating --> z.x.x.xHat.y = Reciprocal (z.x.x.std) : [1 x *1] -> [1 x *1]
+Validating --> z.x.x.xHat = ElementTimes (z.x.x.x0, z.x.x.xHat.y) : [33 x *1], [1 x *1] -> [33 x *1]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.gain = LearnableParameter() :  -> [1]
+Validating --> z.x.x.val.PlusArgs[0] = ElementTimes (z.x.x.xHat, modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.gain) : [33 x *1], [1] -> [33 x *1]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.bias = LearnableParameter() :  -> [1]
+Validating --> z.x.x.val = Plus (z.x.x.val.PlusArgs[0], modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.bias) : [33 x *1], [1] -> [33 x *1]
+Validating --> z.x.mean.r = ReduceElements (z.x.x.val) : [33 x *1] -> [1 x *1]
+Validating --> z.x.x0 = Minus (z.x.x.val, z.x.mean.r) : [33 x *1], [1 x *1] -> [33 x *1]
+Validating --> z.x.std.z._ = ElementTimes (z.x.x0, z.x.x0) : [33 x *1], [33 x *1] -> [33 x *1]
+Validating --> z.x.std.z.r = ReduceElements (z.x.std.z._) : [33 x *1] -> [1 x *1]
+Validating --> z.x.std = Sqrt (z.x.std.z.r) : [1 x *1] -> [1 x *1]
+Validating --> z.x.xHat.y = Reciprocal (z.x.std) : [1 x *1] -> [1 x *1]
+Validating --> z.x.xHat = ElementTimes (z.x.x0, z.x.xHat.y) : [33 x *1], [1 x *1] -> [33 x *1]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.gain = LearnableParameter() :  -> [1]
+Validating --> z.x.val.PlusArgs[0] = ElementTimes (z.x.xHat, modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.gain) : [33 x *1], [1] -> [33 x *1]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.bias = LearnableParameter() :  -> [1]
+Validating --> z.x.val = Plus (z.x.val.PlusArgs[0], modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.bias) : [33 x *1], [1] -> [33 x *1]
+Validating --> z.x.PlusArgs[0] = Times (modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W, z.x.val) : [132 x 33], [33 x *1] -> [132 x *1]
+Validating --> modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b = LearnableParameter() :  -> [132]
+Validating --> z = Plus (z.x.PlusArgs[0], modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b) : [132 x *1], [132] -> [132 x *1]
+Validating --> ce.matrix.MinusArgs[0].r = ReduceElements (z) : [132 x *1] -> [1 x *1]
+Validating --> labels = InputValue() :  -> [132 x *1]
+Validating --> ce.matrix.MinusArgs[1] = TransposeTimes (labels, z) : [132 x *1], [132 x *1] -> [1 x *1]
+Validating --> ce.matrix = Minus (ce.matrix.MinusArgs[0].r, ce.matrix.MinusArgs[1]) : [1 x *1], [1 x *1] -> [1 x *1]
+Validating --> ce = SumElements (ce.matrix) : [1 x *1] -> [1]
+Validating --> BS.Constants.One = LearnableParameter() :  -> [1]
+Validating --> err.matrix.MinusArgs[1].rightMatrix = Hardmax (z) : [132 x *1] -> [132 x *1]
+Validating --> err.matrix.MinusArgs[1] = TransposeTimes (labels, err.matrix.MinusArgs[1].rightMatrix) : [132 x *1], [132 x *1] -> [1 x *1]
+Validating --> err.matrix = Minus (BS.Constants.One, err.matrix.MinusArgs[1]) : [1], [1 x *1] -> [1 x *1]
+Validating --> err = SumElements (err.matrix) : [1 x *1] -> [1]
+Validating --> logPrior._ = Mean (labels) : [132 x *1] -> [132]
+Validating --> logPrior = Log (logPrior._) : [132] -> [132]
+Validating --> scaledLogLikelihood._ = Minus (z, logPrior) : [132 x *1], [132] -> [132 x *1]
+Validating --> scaledLogLikelihood = Pass (scaledLogLikelihood._) : [132 x *1] -> [132 x *1]
+
+Validating network. 48 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+
+Post-processing network complete.
+
+reading script file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.scp ... 948 entries
+total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list
+htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-Created model with 59 nodes on GPU 0.
+12/15/2016 08:48:53: 
+Model has 59 nodes. Using CPU.
 
-Training criterion node(s):
-	ce = SumElements
-
-Evaluation criterion node(s):
-	err = SumElements
+12/15/2016 08:48:53: Training criterion:   ce = SumElements
+12/15/2016 08:48:53: Evaluation criterion: err = SumElements
 
 
 Allocating matrices for forward and/or backward propagation.
 
 Memory Sharing: Out of 93 matrices, 50 are shared as 20, and 43 are not shared.
 
-	{ ce.matrix.MinusArgs[0].r : [1 x *]
-	  modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.bias : [1] (gradient)
-	  z.x.PlusArgs[0] : [132 x *] (gradient) }
-	{ z.x.std.z.r : [1 x *] (gradient)
-	  z.x.xHat.y : [1 x *] }
-	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.gain : [1] (gradient)
-	  z.x.std.z._ : [33 x *]
-	  z.x.x.val : [33 x *] (gradient) }
-	{ ce.matrix.MinusArgs[0].r : [1 x *] (gradient)
+	{ ce.matrix.MinusArgs[0].r : [1 x *1] (gradient)
 	  modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b : [132] (gradient) }
-	{ ce.matrix : [1 x *]
-	  modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.gain : [1] (gradient)
-	  z : [132 x *] (gradient)
-	  z.x.val : [33 x *] (gradient) }
-	{ z.x.PlusArgs[0] : [132 x *]
-	  z.x.val.PlusArgs[0] : [33 x *] (gradient)
-	  z.x.xHat.y : [1 x *] (gradient) }
-	{ z.x.std : [1 x *] (gradient)
-	  z.x.xHat : [33 x *] }
-	{ z.x.val : [33 x *]
-	  z.x.xHat : [33 x *] (gradient) }
-	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.bias : [1] (gradient)
-	  z.x.mean.r : [1 x *] (gradient)
-	  z.x.std : [1 x *]
-	  z.x.std.z._ : [33 x *] (gradient) }
-	{ modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W : [132 x 33] (gradient)
-	  z : [132 x *] }
-	{ z.x.val.PlusArgs[0] : [33 x *]
-	  z.x.x0 : [33 x *] (gradient) }
-	{ z.x.x.std.z._ : [33 x *]
-	  z.x.x.x.val : [33 x *] (gradient) }
-	{ z.x.x.mean.r : [1 x *]
-	  z.x.x.x.val.PlusArgs[0] : [33 x *] (gradient) }
-	{ z.x.x.std.z.r : [1 x *] (gradient)
-	  z.x.x.xHat.y : [1 x *] }
-	{ z.x.x.std : [1 x *] (gradient)
-	  z.x.x.xHat : [33 x *] }
-	{ z.x.x.val.PlusArgs[0] : [33 x *]
-	  z.x.x.x0 : [33 x *] (gradient) }
-	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions.bias : [1] (gradient)
-	  z.x.x.mean.r : [1 x *] (gradient)
-	  z.x.x.std : [1 x *]
-	  z.x.x.std.z._ : [33 x *] (gradient) }
-	{ z.x.x.val : [33 x *]
-	  z.x.x.xHat : [33 x *] (gradient) }
 	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions.gain : [1] (gradient)
-	  z.x.x.x.val : [33 x *] }
-	{ z.x.mean.r : [1 x *]
-	  z.x.x.val.PlusArgs[0] : [33 x *] (gradient)
-	  z.x.x.xHat.y : [1 x *] (gradient) }
+	  z.x.x.x.val : [33 x *1] }
+	{ z.x.x.mean.r : [1 x *1]
+	  z.x.x.x.val.PlusArgs[0] : [33 x *1] (gradient) }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions.bias : [1] (gradient)
+	  z.x.x.mean.r : [1 x *1] (gradient)
+	  z.x.x.std : [1 x *1]
+	  z.x.x.std.z._ : [33 x *1] (gradient) }
+	{ z.x.x.std.z.r : [1 x *1] (gradient)
+	  z.x.x.xHat.y : [1 x *1] }
+	{ z.x.x.std : [1 x *1] (gradient)
+	  z.x.x.xHat : [33 x *1] }
+	{ z.x.x.val.PlusArgs[0] : [33 x *1]
+	  z.x.x.x0 : [33 x *1] (gradient) }
+	{ z.x.x.val : [33 x *1]
+	  z.x.x.xHat : [33 x *1] (gradient) }
+	{ z.x.mean.r : [1 x *1]
+	  z.x.x.val.PlusArgs[0] : [33 x *1] (gradient)
+	  z.x.x.xHat.y : [1 x *1] (gradient) }
+	{ z.x.x.std.z._ : [33 x *1]
+	  z.x.x.x.val : [33 x *1] (gradient) }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.gain : [1] (gradient)
+	  z.x.std.z._ : [33 x *1]
+	  z.x.x.val : [33 x *1] (gradient) }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.bias : [1] (gradient)
+	  z.x.mean.r : [1 x *1] (gradient)
+	  z.x.std : [1 x *1]
+	  z.x.std.z._ : [33 x *1] (gradient) }
+	{ z.x.val.PlusArgs[0] : [33 x *1]
+	  z.x.x0 : [33 x *1] (gradient) }
+	{ z.x.std : [1 x *1] (gradient)
+	  z.x.xHat : [33 x *1] }
+	{ z.x.val : [33 x *1]
+	  z.x.xHat : [33 x *1] (gradient) }
+	{ z.x.PlusArgs[0] : [132 x *1]
+	  z.x.val.PlusArgs[0] : [33 x *1] (gradient)
+	  z.x.xHat.y : [1 x *1] (gradient) }
+	{ ce.matrix : [1 x *1]
+	  modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.gain : [1] (gradient)
+	  z : [132 x *1] (gradient)
+	  z.x.val : [33 x *1] (gradient) }
+	{ modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W : [132 x 33] (gradient)
+	  z : [132 x *1] }
+	{ z.x.std.z.r : [1 x *1] (gradient)
+	  z.x.xHat.y : [1 x *1] }
+	{ ce.matrix.MinusArgs[0].r : [1 x *1]
+	  modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.bias : [1] (gradient)
+	  z.x.PlusArgs[0] : [132 x *1] (gradient) }
 
 
-Training 4494 parameters in 8 out of 8 parameter tensors and 34 nodes with gradient:
+12/15/2016 08:48:53: Training 4494 parameters in 8 out of 8 parameter tensors and 34 nodes with gradient:
 
-	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions.bias' (LearnableParameter operation) : [1]
-	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions.gain' (LearnableParameter operation) : [1]
-	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.bias' (LearnableParameter operation) : [1]
-	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.gain' (LearnableParameter operation) : [1]
-	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.bias' (LearnableParameter operation) : [1]
-	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.gain' (LearnableParameter operation) : [1]
-	Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) : [132 x 33]
-	Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b' (LearnableParameter operation) : [132]
+12/15/2016 08:48:53: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions.bias' (LearnableParameter operation) : [1]
+12/15/2016 08:48:53: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions.gain' (LearnableParameter operation) : [1]
+12/15/2016 08:48:53: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.bias' (LearnableParameter operation) : [1]
+12/15/2016 08:48:53: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions.gain' (LearnableParameter operation) : [1]
+12/15/2016 08:48:53: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.bias' (LearnableParameter operation) : [1]
+12/15/2016 08:48:53: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions.gain' (LearnableParameter operation) : [1]
+12/15/2016 08:48:53: 	Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) : [132 x 33]
+12/15/2016 08:48:53: 	Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b' (LearnableParameter operation) : [132]
 
 
-Precomputing --> 3 PreCompute nodes found.
+12/15/2016 08:48:53: Precomputing --> 3 PreCompute nodes found.
 
-	z.x.x.mean = Mean()
-	z.x.x.invStdDev = InvStdDev()
-	logPrior._ = Mean()
+12/15/2016 08:48:53: 	z.x.x.mean = Mean()
+12/15/2016 08:48:53: 	z.x.x.invStdDev = InvStdDev()
+12/15/2016 08:48:53: 	logPrior._ = Mean()
 minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
-Precomputing --> Completed.
+12/15/2016 08:48:54: Precomputing --> Completed.
 
 
-Starting Epoch 1: learning rate per sample = 0.000781  effective momentum = 0.774129  momentum as time constant = 2499.8 samples
+12/15/2016 08:48:54: Starting Epoch 1: learning rate per sample = 0.000781  effective momentum = 0.774129  momentum as time constant = 2499.8 samples
 minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 
-Starting minibatch loop.
- Epoch[ 1 of 4]-Minibatch[   1-  10, 0.98%]: ce = 4.66767303 * 6400; err = 0.91546875 * 6400; time = 0.2887s; samplesPerSecond = 22170.8
- Epoch[ 1 of 4]-Minibatch[  11-  20, 1.95%]: ce = 3.70825836 * 6400; err = 0.81328125 * 6400; time = 0.2875s; samplesPerSecond = 22262.7
- Epoch[ 1 of 4]-Minibatch[  21-  30, 2.93%]: ce = 3.33248487 * 5494; err = 0.76010193 * 5494; time = 0.2812s; samplesPerSecond = 19535.5
- Epoch[ 1 of 4]-Minibatch[  31-  40, 3.91%]: ce = 2.99555574 * 2062; err = 0.71096023 * 2062; time = 0.2791s; samplesPerSecond = 7387.2
-Finished Epoch[ 1 of 4]: [Training] ce = 3.82782733 * 20498; err = 0.81988487 * 20498; totalSamplesSeen = 20498; learningRatePerSample = 0.00078125001; epochTime=1.26677s
-SGD: Saving checkpoint model 'c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance/models/cntkSpeech.dnn.1'
+12/15/2016 08:48:54: Starting minibatch loop.
+12/15/2016 08:48:54:  Epoch[ 1 of 4]-Minibatch[   1-  10, 0.98%]: ce = 4.67807556 * 6400; err = 0.91781250 * 6400; time = 0.2473s; samplesPerSecond = 25881.5
+12/15/2016 08:48:55:  Epoch[ 1 of 4]-Minibatch[  11-  20, 1.95%]: ce = 3.80448547 * 6400; err = 0.81265625 * 6400; time = 0.2515s; samplesPerSecond = 25450.4
+12/15/2016 08:48:55:  Epoch[ 1 of 4]-Minibatch[  21-  30, 2.93%]: ce = 3.34967123 * 5494; err = 0.76738260 * 5494; time = 0.2386s; samplesPerSecond = 23026.9
+12/15/2016 08:48:55:  Epoch[ 1 of 4]-Minibatch[  31-  40, 3.91%]: ce = 2.98479177 * 2062; err = 0.69932105 * 2062; time = 0.2338s; samplesPerSecond = 8818.5
+12/15/2016 08:48:55: Finished Epoch[ 1 of 4]: [Training] ce = 3.86498645 * 20498; err = 0.82110450 * 20498; totalSamplesSeen = 20498; learningRatePerSample = 0.00078125001; epochTime=1.08513s
+12/15/2016 08:48:55: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu/models/cntkSpeech.dnn.1'
 
-Starting Epoch 2: learning rate per sample = 0.000781  effective momentum = 0.774129  momentum as time constant = 2499.8 samples
+12/15/2016 08:48:55: Starting Epoch 2: learning rate per sample = 0.000781  effective momentum = 0.774129  momentum as time constant = 2499.8 samples
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20498), data subset 0 of 1, with 1 datapasses
 
-Starting minibatch loop.
- Epoch[ 2 of 4]-Minibatch[   1-  10, 0.98%]: ce = 2.79078125 * 6400; err = 0.67343750 * 6400; time = 0.3380s; samplesPerSecond = 18936.5
- Epoch[ 2 of 4]-Minibatch[  11-  20, 1.95%]: ce = 2.69503479 * 6400; err = 0.67078125 * 6400; time = 0.2841s; samplesPerSecond = 22529.7
- Epoch[ 2 of 4]-Minibatch[  21-  30, 2.93%]: ce = 2.57620659 * 5626; err = 0.66601493 * 5626; time = 0.2900s; samplesPerSecond = 19396.7
- Epoch[ 2 of 4]-Minibatch[  31-  40, 3.91%]: ce = 2.67395288 * 1816; err = 0.67400881 * 1816; time = 0.2783s; samplesPerSecond = 6526.1
- Epoch[ 2 of 4]-Minibatch[  41-  50, 4.88%]: ce = 2.65301668 * 238; err = 0.66386555 * 238; time = 0.2768s; samplesPerSecond = 859.9
-Finished Epoch[ 2 of 4]: [Training] ce = 2.68886549 * 20514; err = 0.67056644 * 20514; totalSamplesSeen = 41012; learningRatePerSample = 0.00078125001; epochTime=1.54214s
-SGD: Saving checkpoint model 'c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance/models/cntkSpeech.dnn.2'
+12/15/2016 08:48:55: Starting minibatch loop.
+12/15/2016 08:48:55:  Epoch[ 2 of 4]-Minibatch[   1-  10, 0.98%]: ce = 2.79046356 * 6400; err = 0.67484375 * 6400; time = 0.2420s; samplesPerSecond = 26446.8
+12/15/2016 08:48:56:  Epoch[ 2 of 4]-Minibatch[  11-  20, 1.95%]: ce = 2.70486115 * 6400; err = 0.67390625 * 6400; time = 0.2431s; samplesPerSecond = 26326.4
+12/15/2016 08:48:56:  Epoch[ 2 of 4]-Minibatch[  21-  30, 2.93%]: ce = 2.59371042 * 5626; err = 0.67081408 * 5626; time = 0.2435s; samplesPerSecond = 23109.3
+12/15/2016 08:48:56:  Epoch[ 2 of 4]-Minibatch[  31-  40, 3.91%]: ce = 2.67677502 * 1816; err = 0.68887665 * 1816; time = 0.2308s; samplesPerSecond = 7869.8
+12/15/2016 08:48:56:  Epoch[ 2 of 4]-Minibatch[  41-  50, 4.88%]: ce = 2.58672532 * 238; err = 0.65546218 * 238; time = 0.2293s; samplesPerSecond = 1037.8
+12/15/2016 08:48:56: Finished Epoch[ 2 of 4]: [Training] ce = 2.69618024 * 20514; err = 0.67456371 * 20514; totalSamplesSeen = 41012; learningRatePerSample = 0.00078125001; epochTime=1.25763s
+12/15/2016 08:48:56: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu/models/cntkSpeech.dnn.2'
 
-Starting Epoch 3: learning rate per sample = 0.000781  effective momentum = 0.774129  momentum as time constant = 2499.8 samples
+12/15/2016 08:48:57: Starting Epoch 3: learning rate per sample = 0.000781  effective momentum = 0.774129  momentum as time constant = 2499.8 samples
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 41012), data subset 0 of 1, with 1 datapasses
 
-Starting minibatch loop.
- Epoch[ 3 of 4]-Minibatch[   1-  10, 0.98%]: ce = 2.53135300 * 6400; err = 0.63375000 * 6400; time = 0.3158s; samplesPerSecond = 20266.3
- Epoch[ 3 of 4]-Minibatch[  11-  20, 1.95%]: ce = 2.43102463 * 6400; err = 0.62484375 * 6400; time = 0.2839s; samplesPerSecond = 22540.1
- Epoch[ 3 of 4]-Minibatch[  21-  30, 2.93%]: ce = 2.39190500 * 5748; err = 0.64022269 * 5748; time = 0.2828s; samplesPerSecond = 20324.8
- Epoch[ 3 of 4]-Minibatch[  31-  40, 3.91%]: ce = 2.38617170 * 1828; err = 0.62910284 * 1828; time = 0.2778s; samplesPerSecond = 6580.5
-Finished Epoch[ 3 of 4]: [Training] ce = 2.44292149 * 20598; err = 0.63268278 * 20598; totalSamplesSeen = 61610; learningRatePerSample = 0.00078125001; epochTime=1.31938s
-SGD: Saving checkpoint model 'c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance/models/cntkSpeech.dnn.3'
+12/15/2016 08:48:57: Starting minibatch loop.
+12/15/2016 08:48:57:  Epoch[ 3 of 4]-Minibatch[   1-  10, 0.98%]: ce = 2.51116730 * 6400; err = 0.63984375 * 6400; time = 0.2415s; samplesPerSecond = 26503.0
+12/15/2016 08:48:57:  Epoch[ 3 of 4]-Minibatch[  11-  20, 1.95%]: ce = 2.44872803 * 6400; err = 0.63140625 * 6400; time = 0.2453s; samplesPerSecond = 26090.2
+12/15/2016 08:48:57:  Epoch[ 3 of 4]-Minibatch[  21-  30, 2.93%]: ce = 2.40560949 * 5748; err = 0.63778706 * 5748; time = 0.2408s; samplesPerSecond = 23867.1
+12/15/2016 08:48:57:  Epoch[ 3 of 4]-Minibatch[  31-  40, 3.91%]: ce = 2.35834074 * 1828; err = 0.62253829 * 1828; time = 0.2315s; samplesPerSecond = 7895.1
+12/15/2016 08:48:58: Finished Epoch[ 3 of 4]: [Training] ce = 2.44380124 * 20598; err = 0.63540150 * 20598; totalSamplesSeen = 61610; learningRatePerSample = 0.00078125001; epochTime=1.09722s
+12/15/2016 08:48:58: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu/models/cntkSpeech.dnn.3'
 
-Starting Epoch 4: learning rate per sample = 0.000781  effective momentum = 0.774129  momentum as time constant = 2499.8 samples
+12/15/2016 08:48:58: Starting Epoch 4: learning rate per sample = 0.000781  effective momentum = 0.774129  momentum as time constant = 2499.8 samples
 minibatchiterator: epoch 3: frames [61440..81920] (first utterance at frame 61610), data subset 0 of 1, with 1 datapasses
 
-Starting minibatch loop.
- Epoch[ 4 of 4]-Minibatch[   1-  10, 0.98%]: ce = 2.44734314 * 6400; err = 0.64000000 * 6400; time = 0.5571s; samplesPerSecond = 11488.6
- Epoch[ 4 of 4]-Minibatch[  11-  20, 1.95%]: ce = 2.36628693 * 6400; err = 0.64250000 * 6400; time = 0.3727s; samplesPerSecond = 17173.8
- Epoch[ 4 of 4]-Minibatch[  21-  30, 2.93%]: ce = 2.54873548 * 5882; err = 0.66558994 * 5882; time = 0.3400s; samplesPerSecond = 17301.2
- Epoch[ 4 of 4]-Minibatch[  31-  40, 3.91%]: ce = 2.53740664 * 1682; err = 0.69262782 * 1682; time = 0.3355s; samplesPerSecond = 5013.5
-Finished Epoch[ 4 of 4]: [Training] ce = 2.45861419 * 20376; err = 0.65272870 * 20376; totalSamplesSeen = 81986; learningRatePerSample = 0.00078125001; epochTime=1.68303s
-SGD: Saving checkpoint model 'c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance/models/cntkSpeech.dnn'
-CNTKCommandTrainEnd: speechTrain
+12/15/2016 08:48:58: Starting minibatch loop.
+12/15/2016 08:48:58:  Epoch[ 4 of 4]-Minibatch[   1-  10, 0.98%]: ce = 2.43738480 * 6400; err = 0.63265625 * 6400; time = 0.2427s; samplesPerSecond = 26367.9
+12/15/2016 08:48:58:  Epoch[ 4 of 4]-Minibatch[  11-  20, 1.95%]: ce = 2.35663284 * 6400; err = 0.64046875 * 6400; time = 0.2465s; samplesPerSecond = 25958.7
+12/15/2016 08:48:58:  Epoch[ 4 of 4]-Minibatch[  21-  30, 2.93%]: ce = 2.54847250 * 5882; err = 0.67052023 * 5882; time = 0.2384s; samplesPerSecond = 24677.9
+12/15/2016 08:48:59:  Epoch[ 4 of 4]-Minibatch[  31-  40, 3.91%]: ce = 2.53450830 * 1682; err = 0.68549346 * 1682; time = 0.2315s; samplesPerSecond = 7264.2
+12/15/2016 08:48:59: Finished Epoch[ 4 of 4]: [Training] ce = 2.45215649 * 20376; err = 0.65061837 * 20376; totalSamplesSeen = 81986; learningRatePerSample = 0.00078125001; epochTime=1.00126s
+12/15/2016 08:48:59: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_TruncatedLayers@release_cpu/models/cntkSpeech.dnn'
 
-Action "train" complete.
+12/15/2016 08:48:59: Action "train" complete.
 
-__COMPLETED__
+12/15/2016 08:48:59: __COMPLETED__

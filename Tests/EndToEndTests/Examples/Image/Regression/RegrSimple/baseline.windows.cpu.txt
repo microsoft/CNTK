@@ -1,314 +1,63 @@
 CPU info:
-    CPU Model Name: Intel(R) Xeon(R) CPU X5680 @ 3.33GHz
-    Hardware threads: 12
-    Total Memory: 33537232 kB
+    CPU Model Name: Intel(R) Xeon(R) CPU W3565 @ 3.20GHz
+    Hardware threads: 8
+    Total Memory: 12580436 kB
 -------------------------------------------------------------------
-=== Running /cygdrive/d/GitHub/CNTK/x64/release_CpuOnly/cntk.exe configFile=D:\GitHub\CNTK\Examples\Image\Regression/RegrSimple_CIFAR10.cntk currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10 RunDir=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10 ConfigDir=D:\GitHub\CNTK\Examples\Image\Regression OutputDir=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu DeviceId=-1 timestamping=true [command=TrainConvNet:Test] forceDeterministicAlgorithms=true stderr=-
--------------------------------------------------------------------
-Build info: 
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Regression/RegrSimple_CIFAR10.cntk currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Regression OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu DeviceId=-1 timestamping=true [command=TrainConvNet:Test] forceDeterministicAlgorithms=true stderr=-
+CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:29:34) on cntk-muc01 at 2016/12/15 08:33:42
 
-		Built time: Aug 18 2016 12:06:37
-		Last modified date: Thu Aug 18 11:05:26 2016
-		Build type: Release
-		Build target: CPU-only
-		With 1bit-SGD: no
-		Math lib: mkl
-		Build Branch: master
-		Build SHA1: 9bd9308d2ea8674872d18d15fe6519163096d3fa
-		Built by chazhang on CHAZHANG
-		Build Path: D:\GitHub\CNTK\Source\CNTK\
--------------------------------------------------------------------
-Changed current directory to D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
-10/03/2016 23:27:30: Redirecting stderr to file -_TrainConvNet_Test.log
-10/03/2016 23:27:30: -------------------------------------------------------------------
-10/03/2016 23:27:30: Build info: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Regression/RegrSimple_CIFAR10.cntk  currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu  DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Regression  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu  DeviceId=-1  timestamping=true  [command=TrainConvNet:Test]  forceDeterministicAlgorithms=true  stderr=-
+Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData
+12/15/2016 08:33:43: Redirecting stderr to file -_TrainConvNet_Test.log
+12/15/2016 08:33:43: -------------------------------------------------------------------
+12/15/2016 08:33:43: Build info: 
 
-10/03/2016 23:27:30: 		Built time: Aug 18 2016 12:06:37
-10/03/2016 23:27:30: 		Last modified date: Thu Aug 18 11:05:26 2016
-10/03/2016 23:27:30: 		Build type: Release
-10/03/2016 23:27:30: 		Build target: CPU-only
-10/03/2016 23:27:30: 		With 1bit-SGD: no
-10/03/2016 23:27:30: 		Math lib: mkl
-10/03/2016 23:27:30: 		Build Branch: master
-10/03/2016 23:27:30: 		Build SHA1: 9bd9308d2ea8674872d18d15fe6519163096d3fa
-10/03/2016 23:27:30: 		Built by chazhang on CHAZHANG
-10/03/2016 23:27:30: 		Build Path: D:\GitHub\CNTK\Source\CNTK\
-10/03/2016 23:27:30: -------------------------------------------------------------------
+12/15/2016 08:33:43: 		Built time: Dec 15 2016 06:29:34
+12/15/2016 08:33:43: 		Last modified date: Wed Dec 14 12:53:20 2016
+12/15/2016 08:33:43: 		Build type: Release
+12/15/2016 08:33:43: 		Build target: GPU
+12/15/2016 08:33:43: 		With 1bit-SGD: no
+12/15/2016 08:33:43: 		With ASGD: yes
+12/15/2016 08:33:43: 		Math lib: mkl
+12/15/2016 08:33:43: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+12/15/2016 08:33:43: 		CUB_PATH: c:\src\cub-1.4.1
+12/15/2016 08:33:43: 		CUDNN_PATH: C:\local\cudnn-8.0-windows10-x64-v5.1
+12/15/2016 08:33:43: 		Build Branch: HEAD
+12/15/2016 08:33:43: 		Build SHA1: 5f1fabfe95e68af0787193f8849159f824d914d5 (modified)
+12/15/2016 08:33:43: 		Built by svcphil on liana-08-w
+12/15/2016 08:33:43: 		Build Path: C:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+12/15/2016 08:33:43: -------------------------------------------------------------------
+12/15/2016 08:33:43: -------------------------------------------------------------------
+12/15/2016 08:33:43: GPU info:
 
-10/03/2016 23:27:30: Running on CHAZHANG at 2016/10/03 23:27:30
-10/03/2016 23:27:30: Command line: 
-D:\GitHub\CNTK\x64\release_CpuOnly\cntk.exe  configFile=D:\GitHub\CNTK\Examples\Image\Regression/RegrSimple_CIFAR10.cntk  currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10  RunDir=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu  DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10  ConfigDir=D:\GitHub\CNTK\Examples\Image\Regression  OutputDir=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu  DeviceId=-1  timestamping=true  [command=TrainConvNet:Test]  forceDeterministicAlgorithms=true  stderr=-
+12/15/2016 08:33:43: 		Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB
+12/15/2016 08:33:43: -------------------------------------------------------------------
 
+Configuration After Processing and Variable Resolution:
 
-
-10/03/2016 23:27:30: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-10/03/2016 23:27:30: command = TrainConvNet:Write:Test
-makeMode = false ; traceLevel = 1 ; deviceId = "auto"
-rootDir = ".." ; dataDir  = "$rootDir$/DataSets/CIFAR10" ;
-outputDir = "Output" ; modelDir = "$outputDir$/Models"
-modelPath = "$ModelDir$/RegrSimple_CIFAR10.cmf"
-TrainConvNet = {
-    action = "train"
-    BrainScriptNetworkBuilder = [
-        imageShape = 32:32:3
-        featScale = Constant(1/256)
-        labelDim = 3
-        model (features) = {
-            featNorm = Scale(features, featScale)
-            h1 = LinearLayer {100,      init="gaussian", initValueScale=1.5} (featNorm)
-            ol = LinearLayer {labelDim, init="gaussian", initValueScale=1.5} (h1)
-        }.ol
-        features = Input {imageShape}
-        regrLabels = Input {labelDim}
-        ol = model (features)
-        sqerr = SquareError (regrLabels, ol)
-        rmse = Sqrt (Constant(1/labelDim).* sqerr)
-        featureNodes    = (features)
-        labelNodes      = (regrLabels)
-        criterionNodes  = (rmse)
-        evaluationNodes = (rmse)
-        OutputNodes     = (ol)
-    ]
-    SGD = {
-        epochSize = 0
-        maxEpochs = 2
-        minibatchSize = 128
-        learningRatesPerSample = 0.0005
-        momentumAsTimeConstant = 1024
-        firstMBsToShowResult = 5 ; numMBsToShowResult = 50
-    }
-    reader = {
-        verbosity = 0 ; randomize = true
-        deserializers = ({
-            type = "ImageDeserializer" ; module = "ImageReader"
-            file = "$dataDir$/train_map.txt"
-            input = {
-                features = { transforms = (
-                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Transpose" }
-                )}
-                ignored = { labelDim = 10 }
-            }
-        } : {
-            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "$dataDir$/train_regrLabels.txt"
-            input = {
-                regrLabels = { dim = 3 ; format = "dense" }
-            }
-        })
-    }
-}
-Write = {
-    action = "write"
-    minibatchSize = 1
-    outputNodeNames = (ol, regrLabels, rmse)
-    outputPath = "$OutputDir$/RegrSimple_CIFAR10"
-    reader = {
-        verbosity = 0 ; randomize = false
-        deserializers = ({
-            type = "ImageDeserializer" ; module = "ImageReader"
-            file = "$dataDir$/test_map.txt"
-            input = {
-                features = { transforms = (
-                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Transpose" }
-                )}
-                ignored = { labelDim = 10 }
-            }
-        } : {
-            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "$dataDir$/test_regrLabels.txt"
-            input = {
-                regrLabels = { dim = 3 ; format = "dense" }
-            }
-        })
-    }
-}
-Test = {
-    action = "test"
-    minibatchSize = 512
-    outputNodeNames = (ol, regrLabels, rmse)
-    outputPath = "$OutputDir$/RegrSimple_CIFAR10"
-    reader = {
-        verbosity = 0 ; randomize = false
-        deserializers = ({
-            type = "ImageDeserializer" ; module = "ImageReader"
-            file = "$dataDir$/test_map.txt"
-            input = {
-                features = { transforms = (
-                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Transpose" }
-                )}
-                ignored = { labelDim = 10 }
-            }
-        } : {
-            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "$dataDir$/test_regrLabels.txt"
-            input = {
-                regrLabels = { dim = 3 ; format = "dense" }
-            }
-        })
-    }
-}
-currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
-RunDir=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu
-DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
-ConfigDir=D:\GitHub\CNTK\Examples\Image\Regression
-OutputDir=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu
-DeviceId=-1
-timestamping=true
-[command=TrainConvNet:Test]
-forceDeterministicAlgorithms=true
-stderr=-
-
-10/03/2016 23:27:30: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
-
-10/03/2016 23:27:30: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-10/03/2016 23:27:30: command = TrainConvNet:Write:Test
-makeMode = false ; traceLevel = 1 ; deviceId = "auto"
-rootDir = ".." ; dataDir  = "../DataSets/CIFAR10" ;
-outputDir = "Output" ; modelDir = "C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu/Models"
-modelPath = "C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu/Models/RegrSimple_CIFAR10.cmf"
-TrainConvNet = {
-    action = "train"
-    BrainScriptNetworkBuilder = [
-        imageShape = 32:32:3
-        featScale = Constant(1/256)
-        labelDim = 3
-        model (features) = {
-            featNorm = Scale(features, featScale)
-            h1 = LinearLayer {100,      init="gaussian", initValueScale=1.5} (featNorm)
-            ol = LinearLayer {labelDim, init="gaussian", initValueScale=1.5} (h1)
-        }.ol
-        features = Input {imageShape}
-        regrLabels = Input {labelDim}
-        ol = model (features)
-        sqerr = SquareError (regrLabels, ol)
-        rmse = Sqrt (Constant(1/labelDim).* sqerr)
-        featureNodes    = (features)
-        labelNodes      = (regrLabels)
-        criterionNodes  = (rmse)
-        evaluationNodes = (rmse)
-        OutputNodes     = (ol)
-    ]
-    SGD = {
-        epochSize = 0
-        maxEpochs = 2
-        minibatchSize = 128
-        learningRatesPerSample = 0.0005
-        momentumAsTimeConstant = 1024
-        firstMBsToShowResult = 5 ; numMBsToShowResult = 50
-    }
-    reader = {
-        verbosity = 0 ; randomize = true
-        deserializers = ({
-            type = "ImageDeserializer" ; module = "ImageReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/train_map.txt"
-            input = {
-                features = { transforms = (
-                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Transpose" }
-                )}
-                ignored = { labelDim = 10 }
-            }
-        } : {
-            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/train_regrLabels.txt"
-            input = {
-                regrLabels = { dim = 3 ; format = "dense" }
-            }
-        })
-    }
-}
-Write = {
-    action = "write"
-    minibatchSize = 1
-    outputNodeNames = (ol, regrLabels, rmse)
-    outputPath = "C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu/RegrSimple_CIFAR10"
-    reader = {
-        verbosity = 0 ; randomize = false
-        deserializers = ({
-            type = "ImageDeserializer" ; module = "ImageReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/test_map.txt"
-            input = {
-                features = { transforms = (
-                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Transpose" }
-                )}
-                ignored = { labelDim = 10 }
-            }
-        } : {
-            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/test_regrLabels.txt"
-            input = {
-                regrLabels = { dim = 3 ; format = "dense" }
-            }
-        })
-    }
-}
-Test = {
-    action = "test"
-    minibatchSize = 512
-    outputNodeNames = (ol, regrLabels, rmse)
-    outputPath = "C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu/RegrSimple_CIFAR10"
-    reader = {
-        verbosity = 0 ; randomize = false
-        deserializers = ({
-            type = "ImageDeserializer" ; module = "ImageReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/test_map.txt"
-            input = {
-                features = { transforms = (
-                    { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
-                    { type = "Transpose" }
-                )}
-                ignored = { labelDim = 10 }
-            }
-        } : {
-            type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/test_regrLabels.txt"
-            input = {
-                regrLabels = { dim = 3 ; format = "dense" }
-            }
-        })
-    }
-}
-currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
-RunDir=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu
-DataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
-ConfigDir=D:\GitHub\CNTK\Examples\Image\Regression
-OutputDir=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu
-DeviceId=-1
-timestamping=true
-[command=TrainConvNet:Test]
-forceDeterministicAlgorithms=true
-stderr=-
-
-10/03/2016 23:27:30: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-
-10/03/2016 23:27:30: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
 configparameters: RegrSimple_CIFAR10.cntk:command=TrainConvNet:Test
-configparameters: RegrSimple_CIFAR10.cntk:ConfigDir=D:\GitHub\CNTK\Examples\Image\Regression
-configparameters: RegrSimple_CIFAR10.cntk:currentDirectory=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
-configparameters: RegrSimple_CIFAR10.cntk:dataDir=D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10
+configparameters: RegrSimple_CIFAR10.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Examples\Image\Regression
+configparameters: RegrSimple_CIFAR10.cntk:currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData
+configparameters: RegrSimple_CIFAR10.cntk:dataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData
 configparameters: RegrSimple_CIFAR10.cntk:deviceId=-1
 configparameters: RegrSimple_CIFAR10.cntk:forceDeterministicAlgorithms=true
 configparameters: RegrSimple_CIFAR10.cntk:makeMode=false
-configparameters: RegrSimple_CIFAR10.cntk:modelDir=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu/Models
-configparameters: RegrSimple_CIFAR10.cntk:modelPath=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu/Models/RegrSimple_CIFAR10.cmf
-configparameters: RegrSimple_CIFAR10.cntk:outputDir=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu
+configparameters: RegrSimple_CIFAR10.cntk:modelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu/Models
+configparameters: RegrSimple_CIFAR10.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu/Models/RegrSimple_CIFAR10.cmf
+configparameters: RegrSimple_CIFAR10.cntk:outputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu
 configparameters: RegrSimple_CIFAR10.cntk:rootDir=..
-configparameters: RegrSimple_CIFAR10.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu
+configparameters: RegrSimple_CIFAR10.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu
 configparameters: RegrSimple_CIFAR10.cntk:stderr=-
 configparameters: RegrSimple_CIFAR10.cntk:Test={
     action = "test"
     minibatchSize = 512
     outputNodeNames = (ol, regrLabels, rmse)
-    outputPath = "C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu/RegrSimple_CIFAR10"
+    outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu/RegrSimple_CIFAR10"
     reader = {
         verbosity = 0 ; randomize = false
         deserializers = ({
             type = "ImageDeserializer" ; module = "ImageReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/test_map.txt"
+            file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData/test_map.txt"
             input = {
                 features = { transforms = (
                     { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
@@ -318,7 +67,7 @@ configparameters: RegrSimple_CIFAR10.cntk:Test={
             }
         } : {
             type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/test_regrLabels.txt"
+            file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData/test_regrLabels.txt"
             input = {
                 regrLabels = { dim = 3 ; format = "dense" }
             }
@@ -362,7 +111,7 @@ configparameters: RegrSimple_CIFAR10.cntk:TrainConvNet={
         verbosity = 0 ; randomize = true
         deserializers = ({
             type = "ImageDeserializer" ; module = "ImageReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/train_map.txt"
+            file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData/train_map.txt"
             input = {
                 features = { transforms = (
                     { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
@@ -372,7 +121,7 @@ configparameters: RegrSimple_CIFAR10.cntk:TrainConvNet={
             }
         } : {
             type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/train_regrLabels.txt"
+            file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData/train_regrLabels.txt"
             input = {
                 regrLabels = { dim = 3 ; format = "dense" }
             }
@@ -384,12 +133,12 @@ configparameters: RegrSimple_CIFAR10.cntk:Write={
     action = "write"
     minibatchSize = 1
     outputNodeNames = (ol, regrLabels, rmse)
-    outputPath = "C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu/RegrSimple_CIFAR10"
+    outputPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu/RegrSimple_CIFAR10"
     reader = {
         verbosity = 0 ; randomize = false
         deserializers = ({
             type = "ImageDeserializer" ; module = "ImageReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/test_map.txt"
+            file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData/test_map.txt"
             input = {
                 features = { transforms = (
                     { type = "Scale" ; width = 32 ; height = 32 ; channels = 3 ; interpolations = "linear" } :
@@ -399,7 +148,7 @@ configparameters: RegrSimple_CIFAR10.cntk:Write={
             }
         } : {
             type = "CNTKTextFormatDeserializer" ; module = "CNTKTextFormatReader"
-            file = "D:\GitHub\CNTK\Examples\Image\DataSets\CIFAR-10/test_regrLabels.txt"
+            file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu\TestData/test_regrLabels.txt"
             input = {
                 regrLabels = { dim = 3 ; format = "dense" }
             }
@@ -407,32 +156,20 @@ configparameters: RegrSimple_CIFAR10.cntk:Write={
     }
 }
 
-10/03/2016 23:27:30: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-10/03/2016 23:27:30: Commands: TrainConvNet Test
-10/03/2016 23:27:30: Precision = "float"
-10/03/2016 23:27:30: CNTKModelPath: C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu/Models/RegrSimple_CIFAR10.cmf
-10/03/2016 23:27:30: CNTKCommandTrainInfo: TrainConvNet : 2
-10/03/2016 23:27:30: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 2
+12/15/2016 08:33:43: Commands: TrainConvNet Test
+12/15/2016 08:33:43: precision = "float"
+12/15/2016 08:33:43: WARNING: forceDeterministcAlgorithms flag is specified. Using 1 CPU thread for processing.
 
-10/03/2016 23:27:30: ##############################################################################
-10/03/2016 23:27:30: #                                                                            #
-10/03/2016 23:27:30: # Action "train"                                                             #
-10/03/2016 23:27:30: #                                                                            #
-10/03/2016 23:27:30: ##############################################################################
+12/15/2016 08:33:43: ##############################################################################
+12/15/2016 08:33:43: #                                                                            #
+12/15/2016 08:33:43: # TrainConvNet command (train action)                                        #
+12/15/2016 08:33:43: #                                                                            #
+12/15/2016 08:33:43: ##############################################################################
 
-10/03/2016 23:27:30: CNTKCommandTrainBegin: TrainConvNet
-
-10/03/2016 23:27:31: Creating virgin network.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.333333.
+12/15/2016 08:33:43: 
+Creating virgin network.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[3 x 0] as gaussian later when dimensions are fully known.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[100 x 0] as gaussian later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.003906.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[100] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[100] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[3] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[3] <- 0.000000.
 
 Post-processing network...
 
@@ -449,13 +186,13 @@ Validating --> features = InputValue() :  -> [32 x 32 x 3 x *]
 Validating --> featScale = LearnableParameter() :  -> [1 x 1]
 Validating --> ol.featNorm = ElementTimes (features, featScale) : [32 x 32 x 3 x *], [1 x 1] -> [32 x 32 x 3 x *]
 Node 'ol.h1.W' (LearnableParameter operation) operation: Tensor shape was inferred as [100 x 32 x 32 x 3].
-Node 'ol.h1.W' (LearnableParameter operation): Initializing Parameter[100 x 32 x 32 x 3] <- gaussian(seed=2, range=0.003608*1.500000, onCPU=true).
-Validating --> ol.h1.PlusArgs[0] = Times (ol.h1.W, ol.featNorm) : [100 x 32 x 32 x 3], [32 x 32 x 3 x *] -> [100 x *]
+Node 'ol.h1.W' (LearnableParameter operation): Initializing Parameter[100 x 32 x 32 x 3] <- gaussian(seed=2, init dims=[100 x 3072], range=0.005413(0.003608*1.500000), onCPU=true.
+)Validating --> ol.h1.PlusArgs[0] = Times (ol.h1.W, ol.featNorm) : [100 x 32 x 32 x 3], [32 x 32 x 3 x *] -> [100 x *]
 Validating --> ol.h1.b = LearnableParameter() :  -> [100]
 Validating --> ol.h1 = Plus (ol.h1.PlusArgs[0], ol.h1.b) : [100 x *], [100] -> [100 x *]
 Node 'ol.ol.W' (LearnableParameter operation) operation: Tensor shape was inferred as [3 x 100].
-Node 'ol.ol.W' (LearnableParameter operation): Initializing Parameter[3 x 100] <- gaussian(seed=1, range=0.020000*1.500000, onCPU=true).
-Validating --> ol.ol.PlusArgs[0] = Times (ol.ol.W, ol.h1) : [3 x 100], [100 x *] -> [3 x *]
+Node 'ol.ol.W' (LearnableParameter operation): Initializing Parameter[3 x 100] <- gaussian(seed=1, init dims=[3 x 100], range=0.030000(0.020000*1.500000), onCPU=true.
+)Validating --> ol.ol.PlusArgs[0] = Times (ol.ol.W, ol.h1) : [3 x 100], [100 x *] -> [3 x *]
 Validating --> ol.ol.b = LearnableParameter() :  -> [3]
 Validating --> ol = Plus (ol.ol.PlusArgs[0], ol.ol.b) : [3 x *], [3] -> [3 x *]
 Validating --> sqerr = SquareError (regrLabels, ol) : [3 x *], [3 x *] -> [1]
@@ -469,91 +206,87 @@ Validating network, final pass.
 
 
 
-9 out of 16 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-10/03/2016 23:27:31: Created model with 16 nodes on CPU.
+12/15/2016 08:33:48: 
+Model has 16 nodes. Using CPU.
 
-10/03/2016 23:27:31: Training criterion node(s):
-10/03/2016 23:27:31: 	rmse = Sqrt
+12/15/2016 08:33:48: Training criterion:   rmse = Sqrt
 
 
 Allocating matrices for forward and/or backward propagation.
 
 Memory Sharing: Out of 27 matrices, 13 are shared as 6, and 14 are not shared.
 
+	{ ol : [3 x *]
+	  ol.ol.W : [3 x 100] (gradient) }
 	{ ol : [3 x *] (gradient)
 	  ol.h1 : [100 x *] (gradient)
 	  rmse.z : [1 x 1] }
-	{ ol.h1 : [100 x *]
-	  ol.h1.W : [100 x 32 x 32 x 3] (gradient) }
 	{ ol.h1.PlusArgs[0] : [100 x *] (gradient)
 	  ol.ol.PlusArgs[0] : [3 x *] }
+	{ ol.h1 : [100 x *]
+	  ol.h1.W : [100 x 32 x 32 x 3] (gradient) }
 	{ ol.ol.b : [3] (gradient)
 	  sqerr : [1] }
 	{ ol.h1.b : [100] (gradient)
 	  ol.ol.PlusArgs[0] : [3 x *] (gradient) }
-	{ ol : [3 x *]
-	  ol.ol.W : [3 x 100] (gradient) }
 
 
-10/03/2016 23:27:31: Training 307603 parameters in 4 out of 4 parameter tensors and 11 nodes with gradient:
+12/15/2016 08:33:48: Training 307603 parameters in 4 out of 4 parameter tensors and 11 nodes with gradient:
 
-10/03/2016 23:27:31: 	Node 'ol.h1.W' (LearnableParameter operation) : [100 x 32 x 32 x 3]
-10/03/2016 23:27:31: 	Node 'ol.h1.b' (LearnableParameter operation) : [100]
-10/03/2016 23:27:31: 	Node 'ol.ol.W' (LearnableParameter operation) : [3 x 100]
-10/03/2016 23:27:31: 	Node 'ol.ol.b' (LearnableParameter operation) : [3]
+12/15/2016 08:33:48: 	Node 'ol.h1.W' (LearnableParameter operation) : [100 x 32 x 32 x 3]
+12/15/2016 08:33:48: 	Node 'ol.h1.b' (LearnableParameter operation) : [100]
+12/15/2016 08:33:48: 	Node 'ol.ol.W' (LearnableParameter operation) : [3 x 100]
+12/15/2016 08:33:48: 	Node 'ol.ol.b' (LearnableParameter operation) : [3]
 
-10/03/2016 23:27:31: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+12/15/2016 08:33:48: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-10/03/2016 23:27:31: Starting Epoch 1: learning rate per sample = 0.000500  effective momentum = 0.882497  momentum as time constant = 1024.0 samples
-BlockRandomizer::StartEpoch: epoch 1: samples [0..50000] (first sequence at sample 0), worker rank 0, total workers 1
+12/15/2016 08:33:48: Starting Epoch 1: learning rate per sample = 0.000500  effective momentum = 0.882497  momentum as time constant = 1024.0 samples
 
-10/03/2016 23:27:31: Starting minibatch loop.
-10/03/2016 23:27:32:  Epoch[ 1 of 2]-Minibatch[ -48-   1]: rmse = 0.04855239 * 128; time = 0.5083s; samplesPerSecond = 251.8
-10/03/2016 23:27:32:  Epoch[ 1 of 2]-Minibatch[ -47-   2]: rmse = 0.04447598 * 128; time = 0.0099s; samplesPerSecond = 12958.1
-10/03/2016 23:27:32:  Epoch[ 1 of 2]-Minibatch[ -46-   3]: rmse = 0.04118720 * 128; time = 0.0358s; samplesPerSecond = 3575.6
-10/03/2016 23:27:32:  Epoch[ 1 of 2]-Minibatch[ -45-   4]: rmse = 0.03747429 * 128; time = 0.0346s; samplesPerSecond = 3694.8
-10/03/2016 23:27:32:  Epoch[ 1 of 2]-Minibatch[ -44-   5]: rmse = 0.03261121 * 128; time = 0.0371s; samplesPerSecond = 3452.6
-10/03/2016 23:27:33:  Epoch[ 1 of 2]-Minibatch[   1-  50]: rmse = 0.00665964 * 5760; time = 1.4244s; samplesPerSecond = 4043.8
-10/03/2016 23:27:35:  Epoch[ 1 of 2]-Minibatch[  51- 100]: rmse = 0.00157926 * 6400; time = 1.5074s; samplesPerSecond = 4245.6
-10/03/2016 23:27:36:  Epoch[ 1 of 2]-Minibatch[ 101- 150]: rmse = 0.00088571 * 6400; time = 1.5211s; samplesPerSecond = 4207.5
-10/03/2016 23:27:38:  Epoch[ 1 of 2]-Minibatch[ 151- 200]: rmse = 0.00064759 * 6400; time = 1.5293s; samplesPerSecond = 4184.9
-10/03/2016 23:27:40:  Epoch[ 1 of 2]-Minibatch[ 201- 250]: rmse = 0.00070875 * 6400; time = 1.5304s; samplesPerSecond = 4181.8
-10/03/2016 23:27:41:  Epoch[ 1 of 2]-Minibatch[ 251- 300]: rmse = 0.00075506 * 6400; time = 1.5427s; samplesPerSecond = 4148.7
-10/03/2016 23:27:43:  Epoch[ 1 of 2]-Minibatch[ 301- 350]: rmse = 0.00085470 * 6400; time = 1.5073s; samplesPerSecond = 4246.1
-10/03/2016 23:27:44: Finished Epoch[ 1 of 2]: [Training] rmse = 0.00207382 * 50000; totalSamplesSeen = 50000; learningRatePerSample = 0.00050000002; epochTime=12.6376s
-10/03/2016 23:27:44: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu/Models/RegrSimple_CIFAR10.cmf.1'
+12/15/2016 08:33:48: Starting minibatch loop.
+12/15/2016 08:33:49:  Epoch[ 1 of 2]-Minibatch[   1-   1]: rmse = 0.03853316 * 128; time = 1.3943s; samplesPerSecond = 91.8
+12/15/2016 08:33:49:  Epoch[ 1 of 2]-Minibatch[   2-   2]: rmse = 0.03602910 * 128; time = 0.0174s; samplesPerSecond = 7355.1
+12/15/2016 08:33:49:  Epoch[ 1 of 2]-Minibatch[   3-   3]: rmse = 0.03457779 * 128; time = 0.0177s; samplesPerSecond = 7221.4
+12/15/2016 08:33:49:  Epoch[ 1 of 2]-Minibatch[   4-   4]: rmse = 0.03019408 * 128; time = 0.0173s; samplesPerSecond = 7390.3
+12/15/2016 08:33:49:  Epoch[ 1 of 2]-Minibatch[   5-   5]: rmse = 0.02429050 * 128; time = 0.0180s; samplesPerSecond = 7098.1
+12/15/2016 08:33:50:  Epoch[ 1 of 2]-Minibatch[   6-  50]: rmse = 0.00569115 * 5760; time = 0.8137s; samplesPerSecond = 7078.4
+12/15/2016 08:33:51:  Epoch[ 1 of 2]-Minibatch[  51- 100]: rmse = 0.00139057 * 6400; time = 0.9074s; samplesPerSecond = 7053.5
+12/15/2016 08:33:52:  Epoch[ 1 of 2]-Minibatch[ 101- 150]: rmse = 0.00077142 * 6400; time = 0.9076s; samplesPerSecond = 7051.7
+12/15/2016 08:33:53:  Epoch[ 1 of 2]-Minibatch[ 151- 200]: rmse = 0.00059897 * 6400; time = 0.9042s; samplesPerSecond = 7078.0
+12/15/2016 08:33:54:  Epoch[ 1 of 2]-Minibatch[ 201- 250]: rmse = 0.00054257 * 6400; time = 0.9035s; samplesPerSecond = 7083.4
+12/15/2016 08:33:55:  Epoch[ 1 of 2]-Minibatch[ 251- 300]: rmse = 0.00049910 * 6400; time = 0.9050s; samplesPerSecond = 7071.8
+12/15/2016 08:33:56:  Epoch[ 1 of 2]-Minibatch[ 301- 350]: rmse = 0.00048106 * 6400; time = 0.9034s; samplesPerSecond = 7084.4
+12/15/2016 08:33:56: Finished Epoch[ 1 of 2]: [Training] rmse = 0.00167318 * 50000; totalSamplesSeen = 50000; learningRatePerSample = 0.00050000002; epochTime=8.51184s
+12/15/2016 08:33:56: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu/Models/RegrSimple_CIFAR10.cmf.1'
 
-10/03/2016 23:27:44: Starting Epoch 2: learning rate per sample = 0.000500  effective momentum = 0.882497  momentum as time constant = 1024.0 samples
-BlockRandomizer::StartEpoch: epoch 2: samples [50000..100000] (first sequence at sample 50000), worker rank 0, total workers 1
+12/15/2016 08:33:57: Starting Epoch 2: learning rate per sample = 0.000500  effective momentum = 0.882497  momentum as time constant = 1024.0 samples
 
-10/03/2016 23:27:44: Starting minibatch loop.
-10/03/2016 23:27:44:  Epoch[ 2 of 2]-Minibatch[ -48-   1, 0.29%]: rmse = 0.00039462 * 128; time = 0.1191s; samplesPerSecond = 1074.3
-10/03/2016 23:27:44:  Epoch[ 2 of 2]-Minibatch[ -47-   2, 0.57%]: rmse = 0.00054775 * 128; time = 0.0325s; samplesPerSecond = 3941.4
-10/03/2016 23:27:44:  Epoch[ 2 of 2]-Minibatch[ -46-   3, 0.86%]: rmse = 0.00060361 * 128; time = 0.0312s; samplesPerSecond = 4098.2
-10/03/2016 23:27:44:  Epoch[ 2 of 2]-Minibatch[ -45-   4, 1.14%]: rmse = 0.00043940 * 128; time = 0.0309s; samplesPerSecond = 4145.6
-10/03/2016 23:27:44:  Epoch[ 2 of 2]-Minibatch[ -44-   5, 1.43%]: rmse = 0.00065968 * 128; time = 0.0309s; samplesPerSecond = 4146.4
-10/03/2016 23:27:46:  Epoch[ 2 of 2]-Minibatch[   1-  50, 14.29%]: rmse = 0.00044168 * 5760; time = 1.4005s; samplesPerSecond = 4112.8
-10/03/2016 23:27:47:  Epoch[ 2 of 2]-Minibatch[  51- 100, 28.57%]: rmse = 0.00043480 * 6400; time = 1.5195s; samplesPerSecond = 4211.8
-10/03/2016 23:27:49:  Epoch[ 2 of 2]-Minibatch[ 101- 150, 42.86%]: rmse = 0.00042066 * 6400; time = 1.5343s; samplesPerSecond = 4171.3
-10/03/2016 23:27:50:  Epoch[ 2 of 2]-Minibatch[ 151- 200, 57.14%]: rmse = 0.00039843 * 6400; time = 1.5340s; samplesPerSecond = 4172.1
-10/03/2016 23:27:52:  Epoch[ 2 of 2]-Minibatch[ 201- 250, 71.43%]: rmse = 0.00039572 * 6400; time = 1.5783s; samplesPerSecond = 4055.0
-10/03/2016 23:27:53:  Epoch[ 2 of 2]-Minibatch[ 251- 300, 85.71%]: rmse = 0.00039760 * 6400; time = 1.5401s; samplesPerSecond = 4155.7
-10/03/2016 23:27:55:  Epoch[ 2 of 2]-Minibatch[ 301- 350, 100.00%]: rmse = 0.00038494 * 6400; time = 1.5233s; samplesPerSecond = 4201.4
-10/03/2016 23:27:56: Finished Epoch[ 2 of 2]: [Training] rmse = 0.00040838 * 50000; totalSamplesSeen = 100000; learningRatePerSample = 0.00050000002; epochTime=12.1973s
-10/03/2016 23:27:56: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20161003152728.360802\Examples\Image\Regression_RegrSimple@release_cpu/Models/RegrSimple_CIFAR10.cmf'
-10/03/2016 23:27:56: CNTKCommandTrainEnd: TrainConvNet
+12/15/2016 08:33:57: Starting minibatch loop.
+12/15/2016 08:33:57:  Epoch[ 2 of 2]-Minibatch[   1-   1, 0.29%]: rmse = 0.00045939 * 128; time = 0.0819s; samplesPerSecond = 1562.8
+12/15/2016 08:33:57:  Epoch[ 2 of 2]-Minibatch[   2-   2, 0.57%]: rmse = 0.00059893 * 128; time = 0.0175s; samplesPerSecond = 7321.0
+12/15/2016 08:33:57:  Epoch[ 2 of 2]-Minibatch[   3-   3, 0.86%]: rmse = 0.00041422 * 128; time = 0.0175s; samplesPerSecond = 7326.8
+12/15/2016 08:33:57:  Epoch[ 2 of 2]-Minibatch[   4-   4, 1.14%]: rmse = 0.00059208 * 128; time = 0.0182s; samplesPerSecond = 7050.8
+12/15/2016 08:33:57:  Epoch[ 2 of 2]-Minibatch[   5-   5, 1.43%]: rmse = 0.00042557 * 128; time = 0.0178s; samplesPerSecond = 7175.7
+12/15/2016 08:33:58:  Epoch[ 2 of 2]-Minibatch[   6-  50, 14.29%]: rmse = 0.00051159 * 5760; time = 0.8141s; samplesPerSecond = 7075.1
+12/15/2016 08:33:59:  Epoch[ 2 of 2]-Minibatch[  51- 100, 28.57%]: rmse = 0.00047599 * 6400; time = 0.9044s; samplesPerSecond = 7076.4
+12/15/2016 08:34:00:  Epoch[ 2 of 2]-Minibatch[ 101- 150, 42.86%]: rmse = 0.00047242 * 6400; time = 0.9000s; samplesPerSecond = 7110.9
+12/15/2016 08:34:01:  Epoch[ 2 of 2]-Minibatch[ 151- 200, 57.14%]: rmse = 0.00046507 * 6400; time = 0.9052s; samplesPerSecond = 7070.1
+12/15/2016 08:34:02:  Epoch[ 2 of 2]-Minibatch[ 201- 250, 71.43%]: rmse = 0.00045499 * 6400; time = 0.9064s; samplesPerSecond = 7060.7
+12/15/2016 08:34:02:  Epoch[ 2 of 2]-Minibatch[ 251- 300, 85.71%]: rmse = 0.00046495 * 6400; time = 0.9056s; samplesPerSecond = 7067.1
+12/15/2016 08:34:03:  Epoch[ 2 of 2]-Minibatch[ 301- 350, 100.00%]: rmse = 0.00043301 * 6400; time = 0.9022s; samplesPerSecond = 7094.1
+12/15/2016 08:34:04: Finished Epoch[ 2 of 2]: [Training] rmse = 0.00046630 * 50000; totalSamplesSeen = 100000; learningRatePerSample = 0.00050000002; epochTime=7.19599s
+12/15/2016 08:34:04: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Examples\Image\Regression_RegrSimple@release_cpu/Models/RegrSimple_CIFAR10.cmf'
 
-10/03/2016 23:27:56: Action "train" complete.
+12/15/2016 08:34:04: Action "train" complete.
 
 
-10/03/2016 23:27:56: ##############################################################################
-10/03/2016 23:27:56: #                                                                            #
-10/03/2016 23:27:56: # Action "test"                                                              #
-10/03/2016 23:27:56: #                                                                            #
-10/03/2016 23:27:56: ##############################################################################
+12/15/2016 08:34:04: ##############################################################################
+12/15/2016 08:34:04: #                                                                            #
+12/15/2016 08:34:04: # Test command (test action)                                                 #
+12/15/2016 08:34:04: #                                                                            #
+12/15/2016 08:34:04: ##############################################################################
 
 
 Post-processing network...
@@ -587,7 +320,6 @@ Validating network, final pass.
 
 
 
-9 out of 16 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
@@ -599,9 +331,9 @@ Allocating matrices for forward and/or backward propagation.
 Memory Sharing: Out of 16 matrices, 0 are shared as 0, and 16 are not shared.
 
 
-10/03/2016 23:27:59: Minibatch[1-20]: rmse = 0.00102296 * 10000
-10/03/2016 23:27:59: Final Results: Minibatch[1-20]: rmse = 0.00102296 * 10000
+12/15/2016 08:34:06: Minibatch[1-20]: rmse = 0.00099926 * 10000
+12/15/2016 08:34:06: Final Results: Minibatch[1-20]: rmse = 0.00099926 * 10000
 
-10/03/2016 23:27:59: Action "test" complete.
+12/15/2016 08:34:06: Action "test" complete.
 
-10/03/2016 23:27:59: __COMPLETED__
+12/15/2016 08:34:06: __COMPLETED__

@@ -1,53 +1,56 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU W3565 @ 3.20GHz
+    Hardware threads: 8
+    Total Memory: 12580436 kB
 -------------------------------------------------------------------
-Build info: 
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu DeviceId=-1 timestamping=true truncated=false speechTrain=[reader=[nbruttsineachrecurrentiter=2]] speechTrain=[SGD=[epochSize=2560]] speechTrain=[SGD=[maxEpochs=2]] speechTrain=[SGD=[numMBsToShowResult=1]] modelSelector=1 shareNodeValueMatrices=true
+CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:29:34) on cntk-muc01 at 2016/12/15 08:48:04
 
-		Built time: Aug 24 2016 18:50:02
-		Last modified date: Mon Aug 22 13:48:06 2016
-		Build type: Release
-		Build target: GPU
-		With 1bit-SGD: yes
-		Math lib: mkl
-		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
-		CUB_PATH: c:\src\cub-1.4.1\
-		CUDNN_PATH: C:\NVIDIA\cudnn-5.0\cuda
-		Build Branch: fseide/cudnn5
-		Build SHA1: 5f14fcaea07dc1d87a1841115818ca6065ae69f8
-		Built by fseide on FSEIDE-GPU
-		Build Path: C:\work\cntk\Source\CNTK\
--------------------------------------------------------------------
--------------------------------------------------------------------
-GPU info:
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu  DeviceId=-1  timestamping=true  truncated=false  speechTrain=[reader=[nbruttsineachrecurrentiter=2]]  speechTrain=[SGD=[epochSize=2560]]  speechTrain=[SGD=[maxEpochs=2]]  speechTrain=[SGD=[numMBsToShowResult=1]]  modelSelector=1  shareNodeValueMatrices=true
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+12/15/2016 08:48:04: -------------------------------------------------------------------
+12/15/2016 08:48:04: Build info: 
 
-		Device[0]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
-		Device[1]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
-		Device[2]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
-		Device[3]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
-		Device[4]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
-		Device[5]: cores = 4608; computeCapability = 5.2; type = "GeForce GTX TITAN X"; memory = 12288 MB
--------------------------------------------------------------------
+12/15/2016 08:48:04: 		Built time: Dec 15 2016 06:29:34
+12/15/2016 08:48:04: 		Last modified date: Wed Dec 14 12:53:20 2016
+12/15/2016 08:48:04: 		Build type: Release
+12/15/2016 08:48:04: 		Build target: GPU
+12/15/2016 08:48:04: 		With 1bit-SGD: no
+12/15/2016 08:48:04: 		With ASGD: yes
+12/15/2016 08:48:04: 		Math lib: mkl
+12/15/2016 08:48:04: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+12/15/2016 08:48:04: 		CUB_PATH: c:\src\cub-1.4.1
+12/15/2016 08:48:04: 		CUDNN_PATH: C:\local\cudnn-8.0-windows10-x64-v5.1
+12/15/2016 08:48:04: 		Build Branch: HEAD
+12/15/2016 08:48:04: 		Build SHA1: 5f1fabfe95e68af0787193f8849159f824d914d5 (modified)
+12/15/2016 08:48:04: 		Built by svcphil on liana-08-w
+12/15/2016 08:48:04: 		Build Path: C:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
+12/15/2016 08:48:04: -------------------------------------------------------------------
+12/15/2016 08:48:05: -------------------------------------------------------------------
+12/15/2016 08:48:05: GPU info:
 
-Running on FSEIDE-GPU at 2016/08/24 19:45:53
-Command line: 
-..\..\..\..\x64\Release\CNTK.exe  currentDirectory=c:\work\CNTK\Tests\EndToEndTests\Speech\Data  configFile=c:\work\CNTK\Tests\EndToEndTests\Speech\LSTM\cntk.cntk  RunDir=c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance  DataDir=.  DeviceId=auto  makeMode=false  stderr=x  truncated=false  speechTrain=[reader=[nbruttsineachrecurrentiter=2]]  speechTrain=[SGD=[epochSize=2560]]  speechTrain=[SGD=[maxEpochs=2]]  speechTrain=[SGD=[numMBsToShowResult=1]]  modelSelector=1  shareNodeValueMatrices=true
-
+12/15/2016 08:48:05: 		Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB
+12/15/2016 08:48:05: -------------------------------------------------------------------
 
 Configuration After Processing and Variable Resolution:
 
 configparameters: cntk.cntk:// Note: These options are overridden from the command line in some test cases.=true
-configparameters: cntk.cntk:command=speechTrain
-configparameters: cntk.cntk:currentDirectory=c:\work\CNTK\Tests\EndToEndTests\Speech\Data
-configparameters: cntk.cntk:DataDir=.
-configparameters: cntk.cntk:deviceId=auto
+configparameters: cntk.cntk:command=speechCreate:speechTrain
+configparameters: cntk.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM
+configparameters: cntk.cntk:currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+configparameters: cntk.cntk:DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+configparameters: cntk.cntk:deviceId=-1
 configparameters: cntk.cntk:frameMode=false
-configparameters: cntk.cntk:makeMode=false
+configparameters: cntk.cntk:modelPath=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu/models/cntkSpeech.dnn
 configparameters: cntk.cntk:modelSelector=1
+configparameters: cntk.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu
 configparameters: cntk.cntk:parallelTrain=false
 configparameters: cntk.cntk:precision=float
-configparameters: cntk.cntk:RunDir=c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance
+configparameters: cntk.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu
 configparameters: cntk.cntk:shareNodeValueMatrices=true
-configparameters: cntk.cntk:speechTrain={
-    action = "train"
-    modelPath = "c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance/models/cntkSpeech.dnn"
+configparameters: cntk.cntk:speechCreate={
+    action = "edit"
+    outputModelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu/models/cntkSpeech.dnn.initial"
     BrainScriptNetworkBuilder = {
         useLayerNorm = false
         // dimensions (needed for both model and readers)
@@ -163,6 +166,11 @@ model = models[1]
         evaluationNodes = (err)
         outputNodes = (scaledLogLikelihood)
     }
+}
+
+configparameters: cntk.cntk:speechTrain={
+    action = "train"
+    BrainScriptNetworkBuilder = (BS.Network.Load("C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu/models/cntkSpeech.dnn.initial"))
     SGD = {
         epochSize = 20480 ; maxEpochs = 4 ; minibatchSize = 20
         learningRatesPerMB = 0.5 ; momentumAsTimeConstant = 2500
@@ -174,68 +182,27 @@ model = models[1]
         randomize = "auto" ; readMethod = "blockRandomize"
         nbruttsineachrecurrentiter = 32
         miniBatchMode = "partial" ; verbosity = 0 ; useMersenneTwisterRand = true
-        features = { dim =      363 ; type      = "real"     ; scpFile = "./glob_0000.scp" ; }
-        labels   = { labelDim = 132 ; labelType = "category" ; mlfFile = "./glob_0000.mlf" ; labelMappingFile = "./state.list" }
+        features = { dim =      363 ; type      = "real"     ; scpFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.scp" ; }
+        labels   = { labelDim = 132 ; labelType = "category" ; mlfFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf" ; labelMappingFile = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list" }
     }
 } [reader=[nbruttsineachrecurrentiter=2]] [SGD=[epochSize=2560]] [SGD=[maxEpochs=2]] [SGD=[numMBsToShowResult=1]]
 
-configparameters: cntk.cntk:stderr=x
+configparameters: cntk.cntk:timestamping=true
 configparameters: cntk.cntk:traceLevel=1
 configparameters: cntk.cntk:truncated=false
-Commands: speechTrain
-Precision = "float"
-CNTKModelPath: c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance/models/cntkSpeech.dnn
-CNTKCommandTrainInfo: speechTrain : 2
-CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 2
+12/15/2016 08:48:05: Commands: speechCreate speechTrain
+12/15/2016 08:48:05: precision = "float"
 
-##############################################################################
-#                                                                            #
-# Action "train"                                                             #
-#                                                                            #
-##############################################################################
+12/15/2016 08:48:05: ##############################################################################
+12/15/2016 08:48:05: #                                                                            #
+12/15/2016 08:48:05: # speechCreate command (edit action)                                         #
+12/15/2016 08:48:05: #                                                                            #
+12/15/2016 08:48:05: ##############################################################################
 
-CNTKCommandTrainBegin: speechTrain
-LockDevice: Locked GPU 0 to test availability.
-LockDevice: Unlocked GPU 0 after testing.
-LockDevice: Locked GPU 1 to test availability.
-LockDevice: Unlocked GPU 1 after testing.
-LockDevice: Locked GPU 2 to test availability.
-LockDevice: Unlocked GPU 2 after testing.
-LockDevice: Locked GPU 4 to test availability.
-LockDevice: Unlocked GPU 4 after testing.
-LockDevice: Locked GPU 5 to test availability.
-LockDevice: Unlocked GPU 5 after testing.
-LockDevice: Locked GPU 3 to test availability.
-LockDevice: Unlocked GPU 3 after testing.
-LockDevice: Locked GPU 0 for exclusive use.
-useParallelTrain option is not enabled. ParallelTrain config will be ignored.
-Creating virgin network.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[132 x 0] as heUniform later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- heUniform(seed=2, init dims=[256 x 1024], range=0.076547*0.333333, onCPU=true).
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096] <- 0.000000.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[4096 x 0] as heUniform later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- heUniform(seed=4, init dims=[256 x 1024], range=0.076547*0.333333, onCPU=true).
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096] <- 0.000000.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[4096 x 0] as heUniform later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[256 x 1024] <- heUniform(seed=6, init dims=[256 x 1024], range=0.076547*0.333333, onCPU=true).
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096] <- 0.000000.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[4096 x 0] as heUniform later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096 x 256] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096 x 256] <- heUniform(seed=8, init dims=[4096 x 256], range=0.153093*0.333333, onCPU=true).
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096 x 256] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096 x 256] <- heUniform(seed=9, init dims=[4096 x 256], range=0.153093*0.333333, onCPU=true).
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096 x 256] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[4096 x 256] <- heUniform(seed=10, init dims=[4096 x 256], range=0.153093*0.333333, onCPU=true).
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[132] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[132] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 0.000000.
-Node '<placeholder>' (LearnableParameter operation): Initializing Parameter[1] <- 1.000000.
 
 Post-processing network...
 
@@ -278,14 +245,14 @@ Validating network. 98 nodes to process in pass 1.
 
 Validating --> modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W = LearnableParameter() :  -> [132 x 0]
 Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.Wmr = LearnableParameter() :  -> [256 x 1024]
-Validating --> z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0] = LearnableParameter() :  -> [4096]
-Validating --> z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [4096 x 0]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.B = LearnableParameter() :  -> [4096]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.W = LearnableParameter() :  -> [4096 x 0]
 Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.Wmr = LearnableParameter() :  -> [256 x 1024]
-Validating --> z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0] = LearnableParameter() :  -> [4096]
-Validating --> z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [4096 x 0]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.B = LearnableParameter() :  -> [4096]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.W = LearnableParameter() :  -> [4096 x 0]
 Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.Wmr = LearnableParameter() :  -> [256 x 1024]
-Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0] = LearnableParameter() :  -> [4096]
-Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [4096 x 0]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.B = LearnableParameter() :  -> [4096]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.W = LearnableParameter() :  -> [4096 x 0]
 Validating --> features = InputValue() :  -> [1 x 363 x *]
 Validating --> realFeatures.x = TransposeDimensions (features) : [1 x 363 x *] -> [363 x 1 x *]
 Validating --> realFeatures = Reshape (realFeatures.x) : [363 x 1 x *] -> [363 x *]
@@ -294,12 +261,12 @@ Validating --> z.x.x.mean = Mean (feashift) : [33 x *] -> [33]
 Validating --> z.x.x.ElementTimesArgs[0] = Minus (feashift, z.x.x.mean) : [33 x *], [33] -> [33 x *]
 Validating --> z.x.x.invStdDev = InvStdDev (feashift) : [33 x *] -> [33]
 Validating --> z.x.x = ElementTimes (z.x.x.ElementTimesArgs[0], z.x.x.invStdDev) : [33 x *], [33] -> [33 x *]
-Node 'z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) operation: Tensor shape was inferred as [4096 x 33].
-Node 'z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation): Initializing Parameter[4096 x 33] <- heUniform(seed=7, init dims=[4096 x 33], range=0.426401*0.333333, onCPU=true).
-Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] = Times (z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0], z.x.x) : [4096 x 33], [33 x *] -> [4096 x *]
-Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[0] = Plus (z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0], z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1]) : [4096], [4096 x *] -> [4096 x *]
-Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [4096 x 256]
-Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[1] = Times (z.x.x.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0], z.x.x.x.prevState.h) : [4096 x 256], [0] -> [4096]
+Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.W' (LearnableParameter operation) operation: Tensor shape was inferred as [4096 x 33].
+Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.W' (LearnableParameter operation): Initializing Parameter[4096 x 33] <- heUniform(seed=7, init dims=[4096 x 33], range=0.142134(0.426401*0.333333), onCPU=true.
+)Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.W, z.x.x) : [4096 x 33], [33 x *] -> [4096 x *]
+Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[0] = Plus (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.B, z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1]) : [4096], [4096 x *] -> [4096 x *]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.H = LearnableParameter() :  -> [4096 x 256]
+Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.H, z.x.x.x.prevState.h) : [4096 x 256], [0] -> [4096]
 Validating --> z.x.x.x.lstmState._.proj4 = Plus (z.x.x.x.lstmState._.proj4.PlusArgs[0], z.x.x.x.lstmState._.proj4.PlusArgs[1]) : [4096 x *], [4096] -> [4096 x *]
 Validating --> z.x.x.x.lstmState._.otProj = Slice (z.x.x.x.lstmState._.proj4) : [4096 x *] -> [1024 x *]
 Validating --> z.x.x.x.lstmState._.ot = Sigmoid (z.x.x.x.lstmState._.otProj) : [1024 x *] -> [1024 x *]
@@ -315,12 +282,12 @@ Validating --> z.x.x.x.lstmState._.ct = Plus (z.x.x.x.lstmState._.bft, z.x.x.x.l
 Validating --> z.x.x.x.lstmState._.ht.ElementTimesArgs[1] = Tanh (z.x.x.x.lstmState._.ct) : [1024 x *] -> [1024 x *]
 Validating --> z.x.x.x.lstmState._.ht = ElementTimes (z.x.x.x.lstmState._.ot, z.x.x.x.lstmState._.ht.ElementTimesArgs[1]) : [1024 x *], [1024 x *] -> [1024 x *]
 Validating --> z.x.x.x.lstmState.h = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.Wmr, z.x.x.x.lstmState._.ht) : [256 x 1024], [1024 x *] -> [256 x *]
-Node 'z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) operation: Tensor shape was inferred as [4096 x 256].
-Node 'z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation): Initializing Parameter[4096 x 256] <- heUniform(seed=5, init dims=[4096 x 256], range=0.153093*0.333333, onCPU=true).
-Validating --> z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] = Times (z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0], z.x.x.x.lstmState.h) : [4096 x 256], [256 x *] -> [4096 x *]
-Validating --> z.x.x.lstmState._.proj4.PlusArgs[0] = Plus (z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0], z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1]) : [4096], [4096 x *] -> [4096 x *]
-Validating --> z.x.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [4096 x 256]
-Validating --> z.x.x.lstmState._.proj4.PlusArgs[1] = Times (z.x.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0], z.x.x.prevState.h) : [4096 x 256], [0] -> [4096]
+Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.W' (LearnableParameter operation) operation: Tensor shape was inferred as [4096 x 256].
+Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.W' (LearnableParameter operation): Initializing Parameter[4096 x 256] <- heUniform(seed=5, init dims=[4096 x 256], range=0.051031(0.153093*0.333333), onCPU=true.
+)Validating --> z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.W, z.x.x.x.lstmState.h) : [4096 x 256], [256 x *] -> [4096 x *]
+Validating --> z.x.x.lstmState._.proj4.PlusArgs[0] = Plus (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.B, z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1]) : [4096], [4096 x *] -> [4096 x *]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.H = LearnableParameter() :  -> [4096 x 256]
+Validating --> z.x.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.H, z.x.x.prevState.h) : [4096 x 256], [0] -> [4096]
 Validating --> z.x.x.lstmState._.proj4 = Plus (z.x.x.lstmState._.proj4.PlusArgs[0], z.x.x.lstmState._.proj4.PlusArgs[1]) : [4096 x *], [4096] -> [4096 x *]
 Validating --> z.x.x.lstmState._.otProj = Slice (z.x.x.lstmState._.proj4) : [4096 x *] -> [1024 x *]
 Validating --> z.x.x.lstmState._.ot = Sigmoid (z.x.x.lstmState._.otProj) : [1024 x *] -> [1024 x *]
@@ -336,12 +303,12 @@ Validating --> z.x.x.lstmState._.ct = Plus (z.x.x.lstmState._.bft, z.x.x.lstmSta
 Validating --> z.x.x.lstmState._.ht.ElementTimesArgs[1] = Tanh (z.x.x.lstmState._.ct) : [1024 x *] -> [1024 x *]
 Validating --> z.x.x.lstmState._.ht = ElementTimes (z.x.x.lstmState._.ot, z.x.x.lstmState._.ht.ElementTimesArgs[1]) : [1024 x *], [1024 x *] -> [1024 x *]
 Validating --> z.x.x.lstmState.h = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.Wmr, z.x.x.lstmState._.ht) : [256 x 1024], [1024 x *] -> [256 x *]
-Node 'z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) operation: Tensor shape was inferred as [4096 x 256].
-Node 'z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation): Initializing Parameter[4096 x 256] <- heUniform(seed=3, init dims=[4096 x 256], range=0.153093*0.333333, onCPU=true).
-Validating --> z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] = Times (z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0], z.x.x.lstmState.h) : [4096 x 256], [256 x *] -> [4096 x *]
-Validating --> z.x.lstmState._.proj4.PlusArgs[0] = Plus (z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0], z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1]) : [4096], [4096 x *] -> [4096 x *]
-Validating --> z.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [4096 x 256]
-Validating --> z.x.lstmState._.proj4.PlusArgs[1] = Times (z.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0], z.x.prevState.h) : [4096 x 256], [0] -> [4096]
+Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.W' (LearnableParameter operation) operation: Tensor shape was inferred as [4096 x 256].
+Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.W' (LearnableParameter operation): Initializing Parameter[4096 x 256] <- heUniform(seed=3, init dims=[4096 x 256], range=0.051031(0.153093*0.333333), onCPU=true.
+)Validating --> z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.W, z.x.x.lstmState.h) : [4096 x 256], [256 x *] -> [4096 x *]
+Validating --> z.x.lstmState._.proj4.PlusArgs[0] = Plus (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.B, z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1]) : [4096], [4096 x *] -> [4096 x *]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.H = LearnableParameter() :  -> [4096 x 256]
+Validating --> z.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.H, z.x.prevState.h) : [4096 x 256], [0] -> [4096]
 Validating --> z.x.lstmState._.proj4 = Plus (z.x.lstmState._.proj4.PlusArgs[0], z.x.lstmState._.proj4.PlusArgs[1]) : [4096 x *], [4096] -> [4096 x *]
 Validating --> z.x.lstmState._.otProj = Slice (z.x.lstmState._.proj4) : [4096 x *] -> [1024 x *]
 Validating --> z.x.lstmState._.ot = Sigmoid (z.x.lstmState._.otProj) : [1024 x *] -> [1024 x *]
@@ -358,8 +325,8 @@ Validating --> z.x.lstmState._.ht.ElementTimesArgs[1] = Tanh (z.x.lstmState._.ct
 Validating --> z.x.lstmState._.ht = ElementTimes (z.x.lstmState._.ot, z.x.lstmState._.ht.ElementTimesArgs[1]) : [1024 x *], [1024 x *] -> [1024 x *]
 Validating --> z.x.lstmState.h = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.Wmr, z.x.lstmState._.ht) : [256 x 1024], [1024 x *] -> [256 x *]
 Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [132 x 256].
-Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[132 x 256] <- heUniform(seed=1, init dims=[132 x 256], range=0.153093*0.333333, onCPU=true).
-Validating --> z.x.PlusArgs[0] = Times (modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W, z.x.lstmState.h) : [132 x 256], [256 x *] -> [132 x *]
+Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[132 x 256] <- heUniform(seed=1, init dims=[132 x 256], range=0.051031(0.153093*0.333333), onCPU=true.
+)Validating --> z.x.PlusArgs[0] = Times (modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W, z.x.lstmState.h) : [132 x 256], [256 x *] -> [132 x *]
 Validating --> modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b = LearnableParameter() :  -> [132]
 Validating --> z = Plus (z.x.PlusArgs[0], modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b) : [132 x *], [132] -> [132 x *]
 Validating --> ce.matrix.MinusArgs[0].r = ReduceElements (z) : [132 x *] -> [1 x *]
@@ -380,13 +347,13 @@ Validating --> scaledLogLikelihood = Pass (scaledLogLikelihood._) : [132 x *] ->
 Validating network. 81 nodes to process in pass 2.
 
 Validating --> z.x.x.x.prevState.h = PastValue (z.x.x.x.lstmState.h) : [256 x *] -> [256 x *]
-Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[1] = Times (z.x.x.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0], z.x.x.x.prevState.h) : [4096 x 256], [256 x *] -> [4096 x *]
+Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.H, z.x.x.x.prevState.h) : [4096 x 256], [256 x *] -> [4096 x *]
 Validating --> z.x.x.x.prevState.c = PastValue (z.x.x.x.lstmState._.ct) : [1024 x *] -> [1024 x *]
 Validating --> z.x.x.prevState.h = PastValue (z.x.x.lstmState.h) : [256 x *] -> [256 x *]
-Validating --> z.x.x.lstmState._.proj4.PlusArgs[1] = Times (z.x.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0], z.x.x.prevState.h) : [4096 x 256], [256 x *] -> [4096 x *]
+Validating --> z.x.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.H, z.x.x.prevState.h) : [4096 x 256], [256 x *] -> [4096 x *]
 Validating --> z.x.x.prevState.c = PastValue (z.x.x.lstmState._.ct) : [1024 x *] -> [1024 x *]
 Validating --> z.x.prevState.h = PastValue (z.x.lstmState.h) : [256 x *] -> [256 x *]
-Validating --> z.x.lstmState._.proj4.PlusArgs[1] = Times (z.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0], z.x.prevState.h) : [4096 x 256], [256 x *] -> [4096 x *]
+Validating --> z.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.H, z.x.prevState.h) : [4096 x 256], [256 x *] -> [4096 x *]
 Validating --> z.x.prevState.c = PastValue (z.x.lstmState._.ct) : [1024 x *] -> [1024 x *]
 
 Validating network. 9 nodes to process in pass 3.
@@ -396,199 +363,365 @@ Validating network, final pass.
 
 
 
-21 out of 98 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
-reading script file ./glob_0000.scp ... 948 entries
-total 132 state names in state list ./state.list
-htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
+12/15/2016 08:48:05: 
+Model with 98 nodes saved as 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu/models/cntkSpeech.dnn.initial'.
+
+12/15/2016 08:48:05: Action "edit" complete.
+
+
+12/15/2016 08:48:05: ##############################################################################
+12/15/2016 08:48:05: #                                                                            #
+12/15/2016 08:48:05: # speechTrain command (train action)                                         #
+12/15/2016 08:48:05: #                                                                            #
+12/15/2016 08:48:05: ##############################################################################
+
+parallelTrain option is not enabled. ParallelTrain config will be ignored.
+12/15/2016 08:48:05: 
+Creating virgin network.
+Load: Loading model file: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu/models/cntkSpeech.dnn.initial
+Post-processing network...
+
+6 roots:
+	ce = SumElements()
+	err = SumElements()
+	logPrior._ = Mean()
+	scaledLogLikelihood = Pass()
+	z.x.x.invStdDev = InvStdDev()
+	z.x.x.mean = Mean()
+
+Loop[0] --> Loop_z.x.x.x.lstmState.h -> 18 nodes
+
+	z.x.x.x.prevState.h	z.x.x.x.lstmState._.proj4.PlusArgs[1]	z.x.x.x.lstmState._.proj4
+	z.x.x.x.lstmState._.otProj	z.x.x.x.lstmState._.ot	z.x.x.x.lstmState._.ftProj
+	z.x.x.x.lstmState._.ft	z.x.x.x.prevState.c	z.x.x.x.lstmState._.bft
+	z.x.x.x.lstmState._.itProj	z.x.x.x.lstmState._.it	z.x.x.x.lstmState._.bitProj
+	z.x.x.x.lstmState._.bit.ElementTimesArgs[1]	z.x.x.x.lstmState._.bit	z.x.x.x.lstmState._.ct
+	z.x.x.x.lstmState._.ht.ElementTimesArgs[1]	z.x.x.x.lstmState._.ht	z.x.x.x.lstmState.h
+
+Loop[1] --> Loop_z.x.x.lstmState.h -> 18 nodes
+
+	z.x.x.prevState.h	z.x.x.lstmState._.proj4.PlusArgs[1]	z.x.x.lstmState._.proj4
+	z.x.x.lstmState._.otProj	z.x.x.lstmState._.ot	z.x.x.lstmState._.ftProj
+	z.x.x.lstmState._.ft	z.x.x.prevState.c	z.x.x.lstmState._.bft
+	z.x.x.lstmState._.itProj	z.x.x.lstmState._.it	z.x.x.lstmState._.bitProj
+	z.x.x.lstmState._.bit.ElementTimesArgs[1]	z.x.x.lstmState._.bit	z.x.x.lstmState._.ct
+	z.x.x.lstmState._.ht.ElementTimesArgs[1]	z.x.x.lstmState._.ht	z.x.x.lstmState.h
+
+Loop[2] --> Loop_z.x.lstmState.h -> 18 nodes
+
+	z.x.prevState.h	z.x.lstmState._.proj4.PlusArgs[1]	z.x.lstmState._.proj4
+	z.x.lstmState._.otProj	z.x.lstmState._.ot	z.x.lstmState._.ftProj
+	z.x.lstmState._.ft	z.x.prevState.c	z.x.lstmState._.bft
+	z.x.lstmState._.itProj	z.x.lstmState._.it	z.x.lstmState._.bitProj
+	z.x.lstmState._.bit.ElementTimesArgs[1]	z.x.lstmState._.bit	z.x.lstmState._.ct
+	z.x.lstmState._.ht.ElementTimesArgs[1]	z.x.lstmState._.ht	z.x.lstmState.h
+
+Validating network. 98 nodes to process in pass 1.
+
+Validating --> modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W = LearnableParameter() :  -> [132 x 256]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.Wmr = LearnableParameter() :  -> [256 x 1024]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.B = LearnableParameter() :  -> [4096]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.W = LearnableParameter() :  -> [4096 x 256]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.Wmr = LearnableParameter() :  -> [256 x 1024]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.B = LearnableParameter() :  -> [4096]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.W = LearnableParameter() :  -> [4096 x 256]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.Wmr = LearnableParameter() :  -> [256 x 1024]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.B = LearnableParameter() :  -> [4096]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.W = LearnableParameter() :  -> [4096 x 33]
+Validating --> features = InputValue() :  -> [1 x 363 x *1]
+Validating --> realFeatures.x = TransposeDimensions (features) : [1 x 363 x *1] -> [363 x 1 x *1]
+Validating --> realFeatures = Reshape (realFeatures.x) : [363 x 1 x *1] -> [363 x *1]
+Validating --> feashift = Slice (realFeatures) : [363 x *1] -> [33 x *1]
+Validating --> z.x.x.mean = Mean (feashift) : [33 x *1] -> [33]
+Validating --> z.x.x.ElementTimesArgs[0] = Minus (feashift, z.x.x.mean) : [33 x *1], [33] -> [33 x *1]
+Validating --> z.x.x.invStdDev = InvStdDev (feashift) : [33 x *1] -> [33]
+Validating --> z.x.x = ElementTimes (z.x.x.ElementTimesArgs[0], z.x.x.invStdDev) : [33 x *1], [33] -> [33 x *1]
+Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.W, z.x.x) : [4096 x 33], [33 x *1] -> [4096 x *1]
+Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[0] = Plus (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.B, z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1]) : [4096], [4096 x *1] -> [4096 x *1]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.H = LearnableParameter() :  -> [4096 x 256]
+Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.H, z.x.x.x.prevState.h) : [4096 x 256], [256] -> [4096]
+Validating --> z.x.x.x.lstmState._.proj4 = Plus (z.x.x.x.lstmState._.proj4.PlusArgs[0], z.x.x.x.lstmState._.proj4.PlusArgs[1]) : [4096 x *1], [4096] -> [4096 x *1]
+Validating --> z.x.x.x.lstmState._.otProj = Slice (z.x.x.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.ot = Sigmoid (z.x.x.x.lstmState._.otProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.ftProj = Slice (z.x.x.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.ft = Sigmoid (z.x.x.x.lstmState._.ftProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.bft = ElementTimes (z.x.x.x.lstmState._.ft, z.x.x.x.prevState.c) : [1024 x *1], [1024] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.itProj = Slice (z.x.x.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.it = Sigmoid (z.x.x.x.lstmState._.itProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.bitProj = Slice (z.x.x.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.bit.ElementTimesArgs[1] = Tanh (z.x.x.x.lstmState._.bitProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.bit = ElementTimes (z.x.x.x.lstmState._.it, z.x.x.x.lstmState._.bit.ElementTimesArgs[1]) : [1024 x *1], [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.ct = Plus (z.x.x.x.lstmState._.bft, z.x.x.x.lstmState._.bit) : [1024 x *1], [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.ht.ElementTimesArgs[1] = Tanh (z.x.x.x.lstmState._.ct) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState._.ht = ElementTimes (z.x.x.x.lstmState._.ot, z.x.x.x.lstmState._.ht.ElementTimesArgs[1]) : [1024 x *1], [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.x.lstmState.h = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.Wmr, z.x.x.x.lstmState._.ht) : [256 x 1024], [1024 x *1] -> [256 x *1]
+Validating --> z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.W, z.x.x.x.lstmState.h) : [4096 x 256], [256 x *1] -> [4096 x *1]
+Validating --> z.x.x.lstmState._.proj4.PlusArgs[0] = Plus (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.B, z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1]) : [4096], [4096 x *1] -> [4096 x *1]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.H = LearnableParameter() :  -> [4096 x 256]
+Validating --> z.x.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.H, z.x.x.prevState.h) : [4096 x 256], [256] -> [4096]
+Validating --> z.x.x.lstmState._.proj4 = Plus (z.x.x.lstmState._.proj4.PlusArgs[0], z.x.x.lstmState._.proj4.PlusArgs[1]) : [4096 x *1], [4096] -> [4096 x *1]
+Validating --> z.x.x.lstmState._.otProj = Slice (z.x.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.ot = Sigmoid (z.x.x.lstmState._.otProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.ftProj = Slice (z.x.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.ft = Sigmoid (z.x.x.lstmState._.ftProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.bft = ElementTimes (z.x.x.lstmState._.ft, z.x.x.prevState.c) : [1024 x *1], [1024] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.itProj = Slice (z.x.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.it = Sigmoid (z.x.x.lstmState._.itProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.bitProj = Slice (z.x.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.bit.ElementTimesArgs[1] = Tanh (z.x.x.lstmState._.bitProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.bit = ElementTimes (z.x.x.lstmState._.it, z.x.x.lstmState._.bit.ElementTimesArgs[1]) : [1024 x *1], [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.ct = Plus (z.x.x.lstmState._.bft, z.x.x.lstmState._.bit) : [1024 x *1], [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.ht.ElementTimesArgs[1] = Tanh (z.x.x.lstmState._.ct) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState._.ht = ElementTimes (z.x.x.lstmState._.ot, z.x.x.lstmState._.ht.ElementTimesArgs[1]) : [1024 x *1], [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.lstmState.h = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.Wmr, z.x.x.lstmState._.ht) : [256 x 1024], [1024 x *1] -> [256 x *1]
+Validating --> z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.W, z.x.x.lstmState.h) : [4096 x 256], [256 x *1] -> [4096 x *1]
+Validating --> z.x.lstmState._.proj4.PlusArgs[0] = Plus (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.B, z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1]) : [4096], [4096 x *1] -> [4096 x *1]
+Validating --> modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.H = LearnableParameter() :  -> [4096 x 256]
+Validating --> z.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.H, z.x.prevState.h) : [4096 x 256], [256] -> [4096]
+Validating --> z.x.lstmState._.proj4 = Plus (z.x.lstmState._.proj4.PlusArgs[0], z.x.lstmState._.proj4.PlusArgs[1]) : [4096 x *1], [4096] -> [4096 x *1]
+Validating --> z.x.lstmState._.otProj = Slice (z.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState._.ot = Sigmoid (z.x.lstmState._.otProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState._.ftProj = Slice (z.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState._.ft = Sigmoid (z.x.lstmState._.ftProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState._.bft = ElementTimes (z.x.lstmState._.ft, z.x.prevState.c) : [1024 x *1], [1024] -> [1024 x *1]
+Validating --> z.x.lstmState._.itProj = Slice (z.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState._.it = Sigmoid (z.x.lstmState._.itProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState._.bitProj = Slice (z.x.lstmState._.proj4) : [4096 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState._.bit.ElementTimesArgs[1] = Tanh (z.x.lstmState._.bitProj) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState._.bit = ElementTimes (z.x.lstmState._.it, z.x.lstmState._.bit.ElementTimesArgs[1]) : [1024 x *1], [1024 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState._.ct = Plus (z.x.lstmState._.bft, z.x.lstmState._.bit) : [1024 x *1], [1024 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState._.ht.ElementTimesArgs[1] = Tanh (z.x.lstmState._.ct) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState._.ht = ElementTimes (z.x.lstmState._.ot, z.x.lstmState._.ht.ElementTimesArgs[1]) : [1024 x *1], [1024 x *1] -> [1024 x *1]
+Validating --> z.x.lstmState.h = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.Wmr, z.x.lstmState._.ht) : [256 x 1024], [1024 x *1] -> [256 x *1]
+Validating --> z.x.PlusArgs[0] = Times (modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W, z.x.lstmState.h) : [132 x 256], [256 x *1] -> [132 x *1]
+Validating --> modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b = LearnableParameter() :  -> [132]
+Validating --> z = Plus (z.x.PlusArgs[0], modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b) : [132 x *1], [132] -> [132 x *1]
+Validating --> ce.matrix.MinusArgs[0].r = ReduceElements (z) : [132 x *1] -> [1 x *1]
+Validating --> labels = InputValue() :  -> [132 x *1]
+Validating --> ce.matrix.MinusArgs[1] = TransposeTimes (labels, z) : [132 x *1], [132 x *1] -> [1 x *1]
+Validating --> ce.matrix = Minus (ce.matrix.MinusArgs[0].r, ce.matrix.MinusArgs[1]) : [1 x *1], [1 x *1] -> [1 x *1]
+Validating --> ce = SumElements (ce.matrix) : [1 x *1] -> [1]
+Validating --> BS.Constants.One = LearnableParameter() :  -> [1]
+Validating --> err.matrix.MinusArgs[1].rightMatrix = Hardmax (z) : [132 x *1] -> [132 x *1]
+Validating --> err.matrix.MinusArgs[1] = TransposeTimes (labels, err.matrix.MinusArgs[1].rightMatrix) : [132 x *1], [132 x *1] -> [1 x *1]
+Validating --> err.matrix = Minus (BS.Constants.One, err.matrix.MinusArgs[1]) : [1], [1 x *1] -> [1 x *1]
+Validating --> err = SumElements (err.matrix) : [1 x *1] -> [1]
+Validating --> logPrior._ = Mean (labels) : [132 x *1] -> [132]
+Validating --> logPrior = Log (logPrior._) : [132] -> [132]
+Validating --> scaledLogLikelihood._ = Minus (z, logPrior) : [132 x *1], [132] -> [132 x *1]
+Validating --> scaledLogLikelihood = Pass (scaledLogLikelihood._) : [132 x *1] -> [132 x *1]
+
+Validating network. 81 nodes to process in pass 2.
+
+Validating --> z.x.x.x.prevState.h = PastValue (z.x.x.x.lstmState.h) : [256 x *1] -> [256 x *1]
+Validating --> z.x.x.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.H, z.x.x.x.prevState.h) : [4096 x 256], [256 x *1] -> [4096 x *1]
+Validating --> z.x.x.x.prevState.c = PastValue (z.x.x.x.lstmState._.ct) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.x.prevState.h = PastValue (z.x.x.lstmState.h) : [256 x *1] -> [256 x *1]
+Validating --> z.x.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.H, z.x.x.prevState.h) : [4096 x 256], [256 x *1] -> [4096 x *1]
+Validating --> z.x.x.prevState.c = PastValue (z.x.x.lstmState._.ct) : [1024 x *1] -> [1024 x *1]
+Validating --> z.x.prevState.h = PastValue (z.x.lstmState.h) : [256 x *1] -> [256 x *1]
+Validating --> z.x.lstmState._.proj4.PlusArgs[1] = Times (modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.H, z.x.prevState.h) : [4096 x 256], [256 x *1] -> [4096 x *1]
+Validating --> z.x.prevState.c = PastValue (z.x.lstmState._.ct) : [1024 x *1] -> [1024 x *1]
+
+Validating network. 9 nodes to process in pass 3.
+
+
+Validating network, final pass.
+
+
+
+
+Post-processing network complete.
+
+reading script file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.scp ... 948 entries
+total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list
+htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-Created model with 98 nodes on GPU 0.
+12/15/2016 08:48:06: 
+Model has 98 nodes. Using CPU.
 
-Training criterion node(s):
-	ce = SumElements
-
-Evaluation criterion node(s):
-	err = SumElements
+12/15/2016 08:48:06: Training criterion:   ce = SumElements
+12/15/2016 08:48:06: Evaluation criterion: err = SumElements
 
 
 Allocating matrices for forward and/or backward propagation.
 
 Memory Sharing: Out of 178 matrices, 116 are shared as 42, and 62 are not shared.
 
-	{ z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0] : [4096] (gradient)
-	  z.x.prevState.h : [256 x *] }
-	{ z.x.prevState.c : [1024 x *]
-	  z.x.x.lstmState._.bit.ElementTimesArgs[1] : [1024 x *] (gradient)
-	  z.x.x.x.lstmState._.proj4.PlusArgs[0] : [4096 x *] (gradient)
-	  z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [4096 x 33] (gradient) }
-	{ z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0] : [4096] (gradient)
-	  z.x.x.x.prevState.h : [256 x *] }
-	{ realFeatures : [363 x *]
-	  z.x.x.ElementTimesArgs[0] : [33 x *]
-	  z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *]
-	  z.x.x.x.lstmState._.proj4.PlusArgs[1] : [4096 x *] }
-	{ z.x.x.lstmState._.ot : [1024 x *]
-	  z.x.x.x.lstmState._.ht.ElementTimesArgs[1] : [1024 x *] (gradient) }
-	{ z.x.x.lstmState._.ft : [1024 x *]
-	  z.x.x.x.lstmState._.bit : [1024 x *] (gradient) }
-	{ z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *]
-	  z.x.x.lstmState._.proj4.PlusArgs[1] : [4096 x *]
-	  z.x.x.x.lstmState._.proj4.PlusArgs[0] : [4096 x *] }
-	{ feashift : [33 x *]
-	  realFeatures.x : [363 x 1 x *]
-	  z.x.x : [33 x *] }
-	{ z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *]
-	  z.x.lstmState._.proj4.PlusArgs[1] : [4096 x *]
-	  z.x.x.lstmState._.proj4.PlusArgs[0] : [4096 x *] }
-	{ z.x.x.lstmState._.bit.ElementTimesArgs[1] : [1024 x *]
-	  z.x.x.x.lstmState._.otProj : [1024 x *] (gradient) }
-	{ z.x.lstmState._.it : [1024 x *]
-	  z.x.x.lstmState._.ft : [1024 x *] (gradient)
-	  z.x.x.x.lstmState._.it : [1024 x *] (gradient) }
-	{ modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W : [132 x 256] (gradient)
-	  z : [132 x *] }
 	{ ce : [1] (gradient)
-	  err.matrix : [1 x *]
-	  scaledLogLikelihood._ : [132 x *] }
-	{ ce.matrix : [1 x *]
-	  err.matrix.MinusArgs[1].rightMatrix : [132 x *] }
-	{ z.x.lstmState._.bit.ElementTimesArgs[1] : [1024 x *]
-	  z.x.x.lstmState._.otProj : [1024 x *] (gradient)
-	  z.x.x.x.lstmState._.ot : [1024 x *] (gradient) }
-	{ z.x.x.lstmState._.ht.ElementTimesArgs[1] : [1024 x *]
-	  z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *] (gradient)
-	  z.x.x.x.prevState.h : [256 x *] (gradient) }
-	{ ce.matrix.MinusArgs[0].r : [1 x *]
-	  modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.Wmr : [256 x 1024] (gradient)
-	  z.x.PlusArgs[0] : [132 x *]
-	  z.x.PlusArgs[0] : [132 x *] (gradient)
-	  z.x.lstmState._.proj4.PlusArgs[0] : [4096 x *] }
-	{ z.x.lstmState._.ft : [1024 x *]
-	  z.x.x.lstmState._.bit : [1024 x *] (gradient)
-	  z.x.x.x.lstmState._.proj4.PlusArgs[1] : [4096 x *] (gradient) }
-	{ ce.matrix : [1 x *] (gradient)
-	  ce.matrix.MinusArgs[1] : [1 x *]
-	  err.matrix.MinusArgs[1] : [1 x *]
-	  z : [132 x *] (gradient)
-	  z.x.lstmState.h : [256 x *] (gradient) }
-	{ z.x.lstmState._.ot : [1024 x *]
-	  z.x.x.lstmState._.ht.ElementTimesArgs[1] : [1024 x *] (gradient) }
-	{ z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0] : [4096] (gradient)
-	  z.x.x.prevState.h : [256 x *] }
-	{ z.x.x.lstmState._.it : [1024 x *]
-	  z.x.x.x.lstmState._.ft : [1024 x *] (gradient) }
-	{ z.x.lstmState._.ct : [1024 x *] (gradient)
-	  z.x.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0] : [4096 x 256] (gradient) }
-	{ z.x.lstmState._.bft : [1024 x *] (gradient)
-	  z.x.x.lstmState._.proj4 : [4096 x *] (gradient)
-	  z.x.x.x.lstmState._.ht : [1024 x *] (gradient) }
-	{ z.x.lstmState._.bit : [1024 x *] (gradient)
-	  z.x.x.lstmState._.proj4.PlusArgs[1] : [4096 x *] (gradient)
-	  z.x.x.x.lstmState.h : [256 x *] (gradient) }
-	{ ce.matrix.MinusArgs[1] : [1 x *] (gradient)
-	  z.x.lstmState._.ht : [1024 x *] (gradient) }
-	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.Wmr : [256 x 1024] (gradient)
-	  z.x.lstmState._.ht.ElementTimesArgs[1] : [1024 x *]
-	  z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *] (gradient)
-	  z.x.x.prevState.h : [256 x *] (gradient) }
-	{ ce.matrix.MinusArgs[0].r : [1 x *] (gradient)
+	  err.matrix : [1 x *1]
+	  scaledLogLikelihood._ : [132 x *1] }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.W : [4096 x 33] (gradient)
+	  z.x.prevState.c : [1024 x *1]
+	  z.x.x.lstmState._.bit.ElementTimesArgs[1] : [1024 x *1] (gradient)
+	  z.x.x.x.lstmState._.proj4.PlusArgs[0] : [4096 x *1] (gradient) }
+	{ ce.matrix : [1 x *1]
+	  err.matrix.MinusArgs[1].rightMatrix : [132 x *1] }
+	{ ce.matrix.MinusArgs[0].r : [1 x *1] (gradient)
 	  modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b : [132] (gradient) }
-	{ z.x.lstmState._.ot : [1024 x *] (gradient)
-	  z.x.x.lstmState._.ct : [1024 x *] (gradient)
-	  z.x.x.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0] : [4096 x 256] (gradient) }
-	{ z.x.lstmState._.it : [1024 x *] (gradient)
-	  z.x.x.prevState.c : [1024 x *] (gradient)
-	  z.x.x.x.lstmState._.bitProj : [1024 x *] (gradient) }
-	{ z.x.lstmState._.bit.ElementTimesArgs[1] : [1024 x *] (gradient)
-	  z.x.x.lstmState._.proj4.PlusArgs[0] : [4096 x *] (gradient)
-	  z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [4096 x 256] (gradient) }
-	{ z.x.x.prevState.c : [1024 x *]
-	  z.x.x.x.lstmState._.bit.ElementTimesArgs[1] : [1024 x *] (gradient) }
-	{ z.x.lstmState._.bitProj : [1024 x *] (gradient)
-	  z.x.x.lstmState._.ftProj : [1024 x *] (gradient)
-	  z.x.x.x.lstmState._.bft : [1024 x *] (gradient) }
+	{ ce.matrix : [1 x *1] (gradient)
+	  ce.matrix.MinusArgs[1] : [1 x *1]
+	  err.matrix.MinusArgs[1] : [1 x *1]
+	  z : [132 x *1] (gradient)
+	  z.x.lstmState.h : [256 x *1] (gradient) }
+	{ ce.matrix.MinusArgs[1] : [1 x *1] (gradient)
+	  z.x.lstmState._.ht : [1024 x *1] (gradient) }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.B : [4096] (gradient)
+	  z.x.prevState.h : [256 x *1] }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.B : [4096] (gradient)
+	  z.x.x.prevState.h : [256 x *1] }
+	{ z.x.x.prevState.c : [1024 x *1]
+	  z.x.x.x.lstmState._.bit.ElementTimesArgs[1] : [1024 x *1] (gradient) }
+	{ modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W : [132 x 256] (gradient)
+	  z : [132 x *1] }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.H : [4096 x 256] (gradient)
+	  z.x.lstmState._.ot : [1024 x *1] (gradient)
+	  z.x.x.lstmState._.ct : [1024 x *1] (gradient) }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.B : [4096] (gradient)
+	  z.x.x.x.prevState.h : [256 x *1] }
+	{ z.x.lstmState._.proj4 : [4096 x *1] (gradient)
+	  z.x.x.lstmState._.ht : [1024 x *1] (gradient) }
+	{ z.x.lstmState._.itProj : [1024 x *1] (gradient)
+	  z.x.x.lstmState._.itProj : [1024 x *1] (gradient)
+	  z.x.x.x.lstmState._.itProj : [1024 x *1] (gradient) }
+	{ z.x.lstmState._.it : [1024 x *1] (gradient)
+	  z.x.x.prevState.c : [1024 x *1] (gradient)
+	  z.x.x.x.lstmState._.bitProj : [1024 x *1] (gradient) }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.H : [4096 x 256] (gradient)
+	  z.x.lstmState._.ct : [1024 x *1] (gradient) }
+	{ z.x.lstmState._.ft : [1024 x *1] (gradient)
+	  z.x.x.lstmState._.it : [1024 x *1] (gradient)
+	  z.x.x.x.prevState.c : [1024 x *1] (gradient) }
+	{ z.x.lstmState._.otProj : [1024 x *1] (gradient)
+	  z.x.x.lstmState._.ot : [1024 x *1] (gradient)
+	  z.x.x.x.lstmState._.ct : [1024 x *1] (gradient) }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.W : [4096 x 256] (gradient)
+	  z.x.lstmState._.proj4.PlusArgs[0] : [4096 x *1] (gradient) }
+	{ z.x.lstmState._.bft : [1024 x *1] (gradient)
+	  z.x.x.lstmState._.proj4 : [4096 x *1] (gradient)
+	  z.x.x.x.lstmState._.ht : [1024 x *1] (gradient) }
 	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.Wmr : [256 x 1024] (gradient)
-	  z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *] (gradient)
-	  z.x.prevState.h : [256 x *] (gradient) }
-	{ z.x.lstmState._.proj4 : [4096 x *] (gradient)
-	  z.x.x.lstmState._.ht : [1024 x *] (gradient) }
-	{ z.x.lstmState._.ftProj : [1024 x *] (gradient)
-	  z.x.x.lstmState._.bft : [1024 x *] (gradient)
-	  z.x.x.x.lstmState._.proj4 : [4096 x *] (gradient) }
-	{ z.x.lstmState._.ft : [1024 x *] (gradient)
-	  z.x.x.lstmState._.it : [1024 x *] (gradient)
-	  z.x.x.x.prevState.c : [1024 x *] (gradient) }
-	{ z.x.lstmState._.otProj : [1024 x *] (gradient)
-	  z.x.x.lstmState._.ot : [1024 x *] (gradient)
-	  z.x.x.x.lstmState._.ct : [1024 x *] (gradient) }
-	{ z.x.lstmState._.proj4.PlusArgs[1] : [4096 x *] (gradient)
-	  z.x.x.lstmState.h : [256 x *] (gradient) }
-	{ z.x.lstmState._.proj4.PlusArgs[0] : [4096 x *] (gradient)
-	  z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [4096 x 256] (gradient) }
-	{ z.x.lstmState._.itProj : [1024 x *] (gradient)
-	  z.x.x.lstmState._.itProj : [1024 x *] (gradient)
-	  z.x.x.x.lstmState._.itProj : [1024 x *] (gradient) }
-	{ z.x.prevState.c : [1024 x *] (gradient)
-	  z.x.x.lstmState._.bitProj : [1024 x *] (gradient)
-	  z.x.x.x.lstmState._.ftProj : [1024 x *] (gradient) }
+	  z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *1] (gradient)
+	  z.x.prevState.h : [256 x *1] (gradient) }
+	{ z.x.lstmState._.bit : [1024 x *1] (gradient)
+	  z.x.x.lstmState._.proj4.PlusArgs[1] : [4096 x *1] (gradient)
+	  z.x.x.x.lstmState.h : [256 x *1] (gradient) }
+	{ z.x.lstmState._.proj4.PlusArgs[1] : [4096 x *1] (gradient)
+	  z.x.x.lstmState.h : [256 x *1] (gradient) }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.W : [4096 x 256] (gradient)
+	  z.x.lstmState._.bit.ElementTimesArgs[1] : [1024 x *1] (gradient)
+	  z.x.x.lstmState._.proj4.PlusArgs[0] : [4096 x *1] (gradient) }
+	{ z.x.prevState.c : [1024 x *1] (gradient)
+	  z.x.x.lstmState._.bitProj : [1024 x *1] (gradient)
+	  z.x.x.x.lstmState._.ftProj : [1024 x *1] (gradient) }
+	{ z.x.lstmState._.bitProj : [1024 x *1] (gradient)
+	  z.x.x.lstmState._.ftProj : [1024 x *1] (gradient)
+	  z.x.x.x.lstmState._.bft : [1024 x *1] (gradient) }
+	{ z.x.lstmState._.ftProj : [1024 x *1] (gradient)
+	  z.x.x.lstmState._.bft : [1024 x *1] (gradient)
+	  z.x.x.x.lstmState._.proj4 : [4096 x *1] (gradient) }
+	{ z.x.x.lstmState._.ht.ElementTimesArgs[1] : [1024 x *1]
+	  z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *1] (gradient)
+	  z.x.x.x.prevState.h : [256 x *1] (gradient) }
+	{ z.x.lstmState._.it : [1024 x *1]
+	  z.x.x.lstmState._.ft : [1024 x *1] (gradient)
+	  z.x.x.x.lstmState._.it : [1024 x *1] (gradient) }
+	{ z.x.lstmState._.bit.ElementTimesArgs[1] : [1024 x *1]
+	  z.x.x.lstmState._.otProj : [1024 x *1] (gradient)
+	  z.x.x.x.lstmState._.ot : [1024 x *1] (gradient) }
+	{ z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *1]
+	  z.x.lstmState._.proj4.PlusArgs[1] : [4096 x *1]
+	  z.x.x.lstmState._.proj4.PlusArgs[0] : [4096 x *1] }
+	{ z.x.x.lstmState._.bit.ElementTimesArgs[1] : [1024 x *1]
+	  z.x.x.x.lstmState._.otProj : [1024 x *1] (gradient) }
+	{ z.x.x.lstmState._.ft : [1024 x *1]
+	  z.x.x.x.lstmState._.bit : [1024 x *1] (gradient) }
+	{ ce.matrix.MinusArgs[0].r : [1 x *1]
+	  modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.Wmr : [256 x 1024] (gradient)
+	  z.x.PlusArgs[0] : [132 x *1]
+	  z.x.PlusArgs[0] : [132 x *1] (gradient)
+	  z.x.lstmState._.proj4.PlusArgs[0] : [4096 x *1] }
+	{ modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.Wmr : [256 x 1024] (gradient)
+	  z.x.lstmState._.ht.ElementTimesArgs[1] : [1024 x *1]
+	  z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *1] (gradient)
+	  z.x.x.prevState.h : [256 x *1] (gradient) }
+	{ z.x.x.lstmState._.it : [1024 x *1]
+	  z.x.x.x.lstmState._.ft : [1024 x *1] (gradient) }
+	{ z.x.x.lstmState._.ot : [1024 x *1]
+	  z.x.x.x.lstmState._.ht.ElementTimesArgs[1] : [1024 x *1] (gradient) }
+	{ z.x.lstmState._.ot : [1024 x *1]
+	  z.x.x.lstmState._.ht.ElementTimesArgs[1] : [1024 x *1] (gradient) }
+	{ z.x.lstmState._.ft : [1024 x *1]
+	  z.x.x.lstmState._.bit : [1024 x *1] (gradient)
+	  z.x.x.x.lstmState._.proj4.PlusArgs[1] : [4096 x *1] (gradient) }
+	{ feashift : [33 x *1]
+	  realFeatures.x : [363 x 1 x *1]
+	  z.x.x : [33 x *1] }
+	{ realFeatures : [363 x *1]
+	  z.x.x.ElementTimesArgs[0] : [33 x *1]
+	  z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *1]
+	  z.x.x.x.lstmState._.proj4.PlusArgs[1] : [4096 x *1] }
+	{ z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1] : [4096 x *1]
+	  z.x.x.lstmState._.proj4.PlusArgs[1] : [4096 x *1]
+	  z.x.x.x.lstmState._.proj4.PlusArgs[0] : [4096 x *1] }
 
 
-Training 6210692 parameters in 14 out of 14 parameter tensors and 80 nodes with gradient:
+12/15/2016 08:48:06: Training 6210692 parameters in 14 out of 14 parameter tensors and 80 nodes with gradient:
 
-	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.Wmr' (LearnableParameter operation) : [256 x 1024]
-	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.Wmr' (LearnableParameter operation) : [256 x 1024]
-	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.Wmr' (LearnableParameter operation) : [256 x 1024]
-	Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) : [132 x 256]
-	Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b' (LearnableParameter operation) : [132]
-	Node 'z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0]' (LearnableParameter operation) : [4096]
-	Node 'z.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [4096 x 256]
-	Node 'z.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [4096 x 256]
-	Node 'z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0]' (LearnableParameter operation) : [4096]
-	Node 'z.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [4096 x 256]
-	Node 'z.x.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [4096 x 256]
-	Node 'z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[0]' (LearnableParameter operation) : [4096]
-	Node 'z.x.x.x.lstmState._.proj4.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [4096 x 33]
-	Node 'z.x.x.x.lstmState._.proj4.PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [4096 x 256]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.B' (LearnableParameter operation) : [4096]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.H' (LearnableParameter operation) : [4096 x 256]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.W' (LearnableParameter operation) : [4096 x 33]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[0].arrayOfFunctions[1].lstm.Wmr' (LearnableParameter operation) : [256 x 1024]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.B' (LearnableParameter operation) : [4096]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.H' (LearnableParameter operation) : [4096 x 256]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.W' (LearnableParameter operation) : [4096 x 256]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[1].arrayOfFunctions[1].lstm.Wmr' (LearnableParameter operation) : [256 x 1024]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.B' (LearnableParameter operation) : [4096]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.H' (LearnableParameter operation) : [4096 x 256]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.W' (LearnableParameter operation) : [4096 x 256]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[1].arrayOfFunctions[2].arrayOfFunctions[1].lstm.Wmr' (LearnableParameter operation) : [256 x 1024]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].W' (LearnableParameter operation) : [132 x 256]
+12/15/2016 08:48:06: 	Node 'modelUsingLayers.arrayOfFunctions[2].arrayOfFunctions[0].b' (LearnableParameter operation) : [132]
 
 
-Precomputing --> 3 PreCompute nodes found.
+12/15/2016 08:48:06: Precomputing --> 3 PreCompute nodes found.
 
-	z.x.x.mean = Mean()
-	z.x.x.invStdDev = InvStdDev()
-	logPrior._ = Mean()
+12/15/2016 08:48:06: 	z.x.x.mean = Mean()
+12/15/2016 08:48:06: 	z.x.x.invStdDev = InvStdDev()
+12/15/2016 08:48:06: 	logPrior._ = Mean()
 minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
-Precomputing --> Completed.
+12/15/2016 08:48:07: Precomputing --> Completed.
 
 
-Starting Epoch 1: learning rate per sample = 0.025000  effective momentum = 0.992031  momentum as time constant = 2499.8 samples
+12/15/2016 08:48:08: Starting Epoch 1: learning rate per sample = 0.025000  effective momentum = 0.992031  momentum as time constant = 2499.8 samples
 minibatchiterator: epoch 0: frames [0..2560] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 
-Starting minibatch loop.
- Epoch[ 1 of 2]-Minibatch[   1-   1, 0.78%]: ce = 4.88288800 * 886; err = 0.99887133 * 886; time = 1.5565s; samplesPerSecond = 569.2
- Epoch[ 1 of 2]-Minibatch[   2-   2, 1.56%]: ce = 4.57590181 * 226; err = 0.76106195 * 226; time = 0.3677s; samplesPerSecond = 614.7
- Epoch[ 1 of 2]-Minibatch[   3-   3, 2.34%]: ce = 4.28189238 * 526; err = 0.82889734 * 526; time = 0.6436s; samplesPerSecond = 817.3
- Epoch[ 1 of 2]-Minibatch[   4-   4, 3.13%]: ce = 4.43660499 * 946; err = 0.89217759 * 946; time = 1.5118s; samplesPerSecond = 625.7
-Finished Epoch[ 1 of 2]: [Training] ce = 4.57031590 * 2584; err = 0.90441176 * 2584; totalSamplesSeen = 2584; learningRatePerSample = 0.025; epochTime=4.08307s
-SGD: Saving checkpoint model 'c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance/models/cntkSpeech.dnn.1'
+12/15/2016 08:48:08: Starting minibatch loop.
+12/15/2016 08:48:11:  Epoch[ 1 of 2]-Minibatch[   1-   1, 0.78%]: ce = 4.88279982 * 886; err = 0.99435666 * 886; time = 2.8885s; samplesPerSecond = 306.7
+12/15/2016 08:48:11:  Epoch[ 1 of 2]-Minibatch[   2-   2, 1.56%]: ce = 4.57616107 * 226; err = 0.76106195 * 226; time = 0.8830s; samplesPerSecond = 256.0
+12/15/2016 08:48:13:  Epoch[ 1 of 2]-Minibatch[   3-   3, 2.34%]: ce = 4.28233053 * 526; err = 0.82889734 * 526; time = 1.6640s; samplesPerSecond = 316.1
+12/15/2016 08:48:17:  Epoch[ 1 of 2]-Minibatch[   4-   4, 3.13%]: ce = 4.43701791 * 946; err = 0.89217759 * 946; time = 3.9746s; samplesPerSecond = 238.0
+12/15/2016 08:48:17: Finished Epoch[ 1 of 2]: [Training] ce = 4.57054870 * 2584; err = 0.90286378 * 2584; totalSamplesSeen = 2584; learningRatePerSample = 0.025; epochTime=9.41245s
+12/15/2016 08:48:17: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu/models/cntkSpeech.dnn.1'
 
-Starting Epoch 2: learning rate per sample = 0.025000  effective momentum = 0.992031  momentum as time constant = 2499.8 samples
+12/15/2016 08:48:18: Starting Epoch 2: learning rate per sample = 0.025000  effective momentum = 0.992031  momentum as time constant = 2499.8 samples
 minibatchiterator: epoch 1: frames [2560..5120] (first utterance at frame 2584), data subset 0 of 1, with 1 datapasses
 
-Starting minibatch loop.
- Epoch[ 2 of 2]-Minibatch[   1-   1, 0.78%]: ce = 4.20906699 * 594; err = 0.89057239 * 594; time = 0.9073s; samplesPerSecond = 654.7
- Epoch[ 2 of 2]-Minibatch[   2-   2, 1.56%]: ce = 4.58868313 * 386; err = 0.95854922 * 386; time = 0.5591s; samplesPerSecond = 690.3
- Epoch[ 2 of 2]-Minibatch[   3-   3, 2.34%]: ce = 4.01516544 * 884; err = 0.91176471 * 884; time = 1.1601s; samplesPerSecond = 762.0
- Epoch[ 2 of 2]-Minibatch[   4-   4, 3.13%]: ce = 3.98171216 * 946; err = 0.91754757 * 946; time = 1.2278s; samplesPerSecond = 770.5
-Finished Epoch[ 2 of 2]: [Training] ce = 4.12367382 * 2810; err = 0.91565836 * 2810; totalSamplesSeen = 5394; learningRatePerSample = 0.025; epochTime=3.85718s
-SGD: Saving checkpoint model 'c:\work\CNTK\Tests\EndToEndTests\Speech\RunDir\LSTM\FullUtterance/models/cntkSpeech.dnn'
-CNTKCommandTrainEnd: speechTrain
+12/15/2016 08:48:18: Starting minibatch loop.
+12/15/2016 08:48:20:  Epoch[ 2 of 2]-Minibatch[   1-   1, 0.78%]: ce = 4.21058033 * 594; err = 0.89057239 * 594; time = 2.0331s; samplesPerSecond = 292.2
+12/15/2016 08:48:21:  Epoch[ 2 of 2]-Minibatch[   2-   2, 1.56%]: ce = 4.58803926 * 386; err = 0.95854922 * 386; time = 1.3658s; samplesPerSecond = 282.6
+12/15/2016 08:48:24:  Epoch[ 2 of 2]-Minibatch[   3-   3, 2.34%]: ce = 4.01458381 * 884; err = 0.91176471 * 884; time = 3.1475s; samplesPerSecond = 280.9
+12/15/2016 08:48:28:  Epoch[ 2 of 2]-Minibatch[   4-   4, 3.13%]: ce = 3.98343354 * 946; err = 0.91754757 * 946; time = 3.5471s; samplesPerSecond = 266.7
+12/15/2016 08:48:28: Finished Epoch[ 2 of 2]: [Training] ce = 4.12430181 * 2810; err = 0.91565836 * 2810; totalSamplesSeen = 5394; learningRatePerSample = 0.025; epochTime=10.095s
+12/15/2016 08:48:28: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082658.690476\Speech\LSTM_FullUtteranceLayers@release_cpu/models/cntkSpeech.dnn'
 
-Action "train" complete.
+12/15/2016 08:48:28: Action "train" complete.
 
-__COMPLETED__
+12/15/2016 08:48:28: __COMPLETED__
