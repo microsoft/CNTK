@@ -15,11 +15,12 @@ def test_cntk_205_artistic_style_transfer_noErrors(nb):
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
-expected_cpu_objective = '7528293.5'
-expected_gpu_objective = '2357408.8'
+expected_objective = 17192486.0
+relative_tolerance = 1e-5
 
 def test_cntk_205_artistic_style_transfer_evalCorrect(nb):
     testCell = [cell for cell in nb.cells
                 if cell.cell_type == 'code' and re.search('objfun(xstar', cell.source)]
     assert len(testCell) == 1
-    assert testCell[0].outputs[0]['data']['text/plain'] == expected_gpu_objective
+    actual_objective = float(testCell[0].outputs[0]['data']['text/plain'])
+    assert abs((actual_objective-expected_objective)/expected_objective) < relative_tolerance
