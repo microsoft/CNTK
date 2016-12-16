@@ -96,8 +96,9 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     // Pick up the randomizer, always picking up no randomization for the write mode.
     bool randomize = isActionWrite ? false : config(L"randomize", false);
 
-    // Check whether to use local timeline.
-    bool localTimeline = config(L"localTimeline", false);
+    // Check whether to use local timeline, by default we use it for better performance.
+    // Currently used only in frame mode.
+    bool localTimeline = config(L"localTimeline", true);
 
     // By default do not use omp threads for deserialization of sequences.
     // It makes sense to put it to true for cases when deserialization is CPU intensive,
@@ -109,13 +110,10 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         size_t randomizationWindow = requestDataSize;
 
         // Currently in case of images, a single chunk is a single image. So no need to randomize, chunks will be randomized anyway.
-        // Setting localtimeline for the image reader by default.
-        // TODO: set local timeline to others by default. This will currently break all baselines though.
         if (ContainsDeserializer(config, L"ImageDeserializer") && m_deserializers.size() == 1)
         {
             randomizationWindow = 1;
             m_packingMode = PackingMode::sample;
-            localTimeline = true;
         }
 
         randomizationWindow = config(L"randomizationWindow", randomizationWindow);
