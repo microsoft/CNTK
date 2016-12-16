@@ -83,13 +83,15 @@ public:
     }
 };
 
-MinibatchSourcePtr TextFormatMinibatchSourceWithMockCommunicator(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true, size_t distributedAfterSampleCount = MinibatchSource::InfiniteSamples, size_t numWorkers = 2, size_t workerRank = 0)
+MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize, bool randomize, size_t distributedAfterSampleCount, size_t numWorkers, size_t workerRank, size_t chunkSizeInBytes)
 {
     ::CNTK::Dictionary minibatchSourceConfiguration;
     minibatchSourceConfiguration[L"epochSize"] = epochSize;
 
     if (randomize)
         minibatchSourceConfiguration[L"randomize"] = true;
+    else
+        minibatchSourceConfiguration[L"randomize"] = false;
 
     ::CNTK::Dictionary deserializerConfiguration;
     deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
@@ -113,6 +115,7 @@ MinibatchSourcePtr TextFormatMinibatchSourceWithMockCommunicator(const std::wstr
     }
 
     deserializerConfiguration[L"input"] = inputStreamsConfig;
+    deserializerConfiguration[L"chunkSizeInBytes"] = chunkSizeInBytes;
     minibatchSourceConfiguration[L"deserializers"] = std::vector<::CNTK::DictionaryValue>({ deserializerConfiguration });
     minibatchSourceConfiguration[L"distributedAfterSampleCount"] = distributedAfterSampleCount;
     minibatchSourceConfiguration[L"numWorkers"] = numWorkers;
@@ -120,7 +123,7 @@ MinibatchSourcePtr TextFormatMinibatchSourceWithMockCommunicator(const std::wstr
     return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
 }
 
-void TestMinibatchSourceWarmStart(size_t numMBs, size_t minibatchSize, size_t warmStartSamples, bool randomize)
+void TestMinibatchSourceWarmStart(size_t numMBs, size_t minibatchSize, size_t warmStartSamples, bool randomize, size_t chunkSizeInBytes, bool expectNoData = false)
 {
     const size_t inputDim = 2;
     const size_t numOutputClasses = 2;
@@ -128,23 +131,25 @@ void TestMinibatchSourceWarmStart(size_t numMBs, size_t minibatchSize, size_t wa
     auto labelsStreamName = L"labels";
     const size_t numWorkers = 2;
 
-    auto minibatchSource = TextFormatMinibatchSourceWithMockCommunicator(
+    auto minibatchSource = TextFormatMinibatchSource(
         L"SimpleDataTrain_cntk_text.txt",
         { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },
         MinibatchSource::InfinitelyRepeat,
         randomize,
         warmStartSamples,
         numWorkers,
-        0);
+        0,
+        chunkSizeInBytes);
 
-    auto minibatchSource2 = TextFormatMinibatchSourceWithMockCommunicator(
+    auto minibatchSource2 = TextFormatMinibatchSource(
         L"SimpleDataTrain_cntk_text.txt",
         { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },
         MinibatchSource::InfinitelyRepeat,
         randomize,
         warmStartSamples,
         numWorkers,
-        1);
+        1,
+        chunkSizeInBytes);
 
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
@@ -166,37 +171,45 @@ void TestMinibatchSourceWarmStart(size_t numMBs, size_t minibatchSize, size_t wa
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize);
         auto minibatchData2 = minibatchSource2->GetNextMinibatch(minibatchSize);
 
-        // NOTE: the expectedNumSamples are valid only in this test case scenario
         size_t expectedNumSamples = minibatchSize;
         size_t numSamples = minibatchData[featureStreamInfo].m_numSamples;
-        size_t numSamples2 = minibatchData2[featureStreamInfo].m_numSamples;
 
-        if (!distributed && numSamples != numSamples2)
+        if (expectNoData && distributed2)
         {
-            ReportFailure("TestMinibatchSourceWarmStart failed in sample count: expected %lu, distributed %d (0:%lu, 1:%lu)",
-                expectedNumSamples, distributed, numSamples, numSamples2);
+            if (numSamples != expectedNumSamples/2 || !minibatchData2.empty())
+                ReportFailure("TestMinibatchSourceWarmStart failed in sample count: expected %lu, distributed %d (0:%lu)", expectedNumSamples, distributed, numSamples);
+        }
+        else
+        {
+            size_t numSamples2 = minibatchData2[featureStreamInfo].m_numSamples;
+            if (numSamples != numSamples2)
+                ReportFailure("TestMinibatchSourceWarmStart failed in sample count: expected %lu, distributed %d (0:%lu, 1:%lu)", expectedNumSamples, distributed, numSamples, numSamples2);
         }
 
-        size_t actualNumSamples = distributed ? numSamples + numSamples2 : numSamples;
-
-        if (actualNumSamples != expectedNumSamples)
-        {
-            ReportFailure("TestMinibatchSourceWarmStart failed in sample count: expected %lu, actual %lu distributed %d (%lu+%lu)",
-                expectedNumSamples, actualNumSamples, distributed, numSamples, numSamples2);
-        }
-
-        totalSamples += actualNumSamples;
+        totalSamples += expectedNumSamples;
     }
 }
 
 void MinibatchSourceTests()
 {
-    // Test no-randomize minibatch source
-    TestMinibatchSourceWarmStart(10, 64, 128, false);
-    TestMinibatchSourceWarmStart(10, 64, 0, false);
-    TestMinibatchSourceWarmStart(10, 64, 100, false);
+    // Test no-randomize minibatch source with small data chunks
+    TestMinibatchSourceWarmStart(10, 64, 128, false, 1024);
+    TestMinibatchSourceWarmStart(10, 64, 0, false, 1024);
+    TestMinibatchSourceWarmStart(10, 64, 100, false, 1024);
 
-    // Test randomized minibatch source
-    TestMinibatchSourceWarmStart(10, 64, 0, true);
-    TestMinibatchSourceWarmStart(10, 64, 128, true);
+    // Test no-randomized minibatch source with a single chunk
+    size_t chunk32MB = 1024 * 1024 * 32;
+    TestMinibatchSourceWarmStart(10, 64, 128, false, chunk32MB);
+    TestMinibatchSourceWarmStart(10, 64, 0, false, chunk32MB);
+    TestMinibatchSourceWarmStart(10, 64, 100, false, chunk32MB);
+
+    // Test randomized minibatch source with small data chunks
+    TestMinibatchSourceWarmStart(10, 64, 0, true, 1024);
+    TestMinibatchSourceWarmStart(10, 64, 128, true, 1024);
+
+    // Test randomized minibatch source with no data for one of the workers 
+    // due to decimation based on chunks
+    bool expectNoData = true;
+    TestMinibatchSourceWarmStart(10, 64, 0, true, chunk32MB, expectNoData);
+    TestMinibatchSourceWarmStart(10, 64, 128, true, chunk32MB, expectNoData);
 }

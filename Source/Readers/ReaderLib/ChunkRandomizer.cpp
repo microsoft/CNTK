@@ -10,8 +10,8 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    ChunkRandomizer::ChunkRandomizer(IDataDeserializerPtr deserializer, size_t randomizationRangeInSamples, bool legacy) :
-        m_deserializer(deserializer), m_legacy(legacy), m_randomizationRangeInSamples(randomizationRangeInSamples)
+    ChunkRandomizer::ChunkRandomizer(IDataDeserializerPtr deserializer, size_t randomizationRangeInSamples) :
+        m_deserializer(deserializer), m_randomizationRangeInSamples(randomizationRangeInSamples)
     {
         m_originalChunks = m_deserializer->GetChunkDescriptions();
         assert(m_originalChunks.size() < CHUNKID_MAX);
@@ -23,7 +23,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return m_randomizedChunks;
     }
 
-    // Randomizes chunks depending on the mode (legacy or not) and calculates randomization windows.
+    // Randomizes chunks and calculates randomization windows.
     void ChunkRandomizer::Randomize(unsigned int seed)
     {
         std::vector<ChunkIdType> randomizedChunkIndices;

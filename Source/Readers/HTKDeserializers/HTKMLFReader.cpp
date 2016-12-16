@@ -113,7 +113,7 @@ HTKMLFReader::HTKMLFReader(const ConfigParameters& readerConfig)
     // TODO: this should be bool. Change when config per deserializer is allowed.
     if (AreEqualIgnoreCase(readMethod, std::wstring(L"blockRandomize")))
     {
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, window, bundler, true  /* should Prefetch */, true /* useLegacyRandomization */);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, window, bundler, true  /* should Prefetch */);
     }
     else if (AreEqualIgnoreCase(readMethod, std::wstring(L"none")))
     {

@@ -18,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // A randomizer that firstly randomizes chunks and then sequences inside a rolling window of chunks.
 // Uses ChunkRandomizer to randomize chunk descriptions and SequenceRandomizer to randomize sequence descriptions inside a window of chunks.
 // It requires only a window of sequence descriptions and corresponding chunk data.
-// The code is based on the old block randomizer and it preserves the same behavior to pass all available tests.
+// The code is based on the old block randomizer and it preserves the same behavior to pass all available tests (with useMersenneTwister=true for the old readers).
 // The high-level algorithm is:
 //     When next sequences are requested (limited by the sampleCount), the following steps are performed:
 //         1) if a new sweep is entered, randomize chunk descriptions using ChunkRandomizer, also precalculate randomization windows for all
@@ -40,14 +40,15 @@ public:
         size_t randomizationRangeInSamples,
         IDataDeserializerPtr deserializer,
         bool shouldPrefetch,
-        bool useLegacyRandomization = false,
         bool multithreadedGetNextSequences = false);
 
     // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;
 
-    // Gets next sequences.
-    virtual Sequences GetNextSequences(size_t sampleCount) override;
+    // Gets next sequences not exceeding global and local sample count.
+    // Global sample count - number of samples on a global timeline
+    // Local sample count - number of samples on a global timeline beloning to this worker.
+    virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) override;
 
     // Gets stream descriptions.
     virtual std::vector<StreamDescriptionPtr> GetStreamDescriptions() const override
@@ -74,12 +75,8 @@ private:
     // Load data for chunks if needed.
     void LoadDataChunks(const ClosedOpenChunkInterval& windowRange);
 
-    // Get next sequence descriptions that do not exceed sample count.
-    // Returns true if epoch end is reached.
-    bool GetNextSequenceDescriptions(size_t sampleCount, std::vector<RandomizedSequenceDescription>& result, ClosedOpenChunkInterval& windowRange);
-
-    // Decimates sequence descriptions and loads chunks of data.
-    void Decimate(const std::vector<RandomizedSequenceDescription>& all, std::vector<RandomizedSequenceDescription>& decimated);
+    // Get next sequence descriptions that do not exceed global and local sample count.
+    bool GetNextSequenceDescriptions(size_t globalSampleCount, size_t localSampleCount, std::vector<RandomizedSequenceDescription>& result, ClosedOpenChunkInterval& windowRange);
 
     // Prepares a new sweep if needed.
     void PrepareNewSweepIfNeeded(size_t samplePosition);
@@ -104,9 +101,6 @@ private:
 
     // Current sweep.
     size_t m_sweep;
-
-    // Global position of the current sweep in samples.
-    size_t m_sweepStartInSamples;
 
     // Total number of samples in a sweep.
     size_t m_sweepTotalNumberOfSamples;
@@ -149,6 +143,13 @@ private:
 
     // Current loaded chunks.
     ClosedOpenChunkInterval m_currentWindowRange;
+
+    // Sequence buffer, used to avoid reallocation only.
+    std::vector<RandomizedSequenceDescription> m_sequenceBuffer;
+
+    // Flag indicating whether in distributed mode the minibatch is filled completely
+    // with data local to the worker.
+    bool m_useLocalTimeline;
 };
 
 }}}
