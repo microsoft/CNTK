@@ -115,7 +115,7 @@ protected:
     // learning rate per sample provided outside
     floatargvector m_learningRatesParam;
     intargvector m_learningRatesSpecifiedForMBSize; // 1 for per sample, m_mbSize[] for per MB
-    floatargvector m_momentumParam;
+    doubleargvector m_momentumParam;
     intargvector m_momentumSpecifiedForMBSize;
     bool m_useNesterovMomentum;
 

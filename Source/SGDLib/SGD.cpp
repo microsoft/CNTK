@@ -2732,9 +2732,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     // We use 'momentumAsTimeConstant' to specify the time constant of the low-pass filter that momentum really is.
     // To convert a typical per-MB momentum value of 'm' used with a MB size of 'N', use momentumAsTimeConstant = -N/ln(m).
     // For the common configuration of momentum 0.9 at MB size of 256, that is momentumAsTimeConstant = 2429.8.
-    floatargvector momentumPerMB = configSGD(L"momentumPerMB", ConfigRecordType::Array(floatargvector()));
-    floatargvector momentumPerSample = configSGD(L"momentumPerSample", ConfigRecordType::Array(floatargvector()));
-    floatargvector momentumAsTimeConstant = configSGD(L"momentumAsTimeConstant", ConfigRecordType::Array(floatargvector()));
+    doubleargvector momentumPerMB = configSGD(L"momentumPerMB", ConfigRecordType::Array(doubleargvector()));
+    doubleargvector momentumPerSample = configSGD(L"momentumPerSample", ConfigRecordType::Array(doubleargvector()));
+    doubleargvector momentumAsTimeConstant = configSGD(L"momentumAsTimeConstant", ConfigRecordType::Array(doubleargvector()));
     bool useNesterovMomentum = configSGD(L"useNAG", false);
 
     m_maxTempMemSizeInSamplesForCNN = configSGD(L"maxTempMemSizeInSamplesForCNN", (size_t) 0);
@@ -2842,12 +2842,12 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     }
     else if (momentumAsTimeConstant.size() > 0)
     {
-        vector<float> momentumPerSampleVec;
+        vector<double> momentumPerSampleVec;
         for (int i = 0; i < momentumAsTimeConstant.size(); i++)
         {
             double momTC = momentumAsTimeConstant[i];
             double momPS = momTC == 0.0 ? 0 : exp(-1.0 / momTC);
-            momentumPerSampleVec.push_back((float) momPS);
+            momentumPerSampleVec.push_back(momPS);
         }
         m_momentumParam = momentumPerSampleVec;
         m_momentumSpecifiedForMBSize = intargvector(L"1");
@@ -2859,7 +2859,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     }
     else // default: momentumPerMB = 0.9 per MB
     {
-        m_momentumParam = floatargvector(L"0.9");
+        m_momentumParam = doubleargvector(L"0.9");
         m_momentumSpecifiedForMBSize = m_mbSize;
     }
     m_useNesterovMomentum = useNesterovMomentum;

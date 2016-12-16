@@ -1415,6 +1415,11 @@ class argvector : public std::vector<T>
     using B::clear;
     using B::reserve;
     using B::push_back;
+    static void parse(const std::wstring& in, double& val)
+    {
+        val = msra::strfun::todouble(in);
+    }
+
     static void parse(const std::wstring& in, float& val)
     {
         val = (float) msra::strfun::todouble(in);
