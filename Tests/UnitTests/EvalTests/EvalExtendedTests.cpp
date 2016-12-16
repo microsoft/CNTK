@@ -362,7 +362,7 @@ BOOST_AUTO_TEST_CASE(EvalRNNTest)
 
     // the result is different on GCC. The root cause is in the model initialization (default_random_engine class), which is platform specific.
 #ifdef _WIN32
-    std::vector<int> expected = { -67, 135, -58, 178 };
+    std::vector<int> expected = { 50, 10, 54, 55 };
 #else
     std::vector<int> expected = { 0, 0, 0, 0 };
 #endif
@@ -396,7 +396,7 @@ BOOST_AUTO_TEST_CASE(EvalRNNTest)
         result[i] = (int)(outputBuffer[0].m_buffer[i] * scaler);
 
 #ifdef _WIN32
-    expected = { -63, 126, -54, 166 };
+    expected = { 13, 2, 14, 14 };
 #else
     expected = { 109, -63, -7, -55 };
 #endif
@@ -409,7 +409,7 @@ BOOST_AUTO_TEST_CASE(EvalRNNTest)
         result[i] = (int)(outputBuffer[0].m_buffer[i] * scaler);
 
 #ifdef _WIN32
-    expected = { -61, 122, -52, 161 };
+    expected = { -4, 0, -4, -4 };
 #else
     expected = { 158, -91, -10, -79 };
 #endif
