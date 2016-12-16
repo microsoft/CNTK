@@ -21,6 +21,12 @@
 #include <initializer_list>
 #include "QuantizedOperations.h"
 
+// Forward declarations
+namespace CNTK
+{
+    class Value;
+}
+
 // This class is exported from the Math.dll
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -62,6 +68,8 @@ typedef std::shared_ptr<MatrixBase> MatrixBasePtr;
 template <class ElemType>
 class MATH_API Matrix : public MatrixBase
 {
+    friend class ::CNTK::Value;
+
     typedef MatrixBase Base;
 private:
     mutable BaseMatrix<ElemType>*                 m_baseMatrix;

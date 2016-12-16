@@ -401,6 +401,7 @@ namespace CNTK
         friend class Utils;
         friend class LearnerBase;
         friend class Variable;
+        friend class Value;
         friend class PackedValue;
         friend class MPICommunicatorImpl;
         friend class BlockMomentumDistributedLearner;
@@ -940,6 +941,9 @@ namespace CNTK
         virtual void CopyFrom(const Value& source);
 
     private:
+        template <typename ElementType>
+        static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLength);
+
         CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly, bool createNewCopy);
 
         // Disallow copy and move construction and assignment
