@@ -79,11 +79,11 @@ def create_model_function():
     return Sequential([
         Embedding(emb_dim),
         #Stabilizer(),
-        Recurrence(LSTM(hidden_dim), go_backwards=False),
+        #Recurrence(LSTM(hidden_dim), go_backwards=False),
         #Recurrence(GRU(hidden_dim), go_backwards=False),
         #Recurrence(GRU(hidden_dim, activation=relu), go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=relu), go_backwards=False),
-        #Recurrence(RNNUnit(hidden_dim, activation=softplus), go_backwards=False),
+        Recurrence(RNNUnit(hidden_dim, activation=softplus), go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=softplus4), go_backwards=False),
         #Recurrence(pr_rnn, go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=relu) >> Dense(hidden_dim, activation=relu), go_backwards=False),

@@ -1676,6 +1676,7 @@ def splice(inputs, axis=-1, name=''):
     from cntk.cntk_py import splice
     if type(inputs) not in (list, tuple):
         raise ValueError('inputs has to be an iterable')
+    # TODO: also accept a variable-length parameter list, to allow bidirectional RNN as composition
 
     inputs = [sanitize_input(x) for x in inputs]
     axis = sanitize_axis(axis)
@@ -1996,6 +1997,8 @@ def dropout(x, dropout_rate=0.0, name=''):
 ##########################################################################
 # variables_and_parameters ops
 ##########################################################################
+
+# TODO: These are not ops but object constructors.
 
 from cntk.device import use_default_device
 from cntk.axis import Axis

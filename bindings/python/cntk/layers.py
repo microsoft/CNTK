@@ -265,6 +265,9 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
 
+    # TODO: accept 'over' to be a Python function, including CNTK primitives like max().
+    #       I.e. run it through Function(); or do those use var-length inputs?
+
     # function that this layer represents
     @Function
     def recurrence(x):
@@ -276,6 +279,8 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
         if len(over.outputs) != len(prev_state_args):
             raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
         out_vars_fwd = [Placeholder(state_var.shape) for state_var in prev_state_args] # create list of placeholders for the state variables
+        #out_vars_fwd = [Placeholder() for state_var in prev_state_args] # create list of placeholders for the state variables
+        # BUGBUG: ^^ This currently leads to "ValueError: Cannot create an NDArrayView using a view shape that has unknown dimensions for any of its axes!"
 
         #print('out_vars_fwd', [p.uid for p in out_vars_fwd])
 

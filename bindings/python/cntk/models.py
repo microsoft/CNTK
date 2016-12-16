@@ -24,7 +24,8 @@ from cntk.blocks import identity, Block
 # TODO: Willi had an idea how to use *layers to avoid the [ ]?
 # Experimental: users can inject strings which name variables that are returned. Not pretty yet.
 def Sequential(layers):
-    if not isinstance(layers, (list,tuple)): # to support nested lists, run every item recursively through Sequential()
+    if not isinstance(layers, list): # to support nested lists, run every item recursively through Sequential()
+        # TODO: Is this confusing w.r.t. tuple which is parallel and list which is sequential?
         return layers
     #apply_x = identity
     #for layer in layers:
@@ -40,6 +41,9 @@ def Sequential(layers):
     from functools import reduce
     layers = [Sequential(layer) for layer in layers] # expand all layers recursively
     apply_x = reduce(lambda f, g: f >> g, layers, identity)
+    # TODO: Do not start with identity; just with the first element. That allows tuple syntax for Parallel().
+    # example ResNet layer:
+    # rn_layer = (Conv(...) >> relu >> Conv(...) >> relu, None) >> plus
     # BUGBUG: In conjunction with alias(), this looses the placeholders somewhere; use this for debugging
     #apply_x = identity
     #for layer in layers:

@@ -311,6 +311,12 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
         ht = (1 - zt) * ct + zt * dhs # hidden state ht / output
 
+        # for comparison: CUDNN_GRU
+        # i(t) = sigmoid(W_i x(t) +          R_i h(t-1)  + b_Wi + b_Ru)
+        # r(t) = sigmoid(W_r x(t) +          R_r h(t-1)  + b_Wr + b_Rr)   --same up to here
+        # h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
+        # h(t) = (1 - i(t) .* h'(t)) + i(t) .* h(t-1)                     --wrong bracketing??
+
         h = times(Sht(ht), Wmr) if has_projection else \
             ht
 

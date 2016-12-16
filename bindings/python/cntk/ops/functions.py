@@ -186,6 +186,7 @@ class Function(cntk_py.Function):
 
     # TODO: if all inputs are actual data, this should eval() instead.
     # TODO: if passed an actual Python function, construct a Function from it. ...how does that affect the function signature??
+    # TODO: accept a single tuple as args, for (F, G) >> plus. tuple members can be None = identity.
     def __call__(self, *args, **kwargs):
         '''
         Call a Function, either on symbolic or numeric inputs.
@@ -230,6 +231,16 @@ class Function(cntk_py.Function):
         '''
         Forward function composition (other o self), same as Sequential([self, other]).
         '''
+        # TODO: accept a tuple for other, e.g. projected LSTM:
+        #   LSTM(500) >> (Dense(250), identity)
+        # Input is assumed to be a tuple of the same number of elements.
+        # Note: in Sequential(), don't start from identity, but from first item which can be a tuple.
+        # Note: We can broadcast here, to implement Parallel(), e.g.
+        #       identity >> (Recurrence(LSTM(500)), Recurrence(LSTM(500), go_backwards=True) >> splice
+        # TODO: change splice() to accept a variable-number of arguments
+        if isinstance(other, tuple):
+            combine([f(self.outputs[i]) for i in range(len(other))])
+        # TODO: Test this ^^
         return other(self)
 
     def __lshift__(self, other):

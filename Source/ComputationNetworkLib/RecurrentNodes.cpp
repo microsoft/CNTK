@@ -260,13 +260,13 @@ template<class ElemType, int direction>
             for (size_t dt = 0; dt < m_timeStep && dt < Tout; dt++) // we have this many boundary frames in each sequence
             {
                 // For example, for m_timeStep = 2 and PastValue direction, and an initial-state length of 13,
-                // the index sequence would be [12, 11, -1, -1, ...].
+                // the index sequence would be [11, 12, -1, -1, ...].
                 // If the initial-state length is 1, we will broadcast and instead get [0, 0, -1, -1, ...].
-                size_t tout =                 direction < 0 ? dt                    : Tout      - 1 - dt;  // step index of boundary frame in output
-                size_t tin  = Tin == 1 ? 0 : (direction < 0 ? Tin - m_timeStep + dt : m_timeStep- 1 - dt); // and where in the initial state it comes from (Tin=1: broadcasting)
+                let tout =                 direction < 0 ?                    dt : Tout      - 1 - dt;  // step index of boundary frame in output
+                let tin  = Tin == 1 ? 0 : (direction < 0 ? Tin - m_timeStep + dt : m_timeStep- 1 - dt); // and where in the initial state it comes from (Tin=1: broadcasting)
                 // now this must be mapped to matrix column indices relative to the respective MBLayout
-                size_t jout = outMBLayout->GetColumnIndex(outSeq, tout);
-                size_t jin  =  inMBLayout->GetColumnIndex(inSeq,  tin);
+                let jout = outMBLayout->GetColumnIndex(outSeq, tout);
+                let jin  =  inMBLayout->GetColumnIndex(inSeq,  tin);
                 buf[jout] = (ElemType)jin;
             }
         }
