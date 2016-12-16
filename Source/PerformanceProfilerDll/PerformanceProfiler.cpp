@@ -366,7 +366,7 @@ void PERF_PROFILER_API ProfilerClose()
     // Generate summary report
     if (_wmkdir(g_profilerState->profilerDir.c_str()) == ENOENT)
     {
-        RuntimeError("Error: ProfilerClose: Cannot create directory <%s>.\n", g_profilerState->profilerDir.c_str());
+        RuntimeError("Error: ProfilerClose: Cannot create directory <%ls>.\n", g_profilerState->profilerDir.c_str());
         return;
     }
 
@@ -513,7 +513,7 @@ void ProfilerGenerateReport(const std::wstring& fileName, struct tm* timeInfo)
     FILE* f = _wfopen(fileName.c_str(), L"wt");
     if (f == NULL)
     {
-        fprintf(stderr, "Error: ProfilerGenerateReport: Cannot create file <%s>.\n", fileName);
+        fprintf(stderr, "Error: ProfilerGenerateReport: Cannot create file <%ls>.\n", fileName.c_str());
         return;
     }
 
@@ -648,7 +648,7 @@ void ProfilerGenerateDetailFile(const std::wstring& fileName)
     FILE* f = _wfopen(fileName.c_str(), L"wt");
     if (f == NULL)
     {
-        fprintf(stderr, "Error: ProfilerGenerateDetailFile: Cannot create file <%s>.\n", fileName);
+        fprintf(stderr, "Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", fileName.c_str());
         return;
     }
 
