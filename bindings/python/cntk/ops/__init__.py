@@ -1098,9 +1098,9 @@ def sin(x, name=''):
     The output tensor has the same shape as ``x``.
 
     Example:
-        >>> C.sin([[0,np.pi/2],[np.pi,3*np.pi/2]]).eval()
-        array([[ 0.,  1.],
-               [ 0., -1.]], dtype=float32)
+        >>> np.round(C.sin(np.arcsin([[1,0.5],[-0.25,-0.75]])).eval(),5)
+        array([[ 1.  ,  0.5 ],
+               [-0.25, -0.75]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
@@ -1120,9 +1120,9 @@ def cos(x, name=''):
     The output tensor has the same shape as ``x``.
 
     Example:
-        >>> C.cos([[0,np.pi/2],[np.pi,3*np.pi/2]]).eval()
-        array([[ 1.,  0.],
-               [-1., -0.]], dtype=float32)
+        >>> np.round(C.cos(np.arccos([[1,0.5],[-0.25,-0.75]])).eval(),5)
+        array([[ 1.  ,  0.5 ],
+               [-0.25, -0.75]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
@@ -1507,9 +1507,19 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         >>> W = C.parameter((InferredDimension,4), constant_initializer(0.1))
         >>> x = C.input_variable(shape=(4,))
         >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))
-        >>> f = C.optimized_rnnstack(x, W, 8, 2)
-        >>> print(*f.eval({x:s}).shape)
-        1 5 8
+        >>> t = np.reshape(np.arange(12.0, dtype=np.float32), (3,4))
+        >>> f = C.optimized_rnnstack(x, W, 8, 2) # doctest: +SKIP
+        >>> r = f.eval({x:[s,t]})                # doctest: +SKIP
+        >>> len(r)                               # doctest: +SKIP
+        2
+        >>> r[0].shape                           # doctest: +SKIP
+        (5, 8)
+        >>> r[1].shape                           # doctest: +SKIP
+        (3, 8)
+        >>> r[0][:3,:]-r[1]                      # doctest: +SKIP
+        array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]], dtype=float32)
 
     Returns:
         :class:`~cntk.ops.functions.Function`

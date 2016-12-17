@@ -61,7 +61,7 @@ def test_op_plus_gradient_accumulation(device_id, precision):
     value = AA([[[1]]], dtype=dt_precision)
 
     from cntk import times_transpose, Axis
-    a = I(shape=(1,),
+    a = I(shape=(1,), dtype=dt_precision,
           needs_gradient=True,
           name='a')
 

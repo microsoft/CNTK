@@ -78,11 +78,6 @@ def test_sanitize_batch_sparse():
     # 2 sequences, with max seq len of 2 and dimension 3
     assert b.shape == (2,2,3)
 
-    var = input_variable((1,3), is_sparse=True)
-    b = sanitize_batch(var, batch)
-    # 2 sequences, with max seq len of 2 and dimension 3
-    assert b.shape == (2,2,3)
-
 @pytest.mark.parametrize("batch, seq_starts, expected", [
     ([AA([5, 6, 7]), AA([8])],
        [True, False],
@@ -92,10 +87,14 @@ def test_sanitize_batch_sparse():
        [True, False],
        [[2], [1]]),
 
-    # exception handling
     ([[5, 6, 7], [8]],
        [True, False],
-       ValueError),
+       [[2, 1, 1], [1, 0, 0]]),
+
+#    # exception handling
+#    ([[5, 6, 7], [8]],
+#       [True, False],
+#       ValueError),
 ])
 def test_mask(batch, seq_starts, expected):
     shape = ()
