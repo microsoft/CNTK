@@ -29,6 +29,7 @@
 #include "InputAndParamNodes.h"
 #include "latticearchive.h"
 #include <limits>
+#include "RecurrentNodes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -359,8 +360,8 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
         assert(numCols >= 1);
         inputNode->GetMBLayout()->Init(1, numCols);
         
-        // INT_MIN is used to specify the lower bound of look-back step of recurrent nodes
-        inputNode->GetMBLayout()->AddSequence(0, 0, resetRNN ? 0 : INT_MIN, numCols);
+        // SentinelValueIndicatingUnspecifedSequenceBeginIdx is used to specify the lower bound of look-back step of recurrent nodes
+        inputNode->GetMBLayout()->AddSequence(0, 0, resetRNN ? 0 : SentinelValueIndicatingUnspecifedSequenceBeginIdx, numCols);
 
         if (type == MatrixType::DENSE)
             matrix->SetValue(numRows, numCols, matrix->GetDeviceId(), buffer.m_buffer.data(), matrixFlagNormal);

@@ -218,6 +218,11 @@ bindings/python/cntk/c_plus_c.mod
 bindings/python/cntk/i_plus_c_0.mod
 bindings/python/cntk/i_plus_i_0.mod
 
+# CSharp bindings
+bindings/csharp/Swig/cntk_cs_wrap.h
+bindings/csharp/Swig/cntk_cs_wrap.cxx
+bindings/csharp/CSEvalV2Library/SwigProxyClasses/*.cs
+
 # Examples and Tutorials
 Examples/Image/DataSets/Pascal/VOC*
 Examples/Image/DataSets/Pascal/selective_search_data*

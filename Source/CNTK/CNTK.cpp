@@ -565,6 +565,8 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         Globals::EnableShareNodeValueMatrices();
     if (config(L"hyperCompressMemory", false))
         Globals::EnableHyperCompressMemory();
+    if (config(L"optimizeGradientAccumulation", true))
+        Globals::EnableGradientAccumulationOptimization();
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -645,7 +647,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 2.0.beta5.0+ (");
+    fprintf(stderr, "CNTK 2.0.beta6.0+ (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
@@ -710,6 +712,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         Globals::EnableShareNodeValueMatrices();
     if (config(L"hyperCompressMemory", false))
         Globals::EnableHyperCompressMemory();
+    if (config(L"optimizeGradientAccumulation", true))
+        Globals::EnableGradientAccumulationOptimization();
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -744,11 +748,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     }
 
     // full config info
-    if (traceLevel > 0)
-    {
-        PrintBuiltInfo();
+    PrintBuiltInfo();
     PrintGpuInfo();
-    }
 
 #ifdef _DEBUG
     if (traceLevel > 0)

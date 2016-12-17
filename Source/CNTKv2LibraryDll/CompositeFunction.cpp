@@ -763,7 +763,7 @@ namespace CNTK
                 if (functionConfig.Contains(PrimitiveFunction::AttributeNameRngSeed))
                 {
                     auto seed = functionConfig[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
-                    unsigned long long offset = 0;
+                    uint64_t offset = 0;
                     if (functionConfig.Contains(PrimitiveFunction::AttributeNameRngOffset))
                     {
                         offset = functionConfig[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
@@ -1191,9 +1191,9 @@ namespace CNTK
         return m_perOutputVarArgumentDependencies[output];
     }
 
-    std::unordered_map<Variable, int64_t> CompositeFunction::GetCurrentBackpropRootsTimeStamps() const
+    std::unordered_map<Variable, uint64_t> CompositeFunction::GetCurrentBackpropRootsTimeStamps() const
     {
-        std::unordered_map<Variable, int64_t> currentBackpropRootsTimeStamps;
+        std::unordered_map<Variable, uint64_t> currentBackpropRootsTimeStamps;
         assert(m_computationNetwork != nullptr);
 
         for (auto& backpropRoot : m_currentBackpropRoots)
@@ -1254,16 +1254,30 @@ namespace CNTK
             outputsToEvaluate.push_back(outputComputationNode);
         }
 
-        // TODO: Avoid copying the data when possible
-
         // We should have argument values supplied for all required argument dependencies for the requested outputs
+        std::vector<Variable> missingRequiredArguments;
         for (auto requiredArgument : requiredArguments)
         {
             if (arguments.find(requiredArgument) == arguments.end())
-                InvalidArgument("Function::Forward: Required argument's (%S) value that the requested output(s) depend on has not been provided", requiredArgument.Name().c_str());
+                missingRequiredArguments.push_back(requiredArgument);
+        }
+
+        if (!missingRequiredArguments.empty())
+        {
+            std::wstring missingRequiredArgumentNames;
+            for (auto missingRequiredArgument : missingRequiredArguments)
+            {
+                if (!missingRequiredArgumentNames.empty())
+                    missingRequiredArgumentNames += L", ";
+
+                missingRequiredArgumentNames += missingRequiredArgument.Name();
+            }
+
+            InvalidArgument("Function::Forward: Required arguments (%S) values that the requested output(s) depend on has not been provided", missingRequiredArgumentNames.c_str());
         }
 
         // Feed data into the arguments of the network
+        // TODO: Avoid copying the data when possible
         PopulateNetworkInputs(arguments);
 
         // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
@@ -1328,7 +1342,7 @@ namespace CNTK
             InvalidArgument("Invalid backprop state specified");
 
         // TODO: Support multiple concurrent backprop states
-        std::unordered_map<Variable, int64_t> currentBackpropRootTimeStamps = GetCurrentBackpropRootsTimeStamps();
+        std::unordered_map<Variable, uint64_t> currentBackpropRootTimeStamps = GetCurrentBackpropRootsTimeStamps();
         if (backpropState->BackpropRootsForwardTimeStamps() != currentBackpropRootTimeStamps)
             LogicError("The specified backprop state specified cannot be used for backpropagation as the Function's internal state was modified by subsequent Forward calls to the function."
                        "This is not a user error but a shortcoming of the current implementation where multiple independent backprop states are not simultaneously supported");

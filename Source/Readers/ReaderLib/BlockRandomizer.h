@@ -35,19 +35,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class BlockRandomizer : public SequenceEnumerator
 {
 public:
-    // Currently, decimation based on sequences or chunks is supported.
-    enum class DecimationMode
-    {
-        chunk,
-        sequence
-    };
-
     BlockRandomizer(
         int verbosity,
         size_t randomizationRangeInSamples,
         IDataDeserializerPtr deserializer,
         bool shouldPrefetch,
-        DecimationMode decimationMode = DecimationMode::chunk,
         bool useLegacyRandomization = false,
         bool multithreadedGetNextSequences = false);
 
@@ -133,11 +125,7 @@ private:
     // A map of data chunks from original chunk id into chunk.
     std::map<size_t, ChunkPtr> m_chunks;
 
-    // Decimation mode.
-    DecimationMode m_decimationMode;
-
     // Whether to get sequences using multiple thread.
-    // TODO temporary; should go away when transformers are moved closer to the deserializer
     bool m_multithreadedGetNextSequences;
 
     // General configuration

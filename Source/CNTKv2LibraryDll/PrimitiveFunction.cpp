@@ -222,10 +222,8 @@ namespace CNTK
                 if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
                     LogicError("TransposeAxes operation currently does not support transposing dynamic axes");
 
-                VerifyStaticAxis(axis1, inputs[0].Shape());
-                VerifyStaticAxis(axis2, inputs[0].Shape());
-
-                outputShape = inputs[0].Shape();
+                auto outputRank = std::max(inputs[0].Shape().Rank(), (size_t)(std::max(axis1.StaticAxisIndex(), axis2.StaticAxisIndex()) + 1));
+                outputShape = inputs[0].Shape().AppendShape(NDShape(outputRank - inputs[0].Shape().Rank(), 1));
                 std::swap(outputShape[axis1.StaticAxisIndex()], outputShape[axis2.StaticAxisIndex()]);
                 break;
             }
@@ -535,7 +533,7 @@ namespace CNTK
                     outputShape = shape;
                 else
                 {
-                    vector<size_t> dimensions{ numSamples, numClasses };
+                    vector<size_t> dimensions{ numClasses, numSamples};
                     outputShape = NDShape(dimensions);
                 }
 
@@ -631,9 +629,9 @@ namespace CNTK
         // The hard requirement that the serialization depends on is that
         // new op type values are only added to the end of the list, after Combine.
         // This also applies to other enums (DataType, VariableKind, etc.)
-        if (op > PrimitiveOpType::Combine)
+        if (op > PrimitiveOpType::Pass)
         {
-            LogicError("Unexpected variable '%ls':'%u' (%s).", 
+            LogicError("Unexpected op '%ls':'%u' (%s).", 
                         opKey.c_str(), 
                         static_cast<std::underlying_type<CNTK::PrimitiveOpType>::type>(op),
                         GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());

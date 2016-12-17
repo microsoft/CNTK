@@ -6,6 +6,30 @@
 # for full license information.
 # ==============================================================================
 
+PY_VERSION=34
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --py-version)
+      case "$2" in
+        34 | 35)
+          PY_VERSION="$2"
+          ;;
+        *)
+          echo Invalid or missing value for --py-version option, please specify 34 or 35.
+          exit 1
+          ;;
+      esac
+      shift # extra shift
+      ;;
+    *)
+      echo Unknown option $1
+      exit 1
+      ;;
+  esac
+  shift
+done
+
 # Log steps, stop on error
 # TODO cut down on logging
 set -x -e -o pipefail
@@ -21,12 +45,12 @@ CNTK_DEP_LIB_PATH="$PWD/cntk/dependencies/lib"
 CNTK_EXAMPLES_PATH="$PWD/Examples"
 CNTK_TUTORIALS_PATH="$PWD/Tutorials"
 CNTK_BINARY="$CNTK_BIN_PATH/cntk"
-CNTK_PY34_ENV_FILE="$SCRIPT_DIR/conda-linux-cntk-py34-environment.yml"
-CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta5.0-cp34-cp34m-linux_x86_64.whl"
+CNTK_PY_ENV_FILE="$SCRIPT_DIR/conda-linux-cntk-py$PY_VERSION-environment.yml"
+CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta6.0-cp$PY_VERSION-cp${PY_VERSION}m-linux_x86_64.whl"
 test -d "$CNTK_BIN_PATH" && test -d "$CNTK_LIB_PATH" && test -d "$CNTK_DEP_LIB_PATH" && 
 test -d "$CNTK_TUTORIALS_PATH" &&
 test -d "$CNTK_EXAMPLES_PATH" && test -x "$CNTK_BINARY" &&
-test -f "$CNTK_PY34_ENV_FILE" && test -f "$CNTK_WHEEL_PATH" || {
+test -f "$CNTK_PY_ENV_FILE" && test -f "$CNTK_WHEEL_PATH" || {
   echo Cannot find expected drop content. Please double-check that this is a
   echo CNTK binary drop for Linux. Go to https://github.com/Microsoft/CNTK/wiki
   echo for help.
@@ -114,17 +138,17 @@ PY_ACTIVATE="$HOME/anaconda3/bin/activate"
 PY_DEACTIVATE="$HOME/anaconda3/bin/deactivate"
 [ -x "$PY_DEACTIVATE" ]
 
-CNTK_PY34_ENV_NAME="cntk-py34"
-CNTK_PY34_ENV_PREFIX="$ANACONDA_PREFIX/envs/$CNTK_PY34_ENV_NAME"
-if [ -d "$CNTK_PY34_ENV_PREFIX" ]; then
-  "$CONDA" env update --file "$CNTK_PY34_ENV_FILE" --name "$CNTK_PY34_ENV_NAME" || {
+CNTK_PY_ENV_NAME="cntk-py$PY_VERSION"
+CNTK_PY_ENV_PREFIX="$ANACONDA_PREFIX/envs/$CNTK_PY_ENV_NAME"
+if [ -d "$CNTK_PY_ENV_PREFIX" ]; then
+  "$CONDA" env update --file "$CNTK_PY_ENV_FILE" --name "$CNTK_PY_ENV_NAME" || {
     echo Updating Anaconda environment failed.
     exit 1
   }
 else
-  "$CONDA" env create --file "$CNTK_PY34_ENV_FILE" --prefix "$CNTK_PY34_ENV_PREFIX" || {
+  "$CONDA" env create --file "$CNTK_PY_ENV_FILE" --prefix "$CNTK_PY_ENV_PREFIX" || {
     echo Creating Anaconda environment failed.
-    rm -rf "$CNTK_PY34_ENV_PREFIX"
+    rm -rf "$CNTK_PY_ENV_PREFIX"
     exit 1
   }
 fi
@@ -133,7 +157,7 @@ fi
 # Install CNTK module
 
 set +x
-source "$PY_ACTIVATE" "$CNTK_PY34_ENV_PREFIX"
+source "$PY_ACTIVATE" "$CNTK_PY_ENV_PREFIX"
 set -x
 
 pip install "$CNTK_WHEEL_PATH"
@@ -160,7 +184,7 @@ elif [ "\$(basename "\$0" 2> /dev/null)" == "$ACTIVATE_SCRIPT_NAME" ]; then
 else
   export PATH="$CNTK_BIN_PATH:\$PATH"
   export LD_LIBRARY_PATH="$LD_LIBRARY_PATH_SETTING"
-  source "$PY_ACTIVATE" "$CNTK_PY34_ENV_PREFIX"
+  source "$PY_ACTIVATE" "$CNTK_PY_ENV_PREFIX"
 
   cat <<MESSAGE
 

@@ -150,7 +150,8 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     '''
     Converts ``batch`` into a :class:`Value` object of ``dtype``
     such that the integer data in ``batch`` is interpreted as the indices
-    representing one-hot vectors.
+    representing one-hot vectors. Additionally, a SciPy CSR matrix can be obtained
+    by calling :meth:`~cntk.utils.Value.to_csr`.
 
     Example:
         >>> num_classes = 6
@@ -266,14 +267,16 @@ def _has_seq_dim(var, data):
                         (drill_shape, var.name, var_shape))
 
     num_var_dyn_axes = len(var.dynamic_axes)
+
     if num_dyn_axes == num_var_dyn_axes:
-        return True
+        # num_dyn_axes is at least 1, in which case there's only a batch axis
+        return (num_dyn_axes > 1)
     elif num_dyn_axes == num_var_dyn_axes-1:
         return False
     else:
         raise ValueError(
         'data having %i axes is not compatible with the '
-        'input variable having %i axes'%(num_dyn_axes,len(var_shape)))
+        'input variable having %i axes'%(num_dyn_axes, num_var_dyn_axes))
 
 
 def sanitize_shape(shape):
@@ -724,6 +727,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
             applied to all batches. 
 
          Data should be either NumPy arrays or a
+         :class:`~cntk.io.MinibatchData` instance.
         precision (str or `np.float32` or `np.float64`): if string it can be
          one of 'float' 'float32, 'double', 'float64', or None
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device

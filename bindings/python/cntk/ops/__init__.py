@@ -21,21 +21,21 @@ def combine(operands, name=''):
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
 
     Example:
-    >>> in1 = C.input_variable((4,))
-    >>> in2 = C.input_variable((4,))
+        >>> in1 = C.input_variable((4,))
+        >>> in2 = C.input_variable((4,))
 
-    >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
-    >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
+        >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
+        >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
 
-    >>> plus_node = in1 + in2
-    >>> minus_node = in1 - in2
+        >>> plus_node = in1 + in2
+        >>> minus_node = in1 - in2
 
-    >>> forward = C.combine([plus_node, minus_node]).eval({in1: in1_data, in2: in2_data})
-    >>> len(forward)
-    2
-    >>> list(forward.values()) # doctest: +SKIP
-    [array([[[ 1., -3.,  6.,  2.]]], dtype=float32),
-     array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)]
+        >>> forward = C.combine([plus_node, minus_node]).eval({in1: in1_data, in2: in2_data})
+        >>> len(forward)
+        2
+        >>> list(forward.values()) # doctest: +SKIP
+        [array([[[ 1., -3.,  6.,  2.]]], dtype=float32),
+         array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)]
 
     Args:
         operands (list): list of functions or their variables to combine
@@ -291,15 +291,15 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
 
     Example:
-    >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
-    >>> x = C.input_variable(img.shape)
-    >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
-    >>> kernel = C.constant(value = filter)
-    >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}) # doctest: +SKIP
-    array([[[[[  6.,   8.,  10.,  12.],
-              [ 16.,  18.,  20.,  22.],
-              [ 26.,  28.,  30.,  32.],
-              [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
+        >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
+        >>> x = C.input_variable(img.shape)
+        >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
+        >>> kernel = C.constant(value = filter)
+        >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}) # doctest: +SKIP
+        array([[[[[  6.,   8.,  10.,  12.],
+                  [ 16.,  18.,  20.,  22.],
+                  [ 26.,  28.,  30.,  32.],
+                  [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
 
     Args:
         convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
@@ -372,14 +372,14 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
 
     Example:
-    >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-    >>> x = C.input_variable(img.shape)
-    >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
-    array([[[[[  2.5,   4.5],
-              [ 10.5,  12.5]]]]], dtype=float32)
-    >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : [img]})
-    array([[[[[  5.,   7.],
-              [ 13.,  15.]]]]], dtype=float32)
+        >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+        >>> x = C.input_variable(img.shape)
+        >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
+        array([[[[[  2.5,   4.5],
+                  [ 10.5,  12.5]]]]], dtype=float32)
+        >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : [img]})
+        array([[[[[  5.,   7.],
+                  [ 13.,  15.]]]]], dtype=float32)
 
     Args:
         operand: pooling input
@@ -718,11 +718,11 @@ def log_add_exp(left, right, name=''):
     of the two input tensors. It supports broadcasting.
 
     Example:
-    >>> a = np.arange(3,dtype=np.float32)
-    >>> np.exp(C.log_add_exp(np.log(1+a), np.log(1+a*a)).eval())
-    array([ 2.,  4.,  8.], dtype=float32)
-    >>> np.exp(C.log_add_exp(np.log(1+a), [0.]).eval())
-    array([ 2.,  3.,  4.], dtype=float32)
+        >>> a = np.arange(3,dtype=np.float32)
+        >>> np.exp(C.log_add_exp(np.log(1+a), np.log(1+a*a)).eval())
+        array([ 2.,  4.,  8.], dtype=float32)
+        >>> np.exp(C.log_add_exp(np.log(1+a), [0.]).eval())
+        array([ 2.,  3.,  4.], dtype=float32)
 
     Args:
         left: left side tensor

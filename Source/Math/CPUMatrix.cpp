@@ -6077,6 +6077,16 @@ int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
     return numThreads;
 }
 
+template <class ElemType>
+int CPUMatrix<ElemType>::GetMaxNumThreads()
+{
+    int numThreads = (int)std::thread::hardware_concurrency();
+#ifdef _OPENMP
+    numThreads = omp_get_max_threads();
+#endif
+    return numThreads;
+}
+
 // To ensure Intel MKL calls return the same results on all Intel or Intel compatible CPUs,
 // the function set CBWR compatible mode.
 template <class ElemType>

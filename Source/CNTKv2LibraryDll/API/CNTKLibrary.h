@@ -7,7 +7,6 @@
 
 #pragma once
 
-
 #include <memory>
 #include <vector>
 #include <array>
@@ -402,6 +401,7 @@ namespace CNTK
         friend class Utils;
         friend class LearnerBase;
         friend class Variable;
+        friend class Value;
         friend class PackedValue;
         friend class MPICommunicatorImpl;
         friend class BlockMomentumDistributedLearner;
@@ -642,9 +642,7 @@ namespace CNTK
         static const size_t AutoSelectRowColSplitPoint = SIZE_MAX;
 
     private:
-
         CNTK_API NDArrayView(::CNTK::DataType dataType, const DeviceDescriptor& device, ::CNTK::StorageFormat storageType, const NDShape& viewShape, bool readOnly, void* tensorView);
-
 
         template <typename ElementType>
         static std::shared_ptr<Microsoft::MSR::CNTK::Matrix<ElementType>> GetMatrixImpl(const Microsoft::MSR::CNTK::TensorView<ElementType>* tensorView, size_t rowColSplitPoint);
@@ -850,7 +848,17 @@ namespace CNTK
         /// The created Value object contains a copy of the specified 'sequences' data.
         ///
         template <typename ElementType>
-        CNTK_API static ValuePtr Create(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly = false);
+        CNTK_API static ValuePtr Create(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly = false);
+
+        ///
+        /// Create a new Value object containing a collection of variable length sequences of one hot vectors
+        /// The created Value object contains a copy of the specified 'sequences' data.
+        ///
+        template <typename ElementType>
+        static ValuePtr Create(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return Create<ElementType>(vocabularySize, oneHotSequences, {}, device, readOnly);
+        }
 
         ///
         /// Destruct 'this' Value object.
@@ -933,6 +941,9 @@ namespace CNTK
         virtual void CopyFrom(const Value& source);
 
     private:
+        template <typename ElementType>
+        static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLength);
+
         CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly, bool createNewCopy);
 
         // Disallow copy and move construction and assignment
@@ -1780,7 +1791,6 @@ private:
         CNTK_API static Variable Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
     private:
-
         struct VariableFields final : public std::enable_shared_from_this<VariableFields>
         {
             friend class CompositeFunction;
@@ -1845,6 +1855,15 @@ private:
             VariableFields(const VariableFields&) = delete; VariableFields& operator=(const VariableFields& other) = delete; VariableFields(VariableFields&&) = delete; VariableFields& operator=(VariableFields&&) = delete;
         };
         typedef std::shared_ptr<VariableFields> VariableFieldsPtr;
+
+#ifdef SWIGCSHARP
+    public:
+        // Todo: a better way to get hash value?
+        size_t GetHashValue()
+        {
+            return std::hash<const void *>()(m_dataFields.get());
+        }
+#endif
 
     protected:
         VariableFieldsPtr m_dataFields;
@@ -2308,6 +2327,14 @@ namespace CNTK
         /// Destruct this Function.
         ///
         CNTK_API virtual ~Function();
+
+        ///
+        /// Performs forward computation, i.e. evaluation, on the computaion graph using provided 'input' and stores the results in the 'outputs' map.
+        /// It is same as Forward, but without storing and returning information needed for backpropagation.
+        ///
+        CNTK_API void Evaluate(const std::unordered_map<Variable, ValuePtr>& arguments,
+                      std::unordered_map<Variable, ValuePtr>& outputs,
+                      const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Clones 'this' Function. The parameters of the Function are either cloned, shared or frozen as specified by the parameterCloneMethod argument and
@@ -3539,8 +3566,9 @@ namespace CNTK
         Variable    m_testSampleCountVar;
         LearnersPtr m_parameterLearners;
         bool        m_distributed;
+        ValuePtr    m_rootGradientValue;
 
-        size_t m_prevMinibatchNumSamples;
+        size_t   m_prevMinibatchNumSamples;
         ValuePtr m_prevMinibatchAggregateTrainingLossValue;
         ValuePtr m_prevMinibatchAggregateEvalCriterionValue;
     };
