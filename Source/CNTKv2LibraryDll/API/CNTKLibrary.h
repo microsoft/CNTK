@@ -946,15 +946,141 @@ namespace CNTK
         /// The Value should have the same axes as variable.
         ///
         template <typename ElementType>
-        CNTK_API void CopyTo(const NDShape& sampleShape, std::vector<std::vector<ElementType>>& outputData);
+        void CopyTo(const NDShape& sampleShape, std::vector<std::vector<ElementType>>& sequences)
+        {
+            std::vector<size_t> seqLens;
+            CopyTo(sampleShape, sequences, seqLens, true);
+        }
 
-        CNTK_API void CopyTo(const NDShape& sampleShape, std::vector<std::vector<size_t>>& outputData);
+        template <typename ElementType>
+        void CopyTo(const NDShape& sampleShape, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLens, bool isResizeable = true)
+        {
+            // Check the data type matches
+            if (AsDataType<ElementType>() != GetDataType())
+                InvalidArgument("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(GetDataType()));
+
+            // Todo: convert sparse into dense.
+            if (GetStorageFormat() != StorageFormat::Dense)
+                InvalidArgument("Only the dense storage format is supported now.");
+
+            auto valueRank = Shape().Rank();
+            auto sampleRank = sampleShape.Rank();
+            if ((valueRank < sampleRank + 1) || (valueRank > sampleRank + 2) || (sampleShape != Shape().SubShape(0, sampleRank)))
+                RuntimeError("The variable and the Value does not have the same tensor shape.");
+
+            CheckAndResizeOutputBuffer(sampleRank, sampleShape.TotalSize(), sequences, sequenceLens, isResizeable);
+
+            CopyToImpl(sampleShape, sequences, sequenceLens);
+        }
+
+        ///
+        /// Copy the data stored in the Value object to the buffer 'sequences' as a collection of variable length sequences.
+        /// The sequence buffer is on CPU.
+        /// The Value should have the same axes as variable.
+        ///
+        template <typename ElementType>
+        void CopyTo(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences)
+        {
+            std::vector<size_t> seqLens;
+            CopyTo(sampleShape, sequences, seqLens, true);
+        }
+
+        template <typename ElementType>
+        void CopyTo(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLens, bool isResizeable = true)
+        {
+            // Check the data type matches
+            if (AsDataType<ElementType>() != GetDataType())
+                InvalidArgument("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(GetDataType()));
+
+            // Todo: convert sparse into dense.
+            if (GetStorageFormat() != StorageFormat::Dense)
+                InvalidArgument("Only the dense storage format is supported now.");
+
+            if (sampleShape[0] != sampleShape.TotalSize())
+                InvalidArgument("")
+
+            auto valueRank = Shape().Rank();
+            auto sampleRank = sampleShape.Rank();
+            if ((valueRank < sampleRank + 1) || (valueRank > sampleRank + 2) || (sampleShape != Shape().SubShape(0, sampleRank)))
+                RuntimeError("The variable and the Value does not have the same tensor shape.");
+
+            // For OneHot vector, only 1 value is needed for a sample.
+            CheckAndResizeOutputBuffer(sampleRank, 1, sequences, sequenceLens, isResizeable);
+
+            // CopyToImpl(sampleShape, sequences, sequenceLens);
+        }
+
 
     private:
         template <typename ElementType>
         static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLength);
 
         CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly, bool createNewCopy);
+
+        template <typename ElementType>
+        CNTK_API void CopyToImpl(const NDShape& sampleShape, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLens);
+
+        template <typename ElementType>
+        void CheckAndResizeOutputBuffer(const size_t sampleRank, const size_t sampleSize, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLens, bool isResizeable)
+        {
+            auto valueRank = Shape().Rank();
+            size_t numOfSequences;
+            size_t maxSequenceLen;
+
+            if (valueRank == sampleRank + 1)
+            {
+                // no batch axis, only sequence axis
+                numOfSequences = 1;
+                maxSequenceLen = Shape()[valueRank - 1];
+            }
+            else
+            {
+                assert(valueRank == sampleRank + 2);
+                numOfSequences = Shape()[valueRank - 1];
+                maxSequenceLen = Shape()[valueRank - 2];
+            }
+
+            // resize the sequnce length buffer to reflect the number of sequences in output.
+            if (sequenceLens.size() < numOfSequences)
+                sequenceLens.resize(numOfSequences);
+
+            // Check whether the additional space in the sequences output buffer needs to be allocated if it is resizeable.
+            if (isResizeable)
+            {
+                const MaskKind* maskData = nullptr;
+                if (m_mask != nullptr)
+                    maskData = Device() != DeviceDescriptor::CPUDevice() ? m_mask->DeepClone(DeviceDescriptor::CPUDevice())->DataBuffer() : m_mask->DataBuffer();
+
+                size_t sampleCount, seqStart;
+                for (auto seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
+                {
+                    if (maskData == nullptr)
+                    {
+                        sampleCount = maxSequenceLen;
+                    }
+                    else
+                    {
+                        seqStart = seqIndex * maxSequenceLen;
+                        sampleCount = 0;
+                        for (size_t i = 0; i < maxSequenceLen; i++)
+                            if (maskData[seqStart + i] != MaskKind::Invalid)
+                                sampleCount++;
+                    }
+
+                    if (seqIndex < sequences.size())
+                    {
+                        if (sequences[seqIndex].size() < sampleCount * sampleSize)
+                            sequences[seqIndex].resize(sampleCount * sampleSize);
+                    }
+                    else
+                    {
+                        assert(seqIndex == sequences.size());
+                        auto p = new std::vector<ElementType>(sampleCount * sampleSize);
+                        sequences.push_back(*p);
+                    }
+                }
+            }
+        }
 
         // Disallow copy and move construction and assignment
         Value(const Value&) = delete; Value& operator=(const Value&) = delete; Value(Value&&) = delete; Value& operator=(Value&&) = delete;

@@ -45,13 +45,13 @@ int main()
 
     // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking 
     // which will have a silent performance degradation otherwise
-    Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
+    //Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
 
-    // Note: Run the device selection tests first since later tests
-    // may interfere with device selection by freezing default device
-    DeviceSelectionTests();
+    //// Note: Run the device selection tests first since later tests
+    //// may interfere with device selection by freezing default device
+    //DeviceSelectionTests();
 
-    NDArrayViewTests();
+    //NDArrayViewTests();
     ValueTests();
     TensorTests();
     FunctionTests();

@@ -239,6 +239,141 @@ void ValueCreationOneHotWithNDMaskTest(const DeviceDescriptor device, bool readO
     CheckValue<ElementType>(testValue, {vocabSize, maxSeqLen, numberOfSequences}, vocabSize, data, seqLenList);
 }
 
+template <typename ElementType>
+void CheckCopyToOutput(const size_t sampleSize, std::vector<std::vector<ElementType>> expected, std::vector<std::vector<ElementType>> actual)
+{
+    std::vector<size_t> seqLens(0);
+    CheckCopyToOutput(sampleSize, expected, actual, seqLens);
+}
+
+template <typename ElementType>
+void CheckCopyToOutput(const size_t sampleSize, std::vector<std::vector<ElementType>>& expected, std::vector<std::vector<ElementType>>& actual, std::vector<size_t>& seqLens)
+{
+    bool useSeqLens;
+    if (seqLens.size() != 0)
+    {
+        useSeqLens = true;
+        if (seqLens.size() < expected.size())
+            ReportFailure("The seqLens size does not match. expected: %" PRIu64 " actual: %" PRIu64 "\n", expected.size(), seqLens.size());
+        else
+        {
+            for (size_t i = expected.size(); i < seqLens.size(); i++)
+                if (seqLens[i] != 0)
+                    ReportFailure("The seqLens contains invalid data.");
+        }
+
+        if (actual.size() < expected.size())
+            ReportFailure("The number of sequences does not match. expected: %" PRIu64 " actual: %" PRIu64 "\n", expected.size(), actual.size());
+    }
+    else
+    {
+        useSeqLens = false;
+        if (expected.size() != actual.size())
+            ReportFailure("The number of sequences does not match. expected: %" PRIu64 " actual: %" PRIu64 "\n", expected.size(), actual.size());
+    }
+
+    for (size_t i = 0; i < expected.size(); i++)
+    {
+        auto len = useSeqLens ? seqLens[i] * sampleSize : actual[i].size();
+        if ((actual[i].size() < len) || (expected[i].size() != len))
+        {
+            ReportFailure("Seq " PRIu64 " does not match.\n", i);
+        }
+        for (size_t j = 0; j < len; j++)
+        {
+            if (expected[i][j] != actual[i][j])
+            {
+                ReportFailure("Seq " PRIu64 " does not match.\n", i);
+            }
+        }
+    }
+}
+
+template <typename ElementType>
+void ValueCopyToDenseTest(const DeviceDescriptor device)
+{
+    NDShape sampleShape{{2, 3}};
+    auto sampleSize = sampleShape.TotalSize();
+    std::vector<std::vector<ElementType>> output;
+    std::vector<std::vector<ElementType>> sequences;
+    std::vector<size_t> seqLens;
+
+    // Check single sample.
+    sequences.clear();
+    sequences.resize(1, std::vector<ElementType>(sampleSize));
+    // Todo: use generateSequences in common.h
+    for (size_t i = 0; i < sampleSize; i++)
+        sequences[0][i] = static_cast<ElementType>(i);
+    auto val = Value::Create(sampleShape, sequences, device);
+    val->CopyTo(sampleShape, output);
+    CheckCopyToOutput(sampleSize, sequences, output);
+
+    // Check batch of sample.
+    size_t batchCount = 2;
+    sequences.clear();
+    sequences.resize(2, std::vector<ElementType>(sampleSize));
+    for (size_t s = 0; s < batchCount; s++)
+    {
+        for (size_t i = 0; i < sampleSize; i++)
+        {
+            sequences[s][i] = static_cast<ElementType>(s * 10 + i);
+        }
+    }
+    val = Value::Create(sampleShape, sequences, device);
+    VerifyException([&val, &sampleShape, &output, &seqLens]() {
+        val->CopyTo(sampleShape, output, seqLens, false);
+    }, "The output buffer is too small.");
+    val->CopyTo(sampleShape, output, seqLens);
+    CheckCopyToOutput(sampleSize, sequences, output, seqLens);
+
+    // Check sequence of sample
+    size_t sampleCount = 4;
+    sequences.clear();
+    sequences.resize(1, std::vector<ElementType>(sampleSize * sampleCount));
+    for (size_t i = 0; i < sampleSize * sampleCount; i++)
+    {
+        sequences[0][i] = static_cast<ElementType>(i);
+    }
+    val = Value::Create(sampleShape, sequences, device);
+    VerifyException([&val, &sampleShape, &output, &seqLens]() {
+        val->CopyTo(sampleShape, output, seqLens, false);
+    }, "The output buffer is too small.");
+    val->CopyTo(sampleShape, output, seqLens);
+    CheckCopyToOutput(sampleSize, sequences, output, seqLens);
+
+    // Check batch of sequence of the same length, no mask needed.
+    batchCount = 4;
+    sampleCount = 3;
+    sequences.clear();
+    sequences.resize(batchCount, std::vector<ElementType>(sampleSize * sampleCount));
+    for (size_t s = 0; s < batchCount; s++)
+    {
+        for (size_t i = 0; i < sampleSize * sampleCount; i++)
+        {
+            sequences[s][i] = static_cast<ElementType>(s * 10 + i);
+        }
+    }
+    val = Value::Create(sampleShape, sequences, device);
+    val->CopyTo(sampleShape, output, seqLens);
+    CheckCopyToOutput(sampleSize, sequences, output, seqLens);
+
+    // Check batch of sequecnes with different length, mask needed.
+    std::vector<size_t> sampleCountList{6, 9, 2, 1, 5, 3, 4};
+    batchCount = sampleCountList.size();
+    sequences.clear();
+    sequences.resize(batchCount, std::vector<ElementType>(0));
+    for (size_t s = 0; s < batchCount; s++)
+    {
+        for (size_t i = 0; i < sampleSize * sampleCountList[s]; i++)
+        {
+            sequences[s].push_back(static_cast<ElementType>(s * 10 + i));
+        }
+    }
+    val = Value::Create(sampleShape, sequences, device);
+    val->CopyTo(sampleShape, output, seqLens);
+    CheckCopyToOutput(sampleSize, sequences, output, seqLens);
+}
+
 void TestSettingParameterValuesManually(const DeviceDescriptor& device)
 {
     auto v1_1 = MakeSharedObject<NDArrayView>(0.5, NDShape({ 2, 2 }), device);
@@ -312,8 +447,12 @@ void ValueTests()
     ValueCreationOneHotNoNDMaskTest<double>(DeviceDescriptor::CPUDevice(), true);
     ValueCreationOneHotWithNDMaskTest<double>(DeviceDescriptor::CPUDevice(), false);
     ValueCreationOneHotWithNDMaskTest<float>(DeviceDescriptor::CPUDevice(), true);
+<<<<<<< HEAD
     SparseSequenceBatchValueCreationTest(300, 7, DeviceDescriptor::CPUDevice());
     SparseSequenceBatchValueCreationTest(2300, 1, DeviceDescriptor::CPUDevice());
+=======
+    ValueCopyToDenseTest<float>(DeviceDescriptor::CPUDevice());
+>>>>>>> 0a57cbc... refactor Value::CopyTo to allocate memory in .h file; adapt unit tests; add sequencesLens as parameter for Value::CopyTo
 
     if (IsGPUAvailable())
     {
@@ -327,7 +466,11 @@ void ValueTests()
         ValueCreationOneHotNoNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), true);
         ValueCreationOneHotWithNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), false);
         ValueCreationOneHotWithNDMaskTest<double>(DeviceDescriptor::GPUDevice(0), true);
+<<<<<<< HEAD
         SparseSequenceBatchValueCreationTest(50000, 1, DeviceDescriptor::GPUDevice(0));
         SparseSequenceBatchValueCreationTest(6000, 6, DeviceDescriptor::GPUDevice(0));
+=======
+        ValueCopyToDenseTest<float>(DeviceDescriptor::GPUDevice(0));
+>>>>>>> 0a57cbc... refactor Value::CopyTo to allocate memory in .h file; adapt unit tests; add sequencesLens as parameter for Value::CopyTo
     }
 }
