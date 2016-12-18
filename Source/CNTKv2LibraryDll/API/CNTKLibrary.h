@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <mutex>
 #include <future>
-#include <functional>
 
 #ifdef SWIG
 #define final
@@ -944,7 +943,8 @@ namespace CNTK
         ///
         /// Copy the data stored in the Value object to the buffer 'sequences' as a collection of variable length sequences.
         /// The sequence buffer is on CPU.
-        /// The Value should have the same axes as variable.
+        /// The sequence buffer will be resized if nencessary.
+        /// The Value should have the same tensor shape as sampleShape.
         ///
         template <typename ElementType>
         void CopyTo(const NDShape& sampleShape, std::vector<std::vector<ElementType>>& sequences)
@@ -953,17 +953,24 @@ namespace CNTK
             CopyTo(sampleShape, sequences, seqLens, true);
         }
 
+        ///
+        /// Same as buffer, except if isResizeable is false, the sequence buffer will not be resized. Instead, an runtime error is thrown.
+        /// In addition, sequenceLengths contains the length of each sequence in the sequence buffer.
+        /// The sequenceLengths will be resized if necessary, even isResizeable is false.
+        ///
         template <typename ElementType>
         void CopyTo(const NDShape& sampleShape, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizeable = true)
         {
             CheckAndResizeOutputBuffer(sampleShape.Rank(), sampleShape.TotalSize(), sequences, sequenceLengths, isResizeable);
-            CopyToVector(sampleShape, sequences, sequenceLengths);
+            CopyToVector<ElementType>(sampleShape, sequences, sequenceLengths);
         }
 
         ///
         /// Copy the data stored in the Value object to the buffer 'sequences' as a collection of variable length sequences.
+        /// The output data is of the one hot vector format.
         /// The sequence buffer is on CPU.
-        /// The Value should have the same axes as variable.
+        /// The sequence buffer will be resized if nencessary.
+        /// The Value should have the same tensor shape as sampleShape.
         ///
         void CopyTo(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences)
         {
@@ -971,6 +978,11 @@ namespace CNTK
             CopyTo(sampleShape, sequences, seqLens, true);
         }
 
+        ///
+        /// Same as buffer, except if isResizeable is false, the sequence buffer will not be resized. Instead, an runtime error is thrown.
+        /// In addition, sequenceLengths contains the length of each sequence in the sequence buffer.
+        /// The sequenceLengths will be resized if necessary, even isResizeable is false.
+        ///
         void CopyTo(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizeable = true)
         {
             // For OneHot vector, only 1 value is needed for a sample.

@@ -286,7 +286,7 @@ namespace CNTK
                 deviceValueData = valueData;
         }
         else
-        deviceValueData = valueData->DeepClone(device, readOnly);
+            deviceValueData = valueData->DeepClone(device, readOnly);
 
         return MakeSharedObject<Value>(deviceValueData, deviceValueMask);
     }
@@ -305,7 +305,7 @@ namespace CNTK
                 InvalidArgument("Value::Create:: The number of elements in the vector containing sequence data must be a multiple of the size of specified sampel shape");
 
             auto sequenceLength = currentSequence.size() / numElementsPerSample;
-            auto sequenceDataShape = sampleShape.AppendShape({sequenceLength});
+            auto sequenceDataShape = sampleShape.AppendShape({ sequenceLength });
             sequencesData.push_back(MakeSharedObject<NDArrayView>(sequenceDataShape, currentSequence));
         }
 
@@ -376,10 +376,10 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    CNTK_API void Value::CopyToVector(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths)
+    void Value::CopyToVector(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths)
     {
         if (sampleShape[0] != sampleShape.TotalSize())
-            InvalidArgument("");
+            InvalidArgument("The sample shape's leading axis dimensionality must equal the total size of the sample for sparse data.");
 
         CopyToImpl<ElementType, size_t>(sampleShape, sequences, sequenceLengths);
     }
@@ -389,10 +389,11 @@ namespace CNTK
                            std::vector<std::vector<DestType>>& sequences, 
                            std::vector<size_t>& sequenceLengths)
     {
-        auto valueRank = Shape().Rank();
+        auto valueShape = Shape();
+        auto valueRank = valueShape.Rank();
         auto sampleRank = sampleShape.Rank();
-        if ((valueRank < sampleRank + 1) || (valueRank > sampleRank + 2) || (sampleShape != Shape().SubShape(0, sampleRank)))
-            RuntimeError("The variable and the Value does not have the same tensor shape.");
+        if ((valueRank < sampleRank + 1) || (valueRank > sampleRank + 2) || (sampleShape != valueShape.SubShape(0, sampleRank)))
+            RuntimeError("The sample shape does not match the value shape.");
 
         size_t numOfSequences;
         size_t maxSequenceLen;
@@ -400,16 +401,16 @@ namespace CNTK
         {
             // no batch axis, only sequence axis
             numOfSequences = 1;
-            maxSequenceLen = Shape()[valueRank - 1];
+            maxSequenceLen = valueShape[valueRank - 1];
         }
         else
         {
             assert(valueRank == sampleShape.Rank() + 2);
-            numOfSequences = Shape()[valueRank - 1];
-            maxSequenceLen = Shape()[valueRank - 2];
+            numOfSequences = valueShape[valueRank - 1];
+            maxSequenceLen = valueShape[valueRank - 2];
         }
 
-        // Check output buffer size
+        // Check batch size
         if (sequences.size() < numOfSequences)
             RuntimeError("The size of output buffer is too small");
 
@@ -602,5 +603,7 @@ namespace CNTK
     template /*static*/ CNTK_API ValuePtr Value::Create<double>(size_t vocabSize, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template CNTK_API void Value::CopyToVector<float>(const NDShape& sampleShape, std::vector<std::vector<float>>& sequences, std::vector<size_t>& sequencesLens);
     template CNTK_API void Value::CopyToVector<double>(const NDShape& sampleShape, std::vector<std::vector<double>>& sequences, std::vector<size_t>& sequencesLens);
+    template CNTK_API void Value::CopyToVector<float>(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
+    template CNTK_API void Value::CopyToVector<double>(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
 
 }

@@ -11,29 +11,11 @@
 using namespace CNTK;
 using namespace std;
 
-// Check the actual shape matches the expected shape, sequence number and sample size.
-void CheckShape(const NDShape& shape, const NDShape& expectedShape, const size_t expectedNumOfSequences, const size_t expectedSampleSize)
-{
-    if (shape != expectedShape)
-    {
-        ReportFailure("The shape of the value does not match. Expected: %S, actual: %S\n", expectedShape.AsString().c_str(), shape.AsString().c_str());
-    }
-    size_t numOfSequences = shape[shape.Rank() - 1];
-    if (numOfSequences != expectedNumOfSequences)
-    {
-        ReportFailure("The sequence number in the Value does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", expectedNumOfSequences, numOfSequences);
-    }
-    size_t sampleSize = shape.SubShape(0, shape.Rank() - 2).TotalSize();
-    if (sampleSize != expectedSampleSize)
-    {
-        ReportFailure("The sample size in the Value does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", expectedSampleSize, sampleSize);
-    }
-}
-
 // Check the actual Value match the expected shape and the given data (in dense format)
 template <typename ElementType>
-void CheckValue(const ValuePtr testValue, const NDShape& expectedShape, const size_t expectedSampleSize, const vector<vector<ElementType>>& expectedData, const vector<size_t>& seqLenList)
+void CheckValue(const ValuePtr testValue, const NDShape& sampleShape, const vector<vector<ElementType>>& expectedData, const vector<size_t>& seqLenList)
 {
+    size_t sampleSize = sampleShape.TotalSize();
     // Check parameters
     if (expectedData.size() != seqLenList.size())
     {
@@ -41,26 +23,46 @@ void CheckValue(const ValuePtr testValue, const NDShape& expectedShape, const si
     }
     for (size_t i = 0; i < expectedData.size(); i++)
     {
-        if (expectedData[i].size() != seqLenList[i] * expectedSampleSize)
+        if (expectedData[i].size() != seqLenList[i] * sampleSize)
         {
-            ReportFailure("Parameter erroe: the number of data for sequence %" PRIu64 " in the expected data does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", i, seqLenList[i] * expectedSampleSize, expectedData[i].size());
+            ReportFailure("Parameter erroe: the number of data for sequence %" PRIu64 " in the expected data does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", i, seqLenList[i] * sampleSize, expectedData[i].size());
         }
     }
 
     // Check shape 
-    CheckShape(testValue->Shape(), expectedShape, seqLenList.size(), expectedSampleSize);
+    auto valueRank = testValue->Shape().Rank();
+    auto sampleRank = sampleShape.Rank();
+    if ((valueRank < sampleRank + 1) || (valueRank > sampleRank + 2) || (sampleShape != testValue->Shape().SubShape(0, sampleRank)))
+        ReportFailure("The Value does not have the expected shape.");
 
-    // Get data from Value
+    size_t numOfSequences;
+    if (valueRank == sampleShape.Rank() + 1)
+    {
+        // no batch axis, only sequence axis
+        numOfSequences = 1;
+    }
+    else
+    {
+        assert(valueRank == sampleShape.Rank() + 2);
+        numOfSequences = testValue->Shape()[valueRank - 1];
+    }
+
+    if (numOfSequences != expectedData.size())
+    {
+        ReportFailure("The sequence number in the Value does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", expectedData.size(), numOfSequences);
+    }
+
+    // Get data from Value 
     vector<ElementType> outputData(testValue->Shape().TotalSize());
     NDArrayViewPtr arrayOutput = MakeSharedObject<NDArrayView>(testValue->Shape(), outputData, false);
     arrayOutput->CopyFrom(*testValue->Data());
 
     size_t maxSeqLen = *max_element(seqLenList.begin(), seqLenList.end());
     size_t oIndex = 0;
-    size_t sampleSize = testValue->Shape().SubShape(0, testValue->Shape().Rank() - 2).TotalSize();
 
     for (size_t seq = 0; seq < seqLenList.size(); seq++)
     {
+        // Todo: need to check NDMask is also correct. It is partly done in CopyTo tests.
         size_t seqLen = seqLenList[seq];
         for (size_t sIndex = 0; sIndex < seqLen * sampleSize; sIndex++, oIndex++)
         {
@@ -76,7 +78,7 @@ void CheckValue(const ValuePtr testValue, const NDShape& expectedShape, const si
 
 // Check the actual Value match the expected shape and the given data (in onehot vector format)
 template <typename ElementType>
-void CheckValue(const ValuePtr testValue, const NDShape& expectedShape, const size_t vocabSize, const vector<vector<size_t>>& expectedData, const vector<size_t>& seqLenList)
+void CheckValue(const ValuePtr testValue, const size_t vocabSize, const vector<vector<size_t>>& expectedData, const vector<size_t>& seqLenList)
 {
     // Check parameters
     if (expectedData.size() != seqLenList.size())
@@ -91,12 +93,22 @@ void CheckValue(const ValuePtr testValue, const NDShape& expectedShape, const si
         }
     }
 
-    // Check shape 
-    CheckShape(testValue->Shape(), expectedShape, seqLenList.size(), vocabSize);
+    // Check shape
+    NDShape shape = testValue->Shape();
+    size_t valueRank = shape.Rank();
+    if (valueRank < 2 || valueRank > 3 || shape[0] != vocabSize)
+    {
+        ReportFailure("The shape of the value does not match\n");
+    }
+    size_t numOfSequences = valueRank == 2 ? 1 : shape[2]; 
+    if (numOfSequences != expectedData.size())
+    {
+        ReportFailure("The sequence number in the Value does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", expectedData.size(), numOfSequences);
+    }
 
     // Get data from Value
-    vector<ElementType> outputData(testValue->Shape().TotalSize());
-    NDArrayViewPtr arrayOutput = MakeSharedObject<NDArrayView>(testValue->Shape(), outputData, false);
+    vector<ElementType> outputData(shape.TotalSize());
+    NDArrayViewPtr arrayOutput = MakeSharedObject<NDArrayView>(shape, outputData, false);
     arrayOutput->CopyFrom(*testValue->Data());
 
     size_t maxSeqLen = *max_element(seqLenList.begin(), seqLenList.end());
@@ -127,128 +139,139 @@ void CheckValue(const ValuePtr testValue, const NDShape& expectedShape, const si
 }
 
 template <typename ElementType>
-void FillDenseMatrixData(vector<vector<ElementType>>& databuf,  const vector<size_t>& seqLenList, const size_t sampleSize)
-{
-    for (size_t seq = 0; seq < seqLenList.size(); seq++)
-    {
-        auto p = new vector<ElementType>();
-        databuf.push_back(*p);
-        size_t seqLen = seqLenList[seq];
-        for (size_t sample = 0; sample < seqLen ; sample++)
-        {
-            for (size_t element = 0; element < sampleSize; element++)
-            {
-                databuf[seq].push_back(static_cast<ElementType>(seq * 1000 + sample * 100 + element));
-            }
-        }
-    }
-}
-
-template <typename ElementType>
 void ValueCreationNoNDMaskTest(const DeviceDescriptor device, bool readOnly)
 {
-    //Todo: test numberOfSequences == 1: no batch access, need to adapt checkShape(), CheckValue()
-    size_t numberOfSequences = 5;
-    size_t seqLen = 4;
     vector<size_t> dims{3, 2};
-
-    vector<size_t> seqLenList;
-    for (size_t i = 0; i < numberOfSequences; i++)
-    {
-        seqLenList.push_back(seqLen);
-    }
-    vector<vector<ElementType>> data;
-    FillDenseMatrixData(data, seqLenList, dims[0] * dims[1]);
-
-    // Create the Value object based on the given data and shape.
     NDShape sampleShape(dims);
-    ValuePtr testValue = Value::Create(sampleShape, data, device, readOnly);
+    std::vector<std::vector<ElementType>> data;
+    ValuePtr testValue;
 
-    // Check whether the created value matches expected shape and data.
-    CheckValue(testValue, {dims[0], dims[1], seqLen, numberOfSequences}, dims[0] * dims[1], data, seqLenList);
+    // single sequence, single sample
+    std::vector<size_t> seqLenList = {1};
+    data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+    testValue = Value::Create(sampleShape, data, device, readOnly);
+    CheckValue(testValue, sampleShape, data, seqLenList);
+
+    // Single sequnce, multiple samples
+    seqLenList = {2};
+    data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+    testValue = Value::Create(sampleShape, data, device, readOnly);
+    CheckValue(testValue, sampleShape, data, seqLenList);
+
+    // Batch with sequences
+
+    // Same sequence length for testing no NDMask is needed.
+    size_t seqLen = 4;
+    int testRun = 3;
+    size_t maxNumOfSequences = 60;
+    // This is only used to generate number of sequnces, so boost distribution is not needed.
+    std::default_random_engine generator;
+    std::uniform_int_distribution<size_t> distribution(1, maxNumOfSequences);
+    for (int i = 0; i < testRun; i++)
+    {
+        size_t numberOfSequences = distribution(generator);
+        std::vector<size_t> seqLenList(numberOfSequences, seqLen);
+
+        data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+        // Create the Value object based on the given data and shape.
+        testValue = Value::Create(sampleShape, data, device, readOnly);
+        // Check whether the created value matches expected shape and data.
+        CheckValue(testValue, sampleShape, data, seqLenList);
+    }
 }
 
 template <typename ElementType>
 void ValueCreationWithNDMaskTest(const DeviceDescriptor device, bool readOnly)
 {
-    vector<size_t> seqLenList{5, 6, 8, 7};
-    vector<size_t> dims{3, 2};
-
-    size_t numberOfSequences = seqLenList.size();
-    vector<vector<ElementType>> data;
-    FillDenseMatrixData(data, seqLenList, dims[0] * dims[1]);
-
+    vector<size_t> dims{1, 4};
     NDShape sampleShape(dims);
-    ValuePtr testValue = Value::Create(sampleShape, data, device, readOnly);
+    size_t numberOfSequences; 
+    size_t maxAllowedSeqLen = 128;
+    size_t maxSeqLen;
+    std::vector<std::vector<ElementType>> data;
+    std::vector<size_t> seqLenList;
 
-    // Check whether the created value matches expected shape and data.
-    size_t maxSeqLen = *max_element(seqLenList.begin(), seqLenList.end());
-    CheckValue(testValue, {dims[0], dims[1], maxSeqLen, numberOfSequences}, dims[0] * dims[1], data, seqLenList);
+    size_t maxNumOfSequences = 80;
+    // This is only used to generate number of sequnces, so boost distribution is not needed.
+    std::default_random_engine generator;
+    std::uniform_int_distribution<size_t> distribution(1, maxNumOfSequences);
+    int testRun = 3;
+    for (int i = 0; i < testRun; i++)
+    {
+        numberOfSequences = distribution(generator);
+        seqLenList = GenerateSequenceLengths(numberOfSequences, maxAllowedSeqLen);
+        maxSeqLen = *std::max_element(seqLenList.begin(), seqLenList.end());
+        data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+
+        ValuePtr testValue = Value::Create(sampleShape, data, device, readOnly);
+        CheckValue(testValue, sampleShape, data, seqLenList);
+    }
 }
 
 template <typename ElementType>
 void ValueCreationOneHotNoNDMaskTest(const DeviceDescriptor device, bool readOnly)
 {
-    size_t numberOfSequences = 5;
-    size_t seqLen = 4;
-    size_t vocabSize = 16;
+    size_t vocabSize = 18;
+    std::vector<std::vector<size_t>> data;
+    ValuePtr testValue;
 
-    vector<size_t> seqLenList;
-    for (size_t i = 0; i < numberOfSequences; i++)
+    // Single sequence, single sample
+    std::vector<size_t> seqLenList = {1};
+    data = GenerateOneHotSequences(seqLenList, vocabSize);
+    testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
+    CheckValue<ElementType>(testValue, vocabSize, data, seqLenList);
+
+    // Single sequence, multiple samples
+    seqLenList = {2};
+    data = GenerateOneHotSequences(seqLenList, vocabSize);
+    testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
+    CheckValue<ElementType>(testValue, vocabSize, data, seqLenList);
+
+    size_t maxNumOfSequences = 160;
+    size_t seqLen = 26;
+    // This is only used to generate number of sequnces, so boost distribution is not needed.
+    std::default_random_engine generator;
+    std::uniform_int_distribution<size_t> distribution(1, maxNumOfSequences);
+    int testRun = 3;
+    for (int i = 0; i < testRun; i++)
     {
-        seqLenList.push_back(seqLen);
-    }
-    vector<vector<size_t>> data;
-    for (size_t n = 0; n < numberOfSequences; n++)
-    {
-        auto p = new vector<size_t>();
-        data.push_back(*p);
-        for (size_t s = 0; s < seqLen; s++)
-        {
-            data[n].push_back((s * 10 + n) % vocabSize);
-        }
-    }
+        size_t numberOfSequences = distribution(generator);
+        std::vector<size_t> seqLenList(numberOfSequences, seqLen);
 
-    ValuePtr testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
-
-    CheckValue<ElementType>(testValue, {vocabSize, seqLen, numberOfSequences}, vocabSize, data, seqLenList); 
+        data = GenerateOneHotSequences(seqLenList, vocabSize);
+        testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
+        CheckValue<ElementType>(testValue, vocabSize, data, seqLenList);
+    }
 }
 
 template <typename ElementType>
 void ValueCreationOneHotWithNDMaskTest(const DeviceDescriptor device, bool readOnly)
 {
-    vector<size_t> seqLenList{5, 6, 8, 7};
-    size_t maxSeqLen = 0;
-    size_t vocabSize = 13;
+    size_t vocabSize = 64;
+    size_t numberOfSequences;
+    size_t maxAllowedSeqLen = 95;
+    size_t maxSeqLen;
+    std::vector<vector<size_t>> data;
+    std::vector<size_t> seqLenList;
 
-    vector<vector<size_t>> data;
-    size_t numberOfSequences = seqLenList.size();
-    for (size_t n = 0; n < numberOfSequences; n++)
+    size_t maxNumOfSequences = 70;
+    // This is only used to generate number of sequnces, so boost distribution is not needed.
+    std::default_random_engine generator;
+    std::uniform_int_distribution<size_t> distribution(1, maxNumOfSequences);
+    int testRun = 3;
+    for (int i = 0; i < testRun; i++)
     {
-        auto p = new vector<size_t>();
-        data.push_back(*p);
-        size_t seqLen = seqLenList[n];
-        maxSeqLen = max(seqLen, maxSeqLen);
-        for (size_t s = 0; s < seqLen; s++)
-        {
-            data[n].push_back((s * 10 + n) % vocabSize);
-        }
+        numberOfSequences = distribution(generator);
+        seqLenList = GenerateSequenceLengths(numberOfSequences, maxAllowedSeqLen);
+        maxSeqLen = *std::max_element(seqLenList.begin(), seqLenList.end());
+        data = GenerateOneHotSequences(seqLenList, vocabSize);
+        ValuePtr testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
+        CheckValue<ElementType>(testValue, vocabSize, data, seqLenList);
     }
-
-    ValuePtr testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
-
-    CheckValue<ElementType>(testValue, {vocabSize, maxSeqLen, numberOfSequences}, vocabSize, data, seqLenList);
 }
 
 template <typename ElementType>
-void CheckCopyToOutput(const size_t sampleSize, std::vector<std::vector<ElementType>> expected, std::vector<std::vector<ElementType>> actual)
-{
-    std::vector<size_t> actualSeqLens(0);
-    CheckCopyToOutput(sampleSize, expected, actual, actualSeqLens);
-}
-
-template <typename ElementType>
-void CheckCopyToOutput(const size_t sampleSize, std::vector<std::vector<ElementType>>& expected, std::vector<std::vector<ElementType>>& actual, std::vector<size_t>& actualSeqLens)
+void CheckCopyToOutput(const size_t sampleSize, const std::vector<std::vector<ElementType>>& expected, const std::vector<std::vector<ElementType>>& actual, const std::vector<size_t>& actualSeqLens)
 {
     bool useSeqLens;
     if (actualSeqLens.size() != 0)
@@ -278,16 +301,23 @@ void CheckCopyToOutput(const size_t sampleSize, std::vector<std::vector<ElementT
         auto len = useSeqLens ? actualSeqLens[i] * sampleSize : actual[i].size();
         if ((actual[i].size() < len) || (expected[i].size() != len))
         {
-            ReportFailure("Seq " PRIu64 " does not match.\n", i);
+            ReportFailure("Seq %lu does not match.\n", static_cast<unsigned long>(i));
         }
         for (size_t j = 0; j < len; j++)
         {
             if (expected[i][j] != actual[i][j])
             {
-                ReportFailure("Seq " PRIu64 " does not match.\n", i);
+                ReportFailure("Seq %lu does not match.\n", static_cast<unsigned long>(i));
             }
         }
     }
+}
+
+template <typename ElementType>
+void CheckCopyToOutput(const size_t sampleSize, const std::vector<std::vector<ElementType>>& expected, const std::vector<std::vector<ElementType>>& actual)
+{
+    std::vector<size_t> actualSeqLens(0);
+    CheckCopyToOutput(sampleSize, expected, actual, actualSeqLens);
 }
 
 template <typename ElementType>
@@ -310,7 +340,7 @@ void ValueCopyToDenseTest(const DeviceDescriptor device)
     auto val = Value::Create(sampleShape, input, device);
 
     val->CopyTo(sampleShape, output);
-    CheckCopyToOutput(sampleSize, input, output);
+    CheckCopyToOutput<ElementType>(sampleSize, input, output);
 
     // Check batch of sample.
     batchCount = 2;
@@ -326,7 +356,7 @@ void ValueCopyToDenseTest(const DeviceDescriptor device)
     }, "The output buffer is too small.");
 
     val->CopyTo(sampleShape, output, actualSeqLens);
-    CheckCopyToOutput(sampleSize, input, output);
+    CheckCopyToOutput<ElementType>(sampleSize, input, output);
 
     // Check sequence of sample, but single batch
     size_t sampleCount = 4;
@@ -343,7 +373,7 @@ void ValueCopyToDenseTest(const DeviceDescriptor device)
     }, "The output buffer is too small.");
     
     val->CopyTo(sampleShape, output, actualSeqLens);
-    CheckCopyToOutput(sampleSize, input, output, actualSeqLens);
+    CheckCopyToOutput<ElementType>(sampleSize, input, output, actualSeqLens);
 
     // Check batch of sequence of the same length, no mask needed.
     batchCount = 4;
@@ -360,7 +390,7 @@ void ValueCopyToDenseTest(const DeviceDescriptor device)
     }, "The output buffer is too small.");
 
     val->CopyTo(sampleShape, output, actualSeqLens);
-    CheckCopyToOutput(sampleSize, input, output, actualSeqLens);
+    CheckCopyToOutput<ElementType>(sampleSize, input, output, actualSeqLens);
 
     // Check batch of sequecnes with different length, mask needed.
     std::vector<size_t> sampleCountList {6, 9, 2};
@@ -377,7 +407,7 @@ void ValueCopyToDenseTest(const DeviceDescriptor device)
     }, "The output buffer is too small.");
 
     val->CopyTo(sampleShape, output, actualSeqLens);
-    CheckCopyToOutput(sampleSize, input, output, actualSeqLens);
+    CheckCopyToOutput<ElementType>(sampleSize, input, output, actualSeqLens);
 
     // More batches and sequences
     sampleCountList = {6, 12, 2, 1, 5, 3, 4};
@@ -393,7 +423,7 @@ void ValueCopyToDenseTest(const DeviceDescriptor device)
         val->CopyTo(sampleShape, output, actualSeqLens, false);
     }, "The output buffer is too small.");
     val->CopyTo(sampleShape, output, actualSeqLens);
-    CheckCopyToOutput(sampleSize, input, output, actualSeqLens);
+    CheckCopyToOutput<ElementType>(sampleSize, input, output, actualSeqLens);
 
     // Random batch and sequence
     int testRun = 4;
@@ -411,7 +441,7 @@ void ValueCopyToDenseTest(const DeviceDescriptor device)
         val = Value::Create(sampleShape, input, device);
 
         val->CopyTo(sampleShape, output, actualSeqLens);
-        CheckCopyToOutput(sampleSize, input, output, actualSeqLens);
+        CheckCopyToOutput<ElementType>(sampleSize, input, output, actualSeqLens);
     }
 }
 
