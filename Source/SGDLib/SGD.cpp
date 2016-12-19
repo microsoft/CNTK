@@ -426,7 +426,10 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
     {
         // Awlays skip the first epoch for profiling to avoid startup behavior
-        if (i > startEpoch) ProfilerEnable(true);
+        if (i > startEpoch)
+        {
+            ProfilerEnable(true);
+        }
 
         // Synchronize all ranks before proceeding to ensure that
         // rank 0 has finished writing the previous model file
@@ -1014,13 +1017,13 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     bool isFirstMinibatch = true;
     for (;;)
     {
-        auto minibatchProfilerState = ProfilerTimeBegin();
+        auto profMinibatch = ProfilerTimeBegin();
 
         // get minibatch
         // TODO: is it guaranteed that the GPU is already completed at this point, is it safe to overwrite the buffers?
         size_t actualMBSize = 0;
 
-        auto profilerState = ProfilerTimeBegin();
+        auto profGetMinibatch = ProfilerTimeBegin();
         bool wasDataRead = DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(*trainSetDataReader, net, criterionNodes[0],
                                                                                 useDistributedMBReading, useParallelTrain, *inputMatrices, actualMBSize, m_mpi);
 
@@ -1039,8 +1042,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             ProfilerEnable(false);
         }
 
-        ProfilerTimeEnd(profilerState, profilerEvtMainGetMinibatch);
-        profilerState = ProfilerTimeBegin();
+        ProfilerTimeEnd(profGetMinibatch, profilerEvtMainGetMinibatch);
+        auto profForwardBackward = ProfilerTimeBegin();
 
         nSamplesSinceLastModelSync += actualMBSize;
 
@@ -1132,8 +1135,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 maxNumSamplesExceeded = true;
         }
 
-        ProfilerTimeEnd(profilerState, profilerEvtMainFB);
-        profilerState = ProfilerTimeBegin();
+        ProfilerTimeEnd(profForwardBackward, profilerEvtMainFB);
+        auto profGradientAgg = ProfilerTimeBegin();
 
         // for momentum/clipping/regularization/etc., as well as for progress and statistics, we should only count frames that are not gaps
         // #samples according to the default dynamic axis, for use with criterion nodes that do not have an MBLayout
@@ -1223,8 +1226,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             }
         }
 
-        ProfilerTimeEnd(profilerState, profilerEvtMainGradient);
-        profilerState = ProfilerTimeBegin();
+        ProfilerTimeEnd(profGradientAgg, profilerEvtMainGradient);
+        auto profWeights = ProfilerTimeBegin();
 
         // update model parameters
         if ((aggregateNumSamples > 0) && (learnRatePerSample > m_minLearnRate * 0.01))
@@ -1307,8 +1310,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         }
 
 
-        ProfilerTimeEnd(profilerState, profilerEvtMainWeights);
-        profilerState = ProfilerTimeBegin();
+        ProfilerTimeEnd(profWeights, profilerEvtMainWeights);
+        auto profPost = ProfilerTimeBegin();
 
         timer.Stop();
 
@@ -1434,8 +1437,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         profiler.NextSample();
         isFirstMinibatch = false;
 
-        ProfilerTimeEnd(profilerState, profilerEvtMainPost);
-        ProfilerTimeEnd(minibatchProfilerState, profilerEvtMainMinibatch);
+        ProfilerTimeEnd(profPost, profilerEvtMainPost);
+        ProfilerTimeEnd(profMinibatch, profilerEvtMainMinibatch);
     }
 
     // --- END MAIN MINIBATCH LOOP

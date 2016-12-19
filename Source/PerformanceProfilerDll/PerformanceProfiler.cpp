@@ -66,7 +66,7 @@ static const FixedEventDesc c_fixedEvtDesc[profilerEvtMax] = {
     { "Data Reader", profilerEvtSeparator, false },                 // profilerSepDataReader
     { "", profilerEvtSeparator, false },                            // profilerSepSpace4
 
-    { "Read Minibatch Task", profilerEvtTime, false },              // profilerEvtReadMinibatch
+    { "Read Minibatch Task", profilerEvtTime, false },              // profilerEvtPrefetchMinibatch
 };
 
 
@@ -97,17 +97,17 @@ struct CustomEventRecord
 //
 struct ProfilerState
 {
-    bool                    enabled;                    // Profiler enabled (active)
-    bool                    syncGpu;                    // Sync GPU per each profiling event
-    bool                    cudaSyncEnabled;            // Runtime state of CUDA kernel sync
-    std::wstring            profilerDir;                // Directory where reports/logs are saved
-    std::wstring            logSuffix;                  // Suffix to append to report/log file names
-    long long               clockFrequency;             // Timer frequency
+    bool                    enabled;                     // Profiler enabled (active)
+    bool                    syncGpu;                     // Sync GPU per each profiling event
+    bool                    cudaSyncEnabled;             // Runtime state of CUDA kernel sync
+    std::wstring            profilerDir;                 // Directory where reports/logs are saved
+    std::wstring            logSuffix;                   // Suffix to append to report/log file names
+    long long               clockFrequency;              // Timer frequency
     FixedEventRecord        fixedEvents[profilerEvtMax]; // Profiling data for each fixed event
-    bool                    customEventBufferFull;      // Is custom event buffer full?
-    unsigned long long      customEventBufferBytes;     // Number of bytes allocated for the custom event buffer
-    unsigned long long      customEventOffset;          // Offset to current place in buffer
-    char*                   customEventBuffer;          // Pointer to custom event buffer
+    bool                    customEventBufferFull;       // Is custom event buffer full?
+    unsigned long long      customEventBufferBytes;      // Number of bytes allocated for the custom event buffer
+    unsigned long long      customEventOffset;           // Offset to current place in buffer
+    char*                   customEventBuffer;           // Pointer to custom event buffer
 };
 
 

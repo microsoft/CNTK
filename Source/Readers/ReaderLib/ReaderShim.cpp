@@ -213,7 +213,6 @@ void ReaderShim<ElemType>::StartEpoch(const EpochConfiguration& config, const st
     m_prefetchTask = std::async(m_launchType,
     [this, localCurrentDataTransferIndex]()
     {
-        PROFILE_SCOPE(profilerEvtReadMinibatch);
         return PrefetchMinibatch(localCurrentDataTransferIndex);
     });
 }
@@ -348,6 +347,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 template <class ElemType>
 typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMinibatch(size_t currentDataTransferIndex)
 {
+    PROFILE_SCOPE(profilerEvtPrefetchMinibatch);
+
     // Resetting layouts.
     for (auto& mx : m_prefetchBuffers)
         mx.second.m_mbLayout = std::make_shared<MBLayout>();
