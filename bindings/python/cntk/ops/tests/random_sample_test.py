@@ -15,25 +15,25 @@ from cntk import random_sample_inclusion_frequency, random_sample, times
 
 INCLUSION_FREQUENCY_TEST_CASES = [
     # drawing 1 sample
-    # TODO VS15 (np.full((4), 42.), 1, True, np.full((4), 1 / 4), 0.0001, False),
+    (np.full((4), 42.), 1, True, np.full((4), 1 / 4), 0.0001, False),
 
     # drawing 13 samples
-    # TODO VS15 (np.full((4), 42.), 13,
-    # TODO VS15 True,   np.full((4), 13 / 4), 0.0001, False),
+    (np.full((4), 42.), 13,
+     True,   np.full((4), 13 / 4), 0.0001, False),
 
     # drawing more samples than there are classes
-    # TODO VS15 ([1., 2., 3.], 42, True, [42 / (1 + 2 + 3), 2 * 42 / \
-    # TODO VS15                           (1 + 2 + 3), 3 * 42 / (1 + 2 + 3)], 0.0001, False),
+    ([1., 2., 3.], 42, True, [42 / (1 + 2 + 3), 2 * 42 / \
+                              (1 + 2 + 3), 3 * 42 / (1 + 2 + 3)], 0.0001, False),
 
     # Use 300 weights where the first 200 hundred weights are high compared to
     # the rest. Sample 200 without replacement.
-    # TODO VS15 (np.concatenate((np.full((100), 100), np.full((100), 10), np.full((100), 0.1))), 200,
-    # TODO VS15  False, np.concatenate((np.full((200), 1), np.full((100), 0))),  0.1,   False),
+    (np.concatenate((np.full((100), 100), np.full((100), 10), np.full((100), 0.1))), 200,
+     False, np.concatenate((np.full((200), 1), np.full((100), 0))),  0.1,   False),
 
     # Having more classes than samples is not allowed when sampling without
     # replacment. Check if exception is thrown.
-    # TODO VS15 (np.full((4), 42.), 50,
-    # TODO VS15  False,  np.full((4), 13 / 4), 0.0001, True),
+    (np.full((4), 42.), 50,
+     False,  np.full((4), 13 / 4), 0.0001, True),
 
     # Number of requested samples must be positive
     ([1., 2., 3.], 0, False,  np.full((4), 13 / 4), 0.0001, True),
@@ -61,7 +61,7 @@ def test_random_sample_inclusion_frequency(weights, num_samples, allow_duplicate
         assert np.allclose(result.eval(), expected, atol=tolerance)
 
 RANDOM_SAMPLE_TEST_CASES_WITH_REPLACEMENT = [
-    # TODO VS15 ([1., 3., 5., 1.],  1000, 0.05, False),
+    ([1., 3., 5., 1.],  1000, 0.05, False),
     ([1., -1.],  100, 0.0, True),
 ]
 
@@ -92,7 +92,7 @@ def test_random_sample_with_replacement(weights, num_samples, tolerance, raises_
 
 
 RANDOM_SAMPLE_TEST_CASES_WITHOUT_REPLACEMENT = [
-    # TODO VS15 ([1., 3, 50., 1., 0.], 4, (1, 1, 1, 1, 0), 0.0, False),
+    ([1., 3, 50., 1., 0.], 4, (1, 1, 1, 1, 0), 0.0, False),
     ([1., -1.],  1, None,   0.0, True),
 ]
 

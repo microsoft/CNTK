@@ -11,7 +11,7 @@ from cntk.debug import save_as_legacy_model
 from cntk.ops.functions import load_model
 
 
-def TODO_VS15_test_load_save_constant(tmpdir):
+def test_load_save_constant(tmpdir):
     c = constant(value=[1,3])
     root_node = c * 5
 
@@ -46,7 +46,7 @@ def test_load_save_input(tmpdir):
 
     loaded_node = load_model(filename)
 
-    # Test spefying the input node names by order
+    # Test specifying the input node names by order
     loaded_result = loaded_node.eval([input1])
     assert np.allclose(loaded_result, expected)
 

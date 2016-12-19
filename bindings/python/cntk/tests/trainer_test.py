@@ -17,7 +17,7 @@ from .. import cross_entropy_with_softmax, classification_error, parameter, \
 import pytest
 from scipy.sparse import csr_matrix as csr
 
-def TODO_VS15_test_trainer(tmpdir):
+def test_trainer(tmpdir):
     in1 = input_variable(shape=(1,))
     labels = input_variable(shape=(1,))
     p = parameter(shape=(2,), init=10)

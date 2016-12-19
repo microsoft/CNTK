@@ -1924,17 +1924,17 @@ def random_sample_inclusion_frequency(
         >>> w1 = np.full((100),1000, dtype = np.float)
         >>> w2 = np.full((100),1, dtype = np.float)
         >>> w = np.concatenate((w1, w2))
-        >>> # TODO VS15 f = random_sample_inclusion_frequency(w, 150, True).eval()
-        >>> # TODO VS15 f[0]
+        >>> f = random_sample_inclusion_frequency(w, 150, True).eval()
+        >>> f[0]
         1.4985015
-        >>> # TODO VS15 f[1]
+        >>> f[1]
         1.4985015
-        >>> # TODO VS15 f[110]
+        >>> f[110]
         0.0014985015
         >>> # when switching to sampling without duplicates samples are
         >>> # forced to pick the low weight classes too
-        >>> # TODO VS15 hangs: f = random_sample_inclusion_frequency(w, 150, False).eval()
-        >>> # TODO VS15 f[0]
+        >>> f = random_sample_inclusion_frequency(w, 150, False).eval()
+        >>> f[0]
         1.0
 
     Returns:
