@@ -449,7 +449,6 @@ template <typename ElementType>
 void ValueCopyToOneHotTest(const DeviceDescriptor device)
 {
     size_t dim = 100;
-    NDShape sampleShape{{dim}};
     std::vector<std::vector<size_t>> input;
     std::vector<std::vector<size_t>> output;
     std::vector<size_t> expectedSeqLens;
@@ -464,7 +463,7 @@ void ValueCopyToOneHotTest(const DeviceDescriptor device)
     input = GenerateOneHotSequences(expectedSeqLens, dim);
     auto val = Value::Create<ElementType>(dim, input, device);
 
-    val->CopyTo(sampleShape, output);
+    val->CopyTo(dim, output);
     CheckCopyToOutput(1, input, output);
 
     // Check batch of sample.
@@ -476,11 +475,11 @@ void ValueCopyToOneHotTest(const DeviceDescriptor device)
     val = Value::Create<ElementType>(dim, input, device);
 
     // The batch axis is too small
-    VerifyException([&val, &sampleShape, &output, &actualSeqLens]() {
-        val->CopyTo(sampleShape, output, actualSeqLens, false);
+    VerifyException([&val, &dim, &output, &actualSeqLens]() {
+        val->CopyTo(dim, output, actualSeqLens, false);
     }, "The output buffer is too small.");
 
-    val->CopyTo(sampleShape, output, actualSeqLens);
+    val->CopyTo(dim, output, actualSeqLens);
     CheckCopyToOutput(1, input, output);
 
     // Check sequence of sample, but single batch
@@ -493,11 +492,11 @@ void ValueCopyToOneHotTest(const DeviceDescriptor device)
     val = Value::Create<ElementType>(dim, input, device);
 
     // The sequence axis is too small
-    VerifyException([&val, &sampleShape, &output, &actualSeqLens]() {
-        val->CopyTo(sampleShape, output, actualSeqLens, false);
+    VerifyException([&val, &dim, &output, &actualSeqLens]() {
+        val->CopyTo(dim, output, actualSeqLens, false);
     }, "The output buffer is too small.");
 
-    val->CopyTo(sampleShape, output, actualSeqLens);
+    val->CopyTo(dim, output, actualSeqLens);
     CheckCopyToOutput(1, input, output, actualSeqLens);
 
     // Check batch of sequence of the same length, no mask needed.
@@ -510,11 +509,11 @@ void ValueCopyToOneHotTest(const DeviceDescriptor device)
     val = Value::Create<ElementType>(dim, input, device);
 
     // The batch axis is too small, the sequence axis is sufficient.
-    VerifyException([&val, &sampleShape, &output, &actualSeqLens]() {
-        val->CopyTo(sampleShape, output, actualSeqLens, false);
+    VerifyException([&val, &dim, &output, &actualSeqLens]() {
+        val->CopyTo(dim, output, actualSeqLens, false);
     }, "The output buffer is too small.");
 
-    val->CopyTo(sampleShape, output, actualSeqLens);
+    val->CopyTo(dim, output, actualSeqLens);
     CheckCopyToOutput(1, input, output, actualSeqLens);
 
     // Check batch of sequecnes with different length, mask needed.
@@ -527,11 +526,11 @@ void ValueCopyToOneHotTest(const DeviceDescriptor device)
     val = Value::Create<ElementType>(dim, input, device);
 
     // The batch axis is sufficient, the sequence axis is too small
-    VerifyException([&val, &sampleShape, &output, &actualSeqLens]() {
-        val->CopyTo(sampleShape, output, actualSeqLens, false);
+    VerifyException([&val, &dim, &output, &actualSeqLens]() {
+        val->CopyTo(dim, output, actualSeqLens, false);
     }, "The output buffer is too small.");
 
-    val->CopyTo(sampleShape, output, actualSeqLens);
+    val->CopyTo(dim, output, actualSeqLens);
     CheckCopyToOutput(1, input, output, actualSeqLens);
 
     // More batches and sequences
@@ -544,10 +543,10 @@ void ValueCopyToOneHotTest(const DeviceDescriptor device)
     val = Value::Create<float>(dim, input, device);
 
     // Both the batch and sequence axes are too small.
-    VerifyException([&val, &sampleShape, &output, &actualSeqLens]() {
-        val->CopyTo(sampleShape, output, actualSeqLens, false);
+    VerifyException([&val, &dim, &output, &actualSeqLens]() {
+        val->CopyTo(dim, output, actualSeqLens, false);
     }, "The output buffer is too small.");
-    val->CopyTo(sampleShape, output, actualSeqLens);
+    val->CopyTo(dim, output, actualSeqLens);
     CheckCopyToOutput(1, input, output, actualSeqLens);
 
     // Random batch and sequence
@@ -565,7 +564,7 @@ void ValueCopyToOneHotTest(const DeviceDescriptor device)
         input = GenerateOneHotSequences(expectedSeqLens, dim);
         val = Value::Create<ElementType>(dim, input, device);
 
-        val->CopyTo(sampleShape, output, actualSeqLens);
+        val->CopyTo(dim, output, actualSeqLens);
         CheckCopyToOutput(1, input, output, actualSeqLens);
     }
 }
