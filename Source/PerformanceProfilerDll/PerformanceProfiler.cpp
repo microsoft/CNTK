@@ -364,7 +364,7 @@ void PERF_PROFILER_API ProfilerClose()
     LockClose();
 
     // Generate summary report
-    if (_wmkdir(g_profilerState->profilerDir.c_str()) == ENOENT)
+    if (_wmkdir(g_profilerState->profilerDir.c_str()) == -1)
     {
         RuntimeError("Error: ProfilerClose: Cannot create directory <%ls>.\n", g_profilerState->profilerDir.c_str());
         return;
