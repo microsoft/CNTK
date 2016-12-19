@@ -46,8 +46,8 @@ def Sequential(layers):
 # LayerStack(3, lambda i: Dense(3))
 # LayerStack(3, lambda: Dense(3))
 def LayerStack(N, constructor):
-    from inspect import signature
-    takes_arg = len(signature(constructor).parameters) > 0
+    from inspect import getargspec
+    takes_arg = len(getargspec(constructor).args) > 0
     # helper to call the layer constructor
     def call(i):
         if takes_arg:

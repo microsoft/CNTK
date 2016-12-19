@@ -297,7 +297,7 @@ function find_python ()
 function default_use_python ()
 {
 # Keeping it default "no" for a little while:
-#    if test x$(find_swig) = x || test x$(find_python 34)$(find_python 35) = x
+#    if test x$(find_swig) = x || test x$(find_python 27)$(find_python 34)$(find_python 35) = x
 #    then
         echo no
 #    else
@@ -343,7 +343,8 @@ function show_help ()
     echo "  --with-code-coverage[=(yes|no)] $(show_default ${default_use_code_coverage})"
     echo "  --with-boost[=directory] $(show_default $(find_boost))"
     echo "  --with-protobuf[=directory] $(show_default $(find_protobuf))"
-    echo "  --with-py-versions=(space-separated list of 34, 35)"
+    echo "  --with-py-versions=(space-separated list of 27, 34, 35)"
+    echo "  --with-py27-path[=directory] $(show_default $(find_python 27))"
     echo "  --with-py34-path[=directory] $(show_default $(find_python 34))"
     echo "  --with-py35-path[=directory] $(show_default $(find_python 35))"
     echo "  --with-swig[=directory] $(show_default $(find_swig))"
@@ -449,7 +450,7 @@ do
                 for ver in $optarg
                 do
                     case $ver in
-                        34 | 35)
+                        27 | 34 | 35)
                             ;;
                         *)
                             echo "Invalid value for --with-py-versions $optarg: invalid version $ver"
@@ -462,7 +463,7 @@ do
             fi
             ;;
 
-        --with-py34-path*|--with-py35-path*)
+        --with-py27-path*|--with-py34-path*|--with-py35-path*)
             enable_python=yes
             py_version=${key:9:2}
             if test x$optarg = x
@@ -904,6 +905,7 @@ fi
 if test $enable_python = yes
 then
     # Fill unfilled default paths
+    [ -z "${py_paths[27]}" ] && find_python 27 && py_paths[27]=$(find_python 27)
     [ -z "${py_paths[34]}" ] && find_python 34 && py_paths[34]=$(find_python 34)
     [ -z "${py_paths[35]}" ] && find_python 35 && py_paths[35]=$(find_python 35)
 
@@ -912,7 +914,7 @@ then
     py_versions="$py_versions "
 
     # Make sure each requested version is configured, remove other parts
-    for ver in 34 35
+    for ver in 27 34 35
     do
         case $py_versions in
             *$ver\ *)
