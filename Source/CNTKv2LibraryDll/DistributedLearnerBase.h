@@ -19,6 +19,11 @@ namespace CNTK
 
         void RestoreFromCheckpoint(const Dictionary& checkpoint) override;
 
+        size_t ParallelizationAfter() override
+        {
+            return m_distributeAfterSamples;
+        }
+
     protected:
         DistributedLearnerBase(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples);
 

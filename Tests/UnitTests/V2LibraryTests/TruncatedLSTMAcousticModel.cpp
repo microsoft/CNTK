@@ -112,7 +112,7 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
     LearningRatePerSampleSchedule learningRatePerSample = 0.000781;
     MomentumAsTimeConstantSchedule momentumTimeConstant = 6074;
     auto learner = MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample, momentumTimeConstant, /*unitGainMomentum = */true);
-    Trainer trainer(classifierOutput, trainingLoss, prediction, {learner});
+    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, {learner});
 
     size_t outputFrequencyInMinibatches = 1;
     for (size_t i = 0; true; i++)
@@ -129,7 +129,7 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
         if (actualMaxSequenceLength != truncationLength)
             ReportFailure("Actual max sequence length (%d) in minibatch data does not equal specified truncation length (%d)", (int)actualMaxSequenceLength, (int)truncationLength);
 
-        trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
 }

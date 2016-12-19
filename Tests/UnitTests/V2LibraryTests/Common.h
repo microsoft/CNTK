@@ -405,12 +405,12 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
     stream.exceptions(std::ios_base::badbit);  
 }
 
-inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
+inline void PrintTrainingProgress(const CNTK::TrainerPtr trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
 {
-    if ((minibatchIdx % outputFrequencyInMinibatches) == 0 && trainer.PreviousMinibatchSampleCount() != 0)
+    if ((minibatchIdx % outputFrequencyInMinibatches) == 0 && trainer->PreviousMinibatchSampleCount() != 0)
     {
-        double trainLossValue = trainer.PreviousMinibatchLossAverage();
-        double evaluationValue = trainer.PreviousMinibatchEvaluationAverage();
+        double trainLossValue = trainer->PreviousMinibatchLossAverage();
+        double evaluationValue = trainer->PreviousMinibatchEvaluationAverage();
         printf("Minibatch %d: CrossEntropy loss = %.8g, Evaluation criterion = %.8g\n", (int)minibatchIdx, trainLossValue, evaluationValue);
     }
 }

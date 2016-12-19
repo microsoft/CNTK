@@ -50,6 +50,7 @@
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 %template() std::vector<std::shared_ptr<CNTK::Learner>>;
 %template() std::vector<std::shared_ptr<CNTK::DistributedLearner>>;
+%template() std::vector<std::shared_ptr<CNTK::Trainer>>;
 %template() std::pair<size_t, double>;
 %template() std::vector<std::pair<size_t, double>>;
 %template() std::vector<std::pair<CNTK::Variable, CNTK::Variable>>;
@@ -72,6 +73,7 @@
 %{
 #define SWIG_FILE_WITH_INIT
 %}
+
 %init %{
     import_array();
 %}
@@ -883,7 +885,7 @@ public:
 // Because SWIG cannot properly handle smart pointers to derived classes (causes memory leak during the check),
 // we need custom constructors.
 
-%extend CNTK::Trainer
+%extend Trainer
 {
     Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<DistributedLearnerPtr>& parameterLearners)
     {
@@ -891,12 +893,12 @@ public:
         learners.reserve(parameterLearners.size());
         for(const auto& l : parameterLearners)
             learners.push_back(l);
-        return new CNTK::Trainer(model, lossFunction, evaluationFunction, learners);
+        return CreateTrainer(model, lossFunction, evaluationFunction, learners);
     }
 
     Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners)
     {
-        return new CNTK::Trainer(model, lossFunction, evaluationFunction, parameterLearners);
+        return CreateTrainer(model, lossFunction, evaluationFunction, parameterLearners);
     }
 }
 
@@ -953,6 +955,7 @@ public:
 %unordered_map_ref_conversion(CNTK::Parameter, SWIGTYPE_p_CNTK__Parameter, CNTK::NDArrayViewPtr, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView);
 %unordered_map_ref_conversion(CNTK::Variable, SWIGTYPE_p_CNTK__Variable, CNTK::Variable, SWIGTYPE_p_CNTK__Variable);
 
+%shared_ptr(CNTK::Trainer)
 %shared_ptr(CNTK::Function)
 %shared_ptr(CNTK::NDArrayView)
 %shared_ptr(CNTK::Value)

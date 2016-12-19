@@ -37,7 +37,9 @@ class Trainer(cntk_py.Trainer):
         if not isinstance(parameter_learners, list):
             parameter_learners = [parameter_learners]
 
-        super(Trainer, self).__init__(model, loss_function, eval_function, parameter_learners)
+        trainer = cntk_py.create_trainer(model, loss_function, eval_function, parameter_learners)
+        # transplant into this class instance
+        self.__dict__ = trainer.__dict__
 
     def train_minibatch(self, arguments, outputs=None, device=None):
         '''

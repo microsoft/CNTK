@@ -13,6 +13,7 @@ def map_if_possible(obj):
         from cntk.ops.variables import Variable, Parameter, Constant
         from cntk.ops.functions import Function
         from cntk.learner import Learner
+        from cntk.trainer import Trainer
         from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
         from cntk.axis import Axis
         from cntk.distributed import WorkerDescriptor, Communicator, DistributedLearner
@@ -25,6 +26,7 @@ def map_if_possible(obj):
                 cntk_py.Learner: Learner, 
                 cntk_py.Value: Value, 
                 cntk_py.MinibatchSource: MinibatchSource,
+                cntk_py.Trainer: Trainer,
                 cntk_py.MinibatchData: MinibatchData,
                 cntk_py.StreamConfiguration: StreamConfiguration, 
                 cntk_py.Axis: Axis,

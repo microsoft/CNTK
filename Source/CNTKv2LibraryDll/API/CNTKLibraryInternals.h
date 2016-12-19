@@ -208,6 +208,12 @@ namespace CNTK
     struct VariableFields;
     typedef std::shared_ptr<VariableFields> VariableFieldsPtr;
 
+    class TrainingSession;
+    typedef std::shared_ptr<TrainingSession> TrainingSessionPtr;
+
+    class Trainer;
+    typedef std::shared_ptr<Trainer> TrainerPtr;
+
     namespace Internal
     {
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
