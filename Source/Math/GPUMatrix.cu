@@ -986,7 +986,7 @@ static void Peek(const GPUMatrix<ElemType>& m, const char* which)
 #define ALLOW_ATOMIC_SCATTER // allow to disable this, until we know atomicAdd() works properly here
 
 template <class ElemType>
-__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, CUDA_LONG numElements)
+__global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols, const ElemType* idx, size_t idxStride, const ElemType* a, size_t aStride, const ElemType alpha, const ElemType decay, CUDA_LONG numElements)
 {
     CUDA_LONG id = GridDim::GetLinearThreadId();
     if (id >= numElements) // note: there are no __syncthread() calls inside
@@ -1008,18 +1008,24 @@ __global__ void _doScatterColumnsOf(ElemType* us, size_t usStride, size_t usCols
     ElemType&       rus = us[    i + jOut * usStride  ];
 
     ElemType res = ra * alpha;
-    if (res != 0)             // avoid memory conflict if e.g. an entire column has no gradient
+	if (decay == 1)
+	{
+		if (res != 0)             // avoid memory conflict if e.g. an entire column has no gradient
 #ifdef ALLOW_ATOMIC_SCATTER
-        atomicAdd(&rus, res); // rus += res;
+			atomicAdd(&rus, res); // rus += res;
 #else
-        rus += res;
+			rus += res;
 #endif
-    // Note: atomicAdd() is supposed to be fast in case of no conflict (the simple case of Scatter())
+	}
+	else if (decay == 0)
+		rus = res;
+	else
+		rus = res + decay * rus; //BUGBUG: does not make sense in parallel setting
 }
 
 // *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha, ElemType decay )
 {
     if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
@@ -1063,7 +1069,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     CUDA_LONG NN = (CUDA_LONG)(a.GetNumElements()); // linear space identifying each individual input element
     SyncGuard syncGuard;
     GridDim grid(NN);
-    _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
+    _doScatterColumnsOf<ElemType><<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, decay, NN);
 
     //SyncGuard syncGuard;
     //_doScatterColumnsOf<ElemType><<<a.GetNumCols(), a.GetNumRows(), 0, t_stream>>>(Data(), GetNumRows(), GetNumCols(), idx.Data(), idx.GetNumRows(), a.Data(), a.GetNumRows(), alpha, NN);
@@ -1243,6 +1249,19 @@ void GPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, i
         }
     }
     SetFormat(matrixFormatDense);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::SetValueFromIndex(int* pArray)
+{
+	if (IsEmpty())
+		return;
+
+	CUDA_LONG N = (CUDA_LONG)GetNumElements();
+	int blocksPerGrid = (int)ceil(1.0 * N / GridDim::maxThreadsPerBlock);
+	PrepareDevice();
+	SyncGuard syncGuard;
+	_convertAndSetValue<ElemType, int> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(Data(), pArray, N);
 }
 
 template <class ElemType>

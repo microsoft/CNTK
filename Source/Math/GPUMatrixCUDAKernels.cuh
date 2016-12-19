@@ -397,6 +397,18 @@ __global__ void _setValue(
     a[id] = d_v[0];
 };
 
+template <class ElemType, class ElemType2>
+__global__ void _convertAndSetValue(
+	ElemType* a,
+	const ElemType2* d_v,
+	const CUDA_LONG N)
+{
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+	a[id] = (ElemType) d_v[id];
+};
+
 template <class ElemType>
 __global__ void _copyColumnsStrided(ElemType* dest, ElemType* src, CUDA_LONG N, CUDA_LONG numRows, CUDA_LONG destNumColsStride, CUDA_LONG srcNumColsStride)
 {

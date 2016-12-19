@@ -31,11 +31,11 @@ Train = [             # command=Train --> CNTK will look for a parameter named T
 
         # operations
         #p = w * features + b
-	p = SampledTimes(w,features,labels) + b
+        p = SampledTimes(w,features,labels) + b
     
         #lr = CrossEntropyWithSoftmax (labels, p)
         lr = ReduceLogSum(p, axis=1) - TransposeTimes(labels,p)
-	err = lr
+        err = lr
 
         # root nodes
         featureNodes    = (features)
@@ -47,9 +47,9 @@ Train = [             # command=Train --> CNTK will look for a parameter named T
 
     # configuration parameters of the SGD procedure
     SGD = [
-        epochSize = 100                # =0 means size of the training set
-        minibatchSize = 25
-        learningRatesPerSample = 0.001  # gradient contribution from each sample
+        epochSize = 10000                # =0 means size of the training set
+        minibatchSize = 50
+        learningRatesPerSample = 0.005  # gradient contribution from each sample
         maxEpochs = 100
     ]
 

@@ -814,13 +814,26 @@ public:
 		auto input1 = AsFlattenedMatrix( Base::OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()) );
 		auto input2 = AsFlattenedMatrix( Base::OneSampleTensorFor(2,  /*gradient=*/false, fr.AllowBroadcast()) );
 		auto output = AsFlattenedMatrix(Base::OneSampleTensorFor(-1, /*gradient=*/false, fr));
-		int* idx = input2->GetNonZeroIndices();
 
-		m_sampleIdx.SetValue(idx, 1, input2->GetNumNonZeroElements(), GetDeviceId(), false /*matrixFormatRowMajor*/);
+		if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
+		{
+			input0->Print("Weight matrix");
+			input1->Print("Input matrix");
+			input2->Print("Labels");
+		}
+		m_sampleIdx.Resize(1, input2->GetNumNonZeroElements());
+		m_sampleIdx.SetValueFromIndex(input2->GetNonZeroIndices());
 		m_sampledWeights.DoGatherColumnsOf(0, m_sampleIdx, *input0, 1); // *sampledWeights[:,j] = a[:,idx[j]]
-		m_sampledOutput.AssignProductOf(m_sampledWeights, true/*transA*/, *input1, false/*transB*/);
+		m_sampledOutput.AssignProductOf(*input1, true/*transA*/, m_sampledWeights, false/*transB*/);
 		output->SetValue(0);
-		output->Transpose().DoScatterColumnsOf(0, m_sampleIdx, m_sampledOutput, 0);
+		output->SetValue( output->Transpose().DoScatterColumnsOf(0, m_sampleIdx, m_sampledOutput, 1, 0).Transpose() );
+		if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
+		{
+			m_sampleIdx.Print("Sample indices");
+			m_sampledWeights.Print("Sampled weights");
+			m_sampledOutput.Print("Sampled output");
+			output->Print("Output value");
+		}
 	}
 
 	void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -836,10 +849,20 @@ public:
 			auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true, fr.AllowBroadcast()).AsMatrix();
 			auto outputGradient = AsFlattenedMatrix( OneSampleTensorFor(-1, /*gradient=*/true, fr) );
 			auto input1 = AsFlattenedMatrix(OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()));
-
+			if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
+			{
+				input1->Print("Input matrix");
+				outputGradient->Print("Output gradient");
+			}
 			m_sampledOutput.DoGatherColumnsOf(0, m_sampleIdx, outputGradient->Transpose(), 1);
-			m_sampledWeights.AssignProductOf(m_sampledOutput, false/*transA*/, *input1, true/*transB*/);
-			input0Gradient->DoScatterColumnsOf(0, m_sampleIdx, m_sampledWeights.Transpose(), 0);
+			m_sampledWeights.AssignProductOf(m_sampledOutput, true/*transA*/, *input1, true/*transB*/);
+			input0Gradient->DoScatterColumnsOf(0, m_sampleIdx, m_sampledWeights.Transpose(), 1);
+			if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
+			{
+				m_sampledOutput.Print("Sampled output gradient");
+				m_sampledWeights.Print("Sampled weight gradient");
+				input0Gradient->Print("Weight gradient");
+			}
 		}
 		else if (inputIndex == 1) // right derivative
 		{

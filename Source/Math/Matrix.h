@@ -257,7 +257,7 @@ public:
     // AssignValuesOf respects the target matrix's information. It copies the values from the target into the memory of the source.
     void AssignValuesOf(const Matrix<ElemType>& deepCopyFrom);
 	void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr);
-	void SetValue(int* pArray, const size_t numRows, const size_t numCols, int deviceId, const size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr);
+	void SetValueFromIndex(int* pArray);
     void SetValue(const size_t rIdx, const size_t cIdx, ElemType val); // set matrix sparsely
     void SetValue(const size_t numRows, const size_t numCols, std::initializer_list<ElemType> l) // SetValue(2,3, {1,2,3,  4,5,6});
     {
@@ -295,7 +295,7 @@ public:
     Matrix<ElemType>& AssignTransposeOf(const Matrix<ElemType>& a);
 
     Matrix<ElemType>& DoGatherColumnsOf (ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha);
-    Matrix<ElemType>& DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha);
+    Matrix<ElemType>& DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha, ElemType decay = 1);
 
     Matrix<ElemType>& operator+=(const ElemType alpha);
     Matrix<ElemType>  operator+(const ElemType alpha) const;

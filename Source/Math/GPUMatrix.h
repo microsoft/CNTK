@@ -254,7 +254,8 @@ public:
     void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
-    void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr);
+	void SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, size_t matrixFlags = matrixFlagNormal, DataTransferer* transferer = nullptr);
+	void SetValueFromIndex(int* pArray);
 
     void SetDiagonalValue(const ElemType v);
     void SetDiagonalValue(const GPUMatrix<ElemType>& vector);
@@ -266,7 +267,7 @@ public:
     GPUMatrix<ElemType>& AssignTransposeOf(const GPUMatrix<ElemType>& a);
 
     GPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha);
-    GPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha);
+    GPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const GPUMatrix<ElemType>& idx, const GPUMatrix<ElemType>& a, ElemType alpha, ElemType decay = 1);
 
     GPUMatrix<ElemType>& operator+=(const ElemType alpha);
     GPUMatrix<ElemType> operator+(const ElemType alpha) const;

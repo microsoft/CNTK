@@ -137,7 +137,8 @@ public:
     //void SetValue(const GPUMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const CPUSparseMatrix<ElemType>& deepCopyFrom);
     //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
-    void SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
+	void SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
+	void SetValueFromIndex(int* pArray);
 
     void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
 
@@ -156,7 +157,7 @@ public:
     CPUMatrix<ElemType>& AssignTransposeOf(const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& DoGatherColumnsOf (ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
-    CPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha);
+    CPUMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha, ElemType decay = 1);
 
     CPUMatrix<ElemType>& operator+=(const ElemType alpha);
     CPUMatrix<ElemType>  operator+(const ElemType alpha) const;

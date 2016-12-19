@@ -1117,14 +1117,14 @@ Matrix<ElemType>& Matrix<ElemType>::DoGatherColumnsOf(ElemType beta, const Matri
 // Unlike gather, for scatter, 'this' must have been sized already.
 // Invalid entries (gap columns) are denoted by idx(0,j) == -1.
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha)
+Matrix<ElemType>& Matrix<ElemType>::DoScatterColumnsOf(ElemType beta, const Matrix<ElemType>& idx, const Matrix<ElemType>& a, ElemType alpha, ElemType decay = 1)
 {
     DecideAndMoveToRightDevice(*this, idx, a); // TODO: only move target if beta != 0
 
     DISPATCH_MATRIX_ON_FLAG(&a, this,
-        { m_CPUMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUMatrix, alpha); },
-        { m_GPUMatrix->DoScatterColumnsOf(beta, *idx.m_GPUMatrix, *a.m_GPUMatrix, alpha); },
-        { m_CPUSparseMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUSparseMatrix, alpha); },
+        { m_CPUMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUMatrix, alpha, decay); },
+        { m_GPUMatrix->DoScatterColumnsOf(beta, *idx.m_GPUMatrix, *a.m_GPUMatrix, alpha, decay); },
+        { m_CPUSparseMatrix->DoScatterColumnsOf(beta, *idx.m_CPUMatrix, *a.m_CPUSparseMatrix, alpha, decay); },
         { NOT_IMPLEMENTED; });
 
     return *this;
@@ -1324,16 +1324,15 @@ void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int 
 }
 
 template <class ElemType>
-void Matrix<ElemType>::SetValue(int* pArray, const size_t numRows, const size_t numCols, int deviceId, const size_t matrixFlags, DataTransferer* transferer)
+void Matrix<ElemType>::SetValueFromIndex(int* pArray)
 {
-	size_t numElements = numRows * numCols;
-	ElemType* float_p = new ElemType[numElements];
-	for (size_t i = 0; i < numElements; ++i) {
-		float_p[i] = (ElemType)pArray[i];
-	}
-
-	SetValue(1, numElements, deviceId, float_p, matrixFlags, transferer);
-	delete[] float_p;
+	// Only gpu matrix supports async data transfers, so data transferer passed only to gpu matrix.
+	DISPATCH_MATRIX_ON_FLAG(this,
+		this,
+		m_CPUMatrix->SetValueFromIndex(pArray),
+		m_GPUMatrix->SetValueFromIndex(pArray),
+		NOT_IMPLEMENTED,
+		NOT_IMPLEMENTED);
 }
 
 template <class ElemType>

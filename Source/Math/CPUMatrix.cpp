@@ -664,7 +664,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
 
 // *this[:,idx[j]] = a[:,j] * alpha + *this[:,idx[j]] * beta
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUMatrix<ElemType>& a, ElemType alpha, ElemType decay)
 {
     if (idx.GetNumRows() != 1) // index is 1-dimensional only
         InvalidArgument("DoScatterColumnsOf: Map must be a row vector.");
@@ -688,7 +688,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
         size_t jOut = (size_t)jOutF;
         if (jOut >= GetNumCols())
             InvalidArgument("DoGatherColumnsOf: Map out of bounds.");
-        ScaleAndAddColumn(/*beta=*/(ElemType)1, &us(0, jOut), &a(0, jIn), us.GetNumRows(), alpha);
+		//decay can be set to zero if don't want to accumulate duplicate columns, but just keep last one to unique
+        ScaleAndAddColumn(decay /*=1*/, &us(0, jOut), &a(0, jIn), us.GetNumRows(), alpha);
     }
 
     return *this;
@@ -918,6 +919,19 @@ void CPUMatrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, E
             }
         }
     }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::SetValueFromIndex(int* pArray)
+{
+	size_t numElements = GetNumElements();
+	ElemType* float_p = new ElemType[numElements];
+	for (size_t i = 0; i < numElements; ++i) {
+		float_p[i] = (ElemType)pArray[i];
+	}
+
+	SetValue(1, numElements, float_p);
+	delete[] float_p;
 }
 
 template <class ElemType>

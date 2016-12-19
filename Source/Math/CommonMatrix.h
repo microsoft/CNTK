@@ -435,6 +435,10 @@ public:
         }
     }
 
+	ElemType* Buffer() const { return m_pArray; }
+	void SetBuffer(ElemType* pArray, size_t alloc, bool external = false) { m_pArray = pArray; m_totalBufferSizeAllocated = alloc; m_externalBuffer = external; }
+
+
 protected:
     MatrixFormat GetFormat() const { return m_format; }
     void SetFormat(MatrixFormat format) { m_format = format; }
@@ -455,9 +459,6 @@ protected:
 
     size_t GetNumStorageElements() const { return m_numRows * m_numCols; }
     bool IsEmpty() const { return m_numRows == 0 || m_numCols == 0; }
-
-    ElemType* Buffer() const { return m_pArray; }
-    void SetBuffer(ElemType* pArray, size_t alloc, bool external = false) { m_pArray = pArray; m_totalBufferSizeAllocated = alloc; m_externalBuffer = external; }
 
     size_t BufferSizeAllocated() const { return m_totalBufferSizeAllocated; }
     
@@ -571,6 +572,7 @@ protected:
     size_t m_blockIdShift; // used to get efficient slice, actual col = blockIds[j] - m_blockIdShift
 
 };
+//template class BaseMatrixStorage<int>;
 
 // -----------------------------------------------------------------------
 // BaseMatrix -- base class for all matrix types (CPU, GPU) x (dense, sparse)
