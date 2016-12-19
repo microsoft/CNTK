@@ -544,7 +544,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         if (m_traceLevel > 0)
         {
             fprintf(stderr, "\n");
-            LOGPRINTF(stderr, "Starting Epoch %d: learning rate per sample = %8.3g  effective momentum = %f  momentum as time constant = %.1f samples\n",
+            LOGPRINTF(stderr, "Starting Epoch %d: learning rate per sample = %f  effective momentum = %f  momentum as time constant = %.1f samples\n",
                       i + 1, learnRatePerSample, MomentumPerMB(momentumPerSample, actualMinibatchSize), momentumAsTimeConstant);
         }
 
