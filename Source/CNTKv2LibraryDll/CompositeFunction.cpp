@@ -562,8 +562,7 @@ namespace CNTK
             }
             case PrimitiveOpType::Reshape:
             {
-                auto newShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
-                computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(newShape));
+                computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(primitiveFunction->Output().Shape()));
                 break;
             }
             case PrimitiveOpType::ROIPooling:
