@@ -15,7 +15,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CNTK</RootNamespace>
-    <AssemblyName>CSEvalV2Library</AssemblyName>
+    <AssemblyName>CNTKLibraryManaged-2.0.dll</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

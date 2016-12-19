@@ -116,10 +116,13 @@
   <ItemGroup Condition="$(HasSwig)">
     <ClCompile Include="cntk_cs_wrap.cxx" />
   </ItemGroup>
-  <ItemGroup  Condition="$(HasSwig)">
+  <ItemGroup Condition="$(HasSwig)">
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibrary.h" />
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h" />
     <ClInclude Include="cntk_cs_wrap.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\common\CNTKValueExtend.i" />
   </ItemGroup>
   <Target Name="CheckDependencies" Condition="!$(HasSwig)">
     <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed." />
