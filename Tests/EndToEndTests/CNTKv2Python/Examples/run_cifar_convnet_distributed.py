@@ -47,14 +47,13 @@ def run_cifar_convnet_distributed(epochs, block_samples, num_quantization_bits, 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-q', '--quantize_bit', required=False, default=32, type=int)
-
     parser.add_argument('-e', '--epochs', required=False, default=2, type=int)
     parser.add_argument('-b', '--block_samples', required=False, type=int, default=0)
     parser.add_argument('-a', '--distributed_after', type=int, required=False, default='0')
 
     args = vars(parser.parse_args())
     num_quantization_bits = int(args['quantize_bit'])
-
+    epochs = int(args['epochs'])
     block_samples = int(args['block_samples'])
     distributed_after_samples=int(args['distributed_after'])
 
