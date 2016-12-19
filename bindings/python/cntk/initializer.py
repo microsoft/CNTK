@@ -9,7 +9,7 @@ from .cntk_py import default_param_init_scale as DefaultParamInitScale,\
         sentinel_value_for_auto_select_random_seed as SentinelValueForAutoSelectRandomSeed
 
 
-def uniform(scale=DefaultParamInitScale, seed=None):
+def uniform(scale, seed=None):
     '''
     Uniform initializer
 
@@ -27,14 +27,14 @@ def uniform(scale=DefaultParamInitScale, seed=None):
 
     return cntk_py.uniform1_initializer(scale, seed)
 
-def normal(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, scale=DefaultParamInitScale, seed=None):
+def normal(scale, output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, seed=None):
     '''
     Normal initializer
 
     Args:
+        scale (float): scale
         output_rank (int): output rank
         filter_rank (int): filter rank
-        scale (float): scale
         seed (int): random seed
 
     Returns:
@@ -44,16 +44,16 @@ def normal(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelV
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
 
-    return cntk_py.normal_initializer(output_rank, filter_rank, scale, seed)
+    return cntk_py.normal_initializer(scale, output_rank, filter_rank, seed)
 
-def xavier(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, scale=DefaultParamInitScale, seed=None):
+def xavier(scale=DefaultParamInitScale, output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, seed=None):
     '''
     Xavier initializer
 
     Args:
+        scale (float): scale
         output_rank (int): output rank
         filter_rank (int): filter rank
-        scale (float): scale
         seed (int): random seed
 
     Returns:
@@ -64,16 +64,16 @@ def xavier(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelV
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
 
-    return cntk_py.xavier_initializer(output_rank, filter_rank, scale, seed)
+    return cntk_py.xavier_initializer(scale, output_rank, filter_rank, seed)
 
-def glorot_uniform(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, scale=DefaultParamInitScale, seed=None):
+def glorot_uniform(scale=DefaultParamInitScale, output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, seed=None):
     '''
     Glorot initializer
 
     Args:
+        scale (float): scale
         output_rank (int): output rank
         filter_rank (int): filter rank
-        scale (float): scale
         seed (int): random seed
 
     Returns:
@@ -84,16 +84,16 @@ def glorot_uniform(output_rank=SentinelValueForInferParamInitRank, filter_rank=S
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
 
-    return cntk_py.glorot_uniform_initializer(output_rank, filter_rank, scale, seed)
+    return cntk_py.glorot_uniform_initializer(scale, output_rank, filter_rank, seed)
 
-def glorot_normal(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, scale=DefaultParamInitScale, seed=None):
+def glorot_normal(scale=DefaultParamInitScale, output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, seed=None):
     '''
     initializer
 
     Args:
+        scale (float): scale
         output_rank (int): output rank
         filter_rank (int): filter rank
-        scale (float): scale
         seed (int): random seed
 
     Returns:
@@ -104,16 +104,16 @@ def glorot_normal(output_rank=SentinelValueForInferParamInitRank, filter_rank=Se
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
 
-    return cntk_py.glorot_normal_initializer(output_rank, filter_rank, scale, seed)
+    return cntk_py.glorot_normal_initializer(scale, output_rank, filter_rank, seed)
 
-def he_uniform(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, scale=DefaultParamInitScale, seed=None):
+def he_uniform(scale=DefaultParamInitScale, output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, seed=None):
     '''
     initializer
 
     Args:
+        scale (float): scale
         output_rank (int): output rank
         filter_rank (int): filter rank
-        scale (float): scale
         seed (int): random seed
 
     Returns:
@@ -124,16 +124,16 @@ def he_uniform(output_rank=SentinelValueForInferParamInitRank, filter_rank=Senti
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
 
-    return cntk_py.he_uniform_initializer(output_rank, filter_rank, scale, seed)
+    return cntk_py.he_uniform_initializer(scale, output_rank, filter_rank, seed)
 
-def he_normal(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, scale=DefaultParamInitScale, seed=None):
+def he_normal(scale=DefaultParamInitScale, output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, seed=None):
     '''
     initializer
 
     Args:
+        scale (float): scale
         output_rank (int): output rank
         filter_rank (int): filter rank
-        scale (float): scale
         seed (int): random seed
 
     Returns:
@@ -144,7 +144,7 @@ def he_normal(output_rank=SentinelValueForInferParamInitRank, filter_rank=Sentin
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
 
-    return cntk_py.he_normal_initializer(output_rank, filter_rank, scale, seed)
+    return cntk_py.he_normal_initializer(scale, output_rank, filter_rank, seed)
 
 def bilinear(kernel_width, kernel_height):
     '''

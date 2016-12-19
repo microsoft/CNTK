@@ -135,7 +135,7 @@ namespace CNTK
 
     static std::atomic<unsigned long> s_currentRandomSeed(1);
 
-    static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, int outputRank, int filterRank, double scale, unsigned long seed)
+    static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, double scale, int outputRank, int filterRank, unsigned long seed)
     {
         Dictionary initConfig;
         initConfig[InitializerTypeAttributeName] = initializerTypeName;
@@ -171,49 +171,49 @@ namespace CNTK
         return initConfig;
     }
 
-    ParameterInitializer Uniform1Initializer(double scale, unsigned long seed)
+    ParameterInitializer UniformBSInitializer(double scale, unsigned long seed)
     {
         Dictionary initConfig;
-        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::Uniform1InitializerTypeName;
+        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::UniformBSInitializerTypeName;
         initConfig[ScaleAttributeName] = scale;
         initConfig[RandomSeedAttributeName] = (size_t)seed;
 
         return initConfig;
     }
 
-    ParameterInitializer GaussianInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer GaussianInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::GaussianInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::GaussianInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
-    ParameterInitializer NormalInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer NormalInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::NormalInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::NormalInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
-    ParameterInitializer XavierInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer XavierInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::XavierInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::XavierInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
-    ParameterInitializer GlorotUniformInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer GlorotUniformInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::GlorotUniformInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::GlorotUniformInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
-    ParameterInitializer GlorotNormalInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer GlorotNormalInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::GlorotNormalInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::GlorotNormalInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
-    ParameterInitializer HeUniformInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer HeUniformInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::HeUniformInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::HeUniformInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
-    ParameterInitializer HeNormalInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer HeNormalInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::HeNormalInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::HeNormalInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
     ParameterInitializer BilinearInitializer(size_t kernelWidth, size_t kernelHeight)
