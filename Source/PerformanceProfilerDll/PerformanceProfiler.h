@@ -168,9 +168,9 @@ struct PERF_PROFILER_API ScopeThroughput
     ~ScopeThroughput();
 
 private:
-    unsigned long long              m_stateId;
-    int                             m_eventId;
-    long long                       m_bytes;
+    unsigned long long  m_stateId;
+    int                 m_eventId;
+    long long           m_bytes;
 };
 
 #define THROUGHPUT_SCOPE(eventId, bytes)    ScopeThroughput __st##eventId(eventId, bytes);
