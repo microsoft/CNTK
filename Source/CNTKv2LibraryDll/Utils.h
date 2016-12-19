@@ -470,7 +470,9 @@ namespace CNTK
             assert(axis.IsStaticAxis());
             assert(operandShape != NDShape::Unknown);
 
-            if (axis.StaticAxisIndex() < 0)
+            if (axis == Axis::EndStaticAxis())
+                axis = Axis((int)operandShape.Rank());
+            else if (axis.StaticAxisIndex() < 0)
                 axis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
         }
 

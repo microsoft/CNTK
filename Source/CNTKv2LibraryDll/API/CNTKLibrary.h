@@ -970,6 +970,7 @@ namespace CNTK
         CNTK_API static const int SentinelStaticAxisIndexValueForDynamicAxes;
         CNTK_API static const int SentinelStaticAxisIndexValueForAllStaticAxes;
         CNTK_API static const int SentinelStaticAxisIndexValueForUnknownAxes;
+        CNTK_API static const int SentinelEndStaticAxisIndexValue;
 
         class UniqueDynamicAxesNames
         {
@@ -1089,6 +1090,15 @@ namespace CNTK
         static Axis NewUniqueDynamicAxis(const std::wstring& axisNamePrefix, bool isOrderedDynamicAxis = true)
         {
             return Axis(s_uniqueDynamicAxisNames.NewUniqueDynamicAxisName(axisNamePrefix), isOrderedDynamicAxis);
+        }
+
+        ///
+        /// Returns an axis object representing the default end static axis.
+        /// This is used as the default value for the end axis for some operators like Reshape.
+        ///
+        static Axis EndStaticAxis()
+        {
+            return Axis(SentinelEndStaticAxisIndexValue);
         }
 
         ///
@@ -2665,7 +2675,15 @@ namespace CNTK
     ///
     /// Create an instance of the reshape operation on specified tensor input operand
     ///
-    CNTK_API FunctionPtr Reshape(const Variable& operand, const NDShape& newShape, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the reshape operation on specified tensor input operand
+    ///
+    inline FunctionPtr Reshape(const Variable& operand, const NDShape& newShape, const std::wstring& name = L"")
+    {
+        return Reshape(operand, newShape, Axis(0), Axis::EndStaticAxis(), name);
+    }
 
     ///
     /// Create an instance of the CNTK built-in elementwise tensor addition operation with the specified input operands.
