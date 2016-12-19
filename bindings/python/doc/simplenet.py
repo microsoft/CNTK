@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import cntk as C
 from cntk.learner import sgd, learning_rate_schedule, UnitType

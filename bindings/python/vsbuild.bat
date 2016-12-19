@@ -31,9 +31,9 @@ if not defined p_CNTK_PY_VERSIONS (
 )
 
 REM Validate p_CNTK_PY_VERSIONS contents.
-REM TODO Python 3.4 only for now
+REM TODO no Python 3.5 for now
 for %%p in (%p_CNTK_PY_VERSIONS%) do (
-  if not "%%~p" == "34" echo Build for unsupported Python version '%%~p' requested, stopping&exit /b 1
+  if not "%%~p" == "27" if not "%%~p" == "34" echo Build for unsupported Python version '%%~p' requested, stopping&exit /b 1
   set nothingToBuild=
 )
 

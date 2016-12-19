@@ -4,6 +4,7 @@
 # ==============================================================================
 
 from __future__ import division
+from __future__ import print_function
 import numpy as np
 from . import sequence
 from .functions import CloneMethod, Function, load_model
@@ -1502,8 +1503,8 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         >>> x = C.input_variable(shape=(4,))
         >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))
         >>> f = C.optimized_rnnstack(x, W, 8, 2)
-        >>> f.eval({x:s}).shape
-        (1, 5, 8)
+        >>> print(*f.eval({x:s}).shape)
+        1 5 8
 
     Returns:
         :class:`~cntk.ops.functions.Function`

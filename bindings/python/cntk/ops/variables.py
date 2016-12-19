@@ -3,7 +3,7 @@ from cntk import cntk_py, utils
 from ..tensor import TensorOpsMixin
 from ..utils import typemap, sanitize_precision, sanitize_value, sanitize_dtype_cntk, _create_NDArrayView_from_NumPy
 
-class VariableMixin:
+class VariableMixin(object):
     '''
     Standard properties for :class:`Variable` and its derived classes
     :class:`Parameter` and :class:`Constant`.
@@ -182,9 +182,9 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
     def value(self, val):
         if isinstance(val, np.ndarray):
             ndarray = _create_NDArrayView_from_NumPy(val.astype(self.dtype))
-            super().set_value(ndarray)
+            super(Parameter, self).set_value(ndarray)
         elif isinstance(val, cntk_py.NDArrayView):
-            super().set_value(val)
+            super(Parameter, self).set_value(val)
         else:
             raise TypeError("Unsupported value type: %s", type(val))
 

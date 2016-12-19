@@ -8,6 +8,7 @@
 Unit tests random sampling related operations
 """
 
+from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import AA, precision
