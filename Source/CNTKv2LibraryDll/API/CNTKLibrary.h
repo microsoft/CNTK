@@ -972,10 +972,10 @@ namespace CNTK
         /// The sequence buffer will be resized if nencessary.
         /// The Value should have the same tensor shape as sampleShape.
         ///
-        void CopyTo(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences)
+        void CopyTo(const size_t vocabularySize, std::vector<std::vector<size_t>>& sequences)
         {
             std::vector<size_t> seqLens;
-            CopyTo(sampleShape, sequences, seqLens, true);
+            CopyTo(vocabularySize, sequences, seqLens, true);
         }
 
         ///
@@ -983,18 +983,18 @@ namespace CNTK
         /// In addition, sequenceLengths contains the length of each sequence in the sequence buffer.
         /// The sequenceLengths will be resized if necessary, even isResizeable is false.
         ///
-        void CopyTo(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizeable = true)
+        void CopyTo(const size_t vocabularySize, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizeable = true)
         {
             // For OneHot vector, only 1 value is needed for a sample.
-            CheckAndResizeOutputBuffer(sampleShape.Rank(), 1, sequences, sequenceLengths, isResizeable);
+            CheckAndResizeOutputBuffer(1, 1, sequences, sequenceLengths, isResizeable);
             auto dataType = GetDataType();
             if (dataType == DataType::Float)
             {
-                CopyToVector<float>(sampleShape, sequences, sequenceLengths);
+                CopyToVector<float>(vocabularySize, sequences, sequenceLengths);
             } 
             else if (dataType == DataType::Double)
             {
-                CopyToVector<double>(sampleShape, sequences, sequenceLengths);
+                CopyToVector<double>(vocabularySize, sequences, sequenceLengths);
             }
         }
 
@@ -1008,7 +1008,7 @@ namespace CNTK
         CNTK_API void CopyToVector(const NDShape& sampleShape, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths);
 
         template <typename ElementType>
-        CNTK_API void CopyToVector(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
+        CNTK_API void CopyToVector(const size_t vocabularySize, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
 
         template <typename ValueType, typename DestType>
         void CopyToImpl(const NDShape& sampleShape, std::vector<std::vector<DestType>>& sequences, std::vector<size_t>& sequenceLengths);

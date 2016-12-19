@@ -376,12 +376,9 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    void Value::CopyToVector(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths)
+    void Value::CopyToVector(const size_t vocabularySize, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths)
     {
-        if (sampleShape[0] != sampleShape.TotalSize())
-            InvalidArgument("The sample shape's leading axis dimensionality must equal the total size of the sample for sparse data.");
-
-        CopyToImpl<ElementType, size_t>(sampleShape, sequences, sequenceLengths);
+        CopyToImpl<ElementType, size_t>({{vocabularySize}}, sequences, sequenceLengths);
     }
 
     template <typename ValueType, typename DestType>
@@ -603,7 +600,7 @@ namespace CNTK
     template /*static*/ CNTK_API ValuePtr Value::Create<double>(size_t vocabSize, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template CNTK_API void Value::CopyToVector<float>(const NDShape& sampleShape, std::vector<std::vector<float>>& sequences, std::vector<size_t>& sequencesLens);
     template CNTK_API void Value::CopyToVector<double>(const NDShape& sampleShape, std::vector<std::vector<double>>& sequences, std::vector<size_t>& sequencesLens);
-    template CNTK_API void Value::CopyToVector<float>(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
-    template CNTK_API void Value::CopyToVector<double>(const NDShape& sampleShape, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
+    template CNTK_API void Value::CopyToVector<float>(const size_t vocabularySize, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
+    template CNTK_API void Value::CopyToVector<double>(const size_t vocabularySize, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
 
 }
