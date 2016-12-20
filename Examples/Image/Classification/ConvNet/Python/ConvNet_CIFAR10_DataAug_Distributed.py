@@ -146,7 +146,6 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
         metric_denom += local_mb_samples
         minibatch_index += 1
 
-
     fin_msg = "Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom)
     progress_printer.end_progress_print(fin_msg)
 
@@ -158,12 +157,11 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
 
 def train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs=3, distributed_after_samples=0, num_quantization_bits=32, block_samples=0):
 
-
     # create a distributed learner for SGD
     # BlockMomentum SGD will be used in case number of samples per block is not 0 and 1BitSGD is disabled
     if block_samples != 0:
         if num_quantization_bits != 32:
-            raise ValueError("Blockmomentum disrtibuted learner is not meant to be used with 1BitSGD")
+            raise ValueError("Block momentum distributed learner is not meant to be used with 1BitSGD")
         else:
             create_dist_learner = lambda learner: cntk.distributed.block_momentum_distributed_learner(learner=learner, block_size=block_samples)
     else:
