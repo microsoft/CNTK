@@ -71,9 +71,9 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CSEvalV2Library\CSEvalV2Library.csproj">
+    <ProjectReference Include="..\CSEvalV2Library\CNTKLibraryManagedDll.csproj">
       <Project>{50ef9ee6-5018-453e-a063-f77044ef1a97}</Project>
-      <Name>CSEvalV2Library</Name>
+      <Name>CNTKLibraryManagedDll</Name>
     </ProjectReference>
   </ItemGroup>
   <Target Name="Build" Condition="!Exists('$(SWIG_PATH)\swig.exe')">
