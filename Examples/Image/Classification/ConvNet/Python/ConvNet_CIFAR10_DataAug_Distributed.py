@@ -51,7 +51,7 @@ def create_reader(map_file, mean_file, train, total_number_of_samples, distribut
         distributed_after = distributed_after)
 
 # Train and evaluate the network.
-def convnet_cifar10_dataaug(create_train_reader, create_test_reader, create_dist_learner, max_epochs, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
+def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, max_epochs, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
     _cntk_py.set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
@@ -138,7 +138,6 @@ def convnet_cifar10_dataaug(create_train_reader, create_test_reader, create_dist
     metric_denom    = 0
     minibatch_index = 0
 
-    test_reader = create_test_reader(epoch_size)
     while True:
         data = test_reader.next_minibatch(minibatch_size, input_map=input_map)
         if not data: break
@@ -159,22 +158,24 @@ def convnet_cifar10_dataaug(create_train_reader, create_test_reader, create_dist
 
 def train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs=3, distributed_after_samples=0, num_quantization_bits=32, block_samples=0):
 
-    if (block_samples != 0):
-        create_dist_learner = \
-        lambda learner: cntk.distributed.block_momentum_distributed_learner(learner, block_size=block_samples)
+
+    # create a distributed learner for SGD
+    # BlockMomentum SGD will be used in case number of samples per block is not 0 and 1BitSGD is disabled
+    if block_samples != 0:
+        if num_quantization_bits != 32:
+            raise ValueError("Blockmomentum disrtibuted learner is not meant to be used with 1BitSGD")
+        else:
+            create_dist_learner = lambda learner: cntk.distributed.block_momentum_distributed_learner(learner=learner, block_size=block_samples)
     else:
-        create_dist_learner = \
-            lambda learner: cntk.distributed.data_parallel_distributed_learner(learner,
-                                                                               num_quantization_bits=num_quantization_bits,
-                                                                               distributed_after=distributed_after_samples)
+        # 1BitSGD will be used in case num_quantization_bits is 1
+        # distributed_after_samples denotes the number of samples after which distributed training will start 
+        create_dist_learner = lambda learner: cntk.distributed.data_parallel_distributed_learner(learner=learner, num_quantization_bits=num_quantization_bits, distributed_after=distributed_after_samples)
 
-    
-
-
-    create_train_reader = lambda data_size: create_reader(train_data, mean, False, data_size, distributed_after_samples)
-    create_test_reader = lambda data_size: create_reader(test_data, mean, False, data_size, distributed_after=cntk.io.FULL_DATA_SWEEP)
+    # create training and testing readers with respective data  
+    create_train_reader = lambda data_size: create_reader(train_data, mean, True, data_size, distributed_after_samples) # transform data only for training
+    test_reader = create_reader(test_data, mean, False, cntk.io.FULL_DATA_SWEEP)
    
-    return convnet_cifar10_dataaug(create_train_reader, create_test_reader, create_dist_learner, max_epochs=max_epochs, log_to_file=log_dir, num_mbs_per_log=None, gen_heartbeat=False)
+    return convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, max_epochs=max_epochs, log_to_file=log_dir, num_mbs_per_log=None, gen_heartbeat=False)
 
 
 if __name__=='__main__':
@@ -183,6 +184,10 @@ if __name__=='__main__':
     parser.add_argument('-datadir', help='only interested in changes to that file');
     parser.add_argument('-logdir', help='only interested in changes by that user');
     parser.add_argument('-outputdir',  help='go straight to provided changelist');
+    parser.add_argument('-e', '--epochs', help='total epochs', type=int, required=False, default='160')
+    parser.add_argument('-q', '--quantize_bit', help='quantized bit', type=int, required=False, default='32')
+    parser.add_argument('-a', '--distributed_after', help='number of samples to train with before running distributed', type=int, required=False, default='0')
+    parser.add_argument('-b', '--block_samples', type=int, help="number of samples per block for block momentum (BM) distributed learner (if 0 BM learner is not used)", required=False, default=0)
 
     args = vars(parser.parse_args())
 
@@ -195,16 +200,15 @@ if __name__=='__main__':
     if args['outputdir'] != None:
         model_path = args['outputdir'] + "/models"
 
+    num_quantization_bits = int(args['quantize_bit'])
+    epochs = int(args['epochs'])
+    distributed_after_samples = int(args['distributed_after'])
+    block_samples = int(args['block_samples'])
+
     mean=os.path.join(data_path, 'CIFAR-10_mean.xml')
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
     
-    distributed_after_samples = 0
-    num_quantization_bits = 32
-    max_epochs = 1
-
-    block_samples = 0
-    
-    train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs=max_epochs, distributed_after_samples=distributed_after_samples, num_quantization_bits=num_quantization_bits, block_samples=block_samples)
+    train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs=epochs, distributed_after_samples=distributed_after_samples, num_quantization_bits=num_quantization_bits, block_samples=block_samples)
     
     cntk.distributed.Communicator.finalize()
