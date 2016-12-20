@@ -1118,6 +1118,17 @@
     }
 %}
 
+%extend CNTK::Value {
+    void CNTK::Value::CopyToFloat(const CNTK::Variable& sampleVariable, std::vector<std::vector<float>>& sequences)
+    {
+        return self->CopyTo<float>(sampleVariable, sequences);
+    }
+
+    void CNTK::Value::CopyToDouble(const CNTK::Variable& sampleVariable, std::vector<std::vector<double>>& sequences)
+    {
+        return self->CopyTo<double>(sampleVariable, sequences);
+    }
+}
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"

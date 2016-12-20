@@ -71,7 +71,7 @@ namespace CSEvalV2Example
             // Get evaluate result as dense output
             var outputData = new List<List<float>>();
             Value outputVal = outputDataMap[outputVar];
-            outputVal.CopyTo(outputVar.Shape, outputData);
+            outputVal.CopyTo(outputVar, outputData);
 
             // Use case 2: Evaluate with batch of images
             Console.WriteLine("Evaluate batch of images");
@@ -100,7 +100,7 @@ namespace CSEvalV2Example
             // Retrieve the evaluation result.
             outputData = new List<List<float>>();
             outputVal = outputDataMap[outputVar];
-            outputVal.CopyTo(outputVar.Shape, outputData);
+            outputVal.CopyTo(outputVar, outputData);
             
             // Output result
             Console.WriteLine("The number of sequences in the batch: " + outputData.Count);
@@ -185,7 +185,7 @@ namespace CSEvalV2Example
             // Get output result
             var outputData = new List<List<uint>>();
             Value outputVal = outputDataMap[outputVar];
-            outputVal.CopyTo<float>(vocabSize, outputData);
+            outputVal.CopyTo(outputVar, outputData);
 
             // Use case 2: evaluate batch of sequences using OneHot vector as input.
 
@@ -230,7 +230,7 @@ namespace CSEvalV2Example
             // Get evaluation result.
             outputData = new List<List<uint>>();
             outputVal = outputDataMap[outputVar];
-            outputVal.CopyTo<float>(vocabSize, outputData);
+            outputVal.CopyTo(outputVar, outputData);
 
             // output the result
             var numOfElementsInSample = vocabSize;
