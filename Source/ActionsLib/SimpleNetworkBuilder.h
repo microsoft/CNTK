@@ -57,7 +57,8 @@ enum class TrainingCriterion : int // TODO: camel-case these
     ClassCrossEntropyWithSoftmax,
     NCECrossEntropyWithSoftmax,
     CRF,
-    SequenceWithSoftmax
+    SequenceWithSoftmax,
+    WeightedSquareError
 };
 
 enum class EvalCriterion : int
@@ -70,7 +71,8 @@ enum class EvalCriterion : int
     ClassCrossEntropyWithSoftmax,
     NCECrossEntropyWithSoftmax,
     CRF,
-    SequenceWithSoftmax
+    SequenceWithSoftmax,
+    WeightedSquareError
 };
 
 TrainingCriterion ParseTrainingCriterionString(wstring s);

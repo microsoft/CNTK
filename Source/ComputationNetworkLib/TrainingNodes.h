@@ -107,6 +107,89 @@ template class SquareErrorNode<float>;
 template class SquareErrorNode<double>;
 
 // -----------------------------------------------------------------------
+// WeightedSquareErrorNode (left, right, weight)
+// = SumElements ((left - right) .* weight .* (left - right) .* weight)
+// -----------------------------------------------------------------------
+
+template <class ElemType>
+class WeightedSquareErrorNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<3>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"WeightedSquareError"; }
+
+public:
+    DeclareConstructorFromConfigWithNumInputs(WeightedSquareErrorNode);
+    WeightedSquareErrorNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        m_weightedLeftMinusRight->Resize(Input(0)->Value());
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+        m_weightedLeftMinusRight->AssignDifferenceOf(InputRef(0).ValueFor(fr), InputRef(1).ValueFor(fr));
+        m_weightedLeftMinusRight->ColumnElementMultiplyWith(InputRef(2).ValueFor(fr));
+        MaskMissingColumnsToZero(*m_weightedLeftMinusRight, InputRef(0).GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
+        ElemType v = m_weightedLeftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ ((I0[i] - I1[i]) * weight)^2 } )
+        Value().VerifySize(1, 1);
+        Value().SetValue(v * v);  // Value = sum{ ((I0[i] - I1[i]) * weight)^2 }
+#if NANCHECK
+        Value().HasNan("SquareError");
+#endif
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+        auto gradient = InputRef(inputIndex).GradientFor(fr);
+        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 2.0f : -2.0f, Gradient() /*1x1*/, *m_weightedLeftMinusRight, 1.0f, gradient); // O = (I0-I1)^2; dO/dI0 = 2*(I0-I1); dO/dI1 = -2*(I0-I1)
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateBinaryReduce(isFinalValidationPass);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<WeightedSquareErrorNode<ElemType>>(nodeP);
+            node->m_weightedLeftMinusRight->SetValue(*m_weightedLeftMinusRight);
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_weightedLeftMinusRight, matrixPool);
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_weightedLeftMinusRight, matrixPool);
+    }
+
+private:
+    shared_ptr<Matrix<ElemType>> m_weightedLeftMinusRight;
+};
+
+template class WeightedSquareErrorNode<float>;
+template class WeightedSquareErrorNode<double>;
+
+// -----------------------------------------------------------------------
 // CrossEntropyWithSoftmaxNode (labels, prediction)
 // calculates: -sum(left_i * log(softmax_i(right)))
 // -----------------------------------------------------------------------

@@ -448,6 +448,12 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Squar
 }
 
 template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::WeightedSquareError(const ComputationNodePtr a, const ComputationNodePtr b, const ComputationNodePtr w, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<WeightedSquareErrorNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b, w });
+}
+
+template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Logistic(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<LogisticNode<ElemType>>(net.GetDeviceId(), nodeName), { a, b });
