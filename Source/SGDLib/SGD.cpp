@@ -946,8 +946,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             fprintf(stderr, ", DataParallelSGD training (myRank = %d, numNodes = %d, numGradientBits = %d)",
                     (int) m_mpi->CurrentNodeRank(), (int) m_mpi->NumNodesInUse(), (int) m_numGradientBits[epochNumber]);
 
-        if (m_bufferedAsyncGradientAggregation)
-            fprintf(stderr, ", BufferedAsyncGradientAggregation is ENABLED");
+            if (m_bufferedAsyncGradientAggregation)
+                fprintf(stderr, ", BufferedAsyncGradientAggregation is ENABLED");
         }
 
         if (useAsyncGradientAggregation)
@@ -964,14 +964,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (useDistributedMBReading)
             fprintf(stderr, ", distributed reading is ENABLED");
 
-    if (numSubminibatchesNeeded > 1)
-    {
-        if (m_maxSamplesInRAM < SIZE_MAX)
-            fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
-        else
-            fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
-    }
-    fprintf(stderr, ".\n");
+        if (numSubminibatchesNeeded > 1)
+        {
+            if (m_maxSamplesInRAM < SIZE_MAX)
+                fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
+            else
+                fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
+        }
+        fprintf(stderr, ".\n");
     }
 
     Timer timer;
@@ -2987,7 +2987,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
 #endif 
             m_resetSGDMomentum = configBMSGD(L"resetSGDMomentum", true);
             m_useNesterovBlockMomentum = configBMSGD(L"useNesterovMomentum", true);
-            m_blockLearningRate = configBMSGD(L"blockLearningRate", 1.0);
+            m_blockLearningRate = configBMSGD(L"blockLearningRate", 1.0); 
 
             if (configBMSGD.Exists(L"blockMomentumPerSync") && configBMSGD.Exists(L"blockMomentumAsTimeConstant"))
             {
