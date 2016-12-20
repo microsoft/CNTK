@@ -1512,10 +1512,10 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         >>> r = f.eval({x:[s,t]})                # doctest: +SKIP
         >>> len(r)                               # doctest: +SKIP
         2
-        >>> r[0].shape                           # doctest: +SKIP
-        (5, 8)
-        >>> r[1].shape                           # doctest: +SKIP
-        (3, 8)
+        >>> print(*r[0].shape)                   # doctest: +SKIP
+        5 8
+        >>> print(*r[1].shape)                   # doctest: +SKIP
+        3 8
         >>> r[0][:3,:]-r[1]                      # doctest: +SKIP
         array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
                [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
