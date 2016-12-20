@@ -366,23 +366,27 @@ namespace CNTK
     void CopyDenseToOneHot(const ElementType *source, size_t sampleCount, size_t sampleSize, std::vector<DestType>& dest);
 
     template <typename ElementType>
-    void Value::CopyToVector(const Variable& sampleVariable, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths)
+    void Value::CopyToVector(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths)
     { 
         // Check the data type matches
         if (AsDataType<ElementType>() != GetDataType())
             InvalidArgument("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(GetDataType()));
 
-        CopyToImpl<ElementType, ElementType>(sampleVariable, sequences, sequenceLengths);
+        CopyToImpl<ElementType, ElementType>(outputVariable, sequences, sequenceLengths);
     }
 
     template <typename ElementType>
-    void Value::CopyToVector(const Variable& sampleVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths)
+    void Value::CopyToVector(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths)
     {
-        CopyToImpl<ElementType, size_t>(sampleVariable, sequences, sequenceLengths);
+        if (outputVariable.Shape()[0] != outputVariable.Shape().TotalSize())
+        {
+            InvalidArgument("The sample variable's leading axis dimensionality must equal the total size of the variable for sparse data.");
+        }
+        CopyToImpl<ElementType, size_t>(outputVariable, sequences, sequenceLengths);
     }
 
     template <typename ValueType, typename DestType>
-    void Value::CopyToImpl(const Variable& sampleVariable,
+    void Value::CopyToImpl(const Variable& outputVariable,
                            std::vector<std::vector<DestType>>& sequences, 
                            std::vector<size_t>& sequenceLengths)
     {
@@ -392,7 +396,7 @@ namespace CNTK
 
         size_t numOfSequences;
         size_t maxSequenceLen;
-        std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(sampleVariable);
+        std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable);
 
         if (sequences.size() < numOfSequences)
             RuntimeError("The size of output buffer is too small");
@@ -421,7 +425,7 @@ namespace CNTK
         }
         valueData = cpuArrayView->DataBuffer<ValueType>();
 
-        auto sampleSize = sampleVariable.Shape().TotalSize();
+        auto sampleSize = outputVariable.Shape().TotalSize();
         for (auto seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
         {
             size_t seqStart = seqIndex * maxSequenceLen;
@@ -442,18 +446,18 @@ namespace CNTK
         }
     }
 
-    std::pair<size_t, size_t> Value::GetSequenceAndBatchLength(const Variable& sampleVariable)
+    std::pair<size_t, size_t> Value::GetSequenceAndBatchLength(const Variable& outputVariable)
     {
-        size_t sampleRank = sampleVariable.Shape().Rank();
+        size_t sampleRank = outputVariable.Shape().Rank();
         size_t maxSequenceLength = 1;
         size_t numSequences = 1;
 
         if (Shape().Rank() < sampleRank)
-            RuntimeError("The value shape has less ranks than the variable shape.");
+            RuntimeError("The Value'rank should be greater than or equal to the variable's rank.");
         size_t maskRank = Shape().Rank() - sampleRank;
 
-        if (sampleVariable.Shape() != Shape().SubShape(0, sampleRank))
-            RuntimeError("The shape of the sampleVariable does not match the value shape.");
+        if (outputVariable.Shape() != Shape().SubShape(0, sampleRank))
+            RuntimeError("The shape of the outputVariable does not match the value shape.");
 
         if (maskRank > 2)
             RuntimeError("Only 2 dynamic axes are supported now.");
@@ -465,7 +469,7 @@ namespace CNTK
         }
         else if (maskRank == 1)
         {
-            if (sampleVariable.DynamicAxes().size() > 1)
+            if (outputVariable.DynamicAxes().size() > 1)
             {
                 maxSequenceLength = Shape()[sampleRank];
             }
@@ -566,8 +570,8 @@ namespace CNTK
     template /*static*/ CNTK_API ValuePtr Value::Create<double>(const NDShape& sampleShape, const std::vector<std::vector<double>>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template /*static*/ CNTK_API ValuePtr Value::Create<float>(size_t vocabSize, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template /*static*/ CNTK_API ValuePtr Value::Create<double>(size_t vocabSize, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
-    template CNTK_API void Value::CopyToVector<float>(const Variable& sampleVariable, std::vector<std::vector<float>>& sequences, std::vector<size_t>& sequencesLens);
-    template CNTK_API void Value::CopyToVector<double>(const Variable& sampleVariable, std::vector<std::vector<double>>& sequences, std::vector<size_t>& sequencesLens);
-    template CNTK_API void Value::CopyToVector<float>(const Variable& sampleVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
-    template CNTK_API void Value::CopyToVector<double>(const Variable& sampleVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
+    template CNTK_API void Value::CopyToVector<float>(const Variable& outputVariable, std::vector<std::vector<float>>& sequences, std::vector<size_t>& sequencesLens);
+    template CNTK_API void Value::CopyToVector<double>(const Variable& outputVariable, std::vector<std::vector<double>>& sequences, std::vector<size_t>& sequencesLens);
+    template CNTK_API void Value::CopyToVector<float>(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
+    template CNTK_API void Value::CopyToVector<double>(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
 }

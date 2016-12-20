@@ -2163,13 +2163,13 @@ namespace CNTK
         ///
         /// Copy the data stored in the Value object to the buffer 'sequences' as a collection of variable length sequences.
         /// The sequence buffer will be resized if necessary.
-        /// The Value should have the same tensor shape as sampleShape.
+        /// The Value should have the same tensor shape as outputVariable.
         ///
         template <typename ElementType>
-        void CopyTo(const Variable& sampleVariable, std::vector<std::vector<ElementType>>& sequences)
+        void CopyTo(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
             std::vector<size_t> seqLens;
-            CopyTo(sampleVariable, sequences, seqLens, true);
+            CopyTo(outputVariable, sequences, seqLens, true);
         }
 
         ///
@@ -2178,10 +2178,10 @@ namespace CNTK
         /// The sequenceLengths will be resized if necessary, even isResizable is false.
         ///
         template <typename ElementType>
-        void CopyTo(const Variable& sampleVariable, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizable = true)
+        void CopyTo(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizable = true)
         {
-            ResizeOutputBuffer(sampleVariable, sampleVariable.Shape().TotalSize(), sequences, sequenceLengths, isResizable);
-            CopyToVector<ElementType>(sampleVariable, sequences, sequenceLengths);
+            ResizeOutputBuffer(outputVariable, outputVariable.Shape().TotalSize(), sequences, sequenceLengths, isResizable);
+            CopyToVector<ElementType>(outputVariable, sequences, sequenceLengths);
         }
 
         ///
@@ -2191,10 +2191,10 @@ namespace CNTK
         /// The sequence buffer will be resized if nencessary.
         /// The Value should have the same tensor shape as sampleShape.
         ///
-        void CopyTo(const Variable& sampleVariable, std::vector<std::vector<size_t>>& sequences)
+        void CopyTo(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences)
         {
             std::vector<size_t> seqLens;
-            CopyTo(sampleVariable, sequences, seqLens, true);
+            CopyTo(outputVariable, sequences, seqLens, true);
         }
 
         ///
@@ -2202,18 +2202,18 @@ namespace CNTK
         /// In addition, sequenceLengths contains the length of each sequence in the sequence buffer.
         /// The sequenceLengths will be resized if necessary, even isResizable is false.
         ///
-        void CopyTo(const Variable& sampleVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizable = true)
+        void CopyTo(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizable = true)
         {
             // For OneHot vector, only 1 value is needed for a sample.
-            ResizeOutputBuffer(sampleVariable, 1, sequences, sequenceLengths, isResizable);
+            ResizeOutputBuffer(outputVariable, 1, sequences, sequenceLengths, isResizable);
             auto dataType = GetDataType();
             if (dataType == DataType::Float)
             {
-                CopyToVector<float>(sampleVariable, sequences, sequenceLengths);
+                CopyToVector<float>(outputVariable, sequences, sequenceLengths);
             }
             else if (dataType == DataType::Double)
             {
-                CopyToVector<double>(sampleVariable, sequences, sequenceLengths);
+                CopyToVector<double>(outputVariable, sequences, sequenceLengths);
             }
         }
 
@@ -2224,22 +2224,22 @@ namespace CNTK
         CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly, bool createNewCopy);
 
         template <typename ElementType>
-        CNTK_API void CopyToVector(const Variable& sampleVariable, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths);
+        CNTK_API void CopyToVector(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths);
 
         template <typename ElementType>
-        CNTK_API void CopyToVector(const Variable& sampleVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
+        CNTK_API void CopyToVector(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
 
         template <typename ValueType, typename DestType>
-        void CopyToImpl(const Variable& sampleVariable, std::vector<std::vector<DestType>>& sequences, std::vector<size_t>& sequenceLengths);
+        void CopyToImpl(const Variable& outputVariable, std::vector<std::vector<DestType>>& sequences, std::vector<size_t>& sequenceLengths);
 
-        virtual std::pair<size_t, size_t> GetSequenceAndBatchLength(const Variable& sampleVariable);
+        virtual std::pair<size_t, size_t> GetSequenceAndBatchLength(const Variable& outputVariable);
 
         template <typename ElementType>
-        void ResizeOutputBuffer(const Variable& sampleVariable, size_t sampleSize, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizable)
+        void ResizeOutputBuffer(const Variable& outputVariable, size_t sampleSize, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizable)
         {
             size_t numOfSequences;
             size_t maxSequenceLen;
-            std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(sampleVariable);
+            std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable);
 
             // resize the sequnce length buffer to reflect the number of sequences in output.
             if (sequenceLengths.size() < numOfSequences)
