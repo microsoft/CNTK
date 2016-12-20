@@ -119,11 +119,6 @@ namespace CNTK
                 uids.insert(f1->Uid());
             }
 
-            if((f1->RootFunction() == nullptr) != (f2->RootFunction() == nullptr))
-            {
-                return false;
-            }
-
             if (f1->Name() != f2->Name())
             {
                 return false;

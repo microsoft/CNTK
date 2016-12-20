@@ -136,6 +136,7 @@
     <ClInclude Include="API\CNTKLibraryExperimental.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
     <ClInclude Include="BackCompat.h" />
+    <ClInclude Include="BlockFunction.h" />
     <ClInclude Include="CompositeFunction.h" />
     <ClInclude Include="DataParallelDistributedLearner.h" />
     <ClInclude Include="DistributedCommunicator.h" />

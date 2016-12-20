@@ -59,6 +59,32 @@ def combine(operands, name=''):
     return combine(converted_operands, name)
 
 @typemap
+def as_block(composite, block_arguments_map, block_op_name, block_instance_name=''):
+    '''
+     Create a new block Function instance which just encapsulates the specified composite Function
+     to create a new Function that appears to be a primitive. All the arguments of the composite
+     being encapsulated must be Placeholder variables.
+     The purpose of block Functions is to enable creation of hierarchical Function graphs
+     where details of implementing certain building block operations can be encapsulated away
+     such that the actual structure of the block's implementation is not inlined into
+     the parent graph where the block is used, and instead the block just appears as an opaque
+     primtive. Users still have the ability to peek at the underlying Function graph that implements
+     the actual block Function.
+
+    Args:
+        composite: The composite Function that the block encapsulates
+        block_arguments_map: Mapping from block's underlying composite's arguments to 
+        actual variables they are connected to
+        block_op_name: Name of the op that the block represents
+        block_instance_name (str, optional): the name of the block Function in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import as_block
+    return as_block(composite, block_arguments_map, block_op_name, block_instance_name)
+
+@typemap
 def alias(x, name=''):
     '''
      Create a new Function instance which just aliases the specified 'x' Function/Variable

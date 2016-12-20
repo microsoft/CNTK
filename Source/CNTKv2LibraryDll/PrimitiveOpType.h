@@ -66,6 +66,7 @@ namespace CNTK
         Sin = 54,
         Cos = 55,
         Pass = 56,
+        Block = 57,
         // New op types should only be appended to the end of this list.
         // If you append here, also add checks in SerializationTests (CheckEnumValuesNotModified)
         // and bump up PrimitiveFunction::s_serializationVersion

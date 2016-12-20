@@ -49,6 +49,7 @@
     <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="DataParallelDistributedLearner.h" />
+    <ClInclude Include="BlockFunction.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

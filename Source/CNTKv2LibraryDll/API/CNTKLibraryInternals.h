@@ -152,6 +152,7 @@ namespace CNTK
     class Utils;
     class PrimitiveFunction;
     class CompositeFunction;
+    class BlockFunction;
     class Function;
     class Variable;
     class Axis;
