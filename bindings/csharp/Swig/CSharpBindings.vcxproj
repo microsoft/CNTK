@@ -25,6 +25,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{277EBD9D-2504-49FA-AC72-59D5515130C3}</ProjectGuid>
     <RootNamespace>CSharpBindings</RootNamespace>
+    <ProjectName>CNTKLibraryCSBinding</ProjectName>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
