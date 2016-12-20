@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using CNTK;
 
-namespace CSEvalV2Example
+namespace CNTKLibraryManagedClientTest
 {
     public class Program
     {

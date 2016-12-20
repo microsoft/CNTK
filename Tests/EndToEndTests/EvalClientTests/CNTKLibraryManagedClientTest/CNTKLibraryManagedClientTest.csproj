@@ -14,8 +14,8 @@
     <Prefer32Bit>false</Prefer32Bit>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CSEvalV2Example</RootNamespace>
-    <AssemblyName>CSEvalV2Example</AssemblyName>
+    <RootNamespace>CNTKLibraryManagedClientTest</RootNamespace>
+    <AssemblyName>CNTKLibraryManagedClientTest</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -64,17 +64,21 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup Condition="Exists('$(SWIG_PATH)\swig.exe')">
-    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CNTKLibraryManagedDll\CNTKLibraryManagedDll.csproj">
+    <ProjectReference Include="..\..\..\..\bindings\csharp\CNTKLibraryManagedDll\CNTKLibraryManagedDll.csproj">
       <Project>{50ef9ee6-5018-453e-a063-f77044ef1a97}</Project>
       <Name>CNTKLibraryManagedDll</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryManagedClient\Program.cs">
+      <Link>Program.cs</Link>
+    </Compile>
   </ItemGroup>
   <Target Name="Build" Condition="!Exists('$(SWIG_PATH)\swig.exe')">
     <Warning Condition="!Exists('$(SWIG_PATH)\swig.exe')" Text="The project requires SWIG to be installed." />
