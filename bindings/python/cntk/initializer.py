@@ -25,7 +25,7 @@ def uniform(scale, seed=None):
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
 
-    return cntk_py.uniform1_initializer(scale, seed)
+    return cntk_py.uniform_initializer(scale, seed)
 
 def normal(scale, output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelValueForInferParamInitRank, seed=None):
     '''
