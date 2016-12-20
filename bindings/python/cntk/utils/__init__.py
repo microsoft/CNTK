@@ -228,14 +228,14 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
     Args:
         var (:class:`~cntk.ops.variables.Variable`): input variable into which
          ``batch`` is passed
-        batch: batch input for `var`. It can be 
+        batch: batch input for `var`. It can be
          * a single NumPy array denoting the full minibatch
          * a list of NumPy arrays or SciPy sparse CSR matrices each representing a sequence
          * a :class:`Value` object (e.g. returned by :func:`one_hot`)
         seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
-         Booleans one for each sequence in the batch that tell whether a 
-         sequence is a new sequence (`True`) or a continuation of the sequence 
+         Booleans one for each sequence in the batch that tell whether a
+         sequence is a new sequence (`True`) or a continuation of the sequence
          in the same slot of the previous minibatch (`False`)
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
          this value should be put on
@@ -327,27 +327,27 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
            * dict: keys are input variable or names, and values are the input data.
            * any other type: if node has an unique input, arguments is
-             mapped to this input. 
+             mapped to this input.
          For nodes with more than one input, only dict is allowed.
 
          In both cases, every every sample in the data will be interpreted
-         as a new sequence. 
-         
+         as a new sequence.
+
          Sequences can be marked as continuations of the same sequence in
          the previous minibatch (that is the sequence in the same slot).
          There are two possibilities for this:
-         
+
           * specifying arguments as a `tuple` where the first element is
             used as arguments and the second one will be used as a list
             of bools, denoting whether a sequence is a new one (`True`) or a
             continuation of the sequence in the same slot of the previous
-            minibatch (`False`). This will be applied to all batches. 
-          * specifying arguments as a dictionary of variables to tuples 
+            minibatch (`False`). This will be applied to all batches.
+          * specifying arguments as a dictionary of variables to tuples
             where the first element is used as arguments and the second
             one will be used as a list of bools, denoting whether a sequence
             is a new one (`True`) or a continuation of the sequence in the
             same slot of the previous minibatch (`False`). This will be
-            applied to all batches. 
+            applied to all batches.
 
          Data should be either NumPy arrays or a
          :class:`~cntk.io.MinibatchData` instance.
@@ -473,8 +473,8 @@ class Value(cntk_py.Value):
         value (None or value that can be cast to NumPy array): the value to
          be converted
         dtype: data type (np.float32 or np.float64)
-        batch: batch input for `var`. It can be 
-         * a pure Python structure (list of lists, ...), 
+        batch: batch input for `var`. It can be
+         * a pure Python structure (list of lists, ...),
          * a list of NumPy arrays or SciPy sparse CSR matrices
          * a :class:`Value` object (e.g. returned by :func:`one_hot`)
         seq_starts (list of `bool`s or None): if None, every sequence is
@@ -513,7 +513,7 @@ class Value(cntk_py.Value):
         Args:
             var (:class:`~cntk.ops.variables.Variable`): input variable into which
              ``batch`` is passed
-            batch: batch input. It can be 
+            batch: batch input. It can be
              * a single NumPy array denoting the full minibatch
              * a list of NumPy arrays or SciPy sparse CSR matrices
             seq_starts (list of `bool`s or None): if None, every sequence is
@@ -524,7 +524,7 @@ class Value(cntk_py.Value):
             device (:class:`~cntk.device.DeviceDescriptor`, default None): device
              this value should be put on
             read_only (bool, default False): whether the data is read only
-        
+
         Returns:
             :class:`Value` object.
         '''
@@ -561,7 +561,7 @@ class Value(cntk_py.Value):
                         'provide the data as a Python list of NumPy arrays '
                         'or Scipy CSR matrices.'%type(sample))
 
-            if np.issubdtype(sample.dtype, int): 
+            if np.issubdtype(sample.dtype, int):
                 sample = sample.astype(var.dtype)
             elif sample.dtype not in (np.float32, np.float64):
                 raise ValueError('only integer, float32 and float64 are supported, '
@@ -584,8 +584,8 @@ class Value(cntk_py.Value):
             list_of_ndavs.append(ndav)
 
         return cntk_py.Value_create(
-                _as_tuple(var.shape), list_of_ndavs, 
-                seq_starts or [], 
+                _as_tuple(var.shape), list_of_ndavs,
+                seq_starts or [],
                 device or use_default_device(),
                 read_only)
 

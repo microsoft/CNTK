@@ -161,8 +161,8 @@ class Function(cntk_py.Function):
              the input type:
 
                * dict: keys are input variable or names, and values are the input data.
-                 See :meth:`~cntk.ops.functions.Function.forward` for how to specify
-                 minibatches and sequences.
+                 See :meth:`~cntk.ops.functions.Function.forward` for details on passing
+                 input data.
                * any other type: if node has an unique input, arguments is
                  mapped to this input.
              For nodes with more than one input, only dict is allowed.

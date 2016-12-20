@@ -48,7 +48,7 @@ class Trainer(cntk_py.Trainer):
              input data. Empty map signifies end of local training data.
              The interpretation depends on the input type:
                * `dict`: keys are input variable or names, and values are the input data.
-                 See :meth:`~cntk.ops.functions.Function.forward` for details on the shape of the input data.
+                 See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
              In both cases, every every sample in the data will be interpreted
@@ -102,7 +102,7 @@ class Trainer(cntk_py.Trainer):
              input data. The interpretation depends on the input type:
 
                * `dict`: keys are input variable or names, and values are the input data.
-                 See :meth:`~cntk.ops.functions.Function.forward` for details on the shape of the input data.
+                 See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
              In both cases, every every sample in the data will be interpreted

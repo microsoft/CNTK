@@ -19,6 +19,7 @@ def is_first(seq, name=''):
     Example:
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.is_first(x)
+        >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[ 1.,  0.,  0.,  0.]], dtype=float32)
@@ -44,6 +45,7 @@ def is_last(seq, name=''):
     Example:
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.is_last(x)
+        >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[ 0.,  0.,  0.,  1.]], dtype=float32)
@@ -90,6 +92,7 @@ def first(seq, name=''):
     Example:
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.first(x)
+        >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[[[ 0.,  1.],
@@ -115,6 +118,7 @@ def last(seq, name=''):
     Example:
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.last(x)
+        >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[[[ 18.,  19.],
@@ -142,6 +146,7 @@ def where(condition, name=''):
     Example:
         >>> x = C.input_variable(shape=(3,2))
         >>> z = C.greater(C.reduce_sum(x), 60)
+        >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0, dtype=np.float32), (1,4,3,2))
         >>> z.eval({x:x0})
         array([[[ 0.],

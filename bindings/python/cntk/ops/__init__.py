@@ -94,10 +94,10 @@ def cosine_distance(x, y, name=''):
         >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
         >>> x = C.input_variable(shape=(2,))
         >>> y = C.input_variable(shape=(2,))
-        >>> C.cosine_distance(x,y).eval({x:a,y:b}) # doctest: +SKIP
-        array([[-0.99999982,  0.99999982],
-               [ 0.99999982,  0.        ],
-               [ 0.        , -0.99999982]], dtype=float32)
+        >>> np.round(C.cosine_distance(x,y).eval({x:a,y:b}),5)
+        array([[-1.,  1.],
+               [ 1.,  0.],
+               [ 0., -1.]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
@@ -299,7 +299,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
         >>> x = C.input_variable(img.shape)
         >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
         >>> kernel = C.constant(value = filter)
-        >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}) # doctest: +SKIP
+        >>> np.round(C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}),5)
         array([[[[[  6.,   8.,  10.,  12.],
                   [ 16.,  18.,  20.,  22.],
                   [ 26.,  28.,  30.,  32.],
@@ -1524,6 +1524,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    # FIXME figure out how to only SKIP the doctest in CPU 
     from cntk.cntk_py import optimized_rnnstack
     operand = sanitize_input(operand)
     if recurrent_op not in set(['lstm','gru','relu','tanh']):
