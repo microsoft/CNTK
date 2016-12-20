@@ -360,79 +360,51 @@ namespace CNTK
     }
 
     template <typename ElementType, typename DestType>
-    void DirectCopy(const ElementType *source, const size_t sampleCount, const size_t sampleSize, std::vector<DestType>& dest, size_t& destSampleStart);
+    void DirectCopy(const ElementType *source, size_t sampleCount, size_t sampleSize, std::vector<DestType>& dest);
 
     template <typename ElementType, typename DestType>
-    void CopyDenseToOneHot(const ElementType *source, const size_t sampleCount, const size_t sampleSize, std::vector<DestType>& dest, size_t& destSampleStart);
+    void CopyDenseToOneHot(const ElementType *source, size_t sampleCount, size_t sampleSize, std::vector<DestType>& dest);
 
     template <typename ElementType>
-    void Value::CopyToVector(const NDShape& sampleShape, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths)
+    void Value::CopyToVector(const Variable& sampleVariable, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths)
     { 
         // Check the data type matches
         if (AsDataType<ElementType>() != GetDataType())
             InvalidArgument("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(GetDataType()));
 
-        CopyToImpl<ElementType, ElementType>(sampleShape, sequences, sequenceLengths);
+        CopyToImpl<ElementType, ElementType>(sampleVariable, sequences, sequenceLengths);
     }
 
     template <typename ElementType>
-    void Value::CopyToVector(const size_t vocabularySize, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths)
+    void Value::CopyToVector(const Variable& sampleVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths)
     {
-        CopyToImpl<ElementType, size_t>({{vocabularySize}}, sequences, sequenceLengths);
+        CopyToImpl<ElementType, size_t>(sampleVariable, sequences, sequenceLengths);
     }
 
     template <typename ValueType, typename DestType>
-    void Value::CopyToImpl(const NDShape& sampleShape, 
+    void Value::CopyToImpl(const Variable& sampleVariable,
                            std::vector<std::vector<DestType>>& sequences, 
                            std::vector<size_t>& sequenceLengths)
     {
-        auto valueShape = Shape();
-        auto valueRank = valueShape.Rank();
-        auto sampleRank = sampleShape.Rank();
-        if ((valueRank < sampleRank + 1) || (valueRank > sampleRank + 2) || (sampleShape != valueShape.SubShape(0, sampleRank)))
-            RuntimeError("The sample shape does not match the value shape.");
+        // Todo: support packed value by unpacking?
+        if (dynamic_cast<PackedValue *>(this) != nullptr)
+            RuntimeError("CopyTo() does not support PackedValue yet.");
 
         size_t numOfSequences;
         size_t maxSequenceLen;
-        if (valueRank == sampleShape.Rank() + 1)
-        {
-            // no batch axis, only sequence axis
-            numOfSequences = 1;
-            maxSequenceLen = valueShape[valueRank - 1];
-        }
-        else
-        {
-            assert(valueRank == sampleShape.Rank() + 2);
-            numOfSequences = valueShape[valueRank - 1];
-            maxSequenceLen = valueShape[valueRank - 2];
-        }
+        std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(sampleVariable);
 
-        // Check batch size
         if (sequences.size() < numOfSequences)
             RuntimeError("The size of output buffer is too small");
 
-        // Check sequenceLengths size.
-        if (sequenceLengths.size() < numOfSequences)
-        {
-            RuntimeError("The size of sequenceLengths does not match.");
-        }
-        else
-        {
-            for (size_t i = numOfSequences; i < sequenceLengths.size(); i++)
-                sequenceLengths[i] = 0;
-        }
-
         // Copy data to the CPU device if required.
         const ValueType *valueData;
-        const MaskKind* maskData;
         NDArrayViewPtr cpuArrayView;
-        NDMaskPtr cpuMask;
-        if (Device() != DeviceDescriptor::CPUDevice())
+        if (Device().Type() != DeviceKind::CPU)
         {
             // Todo: leverage sparse if the original NDArrayView is in spase.
             cpuArrayView = MakeSharedObject<NDArrayView>(GetDataType(), Data()->Shape(), DeviceDescriptor::CPUDevice());
             cpuArrayView->CopyFrom(*Data());
-            cpuMask = Mask() != nullptr ? Mask()->DeepClone(DeviceDescriptor::CPUDevice()) : nullptr;
         }
         else
         {
@@ -446,62 +418,67 @@ namespace CNTK
             {
                 cpuArrayView = Data();
             }
-            cpuMask = Mask();
         }
         valueData = cpuArrayView->DataBuffer<ValueType>();
-        maskData = cpuMask != nullptr ? cpuMask->DataBuffer() : nullptr;
 
-        auto sampleSize = sampleShape.TotalSize();
+        auto sampleSize = sampleVariable.Shape().TotalSize();
         for (auto seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
         {
             size_t seqStart = seqIndex * maxSequenceLen;
-            size_t destSampleCount = 0;
-            if (maskData == nullptr)
+
+            // The assumption here is that a sequence always start at 0 (no invaid mark at the beginning),
+            // and ends at the first invalid mask. 
+            // Therefore, no need to check NDMask again. The SequenceLengths already contains the correct number of samples.
+
+            // Todo: if function pointer or lambda could support template, switch to use them.
+            if (typeid(DestType) == typeid(size_t))
             {
-                // Todo: if function pointer or lambda could support template, switch to use them.
-                if (typeid(DestType) == typeid(size_t))
-                {
-                    CopyDenseToOneHot<ValueType, DestType>(valueData + seqStart * sampleSize, maxSequenceLen, sampleSize, sequences[seqIndex], destSampleCount);
-                }
-                else
-                {
-                    DirectCopy<ValueType, DestType>(valueData + seqStart * sampleSize, maxSequenceLen, sampleSize, sequences[seqIndex], destSampleCount);
-                }
-                sequenceLengths[seqIndex] = destSampleCount;
+                CopyDenseToOneHot<ValueType, DestType>(valueData + seqStart * sampleSize, sequenceLengths[seqIndex], sampleSize, sequences[seqIndex]);
             }
             else
             {
-                // NDMask is not null
-                size_t current = seqStart;
-                size_t seqEnd = seqStart + maxSequenceLen;
-                while (current < seqEnd)
-                {
-                    // find first valid mask.
-                    while ((current < seqEnd) && (maskData[current] == MaskKind::Invalid))
-                        current++;
-                    auto sampleStart = current;
-
-                    // find the next invalid mask.
-                    while ((current < seqEnd) && (maskData[current] != MaskKind::Invalid))
-                        current++;
-                    assert(current >= sampleStart);
-                    if (current > sampleStart)
-                    {
-                        // Todo: if function pointer or lambda could support template, switch to use them.
-                        if (typeid(DestType) == typeid(size_t))
-                        {
-                            CopyDenseToOneHot<ValueType, DestType>(valueData + seqStart * sampleSize, current - sampleStart, sampleSize, sequences[seqIndex], destSampleCount);
-                        }
-                        else
-                        {
-                            DirectCopy<ValueType, DestType>(valueData + seqStart * sampleSize, current - sampleStart, sampleSize, sequences[seqIndex], destSampleCount);
-                        }
-                    }
-                }
-                sequenceLengths[seqIndex] = destSampleCount;
+                DirectCopy<ValueType, DestType>(valueData + seqStart * sampleSize, sequenceLengths[seqIndex], sampleSize, sequences[seqIndex]);
             }
         }
     }
+
+    std::pair<size_t, size_t> Value::GetSequenceAndBatchLength(const Variable& sampleVariable)
+    {
+        size_t sampleRank = sampleVariable.Shape().Rank();
+        size_t maxSequenceLength = 1;
+        size_t numSequences = 1;
+
+        if (Shape().Rank() < sampleRank)
+            RuntimeError("The value shape has less ranks than the variable shape.");
+        size_t maskRank = Shape().Rank() - sampleRank;
+
+        if (sampleVariable.Shape() != Shape().SubShape(0, sampleRank))
+            RuntimeError("The shape of the sampleVariable does not match the value shape.");
+
+        if (maskRank > 2)
+            RuntimeError("Only 2 dynamic axes are supported now.");
+        else if (maskRank == 2)
+        {
+            // Only 2 axes are supported at the moment, sequence axis should be the first and batch axis the second.
+            maxSequenceLength = Shape()[sampleRank];
+            numSequences = Shape()[sampleRank + 1];
+        }
+        else if (maskRank == 1)
+        {
+            if (sampleVariable.DynamicAxes().size() > 1)
+            {
+                maxSequenceLength = Shape()[sampleRank];
+            }
+            else
+            {
+                // there's only one axis (the default batch axis).
+                numSequences = Shape()[sampleRank];
+            }
+        }
+
+        return std::pair<size_t, size_t>(maxSequenceLength, numSequences);
+    }
+
 
     void PackedValue::Unpack() const
     {
@@ -537,20 +514,19 @@ namespace CNTK
     }
 
     template <typename ElementType, typename DestType>
-    void DirectCopy(const ElementType *source, const size_t sampleCount, const size_t sampleSize, std::vector<DestType>& dest, size_t& destSampleStart)
+    void DirectCopy(const ElementType *source, const size_t sampleCount, const size_t sampleSize, std::vector<DestType>& dest)
     {
         if (typeid(ElementType) != typeid(DestType))
             RuntimeError("Source and destination must be the same data type.");
 
         DestType *destData = dest.data();
-        if ((destSampleStart + sampleCount) * sampleSize > dest.size())
+        if (sampleCount * sampleSize > dest.size())
             RuntimeError("The output buffer is too small.");
-        std::copy(source, source + sampleCount * sampleSize, reinterpret_cast<ElementType *>(destData + destSampleStart * sampleSize));
-        destSampleStart += sampleCount;
+        std::copy(source, source + sampleCount * sampleSize, reinterpret_cast<ElementType *>(destData));
     }
 
     template <typename ElementType, typename DestType>
-    void CopyDenseToOneHot(const ElementType *source, const size_t sampleCount, const size_t sampleSize, std::vector<DestType>& dest, size_t& destSampleStart)
+    void CopyDenseToOneHot(const ElementType *source, const size_t sampleCount, const size_t sampleSize, std::vector<DestType>& dest)
     {
         if (typeid(DestType) != typeid(size_t))
         {
@@ -559,36 +535,28 @@ namespace CNTK
 
         const ElementType *currentp = source;
         const ElementType *lastp = source + sampleCount * sampleSize;
+        size_t destIndex = 0;
         while (currentp < lastp)
         {
-            auto sampleEndp = currentp + sampleSize;
-            auto indexp = std::find_if(currentp, sampleEndp, [](const ElementType val) {
-                return val != 0;
-            });
-
-            if (indexp == sampleEndp)
+            size_t index = sampleSize;
+            bool found = false;
+            for (size_t i = 0; i < sampleSize; i++)
             {
+                if (*currentp == 1)
+                {
+                    if (found)
+                        RuntimeError("Cannot convert to onehot vector: more than one non-zero value in the sample.");
+                    index = i;
+                    found = true;
+                }
+                else if (*currentp != 0)
+                    RuntimeError("Cannot convert to onehot vector: contain value other than 0 and 1.");
+                currentp++;
+            }
+            if (!found)
                 RuntimeError("Cannot convert to onehot vector: the sample does not have any non-zero value.");
-            }
-            else
-            {
-                if (std::find_if(indexp + 1, sampleEndp, [](const ElementType val) {
-                    return val != 0;
-                }) != sampleEndp)
-                {
-                    RuntimeError("Cannot convert to onehot vector: more than one non-zero value in the sample.");
-                }
-                else
-                {
-                    if (destSampleStart >= dest.size())
-                        RuntimeError("The output buffer is too small.");
-                    else
-                    {
-                        dest[destSampleStart++] = static_cast<DestType>(indexp - currentp);
-                    }
-                }
-            }
-            currentp += sampleSize;
+            assert(index != sampleSize);
+            dest[destIndex++] = static_cast<DestType>(index);
         }
         assert(currentp == lastp);
     }
@@ -598,9 +566,8 @@ namespace CNTK
     template /*static*/ CNTK_API ValuePtr Value::Create<double>(const NDShape& sampleShape, const std::vector<std::vector<double>>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template /*static*/ CNTK_API ValuePtr Value::Create<float>(size_t vocabSize, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template /*static*/ CNTK_API ValuePtr Value::Create<double>(size_t vocabSize, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
-    template CNTK_API void Value::CopyToVector<float>(const NDShape& sampleShape, std::vector<std::vector<float>>& sequences, std::vector<size_t>& sequencesLens);
-    template CNTK_API void Value::CopyToVector<double>(const NDShape& sampleShape, std::vector<std::vector<double>>& sequences, std::vector<size_t>& sequencesLens);
-    template CNTK_API void Value::CopyToVector<float>(const size_t vocabularySize, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
-    template CNTK_API void Value::CopyToVector<double>(const size_t vocabularySize, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
-
+    template CNTK_API void Value::CopyToVector<float>(const Variable& sampleVariable, std::vector<std::vector<float>>& sequences, std::vector<size_t>& sequencesLens);
+    template CNTK_API void Value::CopyToVector<double>(const Variable& sampleVariable, std::vector<std::vector<double>>& sequences, std::vector<size_t>& sequencesLens);
+    template CNTK_API void Value::CopyToVector<float>(const Variable& sampleVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
+    template CNTK_API void Value::CopyToVector<double>(const Variable& sampleVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
 }
