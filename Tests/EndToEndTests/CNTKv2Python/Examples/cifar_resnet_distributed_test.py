@@ -17,16 +17,15 @@ from cntk.device import set_default_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
-# from run_cifar_convnet_distributed import run_cifar_convnet_distributed
+train_and_test_script = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ResNet", "Python", "TrainResNet_CIFAR10_Distributed.py")
 
 TOLERANCE_ABSOLUTE = 2E-1
 TIMEOUT_SECONDS = 300
 
 def test_cifar_resnet_distributed_mpiexec(device_id):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
-        pytest.skip('test only runs on GPU')
+    skip_if_cpu(device_id)
 
-    cmd = ["mpiexec", "-n", "2", "python", os.path.join(abs_path, "run_cifar_resnet_distributed.py")]
+    cmd = ["mpiexec", "-n", "2", "python", train_and_test_script, "-e", "2"]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     try:
         out = p.communicate(timeout=TIMEOUT_SECONDS)[0]  # in case we have a hang
@@ -43,10 +42,9 @@ def test_cifar_resnet_distributed_mpiexec(device_id):
                        atol=TOLERANCE_ABSOLUTE)
 
 def test_cifar_resnet_distributed_1bitsgd_mpiexec(device_id):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
-        pytest.skip('test only runs on GPU')
+    skip_if_cpu(device_id)
 
-    cmd = ["mpiexec", "-n", "2", "python", os.path.join(abs_path, "run_cifar_resnet_distributed.py"),"-q", "1"]
+    cmd = ["mpiexec", "-n", "2", "python", os.path.join(abs_path, "run_cifar_resnet_distributed.py"),"-e", "2", "-q", "1"]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     try:
         out = p.communicate(timeout=TIMEOUT_SECONDS)[0]  # in case we have a hang
@@ -63,10 +61,9 @@ def test_cifar_resnet_distributed_1bitsgd_mpiexec(device_id):
                        atol=TOLERANCE_ABSOLUTE)
 
 def test_cifar_resnet_distributed_blockmomentum_mpiexec(device_id):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
-        pytest.skip('test only runs on GPU')
+    skip_if_cpu(device_id)
 
-    cmd = ["mpiexec", "-n", "2", "python", os.path.join(abs_path, "run_cifar_resnet_distributed.py"), "-b", "32000"]
+    cmd = ["mpiexec", "-n", "2", "python", os.path.join(abs_path, "run_cifar_resnet_distributed.py"), "-e", "2", "-b", "32000"]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     try:
         out = p.communicate(timeout=TIMEOUT_SECONDS)[0]  # in case we have a hang
@@ -82,5 +79,9 @@ def test_cifar_resnet_distributed_blockmomentum_mpiexec(device_id):
     expected_test_error = 0.55
     assert np.allclose(float(results[0])/100, expected_test_error,
                        atol=TOLERANCE_ABSOLUTE)
+
+def skip_if_cpu(device_id):
+    if cntk_device(device_id).type() != DeviceKind_GPU:
+        pytest.skip('test only runs on GPU')
 
 
