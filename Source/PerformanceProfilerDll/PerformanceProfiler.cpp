@@ -66,7 +66,7 @@ static const FixedEventDesc c_fixedEvtDesc[profilerEvtMax] = {
     { "Data Reader", profilerEvtSeparator, false },                 // profilerSepDataReader
     { "", profilerEvtSeparator, false },                            // profilerSepSpace4
 
-    { "Read Minibatch Task", profilerEvtTime, false },              // profilerEvtPrefetchMinibatch
+    { "Prefetch Minibatch", profilerEvtTime, false },               // profilerEvtPrefetchMinibatch
 };
 
 
@@ -364,7 +364,7 @@ void PERF_PROFILER_API ProfilerClose()
     LockClose();
 
     // Generate summary report
-    if (_wmkdir(g_profilerState->profilerDir.c_str()) == -1)
+    if (_wmkdir(g_profilerState->profilerDir.c_str()) == -1 && errno != EEXIST)
     {
         RuntimeError("Error: ProfilerClose: Cannot create directory <%ls>.\n", g_profilerState->profilerDir.c_str());
         return;
@@ -522,7 +522,7 @@ void ProfilerGenerateReport(const std::wstring& fileName, struct tm* timeInfo)
     strftime(timeStr, sizeof(timeStr), "%Y/%m/%d %H:%M:%S", timeInfo);
     fprintfOrDie(f, "Time Stamp: %s\n\n", timeStr);
 
-    fprintfOrDie(f, "Description................ ............Mean ..........StdDev .............Min .............Max ...........Count ...........Total\n");
+    fprintfOrDie(f, "Description................ ............Mean ..........StdDev .............Min .............Max ...........Count ...........Total\n\n");
 
     for (int evtIdx = 0; evtIdx < profilerEvtMax; evtIdx++)
     {
