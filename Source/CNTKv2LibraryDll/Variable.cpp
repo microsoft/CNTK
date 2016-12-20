@@ -171,21 +171,6 @@ namespace CNTK
         return initConfig;
     }
 
-    ParameterInitializer UniformBSInitializer(double scale, unsigned long seed)
-    {
-        Dictionary initConfig;
-        initConfig[InitializerTypeAttributeName] = Microsoft::MSR::CNTK::UniformBSInitializerTypeName;
-        initConfig[ScaleAttributeName] = scale;
-        initConfig[RandomSeedAttributeName] = (size_t)seed;
-
-        return initConfig;
-    }
-
-    ParameterInitializer GaussianInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
-    {
-        return CreateInitializer(Microsoft::MSR::CNTK::GaussianInitializerTypeName, scale, outputRank, filterRank, seed);
-    }
-
     ParameterInitializer NormalInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
         return CreateInitializer(Microsoft::MSR::CNTK::NormalInitializerTypeName, scale, outputRank, filterRank, seed);
