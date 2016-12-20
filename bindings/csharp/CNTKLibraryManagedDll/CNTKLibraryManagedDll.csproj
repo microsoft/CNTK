@@ -69,12 +69,6 @@
     <Compile Include="ValueExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Swig\CSharpBindings.vcxproj">
-      <Project>{277ebd9d-2504-49fa-ac72-59d5515130c3}</Project>
-      <Name>CSharpBindings</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="CntkBitmapExtensions.cs" />
     <Compile Include="SwigProxyClasses\Axis.cs" />
     <Compile Include="SwigProxyClasses\AxisVector.cs" />

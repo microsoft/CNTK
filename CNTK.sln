@@ -1405,7 +1405,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNN", "RNN", "{6730F9BE-92A
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CSharp", "CSharp", "{1526F027-B007-472D-82E2-5A91340F3B62}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKLibraryCSBinding", "bindings\csharp\Swig\CSharpBindings.vcxproj", "{277EBD9D-2504-49FA-AC72-59D5515130C3}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKLibraryCSBinding", "bindings\csharp\Swig\CNTKLibraryCSBinding.vcxproj", "{277EBD9D-2504-49FA-AC72-59D5515130C3}"
 	ProjectSection(ProjectDependencies) = postProject
 		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
 	EndProjectSection
