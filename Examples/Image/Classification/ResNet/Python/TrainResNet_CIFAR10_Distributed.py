@@ -32,6 +32,7 @@ num_classes  = 10
 
 # Define the reader for both training and evaluation action.
 def create_reader(map_file, mean_file, train, total_data_size, distributed_after=INFINITE_SAMPLES):
+    
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         raise RuntimeError("File '%s' or '%s' does not exist. Please run install_cifar10.py from DataSets/CIFAR-10 to fetch them" %
                            (map_file, mean_file))
@@ -56,27 +57,7 @@ def create_reader(map_file, mean_file, train, total_data_size, distributed_after
         distributed_after = distributed_after)
 
 
-# Train and evaluate the network.
-
-def train_and_test_cifar_resnet(train_data, test_data, mean, network_name, max_epochs, scale_up=False, block_samples=0, distributed_after=0, num_quantization_bits=32):
-
-    # create a distributed learner for SGD
-    # BlockMomentum SGD will be used in case number of samples per block is not 0 and 1BitSGD is disabled
-    if block_samples != 0:
-        if num_quantization_bits != 32:
-            raise ValueError("Blockmomentum disrtibuted learner is not meant to be used with 1BitSGD")
-        else:
-            create_dist_learner = lambda learner: distributed.block_momentum_distributed_learner(learner=learner, block_size=block_samples)
-    else:
-        # 1BitSGD will be used in case num_quantization_bits is 1
-        # distributed_after_samples denotes the number of samples after which distributed training will start 
-        create_dist_learner = lambda learner: distributed.data_parallel_distributed_learner(learner=learner, num_quantization_bits=num_quantization_bits, distributed_after=distributed_after)
-
-    # create training and testing readers with respective data  
-    reader_train_factory = lambda data_size: create_reader(train_data, mean, False, data_size) # apply transformation only for training set
-    test_reader = create_reader(test_data, mean, False, FULL_DATA_SWEEP)
-
-    set_computation_network_trace_level(0)
+def resnet_cifar10(reader_train_factory, test_reader, create_dist_learner, max_epochs):
 
     # Input variables denoting the features and label data
     input_var = input_variable((num_channels, image_height, image_width))
@@ -157,7 +138,6 @@ def train_and_test_cifar_resnet(train_data, test_data, mean, network_name, max_e
     while True:
         data = test_reader.next_minibatch(minibatch_size, input_map=input_map)
         if not data: break;
-
         local_mb_samples=data[label_var].num_samples
         metric_numer += trainer.test_minibatch(data) * local_mb_samples
         metric_denom += local_mb_samples
@@ -169,7 +149,35 @@ def train_and_test_cifar_resnet(train_data, test_data, mean, network_name, max_e
 
     return metric_numer/metric_denom
 
+# Train and evaluate the network.
+def train_and_test_cifar_resnet(train_data, test_data, mean, network_name, max_epochs, scale_up=False, block_samples=0, distributed_after=0, num_quantization_bits=32):
+
+    # Create distributed trainer factory
+    print("Start training: quantize_bit = {}, epochs = {}, distributed_after = {}".format(num_quantization_bits, max_epochs, distributed_after))
+
+    # BlockMomentum SGD will be used in case number of samples per block is not 0 and 1BitSGD is disabled
+    if block_samples != 0:
+        if num_quantization_bits != 32:
+            raise ValueError("Blockmomentum disrtibuted learner is not meant to be used with 1BitSGD")
+        else:
+            create_dist_learner = lambda learner: distributed.block_momentum_distributed_learner(learner=learner, block_size=block_samples)
+    else:
+        # 1BitSGD will be used in case num_quantization_bits is 1
+        # distributed_after_samples denotes the number of samples after which distributed training will start 
+        create_dist_learner = lambda learner: distributed.data_parallel_distributed_learner(learner=learner, num_quantization_bits=num_quantization_bits, distributed_after=distributed_after)
+
+    # create training and testing readers with respective data  
+    reader_train_factory = lambda data_size: create_reader(train_data, mean, False, data_size) 
+    test_reader = create_reader(test_data, mean, False, FULL_DATA_SWEEP)
+
+    set_computation_network_trace_level(0)
+
+    return resnet_cifar10(reader_train_factory, test_reader, create_dist_learner, max_epochs=max_epochs)
+
+    
+
 if __name__=='__main__':
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
     parser.add_argument('-e', '--epochs', help='total epochs', type=int, required=False, default='100')
@@ -186,9 +194,6 @@ if __name__=='__main__':
     scale_up = bool(args['scale_up'])
     block_size = int(args['block_size'])
 
-    # Create distributed trainer factory
-    print("Start training: quantize_bit = {}, epochs = {}, distributed_after = {}".format(num_quantization_bits, epochs, distributed_after_samples))
-   
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
     mean=os.path.join(data_path, 'CIFAR-10_mean.xml')
