@@ -1415,7 +1415,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CSEvalV2Example", "bindings
 		{50EF9EE6-5018-453E-A063-F77044EF1A97} = {50EF9EE6-5018-453E-A063-F77044EF1A97}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKLibraryManagedDll", "bindings\csharp\CSEvalV2Library\CNTKLibraryManagedDll.csproj", "{50EF9EE6-5018-453E-A063-F77044EF1A97}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKLibraryManagedDll", "bindings\csharp\CNTKLibraryManagedDll\CNTKLibraryManagedDll.csproj", "{50EF9EE6-5018-453E-A063-F77044EF1A97}"
 	ProjectSection(ProjectDependencies) = postProject
 		{277EBD9D-2504-49FA-AC72-59D5515130C3} = {277EBD9D-2504-49FA-AC72-59D5515130C3}
 	EndProjectSection
