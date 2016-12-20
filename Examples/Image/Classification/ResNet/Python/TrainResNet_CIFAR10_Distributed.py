@@ -56,15 +56,23 @@ def create_reader(map_file, mean_file, train, total_data_size, distributed_after
 
 
 # Train and evaluate the network.
-def train_and_evaluate_cifar_resnet(train_data, test_data, mean, network_name, max_epochs, scale_up=False, block_samples=0, distributed_after=0, num_quantization_bits=32):
+def train_and_test_cifar_resnet(train_data, test_data, mean, network_name, max_epochs, scale_up=False, block_samples=0, distributed_after=0, num_quantization_bits=32):
 
-    if (block_samples != 0):
-        create_dist_learner = lambda learner: distributed.block_momentum_distributed_learner(learner=learner, block_size=block_samples)
+    # create a distributed learner for SGD
+    # BlockMomentum SGD will be used in case number of samples per block is not 0 and 1BitSGD is disabled
+    if block_samples != 0:
+        if num_quantization_bits != 32:
+            raise ValueError("Blockmomentum disrtibuted learner is not meant to be used with 1BitSGD")
+        else:
+            create_dist_learner = lambda learner: distributed.block_momentum_distributed_learner(learner=learner, block_size=block_samples)
     else:
+        # 1BitSGD will be used in case num_quantization_bits is 1
+        # distributed_after_samples denotes the number of samples after which distributed training will start 
         create_dist_learner = lambda learner: distributed.data_parallel_distributed_learner(learner=learner, num_quantization_bits=num_quantization_bits, distributed_after=distributed_after)
 
-    reader_train_factory = lambda data_size: create_reader(train_data, mean, False, data_size)
-    reader_test_factory = lambda data_size: create_reader(test_data, mean, False, FULL_DATA_SWEEP)
+    # create training and testing readers with respective data  
+    reader_train_factory = lambda data_size: create_reader(train_data, mean, False, data_size) # apply transformation only for training set
+    test_reader = create_reader(test_data, mean, False, FULL_DATA_SWEEP)
 
     set_computation_network_trace_level(0)
 
@@ -145,7 +153,6 @@ def train_and_evaluate_cifar_resnet(train_data, test_data, mean, network_name, m
     sample_count    = 0
     minibatch_index = 0
 
-    test_reader = reader_test_factory(epoch_size)
     while True:
         data = test_reader.next_minibatch(minibatch_size, input_map=input_map)
         if not data: break;
@@ -190,7 +197,7 @@ if __name__=='__main__':
     mean=os.path.join(data_path, 'CIFAR-10_mean.xml')
 
 
-    train_and_evaluate_cifar_resnet(train_data, test_data, mean, network_name, epochs, scale_up, block_samples, distributed_after_samples, num_quantization_bits)
+    train_and_test_cifar_resnet(train_data, test_data, mean, network_name, epochs, scale_up, block_samples, distributed_after_samples, num_quantization_bits)
 
     # Must call MPI finalize when process exit
     distributed.Communicator.finalize()
