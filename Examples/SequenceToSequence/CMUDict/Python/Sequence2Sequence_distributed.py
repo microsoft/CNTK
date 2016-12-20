@@ -8,9 +8,10 @@ from __future__ import print_function
 import numpy as np
 import sys
 import os
+import argparse
 from cntk import Trainer, Axis, distributed 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.device import cpu, set_default_device
+from cntk.device import cpu, gpu, set_default_device
 from cntk.learner import learning_rate_schedule, UnitType, momentum_sgd, momentum_as_time_constant_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, element_select, alias, hardmax
 from cntk.ops.functions import CloneMethod
@@ -68,7 +69,7 @@ def translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim, debug_ou
 
 # Creates and trains a sequence to sequence translation model
 
-def sequence_to_sequence_translator(debug_output=False, run_test=False):
+def sequence_to_sequence_translator(create_dist_learner, max_epochs=10, debug_output=False, run_test=False):
 
     input_vocab_dim = 69
     label_vocab_dim = 69
@@ -157,15 +158,13 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
 
-    create_dist_learner = lambda learner: distributed.data_parallel_distributed_learner(learner=learner,
-                                                                                        num_quantization_bits=1,
-                                                                                        distributed_after=0)
-
     learner = create_dist_learner(momentum_sgd(z.parameters, 
                            lr_per_minibatch, momentum_time_constant, 
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation))
     trainer = Trainer(z, ce, errs, learner)
+
+   
 
     # setup data
     train_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data", "cmudict-0.7b.train-dev-20-21.ctf")
@@ -192,7 +191,6 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     mbs = 0
     minibatch_size = 72
     epoch_size = 908241
-    max_epochs = 2
     training_progress_output_freq = 500
 
     # make things more basic for running a quicker test
@@ -238,9 +236,6 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
 
     error1 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
 
-    z.save_model("seq2seq.dnn")
-    z.restore_model("seq2seq.dnn")
-
     label_seq_axis = Axis('labelAxis')
     label_sequence = sequence.slice(find_arg_by_name('raw_labels',z), 1, 0)
     ce = cross_entropy_with_softmax(z, label_sequence)
@@ -254,12 +249,32 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
 
     return error1
 
-if __name__ == '__main__':
-    # Specify the target device to be used for computing, if you do not want to
-    # use the best available one, e.g.
-    #set_default_device(cpu())
 
-    error = sequence_to_sequence_translator(debug_output=False, run_test=True)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-e', '--epochs', help='total epochs', type=int, required=False, default='160')
+    parser.add_argument('-q', '--quantize_bit', help='quantized bit', type=int, required=False, default='32')
+    parser.add_argument('-b', '--block_samples', type=int, help="number of samples per block for block momentum (BM) distributed learner (if 0 BM learner is not used)", required=False, default=0)
+
+    args = vars(parser.parse_args())
+    num_quantization_bits = int(args['quantize_bit'])
+    epochs = int(args['epochs'])
+    block_samples = int(args['block_samples'])
+
+   
+
+    # BlockMomentum SGD will be used in case number of samples per block is not 0 and 1BitSGD is disabled
+    if block_samples != 0:
+        if num_quantization_bits != 32:
+            raise ValueError("Blockmomentum disrtibuted learner is not meant to be used with 1BitSGD")
+        else:
+            create_dist_learner = lambda learner: distributed.block_momentum_distributed_learner(learner=learner, block_size=block_samples)
+    else:
+        # 1BitSGD will be used in case num_quantization_bits is 1
+        # distributed_after_samples denotes the number of samples after which distributed training will start 
+        create_dist_learner = lambda learner: distributed.data_parallel_distributed_learner(learner=learner, num_quantization_bits=num_quantization_bits)  
+
+    error = sequence_to_sequence_translator(create_dist_learner, epochs, debug_output=False, run_test=True)
     print("Error: %f" % error)
 
     # Must call MPI finalize when process exit
