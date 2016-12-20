@@ -25,7 +25,7 @@ class Trainer(cntk_py.Trainer):
 
     Args:
        model (:class:`~cntk.ops.functions.Function`): root node of the function to train
-       loss_function (:class:`~cntk.ops.functions.Function`): loss function 
+       loss_function (:class:`~cntk.ops.functions.Function`): loss function
        eval_function (:class:`~cntk.ops.functions.Function`): evaluation function
        parameter_learners (list): list of learners from :mod:`cntk.learner`
     '''
@@ -47,7 +47,8 @@ class Trainer(cntk_py.Trainer):
             arguments: maps variables to their
              input data. Empty map signifies end of local training data.
              The interpretation depends on the input type:
-               * `dict`: keys are input variable or names, and values are the input data. 
+               * `dict`: keys are input variable or names, and values are the input data.
+                 See :meth:`~cntk.ops.functions.Function.forward` for details on the shape of the input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
              In both cases, every every sample in the data will be interpreted
@@ -64,7 +65,7 @@ class Trainer(cntk_py.Trainer):
              to be performed.
 
         Returns:
-            `bool` or `tuple`: 
+            `bool` or `tuple`:
             If ``outputs`` have not been provided, the returned value is `True`
             if updates have been performed, `False` if all parameter learners
             indicate end of learning (through their update). Otherwise, the
@@ -94,13 +95,14 @@ class Trainer(cntk_py.Trainer):
     def test_minibatch(self, arguments, device=None):
         '''
         Test the model on the specified batch of samples using the evaluation
-        Function specified during construction of the Trainer. 
+        Function specified during construction of the Trainer.
 
         Args:
             arguments: maps variables to their
              input data. The interpretation depends on the input type:
 
-               * `dict`: keys are input variable or names, and values are the input data. 
+               * `dict`: keys are input variable or names, and values are the input data.
+                 See :meth:`~cntk.ops.functions.Function.forward` for details on the shape of the input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
              In both cases, every every sample in the data will be interpreted
@@ -153,7 +155,7 @@ class Trainer(cntk_py.Trainer):
         The model that the trainer is training.
         '''
         return super(Trainer, self).model()
-        
+
     @property
     @typemap
     def loss_function(self):

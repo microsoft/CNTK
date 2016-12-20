@@ -28,7 +28,7 @@ def test_trainer(tmpdir):
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, ce, errs, \
+    trainer = Trainer(z, ce, errs,
             [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant)])
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
@@ -56,9 +56,9 @@ def test_output_to_retain():
     errs = classification_error(z, labels)
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, ce, errs, \
+    trainer = Trainer(z, ce, errs,
             [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant)])
-    in1_value = [[[1]],[[2]]]
+    in1_value = [[[1]], [[2]]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
     z_output = z.output
@@ -101,8 +101,8 @@ def test_eval_sparse_dense(tmpdir, device_id):
         shape=input_vocab_dim, dynamic_axes=input_dynamic_axes,
         name='raw_input', is_sparse=True)
 
-    mb_valid = mbs.next_minibatch(minibatch_size_in_samples=100, 
-            input_map={raw_input : mbs.streams.features}, 
+    mb_valid = mbs.next_minibatch(minibatch_size_in_samples=100,
+            input_map={raw_input : mbs.streams.features},
             device=cntk_device(device_id))
 
     z = times(raw_input, np.eye(input_vocab_dim))
@@ -110,7 +110,7 @@ def test_eval_sparse_dense(tmpdir, device_id):
 
     # CSR with the raw_input encoding in ctf_data
     one_hot_data = [
-            [3, 4, 5, 4, 7, 12, 1], 
+            [3, 4, 5, 4, 7, 12, 1],
             [60, 61]
             ]
     data = [csr(np.eye(input_vocab_dim, dtype=np.float32)[d]) for d in
@@ -124,13 +124,13 @@ def test_eval_sparse_dense(tmpdir, device_id):
     assert np.all([np.allclose(a, b) for a,b in zip(e_reader, e_hot)])
 
 @pytest.mark.parametrize("batch_index_data", [
-     [2,3], 
+     [2,3],
      [0,1,6],
     ])
 def test_eval_sparse_no_seq(batch_index_data, device_id):
     dim = 10
     multiplier = 2
-    for var_is_sparse in [True, False]: 
+    for var_is_sparse in [True, False]:
         in1 = input_variable(shape=(dim,), is_sparse=var_is_sparse)
         z = times(in1, multiplier*np.eye(dim))
         batch = np.eye(dim)[batch_index_data]
@@ -149,7 +149,7 @@ def test_eval_sparse_no_seq(batch_index_data, device_id):
 def test_eval_sparse_seq_1(batch, device_id):
     dim = 4
     multiplier = 2
-    for var_is_sparse in [True, False]: 
+    for var_is_sparse in [True, False]:
         in1 = input_variable(shape=(dim,), is_sparse=var_is_sparse)
         z = times(in1, multiplier*np.eye(dim))
         if isinstance(batch[0], list):
@@ -174,7 +174,7 @@ def test_eval_one_hot_seq(one_hot_batch, device_id):
     dim = 10
     multiplier = 2
 
-    for var_is_sparse in [True, False]: 
+    for var_is_sparse in [True, False]:
         in1 = input_variable(shape=(dim,), is_sparse=var_is_sparse)
         # Convert CNTK node value to dense so that we can compare it later
         z = times(in1, np.eye(dim)*multiplier)
@@ -186,7 +186,7 @@ def test_eval_one_hot_seq(one_hot_batch, device_id):
 
 @pytest.mark.parametrize("one_hot_batch, dim", [
     ([[11]], 10),
-    ([[0, 1]], 1), 
+    ([[0, 1]], 1),
     ])
 def test_eval_one_hot_bad(one_hot_batch, dim, device_id):
     with pytest.raises(ValueError):

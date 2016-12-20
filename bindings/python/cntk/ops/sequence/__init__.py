@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 
-from ...utils import sanitize_input, sanitize_shape, get_data_type, typemap
+from ...utils import sanitize_input, get_data_type, typemap
 
 ##########################################################################
 # sequence ops
@@ -177,6 +177,7 @@ def gather(seq, condition, name=''):
         >>> x = C.input_variable(shape=(3,2))
         >>> z = C.greater(C.reduce_sum(x),60)
         >>> y = C.sequence.gather(x,z)
+        >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[[[ 12.,  13.],
@@ -216,6 +217,7 @@ def scatter(seq, condition, name=''):
         >>> t = C.sequence.last(x)
         >>> b = C.sequence.is_first(x)
         >>> y = C.sequence.scatter(t, b)
+        >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[[[ 18.,  19.],
@@ -261,6 +263,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
         >>> t = C.sequence.last(x)
         >>> b = C.sequence.is_first(x)
         >>> y = C.sequence.broadcast_as(t, b)
+        >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[[[ 18.,  19.],
@@ -301,6 +304,7 @@ def reduce_sum(seq, name=''):
 
     Examples:
         >>> x = C.input_variable(shape=(3,2))
+        >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y = C.sequence.reduce_sum(x)
         >>> y.eval({x:x0})

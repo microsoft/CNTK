@@ -19,8 +19,8 @@ from .. import parameter
 SEQUENCES = [
     # (shape of batch (sample size, seq size, rows, cols), time step, initial state)
     ((1, 4, 3, 2), 1, 0.1),
-    #((2, 2, 4, 2), 1, 0.5),
-    #((2, 2, 4, 2), 2, 0.3)
+    ((2, 2, 4, 2), 1, 0.5),
+    ((2, 2, 4, 2), 2, 0.3)
 ]
 
 @pytest.mark.parametrize("input_size, time_step, initial_state", SEQUENCES)
@@ -69,12 +69,12 @@ def test_op_past_value(input_size, time_step, initial_state, device_id, precisio
     total_elements = np.product(input_size)
 
     elem_shape = input_size[2:]
-    
+
     elements_to_roll = np.product(elem_shape) * time_step
     x = np.arange(total_elements, dtype=dt).reshape(input_size)
 
     expected_forward = np.zeros_like(x, dtype=dt)
-    
+
     for seq_idx in range(input_size[0]):
         expected_forward[seq_idx] = np.roll(AA(x[seq_idx], dtype=dt), time_step, axis=0)
         expected_forward[seq_idx,0:time_step] = initial_state
@@ -85,7 +85,9 @@ def test_op_past_value(input_size, time_step, initial_state, device_id, precisio
       name='a')
 
     backward = np.ones_like(x, dtype=dt)
-    np.put(backward, range(total_elements - elements_to_roll, total_elements), 0.0)
+    for seq_idx in range(input_size[0]):
+        for t in range(time_step):
+            backward[seq_idx,-1-t] = 0.0
 
     expected_backward = {
         a: backward

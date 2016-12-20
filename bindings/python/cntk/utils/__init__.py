@@ -230,13 +230,13 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
          ``batch`` is passed
         batch: batch input for `var`. It can be 
          * a single NumPy array denoting the full minibatch
-         * a list of NumPy arrays or SciPy sparse CSR matrices
+         * a list of NumPy arrays or SciPy sparse CSR matrices each representing a sequence
          * a :class:`Value` object (e.g. returned by :func:`one_hot`)
         seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
-         Booleans that tell whether a sequence is a new sequence (`True`) or a
-         continuation of the sequence in the same slot of the previous
-         minibatch (`False`)
+         Booleans one for each sequence in the batch that tell whether a 
+         sequence is a new sequence (`True`) or a continuation of the sequence 
+         in the same slot of the previous minibatch (`False`)
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
          this value should be put on
 

@@ -47,7 +47,7 @@ def test_axes():
 
     assert (Axis.default_dynamic_axis(),) == \
             sanitize_dynamic_axes(Axis.default_dynamic_axis())
-    
+
 def test_get_data_type():
     pa32 = parameter(init=np.asarray(2, dtype=np.float32))
     pa64 = parameter(init=np.asarray(2, dtype=np.float64))
@@ -91,10 +91,10 @@ def test_sanitize_batch_sparse():
        [True, False],
        [[2, 1, 1], [1, 0, 0]]),
 
-#    # exception handling
-#    ([[5, 6, 7], [8]],
-#       [True, False],
-#       ValueError),
+    (one_hot([[3, 4, 5, 1], [60, 61]], num_classes=62),
+        [True, False],
+        ValueError),
+        #[[2, 1, 1, 1], [2, 1, 0, 0]]),
 ])
 def test_mask(batch, seq_starts, expected):
     shape = ()
