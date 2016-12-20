@@ -134,11 +134,14 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
 #    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape) )
 #    kernel : (                +  (output shape) +  (reduction shape) + (filte  shape)   )
 #    out    : ( (sample shape) +  (output shape) +                    + (shifting shape) )
-# TODO: Can we specify atrous (dilated) convolution? How?
+# TODO: Can we specify atrous (dilated) convolution? How? Some clever reshaping might do the trick
 # TODO: sharing = false?
 # TODO: conflict of parameter order: filter_shape or num_filters first?
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
+# TODO:
+#  - reduction rank--allow 0, which inserts a reshape() after length of rf_shape and augments the filter
+#  - time convolution--augment neighbor frames into a reduction dimension, using Delay(initial_state=0)
 def Convolution(rf_shape,        # e.g. (3,3)
                 num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension_
                 activation=default_override_or(identity),
@@ -267,6 +270,10 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
 
     # TODO: accept 'over' to be a Python function, including CNTK primitives like max().
     #       I.e. run it through Function(); or do those use var-length inputs?
+    #       Test by using a recurrence over plus(), but cannot really test because of missing inference.
+    # TEST THIS
+    if isinstance(over, function):
+        over = Function(over)
 
     # function that this layer represents
     @Function

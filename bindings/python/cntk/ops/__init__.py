@@ -1525,6 +1525,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
 # TODO: enable when it is exposed in c++
 
 
+# TODO: enable passing a sub-range of indices to reshape, as in V1; to enable Convolution scenarios
 @typemap
 def reshape(x, shape, name=''):
     '''
