@@ -47,7 +47,9 @@
 #define CNTK_MODEL_VERSION_15 15 // add new nodes: LambdaRankNode and NDCG1Eval
 #define CNTK_MODEL_VERSION_16 16 // save/load rng state for Dropout and RandomSample nodes.
 #define CNTK_MODEL_VERSION_17 17 // use 8 bytes for rng seeds on both platforms
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_17
+#define CNTK_MODEL_VERSION_18 18 // reserving 18 for dilated convolution, write out one more TensorShape 
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_18
+
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
