@@ -303,7 +303,8 @@ def sanitize_function(arg):
         arg = arg.owner
 
     if not isinstance(arg, cntk_py.Function):
-        raise "Object of type %s cannot be cast to Variable" % str(type(arg))
+        raise TypeError("Object of type '%s' cannot be cast to Variable" %
+                str(type(arg)))
 
     return arg
 
