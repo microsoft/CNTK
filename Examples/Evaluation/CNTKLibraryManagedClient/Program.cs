@@ -28,6 +28,7 @@ namespace CNTKLibraryManagedClientTest
         static void EvaluationWithDenseData(DeviceDescriptor device)
         {
             const string outputName = "Plus2060_output";
+            var inputDataMap = new Dictionary<Variable, Value>();
 
             // Load the model.
             Function modelFunc = Function.LoadModel("z.model");
@@ -38,6 +39,9 @@ namespace CNTKLibraryManagedClientTest
             // Get input variable. The model has only one single input.
             // The same way described above for output variable can be used here to get input variable by name.
             Variable inputVar = modelFunc.Arguments.Single();
+            var outputDataMap = new Dictionary<Variable, Value>();
+            Value inputVal, outputVal;
+            List<List<float>> outputBuffer;
 
             // Get shape data for the input variable
             NDShape inputShape = inputVar.Shape;
@@ -45,8 +49,6 @@ namespace CNTKLibraryManagedClientTest
             uint imageHeight = inputShape[1];
             uint imageChannels = inputShape[2];
             uint imageSize = inputShape.TotalSize;
-
-            var outputDataMap = new Dictionary<Variable, Value>();
 
             // Use case 1: Evaluate with single image
             Console.WriteLine("Evaluate single image");
@@ -57,8 +59,7 @@ namespace CNTKLibraryManagedClientTest
             List<float> resizedCHW = resized.ParallelExtractCHW();
 
             // Create input data map
-            var inputDataMap = new Dictionary<Variable, Value>();
-            var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
+            inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
             inputDataMap.Add(inputVar, inputVal);
 
             // Create ouput data map. Using null as Value to indicate using system allocated memory.
@@ -69,12 +70,14 @@ namespace CNTKLibraryManagedClientTest
             modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
             // Get evaluate result as dense output
-            var outputData = new List<List<float>>();
-            Value outputVal = outputDataMap[outputVar];
-            outputVal.CopyTo(outputVar, outputData);
+            outputBuffer = new List<List<float>>();
+            outputVal = outputDataMap[outputVar];
+            outputVal.CopyTo(outputVar, outputBuffer);
+
+            PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
 
             // Use case 2: Evaluate with batch of images
-            Console.WriteLine("Evaluate batch of images");
+            Console.WriteLine("\nEvaluate batch of images");
 
             var fileList = new List<string>() { "00000.png", "00001.png", "00002.png" };
             var seqData = new List<float>();
@@ -96,36 +99,14 @@ namespace CNTKLibraryManagedClientTest
             outputDataMap[outputVar] = null;
 
             // Evaluate the model against the batch input
-            modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+            //modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
-            // Retrieve the evaluation result.
-            outputData = new List<List<float>>();
-            outputVal = outputDataMap[outputVar];
-            outputVal.CopyTo(outputVar, outputData);
+            //// Retrieve the evaluation result.
+            //outputVal = outputDataMap[outputVar];
+            //outputVal.CopyTo(outputVar, outputBuffer);
             
             // Output result
-            Console.WriteLine("The number of sequences in the batch: " + outputData.Count);
-            int seqNo = 0;
-            uint outputSampleSize = outputVar.Shape.TotalSize;
-            foreach(var seq in outputData)
-            {
-                Console.WriteLine(String.Format("Sequence {0} contains {1} samples.", seqNo++, seq.Count/outputSampleSize));
-                uint i = 0;
-                uint sampleNo = 0;
-                foreach (var element in seq)
-                {
-                    Console.Write(String.Format("    sample {0}: " + sampleNo));
-                    Console.Write(element);
-                    if (++i % outputSampleSize == 0)
-                    {
-                        Console.WriteLine(".");
-                        sampleNo++;
-                    }
-                    else
-                        Console.WriteLine(",");
-                }
-            }
-
+            PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
         }
 
         // 
@@ -247,6 +228,36 @@ namespace CNTKLibraryManagedClientTest
                 Console.WriteLine();
                 // next sequence.
                 seqNo++;
+            }
+        }
+
+        static void PrintOutput<T>(uint sampleSize, List<List<T>> outputBuffer)
+        {
+            Console.WriteLine("The number of sequences in the batch: " + outputBuffer.Count);
+            int seqNo = 0;
+            uint outputSampleSize = sampleSize;
+            foreach (var seq in outputBuffer)
+            {
+                Console.WriteLine(String.Format("Sequence {0} contains {1} samples.", seqNo++, seq.Count / outputSampleSize));
+                uint i = 0;
+                uint sampleNo = 0;
+                foreach (var element in seq)
+                {
+                    if (i++ % outputSampleSize == 0)
+                    {
+                        Console.Write(String.Format("    sample {0}: ", sampleNo));
+                    }
+                    Console.Write(element);
+                    if (i % outputSampleSize == 0)
+                    {
+                        Console.WriteLine(".");
+                        sampleNo++;
+                    }
+                    else
+                    {
+                        Console.Write(",");
+                    }
+                }
             }
         }
 
