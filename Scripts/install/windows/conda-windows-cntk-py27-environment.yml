@@ -1,6 +1,7 @@
 name: cntk-py27
 dependencies:
 - enum34=1.1.6=py27_0
+- h5py=2.6.0=np111py27_2
 - jupyter=1.0.0=py27_3
 - matplotlib=1.5.3=np111py27_0
 - numpy=1.11.2=py27_0
