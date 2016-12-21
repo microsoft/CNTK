@@ -115,10 +115,10 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
         `str` containing all nodes and edges
     '''
 
-    dot = (dot_file_path != None)
-    png = (png_file_path != None)
+    is_dot = dot_file_path is not None
+    is_png = png_file_path is not None
 
-    if (dot or png):
+    if is_dot or is_png:
 
         try:
             import pydot_ng as pydot
@@ -153,7 +153,7 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
 
             # add current node
             model += node.op_name + '('
-            if (dot or png):
+            if is_dot or is_png:
                 cur_node = pydot.Node(node.op_name+' '+node.uid,label=node.op_name,shape='circle',
                                         fixedsize='true', height=1, width=1)
                 dot_object.add_node(cur_node)
@@ -163,10 +163,10 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
                 child = node.inputs[i]
                 
                 model += child.uid
-                if (i != len(node.inputs) - 1):
+                if i != len(node.inputs) - 1:
                     model += ", "
 
-                if (dot or png):
+                if is_dot or is_png:
                     child_node = pydot.Node(child.uid)
                     dot_object.add_node(child_node)
                     dot_object.add_edge(pydot.Edge(child_node, cur_node,label=str(child.shape)))
@@ -174,7 +174,7 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
             # ad node's output
             model += ") -> " + node.outputs[0].uid +'\n'
 
-            if (dot or png):
+            if is_dot or is_png:
                 out_node = pydot.Node(node.outputs[0].uid)
                 dot_object.add_node(out_node)
                 dot_object.add_edge(pydot.Edge(cur_node,out_node,label=str(node.outputs[0].shape)))
@@ -192,9 +192,9 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
     if visitor(node):
         accum.append(node)
 
-    if (png):
+    if is_png:
         dot_object.write_png(png_file_path, prog='dot')
-    if (dot):
+    if is_dot:
         dot_object.write_raw(dot_file_path)
 
     # return lines in reversed order
