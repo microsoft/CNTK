@@ -78,7 +78,7 @@ class Function(cntk_py.Function):
             return output
         if isinstance(out, tuple): # multi-value function, returned as a tuple
             out = [resolve_named(output) for output in out]
-            else:
+        else:
             out = [resolve_named(out)]
         # implant the function name as the node name --TODO: should be op_name in a BlockFunction
         out = combine(out, name=f_name)
@@ -136,7 +136,7 @@ class Function(cntk_py.Function):
         #if len(arg_types) != len(params):
         #    raise TypeError("CNTK Function.update_signature() expected {} arguments, got {}".format(len(params), len(arg_types)))
         def to_input(arg, name):
-                from cntk import input_variable
+            from cntk import input_variable
             if isinstance(arg, (int, tuple)): # just passed a shape
                 return input_variable(shape=_as_tuple(arg), name=name)
             else:

@@ -115,7 +115,7 @@ def Block(f, op_name, members={}):
     #if len(p) != len(p1) or len(a) != len(a1):
     #    raise AssertionError('')
 
-    for key in members:   # self.__dict__.update(args_dict)
+    for key in members:   # f.__dict__.update(members)
         f.__dict__[key] = members[key]
     return f
 

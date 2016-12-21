@@ -78,7 +78,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     #@Function
     def dense(x):
         r = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
-    if b:
+        if b:
             r = r + b
         if activation is not None:
             r = r >> activation#activation(r)
@@ -183,7 +183,7 @@ def Convolution(rf_shape,        # e.g. (3,3)
     # expression
     @Function
     def convolve(x):
-    # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
+        # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
         r = convolution (W, x,
                            strides=_as_tuple(strides),
                            sharing=_as_tuple(sharing),
@@ -191,7 +191,7 @@ def Convolution(rf_shape,        # e.g. (3,3)
                            # TODO: can we rename auto_padding to pad?
                            transpose=transpose,
                            max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
-    if bias:
+        if bias:
             r = r + b
         if activation is not None:
             r = activation(r)
@@ -288,9 +288,9 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
         # previous function; that is, past or future_value with initial_state baked in
         # BUGBUG: If initial_state itself depends on a Placeholder at this point (e.g. seq2seq), previous_hook will be a binary function...
         # All state variables get delayed with the same function.
-    def previous_hook(state):
-        return past_value  (state, initial_state) if not go_backwards else \
-               future_value(state, initial_state)
+        def previous_hook(state):
+            return past_value  (state, initial_state) if not go_backwards else \
+                   future_value(state, initial_state)
         prev_out_vars = [previous_hook(s) for s in out_vars_fwd]  # delay (state vars)
         #print('prev_out_vars', [p.uid for p in prev_out_vars])
 
@@ -318,11 +318,11 @@ def Delay(T=1, initial_state=default_override_or(0)):
     # expression
     @Function
     def delay(x):
-    if T > 0:
+        if T > 0:
             return past_value  (x, time_step=T, initial_state=initial_state)
-    elif T < 0:
+        elif T < 0:
             return future_value(x, time_step=T, initial_state=initial_state)
-    else:
+        else:
             return x
     return Block(delay, 'Delay')
 
@@ -376,11 +376,11 @@ def LayerNormalization(initial_scale=1, initial_bias=0):
     # expression
     @Function
     def layer_normalize(x):
-    mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
-    x0 = x - mean;
-    std = sqrt (reduce_mean (x0 * x0))
-    #x_hat = element_divide (x0, std)
-    x_hat = x0 / std
+        mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
+        x0 = x - mean;
+        std = sqrt (reduce_mean (x0 * x0))
+        #x_hat = element_divide (x0, std)
+        x_hat = x0 / std
         return x_hat * scale + bias    # denormalize with learned parameters
 
     return Block(layer_normalize, 'LayerNormalization', Record(scale=scale, bias=bias))

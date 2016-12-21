@@ -4,6 +4,7 @@
 # for full license information.
 # ==============================================================================
 
+from __future__ import print_function
 import os
 import math
 import numpy as np
