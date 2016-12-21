@@ -80,7 +80,7 @@ namespace CNTKLibraryManagedClientTest
             var seqData = new List<float>();
             for (int sampleIndex = 0; sampleIndex < fileList.Count; sampleIndex++)
             {
-                bmp = new Bitmap(Bitmap.FromFile(fileList[sampleIndex++]));
+                bmp = new Bitmap(Bitmap.FromFile(fileList[sampleIndex]));
                 resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
                 resizedCHW = resized.ParallelExtractCHW();
                 // Aadd this sample to the data buffer.

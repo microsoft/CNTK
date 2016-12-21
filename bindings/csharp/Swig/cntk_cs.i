@@ -966,7 +966,7 @@
         System.Collections.Generic.List<T> seq = null;
         foreach (var element in batch)
         {
-            if (++i % shapeSize == 0)
+            if (i++ % shapeSize == 0)
             {
                 seq = new System.Collections.Generic.List<T>();
                 input.Add(seq);
