@@ -9,18 +9,13 @@ import numpy
 
 IS_WINDOWS = platform.system() == 'Windows'
 
-if IS_WINDOWS and sys.version_info.major < 3:
-    print("Detected Python v2 on Windows, which is not yet supported")
-    sys.exit(1)
-
-
 # TODO should handle swig path specified via build_ext --swig-path
 if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
     print("Please install swig (>= 3.0.10) and include it in your path.\n")
     sys.exit(1)
 
 if IS_WINDOWS:
-    if os.system('cl /? -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
+    if os.system('cl 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
         print("Compiler was not found in path. Please run this from a Visual Studio 2013 x64 Native Tools Command Prompt,\n"
               "e.g., by running the following command:\n"
               "  \"C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\VC\\vcvarsall\" amd64\n")
@@ -125,12 +120,13 @@ else:
     os.environ["CXX"] = "mpic++"
 
 cntkV2LibraryInclude = os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API")
+cntkBindingCommon = os.path.join(CNTK_PATH, "bindings", "common")
 
 cntk_module = Extension(
     name="_cntk_py",
 
     sources = [os.path.join("cntk", "cntk_py.i")],
-    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude],
+    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon],
     libraries = link_libs,
     library_dirs = [CNTK_LIB_PATH],
 
@@ -163,7 +159,7 @@ else:
     kwargs = dict(package_data = package_data)
 
 setup(name="cntk",
-      version="2.0.beta5.0",
+      version="2.0.beta6.0",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

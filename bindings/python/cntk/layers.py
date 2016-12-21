@@ -8,19 +8,20 @@
 #           e.g. a fully connected layer with non-linearity
 
 # TODO: clean up the dependencies
+from __future__ import division
 import numpy as np
-from cntk.ops import parameter, input_variable, placeholder_variable, combine
-from cntk.ops import times, convolution, pooling, batch_normalization, dropout
-from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
-from cntk.utils import Record, _as_tuple
-from cntk.blocks import *  # TODO: reduce to what we actually use
-from cntk.blocks import _trace_layers  # (debugging)
+from .ops import parameter, input_variable, placeholder_variable, combine
+from .ops import times, convolution, pooling, batch_normalization, dropout
+from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
+from .utils import Record, _as_tuple
+from .blocks import *  # TODO: reduce to what we actually use
+from .blocks import _trace_layers  # (debugging)
 
-from cntk.ops.functions import Function
-from cntk.ops.variables import Variable
+from .ops.functions import Function
+from .ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-from cntk.blocks import _initializer_for, _INFERRED
+from .blocks import _initializer_for, _INFERRED
 
 def Dense(shape, activation=default_override_or(identity), init=default_override_or(glorot_uniform()),
           input_rank=None, map_rank=None,
@@ -77,7 +78,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     #@Function
     def dense(x):
         r = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
-        if b:
+    if b:
             r = r + b
         if activation is not None:
             r = r >> activation#activation(r)
@@ -182,15 +183,15 @@ def Convolution(rf_shape,        # e.g. (3,3)
     # expression
     @Function
     def convolve(x):
-        # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
+    # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
         r = convolution (W, x,
-                         strides=_as_tuple(strides),
-                         sharing=_as_tuple(sharing),
-                         auto_padding=_as_tuple(pad),
-                         # TODO: can we rename auto_padding to pad?
-                         transpose=transpose,
-                         max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
-        if bias:
+                           strides=_as_tuple(strides),
+                           sharing=_as_tuple(sharing),
+                           auto_padding=_as_tuple(pad),
+                           # TODO: can we rename auto_padding to pad?
+                           transpose=transpose,
+                           max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+    if bias:
             r = r + b
         if activation is not None:
             r = activation(r)
@@ -287,9 +288,9 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
         # previous function; that is, past or future_value with initial_state baked in
         # BUGBUG: If initial_state itself depends on a Placeholder at this point (e.g. seq2seq), previous_hook will be a binary function...
         # All state variables get delayed with the same function.
-        def previous_hook(state):
-            return past_value  (state, initial_state) if not go_backwards else \
-                   future_value(state, initial_state)
+    def previous_hook(state):
+        return past_value  (state, initial_state) if not go_backwards else \
+               future_value(state, initial_state)
         prev_out_vars = [previous_hook(s) for s in out_vars_fwd]  # delay (state vars)
         #print('prev_out_vars', [p.uid for p in prev_out_vars])
 
@@ -317,11 +318,11 @@ def Delay(T=1, initial_state=default_override_or(0)):
     # expression
     @Function
     def delay(x):
-        if T > 0:
+    if T > 0:
             return past_value  (x, time_step=T, initial_state=initial_state)
-        elif T < 0:
+    elif T < 0:
             return future_value(x, time_step=T, initial_state=initial_state)
-        else:
+    else:
             return x
     return Block(delay, 'Delay')
 
@@ -360,7 +361,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     def batch_normalize(x):
         #x = Placeholder(name='batch_normalization_arg')
         return batch_normalization(x, scale, bias, run_mean, run_variance, run_count, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
-                                   use_cudnn_engine=not use_cntk_engine)
+                                  use_cudnn_engine=not use_cntk_engine)
     return Block(batch_normalize, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
 # LayerNormalization -- create a layer-normalization layer
@@ -375,11 +376,11 @@ def LayerNormalization(initial_scale=1, initial_bias=0):
     # expression
     @Function
     def layer_normalize(x):
-        mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
-        x0 = x - mean;
-        std = sqrt (reduce_mean (x0 * x0))
-        #x_hat = element_divide (x0, std)
-        x_hat = x0 / std
+    mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
+    x0 = x - mean;
+    std = sqrt (reduce_mean (x0 * x0))
+    #x_hat = element_divide (x0, std)
+    x_hat = x0 / std
         return x_hat * scale + bias    # denormalize with learned parameters
 
     return Block(layer_normalize, 'LayerNormalization', Record(scale=scale, bias=bias))

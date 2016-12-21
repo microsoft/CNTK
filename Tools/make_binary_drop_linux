@@ -116,7 +116,7 @@ declare -a opencvFiles=("libopencv_core.so.3.1" "libopencv_imgproc.so.3.1" "libo
 declare -a libzipFiles=("libzip.so.4")
 
 # CUDA
-declare -a cudaFiles=("libcudart.so.7.5" "libcublas.so.7.5" "libcurand.so.7.5" "libcusparse.so.7.5")
+declare -a cudaFiles=("libcudart.so.8.0" "libcublas.so.8.0" "libcurand.so.8.0" "libcusparse.so.8.0")
 
 # cuDNN
 # Note: can be only a single file currently, see copy below.
@@ -144,8 +144,7 @@ opencvVersion="3.1.0"
 opencvPath="/usr/local/opencv-$opencvVersion/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
-cudnnVersion="5.1"
-cudnnPath="/usr/local/cudnn-$cudnnVersion/cuda/lib64"
+cudnnPath="/usr/local/cuda/lib64"
 openblasPath="/usr/local/openblas/lib"
 kaldiVersion="c024e8aa"
 kaldiPath="/usr/local/kaldi-$kaldiVersion/src/lib"
@@ -174,8 +173,8 @@ cp -r $buildPath/* $baseBinariesPath
 # General TODO: Implement White List of Binary Drop contents.
 # For the time being "cherry pick"  removal of unneeded files
 #
-# Remove Py 3.5 for the time being
-rm -f $baseBinariesPath/python/cntk*35*35*.whl
+# Remove Py 2.7 for the time being
+rm -f $baseBinariesPath/python/cntk*27*27*.whl
 rm -f $baseBinariesPath/bin/brainscripttests
 rm -f $baseBinariesPath/bin/cppevalclient
 rm -f $baseBinariesPath/bin/cppevalextendedclient

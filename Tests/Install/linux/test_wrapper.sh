@@ -9,9 +9,10 @@
 # Log steps, stop on error
 set -x -e -o pipefail
 
-USAGE="Usage: $0 <url-or-file-of-cntk-drop>"
+USAGE="Usage: $0 <url-or-file-of-cntk-drop> <py-version>"
 
 DROP_LOCATION=${1?$USAGE}
+PY_VERSION=${2?$USAGE}
 
 if [ -f "$DROP_LOCATION" ]; then
   DROP_FILE="$DROP_LOCATION"
@@ -26,6 +27,6 @@ fi
 tar -xzf "$DROP_FILE"
 test -d cntk
 
-exec cntk/Scripts/install/linux/install-cntk.sh
+exec cntk/Scripts/install/linux/install-cntk.sh --py-version $PY_VERSION
 
 # vim:set expandtab shiftwidth=2 tabstop=2:

@@ -28,11 +28,15 @@ def test_cifar_convnet_distributed_mpiexec(device_id):
 
     cmd = ["mpiexec", "-n", "2", "python", os.path.join(abs_path, "run_cifar_convnet_distributed.py")]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    try:
-        out = p.communicate(timeout=TIMEOUT_SECONDS)[0]  # in case we have a hang
-    except subprocess.TimeoutExpired:
-        os.kill(p.pid, signal.CTRL_C_EVENT)
-        raise RuntimeError('Timeout in mpiexec, possibly hang')
+    if sys.version_info[0] < 3:
+        # TODO add timeout for Py2?
+        out = p.communicate()[0]
+    else:
+        try:
+            out = p.communicate(timeout=TIMEOUT_SECONDS)[0]  # in case we have a hang
+        except subprocess.TimeoutExpired:
+            os.kill(p.pid, signal.CTRL_C_EVENT)
+            raise RuntimeError('Timeout in mpiexec, possibly hang')
     str_out = out.decode(sys.getdefaultencoding())
     results = re.findall("Final Results: Minibatch\[.+?\]: errs = (.+?)%", str_out)
     assert len(results) == 2

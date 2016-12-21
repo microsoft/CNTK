@@ -280,8 +280,8 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardData)
             SingleMatrix workspace(deviceId);
             SingleMatrix workspaceB(baseDeviceId);
 
-            testEng->BackwardData(srcGrad, kernel, grad, workspace);
-            baseEng->BackwardData(srcGradB, kernelB, gradB, workspaceB);
+            testEng->BackwardData(srcGrad, kernel, grad, true, workspace);
+            baseEng->BackwardData(srcGradB, kernelB, gradB, true, workspaceB);
 
             std::stringstream tmsg;
             tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId;
@@ -349,8 +349,8 @@ BOOST_AUTO_TEST_CASE(ConvolutionBackwardKernel)
             SingleMatrix workspace(deviceId);
             SingleMatrix workspaceB(baseDeviceId);
             
-            testEng->BackwardKernel(grad, in, kernel, false, workspace);
-            baseEng->BackwardKernel(gradB, inB, kernelB, false, workspaceB);
+            testEng->BackwardKernel(grad, in, kernel, true, false, workspace);
+            baseEng->BackwardKernel(gradB, inB, kernelB, true, false, workspaceB);
             
             std::stringstream tmsg;
             tmsg << "Geometry: " << (std::string)(*g) << ", Batch: " << n << ", Device: " << deviceId;

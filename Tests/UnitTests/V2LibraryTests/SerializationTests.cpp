@@ -208,7 +208,7 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
     learner1->Update(gradientValues, 1);
 
     {
-        auto checkpoint = learner1->Serialize();
+        auto checkpoint = learner1->CreateCheckpoint();
         fstream stream;
         OpenStream(stream, tempFilePath, false);
         stream << checkpoint;
@@ -235,8 +235,8 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
     learner1->Update(gradientValues, 1);
     learner2->Update(gradientValues, 1);
 
-     auto checkpoint1 = learner1->Serialize();
-     auto checkpoint2 = learner2->Serialize();
+     auto checkpoint1 = learner1->CreateCheckpoint();
+     auto checkpoint2 = learner2->CreateCheckpoint();
     
     if (checkpoint1 != checkpoint2)
         throw std::runtime_error("TestLearnerSerialization: original and restored from a checkpoint learners diverge.");

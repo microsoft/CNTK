@@ -4,11 +4,15 @@
 # ==============================================================================
 
 from __future__ import division
+from __future__ import print_function
 import numpy as np
+import numbers
+from numbers import Number
 from . import sequence
-from .functions import Function
+from .functions import CloneMethod, Function, load_model
 from .variables import Variable, Parameter, Constant
 from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes, typemap
+from ..axis import Axis
 
 @typemap
 def combine(operands, name=''):
@@ -21,21 +25,21 @@ def combine(operands, name=''):
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
 
     Example:
-    >>> in1 = C.input_variable((4,))
-    >>> in2 = C.input_variable((4,))
+        >>> in1 = C.input_variable((4,))
+        >>> in2 = C.input_variable((4,))
 
-    >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
-    >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
+        >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
+        >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
 
-    >>> plus_node = in1 + in2
-    >>> minus_node = in1 - in2
+        >>> plus_node = in1 + in2
+        >>> minus_node = in1 - in2
 
-    >>> forward = C.combine([plus_node, minus_node]).eval({in1: in1_data, in2: in2_data})
-    >>> len(forward)
-    2
-    >>> list(forward.values()) # doctest: +SKIP
-    [array([[[ 1., -3.,  6.,  2.]]], dtype=float32),
-     array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)]
+        >>> forward = C.combine([plus_node, minus_node]).eval({in1: in1_data, in2: in2_data})
+        >>> len(forward)
+        2
+        >>> list(forward.values()) # doctest: +SKIP
+        [array([[[ 1., -3.,  6.,  2.]]], dtype=float32),
+         array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)]
 
     Args:
         operands (list): list of functions or their variables to combine
@@ -291,15 +295,15 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
 
     Example:
-    >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
-    >>> x = C.input_variable(img.shape)
-    >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
-    >>> kernel = C.constant(value = filter)
-    >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}) # doctest: +SKIP
-    array([[[[[  6.,   8.,  10.,  12.],
-              [ 16.,  18.,  20.,  22.],
-              [ 26.,  28.,  30.,  32.],
-              [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
+        >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
+        >>> x = C.input_variable(img.shape)
+        >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
+        >>> kernel = C.constant(value = filter)
+        >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}) # doctest: +SKIP
+        array([[[[[  6.,   8.,  10.,  12.],
+                  [ 16.,  18.,  20.,  22.],
+                  [ 26.,  28.,  30.,  32.],
+                  [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
 
     Args:
         convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
@@ -372,14 +376,14 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
 
     Example:
-    >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-    >>> x = C.input_variable(img.shape)
-    >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
-    array([[[[[  2.5,   4.5],
-              [ 10.5,  12.5]]]]], dtype=float32)
-    >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : [img]})
-    array([[[[[  5.,   7.],
-              [ 13.,  15.]]]]], dtype=float32)
+        >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+        >>> x = C.input_variable(img.shape)
+        >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
+        array([[[[[  2.5,   4.5],
+                  [ 10.5,  12.5]]]]], dtype=float32)
+        >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : [img]})
+        array([[[[[  5.,   7.],
+                  [ 13.,  15.]]]]], dtype=float32)
 
     Args:
         operand: pooling input
@@ -719,11 +723,11 @@ def log_add_exp(left, right, name=''):
     of the two input tensors. It supports broadcasting.
 
     Example:
-    >>> a = np.arange(3,dtype=np.float32)
-    >>> np.exp(C.log_add_exp(np.log(1+a), np.log(1+a*a)).eval())
-    array([ 2.,  4.,  8.], dtype=float32)
-    >>> np.exp(C.log_add_exp(np.log(1+a), [0.]).eval())
-    array([ 2.,  3.,  4.], dtype=float32)
+        >>> a = np.arange(3,dtype=np.float32)
+        >>> np.exp(C.log_add_exp(np.log(1+a), np.log(1+a*a)).eval())
+        array([ 2.,  4.,  8.], dtype=float32)
+        >>> np.exp(C.log_add_exp(np.log(1+a), [0.]).eval())
+        array([ 2.,  3.,  4.], dtype=float32)
 
     Args:
         left: left side tensor
@@ -1409,8 +1413,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
 
     Args:
         x: the tensor (or its name) from which the future value is obtained.
-        initial_state: tensor or scalar representing the initial value to be
-        used when the input tensor is shifted in time.
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
         time_step (int): the number of time steps to look into the future (default 1)
         name (str, optional): the name of the Function instance in the network
     Returns:
@@ -1461,8 +1464,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 
     Args:
         x: the tensor (or its name) from which the past value is obtained
-        initial_state: tensor or scalar representing the initial value to be
-        used when the input tensor is shifted in time.
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
         time_step (int): the number of time steps to look into the past (default 1)
         name (str, optional): the name of the Function instance in the network
 
@@ -1505,8 +1507,8 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         >>> x = C.input_variable(shape=(4,))
         >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))
         >>> f = C.optimized_rnnstack(x, W, 8, 2)
-        >>> f.eval({x:s}).shape
-        (1, 5, 8)
+        >>> print(*f.eval({x:s}).shape)
+        1 5 8
 
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -1526,7 +1528,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
 
 
 @typemap
-def reshape(x, shape, name=''):
+def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
     '''
     Reinterpret input samples as having different tensor dimensions
     One dimension may be specified as 0 and will be inferred
@@ -1550,7 +1552,32 @@ def reshape(x, shape, name=''):
     x = sanitize_input(x)
     shape = sanitize_shape(shape)
 
-    return reshape(x, shape, name)
+    if begin_axis is None:
+        begin_axis = Axis(0)
+
+    if end_axis is None:
+        end_axis = Axis.end_static_axis()
+
+    # Pass begin_axis as the end_axis and vice versa to account for
+    # the automatic shape reversal across the python SWIG boundary
+    def sanitize_reshape_axis(axis):
+        if isinstance(axis, numbers.Integral):
+            axis = Axis(axis)
+
+        if not axis.is_static_axis:
+            return axis
+
+        if (axis ==  Axis.end_static_axis()):
+            return Axis(0)
+        elif (axis == Axis(0)):
+            return Axis.end_static_axis()
+        else:
+            return Axis(-axis.static_axis_index())
+
+    internal_reshape_begin_axis = sanitize_reshape_axis(end_axis)
+    internal_reshape_end_axis = sanitize_reshape_axis(begin_axis)
+
+    return reshape(x, shape, internal_reshape_begin_axis, internal_reshape_end_axis, name)
 
 
 @typemap

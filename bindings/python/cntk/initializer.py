@@ -14,12 +14,12 @@ def uniform(scale=DefaultParamInitScale, seed=None):
     Uniform initializer
 
     Args:
-        scale (`float`): scale
-        seed (`int`): random seed
+        scale (float): scale
+        seed (int): random seed
 
     Returns:
-        initializer for :class:`cntk.variables.Parameter`
-        initialized to uniform distribution between `scale*[-0.05, 0.05]`
+        initializer for :class:`~cntk.ops.variables.Parameter`
+        initialized to uniform distribution between $$scale*[-0.05, 0.05]$$.
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -31,14 +31,15 @@ def gaussian(output_rank=SentinelValueForInferParamInitRank, filter_rank=Sentine
     Gaussian initializer
 
     Args:
-        output_rank (`int`): output rank
-        filter_rank (`int`): filter rank
-        scale (`float`): scale
-        seed (`int`): random seed
+        output_rank (int): output rank
+        filter_rank (int): filter rank
+        scale (float): scale
+        seed (int): random seed
 
     Returns:
-        initializer for :class:`cntk.variables.Parameter`
-        initialized to Gaussian distribution with mean `0` and standard deviation `scale*0.2/sqrt(fanIn))`. 
+        initializer for :class:`~cntk.ops.variables.Parameter`
+        initialized to Gaussian distribution with mean `0` and standard
+        deviation $$scale*0.2/sqrt(fanIn))$$ 
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -50,14 +51,15 @@ def xavier(output_rank=SentinelValueForInferParamInitRank, filter_rank=SentinelV
     Xavier initializer
 
     Args:
-        output_rank (`int`): output rank
-        filter_rank (`int`): filter rank
-        scale (`float`): scale
-        seed (`int`): random seed
+        output_rank (int): output rank
+        filter_rank (int): filter rank
+        scale (float): scale
+        seed (int): random seed
 
     Returns:
-        initializer for :class:`cntk.variables.Parameter`
-        initialized to Gaussian distribution with mean `0` and standard deviation `scale*sqrt(3.0/fanIn)`
+        initializer for :class:`~cntk.ops.variables.Parameter`
+        initialized to Gaussian distribution with mean `0` and standard
+        deviation $$scale*sqrt(3.0/fanIn)$$
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -69,14 +71,15 @@ def glorot_uniform(output_rank=SentinelValueForInferParamInitRank, filter_rank=S
     Glorot initializer
 
     Args:
-        output_rank (`int`): output rank
-        filter_rank (`int`): filter rank
-        scale (`float`): scale
-        seed (`int`): random seed
+        output_rank (int): output rank
+        filter_rank (int): filter rank
+        scale (float): scale
+        seed (int): random seed
 
     Returns:
-        initializer for :class:`cntk.variables.Parameter`
-        initialized to uniform distribution between `scale*sqrt(6.0/(fanIn+fanOut))*[-1,1]`
+        initializer for :class:`~cntk.ops.variables.Parameter`
+        initialized to uniform distribution between
+        $$scale*sqrt(6.0/(fanIn+fanOut))*[-1,1]$$
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -88,14 +91,15 @@ def glorot_normal(output_rank=SentinelValueForInferParamInitRank, filter_rank=Se
     initializer
 
     Args:
-        output_rank (`int`): output rank
-        filter_rank (`int`): filter rank
-        scale (`float`): scale
-        seed (`int`): random seed
+        output_rank (int): output rank
+        filter_rank (int): filter rank
+        scale (float): scale
+        seed (int): random seed
 
     Returns:
-        initializer for :class:`cntk.variables.Parameter`
-        initialized to Gaussian distribution with mean `0` and standard deviation `scale*sqrt(2.0/(fanIn+fanOut))`
+        initializer for :class:`~cntk.ops.variables.Parameter`
+        initialized to Gaussian distribution with mean `0` and standard
+        deviation $$scale*sqrt(2.0/(fanIn+fanOut))$$
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -107,14 +111,15 @@ def he_uniform(output_rank=SentinelValueForInferParamInitRank, filter_rank=Senti
     initializer
 
     Args:
-        output_rank (`int`): output rank
-        filter_rank (`int`): filter rank
-        scale (`float`): scale
-        seed (`int`): random seed
+        output_rank (int): output rank
+        filter_rank (int): filter rank
+        scale (float): scale
+        seed (int): random seed
 
     Returns:
-        initializer for :class:`cntk.variables.Parameter`
-        initialized to uniform distribution between `scale*sqrt(6.0/fanIn)*[-1,1]`
+        initializer for :class:`~cntk.ops.variables.Parameter`
+        initialized to uniform distribution between
+        $$scale*sqrt(6.0/fanIn)*[-1,1]$$
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -126,14 +131,15 @@ def he_normal(output_rank=SentinelValueForInferParamInitRank, filter_rank=Sentin
     initializer
 
     Args:
-        output_rank (`int`): output rank
-        filter_rank (`int`): filter rank
-        scale (`float`): scale
-        seed (`int`): random seed
+        output_rank (int): output rank
+        filter_rank (int): filter rank
+        scale (float): scale
+        seed (int): random seed
 
     Returns:
-        initializer for :class:`cntk.variables.Parameter`
-        initialized to Gaussian distribution with mean `0` and standard deviation `scale*sqrt(2.0/fanIn)`
+        initializer for :class:`~cntk.ops.variables.Parameter`
+        initialized to Gaussian distribution with mean `0` and standard
+        deviation $$scale*sqrt(2.0/fanIn)$$
     '''
     if seed is None:
         seed = SentinelValueForAutoSelectRandomSeed
@@ -145,11 +151,11 @@ def bilinear(kernel_width, kernel_height):
     initializer
 
     Args:
-        kernel_width (`int`): kernel width
-        kernel_height (`int`): kernel height
+        kernel_width (int): kernel width
+        kernel_height (int): kernel height
 
     Returns:
-        initializer for :class:`cntk.variables.Parameter`
+        initializer for :class:`~cntk.ops.variables.Parameter`
         useful for deconvolution layer
     '''
     return cntk_py.bilinear_initializer(kernel_width, kernel_height)
@@ -157,15 +163,15 @@ def bilinear(kernel_width, kernel_height):
 def initializer_with_rank(initializer, output_rank=None, filter_rank=None):
     '''
     override output_rank and filter_rank specification in a random initializer
-    constructed without an explciti output_rank and filter_rank specification
+    constructed without an explicit output_rank and filter_rank specification
 
-    Args:'
+    Args:
         initializer: initializer whose output_rank and filter_rank parameters are to be overriden
-        output_rank (`int`): new output rank value
-        filter_rank (`int`): new filter rank value
+        output_rank (int): new output rank value
+        filter_rank (int): new filter rank value
 
     Returns:
-        new initializer for `:class:cntk.variables.Parameter` with specified output_rank and filter_rank
+        new initializer for :class:`~cntk.ops.variables.Parameter` with specified output_rank and filter_rank
     '''
     if output_rank is None:
         output_rank = SentinelValueForInferParamInitRank

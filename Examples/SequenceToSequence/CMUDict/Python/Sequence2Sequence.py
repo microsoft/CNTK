@@ -56,7 +56,7 @@ def translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim, debug_ou
     total_error = 0.0
     while True:
         mb = test_reader.next_minibatch(test_minibatch_size, input_map=test_bind)
-        if mb is None: break
+        if not mb: break
         mb_error = trainer.test_minibatch(mb)
         total_error += mb_error
 

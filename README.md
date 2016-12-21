@@ -1,7 +1,18 @@
 **The [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) has all information on CNTK including [setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine ), [examples](https://github.com/Microsoft/CNTK/wiki/Examples ), etc.**
 
 # Latest news
-*2016-11-25.* V 2.0 Beta 5 Release  
+***2016-12-13.*** V 2.0 Beta 6 Release  
+Highlights of this Release:
+* Both Windows and Linux packages are now created using NVIDIA CUDA 8.0 toolkit.
+* Linux version now supports Python 3.5 (Windows support is coming soon).
+* Support for training on one-hot and sparse arrays via NumPy.
+* New Examples and Tutorials: [Video action recognition](https://github.com/Microsoft/CNTK/tree/v2.0.beta6.0/Examples/Video/GettingStarted), [Finance Timeseries with Pandas/Numpy](https://github.com/Microsoft/CNTK/blob/v2.0.beta6.0/Tutorials/CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy.ipynb), [Neural Character Language Models](https://github.com/Microsoft/CNTK/tree/v2.0.beta6.0/Examples/Text/CharacterLM/README.md)
+* Stability Improvements and bug fixes.
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_6_Release_Notes)  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
+
+***2016-11-25.*** V 2.0 Beta 5 Release  
 Highlights of this Release:
 * The Windows binary packages are now created using the NVIDIA CUDA 8 toolkit, see the [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_5_Release_Notes) for details. The CNTK-Linux binary packages are still built with CUDA 7.5. The Linux support for Cuda8 will follow shortly!
 * Performance enhancements for evaluation of bitmap images through the new `EvaluateRgbImage` function in the [managed Eval API](https://github.com/Microsoft/CNTK/wiki/Managed-EvalDLL-API).
@@ -12,7 +23,7 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_5_Release_Notes)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-*2016-11-21.* V 2.0 Beta 4 Release  
+***2016-11-21.*** V 2.0 Beta 4 Release  
 Highlights of this Release:
 * New ASGD/Hogwild! training using Microsoft’s Parameter Server ([Project Multiverso](https://github.com/Microsoft/multiverso))
 * Distributed Scenarios now supported in CNTK Python API
@@ -23,7 +34,7 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_4_Release_Notes)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-*2016-11-11.* V 2.0 Beta 3 Release  
+***2016-11-11.*** V 2.0 Beta 3 Release  
 Highlights of this Release:
 * Integration with [NVIDIA NCCL](https://github.com/NVIDIA/nccl). Works with Linux when building CNTK from sources. See here [how to enable](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#optional-nccl)
 * The first V.2.0 Prerelease Nuget Package for CNTK Evaluation library
@@ -32,32 +43,13 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_3_Release_Notes)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-*2016-11-03.* V 2.0 Beta 2 Release  
+***2016-11-03.*** V 2.0 Beta 2 Release  
 Highlights of this Release:
 * Feature tuning and bug fixing based on the feedback on Beta 1
 * Changes in the Examples and Tutorials based on the same feedback
 * New [Tutorial on Reinforcement Learning](https://github.com/Microsoft/CNTK/blob/v2.0.beta2.0/bindings/python/tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb)
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_2_Release_Notes)  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
-
-*2016-10-25.* New CNTK Name, new Web Site and V 2.0 Beta 1 Release  
-
-CNTK becomes **The Microsoft Cognitive Toolkit**. See more at our [new Web Site](https://www.microsoft.com/en-us/research/product/cognitive-toolkit/).
-
-With the today's Release we start delivering CNTK V2 - a major upgrade of Microsoft Cognitive Toolkit.
-
-Expect a set of Beta Releases in the Coming Weeks.
-
-Highlights of this Release:
-* CNTK can now be used as a library with [brand new C++ and Python APIs](https://github.com/microsoft/cntk/wiki/CNTK-Library-API)
-* New Python Examples and Tutorials
-* Support of Protocol Buffers serialization
-M* Support of Fast R-CNN algorithm
-* New automated installation procedures
-* Improvements in CNTK Evaluation library including support of CNTK APIs
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_1_Release_Notes). You will find there links to the materials about the new features.  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).

@@ -149,6 +149,7 @@ namespace CNTK
 namespace CNTK
 {
     // Forward declarations
+    class Utils;
     class PrimitiveFunction;
     class CompositeFunction;
     class Function;
@@ -185,6 +186,9 @@ namespace CNTK
     class Learner;
     typedef std::shared_ptr<Learner> LearnerPtr;
 
+    class Learners;
+    typedef std::shared_ptr<Learners> LearnersPtr;
+
     class Dictionary;
     typedef std::shared_ptr<Dictionary> DictionaryPtr;
 
@@ -197,8 +201,8 @@ namespace CNTK
     class QuantizedDistributedCommunicator;
     typedef std::shared_ptr<QuantizedDistributedCommunicator> QuantizedDistributedCommunicatorPtr;
 
-    class DistributedTrainer;
-    typedef std::shared_ptr<DistributedTrainer> DistributedTrainerPtr;
+    class DistributedLearner;
+    typedef std::shared_ptr<DistributedLearner> DistributedLearnerPtr;
 
     namespace Internal
     {
@@ -230,7 +234,7 @@ namespace CNTK
         bool IsSettingDefaultDeviceAlwaysAllowed();
 
         CNTK_API void SetAutomaticUnpackingOfPackedValues(bool disable);
-        bool IsAutomaticUnpackingOfPackedValuesDisabled();
+        CNTK_API bool IsAutomaticUnpackingOfPackedValuesDisabled();
 
         CNTK_API void SetComputationNetworkTraceLevel(int traceLevel);
         int GetComputationNetworkTraceLevel();
@@ -240,17 +244,27 @@ namespace CNTK
         CNTK_API void ForceSynchronousCUDAKernelExecutions();
 
         CNTK_API void ForceDeterministicAlgorithms();
+        CNTK_API bool ShouldForceDeterministicAlgorithms();
 
         CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
 
         CNTK_API void EnableForwardValuesSharing();
         CNTK_API void EnableHyperMemoryCompress();
 
+        CNTK_API void EnableGradientAccumulationOptimization();
+        CNTK_API void DisableGradientAccumulationOptimization();
+
         CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
+        CNTK_API bool AreEqual(const ::CNTK::Value& value1, const ::CNTK::Value& value2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
 
         class VariableResolver;
+
+        ///
+        /// Returns true if num CPU Threads was set.
+        ///
+        bool MaxNumCPUThreadsSet();
     }
 }

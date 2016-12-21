@@ -3,7 +3,7 @@ from cntk import cntk_py, utils
 from ..tensor import TensorOpsMixin
 from ..utils import typemap, sanitize_precision, sanitize_value, sanitize_dtype_cntk, _create_NDArrayView_from_NumPy
 
-class VariableMixin:
+class VariableMixin(object):
     '''
     Standard properties for :class:`Variable` and its derived classes
     :class:`Parameter` and :class:`Constant`.
@@ -115,7 +115,7 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
        needs_gradient (`bool`): if set to True any expression that contains this variable
         will also be differentiated with respect to this variable.
        is_sparse(`bool`): whether this is a sparse or dense input (or output)
-       dynamic_axes(`list` of :class:`cntk.axis.Axis`): the dynamic axes of this variable. These
+       dynamic_axes(`list` of :class:`~cntk.axis.Axis`): the dynamic axes of this variable. These
         express dimensions that can vary across examples or minibatches.
        name(`str`): an optional name for this parameter.
     '''
@@ -140,12 +140,12 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
     Args:
        shape (`tuple`): the shape of the tensor holding the parameters
        init (value (`np.ndarray`, `list`, `float`, `int`) or
-        :class:`cntk.initializer`: Initial value.
+        :class:`~cntk.initializer`: Initial value.
         If a numpy array is specified the shape argument is ignored and
         the tensor gets the shape of this argument. Alternatively, an
-        initializer from :class:`cntk.initializer` can be specified.
+        initializer from :class:`~cntk.initializer` can be specified.
        dtype (`np.float32` or `np.float64`): data type of the values stored.
-       device (:class:`cntk.device.DeviceDescriptor`): the device on which the values should reside.
+       device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this parameter
 
     Parameters are Variables and therefore they inherit all their methods.
@@ -176,15 +176,15 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
         '''
         NumPy array of the value
         '''
-        return super(Parameter, self).value().to_numpy()
+        return super(Parameter, self).value().to_ndarray()
 
     @value.setter
     def value(self, val):
         if isinstance(val, np.ndarray):
             ndarray = _create_NDArrayView_from_NumPy(val.astype(self.dtype))
-            super().set_value(ndarray)
+            super(Parameter, self).set_value(ndarray)
         elif isinstance(val, cntk_py.NDArrayView):
-            super().set_value(val)
+            super(Parameter, self).set_value(val)
         else:
             raise TypeError("Unsupported value type: %s", type(val))
 
@@ -194,13 +194,13 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     A constant value. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that cannot be modified.
 
-    A Constant is a :class:`cntk.ops.Variable` and therefore inherits all its methods.
+    A Constant is a :class:`~cntk.ops.Variable` and therefore inherits all its methods.
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
         BUGBUG: Document initializers
        dtype (`np.float32` or `np.float64`): data type to store the values as.
-       device (:class:`cntk.device.DeviceDescriptor`): the device on which the values should reside.
+       device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
     '''
     def __init__(self, value=None, shape=None, dtype=None, device=None, name=''):
@@ -222,5 +222,5 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         '''
         NumPy array of the value
         '''
-        return super(Constant, self).value().to_numpy()
+        return super(Constant, self).value().to_ndarray()
 

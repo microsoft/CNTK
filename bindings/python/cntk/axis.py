@@ -135,3 +135,14 @@ class Axis(cntk_py.Axis):
             :class:`Axis`: new unique dynamic axis
         '''
         return cntk_py.Axis.new_unique_dynamic_axis(name)
+
+    @staticmethod
+    @typemap
+    def end_static_axis():
+        '''
+        Creates an Axis object representing the end (one past last) static axis.
+
+        Returns:
+            :class:`Axis`: axis object representing the end (one past last) static axis.
+        '''
+        return cntk_py.Axis.end_static_axis()
