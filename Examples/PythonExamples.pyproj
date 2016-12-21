@@ -61,53 +61,147 @@
     <Compile Include="SequenceClassification\SimpleExample\Python\SequenceClassification.py" />
     <Compile Include="SequenceToSequence\CMUDict\Python\Sequence2Sequence.py" />
     <Compile Include="Speech\Miscellaneous\EndToEnd.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\combine_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\comparison_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\evaluation_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\function_tests.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\kernel_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\linear_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\non_diff_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\non_linear_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\ops_test_utils.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\random_sample_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\recurrent_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\reduction_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\reshaping_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\variables_test.py" />
-    <Compile Include="..\bindings\python\cntk\ops\tests\__init__.py" />
-    <Compile Include="..\bindings\python\cntk\tests\attributes_test.py" />
-    <Compile Include="..\bindings\python\cntk\tests\axis_test.py" />
-    <Compile Include="..\bindings\python\cntk\tests\distributed_test.py" />
-    <Compile Include="..\bindings\python\cntk\tests\graph_test.py" />
-    <Compile Include="..\bindings\python\cntk\tests\initializer_test.py" />
-    <Compile Include="..\bindings\python\cntk\tests\learner_test.py" />
-    <Compile Include="..\bindings\python\cntk\tests\persist_test.py" />
-    <Compile Include="..\bindings\python\cntk\tests\tensor_test.py" />
-    <Compile Include="..\bindings\python\cntk\tests\test_utils.py" />
-    <Compile Include="..\bindings\python\cntk\tests\trainer_test.py" />
-    <Compile Include="..\bindings\python\cntk\tests\__init__.py" />
-    <Compile Include="..\bindings\python\cntk\utils\tests\swig_helper_tests.py" />
-    <Compile Include="..\bindings\python\cntk\utils\tests\utils_test.py" />
-    <Compile Include="..\bindings\python\cntk\utils\tests\__init__.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\cifar_convnet_distributed_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\cifar_convnet_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\cifar_resnet_distributed_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\cifar_resnet_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_101_LogisticRegression_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_102_FeedForward_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_202_Language_Understanding_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_204_Sequence_To_Sequence_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\conftest.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\feed_forward_net_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\language_understanding_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\run_cifar_convnet_distributed.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\sequence_classification_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\sequence_to_sequence_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\simple_mnist_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\ucf11_conv3d_test.py" />
-    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\__init__.py" />
+    <Compile Include="..\bindings\python\cntk\ops\tests\combine_test.py">
+      <Link>Tests\cntk\ops\tests\combine_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\comparison_test.py">
+      <Link>Tests\cntk\ops\tests\comparison_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\evaluation_test.py">
+      <Link>Tests\cntk\ops\tests\evaluation_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\function_tests.py">
+      <Link>Tests\cntk\ops\tests\function_tests.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\kernel_test.py">
+      <Link>Tests\cntk\ops\tests\kernel_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\linear_test.py">
+      <Link>Tests\cntk\tests\linear_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\non_diff_test.py">
+      <Link>Tests\cntk\ops\tests\non_diff_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\non_linear_test.py">
+      <Link>Tests\cntk\ops\tests\non_linear_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\ops_test_utils.py">
+      <Link>Tests\cntk\ops\tests\ops_test_utils.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\random_sample_test.py">
+      <Link>Tests\cntk\ops\tests\random_sample_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\recurrent_test.py">
+      <Link>Tests\cntk\ops\tests\recurrent_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\reduction_test.py">
+      <Link>Tests\cntk\ops\tests\reduction_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\reshaping_test.py">
+      <Link>Tests\cntk\ops\tests\reshaping_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\variables_test.py">
+      <Link>Tests\cntk\ops\tests\variables_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\__init__.py">
+      <Link>Tests\cntk\ops\tests\__init__.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\attributes_test.py">
+      <Link>Tests\cntk\tests\attributes_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\axis_test.py">
+      <Link>Tests\cntk\tests\axis_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\distributed_test.py">
+      <Link>Tests\cntk\tests\distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\graph_test.py">
+      <Link>Tests\cntk\tests\graph_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\initializer_test.py">
+      <Link>Tests\cntk\tests\initializer_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\learner_test.py">
+      <Link>Tests\cntk\ops\tests\learner_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\persist_test.py">
+      <Link>Tests\cntk\tests\persist_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\tensor_test.py">
+      <Link>Tests\cntk\tests\tensor_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\test_utils.py">
+      <Link>Tests\cntk\tests\test_utils.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\trainer_test.py">
+      <Link>Tests\cntk\tests\trainer_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\__init__.py">
+      <Link>Tests\cntk\tests\__init__.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\utils\tests\swig_helper_tests.py">
+      <Link>Tests\cntk\utils\tests\swig_helper_tests.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\utils\tests\utils_test.py">
+      <Link>Tests\cntk\utils\tests\utils_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\utils\tests\__init__.py">
+      <Link>Tests\cntk\utils\tests\__init__.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\cifar_convnet_distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\cifar_convnet_distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\cifar_convnet_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\cifar_convnet_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\cifar_resnet_distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\cifar_resnet_distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\cifar_resnet_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\cifar_resnet_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_101_LogisticRegression_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_101_LogisticRegression_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_102_FeedForward_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_102_FeedForward_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_202_Language_Understanding_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_202_Language_Understanding_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_204_Sequence_To_Sequence_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_204_Sequence_To_Sequence_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\conftest.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\conftest.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\feed_forward_net_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\feed_forward_net_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\language_understanding_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\language_understanding_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\run_cifar_convnet_distributed.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\run_cifar_convnet_distributed.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\sequence_classification_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\sequence_classification_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\sequence_to_sequence_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\sequence_to_sequence_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\simple_mnist_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\simple_mnist_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\ucf11_conv3d_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\ucf11_conv3d_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\__init__.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\__init__.py</Link>
+    </Compile>
     <Compile Include="Tests\EndToEndTests\MetricsDriver.py" />
     <Compile Include="Tests\EndToEndTests\TestDriver.py" />
   </ItemGroup>
@@ -129,6 +223,13 @@
     <Folder Include="LanguageUnderstanding\" />
     <Folder Include="LanguageUnderstanding\ATIS\" />
     <Folder Include="LanguageUnderstanding\ATIS\Python\" />
+    <Folder Include="python\" />
+    <Folder Include="python\cntk\" />
+    <Folder Include="python\cntk\ops\" />
+    <Folder Include="python\cntk\ops\tests\" />
+    <Folder Include="python\cntk\tests\" />
+    <Folder Include="python\cntk\utils\" />
+    <Folder Include="python\cntk\utils\tests\" />
     <Folder Include="SequenceClassification\" />
     <Folder Include="SequenceClassification\SimpleExample\" />
     <Folder Include="SequenceClassification\SimpleExample\Python\" />
@@ -146,6 +247,16 @@
     <Folder Include="..\Tests\EndToEndTests\" />
     <Folder Include="..\Tests\EndToEndTests\cntkv2Python\" />
     <Folder Include="..\Tests\EndToEndTests\cntkv2Python\Examples\" />
+    <Folder Include="Tests\" />
+    <Folder Include="Tests\cntk\tests\" />
+    <Folder Include="Tests\cntk\ops\" />
+    <Folder Include="Tests\cntk\ops\tests\" />
+    <Folder Include="Tests\cntk\utils\" />
+    <Folder Include="Tests\cntk\utils\tests\" />
+    <Folder Include="Tests\EndToEndTests\" />
+    <Folder Include="Tests\EndToEndTests\cntkv2Python\" />
+    <Folder Include="Tests\EndToEndTests\cntkv2Python\Examples\" />
+    <Folder Include="Tests\cntk\" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
