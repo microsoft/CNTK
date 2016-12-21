@@ -101,6 +101,7 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
     train_reader = create_train_reader(total_number_of_samples)
     test_reader = create_test_reader(total_number_of_samples)
 
+
     # define mapping from reader streams to network inputs
     input_map = {
         input_var: train_reader.streams.features,
@@ -156,7 +157,7 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
 
     return metric_numer/metric_denom
 
-def train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs=3, distributed_after_samples=0, num_quantization_bits=32, block_size=0):
+def train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs=3, distributed_after_samples=0, num_quantization_bits=32, block_samples=0):
 
     # create a distributed learner for SGD
     # BlockMomentum SGD will be used in case number of samples per block is not 0 and 1BitSGD is disabled
@@ -207,16 +208,7 @@ if __name__=='__main__':
     mean=os.path.join(data_path, 'CIFAR-10_mean.xml')
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
-    
-<<<<<<< 29be5aa316a09aceb868639364a4cf5300bd4ac1
-    distributed_after_samples = 0
-    num_quantization_bits = 32
-    max_epochs = 1
-    block_size = 0
-=======
+
     train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs=epochs, distributed_after_samples=distributed_after_samples, num_quantization_bits=num_quantization_bits, block_samples=block_samples)
->>>>>>> added comments and minor changes to ResNet and ConvNet examples
-    
-    train_and_test_cifar_convnet(mean, train_data, test_data, max_epochs=max_epochs, distributed_after_samples=distributed_after_samples, num_quantization_bits=num_quantization_bits, block_size=block_size)
 
     cntk.distributed.Communicator.finalize()

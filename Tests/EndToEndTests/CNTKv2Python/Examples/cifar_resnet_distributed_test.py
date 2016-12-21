@@ -7,13 +7,13 @@
 import numpy as np
 import os
 import sys
+import signal
+import subprocess
+import re
+import pytest
 from cntk.utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
-from cntk.io import FULL_DATA_SWEEP
-from cntk import distributed
-import pytest
-import subprocess
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
@@ -25,12 +25,12 @@ TOLERANCE_ABSOLUTE = 2E-1
 TIMEOUT_SECONDS = 300
 
 def test_cifar_convnet_distributed_mpiexec(device_id):
-   
+
     params = [ "-e", "2"] # run only 2 epochs
     mpiexec_test(device_id, train_and_test_script, params, 0.5946)
 
 def test_cifar_convnet_distributed_1bitsgd_mpiexec(device_id):
-    
+
     params = ["-q", "1", "-e", "2"] # 2 epochs with 1BitSGD
     mpiexec_test(device_id, train_and_test_script, params, 0.5946)
 
@@ -39,8 +39,4 @@ def test_cifar_convnet_distributed_blockmomentum_mpiexec(device_id):
 
     params = ["-b", "32000", "-e", "2"] # 2 epochs with BlockMomentum SGD using blocksize 32000
     mpiexec_test(device_id, train_and_test_script, params, 0.55)
->>>>>>> moved mpiexec call to a separate function in distributed ResNet and ConvNet tests
 
-    assert np.allclose(test_error, expected_test_error,
-                       atol=TOLERANCE_ABSOLUTE)
-    distributed.Communicator.finalize()

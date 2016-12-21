@@ -18,14 +18,14 @@ import pdb
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
-from run_cifar_convnet_distributed import run_cifar_convnet_distributed
+train_and_test_script = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python", "ConvNet_CIFAR10_DataAug_Distributed.py")
 
 TOLERANCE_ABSOLUTE = 2E-1
 TIMEOUT_SECONDS = 300
 
 def mpiexec_test(device_id, train_and_test_script, params, expected_test_error):
     if cntk_device(device_id).type() != DeviceKind_GPU:
-       pytest.skip('test only runs on GPU')
+        pytest.skip('test only runs on GPU')
 
     cmd = ["mpiexec", "-n", "2", "python", train_and_test_script] + params
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -43,7 +43,7 @@ def mpiexec_test(device_id, train_and_test_script, params, expected_test_error):
     assert len(results) == 2
  
     if "-b" not in params:
-        assert results[0] == results[1]
+    assert results[0] == results[1]
     else:
         assert np.allclose(float(results[0])/100, float(results[1])/100,
                        atol=TOLERANCE_ABSOLUTE)
@@ -60,6 +60,7 @@ def test_cifar_convnet_distributed_1bitsgd_mpiexec(device_id):
     
     params = ["-q", "1", "-e", "2"] # 2 epochs with 1BitSGD
     mpiexec_test(device_id, train_and_test_script, params, 0.617)
+
 
 def test_cifar_convnet_distributed_blockmomentum_mpiexec(device_id):
 

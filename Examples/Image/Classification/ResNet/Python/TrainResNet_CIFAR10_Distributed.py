@@ -85,7 +85,7 @@ def resnet_cifar10(reader_train_factory, test_reader, create_dist_learner, max_e
     # up. However, bigger minimatch size on the same number of samples means less updates, 
     # thus leads to higher training error. This is a trade-off of speed and accuracy
 
-    minibatch_size = 128 * 2#(distributed.Communicator.num_workers() if scale_up else 1)
+    minibatch_size = 128 * (distributed.Communicator.num_workers() if scale_up else 1)
 
     momentum_time_constant = -minibatch_size/np.log(0.9)
     l2_reg_weight = 0.0001
@@ -101,7 +101,8 @@ def resnet_cifar10(reader_train_factory, test_reader, create_dist_learner, max_e
     trainer     = Trainer(z, ce, pe, learner)
 
     total_number_of_samples = max_epochs * epoch_size
-    train_reader=create_train_reader(total_number_of_samples)
+    train_reader=reader_train_factory(total_number_of_samples)
+
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -184,7 +185,7 @@ if __name__=='__main__':
     parser.add_argument('-q', '--quantize_bit', help='quantized bit', type=int, required=False, default='32')
     parser.add_argument('-s', '--scale_up', help='scale up minibatch size with #workers for better parallelism', type=bool, required=False, default='False')
     parser.add_argument('-a', '--distributed_after', help='number of samples to train with before running distributed', type=int, required=False, default='0')
-    parser.add_argument('-b', '--block_size', type=int, help="block size for block momentum distributed learner", required=False, default=0)
+    parser.add_argument('-b', '--block_samples', type=int, help="number of samples per block for block momentum (BM) distributed learner (if 0 BM learner is not used)", required=False, default=0)
 
     args = vars(parser.parse_args())
     num_quantization_bits = int(args['quantize_bit'])
@@ -192,7 +193,10 @@ if __name__=='__main__':
     distributed_after_samples = int(args['distributed_after'])
     network_name = args['network']
     scale_up = bool(args['scale_up'])
-    block_size = int(args['block_size'])
+    block_samples = int(args['block_samples'])
+
+    if (block_samples != 0 and num_quantization_bits == 1):
+        raise ValueError("Blockmomentum disrtibuted learner is not meant to be used with 1BitSGD")
 
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'test_map.txt')
