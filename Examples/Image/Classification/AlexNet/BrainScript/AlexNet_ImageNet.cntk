@@ -133,9 +133,6 @@ Train = {
                             height = 227
                             channels = 3
                             interpolations = "linear"
-                        #}:{
-                        #    type = "Mean"
-                        #    meanFile = "$ConfigDir$/ImageNet1K_mean.xml"
                         }:{
                             type = "Transpose"
                         }

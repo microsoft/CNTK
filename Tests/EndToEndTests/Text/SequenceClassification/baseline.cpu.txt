@@ -1,0 +1,61 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 24
+    Total Memory: 268381192 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config/seqcla.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu DeviceId=-1 timestamping=true
+CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:29:34) on dphaim-26-new at 2016/12/15 08:37:37
+
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config/seqcla.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu  DeviceId=-1  timestamping=true
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data
+
+12/15/2016 08:37:38: ##############################################################################
+12/15/2016 08:37:38: #                                                                            #
+12/15/2016 08:37:38: # Train command (train action)                                               #
+12/15/2016 08:37:38: #                                                                            #
+12/15/2016 08:37:38: ##############################################################################
+
+Node 'model.arrayOfFunctions[1].lstm.W' (LearnableParameter operation) operation: Tensor shape was inferred as [100 x 50].
+Node 'model.arrayOfFunctions[3].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [5 x 25].
+12/15/2016 08:37:38: 
+Model has 42 nodes. Using CPU.
+
+12/15/2016 08:37:38: Training criterion:   ce = CrossEntropyWithSoftmax
+12/15/2016 08:37:38: Evaluation criterion: err = ClassificationError
+
+12/15/2016 08:37:38: Training 7730 parameters in 5 parameter tensors.
+
+12/15/2016 08:37:39: Finished Epoch[ 1 of 5]: [Training] ce = 1.57972053 * 1247; err = 0.47072975 * 1247; totalSamplesSeen = 1247; learningRatePerSample = 0.00050000002; epochTime=0.828774s
+12/15/2016 08:37:39: Finished Epoch[ 2 of 5]: [Training] ce = 1.49164146 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 2494; learningRatePerSample = 0.00050000002; epochTime=0.391561s
+12/15/2016 08:37:40: Finished Epoch[ 3 of 5]: [Training] ce = 1.41872016 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 3741; learningRatePerSample = 0.00050000002; epochTime=0.442264s
+12/15/2016 08:37:40: Finished Epoch[ 4 of 5]: [Training] ce = 1.36587116 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 4988; learningRatePerSample = 0.00050000002; epochTime=0.365941s
+12/15/2016 08:37:41: Finished Epoch[ 5 of 5]: [Training] ce = 1.32881073 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 6235; learningRatePerSample = 0.00050000002; epochTime=0.876245s
+
+12/15/2016 08:37:41: __COMPLETED__
+=== Deleting last epoch data
+==== Re-running from checkpoint
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config/seqcla.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu DeviceId=-1 timestamping=true makeMode=true
+CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:29:34) on dphaim-26-new at 2016/12/15 08:37:46
+
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config/seqcla.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Config  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu  DeviceId=-1  timestamping=true  makeMode=true
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Text\SequenceClassification\Data
+
+12/15/2016 08:37:46: ##############################################################################
+12/15/2016 08:37:46: #                                                                            #
+12/15/2016 08:37:46: # Train command (train action)                                               #
+12/15/2016 08:37:46: #                                                                            #
+12/15/2016 08:37:46: ##############################################################################
+
+12/15/2016 08:37:46: 
+Starting from checkpoint. Loading network from 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Text_SequenceClassification@release_cpu/Models/seqcla.dnn.4'.
+12/15/2016 08:37:46: 
+Model has 42 nodes. Using CPU.
+
+12/15/2016 08:37:46: Training criterion:   ce = CrossEntropyWithSoftmax
+12/15/2016 08:37:46: Evaluation criterion: err = ClassificationError
+
+12/15/2016 08:37:46: Training 7730 parameters in 5 parameter tensors.
+
+12/15/2016 08:37:47: Finished Epoch[ 5 of 5]: [Training] ce = 1.32881073 * 1247; err = 0.44667201 * 1247; totalSamplesSeen = 6235; learningRatePerSample = 0.00050000002; epochTime=0.856345s
+
+12/15/2016 08:37:47: __COMPLETED__
