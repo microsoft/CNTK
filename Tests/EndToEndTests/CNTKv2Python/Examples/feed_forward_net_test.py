@@ -15,7 +15,7 @@ from FeedForwardNet import ffnet
 TOLERANCE_ABSOLUTE = 1E-03
 
 def test_ffnet_error(device_id):
-    from cntk.utils import cntk_device
+    from cntk.ops.tests.ops_test_utils import cntk_device
     set_default_device(cntk_device(device_id))
 
     avg_error = ffnet()
