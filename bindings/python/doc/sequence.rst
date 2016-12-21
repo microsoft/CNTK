@@ -92,8 +92,11 @@ Sequence classification
 
 One of the most exciting areas in deep learning is the powerful idea of recurrent 
 neural networks (RNNs). RNNs are in some ways the Hidden Markov Models of the deep 
-learning world. They are networks with loops in them and they allow us to model the 
-current state given the result of a previous state. In other words, they allow information 
+learning world. They are networks that process variable length sequences using 
+a fixed set of parameters. Therefore they have to learn to summarize all the
+observations in the input sequence into a finite dimensional state, predict the
+next observation using that state and transform their current state and the observed
+input into their next state. In other words, they allow information 
 to persist. So, while a traditional neural network layer can be thought of as having data 
 flow through as in the figure on the left below, an RNN layer can be seen as the figure 
 on the right.
@@ -105,51 +108,38 @@ on the right.
 As is apparent from the figure above on the right, RNNs are the natural structure for 
 dealing with sequences. This includes everything from text to music to video; anything 
 where the current state is dependent on the previous state. While RNNs are indeed 
-powerful, the "vanilla" RNN suffers from an important problem: long-term dependencies. 
+powerful, the "vanilla" RNN is extremely hard to learn via gradient based methods.
 Because the gradient needs to flow back through the network to learn, the contribution 
 from an early element (for example a word at the start of a sentence) on a much later 
 elements (like the last word) can essentially vanish.
 
-To deal with the above problem, we turn to the Long Short Term Memory (LSTM) network. 
+Dealing with the above problem is an active area of research. An architecture that
+seems to be successful in practice is the Long Short Term Memory (LSTM) network. 
 LSTMs are a type of RNN that are exceedingly useful and in practice are what we commonly 
-use when implementing an RNN. For more on why LSTMs are so powerful, see, e.g. 
-http://colah.github.io/posts/2015-08-Understanding-LSTMs. For our purposes, we will 
-concentrate on the central feature of the LSTM model: the `memory cell`. 
-
-.. figure:: images/lstm_cell.png
-    :width: 400px
-    :alt: LSTM cell
-
-    An LSTM cell.
-
-The LSTM cell is associated with three gates that control how information is stored / 
-remembered in the LSTM. The *forget gate* determines what information should be kept 
-after a single element has flowed through the network. It makes this determination 
-using data for the current time step and the previous hidden state. 
-
-The *input gate* uses the same information as the forget gate, but passes it through 
-a `tanh` to determine what to add to the state. The final gate is the *output gate* 
-and it modulates what information should be output from the LSTM cell. This time we 
-also take the previous state's value into account in addition to the previous hidden 
-state and the data of the current state. We have purposely left the full details out 
-for conciseness, so please see the link above for a full understanding of how an LSTM 
-works.
+use when implementing an RNN. A good explanation of the merits of LSTMs is at 
+http://colah.github.io/posts/2015-08-Understanding-LSTMs. An LSTM is a 
+a differentiable function that takes an input and a state and produces an output
+and a new state.
 
 In our example, we will be using an LSTM to do sequence classification. But for even 
 better results, we will also introduce an additional concept here: 
 `word embeddings <https://en.wikipedia.org/wiki/Word_embedding>`_. 
-In traditional NLP approaches, words are seen as single points in a high dimensional 
-space (the vocabulary). A word is represented by an arbitrary id and that single number 
-contains no information about the meaning of the word or how it is used. However, with 
-word embeddings each word is represented by a learned vector that has some meaning. For 
-example, the vector representing the word "cat" may somehow be close, in some sense, to 
-the vector for "dog", and each dimension is encoding some similarities or differences 
-between those words that were learned usually by analyzing a large corpus. In our task, 
-we will use a pre-computed word embedding model using `GloVe <http://nlp.stanford.edu/projects/glove/>`_
-and each of the words in the sequences will be replaced by their respective GloVe vector.
+In traditional NLP approaches, words are identified with the standard basis of a high 
+dimensional space (the vocabulary) (the first word is (1, 0, 0, ...), the second one 
+is (0, 1, 0, ...) and so on).  Each word is orthogonal to all others. But that is not 
+a good abstraction.  In real languages, some words are very similar (we call them 
+synonyms) or they function in similar ways (e.g. Paris, Seattle, Tokyo). The key 
+observation is that words that appear in similar contexts should be similar. We
+can let a neural network sort out these details by forcing each word to be represented 
+by a short learned vector.  Then in order for the network to do well on its task it 
+has to learn to map the words to these vectors effectively. For example, the vector 
+representing the word "cat" may somehow be close, in some sense, to the vector for "dog". 
+In our task, we will use a pre-computed word embedding model 
+using `GloVe <http://nlp.stanford.edu/projects/glove/>`_ and each of the words in the
+sequences will be replaced by their respective GloVe vector.
 
 Now that we've decided on our word representation and the type of recurrent neural 
-network we want to use, let's define the computational network that we'll use to do 
+network we want to use, let's define the network that we'll use to do 
 sequence classification. We can think of the network as adding a series of layers:
 
 1. Embedding layer (individual words in each sequence become vectors)
