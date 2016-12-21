@@ -46,7 +46,7 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
 
     num_tensor_elements = np.multiply.reduce(input_shape)
     input_tensor = np.arange(
-        num_tensor_elements, dtype=PRECISION_TO_TYPE[precision])
+        num_tensor_elements, dtype=PRECISION_TO_TYPE[precision]).reshape(input_shape)
     input_reshaped = input_tensor.reshape(expected_output_shape)
 
     a = I(shape=input_tensor.shape,
@@ -55,6 +55,54 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
           name='a')
 
     a_reshaped = reshape(a, output_shape)
+
+    const_input_reshaped = constant(input_reshaped, device=dev)
+    input_op = element_times(a_reshaped, const_input_reshaped)
+
+    expected_forward = [[input_reshaped**2]]
+    expected_backward = {a: input_tensor}
+
+    # create batch
+    input_tensor.shape = (1, 1) + input_tensor.shape
+
+    forward_input = {a: input_tensor}
+
+    unittest_helper(input_op,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
+
+RESHAPE_SUBSHAPE_TEST_CASES = [
+    #(input_shape, replacement_shape, begin_axis, end_axis, expected_output_shape)
+    ((2, 3),    (3, 2),                   0,                      Axis.end_static_axis(), (3, 2)),
+    ((2, 3),    (1),                      0,                      0,                      (1, 2, 3)),
+    ((2, 3),    (1, 1),                   Axis.end_static_axis(), Axis.end_static_axis(), (2, 3, 1, 1)),
+    ((2, 3, 5), (C.InferredDimension),    0,                      Axis(2),                (6, 5)),
+    ((2, 3, 5), (C.InferredDimension),    Axis(-3),               -1,                     (6, 5)),
+    ((6, 5),    (2, C.InferredDimension), 0,                      1,                      (2, 3, 5)),
+]
+
+@pytest.mark.parametrize("input_shape, replacement_shape, begin_axis, end_axis, expected_output_shape", RESHAPE_SUBSHAPE_TEST_CASES)
+def test_op_reshape_subshape(input_shape, replacement_shape, begin_axis, end_axis, expected_output_shape, device_id, precision):
+    # Reshaping is just moving the input values to different indexes of the result tensor.
+    # If we compute the gradients on the unmodified tensor, reshape would get 1 for all inputs
+    # For testing the gradients we want to have different gradients for each input index otherwise we can't
+    # test if they get wrongly permuted during test. To this end we multiply
+    # the reshaping result with itself.
+    dev = cntk_device(device_id)
+    from ...utils import sanitize_dtype_cntk
+    from .. import reshape, element_times
+
+    num_tensor_elements = np.multiply.reduce(input_shape)
+    input_tensor = np.arange(
+        num_tensor_elements, dtype=PRECISION_TO_TYPE[precision]).reshape(input_shape)
+    input_reshaped = input_tensor.reshape(expected_output_shape)
+
+    a = I(shape=input_tensor.shape,
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          needs_gradient=True,
+          name='a')
+
+    a_reshaped = reshape(a, replacement_shape, begin_axis, end_axis)
 
     const_input_reshaped = constant(input_reshaped, device=dev)
     input_op = element_times(a_reshaped, const_input_reshaped)

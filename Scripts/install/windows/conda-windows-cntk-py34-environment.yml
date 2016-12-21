@@ -1,4 +1,4 @@
-name: cntk-py34 
+name: cntk-py34
 dependencies:
 - jupyter=1.0.0=py34_3
 - matplotlib=1.5.3=np111py34_0

@@ -8,6 +8,7 @@
 #           e.g. a fully connected layer with non-linearity
 
 # TODO: clean up the dependencies
+from __future__ import division
 import numpy as np
 from .ops import parameter, input_variable, placeholder_variable, combine
 from .ops import times, convolution, pooling, batch_normalization, dropout
