@@ -171,13 +171,15 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
                     dot_object.add_node(child_node)
                     dot_object.add_edge(pydot.Edge(child_node, cur_node,label=str(child.shape)))
 
-            # ad node's output
-            model += ") -> " + node.outputs[0].uid +'\n'
+            # add node's outputs
+            node_outputs = [out.uid for out in node.outputs]
+            model += ") -> " + ",".join(node_outputs) +'\n'
 
             if is_dot or is_png:
-                out_node = pydot.Node(node.outputs[0].uid)
-                dot_object.add_node(out_node)
-                dot_object.add_edge(pydot.Edge(cur_node,out_node,label=str(node.outputs[0].shape)))
+                for out in node_outputs:
+                    out_node = pydot.Node(out.uid)
+                    dot_object.add_node(out_node)
+                    dot_object.add_edge(pydot.Edge(cur_node,out_node,label=str(out.shape)))
 
         except AttributeError:
             # OutputVariable node
