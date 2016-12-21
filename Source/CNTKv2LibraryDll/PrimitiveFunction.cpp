@@ -37,6 +37,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumSamples = L"numSamples";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDropoutRate = L"dropoutRate";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewShape = L"newShape";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameBeginAxis = L"beginAxis";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameEndAxis = L"endAxis";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOutputRank = L"outputRank";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameInferInputRankToMap = L"inferInputRankToMap";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOffset = L"offset";
@@ -261,11 +263,17 @@ namespace CNTK
             }
             case PrimitiveOpType::Reshape:
             {
-                auto& newShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
-                outputShape = ReshapeOutputShape(inputs[0].Shape(), newShape);
-                if (inferDimensions)
-                    newShape = outputShape;
+                auto& replacementShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
 
+                auto beginAxis = Axis(0);
+                auto endAxis = Axis((int)inputs[0].Shape().Rank());
+                if (functionConfig.Contains(PrimitiveFunction::AttributeNameBeginAxis))
+                    beginAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameBeginAxis].Value<Axis>(), inputs[0].Shape());
+
+                if (functionConfig.Contains(PrimitiveFunction::AttributeNameEndAxis))
+                    endAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameEndAxis].Value<Axis>(), inputs[0].Shape());
+
+                outputShape = ReshapeOutputShape(inputs[0].Shape(), replacementShape, beginAxis, endAxis, inferDimensions);
                 break;
             }
             case PrimitiveOpType::ROIPooling:
@@ -445,12 +453,12 @@ namespace CNTK
             case PrimitiveOpType::ReduceElements:
             {
                 assert(inputs.size() == 1);
-                    auto reductionAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0].Shape());
+                auto reductionAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0].Shape());
                 if (reductionAxis == Axis::AllStaticAxes())
                     outputShape = {};
                 else
                 {
-                        std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };
+                    std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };
                     outputShape = ReductionOpOutputShape(op, inputs[0].Shape(), reductionAxes, /*preserveReductionAxes =*/ true);
                 }
                 break;
@@ -629,9 +637,9 @@ namespace CNTK
         // The hard requirement that the serialization depends on is that
         // new op type values are only added to the end of the list, after Combine.
         // This also applies to other enums (DataType, VariableKind, etc.)
-        if (op > PrimitiveOpType::Combine)
+        if (op > PrimitiveOpType::Pass)
         {
-            LogicError("Unexpected variable '%ls':'%u' (%s).", 
+            LogicError("Unexpected op '%ls':'%u' (%s).", 
                         opKey.c_str(), 
                         static_cast<std::underlying_type<CNTK::PrimitiveOpType>::type>(op),
                         GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());

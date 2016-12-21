@@ -748,11 +748,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     }
 
     // full config info
-    if (traceLevel > 0)
-    {
-        PrintBuiltInfo();
+    PrintBuiltInfo();
     PrintGpuInfo();
-    }
 
 #ifdef _DEBUG
     if (traceLevel > 0)

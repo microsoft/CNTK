@@ -159,7 +159,7 @@ def _add_tensor_ops(klass):
             raise ValueError('class "%s" already has operator overload "%s"' %
                              (klass, overload_name))
 
-        setattr(klass, overload_name, getattr(TensorOpsMixin, overload_name))
+        setattr(klass, overload_name, TensorOpsMixin.__dict__[overload_name])
 
 
 class ArrayMixin(object):

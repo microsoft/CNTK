@@ -64,12 +64,8 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup Condition="Exists('$(SWIG_PATH)\swig.exe')">
-    <Compile Include="..\..\..\Examples\Evaluation\CSEvalClient\CntkBitmapExtensions.cs">
-      <Link>CntkBitmapExtensions.cs</Link>
-    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SampleUsingBasicClass.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -80,7 +76,6 @@
       <Name>CSEvalV2Library</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
   <Target Name="Build" Condition="!Exists('$(SWIG_PATH)\swig.exe')">
     <Warning Condition="!Exists('$(SWIG_PATH)\swig.exe')" Text="The project requires SWIG to be installed." />
   </Target>

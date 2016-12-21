@@ -562,8 +562,7 @@ namespace CNTK
             }
             case PrimitiveOpType::Reshape:
             {
-                auto newShape = functionConfig[PrimitiveFunction::AttributeNameNewShape].Value<NDShape>();
-                computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(newShape));
+                computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(primitiveFunction->Output().Shape()));
                 break;
             }
             case PrimitiveOpType::ROIPooling:
@@ -1254,16 +1253,30 @@ namespace CNTK
             outputsToEvaluate.push_back(outputComputationNode);
         }
 
-        // TODO: Avoid copying the data when possible
-
         // We should have argument values supplied for all required argument dependencies for the requested outputs
+        std::vector<Variable> missingRequiredArguments;
         for (auto requiredArgument : requiredArguments)
         {
             if (arguments.find(requiredArgument) == arguments.end())
-                InvalidArgument("Function::Forward: Required argument's (%S) value that the requested output(s) depend on has not been provided", requiredArgument.Name().c_str());
+                missingRequiredArguments.push_back(requiredArgument);
+        }
+
+        if (!missingRequiredArguments.empty())
+        {
+            std::wstring missingRequiredArgumentNames;
+            for (auto missingRequiredArgument : missingRequiredArguments)
+            {
+                if (!missingRequiredArgumentNames.empty())
+                    missingRequiredArgumentNames += L", ";
+
+                missingRequiredArgumentNames += missingRequiredArgument.Name();
+            }
+
+            InvalidArgument("Function::Forward: Required arguments (%S) values that the requested output(s) depend on has not been provided", missingRequiredArgumentNames.c_str());
         }
 
         // Feed data into the arguments of the network
+        // TODO: Avoid copying the data when possible
         PopulateNetworkInputs(arguments);
 
         // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input

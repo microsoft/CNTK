@@ -491,5 +491,124 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             }
         }
 
+        [TestMethod]
+        public void EvalManagedRNNTest()
+        {
+            string modelDefinition = @"deviceId = -1
+                precision = ""float""
+                traceLevel = 1 
+                run=NDLNetworkBuilder
+                NDLNetworkBuilder = [
+                LSTMComponent(inputDim, outputDim, cellDim, inputx, cellDimX2, cellDimX3, cellDimX4) = [
+                    wx = Parameter(cellDimX4, 0, init = ""uniform"", initValueScale = 1);
+                    b = Parameter(cellDimX4, 1, init = ""fixedValue"", value = 0.0);
+                    Wh = Parameter(cellDimX4, 0, init = ""uniform"", initValueScale = 1);
+
+                    Wci = Parameter(cellDim, init = ""uniform"", initValueScale = 1);
+                    Wcf = Parameter(cellDim, init = ""uniform"", initValueScale = 1);
+                    Wco = Parameter(cellDim, init = ""uniform"", initValueScale = 1);
+
+                    dh = PastValue(outputDim, output, timeStep = 1);
+                    dc = PastValue(cellDim, ct, timeStep = 1);
+
+                    wxx = Times(wx, inputx);
+                    wxxpb = Plus(wxx, b);
+
+                    whh = Times(wh, dh);
+
+                    wxxpbpwhh = Plus(wxxpb, whh)
+
+                    G1 = RowSlice(0, cellDim, wxxpbpwhh)
+                    G2 = RowSlice(cellDim, cellDim, wxxpbpwhh)
+                    G3 = RowSlice(cellDimX2, cellDim, wxxpbpwhh);
+                    G4 = RowSlice(cellDimX3, cellDim, wxxpbpwhh);
+
+                    Wcidc = DiagTimes(Wci, dc);
+                    it = Sigmoid(Plus(G1, Wcidc));
+
+                    bit = ElementTimes(it, Tanh(G2));
+
+                    Wcfdc = DiagTimes(Wcf, dc);
+                    ft = Sigmoid(Plus(G3, Wcfdc));
+
+                    bft = ElementTimes(ft, dc);
+
+                    ct = Plus(bft, bit);
+
+                    Wcoct = DiagTimes(Wco, ct);
+                    ot = Sigmoid(Plus(G4, Wcoct));
+
+                    mt = ElementTimes(ot, Tanh(ct));
+
+                    Wmr = Parameter(outputDim, cellDim, init = ""uniform"", initValueScale = 1);
+                    output = Times(Wmr, mt);
+                ]
+
+                i1 = Input(4)
+                    o1 = LSTMComponent(4, 4, 1, i1, 2, 3, 4)
+                    FeatureNodes = (i1)
+                    outputNodes = (o1)
+                ]";
+
+            using (var model = new ModelEvaluationExtendedF())
+            {
+                int featDim = 4;
+                int labelDim = 4;
+
+                model.CreateNetwork(modelDefinition);
+
+                VariableSchema inputSchema = model.GetInputSchema();
+                VariableSchema outputSchema = model.GetOutputSchema();
+                model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
+
+                // Allocate the output values layer
+                var outputBuffer = outputSchema.CreateBuffers<float>();
+                var inputBuffer = inputSchema.CreateBuffers<float>();
+
+                for (var i = 0; i < featDim; i++)
+                    inputBuffer[0].Buffer[i] = (float)i;
+
+                int scaler = 100000;
+                var result = new int[labelDim];
+                int[] expected = { -67, 135, -58, 178 };
+
+                // the first pass with reset
+                model.ForwardPass(inputBuffer, outputBuffer);
+
+                for (var i = 0; i < labelDim; i++)
+                    result[i] = (int)(outputBuffer[0].Buffer[i] * scaler);
+                CollectionAssert.AreEqual(expected, result);
+
+                // the second pass with reset
+                model.ForwardPass(inputBuffer, outputBuffer);
+
+                for (var i = 0; i < labelDim; i++)
+                    result[i] = (int)(outputBuffer[0].Buffer[i] * scaler);
+                CollectionAssert.AreEqual(expected, result);
+
+                // another pass with reset
+                model.ForwardPass(inputBuffer, outputBuffer, true);
+
+                for (var i = 0; i < labelDim; i++)
+                    result[i] = (int)(outputBuffer[0].Buffer[i] * scaler);
+                CollectionAssert.AreEqual(expected, result);
+
+                // pass w/o reset
+                model.ForwardPass(inputBuffer, outputBuffer, false);
+                for (var i = 0; i < labelDim; i++)
+                    result[i] = (int)(outputBuffer[0].Buffer[i] * scaler);
+
+                expected = new int[] { -63, 126, -54, 166 };
+                CollectionAssert.AreEqual(expected, result);
+
+                // another pass w/o reset
+                model.ForwardPass(inputBuffer, outputBuffer, false);
+                for (var i = 0; i < labelDim; i++)
+                    result[i] = (int)(outputBuffer[0].Buffer[i] * scaler);
+
+                expected = new int[] { -61, 122, -52, 161 };
+                CollectionAssert.AreEqual(expected, result);
+            }
+        }
     }
 }
