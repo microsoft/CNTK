@@ -390,10 +390,7 @@ namespace CNTK
                            std::vector<std::vector<DestType>>& sequences, 
                            std::vector<size_t>& sequenceLengths)
     {
-        // Todo: support packed value by unpacking?
-        if (dynamic_cast<PackedValue *>(this) != nullptr)
-            RuntimeError("CopyTo() does not support PackedValue yet.");
-
+        // PackedValue should be automatically unpacked when accessing Data() and Mask().
         size_t numOfSequences;
         size_t maxSequenceLen;
         std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable);
