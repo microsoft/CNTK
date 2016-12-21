@@ -2174,7 +2174,7 @@ namespace CNTK
 
         ///
         /// Same as above, except if isResizable is false, the sequence buffer will not be resized. Instead, a runtime error is thrown.
-        /// In addition, sequenceLengths contains the length of each sequence in the sequence buffer.
+        /// In addition, on return, sequenceLengths contains the length of each sequence in sequences.
         /// The sequenceLengths will be resized if necessary, even isResizable is false.
         ///
         template <typename ElementType>
@@ -2186,10 +2186,9 @@ namespace CNTK
 
         ///
         /// Copy the data stored in the Value object to the buffer 'sequences' as a collection of variable length sequences.
-        /// The output data is of the one hot vector format.
-        /// The sequence buffer is on CPU.
-        /// The sequence buffer will be resized if nencessary.
-        /// The Value should have the same tensor shape as sampleShape.
+        /// The output data is in one-hot format.
+        /// The sequence buffer will be resized if ncessary.
+        /// The Value should have the same tensor shape as outputVariable.
         ///
         void CopyTo(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences)
         {
@@ -2198,7 +2197,7 @@ namespace CNTK
         }
 
         ///
-        /// Same as buffer, except if isResizable is false, the sequence buffer will not be resized. Instead, an runtime error is thrown.
+        /// Same as buffer, except if isResizable is false, the sequence buffer will not be resized. Instead, a runtime error is thrown.
         /// In addition, sequenceLengths contains the length of each sequence in the sequence buffer.
         /// The sequenceLengths will be resized if necessary, even isResizable is false.
         ///
@@ -2274,7 +2273,7 @@ namespace CNTK
                     seqStart = seqIndex * maxSequenceLen;
                     if (maskData[seqStart] == MaskKind::Invalid)
                         RuntimeError("No leading invalid mask is allowed for a sequence.");
-                    // The assumption here is that a sequence always start at 0 (no invaid mark at the beginning),
+                    // The assumption here is that a sequence always start at 0 (no invalid mark at the beginning),
                     // and ends at the first invalid mask. 
                     bool isEnd = false;
                     sampleCount = 0;
@@ -2287,6 +2286,7 @@ namespace CNTK
                             else
                                 isEnd = true;
                         }
+                        // Todo: remove the check below if the assumption above is confirmed.
                         if (isEnd && (maskData[seqStart + i] != MaskKind::Invalid))
                             RuntimeError("Invalid sequence.");
                     }

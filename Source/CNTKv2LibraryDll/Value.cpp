@@ -407,7 +407,7 @@ namespace CNTK
         if (Device().Type() != DeviceKind::CPU)
         {
             // Todo: leverage sparse if the original NDArrayView is in spase.
-            cpuArrayView = MakeSharedObject<NDArrayView>(GetDataType(), Data()->Shape(), DeviceDescriptor::CPUDevice());
+            cpuArrayView = MakeSharedObject<NDArrayView>(GetDataType(), Shape(), DeviceDescriptor::CPUDevice());
             cpuArrayView->CopyFrom(*Data());
         }
         else
@@ -415,7 +415,7 @@ namespace CNTK
             // Todo: direct process sparse data without copy
             if (GetStorageFormat() != StorageFormat::Dense)
             {
-                cpuArrayView = MakeSharedObject<NDArrayView>(GetDataType(), Data()->Shape(), DeviceDescriptor::CPUDevice());
+                cpuArrayView = MakeSharedObject<NDArrayView>(GetDataType(), Shape(), DeviceDescriptor::CPUDevice());
                 cpuArrayView->CopyFrom(*Data());
             }
             else
@@ -435,7 +435,7 @@ namespace CNTK
             // Therefore, no need to check NDMask again. The SequenceLengths already contains the correct number of samples.
 
             // Todo: if function pointer or lambda could support template, switch to use them.
-            if (typeid(DestType) == typeid(size_t))
+            if (std::is_same<DestType, size_t>::value)
             {
                 CopyDenseToOneHot<ValueType, DestType>(valueData + seqStart * sampleSize, sequenceLengths[seqIndex], sampleSize, sequences[seqIndex]);
             }
@@ -454,31 +454,15 @@ namespace CNTK
 
         if (Shape().Rank() < sampleRank)
             RuntimeError("The Value'rank should be greater than or equal to the variable's rank.");
-        size_t maskRank = Shape().Rank() - sampleRank;
 
+        size_t maskRank = Shape().Rank() - sampleRank;
         if (outputVariable.Shape() != Shape().SubShape(0, sampleRank))
             RuntimeError("The shape of the outputVariable does not match the value shape.");
 
         if (maskRank > 2)
             RuntimeError("Only 2 dynamic axes are supported now.");
-        else if (maskRank == 2)
-        {
-            // Only 2 axes are supported at the moment, sequence axis should be the first and batch axis the second.
-            maxSequenceLength = Shape()[sampleRank];
-            numSequences = Shape()[sampleRank + 1];
-        }
-        else if (maskRank == 1)
-        {
-            if (outputVariable.DynamicAxes().size() > 1)
-            {
-                maxSequenceLength = Shape()[sampleRank];
-            }
-            else
-            {
-                // there's only one axis (the default batch axis).
-                numSequences = Shape()[sampleRank];
-            }
-        }
+
+        std::tie(maxSequenceLength, numSequences) = GetNumTimeStepsAndSequences(Shape().SubShape(sampleRank), outputVariable.DynamicAxes().size());
 
         return std::pair<size_t, size_t>(maxSequenceLength, numSequences);
     }
@@ -520,7 +504,7 @@ namespace CNTK
     template <typename ElementType, typename DestType>
     void DirectCopy(const ElementType *source, const size_t sampleCount, const size_t sampleSize, std::vector<DestType>& dest)
     {
-        if (typeid(ElementType) != typeid(DestType))
+        if (!std::is_same<ElementType, DestType>::value)
             RuntimeError("Source and destination must be the same data type.");
 
         DestType *destData = dest.data();
@@ -532,7 +516,7 @@ namespace CNTK
     template <typename ElementType, typename DestType>
     void CopyDenseToOneHot(const ElementType *source, const size_t sampleCount, const size_t sampleSize, std::vector<DestType>& dest)
     {
-        if (typeid(DestType) != typeid(size_t))
+        if (!std::is_same<DestType, size_t>::value)
         {
             RuntimeError("The destination data type must be size_t.");
         }
