@@ -15,7 +15,7 @@ def test_cntk_205_artistic_style_transfer_noErrors(nb):
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
-expected_objective = 17192486.0
+expected_objective = 316284.22
 relative_tolerance = 1e-5
 
 def test_cntk_205_artistic_style_transfer_evalCorrect(nb):
