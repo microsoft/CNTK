@@ -1403,6 +1403,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RNN", "RNN", "{6730F9BE-92A
 		Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml = Tests\EndToEndTests\Examples\Text\PennTreebank\RNN\testcases.yml
 	EndProjectSection
 EndProject
+
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Video", "Video", "{2A95B23C-D91E-4DF9-B8F0-5E997608AB65}"
 	ProjectSection(ProjectDependencies) = postProject
 		{277EBD9D-2504-49FA-AC72-59D5515130C3} = {277EBD9D-2504-49FA-AC72-59D5515130C3}
@@ -1428,6 +1429,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Python", "Python", "{CB4566
 		Examples\Video\GettingStarted\Python\Conv3D_UCF11.py = Examples\Video\GettingStarted\Python\Conv3D_UCF11.py
 	EndProjectSection
 EndProject
+
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
