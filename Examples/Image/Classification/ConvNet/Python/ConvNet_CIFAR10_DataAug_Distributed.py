@@ -99,9 +99,7 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
 
     total_number_of_samples = max_epochs * epoch_size
     train_reader = create_train_reader(total_number_of_samples)
-    test_reader = create_test_reader(total_number_of_samples)
-
-
+    
     # define mapping from reader streams to network inputs
     input_map = {
         input_var: train_reader.streams.features,
