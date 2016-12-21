@@ -11,7 +11,7 @@ import signal
 import subprocess
 import re
 import pytest
-from cntk.utils import cntk_device
+from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
 
