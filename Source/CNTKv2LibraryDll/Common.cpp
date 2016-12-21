@@ -15,6 +15,8 @@
 #include "GPUMatrix.h"
 #include "Globals.h"
 
+extern bool g_shareNodeValueMatrices;
+
 namespace CNTK
 {
     namespace Internal
@@ -56,6 +58,26 @@ namespace CNTK
         bool IsAutomaticUnpackingOfPackedValuesDisabled()
         {
             return s_disableAutomaticUnpackingOfPackedValues.load();
+        }
+
+        void EnableForwardValuesSharing()
+        {
+            Microsoft::MSR::CNTK::Globals::EnableShareNodeValueMatrices();
+        }
+
+        void EnableHyperMemoryCompress()
+        {
+            Microsoft::MSR::CNTK::Globals::EnableHyperCompressMemory();
+        }
+
+        void EnableGradientAccumulationOptimization()
+        {
+            Microsoft::MSR::CNTK::Globals::EnableGradientAccumulationOptimization();
+        }
+
+        void DisableGradientAccumulationOptimization()
+        {
+            Microsoft::MSR::CNTK::Globals::DisableGradientAccumulationOptimization();
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
@@ -158,8 +180,35 @@ namespace CNTK
             return AreEquivalent(f1, f2, uids);
         }
 
+        template <typename ElementType>
+        bool AreEqual(const ElementType* data1, const ElementType* data2, size_t numElements, double relativeTolerance, double absoluteTolerance)
+        {
+            for (size_t i = 0; i < numElements; ++i)
+            {
+                auto firstValue = data1[i];
+                auto secondValue = data2[i];
+                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, std::abs(((ElementType)relativeTolerance) * firstValue));
+                if (std::abs(firstValue - secondValue) > allowedTolerance)
+                    return false;
+            }
+
+            return true;
+        }
+
+        template <typename ElementType>
+        std::pair<ElementType*, NDArrayViewPtr> GetCPUDataPtr(const NDArrayView& view) 
+        {
+            if (view.Device().Type() == DeviceKind::CPU)
+                return{ const_cast<ElementType*>(view.DataBuffer<ElementType>()), nullptr };
+            else
+            {
+                auto tempCPUDataView = view.DeepClone(DeviceDescriptor::CPUDevice());
+                return{ tempCPUDataView->WritableDataBuffer<ElementType>(), tempCPUDataView };
+            }
+        }
+
         template <typename ElementType> 
-        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2)
+        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
         {
             if (std::addressof(view1) == std::addressof(view2))
             {
@@ -173,52 +222,106 @@ namespace CNTK
             }
 
             CNTK::NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
-            ElementType* data1 = nullptr;
-            ElementType* data2 = nullptr;
-            if (view1.Device().Type() == DeviceKind::CPU)
-            {
-                data1 = const_cast<ElementType*>(view1.DataBuffer<ElementType>());
-            }
-            else
-            {
-                temp1CpuDataView = MakeSharedObject<CNTK::NDArrayView>(AsDataType<ElementType>(), view1.Shape(), DeviceDescriptor::CPUDevice());
-                temp1CpuDataView->CopyFrom(view1);
-                data1 = temp1CpuDataView->WritableDataBuffer<ElementType>();
-            }
-
-            if (view2.Device().Type() == DeviceKind::CPU)
-            {
-                data2 = const_cast<ElementType*>(view2.DataBuffer<ElementType>());
-            }
-            else
-            {
-                temp2CpuDataView = MakeSharedObject<CNTK::NDArrayView>(AsDataType<ElementType>(), view2.Shape(), DeviceDescriptor::CPUDevice());
-                temp2CpuDataView->CopyFrom(view2);
-                data2 = temp2CpuDataView->WritableDataBuffer<ElementType>();
-            }
+            ElementType* data1;
+            ElementType* data2;
+            std::tie(data1, temp1CpuDataView) = GetCPUDataPtr<ElementType>(view1);
+            std::tie(data2, temp2CpuDataView) = GetCPUDataPtr<ElementType>(view2);
 
             size_t numElements = view1.Shape().TotalSize();
+            return AreEqual(data1, data2, numElements, relativeTolerance, absoluteTolerance);
+        }
 
+        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
+        {
+            if (view1.GetDataType() == DataType::Float)
+                return AreEqual<float>(view1, view2, relativeTolerance, absoluteTolerance);
+
+            if (view1.GetDataType() == DataType::Double)
+                return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
+
+            LogicError("Unknown DataType");
+        }
+
+        std::pair<const MaskKind*, NDMaskPtr> GetCPUDataPtr(const NDMask& mask)
+        {
+            if (mask.Device() == DeviceDescriptor::CPUDevice())
+                return{ mask.DataBuffer(), nullptr };
+            else
+            {
+                auto tempCPUMask = mask.DeepClone(DeviceDescriptor::CPUDevice());
+                return{ tempCPUMask->DataBuffer(), tempCPUMask };
+            }
+        }
+
+        bool AreEqual(const NDMask& mask1, const NDMask& mask2)
+        {
+            if (mask1.Shape() != mask2.Shape())
+                return false;
+
+            NDMaskPtr tempCPUMask1, tempCPUMask2;
+            const MaskKind* mask1Data = nullptr;
+            const MaskKind* mask2Data = nullptr;
+            std::tie(mask1Data, tempCPUMask1) = GetCPUDataPtr(mask1);
+            std::tie(mask2Data, tempCPUMask2) = GetCPUDataPtr(mask2);
+
+            size_t numElements = mask1.Shape().TotalSize();
             for (size_t i = 0; i < numElements; ++i)
             {
-                if (data1[i] != data2[i])
-                {
+                if (mask1Data[i] != mask2Data[i])
                     return false;
-                }
             }
+
             return true;
         }
 
-        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2)
+        template <typename ElementType>
+        bool AreEqual(const ::CNTK::Value& value1, const ::CNTK::Value& value2, double relativeTolerance, double absoluteTolerance)
         {
-            if (view1.GetDataType() == DataType::Float)
+            if (std::addressof(value1) == std::addressof(value2))
+                return true;
+
+            // If neither of the values have mask, we just compare the Data
+            if (!value1.Mask() && !value2.Mask())
+                return AreEqual(*value1.Data(), *value2.Data(), relativeTolerance, absoluteTolerance);
+
+            // Both or neither should have masks
+            if ((!value1.Mask() && value2.Mask()) || (!value2.Mask() && value1.Mask()) || !AreEqual(*value1.Mask(), *value2.Mask()))
+                return false;
+
+            if ((value1.GetDataType() != value2.GetDataType()) || (value1.Shape() != value2.Shape()))
+                return false;
+
+            NDMaskPtr tempCPUMask;
+            const MaskKind* maskData;
+            std::tie(maskData, tempCPUMask) = GetCPUDataPtr(*value1.Mask());
+
+            CNTK::NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
+            ElementType* data1;
+            ElementType* data2;
+            std::tie(data1, temp1CpuDataView) = GetCPUDataPtr<ElementType>(*value1.Data());
+            std::tie(data2, temp2CpuDataView) = GetCPUDataPtr<ElementType>(*value2.Data());
+
+            auto numMaskElements = value1.Mask()->Shape().TotalSize();
+            auto numElementsPerMaskUnit = value1.Shape().TotalSize() / numMaskElements;
+            for (size_t i = 0; i < numMaskElements; ++i)
             {
-                return AreEqual<float>(view1, view2);
-            } 
-            if (view1.GetDataType() == DataType::Double)
-            {
-                return AreEqual<double>(view1, view2);
+                if (maskData[i] != MaskKind::Invalid)
+                {
+                    if (!AreEqual(data1 + (i * numElementsPerMaskUnit), data2 + (i * numElementsPerMaskUnit), numElementsPerMaskUnit, relativeTolerance, absoluteTolerance))
+                        return false;
+                }
             }
+
+            return true;
+        }
+
+        bool AreEqual(const ::CNTK::Value& value1, const ::CNTK::Value& value2, double relativeTolerance, double absoluteTolerance)
+        {
+            if (value1.GetDataType() == DataType::Float)
+                return AreEqual<float>(value1, value2, relativeTolerance, absoluteTolerance);
+
+            if (value1.GetDataType() == DataType::Double)
+                return AreEqual<double>(value1, value2, relativeTolerance, absoluteTolerance);
 
             LogicError("Unknown DataType");
         }
@@ -248,6 +351,17 @@ namespace CNTK
         {
             Microsoft::MSR::CNTK::Globals::ForceDeterministicAlgorithms();
         }
+
+        bool ShouldForceDeterministicAlgorithms()
+        {
+            return Microsoft::MSR::CNTK::Globals::ShouldForceDeterministicAlgorithms();
+        }
+
+        static std::atomic<bool> s_threadsAreSet(false);
+        bool MaxNumCPUThreadsSet()
+        {
+            return s_threadsAreSet;
+        }
     }
 
     /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);
@@ -260,7 +374,8 @@ namespace CNTK
 
     /*static*/ DeviceDescriptor DeviceDescriptor::DefaultDevice()
     {
-        std::call_once(s_initDefaultDeviceFlag, [=]{
+        std::call_once(s_initDefaultDeviceFlag, []
+        {
             s_defaultDevice.reset(new DeviceDescriptor(DeviceDescriptor::BestDevice()));
         });
         return *s_defaultDevice;
@@ -286,7 +401,8 @@ namespace CNTK
         if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
             RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
 
-        std::call_once(s_initDefaultDeviceFlag, []{
+        std::call_once(s_initDefaultDeviceFlag, []
+        {
             // do nothing. This will set the flag above, in case when DefaultDevice() was never called before.
         });
 
@@ -306,7 +422,8 @@ namespace CNTK
     {
         using namespace Microsoft::MSR::CNTK;
 
-        std::call_once(s_initAllDevicesFlag, [=]{
+        std::call_once(s_initAllDevicesFlag, []
+        {
            s_allDevices.reset(new std::vector<DeviceDescriptor>());
 #ifndef CPUONLY
            auto allGpusData = GetAllGpusData();
@@ -342,11 +459,30 @@ namespace CNTK
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForDynamicAxes = std::numeric_limits<int>::max();
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllStaticAxes = std::numeric_limits<int>::max() - 1;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
-
+    /*static*/ const int Axis::SentinelEndStaticAxisIndexValue = std::numeric_limits<int>::max() - 3;
+    
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
-    /*static*/ const std::vector<Axis> Axis::DefaultInputVariableDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
-    /*static*/ const std::vector<Axis> Axis::UnknownDynamicAxes = { Axis(SentinelStaticAxisIndexValueForUnknownAxes) };
+    static std::shared_ptr<std::vector<Axis>> s_defaultInputVariableDynamicAxes, s_unknownDynamicAxes;
+    static std::once_flag s_initDefaultInputVariableDynamicAxesFlag, s_initUnknownDynamicAxesFlag;
+
+    /*static*/ const std::vector<Axis>& Axis::DefaultInputVariableDynamicAxes() 
+    {
+      std::call_once(s_initDefaultInputVariableDynamicAxesFlag, []
+      {
+        s_defaultInputVariableDynamicAxes.reset(new std::vector<Axis>({ Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() }));
+      });
+      return *s_defaultInputVariableDynamicAxes;
+    }
+
+    /*static*/ const std::vector<Axis>& Axis::UnknownDynamicAxes()
+    {
+      std::call_once(s_initUnknownDynamicAxesFlag, []
+      {
+        s_unknownDynamicAxes.reset(new std::vector<Axis>({ Axis(SentinelStaticAxisIndexValueForUnknownAxes) }));
+      });
+      return *s_unknownDynamicAxes;
+    }
 
     /*static*/ const Axis& Axis::DefaultDynamicAxis()
     {
@@ -366,21 +502,19 @@ namespace CNTK
         return s_allStaticAxes;
     }
 
-
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {
         s_uniqueDynamicAxisNames.RegisterAxisName(axisName);
     }
 
-    std::atomic<size_t> s_maxNumCPUThreads(std::thread::hardware_concurrency());
     void SetMaxNumCPUThreads(size_t numCPUThreads)
     {
-        s_maxNumCPUThreads.store(numCPUThreads);
+        Internal::s_threadsAreSet = true;
         Microsoft::MSR::CNTK::CPUMatrix<float>::SetNumThreads((int)numCPUThreads);
     }
 
     size_t GetMaxNumCPUThreads()
     {
-        return s_maxNumCPUThreads.load();
+        return Microsoft::MSR::CNTK::CPUMatrix<float>::GetMaxNumThreads();
     }
 }

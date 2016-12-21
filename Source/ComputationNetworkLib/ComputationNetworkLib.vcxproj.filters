@@ -43,6 +43,9 @@
     <ClCompile Include="LatticeFreeMMINode.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
+    <ClCompile Include="LinearAlgebraNodes.cpp">
+      <Filter>Nodes</Filter>
+    </ClCompile>
     <ClCompile Include="RNNNodes.cpp">
       <Filter>Nodes</Filter>
     </ClCompile>
@@ -148,6 +151,9 @@
       <Filter>Nodes</Filter>
     </ClInclude>
     <ClInclude Include="RNNNodes.h">
+      <Filter>Nodes</Filter>
+    </ClInclude>
+    <ClInclude Include="UserDefinedV2FunctionNode.h">
       <Filter>Nodes</Filter>
     </ClInclude>
   </ItemGroup>

@@ -92,7 +92,7 @@ public:
         }
 
         if (m_verbosity > 0)
-            fprintf(stderr, "Total Samples Evaluated = %lu\n", totalEpochSamples);
+            fprintf(stderr, "Total Samples Evaluated = %lu\n", (unsigned long)totalEpochSamples);
 
         // clean up
     }
@@ -268,7 +268,7 @@ public:
             }
             totalEpochSamples += actualMBSize;
 
-            fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", numMBsRun, actualMBSize);
+            fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", (unsigned long)numMBsRun, (unsigned long)actualMBSize);
             if (outputPath == L"-") // if we mush all nodes together on stdout, add some visual separator
                 fprintf(stdout, "\n");
 
@@ -285,7 +285,7 @@ public:
             fprintfOrDie(f, "%s", formattingOptions.epilogue.c_str());
         }
 
-        fprintf(stderr, "Written to %ls*\nTotal Samples Evaluated = %lu\n", outputPath.c_str(), totalEpochSamples);
+        fprintf(stderr, "Written to %ls*\nTotal Samples Evaluated = %lu\n", outputPath.c_str(), (unsigned long)totalEpochSamples);
 
         // flush all files (where we can catch errors) so that we can then destruct the handle cleanly without error
         for (auto & iter : outputStreams)

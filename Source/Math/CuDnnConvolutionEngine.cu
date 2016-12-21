@@ -183,6 +183,8 @@ public:
     {
     }
 
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
+
 protected:
     using Base::m_geometry;
     using Base::m_deviceId;
@@ -247,10 +249,15 @@ protected:
             if (CUDNN_STATUS_SUCCESS == err2)
                 err = CUDNN_STATUS_SUCCESS;
         }
+
+        // Only supported in MatrixPool enable
+        // NOTE: it's unnecessary to keep the workspace.
+        workspace.Resize(0, 0);
+
         CUDNN_CALL(err);
     }
 
-    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace) override
+    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace) override
     {
         size_t batchSize = srcGrad.GetNumCols();
         // Find best algo and allocate temp buffer, if needed.
@@ -277,10 +284,11 @@ protected:
             workspace.Resize((m_backDataAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardData(*m_cudnn, &C::One, *m_kernelT, ptr(kernel), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.Algo.algo,
-                                                ptr(workspace), m_backDataAlgo.Algo.memory, &C::One, m_inT, ptr(grad)));
+                                                ptr(workspace), m_backDataAlgo.Algo.memory, accumulateGradient ? &C::One : &C::Zero, m_inT, ptr(grad)));
+        workspace.Resize(0, 0);
     }
 
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*allowReuse*/, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool /*allowReuse*/, Mat& workspace) override
     {
         size_t batchSize = in.GetNumCols();
         // Find best algo and allocate temp buffer, if needed.
@@ -307,7 +315,8 @@ protected:
             workspace.Resize((m_backFiltAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardFilter(*m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), *m_conv, m_backFiltAlgo.Algo.algo,
-                                                  ptr(workspace), m_backFiltAlgo.Algo.memory, &C::One, *m_kernelT, ptr(kernelGrad)));
+                                                  ptr(workspace), m_backFiltAlgo.Algo.memory, accumulateGradient ? &C::One : &C::Zero, *m_kernelT, ptr(kernelGrad)));
+        workspace.Resize(0, 0);
     }
 
     void EnsurePoolingInitialized() override

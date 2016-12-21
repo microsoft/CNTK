@@ -104,7 +104,11 @@ const wchar_t* GetScanFormatString(unsigned int)
 {
     return L" %u";
 }
-//template <>    const wchar_t* GetScanFormatString(unsigned long) {return L" %lu";}
+template <>
+const wchar_t* GetScanFormatString(unsigned long) 
+{
+    return L" %lu";
+}
 template <>
 const wchar_t* GetScanFormatString(float)
 {
@@ -116,7 +120,7 @@ const wchar_t* GetScanFormatString(double)
     return L" %lg";
 }
 template <>
-const wchar_t* GetScanFormatString(size_t)
+const wchar_t* GetScanFormatString(unsigned long long)
 {
     return L" %llu";
 }
@@ -161,7 +165,13 @@ const wchar_t* GetFormatString(unsigned int)
 {
     return L" %u";
 }
-//template <>    const wchar_t* GetFormatString(unsigned long) {return L" %lu";}
+
+template <>
+const wchar_t* GetFormatString(unsigned long)
+{
+    return L" %lu";
+}
+
 template <>
 const wchar_t* GetFormatString(float)
 {
@@ -173,7 +183,7 @@ const wchar_t* GetFormatString(double)
     return L" %.17g";
 }
 template <>
-const wchar_t* GetFormatString(size_t)
+const wchar_t* GetFormatString(unsigned long long)
 {
     return L" %llu";
 }
@@ -547,7 +557,7 @@ uint64_t fgetpos(FILE* f)
 void fsetpos(FILE* f, uint64_t reqpos)
 {
 #ifdef _MSC_VER // standard does not allow to cast between fpos_t and integer numbers, and indeed it does not work on Linux (but on Windows and GCC)
-#ifdef _MSC_VER // special hack for VS CRT
+#if (_MSC_VER <= 1800) // Note: this does not trigger if loaded in vs2013 mode in vs2015!
     // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
     // we generally read linearly but skip a few bytes or KB occasionally, as is
     // the case in speech recognition tools. This requires a number of optimizations.
@@ -570,6 +580,34 @@ void fsetpos(FILE* f, uint64_t reqpos)
         if (curpos != fgetpos(f) || curpos + f->_cnt != cureob)
             break; // oops
     }
+#else
+    // special hack for VS CRT (for VS2015)
+    // Visual Studio's ::fsetpos() flushes the read buffer. This conflicts with a situation where
+    // we generally read linearly but skip a few bytes or KB occasionally, as is
+    // the case in speech recognition tools. This requires a number of optimizations.
+#define MAX_FREAD_SKIP 65536
+
+    // forward seeks up to 64KiB are simulated
+    // through a dummy read instead of fsetpos to
+    // the new position.
+    uint64_t curpos = fgetpos(f);
+    size_t n = min((size_t)reqpos - (size_t)curpos, (size_t)MAX_FREAD_SKIP);
+
+    // TODO: if we only skip a limited number of bytes, fread() them
+    //       instead of fsetpos() to the new position since the vs2015
+    //       libraries might drop the internal buffer and thus have to re-read
+    //       from the new position, somthing that costs performance.
+    if (n < MAX_FREAD_SKIP)
+    {
+        // in case we  stay in the internal buffer, no fileio is needed for this operation.
+        char buf[MAX_FREAD_SKIP];
+        fread(buf, sizeof(buf[0]), n, f); // (this may fail, but really shouldn't)
+
+        // if we made it then do not call fsetpos()
+        if (reqpos == fgetpos(f))
+            return;
+    }
+#undef MAX_FREAD_SKIP
 #endif // end special hack for VS CRT
 
     // actually perform the seek

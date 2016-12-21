@@ -212,6 +212,13 @@ void GPUSparseMatrix<ElemType>::SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYP
 {
 }
 
+#if 0
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::SetMatrixFromSBCFormat(const size_t*, const ElemType*, const size_t, const size_t, const size_t)
+{
+}
+#endif
+
 // forward pass from feature to hidden layer
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix<ElemType>& lhs, const bool transposeA,
@@ -1067,12 +1074,12 @@ void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly)
+void GPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly, bool cachedResize)
 {
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly)
+void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly, bool cachedResize)
 {
 }
 
@@ -2221,6 +2228,8 @@ void GranularGPUDataTransferer::WaitForSyncPointOnAssignStreamAsync() {}
 
 PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int /*deviceId*/) : GranularGPUDataTransferer() {}
 
+PrefetchGPUDataTransferer::~PrefetchGPUDataTransferer() {}
+
 GPUDataTransferer::GPUDataTransferer(int, bool){}
 GPUDataTransferer::~GPUDataTransferer(){}
 void GPUDataTransferer::CopyGPUToCPUAsync(void*, size_t, void*){}
@@ -2232,7 +2241,7 @@ void GPUDataTransferer::WaitForCopyCPUToGPUAsync(){}
 
 #pragma region GPURNGHandle functions
 
-GPURNGHandle::GPURNGHandle(int deviceId, unsigned long seed)
+GPURNGHandle::GPURNGHandle(int deviceId, uint64_t seed, uint64_t offset)
     : RNGHandle(deviceId)
 {
 }

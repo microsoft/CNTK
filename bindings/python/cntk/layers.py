@@ -8,137 +8,302 @@
 #           e.g. a fully connected layer with non-linearity
 
 # TODO: clean up the dependencies
+from __future__ import division
 import numpy as np
-import sys
-import os
-import time
-from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
-from cntk.learner import sgd, fsadagrad
-from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
-import itertools
-from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
-from cntk.utils import Record, _as_tuple
-from cntk.blocks import *
-from cntk.blocks import _name_and_extend_Function, _wrap_rename_Function, _trace_layers  # (debugging)
-from cntk.initializer import glorot_uniform
+from .ops import parameter, input_variable, placeholder_variable, combine
+from .ops import times, convolution, pooling, batch_normalization, dropout
+from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
+from .utils import Record, _as_tuple
+from .blocks import *  # TODO: reduce to what we actually use
+from .blocks import _trace_layers  # (debugging)
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", ".."))
-# TODO: move these out from examples
-#from examples.common.nn import slice, sigmoid, log, tanh, past_value, future_value, print_training_progress, negate
-
-from cntk.ops.functions import Function
-from cntk.ops.variables import Variable
+from .ops.functions import Function
+from .ops.variables import Variable
 
 # this is what we initialize weight matrices from by default
-from cntk.blocks import _default_initializer
+from .blocks import _get_current_default_options, _is_given, _initializer_for, _resolve_activation, _INFERRED
 
-# Linear -- create a fully-connected linear projection layer
+# Dense -- create a fully-connected linear projection layer with optional non-linear activation
 # Note: shape may describe a tensor as well.
-# TODO: change to new random-init descriptor
-# inputRank given: number of zeroes to add to W (mapRank must not be given)
-# mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
-# none      given: expand W to all (same as mapRank=0)
-def Linear(shape, _inf, bias=True, init=_default_initializer, init_bias=0, input_rank=None, map_rank=None):
-    out_shape = _as_tuple(shape)
+# input_rank given: number of inferred axes to add to W (map_rank must not be given)
+# map_rank   given: expand W to leave exactly mapRank axes (input_rank must not be given)
+# none       given: expand W to all (same as map_rank=0)
+def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_default_or_None,
+          input_rank=None, map_rank=None,
+          bias=bias_default_or_True, init_bias=init_bias_default_or_0):
+    activation = _resolve_activation(activation)
+    bias       = bias if _is_given(bias) else _get_current_default_options().bias
+    output_shape = _as_tuple(shape)
 
-    # TODO: implement the full semantics of the BrainScript code
-    #inputShape =
-    #    if       BS.Constants.IsNone (inputRank) then Inferred  # not given: one Inferred, which will get expanded
-    #    else if !BS.Constants.IsNone (mapRank)   then Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
-    #    else Repeat (inputRank, Inferred)
-    #W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale}
-    #b = ParameterTensor {outDim, initValue=0}
-    #outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
-    #inferInputRankToMap =
-    #    if      !BS.Constants.IsNone (inputRank) then -1  # means not specified
-    #    else if  BS.Constants.IsNone (mapRank)   then 0   # default to 'use all input dims'
-    #    else mapRank
-    #apply (x) =
-    #    if bias
-    #    then Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap) + b
-    #    else Times (W, x, outputRank=outputRank, inferInputRankToMap=inferInputRankToMap)
+    if input_rank is not None and map_rank is not None:
+        raise ValueError("Dense: input_rank and map_rank cannot be specified at the same time.")
 
-    W = Parameter(_inf.shape + out_shape, init=init     , name='W')
-    b = Parameter(             out_shape, init=init_bias, name='b') if bias else None
-    x = Placeholder(_inf=_inf, name='linear_arg')
-    apply_x = Function.__matmul__(x, W) + b if bias else \
-              Function.__matmul__(x, W)
-    _name_and_extend_Function(apply_x, 'Linear')
-    return apply_x
-    # TODO: how to break after the else?
+    # determine meaning of axes
+    # W gets dimension (input_shape + shape)
+    # where input_shape is determined as:
+    #  - by default, equal to the dimensions of the input passed to Dense()
+    #  - if input_rank is given, then the last 'input_rank' dimensions of the input (all others are not reduced over)
+    #  - if map_rank is given, then the all but the first 'map_rank' dimensions of the input (those are not reduced over)
+    # where input_rank and map_rank are mutuallly exclusive.
 
-def Dense(shape, _inf, bias=True, init=_default_initializer, init_bias=0, input_rank=None, map_rank=None, activation=None):
-    if activation is None:  # TODO: change default to identity once we no longer need _inf
-        activation = Identity(_inf=shape)
-    apply_x = Linear(shape, _inf, bias=bias, init=init, init_bias=init_bias, input_rank=input_rank, map_rank=map_rank) \
-           >> activation
-    # TODO: Any way to do some similar pattern ^^ without backslash?
-    _name_and_extend_Function(apply_x, 'Dense')
-    return apply_x
+    #output_rank = -len(output_shape)   # support outputs with tensor layouts
+    # BUGBUG: Should this be a negative number now, since output is the last axis in Python?
+    output_rank = len(output_shape)   # support outputs with tensor layouts
+
+    # If input_rank not given then pass a single _INFERRED; map_rank if given will determine the input_rank.
+    # The dimension inference may still create multiple axes.
+    input_shape = _INFERRED * (input_rank if input_rank is not None else 1)
+
+    if input_rank is not None:
+        UntestedBranchError("Dense, input_rank option not implemented")
+        infer_input_rank_to_map = -1 # means map_rank is not specified; input_rank rules
+    elif map_rank is None:
+        infer_input_rank_to_map = 0  # neither given: default to 'infer W to use all input dims'
+    else:
+        UntestedBranchError("Dense, map_rank option not implemented")
+        infer_input_rank_to_map = map_rank  # infer W to use all input dims except the first static 'map_rank' ones
+
+    # parameters bound to this Function
+    init_weights = _initializer_for(init, Record(output_rank=output_rank))
+    W = Parameter(input_shape + output_shape, init=init_weights, name='W')
+    b = Parameter(              output_shape, init=init_bias,    name='b') if bias else None
+
+    # expression of this function
+    x = Placeholder(name='dense_arg')
+    apply_x = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
+    if b:
+        apply_x = apply_x + b
+    apply_x = apply_x >> activation
+    return Block(apply_x, 'Dense', Record(W=W, b=b))
 
 # Embedding -- create a linear embedding layer
-# TODO: after removing loading from file, now we have two similar params, weight and init which seems redundant.
-# TODO: Once _inf is gone, change interface to pass weights as a Constant, e.g.
-#       Embedding(shape, constant(np.load('PATH')))
-#       Not nice since now we don't need the output shape either. Grmpf.
-def Embedding(shape, _inf, weights=None, init=_default_initializer, transpose=False):
-    shape = _as_tuple(shape)
-    full_shape = (shape + _inf.shape) if transpose else (_inf.shape + shape)
-    if weights is None:  # no weights given: learn the embedding
-        E = Parameter(full_shape, init=init, name='E')
-    else:                # weights given: use them as constant
+# To create an embedding from a file, use this:
+#  Embedding(weights=np.load('PATH'))
+def Embedding(shape=None, init=None, weights=None):
+    if init is not None or weights is not None:
+        raise ValueError('Embedding: init and weights options are mutually exclusive')
+
+    # parameters bound to this Function:
+    # no weights given: learn the embedding
+    if weights is None:
+        if shape is None:
+            raise ValueError('Embedding: output shape must be specified')
+        if init is None:
+            init = init_default_or_glorot_uniform
+        shape = _as_tuple(shape)
+        weight_shape = _INFERRED + shape
+        E = Parameter(weight_shape, init=init, name='E')
+    # weights given: use them as constant
+    else:
         UntestedBranchError("Embedding, from constant")
-        E = Constant(full_shape, init=weights, name='E')  # TODO: can 'weights' be a CNTK object already? Then how to do this?
-    x = Placeholder(_inf=_inf, name='embedding_arg')
-    apply_x = Function.__matmul__(E, x) if transpose else \
-              Function.__matmul__(x, E)     # x is expected to be sparse one-hot
-    _name_and_extend_Function(apply_x, 'Embedding')
-    return apply_x
+        import numpy as np
+        if not isinstance(weights, array): # TODO: is this the correct test for a numpy array
+            UntestedBranchError("Embedding, from constant that is not an array")
+            # TODO: can 'weights' be a CNTK object? Then how to do this?
+            raise ValueError('Embedding: weights must be a numpy array')
+        weight_shape = np.shape(weights)
+        if shape is not None: # user may give shape, then it must match
+            if len(shape) >= len(weight_shape) or weight_shape[-len(shape):] != shape:
+                raise ValueError('Embedding: shape parameter must match weights')
+        E = Constant(weights, name='E')
 
-def Stabilizer(_inf, steepness=4):
-    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
-    # this behaves linear for weights around 1, yet guarantees positiveness
+    # expression
+    x = Placeholder(name='embedding_arg')
+    apply_x = times(x, E)
+    return Block(apply_x, 'Embedding', Record(E=E))
 
-    # parameters
-    param = Parameter((1), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
-    # TODO: compute this strange value directly in Python
+# Convolution -- create a convolution layer with optional non-linearity
+#             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape) )
+#    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape) )
+#    kernel : (                +  (output shape) +  (reduction shape) + (filte  shape)   )
+#    out    : ( (sample shape) +  (output shape) +                    + (shifting shape) )
+# TODO: Can we specify atrous convolution? How?
+# TODO: sharing = false?
+# TODO: conflict of parameter order: filter_shape or num_filters first?
+#  - filter_shape first is logical for non-NN applications such as straight image filtering
+#  - num_filters first is what Keras does
+def Convolution(filter_shape,        # e.g. (3,3)
+                num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension_
+                activation=activation_default_or_None,
+                init=init_default_or_glorot_uniform,
+                pad=pad_default_or_False,
+                strides=1,
+                sharing=True,     # (must be True currently)
+                bias=bias_default_or_True,
+                init_bias=init_bias_default_or_0,
+                reduction_rank=1, # (must be 1 currently)
+                transpose=False,  # (must be False currently)
+                max_temp_mem_size_in_samples=0):
+    #UntestedBranchError("Convolution")
+    activation = _resolve_activation(activation)
+    pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
+    bias = bias if _is_given(bias) else _get_current_default_options().bias
+    # TODO: there must be a Python trick to do this as a function call on locals or so
+    if reduction_rank != 1:
+        NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
+    if transpose:
+        NotImplementedError("Convolution: transpose option currently not supported")
+    if not sharing:
+        NotImplementedError("Convolution: sharing option currently must be True")
+    output_channels_shape = _as_tuple(num_filters)
+    output_rank = len(output_channels_shape)
+    filter_rank = len(filter_shape)
+    kernel_shape = _INFERRED * reduction_rank + filter_shape # kernel := filter plus reductionDims
 
-    # application
-    x = Placeholder(_inf=_inf, name='stabilizer_arg')
-    # TODO: risk of confusion; can these functions be namespaced?
-    beta = log (1 + exp (steepness * param)) / steepness
-    apply_x = beta * x
-    _name_and_extend_Function(apply_x, 'Stabilizer')
-    return apply_x
+    # parameters bound to this Function
+    #init_kernel = glorot_uniform(filter_rank=-filter_rank, output_rank=1)
+    init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
+    # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag
+    W = Parameter(output_channels_shape + kernel_shape,             init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
+    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
-def Recurrence(over, _inf=None, go_backwards=False, initial_state=None):
+    # expression
+    x = Placeholder(name='convolution_arg')
+    # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
+    apply_x = convolution (W, x,
+                           strides=_as_tuple(strides),
+                           sharing=_as_tuple(sharing),
+                           auto_padding=_as_tuple(pad),
+                           # TODO: can we rename auto_padding to pad?
+                           transpose=transpose,
+                           max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+    if bias:
+        apply_x = apply_x + b
+    apply_x = apply_x >> activation
+    return Block(apply_x, 'Convolution', Record(W=W, b=b))
+
+# Create a Pooling layer with one of following types:
+#
+#   MaxPooling and GlobalMaxPooling
+#   AveragePooling and GlobalAveragePooling
+#
+# Setting the filter_shape to None, mean global pooling.
+from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
+def Pooling(op,      # PoolingType_Max or _Average
+            filter_shape,  # e.g. (3,3)
+            strides=1,
+            pad=False):
+    x = Placeholder(name='pooling_arg')
+    apply_x = pooling (x, op, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
+
+    if op == PoolingType_Average:
+        op_name = 'AveragePooling'
+    elif op == PoolingType_Max:
+        op_name = 'MaxPooling'
+    else:
+        raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
+    return Block(apply_x, op_name)
+
+# MaxPooling
+def MaxPooling(filter_shape,  # e.g. (3,3)
+               strides=1,
+               pad=False):
+    return Pooling(PoolingType_Max, filter_shape, strides=strides, pad=pad)
+
+# AveragePooling
+def AveragePooling(filter_shape,  # e.g. (3,3)
+                   strides=1,
+                   pad=False):
+    return Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad)
+
+# GlobalMaxPooling
+def GlobalMaxPooling():
+    return Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False)
+
+# GlobalAveragePooling
+def GlobalAveragePooling():
+    return Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False)
+
+# Recurrence() -- run a block recurrently over a time sequence
+def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
-    if go_backwards:
-        UntestedBranchError("Recurrence, go_backwards option")
+    initial_state = initial_state if _is_given(initial_state) else _get_current_default_options().initial_state
+    # if initial state is given and a numeric constant, then turn it into a Constant() object
+    if np.isscalar(initial_state):
+        initial_state = Constant(initial_state, shape=(1)) # TODO: This should be automatically done inside the API.
     def previous_hook(state):
-        if hasattr(state, 'outputs'):
-           outputs = state.outputs
-           if len(outputs) > 1:  # if multiple then apply to each element
-               return tuple([previous_hook(s) for s in outputs])
+        if isinstance (state, tuple):  # if multiple then apply to each element
+            return tuple([previous_hook(s) for s in state])
         # not a tuple: must be a 'scalar', i.e. a single element
         return past_value  (state, initial_state) if not go_backwards else \
                future_value(state, initial_state)
-    x = Placeholder(_inf=_inf, name='recurrence_arg')
-    prev_state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
-    f_x_h_c = over(x, prev_state_forward) # apply the recurrent over
+    x = Placeholder(name='recurrence_arg')
+    state_forward = over.create_placeholder() # create a placeholder or a tuple of placeholders
+    prev_state = previous_hook(state_forward)  # delay (h, c)
+    f_x_h_c = over(x, prev_state) # apply the recurrent over
     # this returns a Function (x, (h_prev, c_prev)) -> (h, c)
+    h_c = f_x_h_c.outputs
+    replacements = { value_forward: value for (value_forward, value) in zip(list(_as_tuple(state_forward)), h_c) }
+    f_x_h_c.replace_placeholders(replacements)  # resolves state_forward := h_c
     h = f_x_h_c.outputs[0]  # 'h' is a Variable (the output of a Function that computed it)
     if _trace_layers:
         _log_node(h)
         _log_node(combine([h.owner]))
-    prev_state = previous_hook(f_x_h_c)  # delay (h, c)
-    replacements = { value_forward: value.output for (value_forward, value) in zip(list(prev_state_forward), list(prev_state)) }
-    f_x_h_c.replace_placeholders(replacements)  # binds _h_c := prev_state
-    apply_x = combine([h.owner])     # the Function that yielded 'h', so we get to know its inputs
+    apply_x = combine([h])     # the Function that yielded 'h', so we get to know its inputs
     # apply_x is a Function x -> h
-    _name_and_extend_Function(apply_x, 'Recurrence')
-    if _trace_layers:
-        _log_node(apply_x)
-    return apply_x
+    return Block(apply_x, 'Recurrence', Record(over=over))
+
+# Delay -- delay input
+# TODO: This does not really have bound parameters. Should it still be a layer?
+def Delay(T=1, initial_state=None):
+    UntestedBranchError("Delay")
+
+    # expression
+    x = Placeholder(name='delay_arg')
+    if T > 0:
+        apply_x = past_value  (x, time_step=T, initial_state=initial_state)
+    elif T < 0:
+        apply_x = future_value(x, time_step=T, initial_state=initial_state)
+    else:
+        apply_x = x
+    return Block(apply_x, 'Delay')
+
+# Dropout -- create a drop-out layer
+def Dropout(prob):
+    # expression
+    x = Placeholder(name='dropout_arg')
+    apply_x = dropout(x, dropout_rate=prob)
+    return Block(apply_x, 'Dropout')
+
+# BatchNormalization -- create a batch-normalization layer
+# TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
+def BatchNormalization(map_rank=None,  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
+                       init_scale=1,
+                       normalization_time_constant=5000, blend_time_constant=0,
+                       epsilon=0.00001, use_cntk_engine=True):
+    # TODO: make map_rank a default option, once per-layer type defaults are implemented
+
+    # parameters bound to this Function
+    norm_shape  = _INFERRED
+    if map_rank is not None and map_rank != 1:
+        UntestedBranchError("BatchNormalization map_rank can only be 1 or None for now")
+    scale        = Parameter(norm_shape, init=init_scale)
+    bias         = Parameter(norm_shape, init=0)
+    run_mean     = Constant(0, shape=norm_shape)  # note: these are not really constants; they are updated differently
+    run_variance = Constant(0, shape=norm_shape)
+
+    # expression
+    x = Placeholder(name='batch_normalization_arg')
+    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
+                                  #use_cntk_engine=use_cntk_engine)
+                                  use_cudnn_engine=not use_cntk_engine)
+    return Block(apply_x, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
+
+# LayerNormalization -- create a layer-normalization layer
+def LayerNormalization(initial_scale=1, initial_bias=0):
+    UntestedBranchError("LayerNormalization")
+
+    # parameters bound to this Function
+    scale = Parameter((1), init=initial_scale)  # TODO: offer Softplus version for protection, as for Stabilizer
+    bias  = Parameter((1), init=initial_bias)
+
+    # expression
+    x = Placeholder(name='layer_normalization_arg')
+    mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
+    x0 = x - mean;
+    std = sqrt (reduce_mean (x0 * x0))
+    #x_hat = element_divide (x0, std)
+    x_hat = x0 / std
+    apply_x = x_hat * scale + bias    # denormalize with learned parameters
+    return Block(apply_x, 'LayerNormalization', Record(scale=scale, bias=bias))

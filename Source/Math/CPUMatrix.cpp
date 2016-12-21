@@ -3435,10 +3435,10 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
                                  });
                 // REVIEW alexeyk: the following produces warning (see SCL_SECURE_NO_WARNINGS) so use loop instead.
                 // std::transform(indices.begin(), indices.begin() + topK, curIdx, [](const int& a) { return static_cast<ElemType>(a); });
-                for (int i = 0; i < topK; i++)
+                for (int i2 = 0; i2 < topK; i2++)
                 {
-                    curIdx[i] = static_cast<ElemType>(indices[i]);
-                    curMax[i] = curVal[indices[i]];
+                    curIdx[i2] = static_cast<ElemType>(indices[i2]);
+                    curMax[i2] = curVal[indices[i2]];
                 }
             }
         }
@@ -3611,9 +3611,9 @@ void CPUMatrix<ElemType>::Print(const char* matrixName, ptrdiff_t rowFirst, ptrd
     fprintf(stderr, "\n###### ");
     if (matrixName != nullptr)
         fprintf(stderr, "%s ", matrixName);
-    fprintf(stderr, "(%lu, %lu)", GetNumRows(), GetNumCols());
+    fprintf(stderr, "(%lu, %lu)", (unsigned long)GetNumRows(), (unsigned long)GetNumCols());
     if (rowFirst != 0 || colFirst != 0 || (size_t)(rowLast + 1) != GetNumRows() || (size_t)(colLast + 1) != GetNumCols())
-        fprintf(stderr, " [%ld:%ld, %ld:%ld]", rowFirst, rowLast, colFirst, colLast);
+        fprintf(stderr, " [%ld:%ld, %ld:%ld]", (long)rowFirst, (long)rowLast, (long)colFirst, (long)colLast);
     fprintf(stderr, " ######\n\n");
 
     if (IsEmpty())
@@ -4624,7 +4624,7 @@ void CPUMatrix<ElemType>::BatchNormalizationBackward(const CPUMatrix<ElemType>& 
 /// <param name="c">Resulting matrix, user is responsible for allocating this</param>
 template <class ElemType>
 void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const bool transposeA, const CPUMatrix<ElemType>& b, const bool transposeB,
-                                                 ElemType beta, CPUMatrix<ElemType>& c)
+                                                 ElemType beta, CPUMatrix<ElemType>& c, shared_ptr<QuantizedMultiplier<ElemType>> pQuantizedMultiplier)
 {
     if (a.IsEmpty() || b.IsEmpty())
         return;
@@ -4676,14 +4676,25 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
 
     ldc = (int) c.GetNumRows();
 
-    if (sizeof(ElemType) == sizeof(double))
+    if (pQuantizedMultiplier == nullptr)
     {
-        cblas_dgemm((CBLAS_ORDER) (int)MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            cblas_dgemm((CBLAS_ORDER) (int)MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<double*>(a.Data()), lda, reinterpret_cast<double*>(b.Data()), ldb, beta, reinterpret_cast<double*>(c.Data()), ldc);
+        }
+        else
+        {
+#pragma warning(suppress : 4244)
+            cblas_sgemm((CBLAS_ORDER) (int)MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
+        }
     }
     else
     {
-#pragma warning(suppress : 4244)
-        cblas_sgemm((CBLAS_ORDER) (int)MatrixOrder::ColMajor, mklTransA, mklTransB, m, n, k, alpha, reinterpret_cast<float*>(a.Data()), lda, reinterpret_cast<float*>(b.Data()), ldb, beta, reinterpret_cast<float*>(c.Data()), ldc);
+        // TODO: support transpose product
+        if (mklTransA == CBLAS_TRANSPOSE::CblasTrans || mklTransB == CBLAS_TRANSPOSE::CblasTrans)
+            LogicError("Quantized multiplier currently doesn't support transpose.");
+
+        pQuantizedMultiplier->Multiply(m, n, k, a.Data(), b.Data(), c.Data());
     }
 }
 
@@ -6062,6 +6073,16 @@ int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
     #elif defined(USE_OPENBLAS)
         openblas_set_num_threads(numThreads);
     #endif
+#endif
+    return numThreads;
+}
+
+template <class ElemType>
+int CPUMatrix<ElemType>::GetMaxNumThreads()
+{
+    int numThreads = (int)std::thread::hardware_concurrency();
+#ifdef _OPENMP
+    numThreads = omp_get_max_threads();
 #endif
     return numThreads;
 }

@@ -16,6 +16,11 @@ enable_cuda=
 
 enable_python=
 
+# NCCL communication library
+have_nccl=no
+nccl_path=
+nccl_check=include/nccl.h
+
 # CNTK Custom MKL Version
 cntk_custom_mkl_version=2
 
@@ -31,6 +36,10 @@ openblas_check=include/openblas_config.h
 # Boost library
 boost_path=
 boost_check=include/boost/test/unit_test.hpp
+
+# Protocol buffers library
+protobuf_path=
+protobuf_check=lib/libprotobuf.a
 
 have_kaldi=no
 kaldi_path=
@@ -81,6 +90,9 @@ enable_1bitsgd=$default_use_1bitsgd
 default_use_code_coverage=no
 enable_code_coverage=$default_use_code_coverage
 
+default_use_asgd=yes
+enable_asgd=$default_use_asgd
+
 # List from best to worst choice
 default_path_list="/usr /usr/local /opt /opt/local"
 
@@ -90,14 +102,15 @@ default_openblas=""
 
 default_boost="boost-1.60.0"
 
-# NOTE: Will get compilation errors with cuda-6.0
-default_cudas="cuda-7.5 cuda-7.0 cuda-6.5"
+default_cudas="cuda-8.0 cuda-7.5"
+default_nccls="nccl"
 default_kaldis="kaldi-trunk kaldi-c024e8aa"
 default_gdk_includes="include/nvidia/gdk"
 default_gdk_nvml_libs="src/gdk/nvml/lib"
 default_cubs="cub-1.4.1"
 default_cudnns="cudnn-5.1 cudnn-5.0"
 default_opencvs="opencv-3.1.0 opencv-3.0.0"
+default_protobuf="protobuf-3.1.0"
 default_libzips="libzip-1.1.2"
 default_swig="swig-3.0.10"
 
@@ -150,6 +163,16 @@ function find_openblas ()
 function find_boost ()
 {
     find_dir "$default_boost" "$boost_check"
+}
+
+function find_protobuf ()
+{
+    find_dir "$default_protobuf" "$protobuf_check"
+}
+
+function find_nccl ()
+{
+    find_dir "$default_nccls" "$nccl_check"
 }
 
 function find_cuda ()
@@ -274,7 +297,7 @@ function find_python ()
 function default_use_python ()
 {
 # Keeping it default "no" for a little while:
-#    if test x$(find_swig) = x || test x$(find_python 34)$(find_python 35) = x
+#    if test x$(find_swig) = x || test x$(find_python 27)$(find_python 34)$(find_python 35) = x
 #    then
         echo no
 #    else
@@ -301,6 +324,7 @@ function show_help ()
     echo "  --with-build-top=directory build directory $(show_default $build_top)"
     echo "  --add directory add directory to library search path"
     echo "  --1bitsgd[=(yes|no)] use 1Bit SGD $(show_default ${default_use_1bitsgd})"
+    echo "  --asgd[=(yes|no)] use ASGD powered by Multiverso $(show_default $(default_use_asgd))"
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
     echo "  --python[=(yes|no)] with Python bindings $(show_default $(default_use_python))"
     echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
@@ -308,6 +332,7 @@ function show_help ()
     echo "  --with-gdk-include[=directory] $(show_default $(find_gdk_include))"
     echo "  --with-gdk-nvml-lib[=directory] $(show_default $(find_gdk_nvml_lib))"
     echo "  --with-cudnn[=directory] $(show_default $(find_cudnn))"
+    echo "  --with-nccl[=directory] $(show_default $(find_nccl))"
     echo "  --with-mkl[=directory] $(show_default $(find_mkl))"
     echo "  --with-mkl-sequential[=directory] $(show_default $(find_mkl))"
     echo "  --with-openblas[=directory] (experimental) $(show_default $(find_openblas))"
@@ -317,7 +342,9 @@ function show_help ()
     echo "  --with-libzip[=directory] $(show_default $(find_libzip))"
     echo "  --with-code-coverage[=(yes|no)] $(show_default ${default_use_code_coverage})"
     echo "  --with-boost[=directory] $(show_default $(find_boost))"
-    echo "  --with-py-versions=(space-separated list of 34, 35)"
+    echo "  --with-protobuf[=directory] $(show_default $(find_protobuf))"
+    echo "  --with-py-versions=(space-separated list of 27, 34, 35)"
+    echo "  --with-py27-path[=directory] $(show_default $(find_python 27))"
     echo "  --with-py34-path[=directory] $(show_default $(find_python 34))"
     echo "  --with-py35-path[=directory] $(show_default $(find_python 35))"
     echo "  --with-swig[=directory] $(show_default $(find_swig))"
@@ -379,6 +406,17 @@ do
             fi
             ;;
 
+        --asgd*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                enable_asgd=$optarg
+            else
+                echo "Invalid value for --asgd $optarg"
+                show_help
+                exit
+            fi
+            ;;
+
         --cuda*)
             if test x$optarg = xyes || test x$optarg = xno
             then
@@ -412,7 +450,7 @@ do
                 for ver in $optarg
                 do
                     case $ver in
-                        34 | 35)
+                        27 | 34 | 35)
                             ;;
                         *)
                             echo "Invalid value for --with-py-versions $optarg: invalid version $ver"
@@ -425,7 +463,7 @@ do
             fi
             ;;
 
-        --with-py34-path*|--with-py35-path*)
+        --with-py27-path*|--with-py34-path*|--with-py35-path*)
             enable_python=yes
             py_version=${key:9:2}
             if test x$optarg = x
@@ -577,6 +615,28 @@ do
                 fi
             fi
             ;;
+        --with-nccl*)
+            have_nccl=yes
+            if test x$optarg = x
+            then
+                nccl_path=$(find_nccl)
+                if test x$nccl_path = x
+                then
+                    echo "Cannot find NCCL directory."
+                    echo "Please specify a value for --with-nccl"
+                    echo "NCCL can be downloaded from https://github.com/NVIDIA/nccl"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $nccl_check) = yes
+                then
+                    nccl_path=$optarg
+                else
+                    echo "Invalid NCCL directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
         --with-mkl*)
             have_mkl=yes
             mathlib=mkl
@@ -630,17 +690,37 @@ do
             then
                 boost_path=$(find_boost)
                 if test x$boost_path = x
-                then 
+                then
                     echo "Cannot find Boost directory"
                     echo "Please specify a value for --with-boost"
                     exit 1
                 fi
             else
                 if test $(check_dir $optarg $boost_check) = yes
-                then 
+                then
                     boost_path=$optarg
                 else
                     echo "Invalid Boost directory $optarg"
+                    exit 1
+                fi
+             fi
+             ;;
+        --with-protobuf*)
+            if test x$optarg = x
+            then
+                protobuf_path=$(find_protobuf)
+                if test x$protobuf_path = x
+                then
+                    echo "Cannot find Protocol Buffers directory"
+                    echo "Please specify a value for --with-protobuf"
+                    exit 1
+                fi
+            else
+                if test $(check_dir $optarg $protobuf_check) = yes
+                then
+                    protobuf_path=$optarg
+                else
+                    echo "Invalid Protocol Buffers directory $optarg"
                     exit 1
                 fi
              fi
@@ -825,6 +905,7 @@ fi
 if test $enable_python = yes
 then
     # Fill unfilled default paths
+    [ -z "${py_paths[27]}" ] && find_python 27 && py_paths[27]=$(find_python 27)
     [ -z "${py_paths[34]}" ] && find_python 34 && py_paths[34]=$(find_python 34)
     [ -z "${py_paths[35]}" ] && find_python 35 && py_paths[35]=$(find_python 35)
 
@@ -833,7 +914,7 @@ then
     py_versions="$py_versions "
 
     # Make sure each requested version is configured, remove other parts
-    for ver in 34 35
+    for ver in 27 34 35
     do
         case $py_versions in
             *$ver\ *)
@@ -850,6 +931,14 @@ then
                 ;;
         esac
     done
+fi
+
+if test $enable_cuda = yes && test x$nccl_path = x
+then
+    nccl_path=$(find_nccl)
+    if test x$nccl_path != x; then
+        echo Found NCCL at $nccl_path
+    fi
 fi
 
 if test x$opencv_path = x
@@ -897,6 +986,20 @@ then
     fi
 fi
 
+if test x$protobuf_path = x
+then
+    protobuf_path=$(find_protobuf)
+    if test x$protobuf_path = x
+    then
+        echo Cannot locate Protocol Buffers library. See
+        echo   https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#protobuf
+        echo for installation instructions.
+        exit 1
+    else
+        echo Found Protocol Buffers at $protobuf_path
+    fi
+fi
+
 config=$build_top/Config.make
 echo Generating $config
 echo "#Configuration file for cntk" > $config
@@ -918,6 +1021,7 @@ if test $enable_cuda = yes ; then
     echo GDK_NVML_LIB_PATH=$gdk_nvml_lib_path >> $config
     echo CUB_PATH=$cub_path >> $config
     echo CUDNN_PATH=$cudnn_path >> $config
+    [ -z "$nccl_path" ] || echo NCCL_PATH=$nccl_path >> $config
 fi
 if test $enable_python = yes ; then
     echo PYTHON_SUPPORT=true >> $config
@@ -947,6 +1051,13 @@ if test $enable_code_coverage = yes ; then
 fi
 if test x$boost_path != x; then
     echo BOOST_PATH=$boost_path >> $config
+fi
+if test x$protobuf_path != x; then
+    echo PROTOBUF_PATH=$protobuf_path >> $config
+fi
+
+if test $enable_asgd = yes ; then
+    echo CNTK_ENABLE_ASGD=true >> $config
 fi
 
 # If we are not in the configure directory, generate a trampoline Makefile

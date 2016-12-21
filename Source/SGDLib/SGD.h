@@ -19,7 +19,7 @@
 #include <random>
 #include "Profiler.h"
 #include "MASGD.h"
-
+#include "ASGDHelper.h"
 using namespace std; // ugh! TODO: get rid of this from .h files!!!
 
 #define CNTK_CHECKPOINT_VERSION_1 1     // 1 -> no version number 
@@ -60,6 +60,7 @@ enum class ParallelizationMethod : int
     dataParallelSGD = 1,
     modelAveragingSGD = 2,
     blockMomentumSGD = 3,
+    dataParallelASGD = 4,
     modelParallelSGD = (1 << 8) // Currently unsupported
 };
 
@@ -196,7 +197,7 @@ protected:
     bool m_gradientClippingWithTruncation;
     double m_clippingThresholdPerSample;
 
-    intargvector m_numMiniBatch4LRSearch;
+    intargvector m_numSamples4Search;
     size_t m_numBestSearchEpoch;
 
     LearningRateSearchAlgorithm m_autoLearnRateSearchType;
@@ -286,6 +287,14 @@ protected:
     double m_L2RegWeight;
     double m_L1RegWeight;
 
+    // Parallel training related with ASGD 
+    intargvector m_nSyncSamplesPerWorker;
+    bool m_isAsyncBufferEnabled;
+    bool m_isSimulateMA;
+    AdjustLearningRateAtBeginning m_adjustLearningRateAtBeginning;
+    double m_adjustCoefficient;
+    size_t m_adjustPerMinibatches;
+
     // sequence training
     double m_hSmoothingWeight;
     double m_frameDropThresh;
@@ -354,7 +363,7 @@ public:
 
         if (m_mpi == nullptr)
             m_parallelizationMethod = ParallelizationMethod::none;
-    }
+        }
 
     void Train(shared_ptr<ComputationNetwork> net, DEVICEID_TYPE deviceId,
                IDataReader* trainSetDataReader,
@@ -416,7 +425,8 @@ protected:
                                          std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double> smoothedCounts,
                                          /*out*/ EpochCriterion& epochCriterion,
                                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
-                                         std::string prefixMsg = "");
+                                         std::string prefixMsg,
+                                         const size_t maxNumOfSamples);
 
     size_t AdaptiveMinibatchSizing(ComputationNetworkPtr net,
                                    ComputationNetworkPtr refNet,
@@ -480,9 +490,10 @@ protected:
                          std::list<Matrix<ElemType>>& smoothedGradients, std::vector<double>& smoothedCounts,
                          /*out*/ EpochCriterion& epochCriterion,
                          /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
-                         const std::string& prefixMsg = "");
+                         const std::string& prefixMsg = "",
+                         const size_t maxNumberOfSamples = SIZE_MAX);
 
-    void InitDistGradAgg(int numEvalNodes, int numGradientBits, int traceLevel);
+    void InitDistGradAgg(int numEvalNodes, int numGradientBits, int deviceId, int traceLevel);
     void InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE devID);
 public:
     // UpdateWeights() - actual weight update, implementing various update rules
@@ -564,20 +575,41 @@ protected:
 
 private:
     void MarkDropoutNodesEvalTimeStampAsOutdated(const ComputationNetworkPtr& net, const ComputationNodeBasePtr& criterionNode);
+    std::shared_ptr<ASGDHelper<ElemType>> m_pASGDHelper;
 
     bool UsingGradientAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelSGD) && (epochNumber >= m_parallelizationStartEpochNum));
     }
+
     bool UsingModelAggregation(size_t epochNumber) const
     {
         return ((GetParallelizationMethod() == ParallelizationMethod::modelAveragingSGD ||
                  GetParallelizationMethod() == ParallelizationMethod::blockMomentumSGD) &&
                 (epochNumber >= m_parallelizationStartEpochNum));
     }
-    bool UsingParallelTrain(size_t epochNumber) const
+
+    bool UsingAsyncGradientAggregation(size_t epochNumber)
     {
-        return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber);
+        return ((GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD) && (epochNumber >= m_parallelizationStartEpochNum));
+    }
+
+    bool UsingParallelTrain(size_t epochNumber)
+    {
+        return UsingGradientAggregation(epochNumber) || UsingModelAggregation(epochNumber) || UsingAsyncGradientAggregation(epochNumber);
+    }
+
+    void SynchronizeWorkers()
+    {
+        if (m_mpi != nullptr && GetParallelizationMethod() != ParallelizationMethod::dataParallelASGD)
+        {
+            m_mpi->WaitAll();
+        }
+        if (m_mpi != nullptr && GetParallelizationMethod() == ParallelizationMethod::dataParallelASGD)
+        {
+            m_pASGDHelper->WaitAll();
+        }
+        return;
     }
 };
 

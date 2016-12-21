@@ -105,14 +105,18 @@
     <ClInclude Include="Common\NetworkTestHelper.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="TestHelpers.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp" />
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp" />
+    <ClCompile Include="AccumulatorNodeTests.cpp" />
+    <ClCompile Include="CropNodeTests.cpp" />
     <ClCompile Include="OperatorEvaluation.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="TestHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Config\Network_Operator_Plus.cntk" />

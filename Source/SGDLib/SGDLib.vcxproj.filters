@@ -13,6 +13,9 @@
     <ClCompile Include="PostComputingActions.cpp">
       <Filter>Stat</Filter>
     </ClCompile>
+    <ClCompile Include="ASGDHelper.cpp">
+      <Filter>Parallelization</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Common\Include\fileutil.h">
@@ -131,7 +134,14 @@
     </ClInclude>
     <ClInclude Include="PostComputingActions.h">
       <Filter>Stat</Filter>
+    </ClInclude>
     <ClInclude Include="V2SimpleDistGradAggregator.h">
+      <Filter>Parallelization</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Common\Include\ASGDHelper.h">
+      <Filter>Parallelization</Filter>
+    </ClInclude>
+    <ClInclude Include="AccumulatorAggregation.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
   </ItemGroup>

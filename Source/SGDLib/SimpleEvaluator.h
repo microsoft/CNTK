@@ -2,14 +2,17 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+
 #pragma once
 
 #include "V2SimpleDistGradAggregator.h"
 
+#include "AccumulatorAggregation.h"
 #include "Basics.h"
 #include "DataReader.h"
 #include "ComputationNode.h"
 #include "ComputationNetwork.h"
+#include "LinearAlgebraNodes.h"
 #include "DataReaderHelpers.h"
 #include "TrainingNodes.h" // TODO: we should move the functions that depend on these to the .cpp
 #include "ProgressTracing.h"
@@ -65,6 +68,13 @@ public:
         // allocate memory for forward computation
         m_net->AllocateAllMatrices(evalNodes, {}, nullptr);
 
+        // Find all evaluation nodes that accumulate error on their own.
+        auto evalNodesWhichAccumulateResult =
+            m_net->ExtractNodesWhichAccumulateResult(set<ComputationNodeBasePtr>(evalNodes.begin(), evalNodes.end()));
+        auto ContainsAccumulatedResult = [&evalNodesWhichAccumulateResult](ComputationNodeBasePtr node) {
+            return evalNodesWhichAccumulateResult.find(node) != evalNodesWhichAccumulateResult.end();
+        };
+
         // prepare features and labels
         auto& featureNodes = m_net->FeatureNodes();
         auto& labelNodes = m_net->LabelNodes();
@@ -102,7 +112,9 @@ public:
         if (numSubminibatchesNeeded > 1 || m_useTwoPassTraining)
             smbDispatcher.Init(m_net, learnableNodes, criterionNodes, evalNodes, m_useTwoPassTraining);
 
-        CriterionAccumulator<ElemType> localEpochEvalErrors(evalNodes.size(), m_net->GetDeviceId());
+        CriterionAccumulator<ElemType> localEpochEvalErrors(
+            evalNodes, m_net->GetDeviceId(),
+            {evalNodesWhichAccumulateResult.begin(), evalNodesWhichAccumulateResult.end()});
 
         LatticeFreeMMINode<ElemType>* lfMMINode = nullptr;
         for (auto& x : evalNodes)
@@ -178,7 +190,7 @@ public:
                     if (Globals::UseV2Aggregator())
                         m_distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/, ::CNTK::MPICommunicator());
                     else 
-                        m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, 0 /*syncStatsTrace*/);
+                        m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/);
                 }
 
                 m_gradHeader->numEvalNode = evalNodes.size();
@@ -186,7 +198,7 @@ public:
                 m_gradHeader->numSamplesWithLabel = numSamplesWithLabel;
                 m_gradHeader->criterion = 0.0; // (not used here)
                 for (size_t i = 0; i < evalNodes.size(); i++)
-                    m_gradHeader->evalErrors[i] = localEpochEvalErrors.Assign(evalNodes, i, numSamplesWithLabel).GetCriterion(i);
+                    m_gradHeader->evalErrors[i] = localEpochEvalErrors.Assign(i, numSamplesWithLabel).GetCriterion(i);
 
                 // TODO: We are reusing the aggregation logic inside SimpleDistGradAggregator, which has a heavy dependency
                 // on the gradient matrix. At some point we should refactor the aggregator class to be able to only calculating
@@ -204,14 +216,38 @@ public:
 
                 aggregateNumSamplesWithLabel = m_gradHeader->numSamplesWithLabel;
                 for (size_t i = 0; i < evalResults.size(); i++)
-                    evalResults[i] += m_gradHeader->evalErrors[i];
+                {
+                    if (ContainsAccumulatedResult(evalNodes[i]))
+                    {
+                        // We don't accumulate error in epoch criterion as this node has already accumulated error for
+                        // all samples that passed through network in forward pass.
+                        if (samplesProcessed)
+                        {
+                            evalResults[i] = m_gradHeader->evalErrors[i];
+                        }
+                        // else: no samples processed, no aggregation happened -> we do not want to override current value
+                        // with 0.
+                    }
+                    else
+                        evalResults[i] += m_gradHeader->evalErrors[i];
+                }
             }
             else
             {
                 if (actualMBSize != 0)
                 {
                     for (int i = 0; i < evalNodes.size(); i++)
-                        evalResults[i] += localEpochEvalErrors.Assign(evalNodes, i, numSamplesWithLabel).GetCriterion(i);
+                    {
+                        localEpochEvalErrors.Assign(i, numSamplesWithLabel);
+                        if (ContainsAccumulatedResult(evalNodes[i]))
+                        {
+                            // We don't accumulate error in epoch criterion as this node has already accumulated error
+                            // for all samples that passed through network in forward pass.
+                            evalResults[i] = localEpochEvalErrors.GetCriterion(i);
+                        }
+                        else
+                            evalResults[i] += localEpochEvalErrors.GetCriterion(i);
+                    }
                 }
             }
 
@@ -227,7 +263,17 @@ public:
                     DisplayEvalStatistics(numMBsRunLastLogged + 1, numMBsRun, numSamplesLastLogged, evalNodes, evalResults, evalResultsLastLogged);
 
                     for (int i = 0; i < evalResults.size(); i++)
-                        evalResultsLastLogged[i] = evalResults[i];
+                    {
+                        if (ContainsAccumulatedResult(evalNodes[i]))
+                        {
+                            // For nodes that accumulate error, we report aggregated error for all samples that passed
+                            // through network so far, instead of per minibatch error. So, we reset last logged error
+                            // here.
+                            evalResultsLastLogged[i] = EpochCriterion(0);
+                        }
+                        else
+                            evalResultsLastLogged[i] = evalResults[i];
+                    }
                     numSamplesLastLogged = 0;
                     numMBsRunLastLogged = numMBsRun;
                 }
@@ -244,6 +290,15 @@ public:
         if (m_traceLevel > 0 && numSamplesLastLogged > 0)
         {
             DisplayEvalStatistics(numMBsRunLastLogged + 1, numMBsRun, numSamplesLastLogged, evalNodes, evalResults, evalResultsLastLogged);
+        }
+
+        if (useParallelTrain && !evalNodesWhichAccumulateResult.empty())
+        {
+            // Each worker contains accumulated values for part of the data set, we have to aggregate accumulated values
+            // and recalculate evaluation errors based on accumulators.
+            AggregateAccumulatorValuesAndUpdateEpochEvaluation<ElemType>(
+                m_net, evalNodesWhichAccumulateResult, m_gradHeader, m_mpi, evalResults, evalNodes,
+                localEpochEvalErrors, ContainsAccumulatedResult);
         }
 
         // final statistics
@@ -266,7 +321,7 @@ protected:
     void DisplayEvalStatistics(const size_t startMBNum, const size_t endMBNum, const size_t numSamplesLastLogged, const vector<ComputationNodeBasePtr>& evalNodes,
                                const vector<EpochCriterion>& evalResults, const vector<EpochCriterion>& evalResultsLastLogged, bool displayConvertedValue = false, bool isFinal = false)
     {
-        LOGPRINTF(stderr, "%sMinibatch[%lu-%lu]: ", isFinal ? "Final Results: " : "", startMBNum, endMBNum);
+        LOGPRINTF(stderr, "%sMinibatch[%lu-%lu]: ", isFinal ? "Final Results: " : "", (unsigned long)startMBNum, (unsigned long)endMBNum);
 
         for (size_t i = 0; i < evalResults.size(); i++)
         {

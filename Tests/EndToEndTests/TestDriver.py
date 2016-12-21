@@ -19,14 +19,15 @@
 #    - baseline*.txt - baseline files with a captured expected output of run-test script
 #
 # ----- testcases.yml format -------
+# isPythonTest: [True|False]
 # dataDir: <path> #<relative-path-to the data directory
 # tags: # optional tags - see tagging system
-#   - <tag1> <optional-predicate> 
+#   - <tag1> <optional-predicate>
 #   - <tag2> <optional-predicate>
 #   - ....
 #
 # testCases:
-#   <name of the testcase 1>:  
+#   <name of the testcase 1>:
 #     patterns:
 #       - <pattern 1> # see pattern language
 #       - <pattern 2>
@@ -80,18 +81,18 @@
 #
 # ----- Algorithm ------
 # Baseline verification:
-#   For each testcase 
+#   For each testcase
 #     - filter all lines which matches
 #       - if no lines found then abort with an error - since either baseline and/or pattern are invalid
 # Running test:
 #    Run test script (run-test) and capture output:
 #
 #    For each testcase
-#      - filter all matching lines from baseline 
+#      - filter all matching lines from baseline
 #      - filter all matching lines from test output
 #      - compare filtered lines one by one, ensuring that substrings defined by patterns are matching
 #
-# In practice, TestDriver performs 1 pass through the output of run-test performing a real-time 
+# In practice, TestDriver performs 1 pass through the output of run-test performing a real-time
 # matching against all test-cases/pattern simultaneously
 #
 
@@ -120,7 +121,7 @@ def cygpath(path, relative=False):
 # This class encapsulates an instance of the test
 class Test:
   # "Suite/TestName" => instance of Test
-  allTestsIndexedByFullName = {} 
+  allTestsIndexedByFullName = {}
 
   # suite - name of the test suite
   # name - name of the test
@@ -129,19 +130,26 @@ class Test:
     self.suite = suite
     self.name = name
     self.fullName = suite + "/" + name
+    self.isPythonTest = False
 
     # computing location of test directory (yml file directory)
     self.testDir = cygpath(os.path.dirname(pathToYmlFile), relative=True)
 
-    # parsing yml file with testcases 
+    # parsing yml file with testcases
     with open(pathToYmlFile, "r") as f:
       self.rawYamlData = yaml.safe_load(f.read())
- 
+
     # finding location of data directory
     if self.rawYamlData["dataDir"]:
       self.dataDir = os.path.realpath(os.path.join(self.testDir, self.rawYamlData["dataDir"]))
     else:
       self.dataDir = self.testDir
+
+    # add Python test marker
+    try:
+      self.isPythonTest = bool(self.rawYamlData["isPythonTest"])
+    except KeyError:
+      pass
 
     # parsing test cases
     self.testCases = []
@@ -152,7 +160,7 @@ class Test:
           self.testCases.append(TestCase(name, testCasesYaml[name]))
         except Exception as e:
           six.print_("ERROR registering test case: " + name, file=sys.stderr)
-          raise 
+          raise
 
     # parsing all tags, example input:
     # tags:
@@ -202,16 +210,17 @@ class Test:
   # Runs this test
   #   flavor - "debug" or "release"
   #   device - "cpu" or "gpu"
+  #   pyVersion - Python version used (empty string for non-Python tests)
   #   args - command line arguments from argparse
   # returns an instance of TestRunResult
-  def run(self, flavor, device, args):
+  def run(self, flavor, device, pyVersion, args):
     # measuring the time of running of the test
     startTime = time.time()
-    result = self.runImpl(flavor, device, args)
-    result.duration = time.time() - startTime 
+    result = self.runImpl(flavor, device, pyVersion, args)
+    result.duration = time.time() - startTime
     return result
 
-  def runImpl(self, flavor, device, args):
+  def runImpl(self, flavor, device, pyVersion, args):
     result = TestRunResult()
     result.succeeded = True
 
@@ -237,9 +246,10 @@ class Test:
       else:
           if not args.create_baseline:
               return TestRunResult.fatalError("Baseline file sanity check", "Can't find baseline file")
-  
+
     # preparing run directory
-    runDir = os.path.join(args.run_dir, "{0}_{1}@{2}_{3}".format(self.suite, self.name, flavor, device))
+    pyVersionLabel = "_{0}".format(pyVersion) if pyVersion else ''
+    runDir = os.path.join(args.run_dir, "{0}_{1}@{2}_{3}{4}".format(self.suite, self.name, flavor, device, pyVersionLabel))
     runDir = cygpath(runDir)
     if not os.path.isdir(runDir):
       os.makedirs(runDir)
@@ -263,8 +273,9 @@ class Test:
             break
       os.environ["TEST_CNTK_BINARY"] = tempPath
       os.environ["MPI_BINARY"] = "mpiexec"
+    os.environ["TEST_1BIT_SGD"] = ("1" if args.build_sku == "1bitsgd" else "0")
     if not os.path.exists(os.environ["TEST_CNTK_BINARY"]):
-      raise ValueError("the cntk executable does not exist at path '%s'"%os.environ["TEST_CNTK_BINARY"]) 
+      raise ValueError("the cntk executable does not exist at path '%s'"%os.environ["TEST_CNTK_BINARY"])
     os.environ["TEST_BIN_DIR"] = os.path.dirname(os.environ["TEST_CNTK_BINARY"])
     os.environ["TEST_DIR"] = self.testDir
     os.environ["TEST_DATA_DIR"] = self.dataDir
@@ -287,7 +298,7 @@ class Test:
       process = subprocess.Popen(cmdLine, stdout=subprocess.PIPE)
 
       while True:
-        line = process.stdout.readline() 
+        line = process.stdout.readline()
         if not line:
            break
 
@@ -332,7 +343,7 @@ class Test:
         result.succeeded = False
 
     if len(self.testCases)>0 and (args.update_baseline or (baselineFile == None)) and result.succeeded:
-      # When running in --update-baseline or --create-baseline mode 
+      # When running in --update-baseline or --create-baseline mode
       # verifying that new output is successfully matching every pattern in the testcases.yml
       # If this is not the case then baseline update/create will be rejected
       for testCase in self.testCases:
@@ -365,6 +376,46 @@ class Test:
       fullPath = os.path.join(self.testDir, candidateName)
       return fullPath
 
+  # Baseline filename fragments to match for GPU device, decreasing priority.
+  gpuBaselinePatternList = []
+
+  # Generate baseline pattern fragments for GPU tests based on the minimum CC
+  # level of the cards available on the host. The CC level of only a few cards
+  # is made known to the test driver, based on our test lab set up. Note that
+  # we don't mix cards of different CC levels.
+  # TODO make more general, provide GPU selection
+  def getGpuBaselinePatternList(self):
+    if not self.gpuBaselinePatternList:
+      self.gpuBaselinePatternList = [".gpu", ""]
+      if windows:
+        nvidiaSmiPath = '/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi.exe'
+      else:
+        nvidiaSmiPath = 'nvidia-smi'
+      ccMajorByCard = {
+        'GeForce GTX 780 Ti': 3,
+        'GeForce GTX 960': 5,
+        'Quadro M2000M': 5,
+        'Quadro M4000': 5,
+      }
+      cc = sys.maxint
+      try:
+        gpuList = subprocess.check_output([nvidiaSmiPath, '-L'])
+        for line in gpuList.split('\n'):
+          m = re.match(r"GPU (?P<id>\d+): (?P<type>[^(]*) \(UUID: (?P<guid>GPU-.*)\)\r?$", line)
+          if m:
+            try:
+              current = ccMajorByCard[m.group('type')]
+              if current < cc:
+                cc = current
+            except KeyError:
+              pass
+      except OSError:
+        pass
+      if cc != sys.maxint:
+        self.gpuBaselinePatternList.insert(0, ".gpu.cc" + str(cc))
+
+    return self.gpuBaselinePatternList
+
   # Finds a location of a baseline file by probing different names in the following order:
   #   baseline.$os.$flavor.$device.txt
   #   baseline.$os.$flavor.txt
@@ -375,9 +426,14 @@ class Test:
   #   baseline.$device.txt
   #   baseline.txt
   def findBaselineFile(self, flavor, device):
+    if device == 'gpu':
+      deviceList = self.getGpuBaselinePatternList()
+    else:
+      deviceList = ["." + device.lower(), ""]
+
     for o in ["." + ("windows" if windows else "linux"), ""]:
       for f in ["." + flavor.lower(), ""]:
-        for d in ["." + device.lower(), ""]:
+        for d in deviceList:
           candidateName = "baseline" + o + f + d + ".txt"
           fullPath = cygpath(os.path.join(self.testDir, candidateName), relative=True)
           if os.path.isfile(fullPath):
@@ -390,7 +446,7 @@ class Test:
     tagL = tag.lower() # normalizing the tag for comparison
     # enumerating all the tags
     for tag in list(self.tags.keys()):
-      # match by direct string comparison or by prefix matching rule: 
+      # match by direct string comparison or by prefix matching rule:
       # e.g: 'bvt' matches 'bvt' 'bvt-a', 'bvt-b' but not 'bvtx'
       if tag==tagL or tag.startswith(tagL + "-"):
         # evaluating tag's predicate
@@ -417,8 +473,8 @@ class TestCase:
     result = TestCaseRunResult(self.name, True)
     result.diagnostics = ""
     result.testCase = self
- 
-    # filter all lines of baseline file leaving only those which match ALL the patterns   
+
+    # filter all lines of baseline file leaving only those which match ALL the patterns
     filteredLines = []
     for line in baseline:
       if all([p.match(line) for p in self.patterns]):
@@ -429,7 +485,7 @@ class TestCase:
                            "Possible cause: patterns are wrong and/or baseline file doesn't have required line"
     result.expectedLines = filteredLines
     return result
-     
+
   # Runs this test case and report result into TestCaseRunResult
   def processLine(self, line, result, verbose):
     if all([p.match(line) for p in self.patterns]):
@@ -451,7 +507,7 @@ class TestCase:
           if verbose:
             six.print_("[FAILED]: Testcase " + self.name)
             six.print_("Baseline: " + expected)
-     
+
           # also show all failed patterns
           for p in failedPatterns:
             msg = "Failed pattern: " + p.patternText
@@ -484,7 +540,7 @@ class TestPattern:
    }
   def __init__(self, patternText):
     self.patternText = str(patternText)
-    if len(patternText) == 0: 
+    if len(patternText) == 0:
       raise Exception("Empty pattern")
     if patternText[0]=='^':
       patternText = patternText[1:]
@@ -524,19 +580,19 @@ class TestPattern:
       # converting this to regex which matches specific type
       # All {{...}} sections are converted to regex groups named as G0, G1, G2...
       return "(?P<G{0}>{1})".format(len(self.groupInfo)-1, TestPattern.typeTable[dataType])
- 
+
   # Checks whether given line matches this pattern
   # returns True or False
   def match(self, line):
     if type(line) == bytes:
-      line = line.decode("utf-8") 
+      line = line.decode("utf-8")
     return self.regex.match(line) != None
 
   # Compares a line from baseline log and a line from real output against this pattern
   # return true or false
   def compare(self, expected, actual):
     if type(actual) == bytes:
-      actual = actual.decode("utf-8") 
+      actual = actual.decode("utf-8")
     #import pdb;pdb.set_trace()
     em = self.regex.match(expected)
     am = self.regex.match(actual)
@@ -564,7 +620,7 @@ class TestRunResult:
     self.succeeded = False;
     self.testCaseRunResults = [] # list of TestCaseRunResult
     self.duration = -1
-  
+
   @staticmethod
   def fatalError(name, diagnostics, logFile = None):
     r = TestRunResult()
@@ -612,15 +668,27 @@ def runCommand(args):
          testsToRun.append(Test.allTestsIndexedByFullName[name.lower()])
        else:
          six.print_("ERROR: test not found", name, file=sys.stderr)
-         return 1
+         sys.exit(1)
   else:
      testsToRun = list(sorted(Test.allTestsIndexedByFullName.values(), key=lambda test: test.fullName))
 
   devices = args.devices
   flavors = args.flavors
 
-  if args.func == runCommand and args.prepend_path:
-    os.environ["PATH"] = os.pathsep.join([cygpath(y) for y in args.prepend_path.split(',')]) + os.pathsep + os.environ["PATH"]
+  convertPythonPath = lambda path: os.pathsep.join([cygpath(y) for y in path.split(',')])
+  pyPaths = {}
+  if args.py27_paths:
+    pyPaths['py27'] = convertPythonPath(args.py27_paths)
+  if args.py34_paths:
+    pyPaths['py34'] = convertPythonPath(args.py34_paths)
+  if args.py35_paths:
+    pyPaths['py35'] = convertPythonPath(args.py35_paths)
+  # If no Python was explicitly specifed, go against current.
+  if not pyPaths:
+    pyPaths['py'] = ''
+
+  # Remember original PATH environment variable
+  originalPath = os.environ["PATH"]
 
   os.environ["TEST_ROOT_DIR"] = os.path.dirname(os.path.realpath(sys.argv[0]))
 
@@ -641,51 +709,59 @@ def runCommand(args):
     for flavor in flavors:
       for device in devices:
         for build_sku in args.buildSKUs:
-          if args.tag and args.tag != '' and not test.matchesTag(args.tag, flavor, device, 'windows' if windows else 'linux', build_sku):
-            continue
-          if build_sku=="cpu" and device=="gpu":
-            continue
-          totalCount = totalCount + 1
-          if len(test.testCases)==0:
-            # forcing verbose mode (showing all output) for all test which are based on exit code (no pattern-based test cases)
-            args.verbose = True
-          # Printing the test which is about to run (without terminating the line)
-          sys.stdout.write("Running test {0} ({1} {2}) - ".format(test.fullName, flavor, device));
-          if args.dry_run:
-            print ("[SKIPPED] (dry-run)")
-          # in verbose mode, terminate the line, since there will be a lot of output
-          if args.verbose:
-            sys.stdout.write("\n");
-          sys.stdout.flush()
-          # Running the test and collecting a run results
-          result = test.run(flavor, device, args)
+          testPyPaths = pyPaths if test.isPythonTest else {'': ''}
 
-          if args.verbose:
-            # writing the test name one more time (after possibly long verbose output)
-            sys.stdout.write("Test finished {0} ({1} {2}) - ".format(test.fullName, flavor, device));
-          if result.succeeded:
-            succeededCount = succeededCount + 1
-            # in no-verbose mode this will be printed in the same line as 'Running test...'
-            six.print_("[OK] {0:.2f} sec".format(result.duration))
-          else:
-            six.print_("[FAILED] {0:.2f} sec".format(result.duration))
-          # Showing per-test-case results:
-          for testCaseRunResult in result.testCaseRunResults:
-            if testCaseRunResult.succeeded:
-              # Printing 'OK' test cases only in verbose mode
-              if (args.verbose):
-                six.print_(" [OK] " + testCaseRunResult.testCaseName)
+          for pyVersion in sorted(testPyPaths.keys()):
+            pyTestLabel = " {0}".format(pyVersion) if pyVersion else ''
+
+            if testPyPaths[pyVersion]:
+              os.environ["PATH"] = testPyPaths[pyVersion] + os.pathsep + originalPath
+
+            if args.tag and args.tag != '' and not test.matchesTag(args.tag, flavor, device, 'windows' if windows else 'linux', build_sku):
+              continue
+            if build_sku=="cpu" and device=="gpu":
+              continue
+            totalCount = totalCount + 1
+            if len(test.testCases)==0:
+              # forcing verbose mode (showing all output) for all test which are based on exit code (no pattern-based test cases)
+              args.verbose = True
+            # Printing the test which is about to run (without terminating the line)
+            sys.stdout.write("Running test {0} ({1} {2}{3}) - ".format(test.fullName, flavor, device, pyTestLabel));
+            if args.dry_run:
+              print ("[SKIPPED] (dry-run)")
+            # in verbose mode, terminate the line, since there will be a lot of output
+            if args.verbose:
+              sys.stdout.write("\n");
+            sys.stdout.flush()
+            # Running the test and collecting a run results
+            result = test.run(flavor, device, pyVersion, args)
+
+            if args.verbose:
+              # writing the test name one more time (after possibly long verbose output)
+              sys.stdout.write("Test finished {0} ({1} {2}{3}) - ".format(test.fullName, flavor, device, pyTestLabel));
+            if result.succeeded:
+              succeededCount = succeededCount + 1
+              # in no-verbose mode this will be printed in the same line as 'Running test...'
+              six.print_("[OK] {0:.2f} sec".format(result.duration))
             else:
-              # 'FAILED' + detailed diagnostics with proper indentation
-              six.print_(" [FAILED] " + testCaseRunResult.testCaseName)
-              if testCaseRunResult.diagnostics:
-                for line in testCaseRunResult.diagnostics.split('\n'):
-                  six.print_("    " + line);
-              # In non-verbose mode log wasn't piped to the stdout, showing log file path for convenience
-               
-          if not result.succeeded and not args.verbose and result.logFile:
-            six.print_("  See log file for details: " + result.logFile)
-        
+              six.print_("[FAILED] {0:.2f} sec".format(result.duration))
+            # Showing per-test-case results:
+            for testCaseRunResult in result.testCaseRunResults:
+              if testCaseRunResult.succeeded:
+                # Printing 'OK' test cases only in verbose mode
+                if (args.verbose):
+                  six.print_(" [OK] " + testCaseRunResult.testCaseName)
+              else:
+                # 'FAILED' + detailed diagnostics with proper indentation
+                six.print_(" [FAILED] " + testCaseRunResult.testCaseName)
+                if testCaseRunResult.diagnostics:
+                  for line in testCaseRunResult.diagnostics.split('\n'):
+                    six.print_("    " + line);
+                # In non-verbose mode log wasn't piped to the stdout, showing log file path for convenience
+
+            if not result.succeeded and not args.verbose and result.logFile:
+              six.print_("  See log file for details: " + result.logFile)
+
   if args.update_baseline:
     six.print_("{0}/{1} baselines updated, {2} failed".format(succeededCount, totalCount, totalCount - succeededCount))
   else:
@@ -710,7 +786,9 @@ if __name__ == "__main__":
   runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
   runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
   runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - run tests only for a specified build SKU")
-  runSubparser.add_argument("-pp", "--prepend-path", help="comma-separated paths to prepend when running test script")
+  runSubparser.add_argument("--py27-paths", help="comma-separated paths to prepend when running a test against Python 2.7")
+  runSubparser.add_argument("--py34-paths", help="comma-separated paths to prepend when running a test against Python 3.4")
+  runSubparser.add_argument("--py35-paths", help="comma-separated paths to prepend when running a test against Python 3.5")
   tmpDir = os.getenv("TEMP") if windows else "/tmp"
   defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
   runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")

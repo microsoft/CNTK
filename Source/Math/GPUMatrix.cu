@@ -534,7 +534,7 @@ GPUMatrix<ElemType>::~GPUMatrix(void)
 template <class ElemType>
 void GPUMatrix<ElemType>::Clear()
 {
-    VerifyWritable(__func__);
+    VerifyWritable(__FUNCTION__);
     //if (OwnBuffer() && m_pArray != NULL)
     if (m_sob != nullptr)
     {
@@ -1505,32 +1505,43 @@ void GPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly)
+void GPUMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, bool growOnly, bool cachedResize)
 {
     if (GetNumRows() != numRows || GetNumCols() != numCols)
-        Resize(numRows, numCols, growOnly);
+        Resize(numRows, numCols, growOnly, cachedResize);
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly)
+void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, bool growOnly, bool cachedResize)
 {
-    VerifyResizable(__func__);
-
     if (GetNumRows() == numRows && GetNumCols() == numCols)
         return;
 
+    VerifyResizable(__FUNCTION__);
+    bool isForceResize = (!growOnly) || cachedResize;
+
     size_t numElements = numRows * numCols;
-    if (numElements > GetSizeAllocated() ||                 // grow allocation
-        (!growOnly && numElements != GetSizeAllocated()))   // shrink allocation if not growOnly
+    if (numElements > GetSizeAllocated() ||                     // grow allocation
+        (isForceResize && numElements != GetSizeAllocated()))   // shrink allocation if not growOnly
     {
         // reallocate buffer if numElements > 0
         ElemType* pArray = nullptr;
         if (numElements > 0)
-            pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), numRows, numCols);
+        {
+            if (cachedResize)
+                pArray = BufferManagement::GetManagerInstance(GetComputeDeviceId()).RequestBuffer<ElemType>(numElements);
+            else
+                pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), numRows, numCols);
+        }
 
         // If the buffer exists, free it
         if (Buffer())
-            TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
+        {
+            if(cachedResize)
+                BufferManagement::GetManagerInstance(GetComputeDeviceId()).LogicalReleaseBuffer<ElemType>(Buffer(), GetSizeAllocated());
+            else
+                TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
+        }
 
         SetBuffer(pArray, numElements * sizeof(ElemType));
         SetSizeAllocated(numElements);
@@ -4559,8 +4570,8 @@ template GPUMatrix<char>::GPUMatrix(const GPUMatrix<char>&);
 template GPUMatrix<char>::GPUMatrix(GPUMatrix<char>&&);
 template char* GPUMatrix<char>::CopyToArray() const;
 template void GPUMatrix<char>::ChangeDeviceTo(int);
-template void GPUMatrix<char>::Resize(size_t, size_t, bool);
-template void GPUMatrix<char>::RequireSize(size_t, size_t, bool);
+template void GPUMatrix<char>::Resize(size_t, size_t, bool, bool);
+template void GPUMatrix<char>::RequireSize(size_t, size_t, bool, bool);
 
 template GPUMatrix<char>::~GPUMatrix();
 template GPUMatrix<char> GPUMatrix<char>::ColumnSlice(size_t startColumn, size_t numCols) const;
@@ -4584,8 +4595,8 @@ template GPUMatrix<short>::GPUMatrix(const GPUMatrix<short>&);
 template GPUMatrix<short>::GPUMatrix(GPUMatrix<short>&&);
 template short* GPUMatrix<short>::CopyToArray() const;
 template void GPUMatrix<short>::ChangeDeviceTo(int);
-template void GPUMatrix<short>::Resize(size_t, size_t, bool);
-template void GPUMatrix<short>::RequireSize(size_t, size_t, bool);
+template void GPUMatrix<short>::Resize(size_t, size_t, bool, bool);
+template void GPUMatrix<short>::RequireSize(size_t, size_t, bool, bool);
 
 template GPUMatrix<short>::~GPUMatrix();
 template GPUMatrix<short> GPUMatrix<short>::ColumnSlice(size_t startColumn, size_t numCols) const;

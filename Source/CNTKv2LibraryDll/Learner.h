@@ -17,31 +17,44 @@ namespace CNTK
     class LearnerBase : public Learner
     {
     public:
-        virtual bool Update(const std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) override final;
+        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) override final;
 
-        virtual Dictionary Serialize() const override final;
+        virtual Dictionary CreateCheckpoint() override final;
 
         virtual size_t CurrentVersion() const override final { return s_serializationVersion; }
 
         virtual void RestoreFromCheckpoint(const Dictionary& checkpoint) override final;
+
+        virtual void ResetSmoothedGradients() override final;
 
     protected:
         // allocateSmoothGradients flag specifies whether NDArrayViews for smoothed gradients can be allocated 
         // in the base class constructor (in which case they are allocated with the shapes identical to the shapes of
         // the corresponding parameters) or if the allocation should be deferred to the subclass constructor (which
         // performs allocation that is specific to the particular learner, see FSAdaGrad and RMSProp).
-        LearnerBase(const std::vector<Parameter>& parameters, 
-                    const LearningRatesPerSample& learningRates,
-                    AdditionalLearningOptions additionalOptions,
-                    bool allocateSmoothGradients = true);
+        LearnerBase(const std::vector<Parameter>& parameters,
+            const LearningRateSchedule& learningRateSchedule,
+            AdditionalLearningOptions additionalOptions,
+            bool allocateSmoothGradients = true);
 
         virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const = 0;
 
         std::string LearnerType() const;
 
+        // Returns current (per-sample) learning rate.
+        double LearningRate(size_t minibatchSize) const
+        {
+            auto learningRate = Learner::LearningRate();
+            if (m_learningRateSchedule.Unit() == LearningRateSchedule::UnitType::Minibatch)
+            {
+                // learning rate needs to be converted to the per-sample value.
+                return (minibatchSize == 0) ? 0.0 : learningRate / minibatchSize;
+            }
+
+            return learningRate;
+        }
+
         AdditionalLearningOptions m_additionalOptions;
-
-
 
         std::unordered_map<Parameter, NDArrayViewPtr> m_smoothedGradientValues;
 
@@ -99,13 +112,22 @@ namespace CNTK
     {
     public:
         LearnerSGD(const std::vector<Parameter>& parameters, 
-                   const LearningRatesPerSample& learningRates, 
+                   const LearningRateSchedule& learningRateSchedule, 
                    AdditionalLearningOptions additionalOptions,
                    bool allocateSmoothGradients = true)
-                   : LearnerBase(parameters, learningRates, additionalOptions, allocateSmoothGradients),
-            m_momentumValues(0.0), 
-            m_useNesterovAcceleration(false)
+                   : LearnerBase(parameters, learningRateSchedule, additionalOptions, allocateSmoothGradients)
         {}
+
+        // TODO: get rid of this as soon as NormalGrad is refactored.
+        virtual double MomentumValueForMB(size_t /*minibatchSize*/) const
+        {
+            return 0.0;
+        }
+
+        virtual bool UseNesterovMomentum() const
+        {
+            return false;
+        }
 
     protected:
 
@@ -113,10 +135,6 @@ namespace CNTK
 
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
-
-        // TODO: Move m_momentumValues to LearnerMomentumSGD as soon as NormalGrad is refactored.
-        MomentumValuesPerSample m_momentumValues;
-        bool m_useNesterovAcceleration;
     };
 
     // SGD optimization with momentum. 
@@ -124,14 +142,26 @@ namespace CNTK
     {
     public:
         LearnerMomentumSGD(const std::vector<Parameter>& parameters,
-                           const LearningRatesPerSample& learningRates,
-                           const MomentumValuesPerSample& momentumValues,
+                           const LearningRateSchedule& learningRateSchedule,
+                           const MomentumSchedule& momentumSchedule,
                            AdditionalLearningOptions additionalOptions,
                            bool allocateSmoothGradients = true)
-                           : LearnerSGD(parameters, learningRates, additionalOptions, allocateSmoothGradients)
+                           : LearnerSGD(parameters, learningRateSchedule, additionalOptions, allocateSmoothGradients),
+                           m_momentumSchedule(momentumSchedule)
+        { }
+
+        // returns current per-minibatch momentum value.
+        virtual double MomentumValueForMB(size_t minibatchSize) const override
         {
-            m_momentumValues = momentumValues;
+            return MomentumValueForMB(m_momentumSchedule, minibatchSize);
         }
+
+    protected:
+        // returns current per-minibatch momentum value from the provided schedule.
+        double MomentumValueForMB(const MomentumSchedule& schedule, size_t minibatchSize) const;
+
+    private:
+        MomentumSchedule m_momentumSchedule;
     };
 
     // Nesterov's accelerated SGDLearnerBase descent. 
@@ -140,27 +170,25 @@ namespace CNTK
     public:
 
         LearnerNesterov(const std::vector<Parameter>& parameters,
-                        const LearningRatesPerSample& learningRates,
-                        const MomentumValuesPerSample& momentumValues,
+                        const LearningRateSchedule& learningRateSchedule,
+                        const MomentumSchedule& momentumSchedule,
                         AdditionalLearningOptions additionalOptions)
-                        : LearnerMomentumSGD(parameters, learningRates, momentumValues, additionalOptions, /*allocateSmoothGradients*/ true)
+                        : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, additionalOptions, /*allocateSmoothGradients*/ true)
+        {}
+
+        virtual bool UseNesterovMomentum() const override
         {
-            m_useNesterovAcceleration = true;
+            return true;
         }
     };
 
     class LearnerAdaGrad : public LearnerBase
     {
     public:
-
         LearnerAdaGrad(const std::vector<Parameter>& parameters,
-                       const LearningRatesPerSample& learningRates,
+                       const LearningRateSchedule& learningRateSchedule,
                        bool needAveMultiplier,
-                       AdditionalLearningOptions additionalOptions)
-                       : LearnerBase(parameters, learningRates, additionalOptions, /*allocateSmoothGradients*/ true),
-                       m_needAveMultiplier(needAveMultiplier)
-    {
-    }
+                       AdditionalLearningOptions additionalOptions);
 
     protected:
         bool m_needAveMultiplier;
@@ -176,10 +204,9 @@ namespace CNTK
     public:
 
         LearnerFSAdaGrad(const std::vector<Parameter>& parameters,
-                         const LearningRatesPerSample& learningRates,
-                         const MomentumValuesPerSample& momentumValues,
-                         const double targetAdagradAvDenom,
-                         const size_t adagradT,
+                         const LearningRateSchedule& learningRateSchedule,
+                         const MomentumSchedule& momentumSchedule,
+                         const MomentumSchedule& varianceMomentumSchedule,
                          AdditionalLearningOptions additionalOptions);
 
     protected:
@@ -190,9 +217,16 @@ namespace CNTK
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
 
     private:
+        static const double s_targetAdagradAvDenom;
+
+        // returns current per-minibatch variance momentum value.
+        double VarianceMomentumValueForMB(size_t minibatchSize) const
+        {
+            return MomentumValueForMB(m_varianceMomentumSchedule, minibatchSize);
+        }
+
         mutable std::unordered_map<Parameter, double> m_smoothedCounts;
-        double m_targetAdagradAvDenom;
-        size_t m_adagradT;
+        MomentumSchedule m_varianceMomentumSchedule;
     };
 
     class LearnerRMSProp : public LearnerBase
@@ -200,7 +234,7 @@ namespace CNTK
     public:
 
         LearnerRMSProp(const std::vector<Parameter>& parameters,
-                       const LearningRatesPerSample& learningRates,
+                       const LearningRateSchedule& learningRateSchedule,
                        double gamma, double inc, double dec, double max, double min,
                        bool needAveMultiplier,
                        AdditionalLearningOptions additionalOptions);

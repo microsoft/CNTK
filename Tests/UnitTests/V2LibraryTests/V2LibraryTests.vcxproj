@@ -119,6 +119,7 @@
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="DeviceSelectionTests.cpp" />
     <ClCompile Include="LearnerTests.cpp" />
+    <ClCompile Include="MinibatchSourceTest.cpp" />
     <ClCompile Include="Seq2Seq.cpp" />
     <ClCompile Include="SerializationTests.cpp" />
     <ClCompile Include="FeedForwardTests.cpp" />
@@ -130,10 +131,17 @@
     <ClCompile Include="TensorTests.cpp" />
     <ClCompile Include="TrainerTests.cpp" />
     <ClCompile Include="TruncatedLSTMAcousticModel.cpp" />
+    <ClCompile Include="UserDefinedFunctionTests.cpp" />
+    <ClCompile Include="ValueTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
     <ClInclude Include="Image.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="data\future.dictionary.proto.bin" />
+    <None Include="data\past.dictionary.proto.bin" />
+    <None Include="data\v2.0.beta1.0.dictionary.proto.bin" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

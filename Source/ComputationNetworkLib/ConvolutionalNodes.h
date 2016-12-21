@@ -141,6 +141,7 @@ public:
     }
 
     TensorShape KernelShape() const { return m_kernelShape; }
+    TensorShape MapCount() const { return m_mapCount; }
     TensorShape Strides() const { return m_stride; }
     std::vector<bool> Sharing() const { return m_sharing; }
     std::vector<bool> AutoPad() const { return m_autoPad; }
@@ -186,6 +187,26 @@ protected:
         FixVectorShape(filterRank, inputShape.size(), m_sharing,     true);
     }
 
+    // Derived classes implement transforms calculation. Since all derived classes are filter based we consolidate common
+    // filter transform calculation here to be reused by derived classes. For example convolution and de-convolution
+    // have same transform but inversed, hence both of them may reuse this method and one will call inverse in addition
+    // (similar holds for pooling nodes).
+    SpaceTransform ComputeFilterTransform()
+    {
+        std::shared_ptr<const ConvolveGeometry> geometry = m_convEng->Geometry();
+
+        SpaceTransform result;
+        result.m_axisTransforms.resize(2);
+
+        result.m_axisTransforms[0].scale = (float)(geometry->GetStride(0));
+        result.m_axisTransforms[0].translate = (float)((geometry->KernelShape()[0] - 1) / 2 - geometry->GetLowerPad(0));
+
+        result.m_axisTransforms[1].scale = (float)(geometry->GetStride(1));
+        result.m_axisTransforms[1].translate = (float)((geometry->KernelShape()[1] - 1) / 2 - geometry->GetLowerPad(1));
+
+        return result;
+    }
+
 protected:
     TensorShape m_kernelShape;
     TensorShape m_mapCount;
@@ -228,7 +249,7 @@ public:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
+class ConvolutionNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
     static const std::wstring TypeName() { return L"Convolution"; }
@@ -261,6 +282,8 @@ public:
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
+
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return m_convEng->ImplementsGradientOverwriteOptimization(); }
 
 public:
     void Save(File& fstream) const override
@@ -327,7 +350,7 @@ public:
             // BackwardData adds results to the output so need to zero them out first.
             // REVIEW alexeyk: should be rolled into BackwardData itself.
             sliceOutputValue.SetValue(0);
-            m_convEng->BackwardData(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+            m_convEng->BackwardData(sliceInput1Value, input0, sliceOutputValue, /*accumulateGradient =*/ true, *m_tempMatrix);
         }
     }
 
@@ -339,16 +362,16 @@ public:
             auto& grad = InputRef(0).GradientAsMatrix();
             auto sliceInput1Value = InputRef(1).ValueFor(fr);
             if (!m_transpose)
-                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
+                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrix);
             else
-                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, fr.IsAllFrames(), *m_tempMatrix);
+                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrix);
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
             auto& input0 = InputRef(0).ValueAsMatrix();
             auto sliceInput1Grad = InputRef(1).GradientFor(fr);
             if (!m_transpose)
-                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
+                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->ParentOverwritesGradient(), *m_tempMatrix);
             else
             {
                 // REVIEW alexeyk: Forward overwrites values in sliceInput1Grad. Should handle correctly instead.
@@ -498,6 +521,33 @@ public:
             m_convEng->SetmMaxTempMemSizeInSamples(maxTempMemSizeInSamples);
     }
 
+    bool IsConvolution2D() const { return m_convolution2D; }
+
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms[1].m_axisTransforms.empty())
+        {
+            m_transforms[1] = ComputeFilterTransform();
+            if (!m_transpose)
+            {
+                // Convolution, need to inverse transform.
+                m_transforms[1] = m_transforms[1].Inverse();
+            }
+            // else: Deconvolution, nothing to do.
+        }
+        // else: transform already computed, no need to do computation again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override
+    {
+        // We support transforms just on convolution input.
+        return (inputIndex == 1);
+    }
+
 protected:
     // Flag that indicates whether the node is created using 2D-syntax.
     bool m_convolution2D;
@@ -530,12 +580,12 @@ class ROIPoolingNode : public ComputationNode<ElemType>, public NumInputs<2>
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"ROIPooling"; }
 public:
-    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& outputShape = TensorShape())
-        : Base(deviceId, name), m_outputShape(outputShape), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
+    ROIPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& roiOutputShape = TensorShape())
+        : Base(deviceId, name), m_roiOutputShape(roiOutputShape), m_argmaxData(Matrix<ElemType>::Zeros(1, 1, deviceId))
     {
     }
     ROIPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"outputShape"))
+        : ROIPoolingNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"roiOutputShape"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -588,8 +638,8 @@ public:
         size_t inputW = (size_t)inputShape[0];
         size_t inputH = (size_t)inputShape[1];
         size_t numChannels = (size_t)inputShape[2];
-        size_t outW = m_outputShape[0];
-        size_t outH = m_outputShape[1];
+        size_t outW = m_roiOutputShape[0];
+        size_t outH = m_roiOutputShape[1];
 
         m_tempMatrix->Resize(outW * outH * numChannels * roisPerImage, inputSlice.GetNumCols());
         inputSlice.ROIPoolingForward(roisPerImage, inputSlice.GetNumCols(), 
@@ -599,13 +649,13 @@ public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        m_outputShape.Save(fstream);
+        m_roiOutputShape.Save(fstream);
     }
 
     void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
-        m_outputShape.Load(fstream);
+        m_roiOutputShape.Load(fstream);
     }
 
     void Validate(bool isFinalValidationPass) override
@@ -616,10 +666,10 @@ public:
         auto inShape = GetInputSampleLayout(0);   // layout of input shape is width x height x numChannels
         auto roiShape = GetInputSampleLayout(1); // layout of ROI shape is 4 x roisPerImage
 
-        if (isFinalValidationPass && (m_outputShape.size() != 2))
-            InvalidArgument("ROIPoolingNode: output shape must have two dimensions ([W x H]).");
+        if (isFinalValidationPass && (m_roiOutputShape.size() != 2))
+            InvalidArgument("ROIPoolingNode: roi output shape must have two dimensions ([W x H]).");
 
-        if (isFinalValidationPass && (inShape[0] < m_outputShape[0] || inShape[1] < m_outputShape[1]))
+        if (isFinalValidationPass && (inShape[0] < m_roiOutputShape[0] || inShape[1] < m_roiOutputShape[1]))
             InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
         if (isFinalValidationPass && (inShape[2] < 1))
@@ -632,7 +682,7 @@ public:
             InvalidArgument("ROIPoolingNode: ROI input must contain at least one ROI ([4 x roisPerImage]).");
 
         // set output dimensions to [W x H x C x roisPerImage]
-        SetDims(TensorShape(m_outputShape[0], m_outputShape[1], inShape[2], roiShape[1]), HasMBLayout());
+        SetDims(TensorShape(m_roiOutputShape[0], m_roiOutputShape[1], inShape[2], roiShape[1]), HasMBLayout());
     }
 
     // similar to usual MaxPooling backpropagation. Send gradients
@@ -656,7 +706,7 @@ public:
         auto roiData = Input(1)->ValueFor(fr);
 
         pooledGrad.ROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), numChannels, 
-            inputW, inputH, m_outputShape[0], m_outputShape[1], roiData, inputGrad, *m_tempMatrix);
+            inputW, inputH, m_roiOutputShape[0], m_roiOutputShape[1], roiData, inputGrad, *m_tempMatrix);
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -665,12 +715,14 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<ROIPoolingNode<ElemType>>(nodeP);
-            node->m_outputShape = m_outputShape;
+            node->m_roiOutputShape = m_roiOutputShape;
         }
     }
 
+    TensorShape ROIOutputShape() const { return m_roiOutputShape; }
+
 protected:
-    TensorShape m_outputShape;
+    TensorShape m_roiOutputShape;
     shared_ptr<Matrix<ElemType>> m_tempMatrix;
     Matrix<ElemType> m_argmaxData;
 };
@@ -681,7 +733,7 @@ protected:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class PoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<1>
+class PoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<1>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base; UsingConvolutionNodeBaseMembers;
     static const std::wstring TypeName() { return L"Pooling"; }
@@ -763,6 +815,26 @@ public:
             }
         }
     }
+
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms[0].m_axisTransforms.empty())
+        {
+            m_transforms[0] = ComputeFilterTransform();
+            m_transforms[0] = m_transforms[0].Inverse();
+        }
+        // else: transform already computed, no need to do it again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t /*inputIndex*/) override
+    {
+        // We support transforms on all inputs (one here).
+        return true;
+    }
 };
 
 // -----------------------------------------------------------------------
@@ -781,7 +853,7 @@ public:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class MaxUnpoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>
+class MaxUnpoolingNode : public ConvolutionNodeBase<ElemType>, public NumInputs<2>, public TransformerNode
 {
     typedef ConvolutionNodeBase<ElemType> Base;
     UsingConvolutionNodeBaseMembers;
@@ -865,6 +937,25 @@ public:
             }
         }
     }
+
+private:
+    using TransformerNode::m_transforms;
+    using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;
+
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        if (m_transforms.empty())
+        {
+            m_transforms[0] = ComputeFilterTransform();
+        }
+        // else: transform already computed, no need to do it again.
+    }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t inputIndex) override
+    {
+        // We support transform for just unpool input.
+        return (inputIndex == 0);
+    }
 };
 
 // -----------------------------------------------------------------------
@@ -878,26 +969,36 @@ class PoolingNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
     UsingComputationNodeMembers;
 
 public:
-    PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
+    PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring& name, PoolKind poolKind)
         : Base(deviceId, name),
         m_windowWidth(SIZE_MAX),
         m_windowHeight(SIZE_MAX),
         m_horizontalSubsample(SIZE_MAX),
         m_verticalSubsample(SIZE_MAX),
-        m_imageLayoutKind(ImageLayoutKind::HWC)
+        m_imageLayoutKind(ImageLayoutKind::HWC),
+        m_poolKind(poolKind)
     {
     }
-    PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring& name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
+    PoolingNodeBase(DEVICEID_TYPE deviceId, const wstring& name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind, PoolKind poolKind)
         : Base(deviceId, name),
         m_windowWidth(windowWidth),
         m_windowHeight(windowHeight),
         m_horizontalSubsample(horizontalSubsample),
         m_verticalSubsample(verticalSubsample),
-        m_imageLayoutKind(imageLayoutKind)
+        m_imageLayoutKind(imageLayoutKind),
+        m_poolKind(poolKind)
     {
+        ConvertToTensorShape();
     }
-    PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
-        : PoolingNodeBase(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"windowWidth"), configp->Get(L"windowHeight"), configp->Get(L"horizontalSubsample"), configp->Get(L"verticalSubsample"), ImageLayoutKindFrom(configp->Get(L"imageLayout")))
+    PoolingNodeBase(const ScriptableObjects::IConfigRecordPtr configp, PoolKind poolKind)
+        : PoolingNodeBase(configp->Get(L"deviceId"), 
+            L"<placeholder>", 
+            configp->Get(L"windowWidth"), 
+            configp->Get(L"windowHeight"), 
+            configp->Get(L"horizontalSubsample"), 
+            configp->Get(L"verticalSubsample"),
+            ImageLayoutKindFrom(configp->Get(L"imageLayout")), 
+            poolKind)
     {
         // input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
@@ -918,6 +1019,8 @@ public:
         fstream >> windowWidth >> imageLayoutKind >> m_windowHeight >> m_horizontalSubsample >> m_verticalSubsample;
         m_windowWidth = windowWidth;
         m_imageLayoutKind = (ImageLayoutKind)imageLayoutKind;
+
+        ConvertToTensorShape();
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -937,6 +1040,8 @@ public:
             node->m_outputSizePerSample = m_outputSizePerSample;
 
             node->m_imageLayoutKind = m_imageLayoutKind;
+
+            node->ConvertToTensorShape();
         }
     }
 
@@ -1003,15 +1108,35 @@ public:
             auto inputSampleLayout = GetInputSampleLayout(0);
 
             char str[4096];
-            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", inputSampleLayout[1], inputSampleLayout[2], inputSampleLayout[0]);
+            sprintf(str, "Input[Width:%lu, Height:%lu, Channels:%lu]  \n", (unsigned long)inputSampleLayout[1], (unsigned long)inputSampleLayout[2], (unsigned long)inputSampleLayout[0]);
             fstream << string(str);
-            sprintf(str, "PoolingWindow[Width:%lu, Height:%lu]  SubSampling[Horizontal:%lu, Vertical:%lu]\n", m_windowWidth, m_windowHeight, m_horizontalSubsample, m_verticalSubsample);
+            sprintf(str, "PoolingWindow[Width:%lu, Height:%lu]  SubSampling[Horizontal:%lu, Vertical:%lu]\n", (unsigned long)m_windowWidth, (unsigned long)m_windowHeight, (unsigned long)m_horizontalSubsample, (unsigned long)m_verticalSubsample);
             fstream << string(str);
-            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", m_sampleLayout[1], m_sampleLayout[2], m_sampleLayout[0]);
+            sprintf(str, "Output[Width:%lu, Height:%lu, Channels:%lu]  \n", (unsigned long)m_sampleLayout[1], (unsigned long)m_sampleLayout[2], (unsigned long)m_sampleLayout[0]);
             fstream << string(str);
-            sprintf(str, "TotalSizePerSample[Input:%lu, Output:%lu]  \n", m_inputSizePerSample, m_outputSizePerSample);
+            sprintf(str, "TotalSizePerSample[Input:%lu, Output:%lu]  \n", (unsigned long)m_inputSizePerSample, (unsigned long)m_outputSizePerSample);
             fstream << string(str);
         }
+    }
+
+    bool IsImageLayoutCHW() const { return m_imageLayoutKind == ImageLayoutKind::CHW; }
+    TensorShape KernelShape() const { return m_kernelShape; }
+    TensorShape Strides() const { return m_stride; }
+    std::vector<bool> Sharing() const { return m_sharing; }
+    std::vector<bool> AutoPad() const { return m_autoPad; }
+    TensorShape LowerPad() const { return m_lowerPad; }
+    TensorShape UpperPad() const { return m_upperPad; }
+    PoolKind PoolingKind() const { return m_poolKind; }
+
+protected:
+    void ConvertToTensorShape()
+    {
+        m_kernelShape = ImageDimensions(m_windowWidth, m_windowHeight, 1).AsTensorShape(m_imageLayoutKind);
+        m_stride      = ImageDimensions(m_horizontalSubsample, m_verticalSubsample, 1).AsTensorShape(m_imageLayoutKind);
+        m_sharing     = { true };
+        m_autoPad     = { false };
+        m_lowerPad    = TensorShape(0);
+        m_upperPad    = TensorShape(0);
     }
 
 protected:
@@ -1020,6 +1145,15 @@ protected:
     size_t m_inputSizePerSample, m_outputSizePerSample;
 
     ImageLayoutKind m_imageLayoutKind; // how to interpret the tensor (which dimensions are X/Y and C)
+
+    // Mapping to V2 PoolingNode description..
+    PoolKind m_poolKind;
+    TensorShape m_kernelShape;
+    TensorShape m_stride;
+    std::vector<bool> m_sharing;
+    std::vector<bool> m_autoPad;
+    TensorShape m_lowerPad;
+    TensorShape m_upperPad;
 
     ConvolveGeometryPtr m_geometry;
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
@@ -1059,15 +1193,15 @@ class MaxPoolingNode : public PoolingNodeBase<ElemType>
 
 public:
     MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+        : Base(deviceId, name, PoolKind::Max)
     {
     }
     MaxPoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind)
+        : Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind, PoolKind::Max)
     {
     }
     MaxPoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : Base(configp)
+        : Base(configp, PoolKind::Max)
     {
     }
 
@@ -1099,15 +1233,15 @@ class AveragePoolingNode : public PoolingNodeBase<ElemType>
 
 public:
     AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+        : Base(deviceId, name, PoolKind::Average)
     {
     }
     AveragePoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind)
-        : Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind)
+        : Base(deviceId, name, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayoutKind, PoolKind::Average)
     {
     }
     AveragePoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : Base(configp)
+        : Base(configp, PoolKind::Average)
     {
     }
 

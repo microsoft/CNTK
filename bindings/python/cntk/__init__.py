@@ -17,10 +17,11 @@ from .initializer import *
 from .utils import *
 from .ops import *
 from .io import *
-from .persist import load_model, save_model
+from .debug import save_as_legacy_model
 from .device import *
-
-# TODO wrap
-from .cntk_py import momentums_per_sample
+from .layers import *
+from .models import *
+from .distributed import *
 
 DATATYPE = np.float32
+InferredDimension = cntk_py.InferredDimension

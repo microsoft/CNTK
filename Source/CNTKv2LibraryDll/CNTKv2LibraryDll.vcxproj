@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -39,10 +39,6 @@
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
-  <PropertyGroup Condition="$(ReleaseBuild)" Label="Configuration">
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -55,16 +51,29 @@
     <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
-    <LinkIncremental>false</LinkIncremental>
     <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
+  </PropertyGroup>
+  <PropertyGroup>
+    <CustomBuildBeforeTargets>ClCompile</CustomBuildBeforeTargets>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>.\API;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\API;.\proto;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">$(SolutionDir)Source\1BitSGD;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(NvmlLibPath)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(NvmlLibPath);$(ProtobufLibPath)</AdditionalLibraryDirectories>
     </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="$(HasProtobuf)">
+    <CustomBuildStep>
+      <Message>Compiling CNTK.proto</Message>
+      <Command>$(PROTOBUF_PATH)\bin\protoc --proto_path=$(ProjectDir)\proto\ --cpp_out=$(ProjectDir)\proto\ $(ProjectDir)\proto\CNTK.proto</Command>
+      <Outputs>$(ProjectDir)\proto\CNTK.pb.h;$(ProjectDir)\proto\CNTK.pb.cc</Outputs>
+      <Inputs>$(ProjectDir)\proto\CNTK.proto</Inputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
     <ClCompile>
@@ -79,7 +88,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; Common.lib; SequenceTrainingLib.lib; ReaderLib.lib; kernel32.lib; user32.lib; shell32.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ComputationNetworkLib.lib;Math.lib;Common.lib;SequenceTrainingLib.lib;ReaderLib.lib;kernel32.lib;user32.lib;shell32.lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -87,12 +96,8 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>CNTKV2LIBRARYDLL;WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <OpenMPSupport>false</OpenMPSupport>
       <AdditionalOptions>/d2Zi+ /bigobj %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -101,10 +106,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; Common.lib; ReaderLib.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib; %(AdditionalDependencies)</AdditionalDependencies>
-      <Profile>true</Profile>
+      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; Common.lib; ReaderLib.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -114,6 +116,7 @@
     </ClCompile>
     <Link>
       <DelayLoadDLLs>Math.dll</DelayLoadDLLs>
+      <OptimizeReferences Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">false</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(GpuBuild)">
@@ -132,11 +135,14 @@
     <ClInclude Include="API\CNTKLibrary.h" />
     <ClInclude Include="API\CNTKLibraryExperimental.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
-    <ClInclude Include="DataParallelDistributedTrainer.h" />
+    <ClInclude Include="BackCompat.h" />
+    <ClInclude Include="CompositeFunction.h" />
+    <ClInclude Include="DataParallelDistributedLearner.h" />
     <ClInclude Include="DistributedCommunicator.h" />
-    <ClInclude Include="Function.h" />
+    <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="Learner.h" />
     <ClInclude Include="MinibatchSource.h" />
+    <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="PrimitiveOpType.h" />
     <ClInclude Include="Serialization.h" />
     <ClInclude Include="Utils.h" />
@@ -147,20 +153,23 @@
   <ItemGroup>
     <ClCompile Include="BackCompat.cpp" />
     <ClCompile Include="Common.cpp" />
+    <ClCompile Include="CompositeFunction.cpp" />
     <ClCompile Include="ComputeInputStatistics.cpp" />
-    <ClCompile Include="DataParallelDistributedTrainer.cpp" />
+    <ClCompile Include="DataParallelDistributedLearner.cpp" />
     <ClCompile Include="DistributedCommunicator.cpp" />
+    <ClCompile Include="DistributedLearnerBase.cpp" />
     <ClCompile Include="dllmain.cpp">
       <CompileAsManaged>false</CompileAsManaged>
       <PrecompiledHeader>
       </PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Function.cpp" />
-    <ClCompile Include="Globals.cpp" />
     <ClCompile Include="Learner.cpp" />
     <ClCompile Include="MinibatchSource.cpp" />
     <ClCompile Include="NDArrayView.cpp" />
     <ClCompile Include="NDMask.cpp" />
+    <ClCompile Include="PrimitiveFunction.cpp" />
+    <ClCompile Include="proto\CNTK.pb.cc.VS_wrapper.cpp" />
     <ClCompile Include="Serialization.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -171,9 +180,12 @@
     <ClCompile Include="Variable.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\bindings\python\cntk\PythonBindings.pyproj" />
+    <None Include="proto\CNTK.proto" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <Target Name="Build" Condition="$(HasProtobuf)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
+  <ImportGroup Label="ExtensionTargets" />
+  <Target Name="CheckDependencies">
+    <Warning Condition="!$(HasProtobuf)" Text="CNTKv2LibraryDll requires Protocol Buffers to build. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#protobuf for installation instructions." />
+  </Target>
 </Project>

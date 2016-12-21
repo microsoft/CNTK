@@ -155,7 +155,7 @@ namespace CNTK
     {
         // Ensure none of the shape dimensions are unknown
         if (viewShape.HasInferredDimension())
-            InvalidArgument("Cannot create an NDArrayView using a view shape that has unknown dimensions for any of it's axes!");
+            InvalidArgument("Cannot create an NDArrayView using a view shape that has unknown dimensions for any of its axes!");
 
         size_t matrixRowSize = (viewShape.Rank() > 0) ? viewShape[0] : 1;
         size_t matrixColSize = (viewShape.Rank() > 0) ? viewShape.SubShape(1).TotalSize() : 1;
@@ -237,8 +237,6 @@ namespace CNTK
 
     inline void AddConfigString(std::wstringstream& s, const std::wstring& key, const DictionaryValue& value, size_t numIndentationSpaces)
     {
-        static const size_t perLevelIndentSize = 4;
-
         AddIndentation(s, numIndentationSpaces);
         s << key << L" = ";
         AddConfigString(s, value, numIndentationSpaces);
@@ -338,11 +336,6 @@ namespace CNTK
         return{ paddedOutputMapCount, kernelShape };
     }
 
-    inline double MomentumValueForMB(double momentumPerSample, size_t minibatchSize)
-    {
-        return std::pow(momentumPerSample, minibatchSize);
-    }
-
     template <typename SourceElementType, typename TargetElementType>
     inline TargetElementType* Copy(const SourceElementType* src, size_t srcSize)
     {
@@ -439,8 +432,8 @@ namespace CNTK
 
     inline std::vector<Axis> GetDerivedDynamicAxes(const Axis& sourceAxis, size_t multiplicativeFactor, int additiveFactor)
     {
-        if (sourceAxis.IsStaticAxis())
-            LogicError("Static axes cannot be derived from to create new dynamic axes!");
+        if (!sourceAxis.IsDynamicAxis())
+            LogicError("Only dynamic axes can be derived from to create new dynamic axes!");
 
         if ((multiplicativeFactor == 0) && (additiveFactor == 0))
             LogicError("Zero size dynamic axes are not allowed!");
@@ -477,7 +470,9 @@ namespace CNTK
             assert(axis.IsStaticAxis());
             assert(operandShape != NDShape::Unknown);
 
-            if (axis.StaticAxisIndex() < 0)
+            if (axis == Axis::EndStaticAxis())
+                axis = Axis((int)operandShape.Rank());
+            else if (axis.StaticAxisIndex() < 0)
                 axis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
         }
 
@@ -492,4 +487,64 @@ namespace CNTK
         if (axis.StaticAxisIndex() >= (int)operandShape.Rank())
             InvalidArgument("The specified axis index (%d) exceeds the static #axes (%d) of the corresponding operand", (int)axis.StaticAxisIndex(), (int)operandShape.Rank());
     }
+
+    std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly);
+    int GetFileDescriptor(const std::wstring& filePath, bool readOnly);
+
+    std::string ToString(const std::wstring& wstring);
+    std::wstring ToWString(const std::string& string);
+    // Helper class to manage a collection of learners.
+    class Learners
+    {
+    public:
+        explicit Learners(const std::vector<LearnerPtr>& learners);
+
+        bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount);
+        bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatchInfo);
+
+        std::vector<DictionaryValue> CreateCheckpoint();
+
+        void RestoreFromCheckpoint(const std::vector<DictionaryValue>&);
+
+        const std::vector<LearnerPtr>& ParameterLearners() const
+        {
+            return m_learners;
+        }
+
+        std::unordered_set<Parameter> GetParameters() const
+        {
+            std::unordered_set<Parameter> result;
+            for (auto l : m_learners)
+            {
+                const auto& p = l->Parameters();
+                result.insert(p.begin(), p.end());
+            }
+            return result;
+        }
+
+        bool IsDistributed() const
+        {
+            return m_isDistributed;
+        }
+
+    private:
+        void GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients);
+        void CheckDistributedLearners();
+
+        std::vector<LearnerPtr> m_learners;
+        bool m_isDistributed;
+    };
+
+    class Utils
+    {
+    public:
+        template <typename ElementType>
+        static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr> GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value);
+
+        template <typename ElementType>
+        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
+
+        template <typename ElementType>
+        static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
+    };
 }

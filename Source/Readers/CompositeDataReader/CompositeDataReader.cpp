@@ -29,10 +29,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // For more information please see its header file.
 // This method composes together packers + randomizer + a set of transformers and deserializers.
 CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
-    m_corpus(std::make_shared<CorpusDescriptor>()), m_truncationLength(0)
+    m_truncationLength(0)
 {
     wstring action = config(L"action", L"");
     bool isActionWrite = AreEqualIgnoreCase(action, L"write");
+
+    // We currently by default using numeric keys for ctf and image deserializers.
+    bool useNumericSequenceKeys = ContainsDeserializer(config, L"CNTKTextFormatDeserializer") ||
+        ContainsDeserializer(config, L"ImageDeserializer");
+
+    useNumericSequenceKeys = config(L"useNumericSequenceKeys", useNumericSequenceKeys);
+    m_corpus = std::make_shared<CorpusDescriptor>(useNumericSequenceKeys);
 
     // Identifying packing mode.
     bool frameMode = config(L"frameMode", false);
@@ -89,17 +96,31 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     // Pick up the randomizer, always picking up no randomization for the write mode.
     bool randomize = isActionWrite ? false : config(L"randomize", false);
 
+    // Check whether to use local timeline, by default we use it for better performance.
+    // Currently used only in frame mode.
+    bool localTimeline = config(L"localTimeline", true);
+
     // By default do not use omp threads for deserialization of sequences.
     // It makes sense to put it to true for cases when deserialization is CPU intensive,
     // i.e. decompression of images.
-    bool multiThreadedDeserialization = config(L"multiThreadedDeserialization", false);
+    bool multiThreadedDeserialization = config(L"multiThreadedDeserialization", ContainsDeserializer(config, L"ImageDeserializer"));
     if (randomize)
     {
         // By default randomizing the whole data set.
-        size_t randomizationWindow = config(L"randomizationWindow", requestDataSize);
+        size_t randomizationWindow = requestDataSize;
+
+        // Currently in case of images, a single chunk is a single image. So no need to randomize, chunks will be randomized anyway.
+        if (ContainsDeserializer(config, L"ImageDeserializer") && m_deserializers.size() == 1)
+        {
+            randomizationWindow = 1;
+            m_packingMode = PackingMode::sample;
+        }
+
+        randomizationWindow = config(L"randomizationWindow", randomizationWindow);
+
         // By default using STL random number generator.
         bool useLegacyRandomization = config(L"useLegacyRandomization", false);
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, true /* should Prefetch */, BlockRandomizer::DecimationMode::chunk, useLegacyRandomization, multiThreadedDeserialization);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, true /* should Prefetch */, useLegacyRandomization, multiThreadedDeserialization);
     }
     else
     {
@@ -130,7 +151,8 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     case PackingMode::sample:
         m_packer = std::make_shared<FramePacker>(
             m_sequenceEnumerator,
-            m_streams);
+            m_streams,
+            localTimeline);
         break;
     case PackingMode::sequence:
         m_packer = std::make_shared<SequencePacker>(
@@ -281,6 +303,21 @@ void CompositeDataReader::StartEpoch(const EpochConfiguration& cfg, const std::m
     }
 
     ReaderBase::StartEpoch(config, inputDescriptions);
+}
+
+bool CompositeDataReader::ContainsDeserializer(const ConfigParameters& readerConfig, const wstring& type)
+{
+    argvector<ConfigValue> deserializerConfigs =
+        readerConfig(L"deserializers", ConfigParameters::Array(argvector<ConfigValue>(vector<ConfigValue> {})));
+
+    for (size_t i = 0; i < deserializerConfigs.size(); ++i)
+    {
+        ConfigParameters p = deserializerConfigs[i];
+        std::wstring deserializerType = p("type");
+        if (deserializerType == type)
+            return true;
+    }
+    return false;
 }
 
 }}}

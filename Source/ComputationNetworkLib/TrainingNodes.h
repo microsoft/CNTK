@@ -1151,7 +1151,7 @@ class IRngUser
 {
 public:
     virtual RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) = 0;
-    virtual void SetRandomSeed(const unsigned long val) = 0;
+    virtual void SetRngState(uint64_t seed, uint64_t offset = 0) = 0;
 };
 
 // This implements IRngUser using RNGHandle.
@@ -1161,21 +1161,67 @@ public:
     RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) override
     {
         if (!m_RNGHandle)
-            m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
+            m_RNGHandle = RNGHandle::Create(deviceId, m_rngSeed, m_rngOffset);
 
         return *m_RNGHandle;
     }
 
     // E.g. called from ComputationNetwork to make sure that CNTK running on different nodes will have different seed.
-    void SetRandomSeed(const unsigned long val) override
+    void SetRngState(uint64_t seed, uint64_t offset = 0) override
     {
-        m_randomSeed = (unsigned long)val;
-
+        m_rngSeed = seed;
+        m_rngOffset = offset;
         m_RNGHandle.reset(); // Reset handle. New handle will be generated with next call of GetRNGHandle(...).
     }
 
+    uint64_t GetRngSeed() const
+    {
+        return m_rngSeed;
+    }
+
+    uint64_t GetRngOffset() const
+    {
+        return m_rngOffset;
+    }
+
+    void UpdateRngOffset(uint64_t val)
+    {
+        m_rngOffset = val;
+    }
+
 protected:
-    unsigned long m_randomSeed = 0;
+
+    void Load(File& fstream, size_t modelVersion)
+    {
+        if (modelVersion < CNTK_MODEL_VERSION_16)
+            return;
+
+        uint64_t seed;
+        uint64_t offset;
+
+        if (modelVersion == CNTK_MODEL_VERSION_16)
+        {
+            unsigned long seed_16;
+            fstream >> seed_16;
+            seed = seed_16;
+        }
+        else 
+        {
+            fstream >> seed;
+        }
+
+        fstream >> offset;
+        SetRngState(seed, offset);  
+    }
+
+    void Save(File& fstream) const
+    {
+        fstream << GetRngSeed();
+        fstream << GetRngOffset();
+    }
+
+    uint64_t m_rngSeed = 0;
+    uint64_t m_rngOffset = 0;
     std::shared_ptr<RNGHandle> m_RNGHandle;
 };
 
@@ -1185,7 +1231,7 @@ protected:
 // Provides random sampling functionality.
 //
 // Parameters:
-// * Input(0) Sampling weight vector: Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0) Sampling weight vector: Matrix of shape [numClasses x 1] providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1197,10 +1243,10 @@ class RandomSampleNodeBase : public ComputationNodeNonLooping<ElemType>, public 
     static const std::wstring TypeName(){return L"RandomSampleNodeBase";}
 
 public:
-    RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+    RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates)
     {
-        SetRandomSeed((unsigned long)CreateUniqId());
+        SetRngState(CreateUniqId());
     }
 
     RandomSampleNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
@@ -1211,8 +1257,7 @@ public:
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
 
-    void Save(File& fstream) const;
-
+    virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
 
 protected:
@@ -1221,36 +1266,36 @@ protected:
 
     // Runs the sampling returning a vector with the id's of the samples. The parameter nTries is used to return the number of draws that was needed
     // to get the expected number of samples.
-    const std::vector<size_t> RunSampling(long& nTries);
+    const std::vector<size_t> RunSampling(size_t& nTries);
 
 public:
-    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override {
-        // This node does not propagate gradients.
-    }
-
-    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override{}
-
+    virtual void /*ComputationNode::*/ BackpropToNonLooping(size_t inputIndex) override {} // This node does not propagate gradients.
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
-
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false;}
     virtual void /*ComputationNode::*/ ForwardPropNonLooping() override{}
+    virtual bool GetAllowDuplicates() const { return m_allowDuplicates; }
+    virtual size_t GetNumSamples() const { return m_sizeOfSampledSet; }
 
 protected:
     bool m_allowDuplicates; // The node can create samples allowing for duplicates (sampling with replacement) or not (sampling without replacement).
-    int m_sizeOfSampledSet; // Requested size of sample in case of run-mode = CREATE_SAMPLES.
+    size_t m_sizeOfSampledSet; // Requested size of sample in case of run-mode = CREATE_SAMPLES.
     std::vector<double> m_samplingWeightsPrefixSum;
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleNode(samplingWeights, sizeOfSampledSet, allowDuplicates):
-// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix of shape [nClasses x sizeOfSampledSet] where nClasses is the number of classes (categories) to choose from.
+// The node's value is a set of sizeOfSampledSet random samples represented as a (sparse) matrix 
+// of shape [numClasses x sizeOfSampledSet] where numClasses is the number of classes (categories) to choose from.
 // The output has no dynamic axis.
-// The samples are drawn according to the weight vector p(w_i) = w_i / sum_k(w_k)
+// The samples are drawn with a probability proportional to the weights w of the vector 'samplingWeights' : p(w_i) = w_i / sum_k(w_k)
 // We get one set of samples for per minibatch.
+// Multiply a 'numClasses' - dimensional vector with this matrix to randomly sample 'sizeOfSampledSet' values from it.
+// The resulting vector has a dimension of 'sizeOfSampledSet'.Currently, only rank - 1 tensors are supported.
 // Intended uses are e.g. sampled softmax, noise contrastive estimation etc.
 //
 // Parameters:
-// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0): Sampling weight vector. Matrix of shape [numClasses x 1] providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1261,7 +1306,7 @@ class RandomSampleNode : public RandomSampleNodeBase<ElemType>
     static const std::wstring TypeName(){ return L"RandomSample"; }
 
 public:
-    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+    RandomSampleNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
     {}
 
@@ -1279,13 +1324,13 @@ public:
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 // RandomSampleInclusionFrequencyNode(samplingWeights, sizeOfSampledSet, allowDuplicates): 
-// Intended uses are e.g. sampled softmax, noise contrastive estimation etc where it is used together with RandomSampleNode.
+// Intended uses are e.g. sampled softmax, noise contrastive estimation etc. where it is used together with RandomSampleNode.
 // This node estimates how often each class will occur in a set sampled with RandomSampleNode(...) on the average. 
 // If the sampling mode 'allowDuplicates = true' is choosen this is trivial and exact. 
 // For allowDuplicates = false we get some estimate. The value is updated only when the input weights change.
 //
 // Parameters:
-// * Input(0): Sampling weight vector. Matrix of shape (nClasses x 1) providing sampling weights >= 0.
+// * Input(0): Sampling weight vector. Matrix of shape (numClasses x 1) providing sampling weights >= 0.
 // * sizeOfSampledSet: Size of the sampled set.
 // * allowDuplicates: controls if sampled set is allowed to contain duplicates.
 // --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1295,7 +1340,7 @@ class RandomSampleInclusionFrequencyNode : public RandomSampleNodeBase<ElemType>
     typedef RandomSampleNodeBase<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName(){ return L"RandomSampleInclusionFrequency"; }
 public:
-    RandomSampleInclusionFrequencyNode(DEVICEID_TYPE deviceId, const wstring& name, int sizeOfSampledSet = 0, bool allowDuplicates = false)
+    RandomSampleInclusionFrequencyNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name, sizeOfSampledSet, allowDuplicates)
     {}
 
@@ -2075,10 +2120,13 @@ public:
     DeclareConstructorFromConfigWithNumInputs(DropoutNode);
     DropoutNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name),
-          m_dropoutRate(0)
+        m_dropoutRate(0)
     {
-        SetRandomSeed((unsigned long)CreateUniqId());
+        SetRngState(CreateUniqId());
     }
+
+    virtual void Save(File& fstream) const override;
+    virtual void Load(File& fstream, size_t modelVersion) override;
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
@@ -2118,6 +2166,7 @@ public:
             sliceMask.SetUniformRandomMask((ElemType)m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate)) /*pre-scaled*/, GetRNGHandle());
             // apply dropout mask
             sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
+            UpdateRngOffset(GetRngOffset() + sliceMask.GetNumElements());
         }
     }
 
@@ -2146,7 +2195,7 @@ public:
         {
             auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
             node->m_dropoutRate = m_dropoutRate;
-            node->SetRandomSeed(m_randomSeed);
+            node->SetRngState(GetRngSeed(), GetRngOffset());
             node->m_maskOfDropout = m_maskOfDropout;
         }
     }
@@ -2170,9 +2219,6 @@ private:
     double m_dropoutRate;
     shared_ptr<Matrix<ElemType>> m_maskOfDropout;
 };
-
-template class DropoutNode<float>;
-template class DropoutNode<double>;
 
 // -----------------------------------------------------------------------
 // BatchNormalizationNode (input, scale, bias, runMean, runVariance,
@@ -2216,7 +2262,8 @@ template class DropoutNode<double>;
 // * imageLayout is the image layout. Only cudnn is supported at present.
 // -----------------------------------------------------------------------
 template <class ElemType>
-class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<5>, public IFreezable
+class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<5>, public IFreezable,
+    public IdentityTransformerNodeOnOneInput<0>
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"BatchNormalization"; }
@@ -2229,9 +2276,9 @@ public:
     {
     }
     BatchNormalizationNode(DEVICEID_TYPE deviceId, const wstring& name, bool spatial, double normalizationTimeConstant, double blendTimeConstant,
-                           double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind) :
+                           double epsilon, bool useCntkEngine, ImageLayoutKind imageLayoutKind, size_t samplesSeen = 0) :
         Base(deviceId, name), m_spatial(spatial), m_normTimeConst(normalizationTimeConstant), m_blendTimeConst(blendTimeConstant),
-        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(0),
+        m_epsilon(epsilon), m_useCntkEngine(useCntkEngine), m_imageLayoutKind(imageLayoutKind), m_samplesSeen(samplesSeen),
         m_convertRunningVariancePending(false)
     {
     }
@@ -2351,6 +2398,8 @@ public:
         }
     }
 
+    size_t GetSamplesSeen() const { return m_samplesSeen; }
+
 private: // time-constant conversions
 
     // map time constants to exp avg factor
@@ -2359,11 +2408,7 @@ private: // time-constant conversions
     {
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
-        {
-            if (m_samplesSeen == 0)
-                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
             return 0;                                        // (m_normTimeConst == infinity) no new contribution from current minibatch
-        }
 
         // Initialization case: only use current minibatch.
         if (m_samplesSeen == 0) return 1.0;
@@ -2391,11 +2436,7 @@ private: // time-constant conversions
     {
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
-        {
-            if (m_samplesSeen == 0)
-                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
             return 1.0;                 // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
-        }
 
         // Initialization case: only use current minibatch.
         if (m_samplesSeen == 0) return 0;
@@ -2540,7 +2581,7 @@ public:
         if (expAvgFactor != 0 || blendFactor != 1)
             m_samplesSeen += GetMBLayout()->GetActualNumSamples();
 
-        Base::EndBackprop();
+        Base::EndForwardProp();
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -2589,7 +2630,6 @@ public:
                 runInvStdDev.AssignElementPowerOf(runInvStdDev, 2);
                 runInvStdDev.ElementInverse();
                 runInvStdDev += (float) m_epsilon;
-                runInvStdDev.Print();
                 m_convertRunningVariancePending = false;
             }
 

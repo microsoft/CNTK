@@ -13,14 +13,14 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, batch_dense_to_sparse, left_matrix_type, right_matrix_type
-from ...utils import sanitize_dtype_cntk, ones_like, eval
+from ...utils import sanitize_dtype_cntk, _ones_like, eval
 
 TENSOR_PAIRS = [
     ([30.], [10.]),
     ([[10.]], [[30.]]),
     ([[1.5, 2.1]], [[10., 20.]]),
-    #([[100., 200.], [300., 400.], [10., 20.]],
-    #  [[10., 20.], [30., 40.], [1., 2.]]),
+    ([[100., 200.], [300., 400.], [10., 20.]],
+     [[10., 20.], [30., 40.], [1., 2.]]),
 
     # Adding two 3x2 inputs of sequence length 1
     ([[30., 40.], [1., 2.], [0.1, 0.2]], [[10, 20], [3, 4], [-0.5, -0.4]]),
@@ -55,13 +55,35 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
                     left_operand, right_operand,
                     expected_forward, expected_backward)
 
+def test_op_plus_gradient_accumulation(device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+
+    value = AA([[[1]]], dtype=dt_precision)
+
+    from cntk import times_transpose, Axis
+    a = I(shape=(1,),
+          needs_gradient=True,
+          name='a')
+
+    input_op = a + a
+
+    expected_forward = AA([[[2]]], dtype=dt_precision)
+    expected_backward = { a : [[[2]]], a : [[[2]]] }
+
+    forward_input = {a: value}
+
+    unittest_helper(input_op,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
+
+
 SEQ_TENSOR_PAIRS = [
     # two inputs each having sequences of length 1 and 2
     ([[[30.]], [[40], [50]]],  # first batch with two sequences
      [[[3.]], [[4], [5]]]),  # second batch with two sequences
 
-    ([[[30.,   0]], [[40,   1], [50,   2]]],  # first batch with two sequences
-     [[[3., -10]], [[4, -20], [5, -30]]]),  # second batch with two sequences
+    #([[[30.,   0]], [[40,   1], [50,   2]]],  # first batch with two sequences
+     #[[[3., -10]], [[4, -20], [5, -30]]]),  # second batch with two sequences
 ]
 
 
@@ -74,8 +96,8 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
                         for i in range(len(left_batch))]
 
     expected_backward = {
-        'left': ones_like(left_batch, PRECISION_TO_TYPE[precision]),
-        'right': ones_like(right_batch, PRECISION_TO_TYPE[precision])
+        'left': _ones_like(left_batch, PRECISION_TO_TYPE[precision]),
+        'right': _ones_like(right_batch, PRECISION_TO_TYPE[precision])
     }
 
     left_value = [AA(sample, dtype=PRECISION_TO_TYPE[precision])
@@ -86,20 +108,21 @@ def test_op_plus_var_sequences_input_input(left_batch, right_batch, device_id, p
     right_shape = right_value[0][0].shape
 
     a = I(shape=left_shape,
-          data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           name='a')
 
     b = I(shape=right_shape,
-          data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           name='b')
 
     input_op_input = plus(a, b)
     forward_input = {a: left_value, b: right_value}
     backward_input = {a: None, b: None}
-    expected_backward = {a: expected_backward[
-        'left'], b: expected_backward['right'], }
+    expected_backward = {
+            a: expected_backward['left'], 
+            b: expected_backward['right'], }
     unittest_helper(input_op_input,
                     forward_input, expected_forward,
                     expected_backward,
@@ -175,6 +198,8 @@ NEGATE_TENSORS = [
     ([[100., 200.], [300., 400.], [10., 20.]]),
     ([[30, 40], [1, 2], [0.1, 0.2]])
 ]
+
+
 @pytest.mark.parametrize("operand", NEGATE_TENSORS)
 def test_op_negate(operand, device_id, precision):
     t = -1 * AA(operand, dtype=PRECISION_TO_TYPE[precision])
@@ -193,34 +218,41 @@ def test_op_negate(operand, device_id, precision):
     _test_unary_op(precision, device_id, '-', operand,
                    expected_forward, expected_backward)
 
-TIMES_PAIRS = [
+# transpose_times currently only supports right operands of rank 1 or 2
+TRANSPOSE_TIMES_PAIRS = [
     ([[30.]], [[10.]]),
     ([[1.5, 2.1]], [[10.], [20.]]),
-    ([[100., 200.]], [[10.], [20.]]),
+    ([[100., 200.]], [[-10.], [20.]]),
     ([[100., 200.], [300., 400.]], [[10.], [20.]]),
-    ([[100., 200.], [300., 400.]], [[10., 20.], [20., 30.]])
+    ([[100., 200.], [-300., 400.]], [[10., 20.], [20., 30.]]),
+    (np.reshape(np.arange(24), (4, 3, 2)),
+     np.array([[1, 3], [2, 4]])),
 ]
 
-# TODO: Handle sparse matrices
+# TODO: Handle sparse matrices (left_matrix_type, right_matrix_type)
+
+# adding a rank 3 operand for times operation
+TIMES_PAIRS = TRANSPOSE_TIMES_PAIRS + \
+    list((np.reshape(np.arange(8), (2, 2, 2)), np.reshape(np.arange(8), (2, 2, 2))))
 
 
 @pytest.mark.parametrize("left_operand, right_operand", TIMES_PAIRS)
-def test_op_times(left_operand, right_operand, device_id, precision,
-                  left_matrix_type, right_matrix_type):
+def test_op_times(left_operand, right_operand, device_id, precision):
     dt_precision = PRECISION_TO_TYPE[precision]
 
     a = AA(left_operand, dtype=dt_precision)
     b = AA(right_operand, dtype=dt_precision)
 
-    expected_forward = [[np.dot(a, b)]]
-
-    assert len(a.shape) == len(b.shape) == 2
+    expected_forward = [[np.tensordot(a, b, axes=len(b.shape) - 1)]]
 
     left_backward = np.zeros_like(a)
-    left_backward[:, :] = b.sum(axis=1)
+    left_backward[...] = b.sum(axis=-1)
 
     right_backward = np.zeros_like(b)
-    right_backward[:, :] = np.transpose([a.sum(axis=0)])
+    transpose_axes = list(np.roll(np.arange(len(b.shape)), -1))
+    sum_axes = tuple(np.arange(0, len(a.shape) - len(b.shape) + 1))
+    right_backward[...] = np.transpose(
+        AA([a.sum(axis=sum_axes)]), axes=transpose_axes)
 
     expected_backward = {
         'left_arg':  [[left_backward]],
@@ -231,3 +263,33 @@ def test_op_times(left_operand, right_operand, device_id, precision,
 
     _test_binary_op(precision, device_id, times,
                     left_operand, right_operand, expected_forward, expected_backward)
+
+
+@pytest.mark.parametrize("left_operand, right_operand", TRANSPOSE_TIMES_PAIRS)
+def test_op_transpose_times(left_operand, right_operand, device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+
+    # tranpose right_operand to make product possible
+    right_operand = np.transpose(right_operand).tolist()
+
+    a = AA(left_operand, dtype=dt_precision)
+    b = AA(right_operand, dtype=dt_precision)
+
+    expected_forward = [[np.dot(a, np.transpose(b))]]
+
+    left_backward = np.zeros_like(a)
+    left_backward[...] = b.sum(axis=tuple(range(len(b.shape) - 1)))
+
+    right_backward = np.zeros_like(b)
+    right_backward[...] = a.sum(axis=tuple(range(len(a.shape) - 1)))
+
+    expected_backward = {
+        'left_arg':  [[left_backward]],
+        'right_arg': [[right_backward]]
+    }
+
+    from cntk import times_transpose
+
+    _test_binary_op(precision, device_id, times_transpose,
+                    left_operand, right_operand, expected_forward, expected_backward)
+

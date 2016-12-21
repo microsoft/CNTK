@@ -36,7 +36,7 @@ enum GradientOperationType
 };
 
 template <class ElemType, ElementWiseOperator opForward, ElementWiseOperator opBackward, GradientOperationType opType>
-class UnaryElementWiseWithOpCodeNodeBase : public ComputationNode<ElemType>, public NumInputs<1>
+class UnaryElementWiseWithOpCodeNodeBase : public ComputationNode<ElemType>, public NumInputs<1>, public IdentityTransformerNode
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembers;
@@ -72,7 +72,7 @@ public:
         }
         else if (opTypeHolder == unaryGradient)
         {
-            sliceInputGrad.DoUnaryOpOf(1, sliceOutputGrad, 1, opBackward, opSum);
+            sliceInputGrad.DoUnaryOpOf(Input(inputIndex)->ParentOverwritesGradient() ? 0.0f : 1.0f, sliceOutputGrad, 1, opBackward, opSum);
         }
         else 
         {
@@ -80,7 +80,7 @@ public:
             // Not possible for Cos().
             auto sliceValue = (opType == binaryWithOutputGradient) ? ValueTensorFor(rank, fr) : // using input or output value
                 InputRef(0).ValueTensorFor(rank, fr);
-            sliceInputGrad.DoBinaryOpOf(1, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
+            sliceInputGrad.DoBinaryOpOf(Input(inputIndex)->ParentOverwritesGradient() ? 0.0f : 1.0f, sliceOutputGrad, sliceValue, 1, opBackward, opSum);
         }
     }
 
@@ -93,10 +93,13 @@ public:
     {
         return opType == binaryWithOutputGradient;
     }
+
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override
     {
         return opType == binaryWithInputGradient;
     }
+
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return (opType != noGradient); }
 };
 
 #define UnaryElementWiseWithOpCodeNodeBaseMembers UsingComputationNodeMembersBoilerplate;

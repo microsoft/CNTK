@@ -68,7 +68,7 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
     auto features = InputVariable({ baseFeaturesDim }, DataType::Float, L"features");
     auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels");
 
-    const size_t numSamplesForFeatureStatistics = 0;
+    const size_t numSamplesForFeatureStatistics = MinibatchSource::FullDataSweep;
     Dictionary frameModeConfig;
     frameModeConfig[L"frameMode"] = true;
     auto minibatchSource = CreateMinibatchSource(baseFeaturesDim, numOutputClasses, frameModeConfig, numSamplesForFeatureStatistics, false);
@@ -109,10 +109,9 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
     featureStreamInfo = minibatchSource->StreamInfo(features);
     auto labelStreamInfo = minibatchSource->StreamInfo(labels);
 
-    double learningRatePerSample = 0.000781;
-    size_t momentumTimeConstant = 6074;
-    double momentumPerSample = std::exp(-1.0 / momentumTimeConstant);
-    auto learner = MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample, momentumPerSample);
+    LearningRatePerSampleSchedule learningRatePerSample = 0.000781;
+    MomentumAsTimeConstantSchedule momentumTimeConstant = 6074;
+    auto learner = MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample, momentumTimeConstant);
     Trainer trainer(classifierOutput, trainingLoss, prediction, {learner});
 
     size_t outputFrequencyInMinibatches = 1;

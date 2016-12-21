@@ -6051,14 +6051,17 @@ Test module "MathTests" has passed with:
       770 assertions out of 770 passed
 
   Test suite "CPUMatrixSuite" has passed with:
-    30 test cases out of 30 passed
-    5228662 assertions out of 5228662 passed
+    31 test cases out of 31 passed
+    5248662 assertions out of 5248662 passed
 
     Test case "CPUMatrixSuite/CPUSparseMatrixColumnSlice" has passed with:
       1 assertion out of 1 passed
 
     Test case "CPUMatrixSuite/CPUSparseMatrixCopyColumnSliceToDense" has passed with:
       1 assertion out of 1 passed
+
+    Test case "CPUMatrixSuite/CPUSparseMatrixMultiplyAndAdd" has passed with:
+      20000 assertions out of 20000 passed
 
     Test case "CPUMatrixSuite/MatrixMultiplyTest" has passed with:
       1484 assertions out of 1484 passed
@@ -6146,7 +6149,7 @@ Test module "MathTests" has passed with:
 
   Test suite "GPUMatrixSuite" has passed with:
     56 test cases out of 56 passed
-    1263760 assertions out of 1263760 passed
+    1263762 assertions out of 1263762 passed
 
     Test case "GPUMatrixSuite/GPUBlasMultiplyAndWeightedAdd" has passed with:
       1 assertion out of 1 passed
@@ -6290,7 +6293,7 @@ Test module "MathTests" has passed with:
       4 assertions out of 4 passed
 
     Test case "GPUMatrixSuite/MatrixSparseTimesDense" has passed with:
-      1 assertion out of 1 passed
+      3 assertions out of 3 passed
 
     Test case "GPUMatrixSuite/MatrixDenseTimesSparse" has passed with:
       2 assertions out of 2 passed
@@ -6398,11 +6401,21 @@ Test module "MathTests" has passed with:
       2 assertions out of 2 passed
 
   Test suite "QuantizersUnitTests" has passed with:
-    1 test case out of 1 passed
+    2 test cases out of 2 passed
     12 assertions out of 12 passed
 
     Test case "QuantizersUnitTests/FloatToShort" has passed with:
-      12 assertions out of 12 passed
+      6 assertions out of 6 passed
+
+    Test case "QuantizersUnitTests/QuantizeZeros" has passed with:
+      6 assertions out of 6 passed
+
+  Test suite "QuantizedOperationsUnitTests" has passed with:
+    1 test case out of 1 passed
+    65 assertions out of 65 passed
+
+    Test case "QuantizedOperationsUnitTests/MultiplyIntToShort" has passed with:
+      65 assertions out of 65 passed
 
   Test suite "MathTensorTests" has passed with:
     9 test cases out of 9 passed

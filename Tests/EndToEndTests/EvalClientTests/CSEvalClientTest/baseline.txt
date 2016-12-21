@@ -9,85 +9,86 @@ CPU info:
 ++ cygpath -au 'C:\CNTKTestData'
 + TestDataDir=/cygdrive/c/CNTKTestData
 + ImageDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image
-+ MnistDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST
-+ DataDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Data
-+ ConfigDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Config
-+ OutputDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Output
-+ ResnetModelDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/Miscellaneous/ImageNet/ResNet
-+ cp /cygdrive/c/CNTKTestData/Image/MNIST/v0/Train-28x28_cntk_text.txt /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Data
-+ cp /cygdrive/c/CNTKTestData/Image/MNIST/v0/Test-28x28_cntk_text.txt /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Data
-+ cp /cygdrive/c/CNTKTestData/PreTrainedModels/ResNet/v0/ResNet_18.model /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/Miscellaneous/ImageNet/ResNet
-+ '[' -d /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Output ']'
-+ '[' -d /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Output/Models ']'
-+ rm -rf /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Output/Models
++ MnistDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST
++ DataDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST
++ ConfigDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST/../../GettingStarted
++ OutputDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST/../../GettingStarted/Output
++ ResnetModelDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/Classification/ResNet
++ cp /cygdrive/c/CNTKTestData/Image/MNIST/v0/Train-28x28_cntk_text.txt /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST
++ cp /cygdrive/c/CNTKTestData/Image/MNIST/v0/Test-28x28_cntk_text.txt /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST
++ cp /cygdrive/c/CNTKTestData/PreTrainedModels/ResNet/v0/ResNet_18.model /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/Classification/ResNet
++ '[' -d /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST/../../GettingStarted/Output ']'
++ '[' -d /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST/../../GettingStarted/Output/Models ']'
++ rm -rf /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST/../../GettingStarted/Output/Models
 + DeleteModelsAfterTest=0
-+ '[' -f /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Config/01_OneHidden.cntk ']'
-+ '[' -f /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Config/02_Convolution.cntk ']'
++ '[' -f /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST/../../GettingStarted/01_OneHidden.cntk ']'
++ '[' -f /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST/../../GettingStarted/02_OneConv.cntk ']'
 + cntkrun 01_OneHidden.cntk 'stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
 + configFileName=01_OneHidden.cntk
 + additionalCNTKArgs='stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
 + '[' Windows_NT == Windows_NT ']'
-++ cygpath -aw /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Config
-+ ConfigDir='C:\repos\cntk\Examples\Image\MNIST\Config'
-++ cygpath -aw /tmp/cntk-test-20160923125910.750056/EvalClientTests_CSEvalClientTest@release_cpu
-+ RunDir='C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu'
-++ cygpath -aw /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Data
-+ DataDir='C:\repos\cntk\Examples\Image\MNIST\Data'
-++ cygpath -aw /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/MNIST/Output
-+ OutputDir='C:\repos\cntk\Examples\Image\MNIST\Output'
-+ CNTKArgs='configFile=C:\repos\cntk\Examples\Image\MNIST\Config/01_OneHidden.cntk currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Image\MNIST\Data ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
+++ cygpath -aw /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST/../../GettingStarted
++ ConfigDir='C:\repos\cntk\Examples\Image\GettingStarted'
+++ cygpath -aw /tmp/cntk-test-20161121145053.977226/EvalClientTests_CSEvalClientTest@release_cpu
++ RunDir='C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu'
+++ cygpath -aw /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST
++ DataDir='C:\repos\cntk\Examples\Image\DataSets\MNIST'
+++ cygpath -aw /cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST/../../GettingStarted/Output
++ OutputDir='C:\repos\cntk\Examples\Image\GettingStarted\Output'
++ CNTKArgs='configFile=C:\repos\cntk\Examples\Image\GettingStarted/01_OneHidden.cntk currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
 + '[' '' '!=' '' ']'
-+ modelsDir=/tmp/cntk-test-20160923125910.750056/EvalClientTests_CSEvalClientTest@release_cpu/Models
++ modelsDir=/tmp/cntk-test-20161121145053.977226/EvalClientTests_CSEvalClientTest@release_cpu/Models
 + [[ 1 == 1 ]]
-+ '[' -d /tmp/cntk-test-20160923125910.750056/EvalClientTests_CSEvalClientTest@release_cpu/Models ']'
-+ mkdir -p /tmp/cntk-test-20160923125910.750056/EvalClientTests_CSEvalClientTest@release_cpu/Models
++ '[' -d /tmp/cntk-test-20161121145053.977226/EvalClientTests_CSEvalClientTest@release_cpu/Models ']'
++ mkdir -p /tmp/cntk-test-20161121145053.977226/EvalClientTests_CSEvalClientTest@release_cpu/Models
 + [[ 0 == 0 ]]
-+ run /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\MNIST\Config/01_OneHidden.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\MNIST\Data' 'ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config' 'OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
++ run /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\GettingStarted/01_OneHidden.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted' 'OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
 + cmd=/cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe
 + shift
 + '[' '' == 1 ']'
-+ echo === Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\MNIST\Config/01_OneHidden.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\MNIST\Data' 'ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config' 'OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
-=== Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe configFile=C:\repos\cntk\Examples\Image\MNIST\Config/01_OneHidden.cntk currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Image\MNIST\Data ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]
-+ /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\MNIST\Config/01_OneHidden.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\MNIST\Data' 'ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config' 'OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
-CNTK 1.7+ (zhouwang/add-e2etests 0c25b6, Sep 23 2016 12:56:13) on zhouwang4 at 2016/09/23 11:59:12
++ echo === Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\GettingStarted/01_OneHidden.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted' 'OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
+=== Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe configFile=C:\repos\cntk\Examples\Image\GettingStarted/01_OneHidden.cntk currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]
++ /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\GettingStarted/01_OneHidden.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted' 'OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
+CNTK 2.0.beta3.0+ (zhouwang/evalwrapper-multioutputs ef4251, Nov 17 2016 19:59:53) on zhouwang4 at 2016/11/21 13:50:54
 
-C:\repos\cntk\x64\release_CpuOnly\cntk.exe  configFile=C:\repos\cntk\Examples\Image\MNIST\Config/01_OneHidden.cntk  currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data  RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu  DataDir=C:\repos\cntk\Examples\Image\MNIST\Data  ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config  OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output  DeviceId=-1  timestamping=true  stderr=-  command=trainNetwork  trainNetwork=[SGD=[maxEpochs=1]]
-Changed current directory to C:\repos\cntk\Examples\Image\MNIST\Data
-09/23/2016 11:59:12: Redirecting stderr to file -_trainNetwork.log
-09/23/2016 11:59:12: -------------------------------------------------------------------
-09/23/2016 11:59:12: Build info: 
+C:\repos\cntk\x64\release_CpuOnly\cntk.exe  configFile=C:\repos\cntk\Examples\Image\GettingStarted/01_OneHidden.cntk  currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST  RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu  DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST  ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted  OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output  DeviceId=-1  timestamping=true  stderr=-  command=trainNetwork  trainNetwork=[SGD=[maxEpochs=1]]
+Changed current directory to C:\repos\cntk\Examples\Image\DataSets\MNIST
+11/21/2016 13:50:54: Redirecting stderr to file -_trainNetwork.log
+11/21/2016 13:50:54: -------------------------------------------------------------------
+11/21/2016 13:50:54: Build info: 
 
-09/23/2016 11:59:12: 		Built time: Sep 23 2016 12:56:13
-09/23/2016 11:59:12: 		Last modified date: Fri Sep 23 11:28:25 2016
-09/23/2016 11:59:12: 		Build type: Release
-09/23/2016 11:59:12: 		Build target: CPU-only
-09/23/2016 11:59:12: 		With 1bit-SGD: yes
-09/23/2016 11:59:12: 		Math lib: mkl
-09/23/2016 11:59:12: 		Build Branch: zhouwang/add-e2etests
-09/23/2016 11:59:12: 		Build SHA1: 0c25b63da32c14869deb9232a6257daef6f9d285 (modified)
-09/23/2016 11:59:12: 		Built by zhouwang on zhouwang4
-09/23/2016 11:59:12: 		Build Path: C:\repos\cntk\Source\CNTK\
-09/23/2016 11:59:12: -------------------------------------------------------------------
+11/21/2016 13:50:54: 		Built time: Nov 17 2016 19:59:53
+11/21/2016 13:50:54: 		Last modified date: Wed Nov 16 20:54:22 2016
+11/21/2016 13:50:54: 		Build type: Release
+11/21/2016 13:50:54: 		Build target: CPU-only
+11/21/2016 13:50:54: 		With 1bit-SGD: yes
+11/21/2016 13:50:54: 		With ASGD: yes
+11/21/2016 13:50:54: 		Math lib: mkl
+11/21/2016 13:50:54: 		Build Branch: zhouwang/evalwrapper-multioutputs
+11/21/2016 13:50:54: 		Build SHA1: ef4251e891cbdee7bb9723fb6e340b85671761cb (modified)
+11/21/2016 13:50:54: 		Built by zhouwang on zhouwang4
+11/21/2016 13:50:54: 		Build Path: C:\repos\cntk\Source\CNTK\
+11/21/2016 13:50:55: -------------------------------------------------------------------
 
 Configuration After Processing and Variable Resolution:
 
 configparameters: 01_OneHidden.cntk:command=trainNetwork
-configparameters: 01_OneHidden.cntk:configDir=C:\repos\cntk\Examples\Image\MNIST\Config
-configparameters: 01_OneHidden.cntk:currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data
-configparameters: 01_OneHidden.cntk:dataDir=C:\repos\cntk\Examples\Image\MNIST\Data
+configparameters: 01_OneHidden.cntk:ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted
+configparameters: 01_OneHidden.cntk:currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST
+configparameters: 01_OneHidden.cntk:dataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST
 configparameters: 01_OneHidden.cntk:deviceId=-1
-configparameters: 01_OneHidden.cntk:modelPath=C:\repos\cntk\Examples\Image\MNIST\Output/Models/01_OneHidden
-configparameters: 01_OneHidden.cntk:outputDir=C:\repos\cntk\Examples\Image\MNIST\Output
+configparameters: 01_OneHidden.cntk:modelPath=C:\repos\cntk\Examples\Image\GettingStarted\Output/Models/01_OneHidden
+configparameters: 01_OneHidden.cntk:outputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output
 configparameters: 01_OneHidden.cntk:precision=float
 configparameters: 01_OneHidden.cntk:rootDir=..
-configparameters: 01_OneHidden.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu
+configparameters: 01_OneHidden.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu
 configparameters: 01_OneHidden.cntk:stderr=-
 configparameters: 01_OneHidden.cntk:testNetwork={
     action = "test"
 minibatchSize = 1024    
     reader = {
         readerType = "CNTKTextFormatReader"
-        file = "C:\repos\cntk\Examples\Image\MNIST\Data/Test-28x28_cntk_text.txt"
+        file = "C:\repos\cntk\Examples\Image\DataSets\MNIST/Test-28x28_cntk_text.txt"
         input = {
             features = { dim = 784 ; format = "dense" }
             labels =   { dim = 10  ; format = "dense" }
@@ -102,14 +103,14 @@ configparameters: 01_OneHidden.cntk:trainNetwork={
     BrainScriptNetworkBuilder = {
 imageShape = 28:28:1                        
 labelDim = 10                               
-        featScale = 1/256     
+        featScale = 1/256
         model(x) = {
             s1 = x * featScale
-            h1 = DenseLayer {200, activation=Sigmoid} (s1)
+            h1 = DenseLayer {200, activation=ReLU} (s1) 
             z = LinearLayer {labelDim} (h1)
         }
         features = Input {imageShape}
-        labels = Input (labelDim)
+        labels = Input {labelDim}
         out = model (features)
         ce   = CrossEntropyWithSoftmax (labels, out.z)
         errs = ClassificationError (labels, out.z)
@@ -122,14 +123,14 @@ labelDim = 10
     SGD = {
         epochSize = 60000
         minibatchSize = 64
-        maxEpochs = 30
+        maxEpochs = 10
         learningRatesPerSample = 0.01*5:0.005
         momentumAsTimeConstant = 0
         numMBsToShowResult = 500
     }
     reader = {
         readerType = "CNTKTextFormatReader"
-        file = "C:\repos\cntk\Examples\Image\MNIST\Data/Train-28x28_cntk_text.txt"
+        file = "C:\repos\cntk\Examples\Image\DataSets\MNIST/Train-28x28_cntk_text.txt"
         input = {
             features = { dim = 784 ; format = "dense" }
             labels =   { dim = 10  ; format = "dense" }
@@ -137,16 +138,16 @@ labelDim = 10
     }   
 } [SGD=[maxEpochs=1]]
 
-09/23/2016 11:59:12: Commands: trainNetwork
-09/23/2016 11:59:12: precision = "float"
+11/21/2016 13:50:55: Commands: trainNetwork
+11/21/2016 13:50:55: precision = "float"
 
-09/23/2016 11:59:12: ##############################################################################
-09/23/2016 11:59:12: #                                                                            #
-09/23/2016 11:59:12: # trainNetwork command (train action)                                        #
-09/23/2016 11:59:12: #                                                                            #
-09/23/2016 11:59:12: ##############################################################################
+11/21/2016 13:50:55: ##############################################################################
+11/21/2016 13:50:55: #                                                                            #
+11/21/2016 13:50:55: # trainNetwork command (train action)                                        #
+11/21/2016 13:50:55: #                                                                            #
+11/21/2016 13:50:55: ##############################################################################
 
-09/23/2016 11:59:12: 
+11/21/2016 13:50:55: 
 Creating virgin network.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as glorotUniform later when dimensions are fully known.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[200 x 0] as glorotUniform later when dimensions are fully known.
@@ -171,7 +172,7 @@ Node 'out.h1.arrayOfFunctions[0].W' (LearnableParameter operation): Initializing
 )Validating --> out.h1._.PlusArgs[0] = Times (out.h1.arrayOfFunctions[0].W, out.s1) : [200 x 28 x 28 x 1], [28 x 28 x 1 x *] -> [200 x *]
 Validating --> out.h1.arrayOfFunctions[0].b = LearnableParameter() :  -> [200]
 Validating --> out.h1._ = Plus (out.h1._.PlusArgs[0], out.h1.arrayOfFunctions[0].b) : [200 x *], [200] -> [200 x *]
-Validating --> out.h1 = Sigmoid (out.h1._) : [200 x *] -> [200 x *]
+Validating --> out.h1 = RectifiedLinear (out.h1._) : [200 x *] -> [200 x *]
 Node 'out.z.W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 200].
 Node 'out.z.W' (LearnableParameter operation): Initializing Parameter[10 x 200] <- glorotUniform(seed=1, init dims=[10 x 200], range=0.169031*1.000000, onCPU=true.
 )Validating --> out.z.PlusArgs[0] = Times (out.z.W, out.h1) : [10 x 200], [200 x *] -> [10 x *]
@@ -190,118 +191,119 @@ Validating network, final pass.
 
 Post-processing network complete.
 
-09/23/2016 11:59:12: 
+11/21/2016 13:50:55: 
 Model has 15 nodes. Using CPU.
 
-09/23/2016 11:59:12: Training criterion:   ce = CrossEntropyWithSoftmax
-09/23/2016 11:59:12: Evaluation criterion: errs = ClassificationError
+11/21/2016 13:50:55: Training criterion:   ce = CrossEntropyWithSoftmax
+11/21/2016 13:50:55: Evaluation criterion: errs = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
 
 Memory Sharing: Out of 25 matrices, 10 are shared as 5, and 15 are not shared.
 
-	{ out.h1 : [200 x *] (gradient)
-	  out.h1.arrayOfFunctions[0].b : [200] (gradient) }
-	{ out.h1._ : [200 x *]
-	  out.h1.arrayOfFunctions[0].W : [200 x 28 x 28 x 1] (gradient) }
+	{ out.h1 : [200 x *]
+	  out.h1._.PlusArgs[0] : [200 x *] (gradient) }
 	{ out.h1._ : [200 x *] (gradient)
 	  out.z.PlusArgs[0] : [10 x *] }
 	{ out.z : [10 x *] (gradient)
 	  out.z.W : [10 x 200] (gradient) }
-	{ out.h1 : [200 x *]
-	  out.h1._.PlusArgs[0] : [200 x *] (gradient) }
+	{ out.h1 : [200 x *] (gradient)
+	  out.h1.arrayOfFunctions[0].b : [200] (gradient) }
+	{ out.h1._ : [200 x *]
+	  out.h1.arrayOfFunctions[0].W : [200 x 28 x 28 x 1] (gradient) }
 
 
-09/23/2016 11:59:12: Training 159010 parameters in 4 out of 4 parameter tensors and 10 nodes with gradient:
+11/21/2016 13:50:55: Training 159010 parameters in 4 out of 4 parameter tensors and 10 nodes with gradient:
 
-09/23/2016 11:59:12: 	Node 'out.h1.arrayOfFunctions[0].W' (LearnableParameter operation) : [200 x 28 x 28 x 1]
-09/23/2016 11:59:12: 	Node 'out.h1.arrayOfFunctions[0].b' (LearnableParameter operation) : [200]
-09/23/2016 11:59:12: 	Node 'out.z.W' (LearnableParameter operation) : [10 x 200]
-09/23/2016 11:59:12: 	Node 'out.z.b' (LearnableParameter operation) : [10]
+11/21/2016 13:50:55: 	Node 'out.h1.arrayOfFunctions[0].W' (LearnableParameter operation) : [200 x 28 x 28 x 1]
+11/21/2016 13:50:55: 	Node 'out.h1.arrayOfFunctions[0].b' (LearnableParameter operation) : [200]
+11/21/2016 13:50:55: 	Node 'out.z.W' (LearnableParameter operation) : [10 x 200]
+11/21/2016 13:50:55: 	Node 'out.z.b' (LearnableParameter operation) : [10]
 
-09/23/2016 11:59:12: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+11/21/2016 13:50:55: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-09/23/2016 11:59:12: Starting Epoch 1: learning rate per sample = 0.010000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+11/21/2016 13:50:55: Starting Epoch 1: learning rate per sample = 0.010000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-09/23/2016 11:59:12: Starting minibatch loop.
-09/23/2016 11:59:16:  Epoch[ 1 of 1]-Minibatch[   1- 500, 53.33%]: ce = 0.51783240 * 32000; errs = 15.447% * 32000; time = 3.7966s; samplesPerSecond = 8428.5
-09/23/2016 11:59:17: Finished Epoch[ 1 of 1]: [Training] ce = 0.40280387 * 60000; errs = 12.058% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.0099999998; epochTime=4.74032s
-09/23/2016 11:59:17: SGD: Saving checkpoint model 'C:\repos\cntk\Examples\Image\MNIST\Output/Models/01_OneHidden'
+11/21/2016 13:50:55: Starting minibatch loop.
+11/21/2016 13:50:57:  Epoch[ 1 of 1]-Minibatch[   1- 500, 53.33%]: ce = 0.30943494 * 32000; errs = 9.447% * 32000; time = 1.9108s; samplesPerSecond = 16747.2
+11/21/2016 13:50:58: Finished Epoch[ 1 of 1]: [Training] ce = 0.22920353 * 60000; errs = 6.972% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.0099999998; epochTime=2.81517s
+11/21/2016 13:50:58: SGD: Saving checkpoint model 'C:\repos\cntk\Examples\Image\GettingStarted\Output/Models/01_OneHidden'
 
-09/23/2016 11:59:17: Action "train" complete.
+11/21/2016 13:50:58: Action "train" complete.
 
-09/23/2016 11:59:17: __COMPLETED__
+11/21/2016 13:50:58: __COMPLETED__
 + return 0
 + local ExitCode=0
 + [[ 0 == 1 ]]
 + return 0
-+ cntkrun 02_Convolution.cntk 'stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
-+ configFileName=02_Convolution.cntk
++ cntkrun 02_OneConv.cntk 'stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
++ configFileName=02_OneConv.cntk
 + additionalCNTKArgs='stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
 + '[' Windows_NT == Windows_NT ']'
-++ cygpath -aw 'C:\repos\cntk\Examples\Image\MNIST\Config'
-+ ConfigDir='C:\repos\cntk\Examples\Image\MNIST\Config'
-++ cygpath -aw 'C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu'
-+ RunDir='C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu'
-++ cygpath -aw 'C:\repos\cntk\Examples\Image\MNIST\Data'
-+ DataDir='C:\repos\cntk\Examples\Image\MNIST\Data'
-++ cygpath -aw 'C:\repos\cntk\Examples\Image\MNIST\Output'
-+ OutputDir='C:\repos\cntk\Examples\Image\MNIST\Output'
-+ CNTKArgs='configFile=C:\repos\cntk\Examples\Image\MNIST\Config/02_Convolution.cntk currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Image\MNIST\Data ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
+++ cygpath -aw 'C:\repos\cntk\Examples\Image\GettingStarted'
++ ConfigDir='C:\repos\cntk\Examples\Image\GettingStarted'
+++ cygpath -aw 'C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu'
++ RunDir='C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu'
+++ cygpath -aw 'C:\repos\cntk\Examples\Image\DataSets\MNIST'
++ DataDir='C:\repos\cntk\Examples\Image\DataSets\MNIST'
+++ cygpath -aw 'C:\repos\cntk\Examples\Image\GettingStarted\Output'
++ OutputDir='C:\repos\cntk\Examples\Image\GettingStarted\Output'
++ CNTKArgs='configFile=C:\repos\cntk\Examples\Image\GettingStarted/02_OneConv.cntk currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
 + '[' '' '!=' '' ']'
-+ modelsDir=/tmp/cntk-test-20160923125910.750056/EvalClientTests_CSEvalClientTest@release_cpu/Models
++ modelsDir=/tmp/cntk-test-20161121145053.977226/EvalClientTests_CSEvalClientTest@release_cpu/Models
 + [[ 1 == 1 ]]
-+ '[' -d /tmp/cntk-test-20160923125910.750056/EvalClientTests_CSEvalClientTest@release_cpu/Models ']'
-+ rm -rf /tmp/cntk-test-20160923125910.750056/EvalClientTests_CSEvalClientTest@release_cpu/Models
-+ mkdir -p /tmp/cntk-test-20160923125910.750056/EvalClientTests_CSEvalClientTest@release_cpu/Models
++ '[' -d /tmp/cntk-test-20161121145053.977226/EvalClientTests_CSEvalClientTest@release_cpu/Models ']'
++ rm -rf /tmp/cntk-test-20161121145053.977226/EvalClientTests_CSEvalClientTest@release_cpu/Models
++ mkdir -p /tmp/cntk-test-20161121145053.977226/EvalClientTests_CSEvalClientTest@release_cpu/Models
 + [[ 0 == 0 ]]
-+ run /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\MNIST\Config/02_Convolution.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\MNIST\Data' 'ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config' 'OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
++ run /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\GettingStarted/02_OneConv.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted' 'OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
 + cmd=/cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe
 + shift
 + '[' '' == 1 ']'
-+ echo === Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\MNIST\Config/02_Convolution.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\MNIST\Data' 'ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config' 'OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
-=== Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe configFile=C:\repos\cntk\Examples\Image\MNIST\Config/02_Convolution.cntk currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Image\MNIST\Data ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]
-+ /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\MNIST\Config/02_Convolution.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\MNIST\Data' 'ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config' 'OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
-CNTK 1.7+ (zhouwang/add-e2etests 0c25b6, Sep 23 2016 12:56:13) on zhouwang4 at 2016/09/23 11:59:17
++ echo === Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\GettingStarted/02_OneConv.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted' 'OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
+=== Running /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe configFile=C:\repos\cntk\Examples\Image\GettingStarted/02_OneConv.cntk currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]
++ /cygdrive/c/repos/cntk/x64/release_CpuOnly/cntk.exe 'configFile=C:\repos\cntk\Examples\Image\GettingStarted/02_OneConv.cntk' 'currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu' 'DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST' 'ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted' 'OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output' DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
+CNTK 2.0.beta3.0+ (zhouwang/evalwrapper-multioutputs ef4251, Nov 17 2016 19:59:53) on zhouwang4 at 2016/11/21 13:50:58
 
-C:\repos\cntk\x64\release_CpuOnly\cntk.exe  configFile=C:\repos\cntk\Examples\Image\MNIST\Config/02_Convolution.cntk  currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data  RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu  DataDir=C:\repos\cntk\Examples\Image\MNIST\Data  ConfigDir=C:\repos\cntk\Examples\Image\MNIST\Config  OutputDir=C:\repos\cntk\Examples\Image\MNIST\Output  DeviceId=-1  timestamping=true  stderr=-  command=trainNetwork  trainNetwork=[SGD=[maxEpochs=1]]
-Changed current directory to C:\repos\cntk\Examples\Image\MNIST\Data
-09/23/2016 11:59:17: Redirecting stderr to file -_trainNetwork.log
-09/23/2016 11:59:17: -------------------------------------------------------------------
-09/23/2016 11:59:17: Build info: 
+C:\repos\cntk\x64\release_CpuOnly\cntk.exe  configFile=C:\repos\cntk\Examples\Image\GettingStarted/02_OneConv.cntk  currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST  RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu  DataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST  ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted  OutputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output  DeviceId=-1  timestamping=true  stderr=-  command=trainNetwork  trainNetwork=[SGD=[maxEpochs=1]]
+Changed current directory to C:\repos\cntk\Examples\Image\DataSets\MNIST
+11/21/2016 13:50:58: Redirecting stderr to file -_trainNetwork.log
+11/21/2016 13:50:58: -------------------------------------------------------------------
+11/21/2016 13:50:58: Build info: 
 
-09/23/2016 11:59:17: 		Built time: Sep 23 2016 12:56:13
-09/23/2016 11:59:17: 		Last modified date: Fri Sep 23 11:28:25 2016
-09/23/2016 11:59:17: 		Build type: Release
-09/23/2016 11:59:17: 		Build target: CPU-only
-09/23/2016 11:59:17: 		With 1bit-SGD: yes
-09/23/2016 11:59:17: 		Math lib: mkl
-09/23/2016 11:59:17: 		Build Branch: zhouwang/add-e2etests
-09/23/2016 11:59:17: 		Build SHA1: 0c25b63da32c14869deb9232a6257daef6f9d285 (modified)
-09/23/2016 11:59:17: 		Built by zhouwang on zhouwang4
-09/23/2016 11:59:17: 		Build Path: C:\repos\cntk\Source\CNTK\
-09/23/2016 11:59:17: -------------------------------------------------------------------
+11/21/2016 13:50:58: 		Built time: Nov 17 2016 19:59:53
+11/21/2016 13:50:58: 		Last modified date: Wed Nov 16 20:54:22 2016
+11/21/2016 13:50:58: 		Build type: Release
+11/21/2016 13:50:58: 		Build target: CPU-only
+11/21/2016 13:50:58: 		With 1bit-SGD: yes
+11/21/2016 13:50:58: 		With ASGD: yes
+11/21/2016 13:50:58: 		Math lib: mkl
+11/21/2016 13:50:58: 		Build Branch: zhouwang/evalwrapper-multioutputs
+11/21/2016 13:50:58: 		Build SHA1: ef4251e891cbdee7bb9723fb6e340b85671761cb (modified)
+11/21/2016 13:50:58: 		Built by zhouwang on zhouwang4
+11/21/2016 13:50:58: 		Build Path: C:\repos\cntk\Source\CNTK\
+11/21/2016 13:50:58: -------------------------------------------------------------------
 
 Configuration After Processing and Variable Resolution:
 
-configparameters: 02_Convolution.cntk:command=trainNetwork
-configparameters: 02_Convolution.cntk:configDir=C:\repos\cntk\Examples\Image\MNIST\Config
-configparameters: 02_Convolution.cntk:currentDirectory=C:\repos\cntk\Examples\Image\MNIST\Data
-configparameters: 02_Convolution.cntk:dataDir=C:\repos\cntk\Examples\Image\MNIST\Data
-configparameters: 02_Convolution.cntk:deviceId=-1
-configparameters: 02_Convolution.cntk:modelPath=C:\repos\cntk\Examples\Image\MNIST\Output/Models/02_Convolution
-configparameters: 02_Convolution.cntk:outputDir=C:\repos\cntk\Examples\Image\MNIST\Output
-configparameters: 02_Convolution.cntk:precision=float
-configparameters: 02_Convolution.cntk:rootDir=..
-configparameters: 02_Convolution.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20160923125910.750056\EvalClientTests_CSEvalClientTest@release_cpu
-configparameters: 02_Convolution.cntk:stderr=-
-configparameters: 02_Convolution.cntk:testNetwork={
-    action = test
+configparameters: 02_OneConv.cntk:command=trainNetwork
+configparameters: 02_OneConv.cntk:ConfigDir=C:\repos\cntk\Examples\Image\GettingStarted
+configparameters: 02_OneConv.cntk:currentDirectory=C:\repos\cntk\Examples\Image\DataSets\MNIST
+configparameters: 02_OneConv.cntk:dataDir=C:\repos\cntk\Examples\Image\DataSets\MNIST
+configparameters: 02_OneConv.cntk:deviceId=-1
+configparameters: 02_OneConv.cntk:modelPath=C:\repos\cntk\Examples\Image\GettingStarted\Output/Models/02_OneConv
+configparameters: 02_OneConv.cntk:outputDir=C:\repos\cntk\Examples\Image\GettingStarted\Output
+configparameters: 02_OneConv.cntk:precision=float
+configparameters: 02_OneConv.cntk:rootDir=..
+configparameters: 02_OneConv.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20161121145053.977226\EvalClientTests_CSEvalClientTest@release_cpu
+configparameters: 02_OneConv.cntk:stderr=-
+configparameters: 02_OneConv.cntk:testNetwork={
+    action = "test"
 minibatchSize = 1024    
     reader = {
         readerType = "CNTKTextFormatReader"
-        file = "C:\repos\cntk\Examples\Image\MNIST\Data/Test-28x28_cntk_text.txt"
+        file = "C:\repos\cntk\Examples\Image\DataSets\MNIST/Test-28x28_cntk_text.txt"
         input = {
             features = { dim = 784 ; format = "dense" }
             labels =   { dim = 10  ; format = "dense" }
@@ -309,9 +311,9 @@ minibatchSize = 1024
     }
 }
 
-configparameters: 02_Convolution.cntk:timestamping=true
-configparameters: 02_Convolution.cntk:traceLevel=1
-configparameters: 02_Convolution.cntk:trainNetwork={
+configparameters: 02_OneConv.cntk:timestamping=true
+configparameters: 02_OneConv.cntk:traceLevel=1
+configparameters: 02_OneConv.cntk:trainNetwork={
     action = "train"
     BrainScriptNetworkBuilder = {
 imageShape = 28:28:1                        
@@ -322,13 +324,11 @@ labelDim = 10
             Scale {featScale} :
             ConvolutionalLayer {16, (5:5), pad = true} : ReLU : 
             MaxPoolingLayer    {(2:2), stride=(2:2)} :
-            ConvolutionalLayer {32, (5:5), pad = true} : ReLU : 
-            MaxPoolingLayer    {(2:2), stride=(2:2)} :
-            DenseLayer         {128, activation=Sigmoid} :
-            LinearLayer        {labelDim}
+            DenseLayer {64} : ReLU : 
+            LinearLayer {labelDim}
         )
         features = Input {imageShape}
-        labels = Input {labelDim}
+        labels = Input (labelDim)
         ol = model (features)
         ce   = CrossEntropyWithSoftmax (labels, ol)
         errs = ClassificationError (labels, ol)
@@ -343,33 +343,32 @@ labelDim = 10
         minibatchSize = 64
         maxEpochs = 15
         learningRatesPerSample = 0.001*5:0.0005
-        momentumAsTimeConstant = 0*5:1024
+        momentumAsTimeConstant = 0
         numMBsToShowResult = 500
     }
     reader = {
         readerType = "CNTKTextFormatReader"
-        file = "C:\repos\cntk\Examples\Image\MNIST\Data/Train-28x28_cntk_text.txt"
+        file = "C:\repos\cntk\Examples\Image\DataSets\MNIST/Train-28x28_cntk_text.txt"
         input = {
             features = { dim = 784 ; format = "dense" }
             labels =   { dim = 10  ; format = "dense" }
         }
-    }    
+    }   
 } [SGD=[maxEpochs=1]]
 
-09/23/2016 11:59:17: Commands: trainNetwork
-09/23/2016 11:59:17: precision = "float"
+11/21/2016 13:50:58: Commands: trainNetwork
+11/21/2016 13:50:58: precision = "float"
 
-09/23/2016 11:59:17: ##############################################################################
-09/23/2016 11:59:17: #                                                                            #
-09/23/2016 11:59:17: # trainNetwork command (train action)                                        #
-09/23/2016 11:59:17: #                                                                            #
-09/23/2016 11:59:17: ##############################################################################
+11/21/2016 13:50:58: ##############################################################################
+11/21/2016 13:50:58: #                                                                            #
+11/21/2016 13:50:58: # trainNetwork command (train action)                                        #
+11/21/2016 13:50:58: #                                                                            #
+11/21/2016 13:50:58: ##############################################################################
 
-09/23/2016 11:59:17: 
+11/21/2016 13:50:58: 
 Creating virgin network.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as glorotUniform later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[128 x 0] as glorotUniform later when dimensions are fully known.
-Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[5 x 5 x 0 x 32] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[64 x 0] as glorotUniform later when dimensions are fully known.
 Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[5 x 5 x 0 x 16] as glorotUniform later when dimensions are fully known.
 
 Post-processing network...
@@ -379,123 +378,102 @@ Post-processing network...
 	errs = ClassificationError()
 	ol = Plus()
 
-Validating network. 27 nodes to process in pass 1.
+Validating network. 21 nodes to process in pass 1.
 
 Validating --> labels = InputValue() :  -> [10 x *]
-Validating --> model.arrayOfFunctions[8].W = LearnableParameter() :  -> [10 x 0]
-Validating --> model.arrayOfFunctions[7].arrayOfFunctions[0].W = LearnableParameter() :  -> [128 x 0]
-Validating --> model.arrayOfFunctions[4].W = LearnableParameter() :  -> [5 x 5 x 0 x 32]
+Validating --> model.arrayOfFunctions[6].W = LearnableParameter() :  -> [10 x 0]
+Validating --> model.arrayOfFunctions[4].arrayOfFunctions[0].W = LearnableParameter() :  -> [64 x 0]
 Validating --> model.arrayOfFunctions[1].W = LearnableParameter() :  -> [5 x 5 x 0 x 16]
-Validating --> ol.x.x.x._.x.x._.x.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
+Validating --> ol.x._.x.x._.x.ElementTimesArgs[0] = LearnableParameter() :  -> [1 x 1]
 Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
-Validating --> ol.x.x.x._.x.x._.x = ElementTimes (ol.x.x.x._.x.x._.x.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
+Validating --> ol.x._.x.x._.x = ElementTimes (ol.x._.x.x._.x.ElementTimesArgs[0], features) : [1 x 1], [28 x 28 x 1 x *] -> [28 x 28 x 1 x *]
 Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation) operation: Tensor shape was inferred as [5 x 5 x 1 x 16].
-Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation): Initializing Parameter[5 x 5 x 1 x 16] <- glorotUniform(seed=4, init dims=[400 x 25], range=0.118818*1.000000, onCPU=true.
-)Validating --> ol.x.x.x._.x.x._.c = Convolution (model.arrayOfFunctions[1].W, ol.x.x.x._.x.x._.x) : [5 x 5 x 1 x 16], [28 x 28 x 1 x *] -> [28 x 28 x 16 x *]
+Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation): Initializing Parameter[5 x 5 x 1 x 16] <- glorotUniform(seed=3, init dims=[400 x 25], range=0.118818*1.000000, onCPU=true.
+)Validating --> ol.x._.x.x._.c = Convolution (model.arrayOfFunctions[1].W, ol.x._.x.x._.x) : [5 x 5 x 1 x 16], [28 x 28 x 1 x *] -> [28 x 28 x 16 x *]
 Validating --> model.arrayOfFunctions[1].b = LearnableParameter() :  -> [1 x 1 x 16]
-Validating --> ol.x.x.x._.x.x._.res.x = Plus (ol.x.x.x._.x.x._.c, model.arrayOfFunctions[1].b) : [28 x 28 x 16 x *], [1 x 1 x 16] -> [28 x 28 x 16 x *]
-Validating --> ol.x.x.x._.x.x = RectifiedLinear (ol.x.x.x._.x.x._.res.x) : [28 x 28 x 16 x *] -> [28 x 28 x 16 x *]
-Validating --> ol.x.x.x._.x = Pooling (ol.x.x.x._.x.x) : [28 x 28 x 16 x *] -> [14 x 14 x 16 x *]
-Node 'model.arrayOfFunctions[4].W' (LearnableParameter operation) operation: Tensor shape was inferred as [5 x 5 x 16 x 32].
-Node 'model.arrayOfFunctions[4].W' (LearnableParameter operation): Initializing Parameter[5 x 5 x 16 x 32] <- glorotUniform(seed=3, init dims=[800 x 400], range=0.070711*1.000000, onCPU=true.
-)Validating --> ol.x.x.x._.c = Convolution (model.arrayOfFunctions[4].W, ol.x.x.x._.x) : [5 x 5 x 16 x 32], [14 x 14 x 16 x *] -> [14 x 14 x 32 x *]
-Validating --> model.arrayOfFunctions[4].b = LearnableParameter() :  -> [1 x 1 x 32]
-Validating --> ol.x.x.x._.res.x = Plus (ol.x.x.x._.c, model.arrayOfFunctions[4].b) : [14 x 14 x 32 x *], [1 x 1 x 32] -> [14 x 14 x 32 x *]
-Validating --> ol.x.x.x = RectifiedLinear (ol.x.x.x._.res.x) : [14 x 14 x 32 x *] -> [14 x 14 x 32 x *]
-Validating --> ol.x.x = Pooling (ol.x.x.x) : [14 x 14 x 32 x *] -> [7 x 7 x 32 x *]
-Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [128 x 7 x 7 x 32].
-Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[128 x 7 x 7 x 32] <- glorotUniform(seed=2, init dims=[128 x 1568], range=0.059479*1.000000, onCPU=true.
-)Validating --> ol.x._.PlusArgs[0] = Times (model.arrayOfFunctions[7].arrayOfFunctions[0].W, ol.x.x) : [128 x 7 x 7 x 32], [7 x 7 x 32 x *] -> [128 x *]
-Validating --> model.arrayOfFunctions[7].arrayOfFunctions[0].b = LearnableParameter() :  -> [128]
-Validating --> ol.x._ = Plus (ol.x._.PlusArgs[0], model.arrayOfFunctions[7].arrayOfFunctions[0].b) : [128 x *], [128] -> [128 x *]
-Validating --> ol.x = Sigmoid (ol.x._) : [128 x *] -> [128 x *]
-Node 'model.arrayOfFunctions[8].W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 128].
-Node 'model.arrayOfFunctions[8].W' (LearnableParameter operation): Initializing Parameter[10 x 128] <- glorotUniform(seed=1, init dims=[10 x 128], range=0.208514*1.000000, onCPU=true.
-)Validating --> ol.PlusArgs[0] = Times (model.arrayOfFunctions[8].W, ol.x) : [10 x 128], [128 x *] -> [10 x *]
-Validating --> model.arrayOfFunctions[8].b = LearnableParameter() :  -> [10]
-Validating --> ol = Plus (ol.PlusArgs[0], model.arrayOfFunctions[8].b) : [10 x *], [10] -> [10 x *]
+Validating --> ol.x._.x.x._.res.x = Plus (ol.x._.x.x._.c, model.arrayOfFunctions[1].b) : [28 x 28 x 16 x *], [1 x 1 x 16] -> [28 x 28 x 16 x *]
+Validating --> ol.x._.x.x = RectifiedLinear (ol.x._.x.x._.res.x) : [28 x 28 x 16 x *] -> [28 x 28 x 16 x *]
+Validating --> _ol.x._.x = Pooling (ol.x._.x.x) : [28 x 28 x 16 x *] -> [14 x 14 x 16 x *]
+Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [64 x 14 x 14 x 16].
+Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[64 x 14 x 14 x 16] <- glorotUniform(seed=2, init dims=[64 x 3136], range=0.043301*1.000000, onCPU=true.
+)Validating --> ol.x._.x.PlusArgs[0] = Times (model.arrayOfFunctions[4].arrayOfFunctions[0].W, _ol.x._.x) : [64 x 14 x 14 x 16], [14 x 14 x 16 x *] -> [64 x *]
+Validating --> model.arrayOfFunctions[4].arrayOfFunctions[0].b = LearnableParameter() :  -> [64]
+Validating --> ol.x._.x = Plus (ol.x._.x.PlusArgs[0], model.arrayOfFunctions[4].arrayOfFunctions[0].b) : [64 x *], [64] -> [64 x *]
+Validating --> ol.x = RectifiedLinear (ol.x._.x) : [64 x *] -> [64 x *]
+Node 'model.arrayOfFunctions[6].W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 64].
+Node 'model.arrayOfFunctions[6].W' (LearnableParameter operation): Initializing Parameter[10 x 64] <- glorotUniform(seed=1, init dims=[10 x 64], range=0.284747*1.000000, onCPU=true.
+)Validating --> ol.PlusArgs[0] = Times (model.arrayOfFunctions[6].W, ol.x) : [10 x 64], [64 x *] -> [10 x *]
+Validating --> model.arrayOfFunctions[6].b = LearnableParameter() :  -> [10]
+Validating --> ol = Plus (ol.PlusArgs[0], model.arrayOfFunctions[6].b) : [10 x *], [10] -> [10 x *]
 Validating --> ce = CrossEntropyWithSoftmax (labels, ol) : [10 x *], [10 x *] -> [1]
 Validating --> errs = ClassificationError (labels, ol) : [10 x *], [10 x *] -> [1]
 
-Validating network. 16 nodes to process in pass 2.
+Validating network. 12 nodes to process in pass 2.
 
 
 Validating network, final pass.
 
-ol.x.x.x._.x.x._.c: using GEMM convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-ol.x.x.x._.x: using GEMM convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-ol.x.x.x._.c: using GEMM convolution engine for geometry: Input: 14 x 14 x 16, Output: 14 x 14 x 32, Kernel: 5 x 5 x 16, Map: 32, Stride: 1 x 1 x 16, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
-ol.x.x: using GEMM convolution engine for geometry: Input: 14 x 14 x 32, Output: 7 x 7 x 32, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+ol.x._.x.x._.c: using GEMM convolution engine for geometry: Input: 28 x 28 x 1, Output: 28 x 28 x 16, Kernel: 5 x 5 x 1, Map: 16, Stride: 1 x 1 x 1, Sharing: (1, 1, 1), AutoPad: (1, 1, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
+_ol.x._.x: using GEMM convolution engine for geometry: Input: 28 x 28 x 16, Output: 14 x 14 x 16, Kernel: 2 x 2 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1, 1, 1), AutoPad: (0, 0, 0), LowerPad: 0 x 0 x 0, UpperPad: 0 x 0 x 0.
 
 
 
 Post-processing network complete.
 
-09/23/2016 11:59:17: 
-Model has 27 nodes. Using CPU.
+11/21/2016 13:50:58: 
+Model has 21 nodes. Using CPU.
 
-09/23/2016 11:59:17: Training criterion:   ce = CrossEntropyWithSoftmax
-09/23/2016 11:59:17: Evaluation criterion: errs = ClassificationError
+11/21/2016 13:50:58: Training criterion:   ce = CrossEntropyWithSoftmax
+11/21/2016 13:50:58: Evaluation criterion: errs = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 49 matrices, 29 are shared as 13, and 20 are not shared.
+Memory Sharing: Out of 37 matrices, 20 are shared as 9, and 17 are not shared.
 
-	{ ol.x.x.x : [14 x 14 x 32 x *]
-	  ol.x.x.x._.c : [14 x 14 x 32 x *] (gradient) }
-	{ ol.x.x : [7 x 7 x 32 x *]
-	  ol.x.x.x._.res.x : [14 x 14 x 32 x *] (gradient)
-	  ol.x.x.x._.x : [14 x 14 x 16 x *] (gradient) }
-	{ ol.x : [128 x *]
-	  ol.x._.PlusArgs[0] : [128 x *] (gradient) }
-	{ model.arrayOfFunctions[1].b : [1 x 1 x 16] (gradient)
-	  ol.x.x.x._.x.x : [28 x 28 x 16 x *] (gradient) }
-	{ model.arrayOfFunctions[4].W : [5 x 5 x 16 x 32] (gradient)
-	  ol.x.x.x._.res.x : [14 x 14 x 32 x *] }
-	{ model.arrayOfFunctions[8].W : [10 x 128] (gradient)
+	{ _ol.x._.x : [14 x 14 x 16 x *] (gradient)
+	  ol.PlusArgs[0] : [10 x *]
+	  ol.x._.x : [64 x *] (gradient) }
+	{ model.arrayOfFunctions[6].W : [10 x 64] (gradient)
 	  ol : [10 x *] (gradient) }
-	{ model.arrayOfFunctions[7].arrayOfFunctions[0].W : [128 x 7 x 7 x 32] (gradient)
-	  ol.x._ : [128 x *] }
-	{ model.arrayOfFunctions[4].b : [1 x 1 x 32] (gradient)
-	  ol.x._.PlusArgs[0] : [128 x *]
-	  ol.x.x.x : [14 x 14 x 32 x *] (gradient) }
-	{ ol.PlusArgs[0] : [10 x *]
-	  ol.x._ : [128 x *] (gradient)
-	  ol.x.x : [7 x 7 x 32 x *] (gradient) }
-	{ model.arrayOfFunctions[7].arrayOfFunctions[0].b : [128] (gradient)
-	  ol.x : [128 x *] (gradient) }
+	{ model.arrayOfFunctions[4].arrayOfFunctions[0].b : [64] (gradient)
+	  ol.x : [64 x *] (gradient) }
+	{ model.arrayOfFunctions[4].arrayOfFunctions[0].W : [64 x 14 x 14 x 16] (gradient)
+	  ol.x._.x : [64 x *] }
+	{ ol.x._.x.x : [28 x 28 x 16 x *]
+	  ol.x._.x.x._.c : [28 x 28 x 16 x *] (gradient) }
+	{ _ol.x._.x : [14 x 14 x 16 x *]
+	  ol.x._.x.x._.res.x : [28 x 28 x 16 x *] (gradient) }
+	{ model.arrayOfFunctions[1].b : [1 x 1 x 16] (gradient)
+	  ol.x._.x.PlusArgs[0] : [64 x *]
+	  ol.x._.x.x : [28 x 28 x 16 x *] (gradient) }
+	{ ol.x : [64 x *]
+	  ol.x._.x.PlusArgs[0] : [64 x *] (gradient) }
 	{ model.arrayOfFunctions[1].W : [5 x 5 x 1 x 16] (gradient)
-	  ol.x.x.x._.x.x._.res.x : [28 x 28 x 16 x *] }
-	{ ol.x.x.x._.x.x : [28 x 28 x 16 x *]
-	  ol.x.x.x._.x.x._.c : [28 x 28 x 16 x *] (gradient) }
-	{ ol.x.x.x._.x : [14 x 14 x 16 x *]
-	  ol.x.x.x._.x.x._.res.x : [28 x 28 x 16 x *] (gradient) }
+	  ol.x._.x.x._.res.x : [28 x 28 x 16 x *] }
 
 
-09/23/2016 11:59:17: Training 215370 parameters in 8 out of 8 parameter tensors and 22 nodes with gradient:
+11/21/2016 13:50:58: Training 201834 parameters in 6 out of 6 parameter tensors and 16 nodes with gradient:
 
-09/23/2016 11:59:17: 	Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation) : [5 x 5 x 1 x 16]
-09/23/2016 11:59:17: 	Node 'model.arrayOfFunctions[1].b' (LearnableParameter operation) : [1 x 1 x 16]
-09/23/2016 11:59:17: 	Node 'model.arrayOfFunctions[4].W' (LearnableParameter operation) : [5 x 5 x 16 x 32]
-09/23/2016 11:59:17: 	Node 'model.arrayOfFunctions[4].b' (LearnableParameter operation) : [1 x 1 x 32]
-09/23/2016 11:59:17: 	Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].W' (LearnableParameter operation) : [128 x 7 x 7 x 32]
-09/23/2016 11:59:17: 	Node 'model.arrayOfFunctions[7].arrayOfFunctions[0].b' (LearnableParameter operation) : [128]
-09/23/2016 11:59:17: 	Node 'model.arrayOfFunctions[8].W' (LearnableParameter operation) : [10 x 128]
-09/23/2016 11:59:17: 	Node 'model.arrayOfFunctions[8].b' (LearnableParameter operation) : [10]
+11/21/2016 13:50:58: 	Node 'model.arrayOfFunctions[1].W' (LearnableParameter operation) : [5 x 5 x 1 x 16]
+11/21/2016 13:50:58: 	Node 'model.arrayOfFunctions[1].b' (LearnableParameter operation) : [1 x 1 x 16]
+11/21/2016 13:50:58: 	Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].W' (LearnableParameter operation) : [64 x 14 x 14 x 16]
+11/21/2016 13:50:58: 	Node 'model.arrayOfFunctions[4].arrayOfFunctions[0].b' (LearnableParameter operation) : [64]
+11/21/2016 13:50:58: 	Node 'model.arrayOfFunctions[6].W' (LearnableParameter operation) : [10 x 64]
+11/21/2016 13:50:58: 	Node 'model.arrayOfFunctions[6].b' (LearnableParameter operation) : [10]
 
-09/23/2016 11:59:17: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+11/21/2016 13:50:58: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-09/23/2016 11:59:17: Starting Epoch 1: learning rate per sample = 0.001000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+11/21/2016 13:50:58: Starting Epoch 1: learning rate per sample = 0.001000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-09/23/2016 11:59:18: Starting minibatch loop.
-09/23/2016 11:59:55:  Epoch[ 1 of 1]-Minibatch[   1- 500, 53.33%]: ce = 0.69109216 * 32000; errs = 20.813% * 32000; time = 37.3151s; samplesPerSecond = 857.6
-09/23/2016 12:00:26: Finished Epoch[ 1 of 1]: [Training] ce = 0.44999909 * 60000; errs = 13.405% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.001; epochTime=68.2709s
-09/23/2016 12:00:26: SGD: Saving checkpoint model 'C:\repos\cntk\Examples\Image\MNIST\Output/Models/02_Convolution'
+11/21/2016 13:50:58: Starting minibatch loop.
+11/21/2016 13:51:10:  Epoch[ 1 of 1]-Minibatch[   1- 500, 53.33%]: ce = 0.42840219 * 32000; errs = 12.812% * 32000; time = 11.9852s; samplesPerSecond = 2670.0
+11/21/2016 13:51:20: Finished Epoch[ 1 of 1]: [Training] ce = 0.29921478 * 60000; errs = 8.887% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.001; epochTime=21.5414s
+11/21/2016 13:51:20: SGD: Saving checkpoint model 'C:\repos\cntk\Examples\Image\GettingStarted\Output/Models/02_OneConv'
 
-09/23/2016 12:00:26: Action "train" complete.
+11/21/2016 13:51:20: Action "train" complete.
 
-09/23/2016 12:00:26: __COMPLETED__
+11/21/2016 13:51:20: __COMPLETED__
 + return 0
 + local ExitCode=0
 + [[ 0 == 1 ]]
@@ -504,264 +482,240 @@ Memory Sharing: Out of 49 matrices, 29 are shared as 13, and 20 are not shared.
 + ./CSEvalClientTest.exe
 ====== EvaluateModelSingleLayer ========
 Output layer: out.z
-2.001208
--4.802822
-2.325114
-4.425114
--3.982924
-3.175949
--2.247296
--2.597281
-3.117296
--1.776221
+-0.8439026
+-0.7191153
+3.229217
+3.137152
+-2.507879
+2.206236
+-1.625846
+-2.128882
+3.386673
+-1.82515
 
 ====== EvaluateModelMultipleLayers ========
 --- Output results ---
 Output layer: out.h1
-0.2683823
-0.1090214
-0.01184047
-0.8990746
-0.02413332
-0.03510781
-0.3565165
-0.3117575
-0.12965
-0.2401516
-0.2216991
-0.1678733
-0.03279141
-0.02223396
-0.1626164
-0.08415294
-0.01482351
-0.07272266
-0.07175384
-0.6809868
-0.06222976
-0.009082866
-0.07399224
-0.9218547
-0.212693
-0.9779514
-0.09967358
-0.04013932
-0.03145754
-0.1262747
-0.02784475
-0.0919698
-0.09798594
-0.05439946
-0.1908388
-0.07799235
-0.03603794
-0.1404023
-0.04259705
-0.03222574
-0.05131226
-0.07451677
-0.5438801
-0.2401436
-0.1358653
-0.2271786
-0.02173573
-0.002872244
-0.559422
-0.02315313
-0.151054
-0.04528781
-0.01878005
-0.5114151
-0.8841296
-0.03446104
-0.005009511
-0.1873023
-0.4850568
-0.1047892
-0.151854
-0.02175543
-0.006894592
-0.1962301
-0.06794716
-0.4272658
-0.9982705
-0.02848039
-0.05060492
-0.3753898
-0.1015273
-0.006883771
-0.825007
-0.9406521
-0.02182157
-0.0761656
-0.07223076
-0.009516938
-0.1030247
-0.1885328
-0.04829663
-0.06474321
-0.04656376
-0.08260871
-0.1940126
-0.5882622
-0.3932346
-0.09889062
-0.01870064
-0.212605
-0.05810749
-0.09193221
-0.1005991
-0.1726375
-0.2754686
-0.1179625
-0.06727882
-0.07076227
-0.004821608
-0.3111843
-0.09144999
-0.420513
-0.5846543
-0.06601401
-0.318146
-0.3261085
-0.004118729
-0.06369425
-0.09662306
-0.277049
-0.1156296
-0.03082033
-0.02690081
-0.3521829
-0.2924556
-0.1906833
-0.021983
-0.06811786
-0.02297964
-0.2624159
-0.1233242
-0.08990293
-0.08855268
-0.1425398
-0.05417629
-0.4930024
-0.03245001
-0.02550625
-0.246651
-0.04403492
-0.001682792
-0.0501489
-0.007542285
-0.1224414
-0.1360561
-0.03584297
-0.2796043
-0.2425045
-0.06330835
-0.5869497
-0.1351213
-0.3243051
-0.1027951
-0.04947758
-0.04060661
-0.3137862
-0.5662944
-0.1999882
-0.06880696
-0.006810104
-0.02040924
-0.2634061
-0.2871183
-0.00408037
-0.08282287
-0.03052326
-0.05260019
-0.1937561
-0.05896084
-0.01027311
-0.2306089
-0.03135734
-0.1953855
-0.6365632
-0.02674365
-0.5321123
-0.02834368
-0.5879375
-0.2534099
-0.4444112
-0.07216442
-0.7907202
-0.02082578
-0.03977081
-0.008640379
-0.8939211
-0.114302
-0.493594
-0.05756073
-0.1816426
-0.5404541
-0.1624025
-0.1262308
-0.08846043
-0.1104404
-0.03944265
-0.1364719
-0.2308976
-0.05340569
-0.1992379
-0.2650634
-0.1307982
-0.02861646
-0.06264863
-0.2009191
-0.3750413
-0.7332352
-0.164747
-0.007546702
-0.1601259
+0.5434916
+0.02476481
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0.03591919
+0.5279977
+0
+0
+0
+0
+0.432332
+0.8884268
+0
+0
+0
+0
+1.374698
+0.005274922
+1.967969
+0
+0
+0
+0.2200412
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0.4044029
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+2.616672
+0
+0
+0
+1.786213
+0
+0
+0
+0
+0
+0.3296922
+0
+1.510122
+0
+0
+0.6982462
+0
+0
+0.01940373
+0.1219869
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0.2306091
+0.6465476
+0
+0.008351812
+0
+0
+0
+0
+0
+0
+0
+0
+0.2418465
+0
+0
+1.199936
+0
+0
+0
+0
+0
+0
+0
+0.1649539
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0.1445097
+0
+0
+0
+0
+0
+0.6980208
+0
+0
+0.8325255
+0
+0
+0.009732284
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0.1411052
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0.6307535
+0
+2.079847
+0
+0.4202148
+0
+0
+0.7173507
+0
+0
+0
+0
+0
+0
+0
+0.2288694
+0
+0
+0
+0
+0
+0.5185459
+0.4692782
+0
+0
+0.3691321
+0.8148292
+0
+0
+0
+0
+0
+1.813008
+0
+0.0511215
+0
+0
 Output layer: out.z
-0.6126379
--4.530674
-3.579702
-5.566925
--4.105593
-2.338255
--3.419482
--2.863163
-3.654128
--1.261754
-
-====== EvaluateNetworkSingleLayer ========
-Output layer: ol
-2
-
-====== EvaluateNetworkSingleLayerNoInput ========
-Output layer: ol
-3
+0.1272945
+-1.677788
+2.142101
+3.7772
+-1.507416
+1.59498
+-2.206467
+-1.994169
+2.36597
+-0.7697294
 
 ====== EvaluateExtendedNetworkSingleLayerNoInput ========
 Expected values: 2 - 3
 Actual Values  : 2 - 3
 
 ====== EvaluateMultipleModels ========
-The file Test-28x28_cntk_text.txt was processed using 4 concurrent model(s) with an error rate of: 3.83 % (383 error(s) out of 10000 record(s)), and a throughput of 3,579.11 records/sec
+The file Test-28x28_cntk_text.txt was processed using 4 concurrent model(s) with an error rate of: 3.59 % (359 error(s) out of 10000 record(s)), and a throughput of 6,971.06 records/sec
 
-====== EvaluateModelImageInput ========
-NDLBuilder Using CPU
-
-
-Allocating matrices for forward and/or backward propagation.
-
-Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
-
-
-NDLBuilder Using CPU
-
-
-Allocating matrices for forward and/or backward propagation.
-
-Memory Sharing: Out of 3 matrices, 0 are shared as 0, and 3 are not shared.
-
-
+====== EvaluateImageInputUsingFeatureVector ========
 NDLBuilder Using CPU
 
 
@@ -809,5926 +763,108 @@ INFO: rn4_1.c_proj.y.y: loading pre-CuDNNv5 model: approximated mini-batch count
 INFO: rn4_2.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
       Statistics in further training may be biased; consider re-training instead.
 INFO: rn4_2.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further EvaluateImageInputUsingFeatureVector: Outcome = 118
+
+====== EvaluateImageInputUsingImageApi ========
+training may be biased; consider re-training instead.
+INFO: rn4_3.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_3.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+WARNING: conv1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn1_1.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn1_1.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn1_2.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn1_2.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn2_1.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn2_1.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn2_1.c_proj.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn2_2.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn2_2.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn3_1.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn3_1.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn3_1.c_proj.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn3_2.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn3_2.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_1.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_1.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_1.c_proj.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_2.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_2.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_3.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_3.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+INFO: conv1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn1_1.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn1_1.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn1_2.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn1_2.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn2_1.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn2_1.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn2_1.c_proj.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn2_2.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn2_2.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn3_1.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn3_1.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn3_1.c_proj.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn3_2.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn3_2.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_1.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_1.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_1.c_proj.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_2.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
+      Statistics in further training may be biased; consider re-training instead.
+INFO: rn4_2.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
       Statistics in further training may be biased; consider re-training instead.
 INFO: rn4_3.c1.c.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
       Statistics in further training may be biased; consider re-training instead.
 INFO: rn4_3.c2.y.y: loading pre-CuDNNv5 model: approximated mini-batch count of 625625 as 10010000 trained samples.
       Statistics in further training may be biased; consider re-training instead.
 WARNING: conv1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (64, 1) ######
-
-4801.0419921875	
-3055.7626953125	
-25123.4863281250	
-4339.3159179688	
-4290.4072265625	
-24363.7031250000	
-16410.4023437500	
-2249.9023437500	
-9174.6992187500	
-5765.9536132813	
-4261.8007812500	
-0.0000038286	
-946.1461791992	
-3304.7934570313	
-3114.1303710938	
-861.5491333008	
-4569.1049804688	
-0.0000004136	
-7283.7397460938	
-1706.3448486328	
-15083.8623046875	
-2541.8288574219	
-25439.3867187500	
-1446.8952636719	
-3638.1245117188	
-4621.1123046875	
-12916.2167968750	
-0.0000121202	
-12941.5761718750	
-45787.1210937500	
-9904.1298828125	
-19318.9960937500	
-2753.7216796875	
-2149.1110839844	
-3735.8505859375	
-6308.3632812500	
-38075.4179687500	
-16699.7285156250	
-0.0000010637	
-2350.7106933594	
-7046.7817382813	
-0.0000000044	
-7174.8237304688	
-6819.5610351563	
-16488.4199218750	
-22696.9667968750	
-5027.8530273438	
-7586.7607421875	
-0.0000436994	
-382.8026428223	
-12694.8750000000	
-10238.4658203125	
-1378.3356933594	
-46634.7304687500	
-42388.1914062500	
-19729.8593750000	
-5019.6528320313	
-15307.3466796875	
-1183.6423339844	
-24175.7773437500	
-0.0232097115	
-1493.1010742188	
-0.0000011174	
-6815.6889648438	
 WARNING: rn1_1.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (64, 1) ######
-
-0.3408346772	
-0.8366577029	
-0.0921438113	
-0.1483483464	
-0.2758590579	
-0.1664137244	
-0.1318802983	
-0.4468209743	
-0.5231665373	
-0.5525811315	
-0.5505092144	
-1.4887778759	
-0.3282614946	
-0.3144887984	
-1.0984940529	
-0.4937532544	
-0.2290386111	
-0.8644465208	
-0.8297967911	
-0.2118598372	
-0.0752184391	
-0.3077759743	
-0.6836114526	
-0.3246140778	
-0.5234397054	
-0.4118274152	
-0.1746888012	
-0.1207645237	
-0.4423787892	
-0.1384872049	
-0.2371251136	
-0.9054291248	
-0.9565131664	
-0.8512892723	
-0.1198152900	
-0.0652823448	
-1.0663806200	
-1.0256611109	
-0.1307495981	
-0.8935276270	
-0.2020415217	
-1.0196955204	
-0.3903362453	
-0.9302267432	
-1.0557633638	
-0.8964921832	
-0.1156420261	
-0.7353336215	
-0.0939779505	
-0.6906765699	
-0.5457073450	
-0.7431792617	
-1.3547101021	
-0.5358460546	
-0.3627591431	
-1.2902711630	
-1.5214381218	
-1.0854138136	
-0.5866587162	
-0.2172526568	
-0.4773814082	
-0.4623788297	
-0.2207333446	
-0.4130164683	
 WARNING: rn1_1.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (64, 1) ######
-
-0.0910344124	
-0.0250608530	
-0.0409526527	
-0.0374295115	
-0.0176118091	
-0.0150012942	
-0.0892936140	
-0.0232771486	
-0.0325778015	
-0.1078741029	
-0.0075026732	
-0.0230577365	
-0.0924331173	
-0.0206609126	
-0.0253816210	
-0.0118824216	
-0.0720746890	
-0.0948376805	
-0.0755324513	
-0.0157921277	
-0.0752909407	
-0.0168138463	
-0.0736094192	
-0.0235509071	
-0.0205832534	
-0.0308433063	
-0.0053285905	
-0.0168414451	
-0.0449118800	
-0.1462015659	
-0.0350492969	
-0.0376597047	
-0.0132669453	
-0.0164743382	
-0.1050336137	
-0.0490367338	
-0.1565554738	
-0.0395380966	
-0.0609779358	
-0.0207654927	
-0.0242472254	
-0.0333392397	
-0.0461395606	
-0.0295511931	
-0.1777656823	
-0.0223327987	
-0.0392355733	
-0.0325226001	
-0.0144008556	
-0.0141335530	
-0.0856633931	
-0.1930542737	
-0.0169530418	
-0.0434232801	
-0.1388084888	
-0.0655184612	
-0.1250209808	
-0.0369416773	
-0.0252706390	
-0.0400341861	
-0.0353199877	
-0.0465772748	
-0.0238652304	
-0.0298904218	
 WARNING: rn1_2.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (64, 1) ######
-
-0.2152496278	
-0.1986220181	
-0.5927478671	
-0.3478851020	
-0.3755008280	
-0.3376256526	
-0.5630089641	
-0.5398601890	
-0.3028319180	
-0.3334828913	
-0.9213613272	
-0.2975055277	
-0.1264816523	
-0.3806827962	
-0.4038405716	
-0.3582159281	
-0.1218220815	
-0.1466616094	
-0.1858787090	
-0.2680450976	
-0.3598060906	
-0.2763422728	
-0.3859917521	
-0.2037634999	
-0.4180256724	
-0.1802688390	
-0.2683590949	
-0.2441124171	
-0.3169098198	
-0.4851186574	
-0.3322504759	
-0.2889175117	
-0.2173158228	
-0.4316782653	
-0.1899908483	
-0.1804215312	
-0.3046175539	
-0.4814211130	
-0.1453351080	
-0.7664193511	
-0.2156078964	
-0.6648012996	
-0.1954555064	
-0.1554571241	
-0.3572670519	
-0.3051065207	
-0.1635400504	
-0.1399172843	
-0.5899986625	
-0.4460793138	
-0.3203117847	
-0.4278509915	
-0.4436469674	
-0.1364716291	
-0.4320245683	
-0.3525555730	
-0.3591839671	
-0.3900533020	
-0.3095969856	
-0.4618469775	
-0.1809186190	
-0.5311234593	
-0.5233184695	
-0.3834847510	
 WARNING: rn1_2.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (64, 1) ######
-
-0.0539387949	
-0.0255229715	
-0.0577473491	
-0.0190792643	
-0.0185436644	
-0.0101872561	
-0.0212697163	
-0.0252622403	
-0.0384290442	
-0.0348620005	
-0.0542478673	
-0.0315999612	
-0.0394885093	
-0.0192892998	
-0.0200683344	
-0.0335343517	
-0.0333220623	
-0.0715344474	
-0.0380157940	
-0.0194476340	
-0.0367840230	
-0.0249906220	
-0.0520372242	
-0.0408768840	
-0.0282706711	
-0.0113603361	
-0.0386335626	
-0.0322964117	
-0.0544111952	
-0.0311030559	
-0.0314627811	
-0.0413528197	
-0.1084724888	
-0.0192646980	
-0.0337005109	
-0.0285251215	
-0.0219193473	
-0.0215486400	
-0.0244746525	
-0.0225689728	
-0.0141698644	
-0.0562795438	
-0.0706103370	
-0.0354193561	
-0.0361742675	
-0.0232366715	
-0.0331759751	
-0.1156591624	
-0.0870517120	
-0.0240573790	
-0.0301245302	
-0.0422122143	
-0.0177572649	
-0.0041904538	
-0.0199612696	
-0.0556976460	
-0.0503865965	
-0.0483929031	
-0.0298662428	
-0.0663145781	
-0.0329325907	
-0.0292294361	
-0.0459333323	
-0.0443833210	
 WARNING: rn2_1.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (128, 1) ######
-
-0.2657271326	
-0.7627593279	
-0.9858027697	
-0.5514073968	
-0.4235830903	
-0.7005281448	
-0.6228759289	
-0.6459390521	
-0.8994035125	
-0.4797008932	
-0.7664267421	
-0.6375923753	
-0.3793676794	
-0.5965119600	
-0.6758006811	
-0.4636221230	
-0.7285969257	
-0.5762923956	
-0.6022826433	
-0.3309538364	
-0.4615861773	
-0.6528646946	
-0.9039444327	
-0.3852580190	
-0.9897152781	
-0.3940897882	
-0.7159808874	
-0.4868327975	
-0.3463374674	
-0.5116385221	
-0.4684574604	
-0.7626237869	
-0.3752022088	
-0.7221257091	
-0.5598787069	
-0.8302119970	
-0.6187915802	
-0.3936634958	
-0.3902817369	
-0.3591201305	
-0.5918071866	
-0.8633941412	
-0.8153564930	
-0.4747067094	
-0.5213333368	
-0.6421331167	
-0.5608815551	
-0.6314647198	
-0.7705196142	
-0.5846961141	
-0.2623068988	
-0.6081745625	
-0.7186890244	
-0.5712949038	
-0.6089418530	
-0.5742186308	
-0.7564783692	
-0.5893126726	
-0.6099141240	
-0.5434198380	
-0.6381003261	
-1.1139529943	
-0.4591422677	
-0.5731136799	
-0.1700848341	
-0.6246139407	
-0.3918371797	
-0.6497313976	
-0.5332059860	
-0.9303810000	
-0.5242757201	
-1.2391149998	
-0.4786880016	
-1.1562262774	
-0.2370512336	
-0.3966264725	
-0.7078084946	
-0.6567888260	
-0.6138582826	
-0.7483506799	
-0.7236813903	
-0.4319529235	
-0.2714540660	
-1.0597524643	
-0.4451109469	
-0.7175030112	
-0.9033138752	
-0.9621763229	
-0.5208759904	
-0.7421037555	
-0.5451439023	
-0.5584465861	
-0.3240947723	
-0.8012545109	
-0.6035775542	
-0.3076816201	
-0.6546443701	
-0.2703943551	
-0.2377021313	
-0.7934844494	
-0.2933040559	
-0.5459774137	
-0.6858891845	
-0.8107759953	
-0.6058173776	
-0.5723643303	
-0.5010548234	
-0.6484682560	
-0.4894790053	
-0.6039494276	
-0.3859739602	
-0.5639659762	
-0.3177204132	
-0.6695256829	
-0.7229128480	
-0.5789070129	
-0.3510953486	
-0.6045800447	
-0.6352570057	
-0.2820457518	
-0.4637337029	
-0.6536083817	
-0.8179337978	
-0.5444455743	
-0.5341940522	
-0.2769686282	
-0.3915377557	
-0.4356070459	
 WARNING: rn2_1.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (128, 1) ######
-
-0.0232157931	
-0.0480994694	
-0.0389506817	
-0.0092022344	
-0.0418050252	
-0.0515350141	
-0.0593280792	
-0.0475928634	
-0.0344033092	
-0.0279068109	
-0.0675675571	
-0.1193165481	
-0.0464426726	
-0.0696486980	
-0.0453050993	
-0.0587655604	
-0.0907278731	
-0.0270754024	
-0.0587010272	
-0.0664346144	
-0.0488384664	
-0.0754471049	
-0.0405610316	
-0.0385492705	
-0.0552059337	
-0.0332223885	
-0.0520663857	
-0.0759404376	
-0.0902176052	
-0.1642840803	
-0.0421010107	
-0.0590971708	
-0.0132725406	
-0.0439860150	
-0.0494820364	
-0.0354690179	
-0.0478735082	
-0.0436062291	
-0.0233744327	
-0.0307309106	
-0.0708338320	
-0.0429921523	
-0.1044065952	
-0.0667777583	
-0.0241153762	
-0.0935128406	
-0.0675195679	
-0.0384574458	
-0.0344539471	
-0.0880110860	
-0.0580144413	
-0.0349895544	
-0.0454656668	
-0.0478719696	
-0.0471781455	
-0.0603937246	
-0.0597441494	
-0.0613475218	
-0.0349970907	
-0.0395350531	
-0.0317434222	
-0.0616166405	
-0.0929324701	
-0.0385234691	
-0.0505173542	
-0.0636173263	
-0.0539024211	
-0.0488099530	
-0.0736868680	
-0.0443247035	
-0.0520666130	
-0.0358424783	
-0.0409438349	
-0.0401536413	
-0.0707352236	
-0.0430927724	
-0.0889078379	
-0.0566870719	
-0.0406100787	
-0.0314291753	
-0.0993354321	
-0.0549704693	
-0.0756872445	
-0.0670024604	
-0.0721059144	
-0.0467423275	
-0.0703910068	
-0.0441980660	
-0.0243518781	
-0.0292616785	
-0.0884915665	
-0.0467168987	
-0.0515160002	
-0.0320545509	
-0.0366440937	
-0.1258876622	
-0.0283376388	
-0.0752146542	
-0.0658984110	
-0.0654634088	
-0.0597485602	
-0.0263320114	
-0.1192096323	
-0.0694895685	
-0.0463657603	
-0.0143800592	
-0.0538411885	
-0.0169607755	
-0.0370903574	
-0.0405384563	
-0.0305082444	
-0.0536661521	
-0.0471605211	
-0.0348157808	
-0.0447247215	
-0.0647335351	
-0.0632759631	
-0.0251769554	
-0.0823652744	
-0.0608393736	
-0.0341156796	
-0.0315376855	
-0.0625233278	
-0.0564467646	
-0.0767674744	
-0.0784445927	
-0.0585589632	
-0.1471628547	
 WARNING: rn2_1.c_proj.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (128, 1) ######
-
-0.1047939882	
-0.0295063853	
-0.0151029965	
-0.1050805077	
-0.0034542028	
-0.0054760086	
-0.0324219316	
-0.0516992733	
-0.0029621904	
-0.0365794636	
-0.0201197974	
-0.0039519081	
-0.0299936086	
-0.0261433236	
-0.0071373349	
-0.0086319856	
-0.0053243241	
-0.1358580291	
-0.0632631555	
-0.0049102698	
-0.0234247241	
-0.0232869610	
-0.0161862876	
-0.0774380863	
-0.0025988829	
-0.0092842029	
-0.0221589990	
-0.0257350504	
-0.0471690185	
-0.0177643597	
-0.0096271429	
-0.0672022700	
-0.0584994778	
-0.0857481211	
-0.0125079025	
-0.0685941204	
-0.0060208980	
-0.0206276551	
-0.0040381933	
-0.1372399330	
-0.0380406454	
-0.0057605663	
-0.0046363049	
-0.0034846999	
-0.0694258064	
-0.0637579858	
-0.0103842616	
-0.1155905426	
-0.0952776149	
-0.0559709929	
-0.0736045614	
-0.0185660776	
-0.0039740768	
-0.1665108800	
-0.0425129496	
-0.0045420271	
-0.0346364677	
-0.0038212417	
-0.0699556991	
-0.0487675704	
-0.0501935892	
-0.0425649323	
-0.0319933370	
-0.0057657249	
-0.2516619265	
-0.0432025902	
-0.0047952090	
-0.0258488953	
-0.0445057489	
-0.0029971788	
-0.0319991671	
-0.0084928181	
-0.0489311218	
-0.0190292429	
-0.0197271183	
-0.0035304336	
-0.0043914504	
-0.0057269861	
-0.0988362581	
-0.0143550290	
-0.0465926155	
-0.0941966996	
-0.0066154762	
-0.0461581238	
-0.0118386131	
-0.1813992262	
-0.0098855356	
-0.0132291690	
-0.0168323852	
-0.0294685513	
-0.0446838140	
-0.1064430699	
-0.0044139405	
-0.0275038742	
-0.0394256003	
-0.0100457314	
-0.0105617503	
-0.0209759381	
-0.0524609126	
-0.0044294051	
-0.0079768291	
-0.1207013130	
-0.0058832583	
-0.0415550768	
-0.0182082895	
-0.0444913954	
-0.0326328613	
-0.0333023816	
-0.0033143994	
-0.1562179029	
-0.0927375555	
-0.0477484539	
-0.0387091562	
-0.0723772794	
-0.1112881303	
-0.0111577474	
-0.0187888816	
-0.0119391326	
-0.0321025886	
-0.1032503024	
-0.2698175311	
-0.1031956226	
-0.0143455351	
-0.0951807201	
-0.0114890980	
-0.0107950605	
-0.0359943286	
-0.0264240485	
 WARNING: rn2_2.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (128, 1) ######
-
-0.2880606353	
-0.1414524466	
-0.2122896314	
-0.2085578442	
-0.1159973592	
-0.1420265734	
-0.2937654555	
-0.2683210075	
-0.1992008090	
-0.1855224222	
-0.1833892465	
-0.1633954197	
-0.1693090349	
-0.2265182137	
-0.2157391757	
-0.1443832666	
-0.1405899525	
-0.2620339692	
-0.1879106611	
-0.1613069624	
-0.1487566084	
-0.2211094052	
-0.1367571652	
-0.2473578155	
-0.1166133210	
-0.1423090845	
-0.2211277634	
-0.3162511885	
-0.1203567460	
-0.1217752397	
-0.1856732965	
-0.2017991841	
-0.1549551338	
-0.1528574824	
-0.2755165994	
-0.1636909842	
-0.0868166983	
-0.2166684121	
-0.1073346138	
-0.1949408054	
-0.2557485998	
-0.3034887314	
-0.2366224825	
-0.2147229761	
-0.1592204571	
-0.3750788271	
-0.1936165243	
-0.1299874187	
-0.1489778161	
-0.2872002721	
-0.1877509356	
-0.2162923068	
-0.0946821421	
-0.2285284698	
-0.1411099136	
-0.3258827627	
-0.1428914517	
-0.1052908301	
-0.1840524226	
-0.1934621036	
-0.1766545624	
-0.1586786211	
-0.3260403872	
-0.1392584890	
-0.4828178585	
-0.2148882300	
-0.1975042075	
-0.1157992780	
-0.3051950932	
-0.2308665216	
-0.2192240953	
-0.1745803356	
-0.1690706015	
-0.1522086263	
-0.1475237608	
-0.3004750609	
-0.1604578793	
-0.2066857815	
-0.1543916315	
-0.1056586951	
-0.3704873323	
-0.3464531898	
-0.2427403629	
-0.2598468065	
-0.1493657827	
-0.2137485445	
-0.3053803742	
-0.1962235868	
-0.2083985806	
-0.0986136049	
-0.2117100656	
-0.2014232427	
-0.1749972254	
-0.1975149512	
-0.2025406659	
-0.3056515157	
-0.1692860574	
-0.1042226031	
-0.1168131679	
-0.1860162020	
-0.3752406836	
-0.1819590181	
-0.1538772583	
-0.1994474679	
-0.3057201207	
-0.2779468000	
-0.1912247539	
-0.1556559056	
-0.2700547874	
-0.4504591525	
-0.2745037079	
-0.2004281282	
-0.2664742470	
-0.2627272308	
-0.1766356975	
-0.2079631686	
-0.3145719767	
-0.1442634165	
-0.2584817708	
-0.3069269657	
-0.1381103843	
-0.2234669477	
-0.1492030919	
-0.1344780624	
-0.3245197237	
-0.1555786580	
-0.1624989957	
-0.1966588795	
 WARNING: rn2_2.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn3_1.c1.c.y.y: loading pre-CuDNNv5 model:EvaluateImageInputUsingImageApi: Outcome = 118
 
-###### (128, 1) ######
-
-0.0310486518	
-0.0251876116	
-0.0297542978	
-0.0130971158	
-0.0222916305	
-0.0170244426	
-0.0309673324	
-0.0145270694	
-0.0159502551	
-0.0109154442	
-0.0171978418	
-0.0105768135	
-0.0161466841	
-0.0186312236	
-0.0203720648	
-0.0146572813	
-0.0158722624	
-0.0224928074	
-0.0104411505	
-0.0205720756	
-0.0225397423	
-0.0440334491	
-0.0126236835	
-0.0111633893	
-0.0184940528	
-0.0139588332	
-0.0104383854	
-0.0194196776	
-0.0098784650	
-0.0241455715	
-0.0124709485	
-0.0128780138	
-0.0154801700	
-0.0193691254	
-0.0113022858	
-0.0119791832	
-0.0038619922	
-0.0263854433	
-0.0338631608	
-0.0141961426	
-0.0278840400	
-0.0210307911	
-0.0137391640	
-0.0167807117	
-0.0121958070	
-0.0249228403	
-0.0349698775	
-0.0298767444	
-0.0180692822	
-0.0090008276	
-0.0203856286	
-0.0192262270	
-0.0136998678	
-0.0289753377	
-0.0089860242	
-0.0273483321	
-0.0182322785	
-0.0215017814	
-0.0147400321	
-0.0183249116	
-0.0099392859	
-0.0272572134	
-0.0084878989	
-0.0260596257	
-0.0198483728	
-0.0362115242	
-0.0219726916	
-0.0185203832	
-0.0154987052	
-0.0133699952	
-0.0146104703	
-0.0138476212	
-0.0150727350	
-0.0134975305	
-0.0269212760	
-0.0180454683	
-0.0139517430	
-0.0188583508	
-0.0192434788	
-0.0603131540	
-0.0184260476	
-0.0223003123	
-0.0124922954	
-0.0179446563	
-0.0126132872	
-0.0185132530	
-0.0203221459	
-0.0119409794	
-0.0339555405	
-0.0276739970	
-0.0230430365	
-0.0092078755	
-0.0221268274	
-0.0226158202	
-0.0133557282	
-0.0200157259	
-0.0110224755	
-0.0216992740	
-0.0136272619	
-0.0137397517	
-0.0250249654	
-0.0143520162	
-0.0117291147	
-0.0189970788	
-0.0151686035	
-0.0159321241	
-0.0151158739	
-0.0366991237	
-0.0172676332	
-0.0199999809	
-0.0186668802	
-0.0254602414	
-0.0272267554	
-0.0214151312	
-0.0279054772	
-0.0248614792	
-0.0349503420	
-0.0408898294	
-0.0117801819	
-0.0151961502	
-0.0150755486	
-0.0094783287	
-0.0215088446	
-0.0226073340	
-0.0213041753	
-0.0185732897	
-0.0167225525	
-0.0192428455	
-WARNING: rn3_1.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (256, 1) ######
-
-0.1497652531	
-0.1333583891	
-0.1208243445	
-0.2325704247	
-0.1253362745	
-0.1413820982	
-0.2166518718	
-0.2174247056	
-0.1902136058	
-0.1544790268	
-0.1966665387	
-0.2532324791	
-0.1318146884	
-0.1242885068	
-0.2393031418	
-0.1658667624	
-0.1145026237	
-0.2392385006	
-0.1943603456	
-0.2188787609	
-0.1725496650	
-0.1189333349	
-0.1680484414	
-0.1776315123	
-0.1863908619	
-0.1665167063	
-0.1477954537	
-0.1458672285	
-0.1540796310	
-0.2103374451	
-0.2119819373	
-0.1093655750	
-0.1283827275	
-0.1409602612	
-0.4471493065	
-0.2002473772	
-0.1155702099	
-0.1113195941	
-0.1624054462	
-0.1573758572	
-0.1086195260	
-0.2845348120	
-0.1429028660	
-0.1631817818	
-0.1356256008	
-0.3177746534	
-0.1944527924	
-0.1306519657	
-0.1204545870	
-0.1511424333	
-0.1842491627	
-0.1250381172	
-0.2280238271	
-0.1246411279	
-0.1395036280	
-0.2272462994	
-0.1583414972	
-0.2251200527	
-0.1645776331	
-0.1893702745	
-0.1958602667	
-0.1362200379	
-0.2823739648	
-0.1563106030	
-0.1679746509	
-0.1008507609	
-0.1251007020	
-0.1529126465	
-0.1482090652	
-0.2988635898	
-0.1490194947	
-0.1738628745	
-0.3008828461	
-0.1367798895	
-0.1984302700	
-0.1264953613	
-0.5327105522	
-0.1544138491	
-0.1818445772	
-0.1472972184	
-0.1244101599	
-0.1829346567	
-0.1939519495	
-0.6369326115	
-0.2532895803	
-0.1698576659	
-0.1405073255	
-0.2078085989	
-0.1471399963	
-0.2565381229	
-0.2587179542	
-0.2113296688	
-0.2495225221	
-0.1186342016	
-0.2055560797	
-0.1771930605	
-0.1754408926	
-0.0997006744	
-0.1468552500	
-0.1228675097	
-0.2315090448	
-0.1260578930	
-0.1501894295	
-0.2570120990	
-0.1548153311	
-0.2623187006	
-0.1650670916	
-0.1420474797	
-0.1800357848	
-0.1697669625	
-0.1493190974	
-0.1286218315	
-0.1421103925	
-0.2284681946	
-0.4888257086	
-0.1731243134	
-0.2193692476	
-0.4170384407	
-0.1630266458	
-0.2079225779	
-0.1716437489	
-0.1961338818	
-0.1930228919	
-0.1676801890	
-0.1320315152	
-0.1791746020	
-0.1378539801	
-0.1385772973	
-0.1228555441	
-0.1720931679	
-0.1219635755	
-0.1195893213	
-0.1693887860	
-0.1779871434	
-0.2155536711	
-0.1459321380	
-0.1426532269	
-0.1024547890	
-0.1599280983	
-0.1711634845	
-0.1572579145	
-0.1447769403	
-0.2238467336	
-0.1149195656	
-0.1663977504	
-0.1840673685	
-0.1414937079	
-0.1363478154	
-0.1323282570	
-0.1192810833	
-0.1335643232	
-0.1612281352	
-0.2850858867	
-0.1433082223	
-0.1837782413	
-0.1189661771	
-0.1569669694	
-0.2239111513	
-0.4478460550	
-0.1284383386	
-0.1745100617	
-0.2152385861	
-0.2968864739	
-0.2002733201	
-0.2012246102	
-0.2042879611	
-0.2313380241	
-0.3125946820	
-0.1539624035	
-0.1288970709	
-0.1452859044	
-0.1368654668	
-0.1800992787	
-0.1715201437	
-0.2648623586	
-0.1963588893	
-0.1395535171	
-0.2187052369	
-0.1099734008	
-0.1842672676	
-0.2211917788	
-0.2378270179	
-0.1642739773	
-0.1289360821	
-0.2602235079	
-0.2489657998	
-0.2305042595	
-0.1359702051	
-0.1998745352	
-0.1679349095	
-0.2077425420	
-0.7819136381	
-0.2227328271	
-0.1242697239	
-0.1756482422	
-0.1179332063	
-0.1279553175	
-0.7673829794	
-0.1670780629	
-0.1971788704	
-0.1621140838	
-0.1615934372	
-0.1388368160	
-0.2166812569	
-0.2243450135	
-0.1311920434	
-0.1913615912	
-0.1452884525	
-0.1939027607	
-0.3737458289	
-0.1455821991	
-0.2498044968	
-0.3457055688	
-0.3576196432	
-0.1338097453	
-0.1102967411	
-0.4233715236	
-0.1882790774	
-0.2879439592	
-0.1968788952	
-0.1200887263	
-0.1326158047	
-0.1463213414	
-0.4097782075	
-0.2027743608	
-0.1592623889	
-0.1368128955	
-0.1451177895	
-0.1510071903	
-0.2482278794	
-0.1549864411	
-0.1991215050	
-0.1361901909	
-0.1533489078	
-0.1293819249	
-0.2443491817	
-0.2424519956	
-0.1835975349	
-0.1734204292	
-0.1463217437	
-0.2336799353	
-0.1768147796	
-0.1165730655	
-0.1475979537	
-0.2120676488	
-0.1502881050	
-0.1981203407	
-0.1594437063	
-0.2378941178	
-0.1772434711	
-0.2706163526	
-0.1597635150	
-0.1802266538	
-0.1472953111	
-0.1779878438	
-0.6205363274	
-WARNING: rn3_1.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (256, 1) ######
-
-0.0486542806	
-0.0325325504	
-0.0331211425	
-0.0733816773	
-0.0533496477	
-0.0510108843	
-0.0650117025	
-0.0412929095	
-0.0609642752	
-0.0541277751	
-0.0354369543	
-0.0950205177	
-0.0589769259	
-0.0587092191	
-0.0398330502	
-0.1099188477	
-0.0748020932	
-0.0580743849	
-0.0738947242	
-0.0478283763	
-0.0929375067	
-0.0570949093	
-0.0460563712	
-0.0813373327	
-0.0910651758	
-0.0479881726	
-0.0595469587	
-0.0653318241	
-0.0554817803	
-0.0443615615	
-0.0383753888	
-0.0726599693	
-0.0730965883	
-0.0927583873	
-0.0484105013	
-0.0260422397	
-0.0612858497	
-0.0552709475	
-0.0605412573	
-0.0395919271	
-0.0242912881	
-0.0657328963	
-0.0842299089	
-0.1231621429	
-0.0572867803	
-0.0498091057	
-0.0725302026	
-0.1065020114	
-0.0796716288	
-0.0387464911	
-0.0665810630	
-0.0797954649	
-0.0430358239	
-0.0690974295	
-0.0440387726	
-0.0555300415	
-0.0571364127	
-0.0605758019	
-0.0495463088	
-0.0546072014	
-0.0545025617	
-0.0519108810	
-0.0589556508	
-0.0547238179	
-0.1359327137	
-0.0723943487	
-0.0481164455	
-0.0540715419	
-0.0612254441	
-0.0561932772	
-0.0546812341	
-0.0642612278	
-0.0583122745	
-0.0877146050	
-0.0681453049	
-0.0588670298	
-0.0535400957	
-0.0584993623	
-0.0311124399	
-0.0758002251	
-0.0476360656	
-0.0928046703	
-0.0571517833	
-0.0758940727	
-0.0438542329	
-0.0971315131	
-0.0350526385	
-0.0540176257	
-0.0703698769	
-0.0393838882	
-0.0477120653	
-0.1105934158	
-0.0215288978	
-0.1317934394	
-0.0865058973	
-0.0554192662	
-0.1262343228	
-0.0431545004	
-0.0213641692	
-0.0731370673	
-0.0534608029	
-0.0522404313	
-0.0660814866	
-0.0460863598	
-0.0787391365	
-0.1020231992	
-0.0536065809	
-0.0804938376	
-0.0577808879	
-0.0673294142	
-0.0839885175	
-0.0788943097	
-0.0582547709	
-0.0741118044	
-0.0563411079	
-0.0770727247	
-0.0612036176	
-0.0552847683	
-0.0427922457	
-0.0596642606	
-0.0742577314	
-0.0689919367	
-0.0426291935	
-0.0676377490	
-0.0694644377	
-0.1045068577	
-0.0635559112	
-0.0861455277	
-0.0465479866	
-0.0599700436	
-0.0555870049	
-0.0419541039	
-0.0533427149	
-0.0309075713	
-0.0822505355	
-0.0408517756	
-0.0545271933	
-0.0412371531	
-0.0614531226	
-0.0436227098	
-0.0426110253	
-0.0575866885	
-0.0575774126	
-0.0758522600	
-0.0223574340	
-0.0498774238	
-0.0298494939	
-0.0424665399	
-0.0423748121	
-0.0602496229	
-0.0533026829	
-0.0643053129	
-0.0670052618	
-0.0627136007	
-0.0529138930	
-0.0613185614	
-0.0487433895	
-0.0729776323	
-0.0612579174	
-0.0723524913	
-0.0480185635	
-0.0707280338	
-0.0516349114	
-0.0591170676	
-0.0444345959	
-0.0365877301	
-0.0647151321	
-0.0543222390	
-0.0560975634	
-0.0365261585	
-0.0569371469	
-0.0517226867	
-0.0596086495	
-0.1006995514	
-0.1081977487	
-0.0919855013	
-0.0632805005	
-0.0575729981	
-0.0923345760	
-0.0870725960	
-0.0569375604	
-0.0364949405	
-0.0898712277	
-0.0477821268	
-0.0636076927	
-0.0433608443	
-0.0682143345	
-0.0561539419	
-0.0484166890	
-0.0581385829	
-0.0383701511	
-0.0738116801	
-0.0595912524	
-0.0362305380	
-0.0668627247	
-0.1126789525	
-0.0496747978	
-0.0918114930	
-0.0603119805	
-0.0756961778	
-0.0638595968	
-0.0522992946	
-0.0468633883	
-0.0392691046	
-0.0569094010	
-0.0379941426	
-0.0652863681	
-0.0403798521	
-0.0442891419	
-0.0189543124	
-0.0415931791	
-0.1013158634	
-0.0762043074	
-0.0551017225	
-0.0496373065	
-0.1051603481	
-0.0487821773	
-0.0643069297	
-0.0468072668	
-0.0931694657	
-0.0320378393	
-0.0753670484	
-0.0542544946	
-0.0866826847	
-0.0369806029	
-0.0330899023	
-0.0804904550	
-0.0756760165	
-0.0389225744	
-0.0623802319	
-0.0257074125	
-0.0540961362	
-0.0222727358	
-0.1128785089	
-0.0473602451	
-0.0492810756	
-0.0751435459	
-0.0639068559	
-0.0481866263	
-0.0761899799	
-0.1196834594	
-0.0413588248	
-0.0701922253	
-0.0320268050	
-0.0396108776	
-0.0659800693	
-0.0867885500	
-0.0893353522	
-0.0371466503	
-0.0976482034	
-0.0702084973	
-0.0668591484	
-0.0741599724	
-0.0509046093	
-0.0548649617	
-0.0540454127	
-WARNING: rn3_1.c_proj.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (256, 1) ######
-
-0.0040407972	
-0.0041230107	
-0.0044402257	
-0.0193272661	
-0.0043704393	
-0.0057619410	
-0.0065120510	
-0.0046186708	
-0.0077114459	
-0.0043244455	
-0.0007215225	
-0.0359756202	
-0.0041311546	
-0.0062421155	
-0.0035092426	
-0.0145251229	
-0.0038538806	
-0.0043013343	
-0.0021227512	
-0.0087799747	
-0.0113408137	
-0.0129051078	
-0.0125390254	
-0.0083556119	
-0.0113121448	
-0.0030520691	
-0.0018042375	
-0.0030160737	
-0.0021921499	
-0.0031282853	
-0.0047716773	
-0.0073173149	
-0.0201647133	
-0.0106945541	
-0.0013189610	
-0.0022598160	
-0.0097711226	
-0.0063159214	
-0.0055970112	
-0.0068360292	
-0.0022824612	
-0.0128989220	
-0.0194907300	
-0.0096883448	
-0.0010926741	
-0.0025409774	
-0.0094931824	
-0.0211215448	
-0.0128197838	
-0.0031808559	
-0.0110237421	
-0.0120875482	
-0.0014347873	
-0.0090509588	
-0.0028310474	
-0.0072590434	
-0.0061643305	
-0.0037658957	
-0.0030149310	
-0.0073141088	
-0.0052864715	
-0.0042399848	
-0.0011580569	
-0.0031318394	
-0.0019921602	
-0.0033191619	
-0.0060581155	
-0.0056552794	
-0.0047553889	
-0.0012635826	
-0.0044351644	
-0.0085463952	
-0.0097224806	
-0.0096925600	
-0.0128810126	
-0.0036805824	
-0.0013964035	
-0.0080398647	
-0.0087752836	
-0.0194274522	
-0.0012548601	
-0.0047715036	
-0.0139338560	
-0.0086279027	
-0.0012779833	
-0.0256038848	
-0.0009125327	
-0.0092119183	
-0.0046397340	
-0.0093704024	
-0.0040741349	
-0.0072846739	
-0.0026173072	
-0.0053947773	
-0.0074585979	
-0.0084338663	
-0.0132361799	
-0.0014510319	
-0.0045969160	
-0.0114785591	
-0.0072802361	
-0.0051859939	
-0.0047878749	
-0.0032118752	
-0.0079953037	
-0.0094364155	
-0.0069508054	
-0.0093070846	
-0.0075276243	
-0.0107963458	
-0.0067817047	
-0.0050309640	
-0.0061822324	
-0.0077875443	
-0.0024132608	
-0.0082382746	
-0.0049426933	
-0.0071950299	
-0.0022796916	
-0.0010551532	
-0.0100037083	
-0.0063465228	
-0.0098972404	
-0.0050471690	
-0.0131684542	
-0.0138213634	
-0.0061900830	
-0.0105156926	
-0.0064023882	
-0.0068296483	
-0.0080355350	
-0.0084678773	
-0.0030321460	
-0.0048629423	
-0.0113202138	
-0.0014104346	
-0.0162729714	
-0.0145823145	
-0.0051390845	
-0.0046408419	
-0.0136786113	
-0.0012471586	
-0.0062747998	
-0.0033991290	
-0.0014055652	
-0.0195967350	
-0.0048560929	
-0.0064277216	
-0.0018962089	
-0.0030775135	
-0.0022996718	
-0.0044741435	
-0.0062156427	
-0.0051356978	
-0.0034923672	
-0.0064290375	
-0.0062750778	
-0.0249657594	
-0.0081267254	
-0.0054875910	
-0.0040632142	
-0.0136190671	
-0.0031162465	
-0.0074555529	
-0.0048216358	
-0.0013005469	
-0.0085929818	
-0.0053522526	
-0.0057044677	
-0.0020694588	
-0.0061275670	
-0.0078427307	
-0.0044616871	
-0.0348406956	
-0.0112116663	
-0.0213205554	
-0.0122012841	
-0.0109235141	
-0.0149151171	
-0.0082883304	
-0.0127753569	
-0.0014813679	
-0.0029930025	
-0.0018862253	
-0.0098399092	
-0.0052613225	
-0.0279562585	
-0.0040613208	
-0.0026952703	
-0.0014681920	
-0.0014156274	
-0.0056512086	
-0.0042717778	
-0.0051292484	
-0.0043338831	
-0.0055266283	
-0.0033792129	
-0.0155721288	
-0.0089039169	
-0.0137414094	
-0.0128207505	
-0.0064370595	
-0.0016144225	
-0.0015667981	
-0.0136773540	
-0.0026626536	
-0.0063707111	
-0.0012813463	
-0.0067735272	
-0.0016597918	
-0.0059514986	
-0.0169301815	
-0.0050503556	
-0.0040784758	
-0.0031104796	
-0.0135822184	
-0.0052716359	
-0.0094928024	
-0.0027635696	
-0.0066623134	
-0.0032677313	
-0.0069480492	
-0.0029207570	
-0.0053393217	
-0.0022512495	
-0.0007765117	
-0.0069034533	
-0.0090953605	
-0.0057311794	
-0.0075282771	
-0.0018110781	
-0.0020294243	
-0.0018231955	
-0.0071905130	
-0.0104421210	
-0.0010148288	
-0.0017017788	
-0.0075751641	
-0.0069234809	
-0.0092396401	
-0.0056651221	
-0.0186980478	
-0.0096769286	
-0.0050928718	
-0.0015309210	
-0.0026111745	
-0.0060649463	
-0.0020297871	
-0.0035444151	
-0.0068026138	
-0.0182347577	
-0.0111992797	
-0.0107526984	
-0.0011549122	
-0.0024761297	
-0.0129017672	
-WARNING: rn3_2.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (256, 1) ######
-
-0.0913171321	
-0.1303014755	
-0.2177370936	
-0.1452177167	
-0.0962915868	
-0.1404744685	
-0.1645219922	
-0.1818831563	
-0.1271212548	
-0.0785462707	
-0.0911494792	
-0.1199260280	
-0.1804872453	
-0.1263028830	
-0.1236379445	
-0.1262624711	
-0.1474411190	
-0.1212069094	
-0.1790842712	
-0.0954706818	
-0.1217341945	
-0.1154851690	
-0.1795971394	
-0.1397307962	
-0.1422457248	
-0.0928542241	
-0.0758446008	
-0.1001739353	
-0.1120977104	
-0.0820008442	
-0.1865409166	
-0.1524826139	
-0.1132171676	
-0.2551549077	
-0.1077701673	
-0.1406866163	
-0.0841051564	
-0.1032455266	
-0.1789738536	
-0.0954923853	
-0.1628505588	
-0.1620768160	
-0.1899683475	
-0.0964212343	
-0.0852801204	
-0.0949016809	
-0.1090754867	
-0.1279837936	
-0.1332995892	
-0.0927349851	
-0.2142360359	
-0.1268901527	
-0.1118166223	
-0.1930433363	
-0.1052992344	
-0.1760053784	
-0.1801280379	
-0.0991228372	
-0.1244517267	
-0.1203044355	
-0.2284856886	
-0.1076582000	
-0.1023732573	
-0.2549030781	
-0.0833616108	
-0.2690545619	
-0.0814587474	
-0.1875159889	
-0.1067323089	
-0.1201274320	
-0.1054939106	
-0.2528780997	
-0.2017299682	
-0.1225699186	
-0.0892462656	
-0.1018504873	
-0.0938354358	
-0.1221332625	
-0.1315347403	
-0.0831395835	
-0.0984339789	
-0.1519457847	
-0.1057720408	
-0.1279714704	
-0.0813539028	
-0.1279110163	
-0.2437263280	
-0.1338159740	
-0.1179929376	
-0.1488124430	
-0.1388294846	
-0.1379304677	
-0.0898383185	
-0.1006959081	
-0.1436920762	
-0.1498893350	
-0.1985057890	
-0.0916987732	
-0.1604112834	
-0.0983914435	
-0.1007350385	
-0.0823305696	
-0.1023909524	
-0.1169630289	
-0.1244456545	
-0.1214454472	
-0.1637343764	
-0.1778317690	
-0.1944614649	
-0.1111303419	
-0.1891256273	
-0.1318611205	
-0.2081950903	
-0.1101851612	
-0.0830256045	
-0.1185533553	
-0.0823553726	
-0.1076255590	
-0.1230437756	
-0.0820767730	
-0.1291754246	
-0.1036883891	
-0.1374154985	
-0.1784924716	
-0.1286707669	
-0.1306173503	
-0.2048833668	
-0.0807874203	
-0.0838235393	
-0.0606247038	
-0.1132103875	
-0.0979427099	
-0.0928394496	
-0.1424337626	
-0.1786932498	
-0.1609124243	
-0.1686440706	
-0.1340232491	
-0.1360355765	
-0.1443834156	
-0.1745374054	
-0.2383172214	
-0.2907800972	
-0.1184137464	
-0.1426716000	
-0.2968682647	
-0.0863852203	
-0.1613863260	
-0.0757098049	
-0.2209843844	
-0.1628686339	
-0.2699455917	
-0.1496145725	
-0.1163523868	
-0.1602270156	
-0.1484106034	
-0.1108219400	
-0.1477844566	
-0.1474416554	
-0.1519970000	
-0.0872726291	
-0.0754506961	
-0.1421466619	
-0.1528022289	
-0.1071511954	
-0.1153610125	
-0.2262505591	
-0.1120728254	
-0.2830743492	
-0.1165641993	
-0.1158728823	
-0.1549753845	
-0.1244254261	
-0.1022632346	
-0.1365681291	
-0.0992796272	
-0.1791297346	
-0.0922681317	
-0.1271034628	
-0.1000863537	
-0.5024996400	
-0.0897110254	
-0.2346975356	
-0.0698523298	
-0.1269013882	
-0.1253027767	
-0.1690268219	
-0.1065521017	
-0.1689892560	
-0.1066982299	
-0.1577068269	
-0.1676278859	
-0.1065913811	
-0.1068181172	
-0.1581966132	
-0.1590325832	
-0.1012016982	
-0.1416380703	
-0.1753667742	
-0.2043271512	
-0.2681166530	
-0.2409927845	
-0.1544420570	
-0.3496451974	
-0.0792227536	
-0.1036007851	
-0.1202303320	
-0.0915427357	
-0.1098224670	
-0.1012297124	
-0.0761502087	
-0.2138212919	
-0.0985626578	
-0.1274174154	
-0.0916436166	
-0.1320487410	
-0.0953266993	
-0.1655846238	
-0.1301886737	
-0.1037535369	
-0.1635233015	
-0.3031447530	
-0.2555966079	
-0.1352224052	
-0.0712947845	
-0.1951562166	
-0.1501791179	
-0.1920059472	
-0.1082423925	
-0.1070877463	
-0.2527012229	
-0.0970954597	
-0.2337807566	
-0.0961565301	
-0.0981797352	
-0.1137871966	
-0.1498145312	
-0.1024053022	
-0.2124284059	
-0.1612051278	
-0.0822825730	
-0.2360202968	
-0.3709649742	
-0.1041058525	
-0.1050503999	
-0.0953288227	
-0.1218377799	
-0.1095765904	
-0.1852656007	
-0.1888569444	
-0.1927718520	
-0.1306515485	
-0.1042817980	
-0.1367698312	
-0.1777028590	
-0.3151579201	
-WARNING: rn3_2.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (256, 1) ######
-
-0.0158036910	
-0.0202063993	
-0.0230618902	
-0.0140807508	
-0.0310491454	
-0.0072858999	
-0.0150144696	
-0.0194123276	
-0.0149375238	
-0.0077598989	
-0.0129160425	
-0.0098876944	
-0.0127766924	
-0.0125368247	
-0.0074106967	
-0.0166826993	
-0.0191004798	
-0.0122566763	
-0.0113612199	
-0.0055532595	
-0.0099319844	
-0.0241179410	
-0.0096965330	
-0.0122791193	
-0.0105631566	
-0.0139798820	
-0.0084331622	
-0.0136977388	
-0.0188635476	
-0.0116488691	
-0.0324732512	
-0.0089946957	
-0.0154670486	
-0.0220060349	
-0.0166274533	
-0.0152855776	
-0.0071784672	
-0.0087719997	
-0.0142570501	
-0.0044317022	
-0.0541404709	
-0.0130389929	
-0.0127184782	
-0.0131946178	
-0.0211277585	
-0.0253910385	
-0.0092563014	
-0.0095056314	
-0.0066189826	
-0.0215211567	
-0.0104664322	
-0.0069135907	
-0.0075122858	
-0.0103573352	
-0.0101565002	
-0.0066361115	
-0.0122899646	
-0.0182278678	
-0.0124708666	
-0.0153128253	
-0.0078901565	
-0.0066953972	
-0.0171351917	
-0.0162580032	
-0.0109923026	
-0.0079212468	
-0.0120251728	
-0.0234163944	
-0.0168394204	
-0.0166043174	
-0.0174233764	
-0.0161631946	
-0.0065985541	
-0.0072947722	
-0.0168236718	
-0.0125161326	
-0.0062729828	
-0.0085835047	
-0.0054070163	
-0.0070004524	
-0.0150809381	
-0.0310610607	
-0.0068876571	
-0.0084029213	
-0.0201209839	
-0.0132600432	
-0.0390730314	
-0.0160421766	
-0.0159198754	
-0.0111913001	
-0.0122134490	
-0.0241330788	
-0.0369451568	
-0.0319625400	
-0.0226795580	
-0.0114134271	
-0.0166190322	
-0.0358520970	
-0.0223716497	
-0.0069350861	
-0.0064781085	
-0.0067133773	
-0.0103530455	
-0.0107101351	
-0.0131072113	
-0.0174829345	
-0.0102199288	
-0.0094994884	
-0.0117674600	
-0.0072799614	
-0.0108138351	
-0.0131450761	
-0.0060536489	
-0.0140229696	
-0.0141566563	
-0.0124261640	
-0.0186061021	
-0.0064779129	
-0.0089675942	
-0.0135948351	
-0.0108250966	
-0.0116113797	
-0.0056443419	
-0.0106306626	
-0.0229042694	
-0.0128315771	
-0.0138963470	
-0.0163946785	
-0.0055670901	
-0.0101182517	
-0.0065125036	
-0.0085231178	
-0.0211209729	
-0.0246438961	
-0.0196908489	
-0.0179315545	
-0.0092255455	
-0.0059937444	
-0.0133226644	
-0.0172446165	
-0.0060611069	
-0.0245013256	
-0.0201712921	
-0.0152328433	
-0.0297225509	
-0.0083989725	
-0.0145624047	
-0.0143086538	
-0.0081442231	
-0.0096174069	
-0.0188807882	
-0.0085442513	
-0.0108484719	
-0.0139654158	
-0.0068364660	
-0.0190784782	
-0.0111085242	
-0.0080551906	
-0.0160326473	
-0.0116274599	
-0.0217487533	
-0.0108337719	
-0.0144598996	
-0.0096954517	
-0.0129327588	
-0.0330370367	
-0.0122167170	
-0.0099060824	
-0.0170709155	
-0.0195913073	
-0.0060217986	
-0.0118185319	
-0.0140875261	
-0.0058428789	
-0.0121923247	
-0.0088224998	
-0.0070581497	
-0.0103409607	
-0.0129608065	
-0.0133743808	
-0.0069604139	
-0.0111281145	
-0.0152237145	
-0.0166897327	
-0.0121550234	
-0.0165600777	
-0.0095177731	
-0.0073360507	
-0.0148036368	
-0.0116914185	
-0.0241480023	
-0.0264401585	
-0.0131077683	
-0.0226850864	
-0.0182115380	
-0.0258662887	
-0.0095391981	
-0.0217637289	
-0.0084858779	
-0.0106142331	
-0.0074847457	
-0.0112237828	
-0.0265204702	
-0.0430648886	
-0.0071027614	
-0.0291520990	
-0.0144272968	
-0.0297907796	
-0.0143238250	
-0.0467554666	
-0.0051354403	
-0.0093068117	
-0.0080436543	
-0.0290874802	
-0.0205657016	
-0.0075159436	
-0.0252226554	
-0.0111551266	
-0.0177727304	
-0.0193383712	
-0.0157606080	
-0.0081105810	
-0.0121749854	
-0.0252112485	
-0.0106843887	
-0.0152797075	
-0.0207638424	
-0.0102579081	
-0.0059865108	
-0.0078194207	
-0.0383572802	
-0.0071003665	
-0.0279285833	
-0.0084045269	
-0.0072724367	
-0.0098416898	
-0.0215520654	
-0.0121744853	
-0.0086953668	
-0.0126205841	
-0.0087096607	
-0.0062276139	
-0.0178224221	
-0.0184834767	
-0.0095363539	
-0.0157882180	
-0.0219034310	
-0.0224598888	
-0.0121341581	
-0.0083729057	
-0.0082611674	
-0.0121938558	
-0.0094792480	
-0.0127964448	
-0.0119700367	
-0.0069671315	
-WARNING: rn4_1.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (512, 1) ######
-
-0.0840237886	
-0.0853950232	
-0.1153285056	
-0.0932355896	
-0.0923770368	
-0.0916560143	
-0.1030113474	
-0.1013079435	
-0.1184363216	
-0.0956733152	
-0.0606350638	
-0.1275295019	
-0.1037519127	
-0.0934292451	
-0.0793254003	
-0.1180690527	
-0.0808741525	
-0.0884025618	
-0.0944156796	
-0.0856488645	
-0.1011500582	
-0.0797330216	
-0.0994982570	
-0.1188550666	
-0.1181415245	
-0.0870141760	
-0.1098103970	
-0.0698227584	
-0.1208584383	
-0.1321557462	
-0.0881443992	
-0.1059879288	
-0.1147699580	
-0.0863267556	
-0.0847837180	
-0.1114991382	
-0.0981851518	
-0.0999556556	
-0.1291664839	
-0.0921900496	
-0.0865481123	
-0.0927772000	
-0.0978634432	
-0.0825759917	
-0.0938453451	
-0.0986671373	
-0.1023912802	
-0.1198185086	
-0.0890283287	
-0.1041242406	
-0.0845026150	
-0.1255470067	
-0.1262632161	
-0.0894784555	
-0.1021263897	
-0.0762416720	
-0.0881899595	
-0.0816667303	
-0.0862453952	
-0.1051785871	
-0.1949158609	
-0.1247515976	
-0.1067819297	
-0.1293411553	
-0.0828346312	
-0.0753543526	
-0.0867618769	
-0.0914931819	
-0.0930527151	
-0.1039541587	
-0.0969679505	
-0.0944849551	
-0.0949425101	
-0.0784612745	
-0.1052570194	
-0.1344231218	
-0.0675992742	
-0.1863080561	
-0.0820690244	
-0.0977405906	
-0.0990768969	
-0.0966719240	
-0.0932203755	
-0.1452571750	
-0.0927923322	
-0.1191903874	
-0.0870967135	
-0.0691690743	
-0.0883738026	
-0.0951386616	
-0.1425342709	
-0.1305440366	
-0.1218054965	
-0.1142286584	
-0.0864430144	
-0.0862823129	
-0.1651773751	
-0.1241053641	
-0.0993927866	
-0.0764931440	
-0.1286933720	
-0.1127125844	
-0.0722896829	
-0.0831800401	
-0.1265430897	
-0.1092643738	
-0.1219501570	
-0.0626316369	
-0.0976809338	
-0.1094623655	
-0.1378294528	
-0.0866973698	
-0.1252931058	
-0.0983439460	
-0.1497437060	
-0.0856519565	
-0.1034650952	
-0.0991566405	
-0.1065835208	
-0.1046593040	
-0.1110124439	
-0.0857029781	
-0.0825750306	
-0.1021943465	
-0.0998487473	
-0.0938816518	
-0.1049451008	
-0.1236258000	
-0.1078098565	
-0.1373741031	
-0.1366040856	
-0.1172866523	
-0.0921212137	
-0.1227714494	
-0.0960411280	
-0.1163736209	
-0.0931095108	
-0.0842503458	
-0.1172659174	
-0.1133660227	
-0.1030899659	
-0.0818500817	
-0.1116095930	
-0.0868530646	
-0.0914997309	
-0.1132585630	
-0.0708164647	
-0.1212534383	
-0.0968676731	
-0.0978062749	
-0.1214664504	
-0.0919948742	
-0.1242697388	
-0.0955610722	
-0.1116774157	
-0.0769165158	
-0.1459409446	
-0.0855262652	
-0.1002370492	
-0.0835244358	
-0.0861646906	
-0.1015557274	
-0.1047211140	
-0.1156467199	
-0.1227105781	
-0.1082822457	
-0.1492918134	
-0.1045372561	
-0.0774239749	
-0.1552578062	
-0.1116471887	
-0.0786164701	
-0.0819161311	
-0.1142430902	
-0.1195629314	
-0.1089874133	
-0.1110490710	
-0.0938255936	
-0.1248252317	
-0.0979835019	
-0.1071333513	
-0.0877885148	
-0.0857506022	
-0.0596816540	
-0.0927295089	
-0.1197453737	
-0.0955960006	
-0.1390141547	
-0.0854783207	
-0.1228273213	
-0.0908740014	
-0.0778118968	
-0.0982914940	
-0.0890894383	
-0.1193595901	
-0.1125966012	
-0.0884748325	
-0.0936167911	
-0.1053493917	
-0.0850669742	
-0.0879824758	
-0.1056656539	
-0.0855529904	
-0.0910356194	
-0.0736286044	
-0.0700603724	
-0.0800194368	
-0.0934846774	
-0.0940441415	
-0.0972168967	
-0.1522684842	
-0.0757480338	
-0.0984977260	
-0.0907956362	
-0.1059947088	
-0.1335091442	
-0.1015013754	
-0.0651306435	
-0.1183617637	
-0.0875297710	
-0.1017269641	
-0.0925630480	
-0.0855805501	
-0.1246555746	
-0.0790516064	
-0.1233247966	
-0.1007843614	
-0.1090577096	
-0.0824534073	
-0.0989829972	
-0.0840860978	
-0.0901127234	
-0.1134196147	
-0.0930636674	
-0.1101374775	
-0.0847713500	
-0.0770206600	
-0.1023705676	
-0.0518928058	
-0.1016428769	
-0.1211427748	
-0.1298702508	
-0.0787913874	
-0.1102587804	
-0.1039582342	
-0.1030791178	
-0.1230928153	
-0.0891894773	
-0.1127865836	
-0.1895775646	
-0.0748081356	
-0.1001001224	
-0.1384962350	
-0.0894134641	
-0.1037844270	
-0.0801115185	
-0.0928158090	
-0.1209224090	
-0.1054364666	
-0.1043418497	
-0.1095602661	
-0.1043904424	
-0.1129946038	
-0.1000315696	
-0.1143411100	
-0.0997019708	
-0.1034463719	
-0.1225403547	
-0.1241990998	
-0.0810394809	
-0.1345632821	
-0.1057725847	
-0.0968729183	
-0.1026603505	
-0.1447612345	
-0.1743002534	
-0.0853177831	
-0.1189819351	
-0.0853321776	
-0.1239512339	
-0.0582507774	
-0.1060945913	
-0.1406047791	
-0.0980757847	
-0.0922197998	
-0.1366879791	
-0.1491482705	
-0.1147034839	
-0.0927294120	
-0.1221510172	
-0.1135117859	
-0.1303087920	
-0.1275037974	
-0.0994368941	
-0.0915375501	
-0.1554594040	
-0.0827511027	
-0.1028689146	
-0.1080343649	
-0.1271358728	
-0.0915029049	
-0.1107593328	
-0.0837261453	
-0.1142491028	
-0.0905715302	
-0.0982894897	
-0.0954261646	
-0.1531178355	
-0.1010127738	
-0.1009274647	
-0.0831903890	
-0.1364304870	
-0.1182542071	
-0.0942450464	
-0.0823354945	
-0.0971766338	
-0.0839859173	
-0.1360552311	
-0.0828423724	
-0.0804616734	
-0.0832686350	
-0.1484868079	
-0.0818503872	
-0.1132397428	
-0.1328913867	
-0.0857649669	
-0.1092435196	
-0.1028487086	
-0.1150614843	
-0.1047724113	
-0.0864538774	
-0.0971857756	
-0.1052901819	
-0.0869843066	
-0.0880024880	
-0.1017483696	
-0.0993091688	
-0.0796578154	
-0.0959206074	
-0.0823702663	
-0.1023170948	
-0.1253532916	
-0.1042035744	
-0.0812162384	
-0.1072553396	
-0.0897378922	
-0.1033872366	
-0.1208119839	
-0.0833047032	
-0.0980006978	
-0.0842111409	
-0.0732740685	
-0.0956091732	
-0.0816927403	
-0.0656305254	
-0.0942242295	
-0.1762284786	
-0.0965646505	
-0.0952066034	
-0.1278518140	
-0.1064816043	
-0.1006166190	
-0.1151171774	
-0.0894260034	
-0.1174011230	
-0.1289593130	
-0.1058070883	
-0.1353096366	
-0.0997477248	
-0.1044350490	
-0.1099652871	
-0.0939334854	
-0.1019316614	
-0.1075720415	
-0.0872991383	
-0.1248566210	
-0.0897011682	
-0.0868953541	
-0.1216254309	
-0.1325519979	
-0.0983271077	
-0.1517272741	
-0.1031843051	
-0.0733087137	
-0.1068496332	
-0.1222573519	
-0.1023372486	
-0.0844547451	
-0.1300608069	
-0.1025603339	
-0.1037112251	
-0.0704961494	
-0.0959173888	
-0.0849147514	
-0.0880608410	
-0.1360256970	
-0.2140477598	
-0.1395485848	
-0.0910406932	
-0.0895085037	
-0.0971560255	
-0.1494780332	
-0.1309296042	
-0.1207898259	
-0.1361513585	
-0.0903398171	
-0.0889841393	
-0.1010520533	
-0.1134882793	
-0.1141202524	
-0.0960164964	
-0.1073617041	
-0.1294060051	
-0.1132866815	
-0.1141517088	
-0.1079630628	
-0.1234797984	
-0.1327610463	
-0.0990984514	
-0.0944410712	
-0.0953208432	
-0.1161284372	
-0.0884296373	
-0.1255642474	
-0.0826091766	
-0.0966145620	
-0.1098955646	
-0.0886261836	
-0.0791224241	
-0.1075504348	
-0.0841729790	
-0.0886482596	
-0.0611821339	
-0.0995760635	
-0.1002837643	
-0.1053972989	
-0.1265115142	
-0.0903819054	
-0.1094578430	
-0.0864961073	
-0.0929870009	
-0.1026400849	
-0.0854372382	
-0.1290532798	
-0.1196697205	
-0.0704761147	
-0.0947893858	
-0.1104415730	
-0.0919034556	
-0.0710067824	
-0.1027727202	
-0.0906553119	
-0.0857025757	
-0.1053204164	
-0.1490006745	
-0.1479350328	
-0.1559969187	
-0.1013341397	
-0.1256572902	
-0.1018955857	
-0.1683526635	
-0.0992397815	
-0.1001903042	
-0.0992825627	
-0.0903590992	
-0.1029708982	
-0.1660435945	
-0.1111813858	
-0.0997383296	
-0.1313230097	
-0.0945924893	
-0.0889168531	
-0.0974106714	
-0.1330154240	
-0.0879187062	
-0.0727768317	
-0.1218792424	
-0.1346732378	
-0.0832521021	
-0.1513688862	
-0.0899992958	
-0.0688370317	
-0.1345425695	
-0.0932046995	
-0.0951846987	
-0.0726525113	
-0.1416601539	
-0.0934493765	
-0.0982249752	
-0.0895399451	
-0.0934287235	
-0.0861505195	
-0.0885898247	
-0.1129175052	
-0.0760968402	
-0.0866813660	
-0.1073012576	
-0.1077629179	
-0.0994901210	
-0.0991138816	
-0.0759653598	
-0.0703339800	
-0.0924230441	
-0.1031392515	
-0.0877977014	
-0.0986146480	
-0.1090453938	
-0.0838224664	
-0.1009039730	
-0.1037219614	
-0.0936946273	
-0.1148990318	
-WARNING: rn4_1.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (512, 1) ######
-
-0.0229781438	
-0.0292076133	
-0.0155005269	
-0.0339493491	
-0.0248537697	
-0.0215006601	
-0.0218920112	
-0.0526958220	
-0.0223096590	
-0.0247247834	
-0.0269340519	
-0.0219873898	
-0.0185868386	
-0.0165213551	
-0.0181566291	
-0.0246125385	
-0.0174587052	
-0.0364185870	
-0.0243038181	
-0.0212436542	
-0.0232380163	
-0.0193117093	
-0.0200533383	
-0.0344028994	
-0.0287650228	
-0.0297417995	
-0.0209530219	
-0.0277742241	
-0.0303746853	
-0.0256637372	
-0.0233168434	
-0.0281649809	
-0.0480598249	
-0.0290398411	
-0.0231558997	
-0.0262665600	
-0.0244842786	
-0.0214965884	
-0.0261735003	
-0.0182213522	
-0.0205904804	
-0.0254453942	
-0.0168986190	
-0.0227285959	
-0.0220449548	
-0.0193835590	
-0.0232496895	
-0.0220140368	
-0.0244614054	
-0.0261396766	
-0.0222363025	
-0.0273216534	
-0.0203979630	
-0.0215101242	
-0.0241443869	
-0.0264215227	
-0.0250608716	
-0.0218134914	
-0.0235648081	
-0.0232973639	
-0.0256906562	
-0.0202665757	
-0.0238990765	
-0.0196259432	
-0.0192130506	
-0.0286604539	
-0.0236323830	
-0.0442502536	
-0.0187738687	
-0.0275417808	
-0.0237632897	
-0.0249924101	
-0.0297545902	
-0.0342982635	
-0.0248510540	
-0.0253464952	
-0.0217982959	
-0.0264871158	
-0.0278218687	
-0.0320404433	
-0.0295714475	
-0.0274860691	
-0.0226304978	
-0.0345042460	
-0.0203340705	
-0.0260157064	
-0.0233907159	
-0.0289062187	
-0.0223486703	
-0.0160889048	
-0.0227169879	
-0.0302826483	
-0.0403234363	
-0.0262608286	
-0.0266854782	
-0.0225005914	
-0.0196002312	
-0.0216935370	
-0.0221044701	
-0.0194800124	
-0.0246670526	
-0.0238562021	
-0.0230439194	
-0.0269675162	
-0.0329853036	
-0.0289695095	
-0.0267373528	
-0.0217385273	
-0.0153482081	
-0.0222327113	
-0.0248097256	
-0.0240136161	
-0.0315411352	
-0.0215399135	
-0.0209290385	
-0.0221891049	
-0.0267905761	
-0.0265109129	
-0.0284458268	
-0.0215407182	
-0.0210579820	
-0.0337751359	
-0.0202529244	
-0.0230342727	
-0.0195887908	
-0.0230838601	
-0.0259244815	
-0.0268919449	
-0.0259235799	
-0.0272294339	
-0.0278993696	
-0.0263975244	
-0.0203536786	
-0.0220277309	
-0.0209136717	
-0.0318627805	
-0.0217641611	
-0.0293411445	
-0.0241347048	
-0.0199610349	
-0.0216572713	
-0.0219444707	
-0.0207967851	
-0.0225941110	
-0.0158600770	
-0.0204823483	
-0.0301393215	
-0.0254386347	
-0.0251966566	
-0.0168196596	
-0.0280475467	
-0.0291677397	
-0.0206505116	
-0.0282452647	
-0.0237824619	
-0.0280432086	
-0.0270428099	
-0.0198214985	
-0.0244456977	
-0.0193265490	
-0.0249539390	
-0.0268577393	
-0.0206035823	
-0.0281881895	
-0.0365231968	
-0.0229669549	
-0.0240060408	
-0.0210849103	
-0.0210285615	
-0.0319923684	
-0.0245022513	
-0.0249059331	
-0.0163958892	
-0.0190067180	
-0.0229886491	
-0.0247120298	
-0.0163265690	
-0.0217596572	
-0.0240885969	
-0.0238760393	
-0.0197087824	
-0.0271479636	
-0.0390495509	
-0.0203356966	
-0.0219204277	
-0.0230542161	
-0.0262221340	
-0.0298583582	
-0.0247965716	
-0.0277334694	
-0.0281153265	
-0.0265269056	
-0.0273042396	
-0.0225675777	
-0.0216631386	
-0.0201221723	
-0.0194031745	
-0.0263954345	
-0.0196011011	
-0.0185108799	
-0.0282476135	
-0.0305733625	
-0.0207770858	
-0.0235435273	
-0.0211564954	
-0.0265365373	
-0.0254472084	
-0.0245767254	
-0.0181287415	
-0.0242357962	
-0.0254268255	
-0.0316086449	
-0.0206395090	
-0.0163642187	
-0.0247863512	
-0.0218323059	
-0.0240371544	
-0.0219722316	
-0.0191616435	
-0.0227865092	
-0.0195100363	
-0.0237388816	
-0.0221147202	
-0.0233158916	
-0.0260597784	
-0.0288257562	
-0.0213901065	
-0.0181653649	
-0.0262606069	
-0.0251314156	
-0.0250035152	
-0.0230770037	
-0.0230906978	
-0.0218546558	
-0.0210987311	
-0.0213026311	
-0.0252697170	
-0.0237741303	
-0.0219453461	
-0.0191748645	
-0.0220804885	
-0.0232700668	
-0.0187967736	
-0.0213652477	
-0.0261038151	
-0.0173006169	
-0.0287023466	
-0.0240379833	
-0.0191085376	
-0.0204859544	
-0.0296370108	
-0.0203278828	
-0.0204292238	
-0.0162340794	
-0.0202845428	
-0.0254043806	
-0.0209820960	
-0.0230350550	
-0.0237521064	
-0.0223568678	
-0.0232187863	
-0.0234291181	
-0.0214816015	
-0.0214932766	
-0.0259744935	
-0.0234740227	
-0.0205378905	
-0.0320292115	
-0.0245187841	
-0.0201383960	
-0.0247737765	
-0.0239041410	
-0.0241535529	
-0.0242667440	
-0.0242348555	
-0.0229931064	
-0.0249219015	
-0.0194425602	
-0.0167205911	
-0.0284375343	
-0.0278136656	
-0.0290176943	
-0.0211097207	
-0.0233867001	
-0.0243674442	
-0.0251098033	
-0.0214715973	
-0.0241734348	
-0.0232993383	
-0.0252488628	
-0.0225751083	
-0.0240174029	
-0.0260538422	
-0.0197721366	
-0.0262622721	
-0.0204156879	
-0.0210823044	
-0.0232142899	
-0.0205175783	
-0.0262608882	
-0.0210935734	
-0.0209281314	
-0.0241392851	
-0.0212943628	
-0.0184114687	
-0.0313887037	
-0.0208979063	
-0.0244585332	
-0.0220270101	
-0.0227449853	
-0.0215010475	
-0.0284218136	
-0.0272808541	
-0.0260159038	
-0.0305908006	
-0.0153904259	
-0.0236000661	
-0.0185157135	
-0.0219814386	
-0.0228835586	
-0.0249552801	
-0.0254988875	
-0.0203602817	
-0.0192380287	
-0.0152745247	
-0.0515226088	
-0.0215573590	
-0.0461588688	
-0.0304700751	
-0.0229887478	
-0.0208418909	
-0.0273790807	
-0.0220407844	
-0.0213045105	
-0.0212779231	
-0.0224401467	
-0.0284088310	
-0.0177734923	
-0.0273000170	
-0.0248347502	
-0.0281176604	
-0.0262308251	
-0.0191313121	
-0.0238509551	
-0.0307434723	
-0.0237777382	
-0.0209625755	
-0.0236346666	
-0.0201216750	
-0.0280811712	
-0.0177603029	
-0.0209113993	
-0.0194798689	
-0.0192535240	
-0.0281188823	
-0.0195408072	
-0.0328759924	
-0.0258346591	
-0.0259856470	
-0.0236152746	
-0.0221919250	
-0.0289446749	
-0.0223458372	
-0.0252326932	
-0.0271792356	
-0.0272241142	
-0.0217001345	
-0.0180593524	
-0.0255428404	
-0.0203245878	
-0.0233784616	
-0.0250474513	
-0.0307188295	
-0.0267971512	
-0.0245396886	
-0.0389653444	
-0.0241299104	
-0.0199090037	
-0.0268212650	
-0.0341632850	
-0.0219159555	
-0.0241590608	
-0.0246070828	
-0.0271914899	
-0.0185463317	
-0.0238711722	
-0.0198111907	
-0.0184311587	
-0.0210761353	
-0.0237968098	
-0.0228237268	
-0.0249519069	
-0.0252705645	
-0.0317613669	
-0.0191569682	
-0.0305475220	
-0.0316787511	
-0.0273004714	
-0.0340927765	
-0.0203357115	
-0.0288756248	
-0.0260678027	
-0.0213166270	
-0.0256840400	
-0.0264796503	
-0.0247598458	
-0.0207536221	
-0.0289809071	
-0.0152777238	
-0.0250259992	
-0.0290991776	
-0.0275995452	
-0.0149625577	
-0.0235703979	
-0.0251381546	
-0.0250568222	
-0.0200869702	
-0.0311099440	
-0.0240527038	
-0.0154006109	
-0.0258150436	
-0.0356094576	
-0.0239994861	
-0.0244225133	
-0.0226321667	
-0.0236454438	
-0.0201781001	
-0.0305199157	
-0.0172649790	
-0.0165421329	
-0.0260442384	
-0.0229728390	
-0.0313292332	
-0.0262929555	
-0.0215217397	
-0.0289632231	
-0.0233188644	
-0.0288050305	
-0.0238886513	
-0.0274874810	
-0.0207692720	
-0.0292784460	
-0.0264913533	
-0.0194686856	
-0.0241939779	
-0.0197246894	
-0.0226028059	
-0.0216342974	
-0.0207690652	
-0.0181179047	
-0.0188509598	
-0.0235815104	
-0.0217639226	
-0.0230069179	
-0.0172653235	
-0.0266677327	
-0.0314416029	
-0.0277178399	
-0.0228246804	
-0.0263056587	
-0.0233661458	
-0.0291813221	
-0.0322826356	
-0.0216624271	
-0.0263735354	
-0.0183286611	
-0.0211745929	
-0.0244359281	
-0.0236695800	
-0.0232475828	
-0.0225967579	
-0.0263699424	
-0.0202718787	
-0.0292247012	
-0.0202470608	
-0.0211528838	
-0.0166714694	
-0.0176995881	
-0.0215352084	
-0.0487685762	
-0.0266390461	
-0.0179095063	
-0.0183739159	
-0.0189484376	
-0.0241790190	
-0.0247136783	
-0.0199766885	
-0.0238805115	
-0.0191129055	
-0.0197601169	
-0.0223719403	
-0.0231081527	
-0.0277744811	
-0.0226038657	
-0.0241696592	
-0.0246378854	
-0.0256779734	
-0.0232056584	
-0.0207062885	
-0.0251712240	
-0.0246677864	
-0.0272994731	
-0.0217286907	
-0.0238540787	
-0.0169272944	
-0.0278573968	
-0.0241065491	
-0.0255120881	
-0.0233691856	
-0.0263855867	
-0.0227679294	
-0.0205104295	
-WARNING: rn4_1.c_proj.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (512, 1) ######
-
-0.0052811718	
-0.0105206063	
-0.0032972847	
-0.0070158471	
-0.0064546620	
-0.0068606068	
-0.0031360241	
-0.0025157554	
-0.0035972919	
-0.0044780676	
-0.0068962602	
-0.0041444506	
-0.0046248841	
-0.0013200658	
-0.0032129411	
-0.0044984855	
-0.0056603481	
-0.0065378677	
-0.0048156544	
-0.0060395845	
-0.0064372178	
-0.0042897197	
-0.0059563708	
-0.0023317786	
-0.0048785536	
-0.0073045935	
-0.0010191548	
-0.0054226061	
-0.0039815223	
-0.0025238369	
-0.0054470976	
-0.0047930395	
-0.0145102199	
-0.0069312267	
-0.0057056919	
-0.0064713033	
-0.0051544509	
-0.0030545224	
-0.0049392032	
-0.0042329370	
-0.0045999479	
-0.0055304402	
-0.0026870077	
-0.0043792026	
-0.0036541361	
-0.0009893421	
-0.0029229927	
-0.0066181021	
-0.0041686697	
-0.0061974498	
-0.0038273507	
-0.0054486888	
-0.0077223661	
-0.0036609543	
-0.0031110949	
-0.0069853081	
-0.0054459418	
-0.0047246083	
-0.0041374126	
-0.0025711728	
-0.0019559287	
-0.0031191967	
-0.0026824903	
-0.0036212639	
-0.0030750174	
-0.0060495762	
-0.0040429067	
-0.0084621357	
-0.0021092186	
-0.0068635084	
-0.0051766955	
-0.0024299759	
-0.0056088334	
-0.0055200569	
-0.0018000327	
-0.0029461707	
-0.0028505397	
-0.0008382217	
-0.0058708568	
-0.0040055085	
-0.0064947172	
-0.0035682914	
-0.0020414905	
-0.0051484257	
-0.0032453586	
-0.0026831636	
-0.0036548541	
-0.0051583885	
-0.0077422406	
-0.0063684490	
-0.0039557600	
-0.0076812226	
-0.0046459818	
-0.0046325019	
-0.0054695522	
-0.0029578158	
-0.0038329661	
-0.0025078610	
-0.0063636843	
-0.0030806817	
-0.0052215396	
-0.0043866956	
-0.0030699831	
-0.0089910738	
-0.0075714854	
-0.0054091038	
-0.0081575997	
-0.0058500208	
-0.0095184073	
-0.0042630034	
-0.0037132415	
-0.0030508859	
-0.0050282083	
-0.0032543712	
-0.0031393974	
-0.0017789726	
-0.0023582848	
-0.0069606700	
-0.0033879697	
-0.0033005234	
-0.0038706027	
-0.0026675102	
-0.0037772292	
-0.0014917655	
-0.0020117229	
-0.0009338390	
-0.0038807255	
-0.0067876098	
-0.0041325488	
-0.0039510257	
-0.0042909249	
-0.0063320613	
-0.0037295464	
-0.0066565396	
-0.0043791793	
-0.0051504122	
-0.0013895414	
-0.0049708225	
-0.0039718319	
-0.0014347601	
-0.0022785044	
-0.0053394339	
-0.0037984676	
-0.0028138843	
-0.0049840980	
-0.0068056383	
-0.0056843585	
-0.0064129205	
-0.0038123177	
-0.0056604720	
-0.0062559266	
-0.0014585220	
-0.0039054782	
-0.0056759231	
-0.0026438816	
-0.0042108078	
-0.0033606149	
-0.0021122268	
-0.0047505610	
-0.0069477791	
-0.0049333582	
-0.0064082886	
-0.0021724938	
-0.0037698341	
-0.0150362821	
-0.0058796741	
-0.0032392400	
-0.0043247524	
-0.0039272425	
-0.0084695704	
-0.0040073413	
-0.0023544510	
-0.0014570337	
-0.0055089840	
-0.0033987537	
-0.0059995409	
-0.0111345230	
-0.0051768562	
-0.0053680576	
-0.0037486278	
-0.0008715446	
-0.0051063201	
-0.0034617230	
-0.0084419325	
-0.0029634356	
-0.0032806327	
-0.0046940376	
-0.0062700785	
-0.0058287792	
-0.0046035722	
-0.0065768869	
-0.0036216769	
-0.0067674154	
-0.0024651010	
-0.0005806666	
-0.0035553323	
-0.0019897020	
-0.0048519946	
-0.0023434113	
-0.0017220424	
-0.0060654348	
-0.0070273746	
-0.0048606540	
-0.0037355660	
-0.0054107774	
-0.0043087462	
-0.0096703134	
-0.0012401156	
-0.0047298232	
-0.0079207439	
-0.0065273182	
-0.0037945304	
-0.0066723893	
-0.0032612984	
-0.0069418200	
-0.0042173620	
-0.0044914442	
-0.0046748072	
-0.0050602579	
-0.0054352940	
-0.0028603883	
-0.0090940148	
-0.0036046356	
-0.0041628769	
-0.0041057253	
-0.0059427805	
-0.0025052400	
-0.0044662054	
-0.0073982701	
-0.0029150876	
-0.0028399881	
-0.0049810237	
-0.0027689287	
-0.0028276532	
-0.0025113462	
-0.0091695208	
-0.0060438034	
-0.0034902235	
-0.0048532463	
-0.0030036783	
-0.0034345721	
-0.0048630796	
-0.0014131051	
-0.0131378146	
-0.0073069129	
-0.0033986289	
-0.0076662926	
-0.0057150307	
-0.0038194063	
-0.0017446720	
-0.0080528576	
-0.0076269177	
-0.0041617909	
-0.0019489336	
-0.0016564396	
-0.0055638212	
-0.0054779598	
-0.0025351336	
-0.0028412691	
-0.0043797842	
-0.0034344580	
-0.0052583925	
-0.0019822747	
-0.0028365636	
-0.0054647392	
-0.0027872161	
-0.0086139422	
-0.0066861729	
-0.0068134312	
-0.0035702379	
-0.0039460165	
-0.0054943664	
-0.0058396878	
-0.0053821197	
-0.0032819598	
-0.0037980012	
-0.0061465753	
-0.0051811594	
-0.0067169387	
-0.0169076994	
-0.0059420625	
-0.0037519475	
-0.0033189184	
-0.0057795565	
-0.0025157933	
-0.0030563781	
-0.0046271700	
-0.0025584721	
-0.0051585431	
-0.0014180944	
-0.0083859069	
-0.0049174614	
-0.0064346278	
-0.0026327202	
-0.0046702037	
-0.0022875026	
-0.0027772360	
-0.0048619104	
-0.0022420774	
-0.0072083962	
-0.0011553485	
-0.0031172198	
-0.0050479993	
-0.0018996210	
-0.0124398265	
-0.0042618429	
-0.0035386924	
-0.0058949389	
-0.0026782344	
-0.0024217416	
-0.0009802441	
-0.0033532905	
-0.0071836514	
-0.0021948647	
-0.0063175214	
-0.0063673113	
-0.0066507631	
-0.0081502656	
-0.0034696765	
-0.0100638960	
-0.0058449446	
-0.0055432608	
-0.0035777970	
-0.0036036228	
-0.0017334855	
-0.0310790762	
-0.0031983203	
-0.0060435883	
-0.0064258450	
-0.0028330474	
-0.0023501574	
-0.0043361965	
-0.0021164489	
-0.0074054524	
-0.0014651763	
-0.0057192412	
-0.0025138804	
-0.0024159304	
-0.0046767257	
-0.0059024259	
-0.0069623990	
-0.0046023643	
-0.0025860153	
-0.0046370458	
-0.0051434711	
-0.0030022974	
-0.0072218906	
-0.0023866664	
-0.0063845632	
-0.0081126969	
-0.0017658193	
-0.0025766992	
-0.0084614512	
-0.0033717470	
-0.0035625822	
-0.0070725866	
-0.0051279534	
-0.0047166115	
-0.0059525040	
-0.0072690714	
-0.0033661672	
-0.0063963099	
-0.0022117547	
-0.0044010053	
-0.0021764690	
-0.0060663670	
-0.0050274939	
-0.0006551892	
-0.0032648458	
-0.0038757296	
-0.0059282715	
-0.0040177642	
-0.0080261873	
-0.0079503758	
-0.0049821897	
-0.0081930105	
-0.0073471768	
-0.0024789474	
-0.0054033650	
-0.0079096360	
-0.0029186602	
-0.0031317163	
-0.0033750080	
-0.0059700771	
-0.0029955280	
-0.0032296993	
-0.0031732991	
-0.0033649346	
-0.0019310004	
-0.0043725302	
-0.0026001697	
-0.0054795272	
-0.0052968268	
-0.0072494727	
-0.0021031359	
-0.0073208208	
-0.0080201384	
-0.0081036752	
-0.0056505650	
-0.0057479208	
-0.0063578598	
-0.0013918513	
-0.0032591780	
-0.0054409895	
-0.0050091888	
-0.0059691956	
-0.0059440960	
-0.0049027507	
-0.0026183098	
-0.0051410329	
-0.0070339432	
-0.0083239954	
-0.0046696430	
-0.0034559220	
-0.0051399623	
-0.0044084908	
-0.0090146270	
-0.0042067701	
-0.0062133474	
-0.0050565279	
-0.0055977716	
-0.0044159577	
-0.0077034691	
-0.0043225074	
-0.0066527585	
-0.0027770833	
-0.0030721680	
-0.0071516363	
-0.0075943870	
-0.0019299226	
-0.0062185917	
-0.0048751971	
-0.0030614887	
-0.0043028910	
-0.0017000147	
-0.0073505612	
-0.0030962883	
-0.0061735427	
-0.0021120163	
-0.0027838696	
-0.0038940951	
-0.0064526913	
-0.0020587784	
-0.0054626456	
-0.0046798051	
-0.0027193103	
-0.0025619688	
-0.0030687714	
-0.0048395414	
-0.0064672744	
-0.0055939401	
-0.0035244476	
-0.0042899619	
-0.0034912524	
-0.0046004434	
-0.0060480544	
-0.0062564062	
-0.0073874313	
-0.0041063665	
-0.0049528978	
-0.0071982928	
-0.0024044875	
-0.0038937863	
-0.0046393424	
-0.0055912053	
-0.0041603115	
-0.0044782697	
-0.0027170717	
-0.0072345524	
-0.0018182049	
-0.0027573477	
-0.0073042270	
-0.0041596233	
-0.0037985838	
-0.0020845660	
-0.0019244240	
-0.0019109281	
-0.0063813846	
-0.0011447445	
-0.0026430862	
-0.0029081665	
-0.0037275020	
-0.0063515087	
-0.0043670209	
-0.0053510843	
-0.0044582132	
-0.0042842580	
-0.0031681780	
-0.0024960083	
-0.0068024574	
-0.0038544191	
-0.0068751872	
-0.0037418162	
-0.0030300771	
-0.0021939217	
-0.0060604932	
-0.0056250608	
-0.0038123413	
-0.0079595698	
-0.0029519971	
-0.0022679614	
-0.0039984295	
-0.0029867510	
-0.0063314242	
-0.0021807048	
-0.0043705301	
-0.0037689356	
-0.0046730139	
-0.0058305645	
-0.0054359972	
-0.0047793724	
-0.0077249114	
-WARNING: rn4_2.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (512, 1) ######
-
-0.1207037196	
-0.1280697137	
-0.1269018650	
-0.1250167638	
-0.1113368571	
-0.1050246805	
-0.1221748441	
-0.1117357761	
-0.1435359269	
-0.1036280617	
-0.1086945757	
-0.1291119456	
-0.2016776353	
-0.1463912427	
-0.1283332855	
-0.1433789432	
-0.1592806876	
-0.1191427335	
-0.1236488074	
-0.1621778607	
-0.1096735299	
-0.1417667568	
-0.1321216524	
-0.1285747290	
-0.1004965007	
-0.1781402826	
-0.1137892231	
-0.0792738721	
-0.0978730619	
-0.1253160089	
-0.1216734722	
-0.1351752430	
-0.1005306095	
-0.1074981540	
-0.1409051567	
-0.1100223437	
-0.1465111077	
-0.1450005174	
-0.1071708277	
-0.1866554469	
-0.1207533553	
-0.1211178377	
-0.1382810473	
-0.0907666981	
-0.1036783755	
-0.1216716170	
-0.1052402630	
-0.1476377547	
-0.1229260191	
-0.1409804672	
-0.1071889848	
-0.1179418936	
-0.1010737717	
-0.1181104407	
-0.1606945395	
-0.1156795844	
-0.1201216504	
-0.1029089838	
-0.0995272174	
-0.1106255725	
-0.0877057239	
-0.1531724483	
-0.1087535322	
-0.1066507474	
-0.1007525325	
-0.1137373224	
-0.1571493745	
-0.0896943212	
-0.1293475926	
-0.1565910131	
-0.0977887362	
-0.0929821059	
-0.1167069376	
-0.0828905925	
-0.0908301547	
-0.1055241749	
-0.1303432882	
-0.0992028937	
-0.1503469348	
-0.1303775907	
-0.1014840975	
-0.1508770585	
-0.1257799268	
-0.1246504337	
-0.1136157364	
-0.1257299483	
-0.1308687329	
-0.1072088629	
-0.1112677082	
-0.0962919593	
-0.0999986231	
-0.0992855057	
-0.2129359990	
-0.1300852448	
-0.1174984723	
-0.1598667502	
-0.1489339471	
-0.1288907677	
-0.1217345223	
-0.1401683539	
-0.1633436531	
-0.1088793203	
-0.0942976177	
-0.1169651821	
-0.1009254083	
-0.1255646348	
-0.1131464243	
-0.1038917303	
-0.1127385944	
-0.1005911678	
-0.2061465830	
-0.1237052009	
-0.0954615697	
-0.1332385391	
-0.1002275497	
-0.2263194472	
-0.1654124260	
-0.1312491298	
-0.1347893924	
-0.1456273198	
-0.1437727958	
-0.1505891830	
-0.1319163144	
-0.1483519673	
-0.1503348947	
-0.0931467786	
-0.1197494194	
-0.1151607186	
-0.0997542888	
-0.1022944972	
-0.1372794658	
-0.1460346729	
-0.1813902408	
-0.1028934196	
-0.1243990362	
-0.1046277955	
-0.1177828163	
-0.3909703493	
-0.1028994471	
-0.1474786550	
-0.1559007019	
-0.1091093197	
-0.1711480916	
-0.1292174160	
-0.1070637554	
-0.1446355879	
-0.1121624857	
-0.1635337025	
-0.1178775504	
-0.1140205637	
-0.1095464304	
-0.0996614248	
-0.1518582404	
-0.0993899181	
-0.1605021805	
-0.1098947152	
-0.1366316676	
-0.1118379310	
-0.1063000783	
-0.0930776447	
-0.1188446954	
-0.1648439169	
-0.1289537996	
-0.1004315913	
-0.0943087190	
-0.1213349178	
-0.1421433091	
-0.1272180676	
-0.2217177749	
-0.1086240783	
-0.1106295735	
-0.1934746653	
-0.1408834159	
-0.1241149977	
-0.0985768065	
-0.1275365800	
-0.1314589530	
-0.1541844010	
-0.1006167233	
-0.1167671904	
-0.1110821217	
-0.1285300851	
-0.1243110597	
-0.1394241899	
-0.1137922853	
-0.1208830252	
-0.1037610397	
-0.1381826848	
-0.1150936261	
-0.0959451571	
-0.0959601477	
-0.1290407926	
-0.0990991369	
-0.1036071777	
-0.1476638168	
-0.1916855276	
-0.1041648537	
-0.1325487196	
-0.1542198062	
-0.1207904145	
-0.1938868910	
-0.1123728827	
-0.1231723875	
-0.1580810398	
-0.1104892120	
-0.1312630177	
-0.1664338857	
-0.0915541798	
-0.1411220282	
-0.1036470234	
-0.0984080657	
-0.1226650327	
-0.1183421463	
-0.1175162345	
-0.1146796122	
-0.0875240788	
-0.1319037080	
-0.1731572747	
-0.1319757849	
-0.1500205398	
-0.1298792362	
-0.0906526446	
-0.1490642875	
-0.1142194122	
-0.1500828415	
-0.1459092945	
-0.0946901590	
-0.1453214139	
-0.2472016811	
-0.1032653525	
-0.1108989865	
-0.1211518720	
-0.1282852888	
-0.1325991899	
-0.1226017550	
-0.1081267446	
-0.1212818399	
-0.1135739237	
-0.1034306511	
-0.1346210092	
-0.1041137502	
-0.1094569936	
-0.1183336228	
-0.0886326581	
-0.1137639433	
-0.1046722904	
-0.1209291741	
-0.1162253171	
-0.1052564159	
-0.0933116227	
-0.1119029298	
-0.1556730717	
-0.1614069343	
-0.1411878020	
-0.1182738394	
-0.1204809397	
-0.1122497171	
-0.1056607068	
-0.1089607105	
-0.1064972430	
-0.0926069990	
-0.1227430552	
-0.1291024238	
-0.1096759364	
-0.1129767299	
-0.0999908298	
-0.1014396250	
-0.1133992970	
-0.1588150859	
-0.1367856264	
-0.1532259583	
-0.1186439171	
-0.1267862171	
-0.2364036143	
-0.0936202481	
-0.1224133819	
-0.2047156543	
-0.1284098774	
-0.1228268370	
-0.1137874573	
-0.1274832785	
-0.1379358470	
-0.1069071367	
-0.1648869812	
-0.1354371458	
-0.1132547855	
-0.1141165122	
-0.1547118574	
-0.0940051153	
-0.1061740443	
-0.1195621416	
-0.1272716522	
-0.1163384765	
-0.1189340279	
-0.1094653681	
-0.1100573018	
-0.1115795895	
-0.0898829475	
-0.1173490658	
-0.1027141139	
-0.1850703657	
-0.1229071394	
-0.1334140301	
-0.1008694991	
-0.1100379229	
-0.1207439825	
-0.1170868501	
-0.0946550891	
-0.1531517059	
-0.0881820694	
-0.0971677378	
-0.1135007739	
-0.2017715722	
-0.1327227503	
-0.1158658788	
-0.1034963056	
-0.1087451875	
-0.1310615242	
-0.1359346062	
-0.1191356629	
-0.1147804409	
-0.1103569046	
-0.0964661613	
-0.2487531453	
-0.0982935354	
-0.0894653648	
-0.1515813917	
-0.1231729239	
-0.2727936804	
-0.1257891953	
-0.1005657911	
-0.1469359696	
-0.1139732152	
-0.1059807092	
-0.0925626084	
-0.1111696959	
-0.1278793961	
-0.1274467111	
-0.0957944989	
-0.0919483751	
-0.0968023688	
-0.1483749151	
-0.1322255582	
-0.1195634082	
-0.1135618761	
-0.1350075155	
-0.1440636963	
-0.1296267807	
-0.1163699478	
-0.1118206829	
-0.1013833955	
-0.1350016147	
-0.1817009002	
-0.1123692840	
-0.1113587320	
-0.1005082950	
-0.1081467792	
-0.1216317490	
-0.1159250438	
-0.1146528870	
-0.0922626480	
-0.1570527107	
-0.1154453754	
-0.1122975722	
-0.1255875826	
-0.1116878092	
-0.1199739575	
-0.1044707149	
-0.1274753809	
-0.1299341470	
-0.1052791998	
-0.1034234166	
-0.1297495961	
-0.1013909727	
-0.1141102314	
-0.1050761789	
-0.1113206670	
-0.1206967160	
-0.1388904601	
-0.1285557747	
-0.1188467294	
-0.1094576716	
-0.1213524863	
-0.0970941037	
-0.2565321028	
-0.1358211190	
-0.0980632156	
-0.1127752587	
-0.1334201992	
-0.1373978704	
-0.1185353175	
-0.1117125750	
-0.1455058753	
-0.0984256417	
-0.1177120358	
-0.0921895131	
-0.1468948126	
-0.1187199354	
-0.1062953845	
-0.0988297164	
-0.1024498641	
-0.1151122600	
-0.1177078635	
-0.1200709119	
-0.1320625544	
-0.1116307527	
-0.1010609940	
-0.1049656272	
-0.1570978463	
-0.1228347048	
-0.1240139753	
-0.0942041203	
-0.1790379733	
-0.1152616739	
-0.1357412636	
-0.1268440634	
-0.0999343470	
-0.0887578949	
-0.1440077722	
-0.1063906029	
-0.1145004481	
-0.1306774169	
-0.1357056201	
-0.1295998544	
-0.1316088587	
-0.1027840972	
-0.1148971543	
-0.1391311288	
-0.1145664155	
-0.1114593968	
-0.1131493077	
-0.1320445091	
-0.1185575426	
-0.1410656124	
-0.1140539274	
-0.1063994244	
-0.0928627476	
-0.1281702816	
-0.1062690318	
-0.1187275425	
-0.1083208770	
-0.1777528822	
-0.1027954817	
-0.1100798994	
-0.1232756004	
-0.1350686252	
-0.1203187555	
-0.1103997678	
-0.1288115382	
-0.1660890877	
-0.1068039760	
-0.1272679418	
-0.1067230776	
-0.1100023463	
-0.1141289175	
-0.1414432675	
-0.1018517986	
-0.1329751164	
-0.1049003974	
-0.1311674118	
-0.1331428587	
-0.1345435232	
-0.1185925603	
-0.1242083088	
-0.1500463635	
-0.1230038702	
-0.1182282344	
-0.1022016034	
-0.0969632864	
-0.1203010380	
-0.1443141699	
-0.0912870169	
-0.1270817667	
-0.1371144056	
-0.1565249115	
-0.1334427595	
-0.1752032489	
-0.1099853218	
-0.1024664044	
-0.1129244119	
-0.1227874383	
-0.1117917895	
-0.1117232740	
-0.1235743836	
-0.1049206182	
-0.1188870296	
-0.1126353145	
-0.1106593981	
-0.1117645279	
-0.1185108051	
-0.1095003486	
-0.1029430479	
-0.1038375422	
-0.1529311538	
-0.1227923408	
-0.1453609318	
-0.1180870607	
-0.1179568470	
-0.1885824502	
-0.1104827076	
-0.1254276037	
-0.1531897187	
-0.1379355341	
-0.1230783239	
-0.1171762198	
-0.1401834190	
-0.1512897462	
-0.1056568176	
-0.0744434148	
-0.2341379374	
-0.1645250469	
-0.1043776125	
-WARNING: rn4_2.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (512, 1) ######
-
-0.0068295123	
-0.0107259974	
-0.0183869582	
-0.0087063052	
-0.0085921874	
-0.0080804182	
-0.0074981865	
-0.0120315636	
-0.0064367740	
-0.0170673355	
-0.0084505221	
-0.0114985304	
-0.0117006255	
-0.0115145836	
-0.0176148787	
-0.0101713464	
-0.0152156698	
-0.0080123320	
-0.0080228709	
-0.0070500430	
-0.0057771970	
-0.0106264073	
-0.0129702222	
-0.0122606782	
-0.0060787955	
-0.0066383635	
-0.0111206137	
-0.0099558420	
-0.0082174018	
-0.0086897397	
-0.0097939605	
-0.0081074899	
-0.0446428396	
-0.0073695788	
-0.0116939219	
-0.0057886606	
-0.0063429940	
-0.0092025492	
-0.0069722980	
-0.0082352068	
-0.0091239568	
-0.0063466849	
-0.0070982897	
-0.0090829628	
-0.0082789008	
-0.0100219660	
-0.0070474129	
-0.0079908380	
-0.0122512029	
-0.0124222497	
-0.0087917997	
-0.0093185864	
-0.0091713853	
-0.0078536933	
-0.0098548979	
-0.0077245981	
-0.0089714061	
-0.0102081727	
-0.0068999343	
-0.0081239734	
-0.0116352551	
-0.0112833353	
-0.0096366955	
-0.0108298128	
-0.0113293845	
-0.0092409598	
-0.0086771799	
-0.0088041592	
-0.0081269909	
-0.0073528728	
-0.0066463272	
-0.0106193786	
-0.0087243207	
-0.0079932306	
-0.0080001522	
-0.0076590194	
-0.0075475341	
-0.0121126026	
-0.0081117013	
-0.0070399693	
-0.0079819141	
-0.0081937779	
-0.0081061590	
-0.0089432616	
-0.0075585754	
-0.0104096076	
-0.0083908057	
-0.0091910157	
-0.0070107374	
-0.0118884379	
-0.0144628631	
-0.0070984880	
-0.0122267036	
-0.0093314825	
-0.0081496835	
-0.0090956232	
-0.0087330649	
-0.0100631053	
-0.0070820004	
-0.0101123378	
-0.0071434989	
-0.0117602451	
-0.0094565395	
-0.0084531885	
-0.0086011849	
-0.0103012240	
-0.0061050029	
-0.0092313047	
-0.0157191660	
-0.0073288251	
-0.0080391867	
-0.0089440700	
-0.0086644487	
-0.0098980702	
-0.0082142474	
-0.0088452213	
-0.0080120200	
-0.0127127841	
-0.0136187132	
-0.0093091093	
-0.0086635826	
-0.0134987999	
-0.0110115977	
-0.0103027932	
-0.0121784909	
-0.0142335622	
-0.0085860640	
-0.0097713936	
-0.0108339675	
-0.0124084400	
-0.0098544182	
-0.0091067292	
-0.0073049045	
-0.0091106640	
-0.0066998559	
-0.0093950983	
-0.0079837805	
-0.0121166008	
-0.0102852732	
-0.0134670241	
-0.0098121846	
-0.0095094601	
-0.0126886209	
-0.0103741828	
-0.0126604624	
-0.0082317377	
-0.0063613942	
-0.0071870741	
-0.0078374976	
-0.0167382360	
-0.0085770804	
-0.0106056631	
-0.0182214752	
-0.0079876091	
-0.0113747371	
-0.0094736647	
-0.0100924354	
-0.0091087529	
-0.0068432232	
-0.0086428244	
-0.0100411549	
-0.0076509290	
-0.0105535323	
-0.0069096345	
-0.0098172668	
-0.0072079636	
-0.0077999397	
-0.0088529615	
-0.0093346685	
-0.0087763844	
-0.0102187824	
-0.0101365484	
-0.0139421802	
-0.0083474247	
-0.0073923976	
-0.0091922674	
-0.0051815379	
-0.0113073643	
-0.0065684672	
-0.0088147726	
-0.0105713075	
-0.0180526357	
-0.0149991969	
-0.0080429651	
-0.0085761435	
-0.0074704685	
-0.0081109302	
-0.0086514438	
-0.0062618093	
-0.0079494920	
-0.0062299329	
-0.0094335675	
-0.0081198830	
-0.0112637766	
-0.0156780928	
-0.0109216161	
-0.0111659570	
-0.0073020970	
-0.0096162409	
-0.0142566385	
-0.0065592183	
-0.0080882898	
-0.0135730542	
-0.0084732827	
-0.0134856766	
-0.0098653464	
-0.0088487184	
-0.0107767750	
-0.0073435986	
-0.0065392051	
-0.0072804820	
-0.0080514094	
-0.0096431868	
-0.0092279762	
-0.0083901798	
-0.0101935370	
-0.0087850615	
-0.0089763505	
-0.0389961004	
-0.0113081718	
-0.0096606882	
-0.0110657625	
-0.0107497266	
-0.0074416045	
-0.0081299711	
-0.0075089037	
-0.0104425857	
-0.0148432348	
-0.0113302702	
-0.0100548677	
-0.0125528611	
-0.0090947328	
-0.0335785784	
-0.0083633214	
-0.0134103475	
-0.0066350019	
-0.0080720978	
-0.0114216926	
-0.0085570971	
-0.0086443406	
-0.0088152261	
-0.0067409868	
-0.0091834189	
-0.0098182010	
-0.0064985561	
-0.0152402045	
-0.0053933673	
-0.0070841336	
-0.0104488470	
-0.0103746522	
-0.0052309050	
-0.0085525922	
-0.0100083277	
-0.0138488319	
-0.0094879903	
-0.0082917456	
-0.0105208326	
-0.0117472531	
-0.0093001369	
-0.0095433686	
-0.0103159631	
-0.0077862795	
-0.0107174553	
-0.0094061829	
-0.0083224969	
-0.0067995214	
-0.0071494286	
-0.0076431246	
-0.0076051578	
-0.0085758138	
-0.0102854241	
-0.0112806959	
-0.0072516361	
-0.0098100845	
-0.0089366399	
-0.0113688279	
-0.0098839086	
-0.0137911756	
-0.0106339967	
-0.0272484086	
-0.0096057802	
-0.0069616176	
-0.0132923070	
-0.0079234010	
-0.0083768731	
-0.0108134579	
-0.0068958132	
-0.0097341239	
-0.0090351123	
-0.0091752047	
-0.0099048037	
-0.0102572376	
-0.0067978962	
-0.0098676430	
-0.0098576564	
-0.0077579045	
-0.0081782658	
-0.0087639121	
-0.0107672373	
-0.0084774010	
-0.0097053861	
-0.0109128756	
-0.0086747436	
-0.0103948396	
-0.0105392579	
-0.0105763841	
-0.0108623151	
-0.0089728814	
-0.0098914178	
-0.0102326851	
-0.0108512128	
-0.0143658705	
-0.0080280155	
-0.0097356373	
-0.0084183216	
-0.0226109624	
-0.0097480370	
-0.0082085757	
-0.0069460794	
-0.0116247246	
-0.0075533590	
-0.0063987258	
-0.0082139587	
-0.0078025176	
-0.0302348640	
-0.0038993605	
-0.0103252400	
-0.0076877046	
-0.0077837259	
-0.0075498424	
-0.0090184892	
-0.0107102087	
-0.0090541709	
-0.0076104151	
-0.0100390650	
-0.0082898047	
-0.0156230787	
-0.0098142130	
-0.0140520120	
-0.0112362336	
-0.0062239040	
-0.0090901060	
-0.0066139265	
-0.0100763729	
-0.0113274762	
-0.0087614805	
-0.0105577689	
-0.0103860898	
-0.0133390930	
-0.0069464594	
-0.0103194742	
-0.0094226301	
-0.0072446587	
-0.0095105357	
-0.0152541809	
-0.0134152006	
-0.0107695814	
-0.0076113129	
-0.0107756192	
-0.0083832396	
-0.0099841142	
-0.0069976649	
-0.0099243820	
-0.0086891484	
-0.0143572669	
-0.0084678866	
-0.0078209266	
-0.0096858479	
-0.0085754571	
-0.0166591890	
-0.0069225179	
-0.0081997029	
-0.0081446255	
-0.0078132059	
-0.0088622989	
-0.0123521602	
-0.0091827456	
-0.0097294347	
-0.0106962398	
-0.0093532335	
-0.0121656405	
-0.0084697353	
-0.0122495331	
-0.0080759889	
-0.0104530780	
-0.0084835645	
-0.0113810599	
-0.0183174759	
-0.0099515971	
-0.0090761725	
-0.0105439276	
-0.0095602721	
-0.0069695460	
-0.0127807129	
-0.0461780690	
-0.0062684384	
-0.0073521626	
-0.0076661492	
-0.0079198629	
-0.0083662616	
-0.0095151896	
-0.0096289739	
-0.0077171265	
-0.0082920752	
-0.0101882564	
-0.0083379941	
-0.0068865288	
-0.0085028308	
-0.0313650668	
-0.0112431655	
-0.0078411251	
-0.0077117770	
-0.0423242114	
-0.0068561491	
-0.0113831665	
-0.0093901642	
-0.0102351140	
-0.0075602424	
-0.0097626522	
-0.0822265521	
-0.0082927765	
-0.0371331684	
-0.0070838328	
-0.0104112774	
-0.0078771710	
-0.0061388649	
-0.0121864825	
-0.0069321087	
-0.0097858328	
-0.0108440751	
-0.0075726309	
-0.0093122376	
-0.0072666723	
-0.0084399153	
-0.0116822822	
-0.0096873315	
-0.0116349626	
-0.0083099799	
-0.0155298952	
-0.0118687181	
-0.0103112217	
-0.0080927508	
-0.0101830000	
-0.0152278384	
-0.0085035106	
-0.0090107461	
-0.0107390806	
-0.0077294977	
-0.0091387713	
-0.0097079799	
-0.0059803971	
-0.0075668679	
-0.0107969288	
-0.0114163468	
-0.0127682015	
-0.0066432343	
-0.0062608360	
-0.0106317187	
-0.0069671161	
-0.0086150384	
-0.0085225180	
-0.0102915671	
-0.0106801819	
-0.0109632388	
-0.0100219138	
-0.0077840090	
-0.0090018213	
-0.0072912616	
-0.0058146962	
-0.0078460416	
-0.0118056005	
-0.0095593696	
-0.0067940345	
-0.0107491696	
-0.0128674358	
-0.0095130671	
-0.0187662002	
-0.0099204825	
-0.0121153845	
-0.0100918729	
-0.0102633275	
-0.0086765112	
-0.0142401233	
-0.0111851506	
-0.0117628695	
-0.0095997266	
-0.0117070060	
-0.0104913628	
-0.0107036959	
-0.0083743427	
-0.0100569893	
-0.0077204960	
-0.0103138406	
-0.0133186802	
-0.0087682586	
-0.0057903123	
-0.0086102979	
-0.0087315915	
-0.0119638732	
-0.0090913046	
-0.0082597481	
-0.0090022646	
-0.0081386808	
-0.0097819027	
-0.0192860775	
-0.0112202261	
-0.0094684800	
-0.0067888377	
-0.0070788111	
-0.0069080559	
-0.0080377590	
-0.0116013512	
-WARNING: rn4_3.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (512, 1) ######
-
-0.1300899684	
-0.1236545965	
-0.1665809751	
-0.1579497010	
-0.2646623254	
-0.1731030494	
-0.1759792268	
-0.1595247984	
-0.1493894458	
-0.1499648392	
-0.1375626475	
-0.1579419225	
-0.1478062868	
-0.1479274482	
-0.1475458294	
-0.1420796961	
-0.1504081637	
-0.1623757780	
-0.1385267079	
-0.1368099004	
-0.1726322323	
-0.1993325502	
-0.1690256745	
-0.1856510937	
-0.1820200831	
-0.1367035955	
-0.1794081777	
-0.1567608416	
-0.1297803819	
-0.1241426095	
-0.1759608537	
-0.1559199691	
-0.1537930518	
-0.1587539911	
-0.1557301879	
-0.1400798112	
-0.1378655732	
-0.1436055452	
-0.1827660948	
-0.1689693779	
-0.1361434609	
-0.1510790437	
-0.2104512304	
-0.1456332058	
-0.1427734792	
-0.1322212964	
-0.1436023116	
-0.1522196233	
-0.1814521551	
-0.1441831738	
-0.1213458180	
-0.1686789691	
-0.1868575066	
-0.1991351843	
-0.1654865593	
-0.1468380839	
-0.1451288015	
-0.1691997051	
-0.1779553443	
-0.1461276710	
-0.1931246221	
-0.1587262452	
-0.1228541508	
-0.1491615772	
-0.1873979867	
-0.1666054875	
-0.1444635987	
-0.1436566412	
-0.1482481062	
-0.1270515770	
-0.1637573540	
-0.1590173692	
-0.1855787486	
-0.1323580444	
-0.1730637401	
-0.1657580435	
-0.1659197360	
-0.1358332336	
-0.1605804712	
-0.1684826165	
-0.1511351764	
-0.1530482918	
-0.1402359605	
-0.1370918453	
-0.1585346162	
-0.1953399032	
-0.1717365235	
-0.1443672180	
-0.1998361051	
-0.1634074152	
-0.1595993191	
-0.1571267545	
-0.1519045532	
-0.1408142000	
-0.1499364823	
-0.1599195898	
-0.1537005752	
-0.1632971019	
-0.1407783777	
-0.1845771521	
-0.1869843900	
-0.1644934267	
-0.1349696517	
-0.1668360084	
-0.1635664999	
-0.1411766708	
-0.1864328980	
-0.1576740444	
-0.1746568382	
-0.1453825384	
-0.2109009475	
-0.1692640334	
-0.1293278635	
-0.1329611987	
-0.1810477674	
-0.1358251721	
-0.3008588254	
-0.1577629894	
-0.1531449407	
-0.1426705420	
-0.1677819639	
-0.1777888685	
-0.2274118513	
-0.1618915796	
-0.2286419570	
-0.1742950827	
-0.1841869503	
-0.1800002158	
-0.1657381952	
-0.1517930478	
-0.1758955568	
-0.1808601469	
-0.1666303277	
-0.1522669494	
-0.1313966513	
-0.1431916207	
-0.1617116034	
-0.1636826694	
-0.1356578320	
-0.1226815805	
-0.1697100103	
-0.2759512365	
-0.1729284227	
-0.1763014048	
-0.1373732984	
-0.1616513431	
-0.1656572074	
-0.1394146830	
-0.1767115891	
-0.1344380230	
-0.2601549625	
-0.2002775967	
-0.1641943753	
-0.1484196782	
-0.2163162827	
-0.1348807216	
-0.1390670091	
-0.1513178498	
-0.1601460725	
-0.1655403674	
-0.1391950697	
-0.5049876571	
-0.1569461823	
-0.1688746661	
-0.1653010398	
-0.1552925557	
-0.1597301066	
-0.1510205418	
-0.1363283098	
-0.1592095941	
-0.1626426131	
-0.1481370926	
-0.1421352029	
-0.2017368674	
-0.1809876561	
-0.1343507767	
-0.1638787240	
-0.2470123023	
-0.1617364138	
-0.1341538876	
-0.1371276379	
-0.1540451497	
-0.1453732103	
-0.1449705362	
-0.1524574161	
-0.1608095169	
-0.1214318201	
-0.1477666795	
-0.1351519376	
-0.1699895114	
-0.2103145272	
-0.1649389714	
-0.2145107090	
-0.1449609399	
-0.1596276611	
-0.2427531183	
-0.1557420045	
-0.1679656357	
-0.1288121343	
-0.1530708969	
-0.1728439331	
-0.1660483629	
-0.1631498933	
-0.1363096535	
-0.1493846327	
-0.1391756386	
-0.1462070495	
-0.1865162551	
-0.1951701492	
-0.1621578783	
-0.1584085971	
-0.2496675551	
-0.1482772976	
-0.1582829207	
-0.1688543856	
-0.1536771804	
-0.1450841725	
-0.1628268957	
-0.1781773865	
-0.1578122526	
-0.1680182815	
-0.1723928899	
-0.1584920138	
-0.1448630393	
-0.1707085520	
-0.1822614223	
-0.1690708101	
-0.1749416590	
-0.1428044438	
-0.1559408158	
-0.1289802045	
-0.1473478228	
-0.1981664002	
-0.1404910088	
-0.1582917273	
-0.1785840243	
-0.1765251905	
-0.1789898127	
-0.1460756063	
-0.1608055532	
-0.1433431655	
-0.1391370595	
-0.1682491601	
-0.1781154722	
-0.1509203315	
-0.1596830040	
-0.1388958693	
-0.1653158516	
-0.1299888492	
-0.1347324103	
-0.2311583012	
-0.1555799842	
-0.2130695581	
-0.1639390737	
-0.1592367142	
-0.1338042617	
-0.1651579440	
-0.1708439887	
-0.1461323053	
-0.1447356492	
-0.1428004950	
-0.1601221412	
-0.1676094532	
-0.1465157866	
-0.1675466150	
-0.1718548536	
-0.1717769057	
-0.1588050425	
-0.1489973813	
-0.1798869222	
-0.1445084661	
-0.1490706354	
-0.1252576411	
-0.1505630463	
-0.1640213281	
-0.1451579630	
-0.1307773590	
-0.1327384412	
-0.1870016307	
-0.1667963415	
-0.1649777740	
-0.2366839051	
-0.1573687494	
-0.1498849541	
-0.1467221528	
-0.1415547878	
-0.1528089643	
-0.1648418456	
-0.1501738578	
-0.1409186274	
-0.1498846710	
-0.1600245088	
-0.1561288238	
-0.1282256097	
-0.1412191242	
-0.1873686016	
-0.1494715512	
-0.1751826853	
-0.1813914925	
-0.1468126625	
-0.1766496897	
-0.1511496603	
-0.1554726511	
-0.2093908787	
-0.1850380898	
-0.1862185001	
-0.1523585618	
-0.1732997000	
-0.1417776644	
-0.1967876107	
-0.3324704766	
-0.1660679430	
-0.1708281338	
-0.1705040485	
-0.1459646374	
-0.1609980017	
-0.1523883492	
-0.1226213351	
-0.1903396994	
-0.2126336396	
-0.1520129591	
-0.1527019888	
-0.1253060251	
-0.1381293237	
-0.1421028078	
-0.1701041311	
-0.1944538206	
-0.1350336075	
-0.1301794946	
-0.1579463482	
-0.1516512483	
-0.1883664131	
-0.1564224660	
-0.1688306034	
-0.1323943883	
-0.1356983781	
-0.1465648711	
-0.1347759962	
-0.1585433185	
-0.1642620414	
-0.1598083973	
-0.1517785341	
-0.1567235291	
-0.1551126987	
-0.1416738629	
-0.1456041932	
-0.1685909927	
-0.1765794605	
-0.1792423278	
-0.1633679569	
-0.1377328783	
-0.1512174904	
-0.1389598995	
-0.1618256867	
-0.1373039335	
-0.1574418545	
-0.1553003192	
-0.2197840065	
-0.1435176283	
-0.2137892693	
-0.1351414025	
-0.2028334886	
-0.1755907834	
-0.1446466297	
-0.1380981952	
-0.1406122446	
-0.1776438206	
-0.1179551780	
-0.1393073648	
-0.1526419669	
-0.1544566154	
-0.1330929548	
-0.1616520584	
-0.1826665103	
-0.1889256835	
-0.1526847184	
-0.1633486599	
-0.1501073539	
-0.1502118707	
-0.1651782393	
-0.1571861058	
-0.1614755243	
-0.2084862590	
-0.1632237583	
-0.1578156799	
-0.1637949497	
-0.1375934184	
-0.2156854421	
-0.1458277553	
-0.1427064687	
-0.1527449936	
-0.1428863555	
-0.1579579264	
-0.1625798941	
-0.2081801891	
-0.1603219211	
-0.1733787656	
-0.1141755432	
-0.1522142142	
-0.1081908420	
-0.1635126621	
-0.1545282602	
-0.1672584265	
-0.1679034382	
-0.1751252264	
-0.1198366135	
-0.1323304921	
-0.1982657462	
-0.2182233334	
-0.1823292226	
-0.1447773129	
-0.1333823204	
-0.1613945216	
-0.1594611704	
-0.1626486182	
-0.1623971760	
-0.1570729017	
-0.1441848576	
-0.1383077651	
-0.1404485852	
-0.1344721615	
-0.1499176025	
-0.1454489082	
-0.1605693847	
-0.1177069992	
-0.1417328566	
-0.1521708965	
-0.1557033360	
-0.1437332034	
-0.1367188990	
-0.1847767532	
-0.1621628553	
-0.1546625644	
-0.1496506333	
-0.1482549608	
-0.1918371320	
-0.1479671746	
-0.1451868415	
-0.1526555866	
-0.1593154669	
-0.1505399793	
-0.1961847842	
-0.1608518958	
-0.1836323589	
-0.1641900688	
-0.1518568844	
-0.1339052171	
-0.1628324687	
-0.1624129415	
-0.2020749450	
-0.1695749015	
-0.1250694990	
-0.1558689028	
-0.1481512934	
-0.2032246888	
-0.1243723854	
-0.1374166608	
-0.1467361152	
-0.2018432468	
-0.1517212242	
-0.1262098998	
-0.1438864470	
-0.1598638296	
-0.1720185727	
-0.1517771930	
-0.1629982740	
-0.1411188692	
-0.1351300776	
-0.1690764427	
-0.1609649807	
-0.1866739094	
-0.1687590033	
-0.2354051322	
-0.1406378895	
-0.1755350828	
-0.1613656729	
-0.1481162608	
-0.1400798410	
-0.1614463180	
-0.1759739071	
-0.1930243522	
-0.1485219002	
-0.1428409070	
-0.1349307597	
-0.1669690907	
-0.1439293474	
-0.1457169354	
-0.1533375382	
-0.1949589550	
-0.1421214342	
-0.1561910361	
-0.1992401183	
-0.1711115390	
-0.1296971887	
-0.1669144183	
-0.1567261666	
-0.2354474068	
-0.1567470282	
-0.1554826945	
-0.1590210348	
-0.1588997990	
-0.1509946287	
-0.1777252257	
-0.1604273319	
-0.1865500957	
-0.1692590266	
-0.1656700075	
-0.1360114366	
-0.1561672986	
-0.1820073277	
-0.1485235840	
-0.2045090348	
-WARNING: rn4_3.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
-
-###### (512, 1) ######
-
-0.0091235088	
-0.0076248497	
-0.0081914719	
-0.0095928824	
-0.0098617962	
-0.0080558136	
-0.0087206224	
-0.0074761501	
-0.0089873988	
-0.0082005979	
-0.0101689454	
-0.0100998525	
-0.0091252076	
-0.0094251344	
-0.0107647059	
-0.0078605702	
-0.0093542319	
-0.0086655412	
-0.0096071418	
-0.0090836203	
-0.0111334566	
-0.0116195437	
-0.0083969403	
-0.0079822801	
-0.0083348369	
-0.0082827117	
-0.0136798872	
-0.0102187051	
-0.0112810256	
-0.0080679972	
-0.0105697867	
-0.0126698446	
-0.0083902227	
-0.0090917880	
-0.0078502614	
-0.0092568574	
-0.0089095505	
-0.0085436022	
-0.0087658335	
-0.0122058270	
-0.0085786376	
-0.0108921845	
-0.0094765760	
-0.0077952100	
-0.0106996354	
-0.0095121600	
-0.0092439866	
-0.0098269721	
-0.0081429956	
-0.0088272085	
-0.0077009066	
-0.0091750314	
-0.0083572492	
-0.0096032778	
-0.0095545277	
-0.0088575771	
-0.0124600437	
-0.0124333082	
-0.0090355873	
-0.0087836497	
-0.0088708550	
-0.0094901333	
-0.0081989933	
-0.0095403111	
-0.0082654338	
-0.0105404966	
-0.0084998077	
-0.0097440248	
-0.0094996737	
-0.0114744296	
-0.0109538976	
-0.0079919789	
-0.0100282440	
-0.0090293111	
-0.0083491700	
-0.0100005483	
-0.0112097980	
-0.0079648718	
-0.0079834340	
-0.0091794319	
-0.0071952832	
-0.0091267005	
-0.0082901977	
-0.0110326959	
-0.0085981423	
-0.0103637977	
-0.0086648734	
-0.0120189292	
-0.0091839917	
-0.0110620316	
-0.0080072498	
-0.0076231579	
-0.0072472272	
-0.0080147004	
-0.0092943646	
-0.0085362690	
-0.0089949155	
-0.0081462124	
-0.0096646305	
-0.0111025041	
-0.0102423178	
-0.0086638369	
-0.0090927379	
-0.0074609364	
-0.0110630970	
-0.0094053075	
-0.0071198791	
-0.0080486983	
-0.0130676255	
-0.0079419082	
-0.0076705045	
-0.0098610017	
-0.0100184167	
-0.0088609969	
-0.0093401000	
-0.0095381644	
-0.0096299415	
-0.0140585015	
-0.0102609647	
-0.0087249298	
-0.0080264369	
-0.0078753643	
-0.0085712411	
-0.0105644222	
-0.0097655272	
-0.0087582869	
-0.0093037933	
-0.0098736305	
-0.0079711266	
-0.0075121066	
-0.0088061960	
-0.0083420435	
-0.0090029258	
-0.0099357804	
-0.0090018827	
-0.0117784292	
-0.0112030189	
-0.0086924201	
-0.0088301115	
-0.0124945221	
-0.0094062667	
-0.0101486333	
-0.0077437274	
-0.0093738576	
-0.0101946089	
-0.0089240018	
-0.0112622902	
-0.0087928157	
-0.0076122526	
-0.0092042098	
-0.0073507293	
-0.0084919017	
-0.0104316054	
-0.0080068419	
-0.0093247266	
-0.0072802515	
-0.0090723028	
-0.0086092642	
-0.0102338651	
-0.0073960060	
-0.0126139065	
-0.0086860470	
-0.0100489855	
-0.0099421004	
-0.0124833388	
-0.0100588631	
-0.0107137440	
-0.0086136591	
-0.0090418160	
-0.0097657330	
-0.0078544887	
-0.0074858032	
-0.0112397484	
-0.0077787214	
-0.0075187688	
-0.0105849123	
-0.0089980839	
-0.0089334873	
-0.0094631063	
-0.0084237233	
-0.0085731735	
-0.0093500977	
-0.0096493652	
-0.0087962020	
-0.0100194132	
-0.0086782034	
-0.0095120883	
-0.0110515868	
-0.0100143291	
-0.0112239942	
-0.0107660051	
-0.0094326260	
-0.0086394046	
-0.0101217544	
-0.0090519348	
-0.0083248634	
-0.0092694471	
-0.0088380650	
-0.0094961934	
-0.0078828204	
-0.0077989358	
-0.0091435136	
-0.0126820318	
-0.0118072182	
-0.0111179547	
-0.0094196405	
-0.0078666974	
-0.0085843829	
-0.0095007950	
-0.0110579049	
-0.0087737013	
-0.0086252820	
-0.0076291924	
-0.0084633660	
-0.0086623374	
-0.0100960918	
-0.0084900036	
-0.0090760076	
-0.0071148155	
-0.0093943989	
-0.0088694049	
-0.0122563289	
-0.0074143750	
-0.0106190881	
-0.0093320180	
-0.0094596120	
-0.0100851720	
-0.0104051139	
-0.0088130096	
-0.0082249064	
-0.0091764629	
-0.0099625960	
-0.0078878673	
-0.0088910712	
-0.0082516531	
-0.0076953257	
-0.0080337953	
-0.0088806413	
-0.0105000893	
-0.0103500951	
-0.0085030338	
-0.0090797329	
-0.0083643124	
-0.0107645616	
-0.0079708323	
-0.0087540410	
-0.0101432065	
-0.0079162568	
-0.0087650837	
-0.0094918981	
-0.0079827076	
-0.0083897607	
-0.0081527447	
-0.0113292839	
-0.0085966075	
-0.0089885378	
-0.0094701024	
-0.0086115533	
-0.0093271229	
-0.0086447895	
-0.0093394872	
-0.0078081512	
-0.0105019668	
-0.0084919659	
-0.0094965026	
-0.0112555660	
-0.0079051349	
-0.0076906341	
-0.0084196553	
-0.009Outcome: 340
+====== CompareImageApiResults ========
+Both image API calls returned the same output vector.
 
 ====== Evaluation Complete ========
-5491111	
-0.0112285903	
-0.0083700409	
-0.0084740268	
-0.0085906470	
-0.0094981324	
-0.0090764808	
-0.0104430411	
-0.0099375797	
-0.0081993518	
-0.0094431797	
-0.0090337871	
-0.0115126604	
-0.0087888287	
-0.0087296059	
-0.0093079302	
-0.0096852425	
-0.0087104747	
-0.0117773972	
-0.0093123717	
-0.0085818516	
-0.0116001340	
-0.0082061803	
-0.0099847438	
-0.0093397070	
-0.0102904635	
-0.0086712707	
-0.0106635811	
-0.0091260355	
-0.0085584745	
-0.0092711905	
-0.0083559416	
-0.0103147440	
-0.0091258669	
-0.0094105462	
-0.0088407947	
-0.0107554169	
-0.0082346117	
-0.0094196089	
-0.0099611422	
-0.0123921968	
-0.0081947660	
-0.0095887333	
-0.0092333928	
-0.0092959497	
-0.0079759741	
-0.0071908487	
-0.0105940448	
-0.0091322800	
-0.0092449822	
-0.0118404124	
-0.0098190308	
-0.0080451593	
-0.0095538916	
-0.0095317475	
-0.0083111199	
-0.0226695389	
-0.0087272702	
-0.0113981096	
-0.0080324467	
-0.0082071219	
-0.0077643236	
-0.0096589345	
-0.0098190084	
-0.0090789804	
-0.0092549920	
-0.0082399240	
-0.0075129271	
-0.0081181247	
-0.0092169652	
-0.0078948401	
-0.0082199555	
-0.0087332055	
-0.0095458282	
-0.0096141333	
-0.0111050727	
-0.0086900108	
-0.0084594237	
-0.0083973911	
-0.0110042775	
-0.0098966444	
-0.0099115251	
-0.0086010499	
-0.0110538192	
-0.0112580443	
-0.0091963112	
-0.0090258336	
-0.0094282525	
-0.0101598939	
-0.0100974739	
-0.0089340741	
-0.0085410643	
-0.0096742054	
-0.0087672845	
-0.0091592185	
-0.0087849749	
-0.0097890170	
-0.0070851240	
-0.0082630450	
-0.0094960667	
-0.0100176288	
-0.0096569397	
-0.0085411360	
-0.0109708384	
-0.0077371867	
-0.0092676673	
-0.0088709425	
-0.0086878277	
-0.0083304178	
-0.0078659663	
-0.0094160894	
-0.0089529017	
-0.0095097711	
-0.0090073431	
-0.0121735996	
-0.0106104529	
-0.0082051065	
-0.0088285711	
-0.0085341241	
-0.0095053753	
-0.0084134480	
-0.0092240991	
-0.0081505030	
-0.0088917101	
-0.0077600330	
-0.0072894520	
-0.0092262467	
-0.0077197445	
-0.0093544219	
-0.0078265006	
-0.0098471930	
-0.0086831097	
-0.0106272893	
-0.0093997186	
-0.0097372243	
-0.0091988808	
-0.0097791096	
-0.0084343236	
-0.0099841468	
-0.0077741095	
-0.0080764703	
-0.0102121262	
-0.0101099247	
-0.0068530976	
-0.0105497139	
-0.0078687211	
-0.0091552315	
-0.0086146165	
-0.0115909288	
-0.0110171279	
-0.0088601094	
-0.0095162354	
-0.0078554088	
-0.0085465917	
-0.0081105614	
-0.0075895740	
-0.0099750441	
-0.0114229657	
-0.0098220399	
-0.0076377727	
-0.0091594132	
-0.0097658327	
-0.0102425953	
-0.0095097423	
-0.0104775717	
-0.0079180710	
-0.0077522527	
-0.0084078917	
-0.0088439621	
-0.0123304399	
-0.0088597834	
-0.0091626598	
-0.0111866742	
-0.0113405529	
-0.0112731652	
-0.0096104955	
-0.0096763317	
-0.0102136135	
-0.0070626568	
-0.0100593781	
-0.0079668853	
-0.0099539869	
-0.0084489314	
-0.0102062235	
-0.0080598388	
-0.0093503166	
-0.0101051740	
-0.0103078419	
-0.0099079870	
-0.0084971627	
-0.0101444693	
-0.0081285536	
-0.0087343156	
-0.0083285505	
-0.0113641890	
-0.0080256658	
-0.0092015974	
-0.0078073046	
-0.0092961639	
-0.0084222583	
-0.0077846837	
-0.0083437543	
-0.0082905088	
-0.0092486944	
-0.0071504535	
-0.0087066069	
-0.0093110623	
-0.0125198010	
-0.0108795706	
-0.0094191032	
-0.0077221435	
-0.0097377645	
-0.0078453682	
-0.0084878132	
-0.0085841436	
-0.0129338307	
-0.0085636089	
-0.0094120791	
-0.0082095843	
-0.0108512808	
-0.0082600005	
-0.0089799538	
-0.0078349756	
-0.0088242842	
-0.0085650962	
-0.0095629496	
-0.0086870985	
-0.0104518980	
-0.0087596802	
-0.0127845882	
-0.0099735819	
-0.0084961643	
-0.0104280803	
-0.0085780527	
-0.0091257067	
-0.0098263156	
-0.0090050446	
-0.0078968555	
-0.0083539132	
-0.0092347721	
-0.0094196582	
-0.0090203714	
-0.0117387921	
-+ grep -i 'Inner Exception' /tmp/cntk-test-20160923125910.750056/EvalClientTests_CSEvalClientTest@release_cpu/output.txt
-+ grep -i 'Inner Exception' /tmp/cntk-test-20160923125910.750056/EvalClientTests_CSEvalClientTest@release_cpu/output.txt
+ approximately converting variance statistics format
+WARNING: rn3_1.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn3_1.c_proj.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn3_2.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn3_2.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_1.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_1.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_1.c_proj.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_2.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_2.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_3.c1.c.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
+WARNING: rn4_3.c2.y.y: loading pre-CuDNNv5 model: approximately converting variance statistics format
++ grep -i 'Inner Exception' /tmp/cntk-test-20161121145053.977226/EvalClientTests_CSEvalClientTest@release_cpu/output.txt
++ grep -i 'Inner Exception' /tmp/cntk-test-20161121145053.977226/EvalClientTests_CSEvalClientTest@release_cpu/output.txt
 + exit 0

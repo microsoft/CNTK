@@ -70,6 +70,7 @@ private:
     IDataDeserializerPtr CreateDeserializer(const ConfigParameters& readerConfig, bool primary);
     TransformerPtr CreateTransformer(const ConfigParameters& config, const std::string& defaultModule, const std::wstring& transformerType);
 
+    bool ContainsDeserializer(const ConfigParameters& readerConfig, const wstring& type);
 
     enum class PackingMode
     {

@@ -63,7 +63,7 @@ public:
                                          ImageLayoutKind imageLayout);
     ComputationNodePtr CreateMaxPoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
     ComputationNodePtr CreateAveragePoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
-    ComputationNodePtr CreateROIPoolingNode(const std::wstring& nodeName, const TensorShape& outputShape);
+    ComputationNodePtr CreateROIPoolingNode(const std::wstring& nodeName, const TensorShape& roiOutputShape);
     ComputationNodePtr CreateReconcileDynamicAxisNode(const std::wstring& nodeName);
     // this is the catch-all for all cases not covered as special cases above
     // Unlike the specialized ones above, this one creates nodes by type given as a string.
@@ -102,8 +102,13 @@ public:
     ComputationNodePtr AveragePooling(const ComputationNodePtr inputValues,
                                       const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind,
                                       const std::wstring nodeName = L"");
-    ComputationNodePtr ROIPooling(const ComputationNodePtr inputValues, const ComputationNodePtr inputROIs, const TensorShape& outputShape, const std::wstring nodeName = L"");
+    ComputationNodePtr ROIPooling(const ComputationNodePtr inputValues, const ComputationNodePtr inputROIs, const TensorShape& roiOutputShape, const std::wstring nodeName = L"");
     ComputationNodePtr ReconcileDynamicAxis(const ComputationNodePtr dataInput, const ComputationNodePtr layoutInput, const std::wstring nodeName = L"");
+
+    ComputationNodePtr Crop(const ComputationNodePtr input1, const ComputationNodePtr input2, const std::wstring nodeName = L"");
+    ComputationNodePtr Crop(const ComputationNodePtr input1, const ComputationNodePtr input2, size_t offsetX, size_t offsetY, const std::wstring nodeName = L"");
+    ComputationNodePtr Crop(const ComputationNodePtr input1, const ComputationNodePtr input2, const ComputationNodePtr eqNode1, const ComputationNodePtr eqNode2, const std::wstring nodeName = L"");
+
 #ifdef COMING_SOON
     ComputationNodePtr CRF(const ComputationNodePtr label, const ComputationNodePtr postDepScore, const ComputationNodePtr transition_score, const std::wstring nodeName = L"");
 #endif
@@ -179,6 +184,7 @@ public:
     ComputationNodePtr Times(const ComputationNodePtr a, const ComputationNodePtr b, size_t outputRank = 1, const std::wstring nodeName = L"");
     ComputationNodePtr TransposeDimensions(const ComputationNodePtr matrix, int dim1, int dim2, const std::wstring nodeName = L"");
     ComputationNodePtr TransposeTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+    ComputationNodePtr QuantizedTimes(const ComputationNodePtr a, const ComputationNodePtr b, size_t bitSmoothingA = 1, size_t bitSmoothingB = 1, size_t outputRank = 1, const std::wstring nodeName = L"");
 #if 1 // legacy
     ComputationNodePtr LegacyReshape(const ComputationNodePtr a, const size_t num_rows, const TensorShape& imageLayout, const std::wstring nodeName = L"");
 #endif

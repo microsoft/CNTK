@@ -12,6 +12,7 @@
 #include "TensorShape.h"
 #include "MatrixPool.h"
 #include "ComputationEnvironment.h"
+#include "Globals.h"
 
 #include <unordered_set>
 #include <map>
@@ -44,9 +45,9 @@
 #define CNTK_MODEL_VERSION_13 13 // batch norm: switch running inverse std deviation -> variance, MB count -> samplesSeen; CuDNN v5
 #define CNTK_MODEL_VERSION_14 14 // axis parameter in OptimizedRNNStackNode
 #define CNTK_MODEL_VERSION_15 15 // add new nodes: LambdaRankNode and NDCG1Eval
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_15
-
-extern bool g_shareNodeValueMatrices;
+#define CNTK_MODEL_VERSION_16 16 // save/load rng state for Dropout and RandomSample nodes.
+#define CNTK_MODEL_VERSION_17 17 // use 8 bytes for rng seeds on both platforms
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_17
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
@@ -152,7 +153,7 @@ struct ComputationNetworkOwnedNodeState
     friend class ComputationNetwork;
 
     ComputationNetworkOwnedNodeState()
-        : m_needsGradient(false), m_valueSharable(true)
+        : m_needsGradient(false), m_valueSharable(true), m_parentOverwritesGradient(false)
     {
         PurgeStateForFormingRecurrentLoops();
         m_isPartOfLoop = false;
@@ -168,9 +169,13 @@ struct ComputationNetworkOwnedNodeState
         other.m_traceNodeValueSparse          = m_traceNodeValueSparse;
         other.m_traceNodeValueUpToDim         = m_traceNodeValueUpToDim;
         other.m_traceNodeValueUpToT           = m_traceNodeValueUpToT;
+        other.m_parentOverwritesGradient = m_parentOverwritesGradient;
     }
 
     bool IsPartOfLoop() const { return m_isPartOfLoop; }
+
+    void MarkParentOverwritesGradient() { m_parentOverwritesGradient = true; }
+    bool ParentOverwritesGradient() const { return m_parentOverwritesGradient; }
 
     virtual void MarkValueNonSharable() { m_valueSharable = false; }
     virtual void MarkValueSharable() { m_valueSharable = true; }
@@ -186,12 +191,17 @@ struct ComputationNetworkOwnedNodeState
     size_t m_traceNodeValueUpToT = 8;   // 8 time steps fit comfortably into a normal-sized console
     void EnableNodeTracing(bool asReal, bool asCategoryLabel, bool asSparse) { m_traceNodeValueReal = asReal; m_traceNodeValueAsCategoryLabel = asCategoryLabel; m_traceNodeValueSparse = asSparse; }
 
+    virtual bool ImplementsGradientOverwriteOptimization() const { return false; }
+
 protected:                // TODO: should be fully encapsulated here
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     bool m_valueSharable; // a flag is needed for memory share.
                           // If it is false (e.g., LearnableParameters/InputValue and those nodes are solely induced by LearnableParameters),
                           // it will never be released to memory pool
+
+    bool m_parentOverwritesGradient; // flag indicating whether the parent of this node overwrites the gradient of this node instead of accumulating to it
+
 private:
     bool m_isPartOfLoop; // true if this loop is part of a recurrent loop
 
@@ -241,7 +251,7 @@ public:
     {
         m_evalTimeStamp = 0;
     }
-    int64_t GetEvalTimeStamp() const
+    uint64_t GetEvalTimeStamp() const
     {
         return m_evalTimeStamp;
     }
@@ -254,18 +264,17 @@ public:
 
     bool IsOlderThan(const TimeStamp& other) const
     {
-        // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
-        return GetEvalTimeStamp() - other.GetEvalTimeStamp() < 0;
+        return GetEvalTimeStamp() < other.GetEvalTimeStamp();
     }
 
-    int64_t CreateUniqId() const
+    uint64_t CreateUniqId() const
     {
-        return atomic_fetch_add(&s_timeStampCounter, (unsigned long long int) 1);
+        return ++s_timeStampCounter;
     }
 
 private:
     static atomic_ullong s_timeStampCounter;
-    int64_t m_evalTimeStamp; // this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
+    uint64_t m_evalTimeStamp; // this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 };
 
 // =======================================================================
@@ -322,6 +331,15 @@ public:
             ComputationNetworkOwnedNodeState::CopyTo(*node);
             TimeStamp::CopyTo(*node);
         }
+
+        if (flags & CopyNodeFlags::copyNodeAll)
+        {
+            for (auto tag : this->GetTags())
+            {
+                node->SetTag(tag);
+            }
+        }
+
         node->ClearConfigMemberCache();
     }
 
@@ -356,7 +374,7 @@ public:
             RpcStringFreeW((RPC_WSTR*) &szUuid);
         }
 #else
-        int64_t id = CreateUniqId();
+        uint64_t id = CreateUniqId();
         std::wstring base = L"AutoName";
         std::wstringstream sstm;
         sstm << base.c_str() << id;
@@ -692,6 +710,8 @@ protected:
 
 public:
 
+    virtual void OnEpochStart() {}
+
     // -----------------------------------------------------------------------
     // forward prop, backprop
     // -----------------------------------------------------------------------
@@ -766,7 +786,11 @@ public:
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const { return true; }
 
     void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
-    bool IsOutputNeededDuringBackprop() const { return !g_shareNodeValueMatrices || m_outputNeededDuringBackprop; }
+    bool IsOutputNeededDuringBackprop() const 
+    { 
+        return (!Globals::ShouldEnableShareNodeValueMatrices() && !Globals::ShouldEnableHyperCompressMemory())
+            || m_outputNeededDuringBackprop; 
+    }
 
     // -----------------------------------------------------------------------
     // helpers for network traversal
@@ -913,6 +937,218 @@ struct NumInputs : public INumInputs // e.g. derive from NumInputs<2>
 };
 
 // =======================================================================
+// AxisTransform -- Defines transformation along one axis. Currently, just
+// scale and translation are supported.
+// =======================================================================
+
+struct AxisTransform
+{
+public:
+    bool operator==(const AxisTransform& other) const
+    {
+        return (scale == other.scale) && (translate == other.translate);
+    }
+
+    bool operator!=(const AxisTransform& other) const
+    {
+        return !operator==(other);
+    }
+
+    // Scale along the axis (by default identity transform -> 1 scale).
+    double scale = 1.0;
+    // Translation along the axis (by default identity transform -> 0 translate).
+    double translate = 0.0;
+};
+
+// =======================================================================
+// SpaceTransform -- Combines several axis transforms into space transform.
+// =======================================================================
+
+struct SpaceTransform
+{
+public:
+    SpaceTransform() {}
+
+    // Returns all axis transforms.
+    std::vector<AxisTransform>* GetTransform()
+    {
+        return &m_axisTransforms;
+    }
+
+    bool operator==(const SpaceTransform& other) const
+    {
+        CheckCompatibility(other);
+        for (size_t i = 0; i < m_axisTransforms.size(); i++)
+        {
+            if (m_axisTransforms[i] != other.m_axisTransforms[i])
+                return false;
+        }
+        return true;
+    }
+
+    bool operator!=(const SpaceTransform& other) const
+    {
+        return !operator==(other);
+    }
+
+    // Returns identity transform with given number of dimensions.
+    static SpaceTransform Identity(int dimensions)
+    {
+        SpaceTransform result;
+        result.m_axisTransforms.resize(dimensions);
+        return result;
+    }
+
+    // Returns composition of this transform with given one (without modifying this one).
+    SpaceTransform Compose(const SpaceTransform& other) const
+    {
+        CheckCompatibility(other);
+        SpaceTransform result = SpaceTransform::Identity(m_axisTransforms.size());
+        for (size_t ia = 0; ia < m_axisTransforms.size(); ia++)
+        {
+            result.m_axisTransforms[ia].scale     = m_axisTransforms[ia].scale * other.m_axisTransforms[ia].scale;
+            result.m_axisTransforms[ia].translate = m_axisTransforms[ia].scale * other.m_axisTransforms[ia].translate + m_axisTransforms[ia].translate;
+        }
+        return result;
+    }
+
+    // Returns inverse of this transform without modifying it.
+    SpaceTransform Inverse() const
+    {
+        SpaceTransform result = SpaceTransform::Identity(m_axisTransforms.size());
+        for (size_t ia = 0; ia < m_axisTransforms.size(); ia++)
+        {
+            result.m_axisTransforms[ia].scale = 1 / m_axisTransforms[ia].scale;
+            result.m_axisTransforms[ia].translate = -m_axisTransforms[ia].translate / m_axisTransforms[ia].scale;
+        }
+        return result;
+    }
+
+    // Check if this transform is compatible with given one.
+    void CheckCompatibility(const SpaceTransform& other) const
+    {
+        // Transforms are compatible if they have same number of axis transforms.
+        if (m_axisTransforms.size() != other.m_axisTransforms.size())
+        {
+            RuntimeError("Incompatible space transforms.");
+        }
+    }
+
+    std::vector<AxisTransform> m_axisTransforms;
+};
+
+// =======================================================================
+// TransformerNode -- Base class for all nodes that implement input-output
+// transformation. Using individual node transformations one can calculate cumulative
+// transformation between two nodes and establish spatial matching of its inputs or
+// outputs. Node needs to provide its type and template argument (we use recurring
+// template pattern to access number of inputs of the derived object).
+// Note: This interface assumes that node also inherits from NumInputs<> class.
+// =======================================================================
+
+struct TransformerNode
+{
+public:
+    TransformerNode() {}
+
+    virtual ~TransformerNode() {}
+
+    // Derived class needs to return if it supports transform computation between input at given index and output.
+    virtual bool SupportsTransformOnInput(size_t index) = 0;
+
+    // Derived class needs to compute transforms for all axes for all supported input-output paths (
+    // (see SupportsTransformOnInput above) on this call.
+    virtual void ComputeTransforms() = 0;
+
+    // Derived classes need to inform us regarding number of inputs they have using this call before first
+    // GetTransformForInput call.
+    void SetNumberOfInputs(size_t inputsCount)
+    {
+        // Allocate appropriate number of transforms. Here transforms will be set to identity, node needs to compute
+        // them during ComputeTransforms.
+        m_transforms.resize(inputsCount);
+    }
+
+    // Handles transform accessing for all derive classes. Derived objects still need to
+    // implement rest of ITransformerNode interface.
+    const SpaceTransform& GetTransformForInput(size_t inputIndex)
+    {
+        if (m_transforms.empty())
+            LogicError("No transforms present on GetTransformForInput call. Maybe SetNumberOfInputs has not been called?");
+
+        // Check that we are within range.
+        if (inputIndex >= m_transforms.size())
+            RuntimeError("Invalid transform index in TransformerNode.");
+
+        // Verify that derived object supports transform on given input.
+        if (!SupportsTransformOnInput(inputIndex))
+            RuntimeError("Space transform requested on unsupported input");
+
+        // All good, ask derived object to compute transforms.
+        ComputeTransforms();
+        // Return transform for requested input.
+        return m_transforms[inputIndex];
+    }
+
+protected:
+    // Transforms for all node inputs.
+    std::vector<SpaceTransform> m_transforms;
+};
+
+// =======================================================================
+// IdentityTransformerNode -- Helper class for nodes that have identity
+// transform for all inputs.
+// =======================================================================
+
+struct IdentityTransformerNode : public TransformerNode
+{
+private:
+    using TransformerNode::m_transforms;
+
+    // Set all transforms to identity.
+    virtual void ComputeTransforms() override
+    {
+        if (m_transforms[0].m_axisTransforms.empty())
+        {
+            for (size_t it = 0; it < m_transforms.size(); it++)
+            {
+                m_transforms[it].m_axisTransforms.resize(2);
+            }
+        }
+    }
+
+    // Support transforms for all inputs.
+    virtual bool SupportsTransformOnInput(size_t /*index*/) override { return true; }
+};
+
+// =======================================================================
+// IdentityTransformerNodeOnOneInput -- Helper class for nodes that support
+// identity transform for one input (defined with template argument).
+// =======================================================================
+
+template <size_t supportedInputIndex>
+struct IdentityTransformerNodeOnOneInput : public TransformerNode
+{
+private:
+    using TransformerNode::m_transforms;
+
+    virtual void ComputeTransforms() override
+    {
+        if (m_transforms[supportedInputIndex].m_axisTransforms.empty())
+        {
+            // m_axisTransforms defaults to identity.
+            m_transforms[supportedInputIndex].m_axisTransforms.resize(2);
+        }
+    }
+
+    // Support transforms just one input.
+    virtual bool SupportsTransformOnInput(size_t inputIndex) override
+    {
+        return (inputIndex == supportedInputIndex);
+    }
+};
+
+// =======================================================================
 // Nodes that can take a dynamic axis need to implement this.
 // =======================================================================
 struct ITakesDynamicAxis
@@ -1001,17 +1237,17 @@ public:
     // creation from configuration
     // Nodes with NumInputs<> should say DeclareConstructorFromConfigWithNumInputs(ClassName), and nodes without DeclareConstructorFromConfig(ClassName).
     // The macro will forward to the regular constructor of the node (which may do more than just calling the base constructor), and then attach the inputs from config.
-#define DeclareConstructorFromConfigWithNumInputs(C)                   \
-    C(const ScriptableObjects::IConfigRecordPtr configp)               \
-        : C(configp->Get(L"deviceId"), L"<placeholder>")               \
-    {                                                                  \
-        AttachInputsFromConfig(configp, this->GetExpectedNumInputs()); \
+#define DeclareConstructorFromConfigWithNumInputs(C)                     \
+    C(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp) \
+        : C(configp->Get(L"deviceId"), L"<placeholder>")                 \
+    {                                                                    \
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());   \
     }
-#define DeclareConstructorFromConfig(C)                            \
-    C(const ScriptableObjects::IConfigRecordPtr configp)           \
-        : C(configp->Get(L"deviceId"), L"<placeholder>")           \
-    {                                                              \
-        AttachInputsFromConfig(configp);                           \
+#define DeclareConstructorFromConfig(C)                                  \
+    C(const Microsoft::MSR::ScriptableObjects::IConfigRecordPtr configp) \
+        : C(configp->Get(L"deviceId"), L"<placeholder>")                 \
+    {                                                                    \
+        AttachInputsFromConfig(configp);                                 \
     }
 
     // helper to load m_value from a stream
@@ -1061,6 +1297,13 @@ public:
                 m_inputs[i] = DownCast(inputs[i]); // (DownCast() checks the type; the assignment then downcasts it again)
             else
                 m_inputs[i] = nullptr; // during network creation, nullptrs are possible
+
+        // If this object implements also TransformerNode interface we need to notify it about number of inputs.
+        if (Is<TransformerNode>())
+        {
+            auto transformerNode = As<TransformerNode>();
+            transformerNode->SetNumberOfInputs(m_inputs.size());
+        }
     }
 
 protected:
@@ -1077,9 +1320,9 @@ protected:
                 auto* val = configp->Find(L"inputs");
                 if (!val) // if there is no 'inputs' then get the first item of this config record for a Fail() function
                 {
-                    auto members = configp->GetMemberIds();
-                    if (members.size() > 0)
-                        val = configp->Find(members.front());
+                    auto members2 = configp->GetMemberIds();
+                    if (members2.size() > 0)
+                        val = configp->Find(members2.front());
                 }
                 if (val)
                     val->Fail(msra::strfun::wstrprintf(L"Expected %d inputs, but %d were given.", (int) expectedNumInputs, (int) inputs.size()));
@@ -1186,12 +1429,15 @@ public:
     Matrix<ElemType>&       Value()       { return *m_value; }
 
     MatrixBasePtr ValuePtr() const override final { return m_value; }    // readers want this as a shared_ptr straight
+    std::shared_ptr<Matrix<ElemType>>& ValuePtrRef() { return m_value; }
+
     // Note: We cannot return a const& since returning m_value as a MatrixBasePtr is a type cast that generates a temporary. Interesting.
 
     const Matrix<ElemType>& Gradient() const { return *m_gradient; }
     Matrix<ElemType>&       Gradient()       { return *m_gradient; }
 
     MatrixBasePtr GradientPtr() const { return m_gradient; }
+    std::shared_ptr<Matrix<ElemType>>& GradientPtrRef() { return m_gradient; }
     // TODO: This is only used for testing whether a gradient has been allocated. Maybe reduce to bool HasGradient()?
 
 private:
@@ -1407,6 +1653,20 @@ public:
 #endif
         // tracing
         Trace();
+
+        // Any memory not needed could resize to zero immediately when HyperCompressMemory active. Since the memory won't really release,
+        // all these memory blocks are gathered into a memory pool. When the next request coming, the best fitting block will be chosen.
+        if (Globals::ShouldEnableHyperCompressMemory()) 
+        {
+            for (auto& input : GetInputs())
+            {
+                if (!input->IsOutputNeededDuringBackprop() && input->IsValueSharable())
+                {
+                    auto inputNodePtr = DownCast(input);
+                    inputNodePtr->Value().Resize(0, 0);
+                }
+            }
+        }
     }
 
 #if 0   // (keep it around in case we need to add stuff in the future)
@@ -1416,9 +1676,9 @@ public:
         }
 #endif
 
-#ifdef _DEBUG
     virtual void /*IComputationNode::*/ EndBackprop() override
     {
+#ifdef _DEBUG
         Base::EndBackprop();
 #ifdef TRACK_GAP_NANS
         for (size_t i = 0; i < m_inputs.size(); i++)
@@ -1432,8 +1692,18 @@ public:
             }
         }
 #endif
-    }
 #endif
+        // We could release the gradient of value sharable nodes and all no-longer used memory generated in forward.
+        if (IsValueSharable() && Globals::ShouldEnableHyperCompressMemory())
+        {
+            if (GradientPtr()) 
+                Gradient().Resize(0, 0);
+
+            // canceling the graph dependency
+            if (IsOutputNeededDuringBackprop()) 
+                Value().Resize(0, 0);
+        }
+    }
 
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)
@@ -1456,7 +1726,10 @@ public:
     void ResetGradient(ElemType val)
     {
         UpdateDataSize(Gradient());
-        Gradient().SetValue(val);
+
+        // No need to zero initialize the gradient if the node's parent is going to overwrite it anyways
+        if ((val != 0) || !ParentOverwritesGradient())
+            Gradient().SetValue(val);
 
         m_gradientInitialized = true;
     }
@@ -2129,7 +2402,7 @@ public:
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class BinaryElementWiseNode : public ComputationNode<ElemType>, public NumInputs<2>
+class BinaryElementWiseNode : public ComputationNode<ElemType>, public NumInputs<2>, public IdentityTransformerNode
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembers;

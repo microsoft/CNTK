@@ -63,6 +63,7 @@ template <class ConfigRecordType>
 void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig)
 {
     m_truncated = readerConfig(L"truncated", false);
+    m_maxUtteranceLength = readerConfig(L"maxUtteranceLength", 10000);
     m_convertLabelsToTargets = false;
 
     intargvector numberOfuttsPerMinibatchForAllEpochs = readerConfig(L"nbruttsineachrecurrentiter", ConfigRecordType::Array(intargvector(vector<int>{1})));
@@ -187,7 +188,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         }
 
         m_featureNameToIdMap[featureNames[i]] = iFeat;
-        scriptpaths.push_back(thisFeature(L"scpFile"));
+        wstring type2 = thisFeature(L"scpFile");
+        scriptpaths.push_back(type2);
         RootPathInScripts.push_back(thisFeature(L"prefixPathInSCP", L""));
         m_featureNameToDimMap[featureNames[i]] = m_featDims[i];
 
@@ -225,7 +227,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         mlfpaths.clear();
         if (thisLabel.ExistsCurrent(L"mlfFile"))
         {
-            mlfpaths.push_back(thisLabel(L"mlfFile"));
+            wstring type2 = thisLabel(L"mlfFile");
+            mlfpaths.push_back(type2);
         }
         else
         {
@@ -298,7 +301,8 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
     {
         const ConfigRecordType& thisHMM = readerConfig(hmmNames[i]);
 
-        cdphonetyingpaths.push_back(thisHMM(L"phoneFile"));
+        wstring type2 = thisHMM(L"phoneFile");
+        cdphonetyingpaths.push_back(type2);
         transPspaths.push_back(thisHMM(L"transPFile", L""));
     }
 
@@ -360,7 +364,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
             n++;
         }
 
-        fprintf(stderr, " %lu entries\n", n);
+        fprintf(stderr, " %lu entries\n", (unsigned long)n);
 
         if (i == 0)
             numFiles = n;
@@ -522,7 +526,7 @@ void HTKMLFReader<ElemType>::PrepareForTrainingOrTesting(const ConfigRecordType&
         m_frameSource.reset(new msra::dbn::minibatchutterancesourcemulti(useMersenneTwisterRand, infilesmulti, labelsmulti, m_featDims, m_labelDims,
                                                                          numContextLeft, numContextRight, randomize, 
                                                                          *m_lattices, m_latticeMap, m_frameMode, 
-                                                                         m_expandToUtt));
+                                                                         m_expandToUtt, m_maxUtteranceLength, m_truncated));
         m_frameSource->setverbosity(m_verbosity);
     }
     else if (EqualCI(readMethod, L"rollingWindow"))
@@ -668,7 +672,8 @@ void HTKMLFReader<ElemType>::PrepareForWriting(const ConfigRecordType& readerCon
         }
 
         m_featureNameToIdMap[featureNames[i]] = iFeat;
-        scriptpaths.push_back(thisFeature(L"scpFile"));
+        wstring type2 = thisFeature(L"scpFile");
+        scriptpaths.push_back(type2);
         m_featureNameToDimMap[featureNames[i]] = realDims[i];
 
         m_featuresBufferMultiIO.push_back(nullptr);
@@ -952,7 +957,6 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
     bool skip = false;
 
     // on first minibatch, make sure we can supply data for requested nodes
-    std::map<std::wstring, size_t>::iterator iter;
     if (m_checkDictionaryKeys)
     {
         for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
@@ -1128,21 +1132,21 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                         m_pMBLayout->AddGap(i, m_numValidFrames[i], m_mbNumTimeSteps);
                 } // if (!frameMode)
 
-                for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+                for (auto iter2 = matrices.begin(); iter2 != matrices.end(); iter2++)
                 {
                     // dereference matrix that corresponds to key (input/output name) and
                     // populate based on whether its a feature or a label
-                    Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
-                    if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+                    Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter2->first); // can be features or labels
+                    if (m_nameToTypeMap[iter2->first] == InputOutputTypes::real)
                     {
-                        id = m_featureNameToIdMap[iter->first];
-                        dim = m_featureNameToDimMap[iter->first];
+                        id = m_featureNameToIdMap[iter2->first];
+                        dim = m_featureNameToDimMap[iter2->first];
                         data.SetValue(dim, m_mbNumTimeSteps * m_numSeqsPerMB, data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
                     }
-                    else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+                    else if (m_nameToTypeMap[iter2->first] == InputOutputTypes::category)
                     {
-                        id = m_labelNameToIdMap[iter->first];
-                        dim = m_labelNameToDimMap[iter->first];
+                        id = m_labelNameToIdMap[iter2->first];
+                        dim = m_labelNameToDimMap[iter2->first];
                         data.SetValue(dim, m_mbNumTimeSteps * m_numSeqsPerMB, data.GetDeviceId(), m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
                     }
                 }
@@ -1205,16 +1209,16 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                     }
                     actualmbsize[i] = m_mbNumTimeSteps;
                     const size_t endFr = startFr + actualmbsize[i]; // actual end frame index of this segment
-                    for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+                    for (auto iter3 = matrices.begin(); iter3 != matrices.end(); iter3++)
                     {
                         // dereference matrix that corresponds to key (input/output name) and
                         // populate based on whether its a feature or a label
-                        Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
+                        Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter3->first); // can be features or labels
 
-                        if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+                        if (m_nameToTypeMap[iter3->first] == InputOutputTypes::real)
                         {
-                            id = m_featureNameToIdMap[iter->first];
-                            dim = m_featureNameToDimMap[iter->first];
+                            id = m_featureNameToIdMap[iter3->first];
+                            dim = m_featureNameToDimMap[iter3->first];
 
                             if ((m_featuresBufferMultiIO[id] == nullptr) ||
                                 (m_featuresBufferAllocatedMultiIO[id] < (dim * m_mbNumTimeSteps * m_numSeqsPerMB)) /*buffer size changed. can be partial minibatch*/)
@@ -1246,10 +1250,10 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                                 }
                             }
                         }
-                        else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+                        else if (m_nameToTypeMap[iter3->first] == InputOutputTypes::category)
                         {
-                            id = m_labelNameToIdMap[iter->first];
-                            dim = m_labelNameToDimMap[iter->first];
+                            id = m_labelNameToIdMap[iter3->first];
+                            dim = m_labelNameToDimMap[iter3->first];
                             if ((m_labelsBufferMultiIO[id] == nullptr) ||
                                 (m_labelsBufferAllocatedMultiIO[id] < (dim * m_mbNumTimeSteps * m_numSeqsPerMB)))
                             {
@@ -1278,16 +1282,16 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                     assert(endFr == m_numFramesToProcess[i]);            // we are at the end
 
                     // fill frames for the tail of this utterance
-                    for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+                    for (auto iter4 = matrices.begin(); iter4 != matrices.end(); iter4++)
                     {
                         // dereference matrix that corresponds to key (input/output name) and
                         // populate based on whether its a feature or a label
-                        Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
+                        Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter4->first); // can be features or labels
 
-                        if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+                        if (m_nameToTypeMap[iter4->first] == InputOutputTypes::real)
                         {
-                            id = m_featureNameToIdMap[iter->first];
-                            dim = m_featureNameToDimMap[iter->first];
+                            id = m_featureNameToIdMap[iter4->first];
+                            dim = m_featureNameToDimMap[iter4->first];
 
                             if ((m_featuresBufferMultiIO[id] == nullptr) ||
                                 (m_featuresBufferAllocatedMultiIO[id] < (dim * m_mbNumTimeSteps * m_numSeqsPerMB)) /*buffer size changed. can be partial minibatch*/)
@@ -1319,10 +1323,10 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                                 }
                             }
                         }
-                        else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+                        else if (m_nameToTypeMap[iter4->first] == InputOutputTypes::category)
                         {
-                            id = m_labelNameToIdMap[iter->first];
-                            dim = m_labelNameToDimMap[iter->first];
+                            id = m_labelNameToIdMap[iter4->first];
+                            dim = m_labelNameToDimMap[iter4->first];
                             if ((m_labelsBufferMultiIO[id] == nullptr) ||
                                 (m_labelsBufferAllocatedMultiIO[id] < (dim * m_mbNumTimeSteps * m_numSeqsPerMB)))
                             {
@@ -1363,16 +1367,16 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                             m_pMBLayout->AddSequence(NEW_SEQUENCE_ID, i, startT, startT + m_numFramesToProcess[i]);
 
                             // copy the data
-                            for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+                            for (auto iter5 = matrices.begin(); iter5 != matrices.end(); iter5++)
                             {
                                 // dereference matrix that corresponds to key (input/output name) and
                                 // populate based on whether its a feature or a label
-                                // Matrix<ElemType>& data = *matrices[iter->first]; // can be features or labels
+                                // Matrix<ElemType>& data = *matrices[iter5->first]; // can be features or labels
 
-                                if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+                                if (m_nameToTypeMap[iter5->first] == InputOutputTypes::real)
                                 {
-                                    id = m_featureNameToIdMap[iter->first];
-                                    dim = m_featureNameToDimMap[iter->first];
+                                    id = m_featureNameToIdMap[iter5->first];
+                                    dim = m_featureNameToDimMap[iter5->first];
                                     if (sizeof(ElemType) == sizeof(float))
                                     {
                                         for (size_t t = startT, fr = 0; t < endT; t++, fr++) // column major, so iterate columns
@@ -1396,10 +1400,10 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
                                         }
                                     }
                                 }
-                                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+                                else if (m_nameToTypeMap[iter5->first] == InputOutputTypes::category)
                                 {
-                                    id = m_labelNameToIdMap[iter->first];
-                                    dim = m_labelNameToDimMap[iter->first];
+                                    id = m_labelNameToIdMap[iter5->first];
+                                    dim = m_labelNameToDimMap[iter5->first];
                                     for (size_t t = startT, fr = 0; t < endT; t++, fr++)
                                     {
                                         for (int d = 0; d < dim; d++)
@@ -1437,21 +1441,21 @@ bool HTKMLFReader<ElemType>::GetMinibatchToTrainOrTest(StreamMinibatchInputs& ma
             } // for (size_t i = 0; i < m_numSeqsPerMB; i++)
             // we are done filling all parallel sequences
 
-            for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+            for (auto iter6 = matrices.begin(); iter6 != matrices.end(); iter6++)
             {
                 // dereference matrix that corresponds to key (input/output name) and
                 // populate based on whether its a feature or a label
-                Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels
-                if (m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+                Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter6->first); // can be features or labels
+                if (m_nameToTypeMap[iter6->first] == InputOutputTypes::real)
                 {
-                    id = m_featureNameToIdMap[iter->first];
-                    dim = m_featureNameToDimMap[iter->first];
+                    id = m_featureNameToIdMap[iter6->first];
+                    dim = m_featureNameToDimMap[iter6->first];
                     data.SetValue(dim, m_mbNumTimeSteps * m_numSeqsPerMB, data.GetDeviceId(), m_featuresBufferMultiIO[id].get(), matrixFlagNormal);
                 }
-                else if (m_nameToTypeMap[iter->first] == InputOutputTypes::category)
+                else if (m_nameToTypeMap[iter6->first] == InputOutputTypes::category)
                 {
-                    id = m_labelNameToIdMap[iter->first];
-                    dim = m_labelNameToDimMap[iter->first];
+                    id = m_labelNameToIdMap[iter6->first];
+                    dim = m_labelNameToDimMap[iter6->first];
                     data.SetValue(dim, m_mbNumTimeSteps * m_numSeqsPerMB, data.GetDeviceId(), m_labelsBufferMultiIO[id].get(), matrixFlagNormal);
                 }
             }
@@ -1543,7 +1547,6 @@ void HTKMLFReader<ElemType>::fillOneUttDataforParallelmode(StreamMinibatchInputs
 template <class ElemType>
 bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices)
 {
-    std::map<std::wstring, size_t>::iterator iter;
     if (m_checkDictionaryKeys)
     {
         for (auto iter = m_featureNameToIdMap.begin(); iter != m_featureNameToIdMap.end(); iter++)
@@ -1594,9 +1597,9 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
                 // This broadcasts a vector to be multiple columns, as needed for i-vector support
                 msra::dbn::matrix feat_col(feat);
                 feat.resize(feat.rows(), nfr);
-                for (size_t i = 0; i < feat.rows(); i++)
+                for (size_t i2 = 0; i2 < feat.rows(); i2++)
                     for (size_t j = 0; j < feat.cols(); j++)
-                        feat(i, j) = feat_col(i, 0);
+                        feat(i2, j) = feat_col(i2, 0);
             }
 
             fprintf(stderr, "evaluate: reading %d frames of %ls\n", (int) feat.cols(), ((wstring) path).c_str());
@@ -1609,16 +1612,16 @@ bool HTKMLFReader<ElemType>::GetMinibatchToWrite(StreamMinibatchInputs& matrices
 
         // populate input matrices
         bool first = true;
-        for (auto iter = matrices.begin(); iter != matrices.end(); iter++)
+        for (auto iter2 = matrices.begin(); iter2 != matrices.end(); iter2++)
         {
             // dereference matrix that corresponds to key (input/output name) and
             // populate based on whether its a feature or a label
 
-            if (m_nameToTypeMap.find(iter->first) != m_nameToTypeMap.end() && m_nameToTypeMap[iter->first] == InputOutputTypes::real)
+            if (m_nameToTypeMap.find(iter2->first) != m_nameToTypeMap.end() && m_nameToTypeMap[iter2->first] == InputOutputTypes::real)
             {
-                Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter->first); // can be features or labels   (TODO: Really? Didn't we just ^^^ check that it is 'real'?)
-                size_t id = m_featureNameToIdMap[iter->first];
-                size_t dim = m_featureNameToDimMap[iter->first];
+                Matrix<ElemType>& data = matrices.GetInputMatrix<ElemType>(iter2->first); // can be features or labels   (TODO: Really? Didn't we just ^^^ check that it is 'real'?)
+                size_t id = m_featureNameToIdMap[iter2->first];
+                size_t dim = m_featureNameToDimMap[iter2->first];
 
                 const msra::dbn::matrix feat = m_fileEvalSource->ChunkOfFrames(id);
 

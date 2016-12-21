@@ -32,12 +32,12 @@ def right_matrix_type(request):
 
 
 def _test_unary_op(precision, device_id, op_func,
-                   value, expected_forward, expected_backward_all, op_param_dict=None):
+                   value, expected_forward, expected_backward_all, op_param_dict={}):
 
     value = AA(value, dtype=PRECISION_TO_TYPE[precision])
 
     a = I(shape=value.shape,
-          data_type=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           name='a')
 
@@ -46,10 +46,8 @@ def _test_unary_op(precision, device_id, op_func,
 
     if (type(op_func) == str):
         input_op = eval('%s a' % op_func)
-    elif op_param_dict:
-        input_op = op_func(a, **op_param_dict)
     else:
-        input_op = op_func(a)
+        input_op = op_func(a, **op_param_dict)
 
     forward_input = {a: value}
     expected_backward = {a: expected_backward_all['arg'], }
@@ -59,30 +57,34 @@ def _test_unary_op(precision, device_id, op_func,
 
 
 def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
-                    expected_forward, expected_backward_all,
-                    only_input_variables=False, wrap_batch_seq=True):
+                    expected_forward, expected_backward_all, wrap_batch_seq=True, op_param_dict={}):
+    dt = PRECISION_TO_TYPE[precision]
+    dev = cntk_device(device_id)
 
-    left_value = AA(left_operand, dtype=PRECISION_TO_TYPE[precision])
-    right_value = AA(right_operand, dtype=PRECISION_TO_TYPE[precision])
+    left_value = AA(left_operand, dtype=dt)
+    right_value = AA(right_operand, dtype=dt)
 
     a = I(shape=left_value.shape,
-          data_type=sanitize_dtype_cntk(precision),
+          dtype=sanitize_dtype_cntk(precision),
           needs_gradient=True,
           name='a')
 
     b = I(shape=right_value.shape,
-          data_type=sanitize_dtype_cntk(precision),
+          dtype=sanitize_dtype_cntk(precision),
           needs_gradient=True,
           name='b')
 
+    const_a = constant(left_value, device=dev)
+    const_b = constant(right_value, device=dev)
+
     if (type(op_func) == str):
-        input_op_constant = eval('a %s right_operand' % op_func)
-        constant_op_input = eval('left_operand %s b' % op_func)
+        input_op_constant = eval('a %s const_b' % op_func)
+        constant_op_input = eval('const_a %s b' % op_func)
         input_op_input = eval('a %s b' % op_func)
     else:
-        input_op_constant = op_func(a, right_value)
-        constant_op_input = op_func(left_value, b)
-        input_op_input = op_func(a, b)
+        input_op_constant = op_func(a, const_b, **op_param_dict)
+        constant_op_input = op_func(const_a, b, **op_param_dict)
+        input_op_input = op_func(a, b, **op_param_dict)
 
     # create batch by wrapping the data point into a sequence of length one and
     # putting it into a batch of one sample
@@ -97,28 +99,28 @@ def _test_binary_op(precision, device_id, op_func, left_operand, right_operand,
                     forward_input, expected_forward, expected_backward,
                     device_id=device_id, precision=precision)
 
-    if not only_input_variables:
-        forward_input = {a: left_value}
-        expected_backward = {a: expected_backward_all['left_arg'], }
-        unittest_helper(input_op_constant,
-                        forward_input, expected_forward, expected_backward,
-                        device_id=device_id, precision=precision)
+    forward_input = {a: left_value}
+    expected_backward = {a: expected_backward_all['left_arg'], }
+    unittest_helper(input_op_constant,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
 
-        forward_input = {b: right_value}
-        expected_backward = {b: expected_backward_all['right_arg'], }
-        unittest_helper(constant_op_input,
-                        forward_input, expected_forward, expected_backward,
-                        device_id=device_id, precision=precision)
+    forward_input = {b: right_value}
+    expected_backward = {b: expected_backward_all['right_arg'], }
+    unittest_helper(constant_op_input,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
 
 
 def unittest_helper(root_node,
                     forward_input, expected_forward, expected_backward,
                     device_id=-1, precision="float"):
 
-    assert isinstance(root_node, Function) 
+    assert isinstance(root_node, Function)
+
     backward_pass = expected_backward is not None
     forward, backward = cntk_eval(root_node, forward_input, precision,
-            cntk_device(device_id), backward_pass)
+            cntk_device(device_id), backward_pass, expected_backward)
 
     # for forward we always expect only one result
     assert len(forward) == 1
@@ -151,7 +153,7 @@ def batch_dense_to_sparse(batch, dynamic_axis=''):
     representation that can be consumed by :func:`cntk.ops.sparse_input_numpy`.
 
     Args:
-        batch (list): list of samples. If `dynamic_axis` is given, samples are sequences
+        batch (list): list of samples. If ``dynamic_axis`` is given, samples are sequences
          of tensors. Otherwise, they are simple tensors.
         dynamic_axis (str or :func:`cntk.ops.dynamic_axis` instance): the dynamic axis
 
@@ -227,3 +229,23 @@ def test_batch_dense_to_sparse_zeros():
         [40, 50, 60]
     ]
     assert s == (2, 3)
+
+def remove_np_array_in_list(arr, l):
+    index = 0
+    size = len(l)
+    while index != size and not np.allclose(l[index], arr, atol=TOLERANCE_ABSOLUTE):
+        index += 1
+    if index != size:
+        l.pop(index)
+    else:
+        raise ValueError('array not found in list.')
+
+# compare two unordered lists of np arrays
+def compare_lists_of_np_arrays(first_list, second_list):
+    second_list = list(second_list)   # make a mutable copy
+    try:
+        for elem in first_list:
+            remove_np_array_in_list(elem, second_list)
+    except ValueError:
+        return False
+    return not second_list

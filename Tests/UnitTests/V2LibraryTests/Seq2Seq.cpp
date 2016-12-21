@@ -6,7 +6,7 @@ using namespace CNTK;
 
 using namespace std::placeholders;
 
-void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useSparseInputs, bool testSaveAndReLoad, bool testCheckpointing, bool addBeamSearchReorderingHook, bool testCloning)
+void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useSparseInputs, bool testSaveAndReLoad, bool testCheckpointing, bool addBeamSearchReorderingHook, bool testCloning, bool usePlaceholders)
 {
     using namespace std::placeholders;
 
@@ -30,7 +30,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     FunctionPtr inputSequence = Alias(rawInput, L"inputSequence");
 
     // Drop the sentence start token from the label, for decoder training
-    auto labelSequence = Slice(rawLabels, labelDynamicAxes[0], 1, 0, L"labelSequenceWithStartTrimmed");
+    auto labelSequence = Sequence::Slice(rawLabels, 1, 0, L"labelSequenceWithStartTrimmed");
     auto labelSentenceStart = Sequence::First(rawLabels, L"labelSequenceStart");
 
     auto isFirstLabel = Sequence::IsFirst(labelSequence, L"isFirstLabel");
@@ -38,8 +38,8 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     bool forceEmbedding = useSparseInputs;
 
     /* Embeddings */
-    auto inputEmbeddingWeights = Parameter({ inputEmbeddingDim, inputVocabDim }, DataType::Float, GlorotUniformInitializer(), device, L"inputEmbeddingWeights");
-    auto labelEmbeddingWeights = Parameter({ labelEmbeddingDim, labelVocabDim }, DataType::Float, GlorotUniformInitializer(), device, L"labelEmbeddingWeights");
+    auto inputEmbeddingWeights = Parameter({ inputEmbeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"inputEmbeddingWeights");
+    auto labelEmbeddingWeights = Parameter({ labelEmbeddingDim, NDShape::InferredDimension }, DataType::Float, GlorotUniformInitializer(), device, L"labelEmbeddingWeights");
 
     auto inputEmbedding = Alias((!forceEmbedding && (inputVocabDim <= inputEmbeddingDim)) ? inputSequence : Times(inputEmbeddingWeights, inputSequence), L"inputEmbedding");
     auto labelEmbedding = Alias((!forceEmbedding && (labelVocabDim <= labelEmbeddingDim)) ? labelSequence : Times(labelEmbeddingWeights, labelSequence), L"labelEmbedding");
@@ -63,8 +63,20 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
         labelSentenceStartEmbeddedScattered = Reshape(labelSentenceStartEmbeddedScattered, labelSentenceStartEmbeddedScattered->Output().Shape().AppendShape({ 1 }), L"labelSentenceStartEmbeddedScattered");
     }
 
-    auto thoughtVectorBroadcastH = Sequence::BroadcastAs(thoughtVectorH, labelEmbedding, L"thoughtVectorBroadcastH");
-    auto thoughtVectorBroadcastC = Sequence::BroadcastAs(thoughtVectorC, labelEmbedding, L"thoughtVectorBroadcastC");
+    auto actualThoughtVectorBroadcastH = Sequence::BroadcastAs(thoughtVectorH, labelEmbedding, L"thoughtVectorBroadcastH");
+    auto actualThoughtVectorBroadcastC = Sequence::BroadcastAs(thoughtVectorC, labelEmbedding, L"thoughtVectorBroadcastC");
+
+    Variable thoughtVectorBroadcastH, thoughtVectorBroadcastC;
+    if (usePlaceholders)
+    {
+        thoughtVectorBroadcastH = PlaceholderVariable();
+        thoughtVectorBroadcastC = PlaceholderVariable();
+    }
+    else
+    {
+        thoughtVectorBroadcastH = actualThoughtVectorBroadcastH;
+        thoughtVectorBroadcastC = actualThoughtVectorBroadcastC;
+    }
 
     /* Decoder */
     auto beamSearchReorderHook = Constant({ 1, 1 }, 1.0f, device);
@@ -116,6 +128,10 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     auto biasWeights = Parameter({ labelVocabDim }, 0.0f, device);
 
     auto z = Plus(Times(outputLayerProjWeights, Stabilize<float>(decoderOutput, device)), biasWeights, L"classifierOutput");
+
+    if (usePlaceholders)
+        z->ReplacePlaceholders({ { thoughtVectorBroadcastH, actualThoughtVectorBroadcastH }, { thoughtVectorBroadcastC, actualThoughtVectorBroadcastC } });
+
     auto ce = CrossEntropyWithSoftmax(z, labelSequence, L"lossFunction");
     auto errs = ClassificationError(z, labelSequence, L"classificationError");
 
@@ -159,13 +175,12 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     auto rawInputStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto rawLabelsStreamInfo = minibatchSource->StreamInfo(labelStreamName);
 
-    double learningRatePerSample = 0.007;
-    size_t momentumTimeConstant = 1100;
-    double momentumPerSample = std::exp(-1.0 / momentumTimeConstant);
+    LearningRatePerSampleSchedule learningRatePerSample = 0.007;
+    MomentumAsTimeConstantSchedule momentumTimeConstant = 1100;
     AdditionalLearningOptions additionalOptions;
     additionalOptions.gradientClippingThresholdPerSample = 2.3;
     additionalOptions.gradientClippingWithTruncation = true;
-    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumPerSample, additionalOptions) });
+    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumTimeConstant, additionalOptions) });
 
     size_t outputFrequencyInMinibatches = 1;
     size_t minibatchSize1 = 72;
@@ -218,8 +233,8 @@ void TrainSequenceToSequenceTranslator()
     fprintf(stderr, "\nTrainSequenceToSequenceTranslator..\n");
 
     // TODO: Also test with sparse input variables in the graph
-    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, true, true);
+    TrainSequenceToSequenceTranslator(DeviceDescriptor::CPUDevice(), false, true, false, false, true, true);
 
     if (IsGPUAvailable())
-        TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, false, false);
+        TrainSequenceToSequenceTranslator(DeviceDescriptor::GPUDevice(0), false, false, true, true, false, false);
 }

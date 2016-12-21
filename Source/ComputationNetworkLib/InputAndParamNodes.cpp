@@ -216,10 +216,10 @@ static pair<bool/*uniform*/,double/*stddev or range*/> ParseRandomizationType(co
 {
     if      (type == UniformInitializerTypeName)       return make_pair( true, 0.05f);
     else if (type == GaussianInitializerTypeName)      return make_pair(false, 0.2 / sqrt(fanIn));
-    else if (type == XavierInitializerTypeName)        return make_pair(true, sqrt(3.0 / fanIn));
-    else if (type == GlorotUniformInitializerTypeName) return make_pair(true, sqrt(6.0 / (fanIn + fanOut)));
+    else if (type == XavierInitializerTypeName)        return make_pair(true,  sqrt(3.0 / fanIn));
+    else if (type == GlorotUniformInitializerTypeName) return make_pair(true,  sqrt(6.0 / (fanIn + fanOut)));
     else if (type == GlorotNormalInitializerTypeName)  return make_pair(false, sqrt(2.0 / (fanIn + fanOut)));
-    else if (type == HeUniformInitializerTypeName)     return make_pair(true, sqrt(6.0 / fanIn));
+    else if (type == HeUniformInitializerTypeName)     return make_pair(true,  sqrt(6.0 / fanIn));
     else if (type == HeNormalInitializerTypeName)      return make_pair(false, sqrt(2.0 / fanIn));
     else                                               return make_pair(false, 0.0);
 }
@@ -614,7 +614,7 @@ template <class ElemType>
         Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
         char str[4096];
-        sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
+        sprintf(str, "[%lu,%lu]  ", (unsigned long)GetAsMatrixNumRows(), (unsigned long)GetAsMatrixNumCols());
         fstream << string(str);
         sprintf(str, "learningRateMultiplier=%f  NeedsGradient=%s", m_learningRateMultiplier, m_learningRateMultiplier>0 ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
         fstream << string(str);

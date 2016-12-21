@@ -30,7 +30,7 @@
 
 # LinearLayer -- create a fully-connected linear projection layer
 # Note: outDim may describe a tensor as well.
-LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None} =
+LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} =
 {
     # inputRank given: number of zeroes to add to W (mapRank must not be given)
     # mapRank   given: expand W to leave exactly mapRank axes (inputRank must not be given)
@@ -40,7 +40,7 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
         else if !BS.Constants.IsNone (mapRank)   then Fail ("'inputRank' and 'mapRank' cannot be specified at the same time.")
         else Repeat (inputRank, Inferred)
     W = ParameterTensor {_ConcatArrays (outDim, inputShape), init=init, initValueScale=initValueScale}
-    b = ParameterTensor {outDim, initValue=0}
+    b = ParameterTensor {outDim, initValue=initBias}
     outputRank = Length (_AsArray (outDim)) # support outputs with tensor layouts
     inferInputRankToMap =
         if      !BS.Constants.IsNone (inputRank) then -1  # means not specified
@@ -53,7 +53,7 @@ LinearLayer {outDim, bias = true, init='glorotUniform', initValueScale=1, inputR
 }.apply
 
 # DenseLayer -- create a fully-connected layer with optional non-linearity
-DenseLayer{outDim, bias = true, activation=(x=>x), init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank} : activation )
+DenseLayer{outDim, bias = true, activation=(x=>x), init='glorotUniform', initValueScale=1, inputRank=None, mapRank=None, initBias=0} = Sequential ( LinearLayer{outDim, bias=bias, init=init, initValueScale=initValueScale, inputRank=inputRank, mapRank=mapRank, initBias=initBias} : activation )
 
 # EmbeddingLayer -- create a linear embedding layer
 EmbeddingLayer {outDim,                                   # dimension of embedding
@@ -73,12 +73,14 @@ EmbeddingLayer {outDim,                                   # dimension of embeddi
 #    in     : [ (shifting dims)  |  (reduction dim)  |                |  (sample dims) ]
 #    kernel : [ (filter dims)    |  (reduction dim)  |  (output dim)  |                ]
 #    out    : [ (shifting dims)] |                   |  (output dim)  |  (sample dims) ]
+# BUGBUG: filterShape should be first, so that numOutputChannels can default to 1 (to denote a normal filter), and remaining parameters consistent with Times()
 ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     filterShape,         # e.g. (3:3)
                     bias = true,
                     activation = (x=>x),
                     init = 'glorotUniform',
                     initValueScale = 1,          # TODO: rename to initScale
+                    initBias = 0,
                     #reductionRank = 1,          # TODO: support this
                     stride = 1, pad = false,
                     lowerPad = 0, upperPad = 0,
@@ -91,7 +93,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     filterRank = Length (filterShape)
     kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, Inferred)) # kernel := filter plus reductionDims
     W = ParameterTensor{_ConcatArrays (kernelShape, outputChannelsShape), init = init, initValueScale = initValueScale, initFilterRank = filterRank, initOutputRank = -1}  # [ W x H x C x K ]
-    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = 0)                                 # [ 1 x 1 x     K ]
+    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)                                                       # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     transpose = false # TODO: support this
     apply (x) = {
@@ -391,15 +393,9 @@ CNTK2 = [
         ].out
         else new ComputationNode [ operation = 'Slice' ; inputs = _AsNodes (_) /*plus the function args*/ ] # non-time axis
 
-    Splice (_, axis=1, tag='') = # TODO: This is a workaround. RowStack itself shall interpret 'axis' and be renamed to Splice().
+    Splice (_, axis=1, tag='') =
         if axis < 1 then Fail('Splice does not yet implement splicing the time axis.')
-        else if axis == 1 then [tag1=tag; out = RowStack (_, tag=tag1)].out
-        else [ # workaround: swap 'axis' to first position, RowStack, swap back
-            ArrayTransposeDimensions (_, axis1, axis2) = [ # transpose each element of a BS array
-                inputsT[i:0..Length(_)-1] = TransposeDimensions (_[i], axis1, axis2)
-            ].inputsT
-            out = [tag1=tag; out=TransposeDimensions (RowStack (ArrayTransposeDimensions (_, 1, axis)), 1, axis, tag=tag)].out
-        ].out
+        else [tag1=tag; out = RowStack (_, axis=axis, tag=tag1)].out
 
     // Swap two axes of a tensor
     TransposeDimensions(_, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = _AsNodes (_) /*plus the function args*/ ]
@@ -510,7 +506,7 @@ CNTK2 = [
 # Parameter{} can do several forms of initialization.
 #  - initValue=scalar, value=array --> initialize from this value  --array form not implemented yet
 #  - initFromFilePath="..." --> read from a data file
-#  - init="uniform|gaussian" (random init scaled by initValueScale). Warning: This has magic scaling factors. TODO: document them here
+#  - init="uniform|gaussian" (random init scaled by initValueScale). 
 #  - init="zero"
 # deprecated:
 #  - initFromLiteral="..." (deprecated) --> parse a string literal (obsolete with value=array form)
@@ -546,7 +542,7 @@ FutureValue (dims, input, timeStep = 1, initialState = None, defaultHiddenActiva
 Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = _AsNodes (input : boundaryValue) /*plus the function args*/ ]
 RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + numRows, input, axis = 1)
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = _AsNodes (input) /*plus the function args*/ ]
-RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
+RowStack(inputs, axis=1, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
 Slice(beginIndex, endIndex, input, axis=1, tag='') =
     if axis < 0 then [ # time axis: specify -1
         beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, input)) else                 BS.Loop.IsLastN  (-beginIndex, input)
@@ -580,7 +576,7 @@ MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, l
 # 2D pooling
 MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 AveragePooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'AveragePooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
-ROIPooling (input, ROIs, shape) = new ComputationNode { operation = 'ROIPooling' ; inputs = _AsNodes (input : ROIs) ; outputShape = new TensorShape [ dims = shape ] ; tag='' /*plus the function args*/ } 
+ROIPooling (input, ROIs, shape) = new ComputationNode { operation = 'ROIPooling' ; inputs = _AsNodes (input : ROIs) ; roiOutputShape = new TensorShape [ dims = shape ] ; tag='' /*plus the function args*/ } 
 ColumnwiseCrossProduct = KhatriRaoProduct // deprecated 
 ErrorPrediction = ClassificationError   # legacy name
 Delay = PastValue 
@@ -644,6 +640,7 @@ Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _AsNodes (
 TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = _AsNodes (vectorSequence) /*plus the function args*/ ]
 Trace (node, say='', logFrequency=100, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [ operation = 'Trace' ; inputs = _AsNodes (node) ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
+QuantizedTimes(leftMatrix, rightMatrix, bitSmoothingA=1, bitSmoothingB=1, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'QuantizedTimes' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = _AsNodes (cond) /*plus the function args*/ ]
 
 ##############################################################################

@@ -12,14 +12,30 @@
 #include "CUDAPageLockedMemAllocator.h"
 #include "MatrixQuantizerImpl.h"
 #include "GPUDataTransferer.h"
+#include <numeric>
 
 using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    void Recreate(const std::vector<NDArrayViewPtr>& values, std::vector<NDArrayViewPtr>& output)
+    {
+        output.resize(values.size());
+        for (size_t i = 0; i < values.size(); ++i)
+        {
+            const auto inputView = values[i];
+            output[i] = MakeSharedObject<NDArrayView>(inputView->GetDataType(), inputView->Shape(), inputView->Device());
+        }
+    }
+
     DistributedCommunicatorPtr MPICommunicator()
     {
         return std::make_shared<MPICommunicatorImpl>();
+    }
+
+    void DistributedCommunicator::Finalize()
+    {
+        MPIWrapper::DeleteInstance();
     }
 
     MPICommunicatorImpl::Buffer MPICommunicatorImpl::AllocateIntermediateBuffer(int deviceID, size_t totalSize)
@@ -48,15 +64,13 @@ namespace CNTK
         return nullptr; // Make compiler happy.
     }
 
-    inline DeviceDescriptor GetNonCPUDevice(const std::vector<NDArrayViewPtr>& values)
-    {
-        auto device = std::find_if(values.begin(), values.end(), [](const NDArrayViewPtr v) { return v ->Device().Type() != DeviceKind::CPU; });
-        return values.end() == device ? DeviceDescriptor::CPUDevice() : (*device)->Device();
-    }
-
     MPICommunicatorImpl::MPICommunicatorImpl()
     {
-        m_mpi = MPIWrapper::s_initialized ? MPIWrapper::GetInstance() : std::make_shared<MPIWrapper>();;
+        m_mpi = MPIWrapper::GetInstance();
+        if (m_mpi == nullptr)
+        {
+            m_mpi = MPIWrapper::GetInstance(true /*create*/);
+        }
         m_currentWorker.m_globalRank = m_mpi->CurrentNodeRank();
         m_currentWorker.m_hostId = std::wstring(m_mpi->CurrentNodeName());
         for (size_t i = 0; i < m_mpi->NumNodesInUse(); ++i)
@@ -128,11 +142,7 @@ namespace CNTK
     {
         if (outputValues.empty())
         {
-            for (const auto& inputValue : values)
-            {
-                const auto& outputView = MakeSharedObject<NDArrayView>(inputValue->GetDataType(), inputValue->Shape(), inputValue->Device());
-                outputValues.push_back(outputView);
-            }
+            Recreate(values, outputValues);
         }
         else if (outputValues.size() != values.size())
         {
@@ -163,36 +173,97 @@ namespace CNTK
         NOT_IMPLEMENTED;
     }
 
-    std::future<std::vector<NDArrayViewPtr>> MPICommunicatorImpl::AggregateAsync(
-        const std::vector<NDArrayViewPtr>& values,
+    void MPICommunicatorImpl::Gather(
+        const Dictionary& input,
+        std::vector<std::shared_ptr<Dictionary>>& output,
         const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers)
     {
-        auto device = GetNonCPUDevice(values);
+        CheckWorkers(sendToWorkers);
 
-        std::shared_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent;
-        if (device.Type() != DeviceKind::CPU)
-            mainStreamSyncEvent.reset(MatrixComputeStreamEvent::Create(device.Id()));
+        std::stringstream dict;
+        dict << input;
+        std::string encoded = dict.str();
 
-        return std::async(std::launch::async, [this, &values, &sendToWorkers, device, mainStreamSyncEvent]()
+        // Exchange data sizes.
+        int encodedSizeInBytes = (int)encoded.size();
+        std::vector<int> othersSize;
+        othersSize.resize(m_mpi->NumNodesInUse());
+        m_mpi->Gather(&encodedSizeInBytes, 1, &othersSize[0], 1, 0);
+
+        output.resize(m_mpi->NumNodesInUse(), std::make_shared<Dictionary>());
+
+        int totalSizeInBytes = std::accumulate(othersSize.begin(), othersSize.end(), 0);
+
+        // Exchange actual data
+        std::vector<char> gathered;
+        gathered.resize(std::max(totalSizeInBytes, 1)); // buffer should be at least of size 1.
+        std::vector<int> offsets;
+        offsets.resize(m_mpi->NumNodesInUse());
+        int currentOffset = 0;
+        for (size_t i = 0; i < offsets.size(); ++i)
         {
-            if (device.Type() != DeviceKind::CPU)
+            offsets[i] = currentOffset;
+            currentOffset += othersSize[i];
+        }
+
+        m_mpi->Gatherv(&encoded[0], encoded.size(), &gathered[0], &othersSize[0], &offsets[0], 0);
+        if (CurrentWorker().m_globalRank != 0)
+            return;
+
+        offsets.push_back(totalSizeInBytes);
+        output.resize(m_workers.size());
+        for (size_t i = 0; i < offsets.size() - 1; ++i)
+        {
+            size_t startOffset = offsets[i];
+            size_t size = offsets[i + 1] - startOffset;
+            std::stringstream ss;
+            ss.write(&gathered[startOffset], size);
+            output[i] = std::make_shared<Dictionary>();
+            ss >> *output[i];
+        }
+    }
+
+    void MPICommunicatorImpl::Concatenate(const std::vector<NDArrayViewPtr>& input, std::vector<NDArrayViewPtr>& output, const std::unordered_set<DistributedWorkerDescriptor>& workers)
+    {
+        // TODO: Currently we only support concatenation of inputs of the same size.
+        CheckWorkers(workers);
+
+        // Check inputs, currently we support only CPU
+        auto nonCpu = std::find_if(input.begin(), input.end(), [](const NDArrayViewPtr& v) { return v->Device() != DeviceDescriptor::CPUDevice(); });
+        if (nonCpu != input.end())
+            LogicError("Currently only CPU located buffers are supported for concatenation.");
+
+        output.resize(input.size());
+        // Currently we only support concatenation of input of the same size.
+        // Gathering blocks sequentially.
+        for (size_t i = 0; i < input.size(); ++i)
+        {
+            if (output[i] == nullptr || 
+                output[i]->Shape().TotalSize() != m_mpi->NumNodesInUse() * input[i]->Shape().TotalSize() ||
+                output[i]->GetDataType() != input[i]->GetDataType())
             {
-                // We are starting on a new thread. Make sure the new thread is setup to use the right device
-                // TODO: SetDevice is type agnostic, move it to the base matrix class. 
-                Matrix<float>::SetDevice(device.Id());
-
-                // Since we will be copying the gradients asynchronously, let us
-                // ensure that the gradient matrices have been computed before starting to aggregate
-                // them asynchronously on another thread. This essentially means that when we are using
-                // a GPU device, we will synchronize on the main GPU compute stream before starting
-                // the gradient aggregation asynchronously on a separate stream
-                mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
+                // Allocating flat array for all ranks.
+                output[i] = std::make_shared<NDArrayView>(input[i]->GetDataType(), NDShape{ input[i]->Shape().TotalSize() * m_mpi->NumNodesInUse() }, DeviceDescriptor::CPUDevice());
             }
+        }
 
-            std::vector<NDArrayViewPtr> output;
-            Aggregate(values, output, sendToWorkers);
-            return output;
-        });
+        // Initiate concatenation.
+        std::vector<MPI_Request> allReduceRequests(input.size());
+        for (size_t i = 0; i < input.size(); ++i)
+        {
+            auto& in = input[i];
+            auto& out = output[i];
+
+            if (input[i]->GetDataType() == DataType::Float)
+                m_mpi->AllGatherAsync(in->DataBuffer<float>(), in->Shape().TotalSize(), out->WritableDataBuffer<float>(), in->Shape().TotalSize(), &allReduceRequests[i]);
+            else if (input[i]->GetDataType() == DataType::Double)
+                m_mpi->AllGatherAsync(in->DataBuffer<double>(), in->Shape().TotalSize(), out->WritableDataBuffer<double>(), in->Shape().TotalSize(), &allReduceRequests[i]);
+            else
+                LogicError("Type is not supported.");
+        }
+
+        // Wait till all requests are finished.
+        m_mpi->WaitAll(allReduceRequests);
     }
 
     void MPICommunicatorImpl::AggregateInPlace(
@@ -319,12 +390,8 @@ namespace CNTK
         }
     }
 
-    void MPICommunicatorImpl::QuantizedAggregate(const std::vector<NDArrayViewPtr>& /*inValues*/,
-        const std::vector<NDArrayViewPtr>& /*inPreviousQuantizationResidues*/,
-        const std::unordered_set<DistributedWorkerDescriptor>& /*sendToWorkers*/,
-        const std::vector<NDArrayViewPtr>& /*aggregatedOutputs*/,
-        const std::vector<NDArrayViewPtr>& /*newQuantizationResidues*/)
+    void  MPICommunicatorImpl::Barrier()
     {
-        NOT_IMPLEMENTED;
+        m_mpi->WaitAll();
     }
 }
