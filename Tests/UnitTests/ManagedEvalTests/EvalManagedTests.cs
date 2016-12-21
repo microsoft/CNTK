@@ -570,7 +570,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
 
                 int scaler = 100000;
                 var result = new int[labelDim];
-                int[] expected = { -67, 135, -58, 178 };
+                int[] expected = { 50, 10, 54, 55 };
 
                 // the first pass with reset
                 model.ForwardPass(inputBuffer, outputBuffer);
@@ -598,7 +598,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 for (var i = 0; i < labelDim; i++)
                     result[i] = (int)(outputBuffer[0].Buffer[i] * scaler);
 
-                expected = new int[] { -63, 126, -54, 166 };
+                expected = new int[] { 13, 2, 14, 14 };
                 CollectionAssert.AreEqual(expected, result);
 
                 // another pass w/o reset
@@ -606,7 +606,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 for (var i = 0; i < labelDim; i++)
                     result[i] = (int)(outputBuffer[0].Buffer[i] * scaler);
 
-                expected = new int[] { -61, 122, -52, 161 };
+                expected = new int[] { -4, 0, -4, -4 };
                 CollectionAssert.AreEqual(expected, result);
             }
         }
