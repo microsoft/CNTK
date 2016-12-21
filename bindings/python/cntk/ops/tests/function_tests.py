@@ -93,8 +93,8 @@ def test_exception_for_unnamed_arguments():
 def test_output_in_intermediate_node():
     x = input_variable((2,))
     y = input_variable((2,))
-    x0 = np.asarray([[2., 1.]])
-    y0 = np.asarray([[4., 6.]])
+    x0 = np.asarray([[2., 1.]], np.float32)
+    y0 = np.asarray([[4., 6.]], np.float32)
 
     sum_node = x + 2
     times_node = sum_node * y
