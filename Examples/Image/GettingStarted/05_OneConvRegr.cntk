@@ -39,8 +39,9 @@ trainNetwork = {
         z = model (features)
 
         # loss and error computation
-        sqErr = SquareError (labels, z)
-        rmse = Sqrt (sqErr / labelDim)
+        diff = labels - z
+        sqerr = ReduceSum (diff.*diff, axis=1)
+        rmse =  Sqrt (sqerr / labelDim)
 
         # declare special nodes
         featureNodes    = (features)
