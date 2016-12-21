@@ -2,6 +2,8 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+
+#include <boost/random/uniform_real_distribution.hpp>
 #include "CNTKLibrary.h"
 #include "PrimitiveOpType.h"
 #include "Common.h"
@@ -13,19 +15,15 @@
 
 using namespace CNTK;
 using namespace std;
-
 using namespace Microsoft::MSR::CNTK;
-
 
 static const size_t maxNDShapeSize = 10;
 static const size_t maxNumAxes = 3;
 static const size_t maxDimSize = 5;
 
-
 static size_t keyCounter = 0;
-static uniform_real_distribution<double> double_dist = uniform_real_distribution<double>();
-static uniform_real_distribution<float> float_dist = uniform_real_distribution<float>();
-
+static boost::random::uniform_real_distribution<double> double_dist = boost::random::uniform_real_distribution<double>();
+static boost::random::uniform_real_distribution<float> float_dist = boost::random::uniform_real_distribution<float>();
 static std::wstring tempFilePath = L"serialization.tmp";
 
 DictionaryValue CreateDictionaryValue(DictionaryValue::Type, size_t, size_t);
@@ -145,7 +143,6 @@ void TestDictionarySerialization(size_t dictSize)
        throw std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
 
     Dictionary originalDict = CreateDictionary(dictSize, dictSize);
-    
     {
         fstream stream;
         OpenStream(stream, tempFilePath, false);
@@ -154,7 +151,6 @@ void TestDictionarySerialization(size_t dictSize)
     }
 
     Dictionary deserializedDict1;
-
     {
         fstream stream;
         OpenStream(stream, tempFilePath, true);

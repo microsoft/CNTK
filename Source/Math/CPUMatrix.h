@@ -61,7 +61,6 @@ public:
     using Base::IsEmpty;
     using Base::VerifySize;
 
-
 public:
     CPUMatrix();
     CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool shallow);     // copy constructor, shallow
