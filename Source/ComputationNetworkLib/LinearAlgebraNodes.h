@@ -760,9 +760,9 @@ template class QuantizedTimesNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class SampledTimesNode : public TimesNodeBase<ElemType, false, 3>, public RngUser
+class SampledTimesNode : public TimesNodeBase<ElemType, true, 3>, public RngUser
 {
-	typedef TimesNodeBase<ElemType, false, 3> Base;
+	typedef TimesNodeBase<ElemType, true, 3> Base;
 	UsingComputationNodeMembersBoilerplate;
 	static const std::wstring TypeName() { return L"SampledTimes"; }
 
@@ -855,8 +855,9 @@ public:
 				outputGradient->Print("Output gradient");
 			}
 			m_sampledOutput.DoGatherColumnsOf(0, m_sampleIdx, outputGradient->Transpose(), 1);
-			m_sampledWeights.AssignProductOf(m_sampledOutput, true/*transA*/, *input1, true/*transB*/);
-			input0Gradient->DoScatterColumnsOf(0, m_sampleIdx, m_sampledWeights.Transpose(), 1);
+			m_sampledWeights.AssignProductOf(*input1, false/*transA*/, m_sampledOutput, false/*transB*/);
+			input0Gradient->SetValue(0);
+			input0Gradient->DoScatterColumnsOf(0, m_sampleIdx, m_sampledWeights, 1);
 			if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
 			{
 				m_sampledOutput.Print("Sampled output gradient");
@@ -872,18 +873,19 @@ public:
 
 			m_sampledWeights.DoGatherColumnsOf(0, m_sampleIdx, *input0, 1);
 			m_sampledOutput.DoGatherColumnsOf(0, m_sampleIdx, outputGradient->Transpose(), 1);
-			input1Gradient->AssignProductOf(m_sampledWeights, true/*transA*/, m_sampledOutput, false/*transB*/);
+			input1Gradient->AssignProductOf(m_sampledWeights, false/*transA*/, m_sampledOutput, true/*transB*/);
 		}
 	}
 
 private:
 	shared_ptr<Matrix<ElemType>> AsFlattenedMatrix(TensorView<ElemType> a)
 	{
-		SmallVector<bool> dimsToDrop(3, false);
-		dimsToDrop[2] = true;
+		//SmallVector<bool> dimsToDrop(3, false);
+		//dimsToDrop[2] = true;
 
-		auto shape = a.GetShape();
-		shape.DropDimsInPlace(dimsToDrop);
+		auto a_shape = a.GetShape();
+		TensorShape shape(a_shape[0], a_shape[1] * a_shape[2]);
+		//shape.DropDimsInPlace(dimsToDrop);
 		return a.Reshaped(shape).AsMatrix();
 	}
 	
