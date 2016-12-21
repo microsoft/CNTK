@@ -71,7 +71,7 @@ def find_by_name(node, node_name):
         node (graph node): the node to start the journey from
         node_name (`str`): name for which we are search nodes
 
-    Returns:
+     Returns:
         Primitive function having the specified name
 
     See also:
