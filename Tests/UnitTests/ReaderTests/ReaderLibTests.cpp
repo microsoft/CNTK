@@ -2,15 +2,21 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-
 #include "stdafx.h"
 #include <numeric>
 #include <random>
-#include <boost/random/uniform_int_distribution.hpp>
+
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
 #include "BlockRandomizer.h"
 #include "CorpusDescriptor.h"
+
+#pragma warning(push)
+// disable warning about possible mod 0 operation in uniform_int_distribution
+#pragma warning(disable:4724)
+#include <boost/random/uniform_int_distribution.hpp>
+#pragma warning(pop)
+
 #include "SequentialDeserializer.h"
 
 using namespace Microsoft::MSR::CNTK;
@@ -548,6 +554,7 @@ void BlockRandomizerChaosMonkeyTest(bool prefetch)
     vector<float> data(numChunks * numSequencesPerChunk);
     iota(data.begin(), data.end(), 0.0f);
     std::mt19937 rng(seed);
+
     boost::random::uniform_int_distribution<int> distr(1, 10);
 
     auto mockDeserializer = make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data, sequenceLength);
@@ -703,8 +710,8 @@ BOOST_AUTO_TEST_CASE(NumericCorpusDescriptor)
     CorpusDescriptor corpus(true);
     for (int i = 0; i < 10; ++i)
     {
-        auto value = distr(rng);
-        BOOST_CHECK_EQUAL(value, corpus.KeyToId(std::to_string(value)));
+       auto value = distr(rng);
+       BOOST_CHECK_EQUAL(value, corpus.KeyToId(std::to_string(value)));
     }
     BOOST_CHECK_EXCEPTION(
         corpus.KeyToId("not a number"),
