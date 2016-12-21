@@ -976,6 +976,14 @@
         return Create(shape, input, device, readOnly);
     }
 
+     public static Value CreateSequence<T>(NDShape shape,
+                                          System.Collections.Generic.List<T> sequence,
+                                          DeviceDescriptor device,
+                                          bool readOnly = false)
+    {
+        return CreateSequence<T>(shape, sequence, true, device, readOnly);
+    }
+
     public static Value CreateSequence<T>(NDShape shape,
                                           System.Collections.Generic.List<T> sequence,
                                           bool seqStartFlag,
@@ -1003,6 +1011,14 @@
         batch.ForEach(element => input.Add(new System.Collections.Generic.List<uint>(1) {element}));
  
         return Create<T>(dimension, input, device, readOnly);
+    }
+
+    public static Value CreateSequence<T>(uint dimension,
+                                          System.Collections.Generic.List<uint> sequence,
+                                          DeviceDescriptor device,
+                                          bool readOnly = false)
+    {
+        return CreateSequence<T>(dimension, sequence, true, device, readOnly);
     }
 
     public static Value CreateSequence<T>(uint dimension,

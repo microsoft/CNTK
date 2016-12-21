@@ -88,7 +88,8 @@ namespace CNTKLibraryManagedClientTest
             }
 
             // Create Value for the batch data.
-            inputVal = Value.CreateBatch(inputVar.Shape, seqData, device);
+            // inputVal = Value.CreateBatch(inputVar.Shape, seqData, device);
+            inputVal = Value.CreateSequence(inputVar.Shape, seqData, true, device);
 
             // Create input and output data map.
             inputDataMap[inputVar] = inputVal;
