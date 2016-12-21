@@ -15,8 +15,10 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 static const wchar_t* ConstantInitializerTypeName =         L"constant";
-static const wchar_t* UniformInitializerTypeName =          L"uniform";
-static const wchar_t* GaussianInitializerTypeName =         L"gaussian";
+static const wchar_t* UniformBSInitializerTypeName =        L"uniform";     // for legacy reason, "uniform" is taken in BrainScript to represent uniform distribution [-0.05, 0.05]
+static const wchar_t* UniformInitializerTypeName =          L"uniform1";
+static const wchar_t* GaussianInitializerTypeName =         L"gaussian";    // legacy for BrainScript normal distribution pre-scaled by sqrt(0.04 / fanin)
+static const wchar_t* NormalInitializerTypeName =           L"normal";
 static const wchar_t* XavierInitializerTypeName =           L"xavier";
 static const wchar_t* GlorotUniformInitializerTypeName =    L"glorotUniform";
 static const wchar_t* GlorotNormalInitializerTypeName =     L"glorotNormal";
