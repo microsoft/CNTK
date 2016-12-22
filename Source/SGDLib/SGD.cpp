@@ -1150,6 +1150,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
         // Sum of actualMBSize across all nodes when using parallel training
         // 'aggregate' here means accross-worker aggregate for this one minibatch.
+        // Note: DataParallelASGD and ModelAveraging do not sync actualMBSize every mini-batch.
         size_t aggregateNumSamples = actualMBSize; // (0 for empty MB)
         size_t aggregateNumSamplesWithLabel = CriterionAccumulator<ElemType>::GetNumSamples(criterionNodes[0], numSamplesWithLabelOfNetwork); // (0 for empty MB)
 
@@ -1405,8 +1406,14 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     }
                 }
 
-                fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s; samplesPerSecond = %.1f\n").c_str(),
-                        totalTimeInMBs, trainSamplesSinceLastLogged / totalTimeInMBs);
+                fprintf(stderr, ("time = " + GeneratePaddedFloatOrExpFormat(0, 4, totalTimeInMBs) + "s;").c_str(),
+                        totalTimeInMBs);
+
+                if (useGradientAggregation)
+                    fprintf(stderr, " samplesPerSecond = %.1f\n", trainSamplesSinceLastLogged / totalTimeInMBs);
+
+                if (useAsyncGradientAggregation || useModelAggregation)
+                    fprintf(stderr, " samplesPerSecond = %.1f\n", trainSamplesSinceLastLogged * (int)m_mpi->NumNodesInUse() / totalTimeInMBs);
             }
 
             // progress tracing for compute cluster management
