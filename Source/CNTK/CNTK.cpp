@@ -75,21 +75,11 @@ void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& con
 {
     if (config(L"profilerEnabled", false))
     {
-        const char* workDir = getenv("HOME");
-        if (workDir == NULL)
-        {
-            workDir = ".";
-        }
-        string profilerDir = workDir;
-        profilerDir += "/profiler";
-        LOGPRINTF(stderr, "profiler dir: %S\n", s2ws(profilerDir).c_str());
-        for (char** env = environ; *env != NULL; env++)
-        {
-            LOGPRINTF(stderr, "   %s\n", *env);
-        }
-        profilerContext.Init(config(L"profilerDirectory", s2ws(profilerDir)),
-                             config(L"profilerBufferSize", static_cast<uint64_t>(32ull * 1024ull * 1024ull)),
-                             std::to_wstring(nodeRank), config(L"profilerSyncGpu", true));
+        wstring workDir = config(L"WorkDir", L".");
+        profilerContext.Init(workDir + L"/profiler",
+                             config(L"profilerBufferSize", static_cast<uint64_t>(32 * 1024 * 1024)),
+                             std::to_wstring(nodeRank),
+                             config(L"profilerSyncGpu", true));
     }
 }
 
