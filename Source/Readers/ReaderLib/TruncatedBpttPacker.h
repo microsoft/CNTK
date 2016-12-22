@@ -51,9 +51,6 @@ private:
     // Calculated based on the truncation size and minibatch size in samples.
     size_t m_numParallelSequences;
 
-    // Truncation size in samples.
-    size_t m_truncationSize;
-
     // Sequence buffer per stream.
     // Each sequence buffer contains m_parallelNumberOfSequences slots
     // that get filled with sequences.

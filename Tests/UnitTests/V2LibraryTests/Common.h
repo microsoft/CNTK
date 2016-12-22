@@ -157,7 +157,7 @@ inline CNTK::FunctionPtr FullyConnectedLinearLayer(CNTK::Variable input, size_t 
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
 
-    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(CNTK::SentinelValueForInferParamInitRank, CNTK::SentinelValueForInferParamInitRank, CNTK::DefaultParamInitScale, 1), device, L"timesParam");
+    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(CNTK::DefaultParamInitScale, CNTK::SentinelValueForInferParamInitRank, CNTK::SentinelValueForInferParamInitRank, 1), device, L"timesParam");
     auto timesFunction = CNTK::Times(timesParam, input, L"times");
 
     auto plusParam = CNTK::Parameter({ outputDim }, 0.0f, device, L"plusParam");
@@ -209,11 +209,11 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
 
     unsigned long seed2 = 1;
     auto createProjectionParam = [device, &seed2](size_t outputDim) {
-        return CNTK::Parameter({ outputDim, CNTK::NDShape::InferredDimension }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed2++), device);
+        return CNTK::Parameter({ outputDim, CNTK::NDShape::InferredDimension }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
     };
 
     auto createDiagWeightParam = [device, &seed2](size_t dim) {
-        return CNTK::Parameter({ dim }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed2++), device);
+        return CNTK::Parameter({ dim }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
     };
 
     auto stabilizedPrevOutput = Stabilize<ElementType>(prevOutput, device);
@@ -350,6 +350,30 @@ inline CNTK::ValuePtr GenerateSequences(const std::vector<size_t>& sequenceLengt
         std::vector<std::vector<size_t>> oneHotSequences = GenerateOneHotSequences(sequenceLengths, vocabularySize);
         return CNTK::Value::Create<ElementType>(vocabularySize, oneHotSequences, device, true);
     }
+}
+
+template <typename ElementType>
+inline std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr> GenerateSparseSequence(size_t vocabSize, size_t sequenceLength, size_t maxNumberOfNonZeroValuesPerSparseInputSample)
+{
+    std::vector<ElementType> inputData(vocabSize * sequenceLength, 0);
+    for (size_t j = 0; j < sequenceLength; ++j)
+    {
+        size_t numActualValuesWritten = 0;
+        for (size_t k = 0; k < vocabSize; ++k)
+        {
+            if ((numActualValuesWritten < maxNumberOfNonZeroValuesPerSparseInputSample) && ((rand() % vocabSize) < maxNumberOfNonZeroValuesPerSparseInputSample))
+            {
+                numActualValuesWritten++;
+                inputData[(j * vocabSize) + k] = ((ElementType)rand()) / RAND_MAX;
+            }
+        }
+    }
+
+    CNTK::NDShape inputDataShape = CNTK::NDShape({ vocabSize, sequenceLength });
+    CNTK::NDArrayViewPtr inputValueData = CNTK::MakeSharedObject<CNTK::NDArrayView>(inputDataShape, inputData);
+    CNTK::NDArrayViewPtr sparseData = CNTK::MakeSharedObject<CNTK::NDArrayView>(CNTK::AsDataType<ElementType>(), CNTK::StorageFormat::SparseCSC, inputDataShape, CNTK::DeviceDescriptor::CPUDevice());
+    sparseData->CopyFrom(*inputValueData);
+    return{ inputValueData->DeepClone(), sparseData };
 }
 
 #pragma warning(pop)

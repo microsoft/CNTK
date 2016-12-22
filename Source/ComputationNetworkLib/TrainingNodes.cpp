@@ -4,6 +4,7 @@
 //
 
 #include "TrainingNodes.h"
+#include <boost/random/uniform_real_distribution.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -79,7 +80,7 @@ void RandomSampleNodeBase<ElemType>::UpdateWeightsPrefixSum()
 template<class ElemType>
 const std::vector<size_t> RandomSampleNodeBase<ElemType>::RunSampling(size_t& nTries)
 {
-    std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
+    boost::random::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
     std::unordered_set<int> alreadySampled;
     std::vector<size_t> samples;
     CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));

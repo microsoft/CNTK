@@ -7,11 +7,12 @@
 Unit tests for kernel operations, tested for the forward and the backward pass
 """
 
+from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, _test_unary_op, AA, I, precision, PRECISION_TO_TYPE, constant
+from .ops_test_utils import unittest_helper, _test_unary_op, AA, I, precision, PRECISION_TO_TYPE, constant, cntk_device
 from cntk.ops import AVG_POOLING, MAX_POOLING
-from ...utils import sanitize_dtype_cntk, cntk_device
+from ...utils import sanitize_dtype_cntk
 
 CONVOLUTION_OPERANDS = [
     ([[[5., 6.],  # (1, 2, 2) map

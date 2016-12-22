@@ -106,30 +106,30 @@
 %ignore CNTK::Varaiable::PrimitiveFunction;
 
 %ignore CNTK::ConstantInitializer(double value = 0.0);
-%ignore CNTK::UniformInitializer(double scale = DefaultParamInitScale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::GaussianInitializer(int outputRank = SentinelValueForInferParamInitRank, 
-                                  int filterRank = SentinelValueForInferParamInitRank, 
-                                  double scale = DefaultParamInitScale, 
-                                  unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::XavierInitializer(int outputRank = SentinelValueForInferParamInitRank, 
+%ignore CNTK::UniformInitializer(double scale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
+%ignore CNTK::NormalInitializer(double scale, 
+                                int outputRank = SentinelValueForInferParamInitRank, 
                                 int filterRank = SentinelValueForInferParamInitRank, 
-                                double scale = DefaultParamInitScale, 
                                 unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::GlorotUniformInitializer(int outputRank = SentinelValueForInferParamInitRank, 
+%ignore CNTK::XavierInitializer(double scale = DefaultParamInitScale, 
+                                int outputRank = SentinelValueForInferParamInitRank, 
+                                int filterRank = SentinelValueForInferParamInitRank, 
+                                unsigned long seed = SentinelValueForAutoSelectRandomSeed);
+%ignore CNTK::GlorotUniformInitializer(double scale = DefaultParamInitScale, 
+                                       int outputRank = SentinelValueForInferParamInitRank, 
                                        int filterRank = SentinelValueForInferParamInitRank, 
-                                       double scale = DefaultParamInitScale, 
                                        unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::GlorotNormalInitializer(int outputRank = SentinelValueForInferParamInitRank, 
+%ignore CNTK::GlorotNormalInitializer(double scale = DefaultParamInitScale, 
+                                      int outputRank = SentinelValueForInferParamInitRank, 
                                       int filterRank = SentinelValueForInferParamInitRank, 
-                                      double scale = DefaultParamInitScale, 
                                       unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::HeUniformInitializer(int outputRank = SentinelValueForInferParamInitRank, 
+%ignore CNTK::HeUniformInitializer(double scale = DefaultParamInitScale, 
+                                   int outputRank = SentinelValueForInferParamInitRank, 
                                    int filterRank = SentinelValueForInferParamInitRank, 
-                                   double scale = DefaultParamInitScale, 
                                    unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::HeNormalInitializer(int outputRank = SentinelValueForInferParamInitRank, 
+%ignore CNTK::HeNormalInitializer(double scale = DefaultParamInitScale, 
+                                  int outputRank = SentinelValueForInferParamInitRank, 
                                   int filterRank = SentinelValueForInferParamInitRank, 
-                                  double scale = DefaultParamInitScale, 
                                   unsigned long seed = SentinelValueForAutoSelectRandomSeed);
 %ignore CNTK::BilinearInitializer(size_t kernelWidth, size_t kernelHeight);
 %ignore CNTK::RandomInitializerWithRank(const ParameterInitializer& initializer, int outputRank, int filterRank);
@@ -953,14 +953,32 @@
         }
     }
 
-    public static Value Create<T>(NDShape shape, System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences, DeviceDescriptor computeDevice)
+    // Create Value object from dense input: batch, sequence or batch of sequences.
+
+    public static Value CreateBatch<T>(NDShape shape, System.Collections.Generic.List<T> batch, DeviceDescriptor computeDevice)
+    {
+        throw new System.ArgumentException("Not implemented yet.");
+    }
+
+    public static Value CreateSequence<T>(NDShape shape, System.Collections.Generic.List<T> sequence,
+                                          bool seqStartFalg,
+                                          DeviceDescriptor computeDevice)
+    {
+        throw new System.ArgumentException("Not implemented yet.");
+    }
+
+    public static Value CreateBatchOfSequences<T>(NDShape shape,
+                                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> batchOfSequences,
+                                                  System.Collections.Generic.List<bool> seqStartFalg,
+                                                  DeviceDescriptor computeDevice)
     {
         var dim = shape.TotalSize;
 
+        // Todo: deal with seqStartFlag
         if (typeof(T).Equals(typeof(float)))
         {
             var inputSeqVector = new FloatVectorVector();
-            foreach (var seq in sequences)
+            foreach (var seq in batchOfSequences)
             {
                 if (seq.Count % dim != 0)
                 {
@@ -974,7 +992,7 @@
         else if (typeof(T).Equals(typeof(double)))
         {
             var inputSeqVector = new DoubleVectorVector();
-            foreach (var seq in sequences)
+            foreach (var seq in batchOfSequences)
             {
                 if (seq.Count % dim != 0)
                 {
@@ -991,21 +1009,57 @@
         }
     }
 
-    public static Value Create<T>(uint vacabSize, 
-                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> oneHotIndex, 
-                                  DeviceDescriptor computeDevice)
+    // Create Value object from OneHotVector input: batch, sequence or batch of sequences
+    public static Value CreateBatch<T>(uint vacabSize, System.Collections.Generic.List<uint> batch, DeviceDescriptor computeDevice)
+    {
+        throw new System.ArgumentException("Not implemented yet.");
+    }
+
+    public static Value CreateSequence<T>(uint vacabSize,
+                                          System.Collections.Generic.List<uint> sequence,
+                                          bool seqStartFalg,
+                                          DeviceDescriptor computeDevice)
+    {
+        throw new System.ArgumentException("Not implemented yet.");
+    }
+
+    public static Value CreateBatchOfSequences<T>(uint vacabSize, 
+                                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
+                                                  System.Collections.Generic.List<bool> seqStartFalg,
+                                                  DeviceDescriptor computeDevice)
     {
         throw new System.NotImplementedException("Not implemented");
+    }
+
+    // Create Value object from sparse input: batch, sequence or batch of sequences.
+    public static Value CreateBatch<T>(NDShape shape, 
+                                       System.Collections.Generic.List<T> data,
+                                       System.Collections.Generic.List<uint> indexes,
+                                       System.Collections.Generic.List<uint> nnzCounts,
+                                       DeviceDescriptor computeDevice)
+    {
+        throw new System.ArgumentException("Not implemented yet.");
+    }
+
+    public static Value CreateSequence<T>(NDShape shape, 
+                                          System.Collections.Generic.List<T> data,
+                                          System.Collections.Generic.List<uint> indexes,
+                                          System.Collections.Generic.List<uint> nnzCounts,
+                                          bool SequenceStartFlag,
+                                          DeviceDescriptor computeDevice)
+    {
+        throw new System.ArgumentException("Not implemented yet.");
     }
 
     // Create Value based on sparse input
     // Todo: could this be a extension to Value class??
     // Todo: use Variable instead of varName. VarName as extension method
-    public static Value Create<T>(NDShape shape, 
-                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> data, 
-                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> indexes, 
-                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> nnzCounts, 
-                                  DeviceDescriptor computeDevice)
+    public static Value CreateBatchOfSequences<T>(NDShape shape,
+                                                 System.Collections.Generic.List<System.Collections.Generic.List<T>> data,
+                                                 System.Collections.Generic.List<System.Collections.Generic.List<uint>> indexes,
+                                                 System.Collections.Generic.List<System.Collections.Generic.List<uint>> nnzCounts,
+                                                 System.Collections.Generic.List<bool> SequenceStartFlag,
+                                                 DeviceDescriptor computeDevice)
     {
         throw new System.NotImplementedException("Not implemented");
     }

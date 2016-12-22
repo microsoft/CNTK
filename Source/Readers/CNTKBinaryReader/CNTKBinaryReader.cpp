@@ -46,7 +46,6 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
                 window,  /* randomizationRangeInSamples */
                 m_deserializer, /* deserializer */
                 true, /* shouldPrefetch */
-                BlockRandomizer::DecimationMode::chunk, /* decimationMode */
                 false, /* useLegacyRandomization */
                 false /* multithreadedGetNextSequences */
                 );

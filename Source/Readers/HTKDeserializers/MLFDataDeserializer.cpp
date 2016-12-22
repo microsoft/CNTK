@@ -236,9 +236,6 @@ void MLFDataDeserializer::InitializeStream(const wstring& name, size_t dimension
     m_streams.push_back(stream);
 }
 
-void InitializeFeatureInformation();
-void InitializeAugmentationWindow(ConfigHelper& config);
-
 // Currently MLF has a single chunk.
 // TODO: This will be changed when the deserializer properly supports chunking.
 ChunkDescriptions MLFDataDeserializer::GetChunkDescriptions()

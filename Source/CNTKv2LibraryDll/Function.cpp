@@ -689,10 +689,15 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Dropout, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr Reshape(const Variable& operand, const NDShape& newShape, const std::wstring& name)
+    FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name)
     {
+        if (!beginAxis.IsStaticAxis() || !endAxis.IsStaticAxis())
+            LogicError("Reshape operation does not support reshaping dynamic axis");
+
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameNewShape] = newShape;
+        additionalProperties[PrimitiveFunction::AttributeNameNewShape] = replacementShape;
+        additionalProperties[PrimitiveFunction::AttributeNameBeginAxis] = beginAxis;
+        additionalProperties[PrimitiveFunction::AttributeNameEndAxis] = endAxis;
 
         return UnaryOp(PrimitiveOpType::Reshape, operand, std::move(additionalProperties), name);
     }
@@ -1009,7 +1014,7 @@ namespace CNTK
     {
         // TODO: This is a temporary and expensive hack until we have a real alias implementation
         // that does not waste memory and compute cycles
-        return Plus(operand, Constant::Scalar(0.0f), name);
+        return UnaryOp(PrimitiveOpType::Pass, operand, Dictionary(), name);
     }
 
     FunctionPtr OptimizedRNNStack(const Variable& operand, const Variable& weights, size_t hiddenSize, size_t numLayers, bool bidirectional, const std::wstring& recurrentOp, const std::wstring& name)

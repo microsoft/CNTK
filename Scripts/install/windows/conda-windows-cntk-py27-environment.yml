@@ -1,0 +1,23 @@
+name: cntk-py27
+dependencies:
+- enum34=1.1.6=py27_0
+- h5py=2.6.0=np111py27_2
+- jupyter=1.0.0=py27_3
+- matplotlib=1.5.3=np111py27_0
+- numpy=1.11.2=py27_0
+- pandas=0.19.1=np111py27_0
+- pillow=3.4.2=py27_0
+- pip=8.1.2=py27_0
+- python=2.7.11=5
+- pyyaml=3.12=py27_0
+- scipy=0.18.1=np111py27_0
+- seaborn=0.7.1=py27_0
+- setuptools=27.2.0=py27_1
+- six=1.10.0=py27_0
+- wheel=0.29.0=py27_0
+- pip:
+  - pytest==3.0.3
+  - sphinx==1.4.8
+  - sphinx-rtd-theme==0.1.9
+  - twine==1.8.1
+  - gym==0.5.2

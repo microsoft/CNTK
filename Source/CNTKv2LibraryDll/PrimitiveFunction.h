@@ -184,6 +184,8 @@ namespace CNTK
         static const std::wstring AttributeNameNumSamples;
         static const std::wstring AttributeNameDropoutRate;
         static const std::wstring AttributeNameNewShape;
+        static const std::wstring AttributeNameBeginAxis;
+        static const std::wstring AttributeNameEndAxis;
         static const std::wstring AttributeNameOutputRank;
         static const std::wstring AttributeNameInferInputRankToMap;
         static const std::wstring AttributeNameOffset;
@@ -274,26 +276,54 @@ namespace CNTK
             return operandShape;
         }
 
-        static NDShape ReshapeOutputShape(const NDShape& operandShape, const NDShape& newShape)
+        static NDShape ReshapeOutputShape(const NDShape& operandShape, NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, bool inferDimensions)
         {
+            int beginAxisIdx = beginAxis.StaticAxisIndex();
+            int endAxisIdx = endAxis.StaticAxisIndex();
+
+            if (beginAxisIdx > endAxisIdx)
+                InvalidArgument("Reshape op begin axis index (%d) is larger than the end axis index (%d)", beginAxisIdx, endAxisIdx);
+
+            if ((beginAxisIdx < 0) || (beginAxisIdx > operandShape.Rank()))
+                InvalidArgument("Reshape op begin axis index (%d) is invalid for operand shape (%S)", beginAxisIdx, AsStringForErrorReporting(operandShape).c_str());
+
+            if ((endAxisIdx < 0) || (endAxisIdx > operandShape.Rank()))
+                InvalidArgument("Reshape op end axis index (%d) is invalid for operand shape (%S)", endAxisIdx, AsStringForErrorReporting(operandShape).c_str());
+
             size_t inputElementsCount = 1;
-            for (size_t k = 0; k < operandShape.Rank(); k++)
+            for (size_t k = beginAxisIdx; k < endAxisIdx; k++)
                 inputElementsCount *= operandShape[k];
 
-            auto outputShape = newShape;
+            auto inferredReplacementShape = replacementShape;
             size_t targetElementsCount = 1;
             size_t inferredAxisIndex = SIZE_MAX;
-            for (size_t k = 0; k < outputShape.Rank(); k++)
+            for (size_t k = 0; k < inferredReplacementShape.Rank(); k++)
             {
-                if (outputShape[k] != NDShape::InferredDimension)
-                    targetElementsCount *= outputShape[k];
+                if (inferredReplacementShape[k] != NDShape::InferredDimension)
+                    targetElementsCount *= inferredReplacementShape[k];
                 else if (inferredAxisIndex == SIZE_MAX)
                     inferredAxisIndex = k;
                 else
-                    InvalidArgument("CNTK::Reshape: More than one axis's dimension was specified as Inferred in the replacement shape %S", AsStringForErrorReporting(outputShape).c_str());
+                    InvalidArgument("CNTK::Reshape: More than one axis's dimension was specified as Inferred in the replacement shape %S", AsStringForErrorReporting(replacementShape).c_str());
             }
+
             if (inferredAxisIndex != SIZE_MAX)
-                outputShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
+                inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
+
+            auto outputShape = operandShape.SubShape(0, beginAxisIdx);
+            outputShape = outputShape.AppendShape(inferredReplacementShape);
+            outputShape = outputShape.AppendShape(operandShape.SubShape(endAxisIdx));
+
+            if (outputShape.TotalSize() != operandShape.TotalSize())
+            {
+                auto replacedSubShape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
+                InvalidArgument("CNTK::Reshape: Operand (sub-)dimensions %S incompatible with desired replacement (sub-)dimensions %S. Number of elements %s.",
+                                AsStringForErrorReporting(replacedSubShape).c_str(), AsStringForErrorReporting(replacementShape).c_str(),
+                                inferredAxisIndex == SIZE_MAX ? "must be the same" : "is not an integer multiple of the non-inferred dimensions");
+            }
+
+            if (inferDimensions)
+                replacementShape = inferredReplacementShape;
 
             return outputShape;
         }

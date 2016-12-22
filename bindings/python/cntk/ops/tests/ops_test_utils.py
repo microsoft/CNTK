@@ -13,22 +13,28 @@ import pytest
 
 from cntk.tests.test_utils import *
 
+from cntk.device import cpu, gpu
 from ...ops.functions import Function
 from ...utils import sanitize_dtype_cntk
-from ...utils import eval as cntk_eval, cntk_device
+from ...utils import eval as cntk_eval
 from .. import constant, input_variable
 
 I = input_variable
 
+def cntk_device(device_id):
+    '''
+    Converts the legacy device ID as it was used in CNTK 1 to a :class:`~cntk.device.DeviceDescriptor` instance.
 
-@pytest.fixture(params=["dense", "sparse"])
-def left_matrix_type(request):
-    return request.param
+    Args:
+        device_id (int): device id, -1 for CPU, 0 or higher for GPU
 
-
-@pytest.fixture(params=["dense", "sparse"])
-def right_matrix_type(request):
-    return request.param
+    Returns:
+        :class:`~cntk.device.DeviceDescriptor`
+    '''
+    if device_id == -1:
+        return cpu()
+    else:
+        return gpu(device_id)
 
 
 def _test_unary_op(precision, device_id, op_func,
