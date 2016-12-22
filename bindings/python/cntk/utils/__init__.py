@@ -567,6 +567,8 @@ class Value(cntk_py.Value):
             elif sample.dtype not in (np.float32, np.float64):
                 raise ValueError('only integer, float32 and float64 are supported, '
                         'you gave %s'%sample.dtype)
+            else:
+                sample = sample.astype(var.dtype)
 
             if isinstance(sample, np.ndarray):
                 if not _is_c_contiguous(sample):
