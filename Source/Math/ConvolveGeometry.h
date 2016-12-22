@@ -109,9 +109,19 @@ public:
         m_originIndex = 0;
         for (int i = (int)dimCount - 1; i >= 0; i--)
         {
-            bool padded = GetAutoPad(i); 
+            assert((m_outputShape[i] % GetMapCount(i)) == 0);
+            int outPerMap = (int)(m_outputShape[i] / GetMapCount(i));
+            // Number of cells between first and last "centers", inclusive. 
+            int cells = (int)((outPerMap - 1) * GetStride(i) + 1); assert(m_inputShape[i] >= cells);
+            // Extra cells, to the left and right of "cells". 
+            int extra = (int)m_inputShape[i] - cells;
+            assert(extra >= 0);
+
+            bool padded = GetAutoPad(i);
             if (padded)
-                m_start[i] = 0; 
+            {
+                m_start[i] = extra / 2;
+            }
             else
             {
                 m_start[i] = ((int)m_kernelShape[i] - 1) / 2;
