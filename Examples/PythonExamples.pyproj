@@ -257,6 +257,9 @@
     <Folder Include="Tests\EndToEndTests\cntkv2Python\" />
     <Folder Include="Tests\EndToEndTests\cntkv2Python\Examples\" />
     <Folder Include="Tests\cntk\" />
+    <Folder Include="ToEndTests\" />
+    <Folder Include="ToEndTests\cntkv2Python\" />
+    <Folder Include="ToEndTests\cntkv2Python\Examples\" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
