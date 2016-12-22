@@ -75,7 +75,7 @@ void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& con
 {
     if (config(L"profilerEnabled", false))
     {
-        const char* workDir = getenv("WORK_DIR");
+        const char* workDir = getenv("HOME");
         if (workDir == NULL)
         {
             workDir = ".";
