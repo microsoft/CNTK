@@ -130,12 +130,6 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     #apply_x = times(x, E)
     return Block(embed, 'Embedding', Record(E=E))
 
-# helpers for convolution depths
-def _inject_singleton_dimension(x, axis):
-    return x
-def _drop_singleton_dimension(x, axis):
-    return x
-
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape)  )
 #    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape)  )
@@ -146,8 +140,8 @@ def _drop_singleton_dimension(x, axis):
 # TODO: conflict of parameter order: filter_shape or num_filters first?
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
-def Convolution(rf_shape,        # e.g. (3,3)
-                num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension)
+def Convolution(rf_shape,         # e.g. (3,3)
+                num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                 activation=default_override_or(identity),
                 init=default_override_or(glorot_uniform()),
                 pad=default_override_or(False),
@@ -155,7 +149,7 @@ def Convolution(rf_shape,        # e.g. (3,3)
                 sharing=True,     # (must be True currently)
                 bias=default_override_or(True),
                 init_bias=default_override_or(0),
-                reduction_rank=1, # (must be 1 currently)
+                reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0):
 
@@ -165,28 +159,42 @@ def Convolution(rf_shape,        # e.g. (3,3)
     bias       = get_default_override(Convolution, bias=bias)
     init_bias  = get_default_override(Convolution, init_bias=init_bias)
 
-    # tuplify all tuple inputs that can also be given as integers if rank 1
+    # tuplify all tuple inputs that can also be given as scalars if rank 1
     rf_shape    = _as_tuple(rf_shape)
-    num_filters = _as_tuple(num_filters) if num_filters else ()
-    strides     = _as_tuple(strides)
-    sharing     = _as_tuple(sharing)
-    pad         = _as_tuple(pad)
+    num_filters = _as_tuple(num_filters or ())
+    # expand options that can be specified as a single value
+    def _pad_to_shape(param):
+        param = _as_tuple(param)
+        while len(param) < len(rf_shape):
+            param = (param[0],) + param
+        return param
+    strides     = _pad_to_shape(strides)
+    sharing     = _pad_to_shape(sharing)
+    pad         = _pad_to_shape(pad)
 
     if reduction_rank > 1:
-        NotImplementedError("Convolution: reduction_rank other than 0 or 1 currently not supported")
+        raise NotImplementedError("Convolution: reduction_rank other than 0 or 1 currently not supported")
     if transpose:
-        NotImplementedError("Convolution: transpose option currently not supported")
+        raise NotImplementedError("Convolution: transpose option currently not supported")
     if not sharing:
-        NotImplementedError("Convolution: sharing option currently must be True")
+        raise NotImplementedError("Convolution: sharing option currently must be True")
     # The convolution() function currently requires exactly one input and one output depth axis.
     # So we fake those dimensions on this level.
     fake_output_depth = num_filters == ()
     fake_input_depth  = reduction_rank == 0
+    #if fake_output_depth or fake_input_depth:
+    #    UntestedBranchError("Convolution with depth faking")
 
     actual_output_channels_shape = num_filters                if not fake_output_depth else (1,)
     actual_reduction_shape       = _INFERRED * reduction_rank if not fake_input_depth  else _INFERRED  # BUGBUG: (1,) crashes
 
-    filter_rank = len(rf_shape)
+    # add the dimension to the options as well
+    if fake_input_depth:
+        strides = (1,)     + strides
+        sharing = (True,)  + sharing
+        pad     = (False,) + pad
+
+    rf_rank = len(rf_shape)
     kernel_shape = actual_reduction_shape + rf_shape # kernel := filter plus reductionDims
 
     # init can be an np.array, which must have the correct dimensions subject to faking depth
@@ -201,7 +209,7 @@ def Convolution(rf_shape,        # e.g. (3,3)
             raise ValueError("a constant initializer was passed that is of wrong shape")
         init_kernel = init.reshape(actual_output_channels_shape + kernel_shape) # make it fit
     else:
-        init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-len(actual_output_channels_shape)))
+        init_kernel = _initializer_for(init, Record(filter_rank=rf_rank, output_rank=-len(actual_output_channels_shape)))
         # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag?
 
     # parameters bound to this Function
@@ -211,6 +219,9 @@ def Convolution(rf_shape,        # e.g. (3,3)
     # expression
     @Function
     def convolve(x):
+        if fake_input_depth:
+            from .ops import reshape
+            x = reshape(x, (1,), begin_axis=-rf_rank, end_axis=-rf_rank) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
         # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
         r = convolution (W, x,
                          strides=strides, sharing=sharing, auto_padding=pad,
@@ -218,9 +229,10 @@ def Convolution(rf_shape,        # e.g. (3,3)
                          transpose=transpose,
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         # if no output dimension is desired, then strip it
-        # BUGBUG: We still have it in the kernel.
+        # BUGBUG: We still have it in the kernel. That can only be solved inside the C++ implementation.
         if fake_output_depth:
-            pass # TODO: drop it. Output depth is right next to filter depth.
+            from .ops import reshape
+            r = reshape(r, (), begin_axis=-rf_rank-1, end_axis=-rf_rank) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
         if bias:
             r = r + b
         if activation is not None:

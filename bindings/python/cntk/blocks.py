@@ -153,6 +153,7 @@ def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholde
 @Function
 def identity(keep):
     return combine([keep])
+    #return alias(keep)
 
 # This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
 def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True)):

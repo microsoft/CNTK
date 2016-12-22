@@ -62,7 +62,8 @@ class Function(cntk_py.Function):
         # Placeholders are ordered in depth-first traversal order.
         # By routing them through combine(), we force their traversal order to be first to last.
         # TODO: Get evidence that this is actually doing what it is meant to do.
-        args = combine(args).outputs
+        #args = combine(args).outputs
+        # No, it is not doing what it is meant to do.
         # execute the lambda with placeholders as inputs, which creates a piece of graph
         out = f(*args)
         # resolve NamedOutputs
@@ -70,7 +71,8 @@ class Function(cntk_py.Function):
         def resolve_named(output):
             if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
                 output = combine([output.arg], name=output.name)
-                #out = alias(output.arg, name=output.name)
+                #output = alias(output.arg, name=output.name)
+                #output = plus(output.arg, 0, name=output.name)
                 # BUGBUG: Fails with "ValueError: Variable(ElementTimes64_output) with unknown shape detected when compiling the Function graph!"
                 #  TODO: verify that this is still the case. Either way, alias() is slow.
                 # BUGBUG: Without alias, the names are not propagated into outputs.
@@ -78,10 +80,13 @@ class Function(cntk_py.Function):
             return output
         if isinstance(out, tuple): # multi-value function, returned as a tuple
             out = [resolve_named(output) for output in out]
+            out = combine(out, name=f_name)
+            #out = alias(out, name=f_name)
         else:
             out = [resolve_named(out)]
+            out = out[0]
         # implant the function name as the node name --TODO: should be op_name in a BlockFunction
-        out = combine(out, name=f_name)
+        #out = combine(out, name=f_name)
         # add all members to the Python class
         # TODO: This should really be a dictionary inside BlockFunction
         for key in members:   # UNTESTED
@@ -273,6 +278,51 @@ class Function(cntk_py.Function):
                              (type(self), name))
 
     _ = "(argument placeholder)" # pass Function._ to any expression to create a Scala-like lambda
+
+    def dump(self):
+        from ..graph import depth_first_search
+        graph = depth_first_search(self.root_function, lambda x: not isinstance(x, cntk_py.Variable) or not x.is_output)
+        names = dict()
+        def name_it(item):
+            if item.name != '':
+                return item.name
+            if item in names:
+                name = names[item]
+            else:
+                def make_name(n): # come up with a letter sequence
+                    if n < 26:
+                        return chr(n + 97)
+                    else:
+                        return make_name(n // 26) + make_name(n % 26)
+                name = make_name(len(names))
+                names[item] = name
+            #if item.name != '':
+            #    name = name + '{' + item.name + '}'
+            return name
+        def print_item(item):
+            name = name_it(item)
+            if isinstance(item, cntk_py.Function):
+                op_name = item.op_name
+                #shape = list(output.shape for output in item.outputs)
+                shape = '(' +  ', '.join([name_it(output) + ':' + "{}".format(output.shape) for output in item.root_function.outputs]) + ')'
+                inputs = '(' +  ', '.join([name_it(input) + ':' + "{}".format(input.shape) for input in item.root_function.inputs]) + ')'
+            #elif isinstance(item, cntk_py.Placeholder):
+            #    op_name = "_"
+            #    shape = item.shape
+            #    inputs = ''
+            elif isinstance(item, cntk_py.Constant):
+                op_name = "Const"
+                shape = item.shape
+                inputs = ''
+            elif isinstance(item, cntk_py.Variable):
+                op_name = "Var "
+                shape = item.shape
+                inputs = ''
+            print(' ', op_name, name, inputs, '->', shape)
+            pass
+        print(name_it(self))
+        for item in graph:
+            print_item(item)
 
     @property
     @typemap
