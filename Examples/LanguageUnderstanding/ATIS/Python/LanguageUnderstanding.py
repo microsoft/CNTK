@@ -81,9 +81,9 @@ def create_model_function():
     return Sequential([
         Embedding(emb_dim),
         #Stabilizer(),
-        #Recurrence(LSTM(hidden_dim), go_backwards=False),
-        (Recurrence(LSTM(hidden_dim), go_backwards=False), Recurrence(LSTM(hidden_dim), go_backwards=True)),
-        plus,
+        Recurrence(LSTM(hidden_dim), go_backwards=False),
+        #(Recurrence(LSTM(hidden_dim), go_backwards=False), Recurrence(LSTM(hidden_dim), go_backwards=True)),
+        #splice,
         #Recurrence(GRU(hidden_dim), go_backwards=False),
         #Recurrence(GRU(hidden_dim, activation=relu), go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=relu), go_backwards=False),

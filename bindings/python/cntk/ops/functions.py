@@ -240,7 +240,6 @@ class Function(cntk_py.Function):
 
         E.g. `Embedding(500) >> (Recurrence(500), Recurrence(500, go_backwards=True)) >> splice >> Dense`
         '''
-        # TODO: change splice() to accept a variable-number of arguments
         inputs = self.outputs
         input_is_tuple = len(inputs) > 1
         # if piping into a tuple of Functions, apply item-wise

@@ -1668,7 +1668,7 @@ def slice(x, axis, begin_index, end_index, name=''):
 
 
 @typemap
-def splice(inputs, axis=-1, name=''):
+def splice(*inputs, axis=-1, name=''):
     '''
     Concatenate the input tensors along an axis.
 
@@ -1684,7 +1684,7 @@ def splice(inputs, axis=-1, name=''):
         ...                       [50, 60]]],dtype=np.float32)
         >>> y = C.constant(value=data2)
         >>> # splice both inputs on axis=0 returns a 5x2 matrix
-        >>> C.splice((x,y), 1).eval()
+        >>> C.splice(x, y, axis=1).eval()
         array([[[  1.,   2.],
                 [  4.,   5.],
                 [ 10.,  20.],
@@ -1692,23 +1692,23 @@ def splice(inputs, axis=-1, name=''):
                 [ 50.,  60.]]], dtype=float32)
 
     Args:
-        inputs (list): tuple of input tensors
-        axis (int or :class:`~cntk.axis.Axis`): axis along which the
+        inputs: one or more input tensors
+        axis (int or :class:`~cntk.axis.Axis`, optional, keyword only): axis along which the
          concatenation will be performed
-        name (str, optional): the name of the Function instance in the network
+        name (str, optional, keyword only): the name of the Function instance in the network
 
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import splice
-    if type(inputs) not in (list, tuple):
-        raise ValueError('inputs has to be an iterable')
+    #if type(inputs) not in (list, tuple):
+    #    raise ValueError('inputs has to be an iterable')
     # TODO: also accept a variable-length parameter list, to allow bidirectional RNN as composition
 
     inputs = [sanitize_input(x) for x in inputs]
     axis = sanitize_axis(axis)
 
-    return splice(inputs, axis, name)
+    return splice(inputs, axis=axis, name=name) # C++ projection expects inputs as a list
 
 ##########################################################################
 # reduction ops
