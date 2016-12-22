@@ -58,7 +58,12 @@ def create_model_function():
 
   @Function
   def softplus4(x):
-      return softplus(4.5*x)/4.5
+      #from blocks import Parameter
+      sc = -10   # Relu    Parameter(1, init=1)#-1  #4.5
+      return log(sigmoid(sc*x))/sc
+      #return softplus(4.5*x)/4.5
+      # similar to relu for large sc, but not as good with sc=1.
+      # Which makes no sense since it should cancel out.
 
   softmux = Function(lambda sel, a, b: a)   # sel * a + (1-sel) * b)
   rnn = RNNUnit(hidden_dim, activation=relu)
