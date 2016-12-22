@@ -7,8 +7,13 @@
 
 import os
 import numpy as np
+import pytest
+
+from cntk.io import _is_tensor, sequence_to_cntk_text_format
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
+
+AA = np.asarray
 
 def test_text_format(tmpdir):
     from cntk.io import text_format_minibatch_source, StreamConfiguration, MinibatchSource
@@ -178,3 +183,47 @@ def test_minibatch(tmpdir):
     assert np.allclose(labels.mask, 
             [[2, 1, 1],
              [2, 1, 0]])
+
+
+@pytest.mark.parametrize("idx, alias_tensor_map, expected", [
+    (0, {'A': [object()]}, ValueError),
+])
+def test_sequence_conversion_exceptions(idx, alias_tensor_map, expected):
+    with pytest.raises(expected):
+        sequence_to_cntk_text_format(idx, alias_tensor_map)
+
+
+@pytest.mark.parametrize("idx, alias_tensor_map, expected", [
+    (0, {'W': AA([])}, ""),
+    (0, {'W': AA([[[1, 0, 0, 0], [1, 0, 0, 0]]])}, """\
+0\t|W 1 0 0 0 1 0 0 0\
+"""),
+    (0, {
+        'W': AA([[[1, 0, 0, 0], [1, 0, 0, 0]]]),
+        'L': AA([[[2]]])
+    },
+        """\
+0\t|L 2 |W 1 0 0 0 1 0 0 0\
+"""),
+    (0, {
+        'W': AA([[[1, 0], [1, 0]], [[5, 6], [7, 8]]]),
+        'L': AA([[[2]]])
+    },
+        """\
+0\t|L 2 |W 1 0 1 0
+0\t|W 5 6 7 8"""),
+])
+def test_sequence_conversion_dense(idx, alias_tensor_map, expected):
+    assert sequence_to_cntk_text_format(idx, alias_tensor_map) == expected
+
+
+@pytest.mark.parametrize("data, expected", [
+    ([1], True),
+    ([[1, 2]], True),
+    ([[AA([1, 2])]], False),
+    ([AA([1, 2])], False),
+    ([AA([1, 2]), AA([])], False),
+])
+def test_is_tensor(data, expected):
+    assert _is_tensor(data) == expected
+

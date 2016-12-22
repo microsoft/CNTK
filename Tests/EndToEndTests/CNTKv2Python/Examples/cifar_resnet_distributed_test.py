@@ -7,7 +7,7 @@
 import numpy as np
 import os
 import sys
-from cntk.utils import cntk_device
+from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
 from cntk.io import FULL_DATA_SWEEP
@@ -40,7 +40,7 @@ def test_cifar_resnet_distributed_error(device_id, is_1bit_sgd):
     os.chdir(os.path.join(base_path, '..'))
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    set_computation_network_trace_level(1) 
+    set_computation_network_trace_level(1)
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     #force_deterministic_algorithms()
     # TODO: do the above; they lead to slightly different results, so not doing it for now

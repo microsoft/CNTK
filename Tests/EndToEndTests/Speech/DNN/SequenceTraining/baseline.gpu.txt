@@ -3,35 +3,37 @@ CPU info:
     Hardware threads: 24
     Total Memory: 264172964 kB
 -------------------------------------------------------------------
-=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining/cntk_sequence.cntk currentDirectory=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData RunDir=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu DataDir=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining OutputDir=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu DeviceId=0 timestamping=true
-CNTK 2.0.beta4.0+ (HEAD a2a030, Nov 23 2016 18:33:12) on localhost at 2016/11/24 19:24:10
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining/cntk_sequence.cntk currentDirectory=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData RunDir=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu DataDir=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining OutputDir=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu DeviceId=0 timestamping=true
+CNTK 2.0.beta6.0+ (HEAD bf0ca9, Dec 20 2016 11:40:12) on localhost at 2016/12/20 16:01:52
 
-/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining/cntk_sequence.cntk  currentDirectory=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData  RunDir=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu  DataDir=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining  OutputDir=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu  DeviceId=0  timestamping=true
-Changed current directory to /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData
-11/24/2016 19:24:11: -------------------------------------------------------------------
-11/24/2016 19:24:11: Build info: 
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining/cntk_sequence.cntk  currentDirectory=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData  RunDir=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu  DataDir=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining  OutputDir=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu  DeviceId=0  timestamping=true
+Changed current directory to /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData
+12/20/2016 16:01:53: -------------------------------------------------------------------
+12/20/2016 16:01:53: Build info: 
 
-11/24/2016 19:24:11: 		Built time: Nov 23 2016 18:33:12
-11/24/2016 19:24:11: 		Last modified date: Wed Nov 23 18:30:09 2016
-11/24/2016 19:24:11: 		Build type: release
-11/24/2016 19:24:11: 		Build target: GPU
-11/24/2016 19:24:11: 		With 1bit-SGD: no
-11/24/2016 19:24:11: 		With ASGD: yes
-11/24/2016 19:24:11: 		Math lib: mkl
-11/24/2016 19:24:11: 		CUDA_PATH: /usr/local/cuda-8.0
-11/24/2016 19:24:11: 		CUB_PATH: /usr/local/cub-1.4.1
-11/24/2016 19:24:11: 		CUDNN_PATH: /usr/local
-11/24/2016 19:24:11: 		Build Branch: HEAD
-11/24/2016 19:24:11: 		Build SHA1: a2a0305b30713d3f8ade828ede1faa77d53665ac
-11/24/2016 19:24:11: 		Built by Source/CNTK/buildinfo.h$$0 on c094ad5d9248
-11/24/2016 19:24:11: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux-SlaveTest
-11/24/2016 19:24:11: -------------------------------------------------------------------
-11/24/2016 19:24:12: -------------------------------------------------------------------
-11/24/2016 19:24:12: GPU info:
+12/20/2016 16:01:53: 		Built time: Dec 20 2016 11:40:12
+12/20/2016 16:01:53: 		Last modified date: Tue Dec 20 11:38:27 2016
+12/20/2016 16:01:53: 		Build type: release
+12/20/2016 16:01:53: 		Build target: GPU
+12/20/2016 16:01:53: 		With 1bit-SGD: no
+12/20/2016 16:01:53: 		With ASGD: yes
+12/20/2016 16:01:53: 		Math lib: mkl
+12/20/2016 16:01:53: 		CUDA_PATH: /usr/local/cuda-8.0
+12/20/2016 16:01:53: 		CUB_PATH: /usr/local/cub-1.4.1
+12/20/2016 16:01:53: 		CUDNN_PATH: /usr/local
+12/20/2016 16:01:53: 		Build Branch: HEAD
+12/20/2016 16:01:53: 		Build SHA1: bf0ca998cd077aa28c04371fd2093770e819ffd0
+12/20/2016 16:01:53: 		Built by Source/CNTK/buildinfo.h$$0 on b4b39bc07965
+12/20/2016 16:01:53: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+12/20/2016 16:01:53: -------------------------------------------------------------------
+12/20/2016 16:01:54: -------------------------------------------------------------------
+12/20/2016 16:01:54: GPU info:
 
-11/24/2016 19:24:12: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3020 MB
-11/24/2016 19:24:12: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3020 MB
-11/24/2016 19:24:12: -------------------------------------------------------------------
+12/20/2016 16:01:54: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3020 MB
+12/20/2016 16:01:54: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3020 MB
+12/20/2016 16:01:54: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3020 MB
+12/20/2016 16:01:54: 		Device[3]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3020 MB
+12/20/2016 16:01:54: -------------------------------------------------------------------
 
 Configuration After Processing and Variable Resolution:
 
@@ -39,46 +41,46 @@ configparameters: cntk_sequence.cntk:addLayer2=[
     action = "edit"
     currLayer = 1
     newLayer = 2
-    currModel = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/Pre1/cntkSpeech"
-    newModel  = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech.0"
-    editPath  = "/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining/add_layer.mel"
+    currModel = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/Pre1/cntkSpeech"
+    newModel  = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech.0"
+    editPath  = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining/add_layer.mel"
 ]
 
 configparameters: cntk_sequence.cntk:AddLayer3=[    
     action = "edit"
     currLayer = 2
     newLayer = 3
-    currModel = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech"
-    newModel  = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.0"
-    editPath  = "/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining/add_layer.mel"
+    currModel = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech"
+    newModel  = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.0"
+    editPath  = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining/add_layer.mel"
 ]
 
 configparameters: cntk_sequence.cntk:command=dptPre1:addLayer2:dptPre2:addLayer3:speechTrain:replaceCriterionNode:sequenceTrain
-configparameters: cntk_sequence.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining
-configparameters: cntk_sequence.cntk:currentDirectory=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData
-configparameters: cntk_sequence.cntk:DataDir=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData
+configparameters: cntk_sequence.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining
+configparameters: cntk_sequence.cntk:currentDirectory=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData
+configparameters: cntk_sequence.cntk:DataDir=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData
 configparameters: cntk_sequence.cntk:deviceId=0
 configparameters: cntk_sequence.cntk:dptPre1=[
     action = "train"
-    modelPath = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/Pre1/cntkSpeech"
+    modelPath = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/Pre1/cntkSpeech"
     NDLNetworkBuilder = [
-        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining/dnn_1layer.txt"
+        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining/dnn_1layer.txt"
     ]
 ]
 
 configparameters: cntk_sequence.cntk:dptPre2=[
     action = "train"
-    modelPath = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech"
+    modelPath = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech"
     NDLNetworkBuilder = [
-        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining/dnn_1layer.txt"
+        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining/dnn_1layer.txt"
     ]
 ]
 
 configparameters: cntk_sequence.cntk:globalInvStdPath=GlobalStats/var.363
 configparameters: cntk_sequence.cntk:globalMeanPath=GlobalStats/mean.363
 configparameters: cntk_sequence.cntk:globalPriorPath=GlobalStats/prior.132
-configparameters: cntk_sequence.cntk:ndlMacros=/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining/macros.txt
-configparameters: cntk_sequence.cntk:OutputDir=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu
+configparameters: cntk_sequence.cntk:ndlMacros=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining/macros.txt
+configparameters: cntk_sequence.cntk:OutputDir=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu
 configparameters: cntk_sequence.cntk:precision=float
 configparameters: cntk_sequence.cntk:reader=[
     readerType = "HTKMLFReader"
@@ -89,11 +91,11 @@ configparameters: cntk_sequence.cntk:reader=[
     features = [
         dim = 363
         type = "real"
-        scpFile = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp"
+        scpFile = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp"
     ]
     labels = [
-        mlfFile = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf"
-        labelMappingFile = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list"
+        mlfFile = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf"
+        labelMappingFile = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list"
         labelDim = 132
         labelType = "category"
     ]
@@ -101,18 +103,18 @@ configparameters: cntk_sequence.cntk:reader=[
 
 configparameters: cntk_sequence.cntk:replaceCriterionNode=[
     action = "edit"
-    currModel = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech"
-    newModel  = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence.0"
-    editPath  = "/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining/replace_ce_with_sequence_criterion.mel"
+    currModel = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech"
+    newModel  = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence.0"
+    editPath  = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining/replace_ce_with_sequence_criterion.mel"
 ]
 
-configparameters: cntk_sequence.cntk:RunDir=/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu
+configparameters: cntk_sequence.cntk:RunDir=/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu
 configparameters: cntk_sequence.cntk:sequenceTrain=[
     action = "train"
-    modelPath = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence"
+    modelPath = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence"
     traceLevel = 1
     NDLNetworkBuilder = [
-        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining/nonexistentfile.txt"
+        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining/nonexistentfile.txt"
     ]
     SGD = [
         epochSize = 81920
@@ -138,20 +140,20 @@ configparameters: cntk_sequence.cntk:sequenceTrain=[
         features = [
             dim = 363
             type = "real"
-            scpFile = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp"
+            scpFile = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp"
         ]
         labels = [
-            mlfFile = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf"
-            labelMappingFile = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list"
+            mlfFile = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf"
+            labelMappingFile = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list"
             labelDim = 132
             labelType = "category"
         ]
         hmms = [
-            phoneFile  = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/model.overalltying"
-            transpFile = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/model.transprob"
+            phoneFile  = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/model.overalltying"
+            transpFile = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/model.transprob"
         ]
         lattices = [
-            denlatTocFile = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/*.lats.toc"
+            denlatTocFile = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/*.lats.toc"
         ]
     ]
 ]
@@ -168,10 +170,10 @@ configparameters: cntk_sequence.cntk:SGD=[
 
 configparameters: cntk_sequence.cntk:speechTrain=[
     action = "train"
-    modelPath = "/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech"
+    modelPath = "/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech"
     traceLevel = 1
     NDLNetworkBuilder = [
-        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Tests/EndToEndTests/Speech/DNN/SequenceTraining/dnn.txt"
+        networkDescription = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/DNN/SequenceTraining/dnn.txt"
     ]
     SGD = [
         epochSize = 81920
@@ -190,1437 +192,1437 @@ configparameters: cntk_sequence.cntk:speechTrain=[
 configparameters: cntk_sequence.cntk:timestamping=true
 configparameters: cntk_sequence.cntk:traceLevel=1
 configparameters: cntk_sequence.cntk:truncated=false
-11/24/2016 19:24:12: Commands: dptPre1 addLayer2 dptPre2 addLayer3 speechTrain replaceCriterionNode sequenceTrain
-11/24/2016 19:24:12: precision = "float"
+12/20/2016 16:01:54: Commands: dptPre1 addLayer2 dptPre2 addLayer3 speechTrain replaceCriterionNode sequenceTrain
+12/20/2016 16:01:54: precision = "float"
 
-11/24/2016 19:24:12: ##############################################################################
-11/24/2016 19:24:12: #                                                                            #
-11/24/2016 19:24:12: # dptPre1 command (train action)                                             #
-11/24/2016 19:24:12: #                                                                            #
-11/24/2016 19:24:12: ##############################################################################
+12/20/2016 16:01:54: ##############################################################################
+12/20/2016 16:01:54: #                                                                            #
+12/20/2016 16:01:54: # dptPre1 command (train action)                                             #
+12/20/2016 16:01:54: #                                                                            #
+12/20/2016 16:01:54: ##############################################################################
 
-11/24/2016 19:24:12: 
+12/20/2016 16:01:54: 
 Creating virgin network.
 NDLBuilder Using GPU 0
 SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
-reading script file /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp ... 948 entries
-total 132 state names in state list /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list
-htkmlfreader: reading MLF file /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf ... total 948 entries
+reading script file /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp ... 948 entries
+total 132 state names in state list /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list
+htkmlfreader: reading MLF file /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-11/24/2016 19:24:12: 
+12/20/2016 16:01:54: 
 Model has 19 nodes. Using GPU 0.
 
-11/24/2016 19:24:12: Training criterion:   ce = CrossEntropyWithSoftmax
-11/24/2016 19:24:12: Evaluation criterion: err = ClassificationError
+12/20/2016 16:01:54: Training criterion:   ce = CrossEntropyWithSoftmax
+12/20/2016 16:01:54: Evaluation criterion: err = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
 
 Memory Sharing: Out of 29 matrices, 11 are shared as 5, and 18 are not shared.
 
-	{ HL1.b : [512 x 1] (gradient)
-	  HL1.y : [512 x 1 x *] (gradient)
-	  OL.z : [132 x 1 x *] (gradient) }
-	{ HL1.W : [512 x 363] (gradient)
-	  HL1.z : [512 x 1 x *] }
-	{ OL.W : [132 x 512] (gradient)
-	  OL.z : [132 x 1 x *] }
 	{ HL1.t : [512 x *] (gradient)
 	  HL1.y : [512 x 1 x *] }
 	{ HL1.z : [512 x 1 x *] (gradient)
 	  OL.t : [132 x 1 x *] }
+	{ HL1.W : [512 x 363] (gradient)
+	  HL1.z : [512 x 1 x *] }
+	{ HL1.b : [512 x 1] (gradient)
+	  HL1.y : [512 x 1 x *] (gradient)
+	  OL.z : [132 x 1 x *] (gradient) }
+	{ OL.W : [132 x 512] (gradient)
+	  OL.z : [132 x 1 x *] }
 
 
-11/24/2016 19:24:12: Training 254084 parameters in 4 out of 4 parameter tensors and 10 nodes with gradient:
+12/20/2016 16:01:54: Training 254084 parameters in 4 out of 4 parameter tensors and 10 nodes with gradient:
 
-11/24/2016 19:24:12: 	Node 'HL1.W' (LearnableParameter operation) : [512 x 363]
-11/24/2016 19:24:12: 	Node 'HL1.b' (LearnableParameter operation) : [512 x 1]
-11/24/2016 19:24:12: 	Node 'OL.W' (LearnableParameter operation) : [132 x 512]
-11/24/2016 19:24:12: 	Node 'OL.b' (LearnableParameter operation) : [132 x 1]
+12/20/2016 16:01:54: 	Node 'HL1.W' (LearnableParameter operation) : [512 x 363]
+12/20/2016 16:01:54: 	Node 'HL1.b' (LearnableParameter operation) : [512 x 1]
+12/20/2016 16:01:54: 	Node 'OL.W' (LearnableParameter operation) : [132 x 512]
+12/20/2016 16:01:54: 	Node 'OL.b' (LearnableParameter operation) : [132 x 1]
 
-11/24/2016 19:24:12: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+12/20/2016 16:01:54: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-11/24/2016 19:24:12: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+12/20/2016 16:01:54: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 minibatchiterator: epoch 0: frames [0..81920] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
-11/24/2016 19:24:12: Starting minibatch loop.
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[   1-  10, 3.12%]: ce = 3.74183846 * 2560; err = 0.80195313 * 2560; time = 0.1288s; samplesPerSecond = 19869.3
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[  11-  20, 6.25%]: ce = 2.91124763 * 2560; err = 0.70898438 * 2560; time = 0.0082s; samplesPerSecond = 312996.7
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[  21-  30, 9.38%]: ce = 2.58015976 * 2560; err = 0.66640625 * 2560; time = 0.0081s; samplesPerSecond = 316283.7
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[  31-  40, 12.50%]: ce = 2.27427139 * 2560; err = 0.58750000 * 2560; time = 0.0080s; samplesPerSecond = 320480.7
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[  41-  50, 15.62%]: ce = 2.05503616 * 2560; err = 0.56093750 * 2560; time = 0.0079s; samplesPerSecond = 322053.1
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.91055145 * 2560; err = 0.52812500 * 2560; time = 0.0079s; samplesPerSecond = 322946.9
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.81562805 * 2560; err = 0.51171875 * 2560; time = 0.0080s; samplesPerSecond = 321608.0
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.68803253 * 2560; err = 0.48476562 * 2560; time = 0.0079s; samplesPerSecond = 323600.1
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[  81-  90, 28.12%]: ce = 1.57382050 * 2560; err = 0.45429687 * 2560; time = 0.0079s; samplesPerSecond = 323641.0
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.62090302 * 2560; err = 0.47304687 * 2560; time = 0.0079s; samplesPerSecond = 322093.6
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.59272614 * 2560; err = 0.47500000 * 2560; time = 0.0079s; samplesPerSecond = 324914.3
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.51520233 * 2560; err = 0.44531250 * 2560; time = 0.0079s; samplesPerSecond = 323314.0
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 121- 130, 40.62%]: ce = 1.49181976 * 2560; err = 0.45039062 * 2560; time = 0.0079s; samplesPerSecond = 324379.1
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.53703613 * 2560; err = 0.44804688 * 2560; time = 0.0079s; samplesPerSecond = 324584.8
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.43095093 * 2560; err = 0.41640625 * 2560; time = 0.0080s; samplesPerSecond = 321729.3
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.41503906 * 2560; err = 0.40078125 * 2560; time = 0.0079s; samplesPerSecond = 323681.9
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 161- 170, 53.12%]: ce = 1.38913269 * 2560; err = 0.41132812 * 2560; time = 0.0079s; samplesPerSecond = 323232.3
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.41208191 * 2560; err = 0.42226562 * 2560; time = 0.0079s; samplesPerSecond = 325079.4
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.39966431 * 2560; err = 0.40664062 * 2560; time = 0.0080s; samplesPerSecond = 319960.0
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.42729187 * 2560; err = 0.42617187 * 2560; time = 0.0080s; samplesPerSecond = 320721.6
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 201- 210, 65.62%]: ce = 1.41336365 * 2560; err = 0.42343750 * 2560; time = 0.0079s; samplesPerSecond = 322336.9
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.33192749 * 2560; err = 0.39921875 * 2560; time = 0.0080s; samplesPerSecond = 321164.2
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.28583069 * 2560; err = 0.38671875 * 2560; time = 0.0079s; samplesPerSecond = 322580.6
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.34125366 * 2560; err = 0.40976563 * 2560; time = 0.0080s; samplesPerSecond = 320280.2
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 241- 250, 78.12%]: ce = 1.32662354 * 2560; err = 0.39687500 * 2560; time = 0.0080s; samplesPerSecond = 321527.3
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.21427002 * 2560; err = 0.37187500 * 2560; time = 0.0079s; samplesPerSecond = 323191.5
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.23751526 * 2560; err = 0.37382813 * 2560; time = 0.0080s; samplesPerSecond = 320480.7
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.29967346 * 2560; err = 0.39062500 * 2560; time = 0.0080s; samplesPerSecond = 318645.8
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 281- 290, 90.62%]: ce = 1.21246338 * 2560; err = 0.37382813 * 2560; time = 0.0079s; samplesPerSecond = 323927.6
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.20534058 * 2560; err = 0.36835937 * 2560; time = 0.0079s; samplesPerSecond = 323518.3
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.23593445 * 2560; err = 0.37187500 * 2560; time = 0.0079s; samplesPerSecond = 323559.2
-11/24/2016 19:24:12:  Epoch[ 1 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.25566101 * 2560; err = 0.38007812 * 2560; time = 0.0078s; samplesPerSecond = 326364.1
-11/24/2016 19:24:12: Finished Epoch[ 1 of 2]: [Training] ce = 1.62944660 * 81920; err = 0.46020508 * 81920; totalSamplesSeen = 81920; learningRatePerSample = 0.003125; epochTime=0.478837s
-11/24/2016 19:24:12: SGD: Saving checkpoint model '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/Pre1/cntkSpeech.1'
+12/20/2016 16:01:54: Starting minibatch loop.
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[   1-  10, 3.12%]: ce = 3.74183846 * 2560; err = 0.80195313 * 2560; time = 0.1368s; samplesPerSecond = 18719.5
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[  11-  20, 6.25%]: ce = 2.91124763 * 2560; err = 0.70898438 * 2560; time = 0.0079s; samplesPerSecond = 325285.9
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[  21-  30, 9.38%]: ce = 2.58015976 * 2560; err = 0.66640625 * 2560; time = 0.0077s; samplesPerSecond = 334378.3
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[  31-  40, 12.50%]: ce = 2.27427139 * 2560; err = 0.58750000 * 2560; time = 0.0075s; samplesPerSecond = 341606.6
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[  41-  50, 15.62%]: ce = 2.05503616 * 2560; err = 0.56093750 * 2560; time = 0.0075s; samplesPerSecond = 342200.2
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.91055145 * 2560; err = 0.52812500 * 2560; time = 0.0075s; samplesPerSecond = 341789.1
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.81562805 * 2560; err = 0.51171875 * 2560; time = 0.0075s; samplesPerSecond = 341561.0
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.68803253 * 2560; err = 0.48476562 * 2560; time = 0.0074s; samplesPerSecond = 344086.0
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[  81-  90, 28.12%]: ce = 1.57382050 * 2560; err = 0.45429687 * 2560; time = 0.0075s; samplesPerSecond = 339928.3
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.62090302 * 2560; err = 0.47304687 * 2560; time = 0.0075s; samplesPerSecond = 343071.6
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.59272614 * 2560; err = 0.47500000 * 2560; time = 0.0075s; samplesPerSecond = 341697.8
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.51520233 * 2560; err = 0.44531250 * 2560; time = 0.0075s; samplesPerSecond = 342612.4
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[ 121- 130, 40.62%]: ce = 1.49181976 * 2560; err = 0.45039062 * 2560; time = 0.0075s; samplesPerSecond = 341015.1
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.53703613 * 2560; err = 0.44804688 * 2560; time = 0.0075s; samplesPerSecond = 341105.9
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.43095093 * 2560; err = 0.41640625 * 2560; time = 0.0075s; samplesPerSecond = 343209.5
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.41503906 * 2560; err = 0.40078125 * 2560; time = 0.0075s; samplesPerSecond = 341515.5
+12/20/2016 16:01:54:  Epoch[ 1 of 2]-Minibatch[ 161- 170, 53.12%]: ce = 1.38913269 * 2560; err = 0.41132812 * 2560; time = 0.0075s; samplesPerSecond = 342429.1
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.41208191 * 2560; err = 0.42226562 * 2560; time = 0.0075s; samplesPerSecond = 342474.9
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.39966431 * 2560; err = 0.40664062 * 2560; time = 0.0075s; samplesPerSecond = 341606.6
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.42729187 * 2560; err = 0.42617187 * 2560; time = 0.0075s; samplesPerSecond = 341424.4
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 201- 210, 65.62%]: ce = 1.41336365 * 2560; err = 0.42343750 * 2560; time = 0.0076s; samplesPerSecond = 336266.9
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.33192749 * 2560; err = 0.39921875 * 2560; time = 0.0075s; samplesPerSecond = 339522.5
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.28583069 * 2560; err = 0.38671875 * 2560; time = 0.0075s; samplesPerSecond = 343163.5
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.34125366 * 2560; err = 0.40976563 * 2560; time = 0.0075s; samplesPerSecond = 339567.6
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 241- 250, 78.12%]: ce = 1.32662354 * 2560; err = 0.39687500 * 2560; time = 0.0076s; samplesPerSecond = 338803.6
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.21427002 * 2560; err = 0.37187500 * 2560; time = 0.0075s; samplesPerSecond = 340289.8
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.23751526 * 2560; err = 0.37382813 * 2560; time = 0.0075s; samplesPerSecond = 340199.3
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.29967346 * 2560; err = 0.39062500 * 2560; time = 0.0075s; samplesPerSecond = 341060.5
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 281- 290, 90.62%]: ce = 1.21246338 * 2560; err = 0.37382813 * 2560; time = 0.0075s; samplesPerSecond = 341515.5
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.20534058 * 2560; err = 0.36835937 * 2560; time = 0.0075s; samplesPerSecond = 341880.3
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.23593445 * 2560; err = 0.37187500 * 2560; time = 0.0075s; samplesPerSecond = 342154.5
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.25566101 * 2560; err = 0.38007812 * 2560; time = 0.0073s; samplesPerSecond = 350301.0
+12/20/2016 16:01:55: Finished Epoch[ 1 of 2]: [Training] ce = 1.62944660 * 81920; err = 0.46020508 * 81920; totalSamplesSeen = 81920; learningRatePerSample = 0.003125; epochTime=0.474607s
+12/20/2016 16:01:55: SGD: Saving checkpoint model '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/Pre1/cntkSpeech.1'
 
-11/24/2016 19:24:12: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+12/20/2016 16:01:55: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
-11/24/2016 19:24:12: Starting minibatch loop.
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[   1-  10, 3.12%]: ce = 1.23269291 * 2560; err = 0.38164063 * 2560; time = 0.0094s; samplesPerSecond = 272717.6
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[  11-  20, 6.25%]: ce = 1.20291767 * 2560; err = 0.37304688 * 2560; time = 0.0080s; samplesPerSecond = 321043.4
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[  21-  30, 9.38%]: ce = 1.28558159 * 2560; err = 0.37695312 * 2560; time = 0.0079s; samplesPerSecond = 322702.6
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[  31-  40, 12.50%]: ce = 1.22916222 * 2560; err = 0.37421875 * 2560; time = 0.0079s; samplesPerSecond = 322621.3
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[  41-  50, 15.62%]: ce = 1.18205528 * 2560; err = 0.35585937 * 2560; time = 0.0080s; samplesPerSecond = 318051.9
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.28033676 * 2560; err = 0.37890625 * 2560; time = 0.0079s; samplesPerSecond = 322865.4
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.22179184 * 2560; err = 0.37421875 * 2560; time = 0.0080s; samplesPerSecond = 321931.6
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.17912292 * 2560; err = 0.36640625 * 2560; time = 0.0079s; samplesPerSecond = 323150.7
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[  81-  90, 28.12%]: ce = 1.23585739 * 2560; err = 0.35976562 * 2560; time = 0.0079s; samplesPerSecond = 322215.2
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.18168030 * 2560; err = 0.37460938 * 2560; time = 0.0079s; samplesPerSecond = 322540.0
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.19452591 * 2560; err = 0.35859375 * 2560; time = 0.0079s; samplesPerSecond = 324667.1
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.18433685 * 2560; err = 0.34609375 * 2560; time = 0.0080s; samplesPerSecond = 320400.5
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[ 121- 130, 40.62%]: ce = 1.16999817 * 2560; err = 0.36562500 * 2560; time = 0.0080s; samplesPerSecond = 318764.8
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.13339691 * 2560; err = 0.35507813 * 2560; time = 0.0080s; samplesPerSecond = 318328.8
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.10162354 * 2560; err = 0.32734375 * 2560; time = 0.0080s; samplesPerSecond = 319401.1
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.10350647 * 2560; err = 0.33593750 * 2560; time = 0.0080s; samplesPerSecond = 319720.2
-11/24/2016 19:24:12:  Epoch[ 2 of 2]-Minibatch[ 161- 170, 53.12%]: ce = 1.19208984 * 2560; err = 0.35781250 * 2560; time = 0.0080s; samplesPerSecond = 321244.8
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.16002197 * 2560; err = 0.35468750 * 2560; time = 0.0097s; samplesPerSecond = 264763.7
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.11639099 * 2560; err = 0.34453125 * 2560; time = 0.0089s; samplesPerSecond = 287964.0
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.12366943 * 2560; err = 0.35234375 * 2560; time = 0.0083s; samplesPerSecond = 309889.8
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 201- 210, 65.62%]: ce = 1.09730225 * 2560; err = 0.32656250 * 2560; time = 0.0081s; samplesPerSecond = 314767.0
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.13167572 * 2560; err = 0.34296875 * 2560; time = 0.0081s; samplesPerSecond = 317539.1
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.13528748 * 2560; err = 0.34882812 * 2560; time = 0.0081s; samplesPerSecond = 317657.3
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.29873352 * 2560; err = 0.39023438 * 2560; time = 0.0080s; samplesPerSecond = 318883.9
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 241- 250, 78.12%]: ce = 1.18422852 * 2560; err = 0.35937500 * 2560; time = 0.0080s; samplesPerSecond = 320681.4
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.13612366 * 2560; err = 0.35507813 * 2560; time = 0.0080s; samplesPerSecond = 321406.2
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.14573059 * 2560; err = 0.34843750 * 2560; time = 0.0080s; samplesPerSecond = 321891.1
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.14446716 * 2560; err = 0.34726563 * 2560; time = 0.0078s; samplesPerSecond = 326530.6
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 281- 290, 90.62%]: ce = 1.06778870 * 2560; err = 0.33476563 * 2560; time = 0.0079s; samplesPerSecond = 325244.6
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.09552002 * 2560; err = 0.33398438 * 2560; time = 0.0079s; samplesPerSecond = 322580.6
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.08288879 * 2560; err = 0.33671875 * 2560; time = 0.0078s; samplesPerSecond = 327240.2
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.06622925 * 2560; err = 0.33281250 * 2560; time = 0.0077s; samplesPerSecond = 331262.9
-11/24/2016 19:24:13: Finished Epoch[ 2 of 2]: [Training] ce = 1.16552296 * 81920; err = 0.35533447 * 81920; totalSamplesSeen = 163840; learningRatePerSample = 0.003125; epochTime=0.262556s
-11/24/2016 19:24:13: SGD: Saving checkpoint model '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/Pre1/cntkSpeech'
+12/20/2016 16:01:55: Starting minibatch loop.
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[   1-  10, 3.12%]: ce = 1.23269291 * 2560; err = 0.38164063 * 2560; time = 0.0089s; samplesPerSecond = 287964.0
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[  11-  20, 6.25%]: ce = 1.20291767 * 2560; err = 0.37304688 * 2560; time = 0.0076s; samplesPerSecond = 337241.5
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[  21-  30, 9.38%]: ce = 1.28558159 * 2560; err = 0.37695312 * 2560; time = 0.0075s; samplesPerSecond = 341743.4
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[  31-  40, 12.50%]: ce = 1.22916222 * 2560; err = 0.37421875 * 2560; time = 0.0075s; samplesPerSecond = 341333.3
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[  41-  50, 15.62%]: ce = 1.18205528 * 2560; err = 0.35585937 * 2560; time = 0.0075s; samplesPerSecond = 341834.7
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.28033676 * 2560; err = 0.37890625 * 2560; time = 0.0075s; samplesPerSecond = 341834.7
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.22179184 * 2560; err = 0.37421875 * 2560; time = 0.0075s; samplesPerSecond = 341469.9
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.17912292 * 2560; err = 0.36640625 * 2560; time = 0.0075s; samplesPerSecond = 341926.0
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[  81-  90, 28.12%]: ce = 1.23585739 * 2560; err = 0.35976562 * 2560; time = 0.0075s; samplesPerSecond = 342017.4
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.18168030 * 2560; err = 0.37460938 * 2560; time = 0.0075s; samplesPerSecond = 342750.0
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.19452591 * 2560; err = 0.35859375 * 2560; time = 0.0075s; samplesPerSecond = 343531.9
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.18433685 * 2560; err = 0.34609375 * 2560; time = 0.0075s; samplesPerSecond = 342429.1
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 121- 130, 40.62%]: ce = 1.16999817 * 2560; err = 0.36562500 * 2560; time = 0.0075s; samplesPerSecond = 340380.3
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.13339691 * 2560; err = 0.35507813 * 2560; time = 0.0075s; samplesPerSecond = 341015.1
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.10162354 * 2560; err = 0.32734375 * 2560; time = 0.0075s; samplesPerSecond = 342841.8
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.10350647 * 2560; err = 0.33593750 * 2560; time = 0.0076s; samplesPerSecond = 337597.3
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 161- 170, 53.12%]: ce = 1.19208984 * 2560; err = 0.35781250 * 2560; time = 0.0075s; samplesPerSecond = 340425.5
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.16002197 * 2560; err = 0.35468750 * 2560; time = 0.0074s; samplesPerSecond = 343901.1
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.11639099 * 2560; err = 0.34453125 * 2560; time = 0.0075s; samplesPerSecond = 341971.7
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.12366943 * 2560; err = 0.35234375 * 2560; time = 0.0075s; samplesPerSecond = 340244.6
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 201- 210, 65.62%]: ce = 1.09730225 * 2560; err = 0.32656250 * 2560; time = 0.0075s; samplesPerSecond = 340969.6
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.13167572 * 2560; err = 0.34296875 * 2560; time = 0.0075s; samplesPerSecond = 342154.5
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.13528748 * 2560; err = 0.34882812 * 2560; time = 0.0076s; samplesPerSecond = 337108.2
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.29873352 * 2560; err = 0.39023438 * 2560; time = 0.0075s; samplesPerSecond = 343347.6
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 241- 250, 78.12%]: ce = 1.18422852 * 2560; err = 0.35937500 * 2560; time = 0.0075s; samplesPerSecond = 339792.9
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.13612366 * 2560; err = 0.35507813 * 2560; time = 0.0075s; samplesPerSecond = 339567.6
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.14573059 * 2560; err = 0.34843750 * 2560; time = 0.0075s; samplesPerSecond = 342795.9
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.14446716 * 2560; err = 0.34726563 * 2560; time = 0.0075s; samplesPerSecond = 342063.1
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 281- 290, 90.62%]: ce = 1.06778870 * 2560; err = 0.33476563 * 2560; time = 0.0075s; samplesPerSecond = 343439.8
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.09552002 * 2560; err = 0.33398438 * 2560; time = 0.0075s; samplesPerSecond = 341971.7
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.08288879 * 2560; err = 0.33671875 * 2560; time = 0.0075s; samplesPerSecond = 342474.9
+12/20/2016 16:01:55:  Epoch[ 2 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.06622925 * 2560; err = 0.33281250 * 2560; time = 0.0073s; samplesPerSecond = 350253.1
+12/20/2016 16:01:55: Finished Epoch[ 2 of 2]: [Training] ce = 1.16552296 * 81920; err = 0.35533447 * 81920; totalSamplesSeen = 163840; learningRatePerSample = 0.003125; epochTime=0.24444s
+12/20/2016 16:01:55: SGD: Saving checkpoint model '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/Pre1/cntkSpeech'
 
-11/24/2016 19:24:13: Action "train" complete.
-
-
-11/24/2016 19:24:13: ##############################################################################
-11/24/2016 19:24:13: #                                                                            #
-11/24/2016 19:24:13: # addLayer2 command (edit action)                                            #
-11/24/2016 19:24:13: #                                                                            #
-11/24/2016 19:24:13: ##############################################################################
+12/20/2016 16:01:55: Action "train" complete.
 
 
-11/24/2016 19:24:13: Action "edit" complete.
+12/20/2016 16:01:55: ##############################################################################
+12/20/2016 16:01:55: #                                                                            #
+12/20/2016 16:01:55: # addLayer2 command (edit action)                                            #
+12/20/2016 16:01:55: #                                                                            #
+12/20/2016 16:01:55: ##############################################################################
 
 
-11/24/2016 19:24:13: ##############################################################################
-11/24/2016 19:24:13: #                                                                            #
-11/24/2016 19:24:13: # dptPre2 command (train action)                                             #
-11/24/2016 19:24:13: #                                                                            #
-11/24/2016 19:24:13: ##############################################################################
+12/20/2016 16:01:55: Action "edit" complete.
 
-11/24/2016 19:24:13: 
-Starting from checkpoint. Loading network from '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech.0'.
+
+12/20/2016 16:01:55: ##############################################################################
+12/20/2016 16:01:55: #                                                                            #
+12/20/2016 16:01:55: # dptPre2 command (train action)                                             #
+12/20/2016 16:01:55: #                                                                            #
+12/20/2016 16:01:55: ##############################################################################
+
+12/20/2016 16:01:55: 
+Starting from checkpoint. Loading network from '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech.0'.
 NDLBuilder Using GPU 0
-reading script file /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp ... 948 entries
-total 132 state names in state list /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list
-htkmlfreader: reading MLF file /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf ... total 948 entries
+reading script file /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp ... 948 entries
+total 132 state names in state list /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list
+htkmlfreader: reading MLF file /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-11/24/2016 19:24:13: 
+12/20/2016 16:01:55: 
 Model has 24 nodes. Using GPU 0.
 
-11/24/2016 19:24:13: Training criterion:   ce = CrossEntropyWithSoftmax
-11/24/2016 19:24:13: Evaluation criterion: err = ClassificationError
+12/20/2016 16:01:55: Training criterion:   ce = CrossEntropyWithSoftmax
+12/20/2016 16:01:55: Evaluation criterion: err = ClassificationError
 
-11/24/2016 19:24:13: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
+12/20/2016 16:01:55: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
 
-11/24/2016 19:24:13: 	Node 'HL1.W' (LearnableParameter operation) : [512 x 363]
-11/24/2016 19:24:13: 	Node 'HL1.b' (LearnableParameter operation) : [512 x 1]
-11/24/2016 19:24:13: 	Node 'HL2.W' (LearnableParameter operation) : [512 x 512]
-11/24/2016 19:24:13: 	Node 'HL2.b' (LearnableParameter operation) : [512 x 1]
-11/24/2016 19:24:13: 	Node 'OL.W' (LearnableParameter operation) : [132 x 512]
-11/24/2016 19:24:13: 	Node 'OL.b' (LearnableParameter operation) : [132 x 1]
+12/20/2016 16:01:55: 	Node 'HL1.W' (LearnableParameter operation) : [512 x 363]
+12/20/2016 16:01:55: 	Node 'HL1.b' (LearnableParameter operation) : [512 x 1]
+12/20/2016 16:01:55: 	Node 'HL2.W' (LearnableParameter operation) : [512 x 512]
+12/20/2016 16:01:55: 	Node 'HL2.b' (LearnableParameter operation) : [512 x 1]
+12/20/2016 16:01:55: 	Node 'OL.W' (LearnableParameter operation) : [132 x 512]
+12/20/2016 16:01:55: 	Node 'OL.b' (LearnableParameter operation) : [132 x 1]
 
-11/24/2016 19:24:13: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+12/20/2016 16:01:55: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-11/24/2016 19:24:13: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+12/20/2016 16:01:55: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 minibatchiterator: epoch 0: frames [0..81920] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
-11/24/2016 19:24:13: Starting minibatch loop.
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[   1-  10, 3.12%]: ce = 4.39397278 * 2560; err = 0.80781250 * 2560; time = 0.0144s; samplesPerSecond = 177938.4
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[  11-  20, 6.25%]: ce = 2.82511444 * 2560; err = 0.72187500 * 2560; time = 0.0113s; samplesPerSecond = 225809.3
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[  21-  30, 9.38%]: ce = 2.22725906 * 2560; err = 0.57851562 * 2560; time = 0.0113s; samplesPerSecond = 225590.4
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[  31-  40, 12.50%]: ce = 1.91397247 * 2560; err = 0.50859375 * 2560; time = 0.0113s; samplesPerSecond = 225829.2
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[  41-  50, 15.62%]: ce = 1.71832962 * 2560; err = 0.47812500 * 2560; time = 0.0113s; samplesPerSecond = 226288.3
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.60741425 * 2560; err = 0.45898438 * 2560; time = 0.0113s; samplesPerSecond = 226608.8
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.56547241 * 2560; err = 0.45039062 * 2560; time = 0.0113s; samplesPerSecond = 226008.7
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.47599487 * 2560; err = 0.42773438 * 2560; time = 0.0113s; samplesPerSecond = 225670.0
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[  81-  90, 28.12%]: ce = 1.39255371 * 2560; err = 0.40625000 * 2560; time = 0.0113s; samplesPerSecond = 226709.2
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.42025909 * 2560; err = 0.42695312 * 2560; time = 0.0114s; samplesPerSecond = 225292.6
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.40285797 * 2560; err = 0.43203125 * 2560; time = 0.0113s; samplesPerSecond = 226228.3
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.37360992 * 2560; err = 0.41210938 * 2560; time = 0.0114s; samplesPerSecond = 225213.3
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 121- 130, 40.62%]: ce = 1.34541016 * 2560; err = 0.41132812 * 2560; time = 0.0113s; samplesPerSecond = 226568.7
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.40011444 * 2560; err = 0.40625000 * 2560; time = 0.0113s; samplesPerSecond = 225968.8
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.33474121 * 2560; err = 0.39804688 * 2560; time = 0.0114s; samplesPerSecond = 225491.1
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.33484497 * 2560; err = 0.40078125 * 2560; time = 0.0113s; samplesPerSecond = 227010.7
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 161- 170, 53.12%]: ce = 1.26447144 * 2560; err = 0.37500000 * 2560; time = 0.0114s; samplesPerSecond = 224561.4
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.28161011 * 2560; err = 0.39179687 * 2560; time = 0.0113s; samplesPerSecond = 226268.3
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.30275269 * 2560; err = 0.39023438 * 2560; time = 0.0113s; samplesPerSecond = 225968.8
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.28338013 * 2560; err = 0.39648438 * 2560; time = 0.0114s; samplesPerSecond = 225530.8
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 201- 210, 65.62%]: ce = 1.26476746 * 2560; err = 0.39140625 * 2560; time = 0.0114s; samplesPerSecond = 225153.9
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.21593323 * 2560; err = 0.36679688 * 2560; time = 0.0113s; samplesPerSecond = 225789.4
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.21276855 * 2560; err = 0.37187500 * 2560; time = 0.0113s; samplesPerSecond = 226068.5
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.25262756 * 2560; err = 0.37812500 * 2560; time = 0.0113s; samplesPerSecond = 225829.2
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 241- 250, 78.12%]: ce = 1.23072510 * 2560; err = 0.37578125 * 2560; time = 0.0113s; samplesPerSecond = 226048.6
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.15166016 * 2560; err = 0.35351562 * 2560; time = 0.0114s; samplesPerSecond = 225491.1
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.16847839 * 2560; err = 0.35351562 * 2560; time = 0.0113s; samplesPerSecond = 225670.0
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.22899780 * 2560; err = 0.36757812 * 2560; time = 0.0113s; samplesPerSecond = 226168.4
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 281- 290, 90.62%]: ce = 1.16620483 * 2560; err = 0.36093750 * 2560; time = 0.0113s; samplesPerSecond = 225570.5
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.17404785 * 2560; err = 0.35898438 * 2560; time = 0.0114s; samplesPerSecond = 224995.6
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.16364441 * 2560; err = 0.34960938 * 2560; time = 0.0115s; samplesPerSecond = 222106.5
-11/24/2016 19:24:13:  Epoch[ 1 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.16885071 * 2560; err = 0.34882812 * 2560; time = 0.0115s; samplesPerSecond = 222125.8
-11/24/2016 19:24:13: Finished Epoch[ 1 of 2]: [Training] ce = 1.50821381 * 81920; err = 0.42675781 * 81920; totalSamplesSeen = 81920; learningRatePerSample = 0.003125; epochTime=0.466833s
-11/24/2016 19:24:13: SGD: Saving checkpoint model '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech.1'
+12/20/2016 16:01:55: Starting minibatch loop.
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[   1-  10, 3.12%]: ce = 4.68542328 * 2560; err = 0.81210938 * 2560; time = 0.0145s; samplesPerSecond = 177125.9
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[  11-  20, 6.25%]: ce = 2.87754745 * 2560; err = 0.70429688 * 2560; time = 0.0105s; samplesPerSecond = 243670.3
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[  21-  30, 9.38%]: ce = 2.30694504 * 2560; err = 0.60078125 * 2560; time = 0.0104s; samplesPerSecond = 246224.9
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[  31-  40, 12.50%]: ce = 1.97322769 * 2560; err = 0.53046875 * 2560; time = 0.0103s; samplesPerSecond = 248857.8
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[  41-  50, 15.62%]: ce = 1.74820175 * 2560; err = 0.48515625 * 2560; time = 0.0103s; samplesPerSecond = 247989.9
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.62830963 * 2560; err = 0.45898438 * 2560; time = 0.0103s; samplesPerSecond = 249124.2
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.57729797 * 2560; err = 0.45742187 * 2560; time = 0.0102s; samplesPerSecond = 249975.6
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.47783203 * 2560; err = 0.42539063 * 2560; time = 0.0102s; samplesPerSecond = 249829.2
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[  81-  90, 28.12%]: ce = 1.38961029 * 2560; err = 0.40312500 * 2560; time = 0.0103s; samplesPerSecond = 248616.1
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.42050476 * 2560; err = 0.42500000 * 2560; time = 0.0104s; samplesPerSecond = 246224.9
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.41446533 * 2560; err = 0.43398437 * 2560; time = 0.0102s; samplesPerSecond = 249780.5
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.38064575 * 2560; err = 0.41562500 * 2560; time = 0.0103s; samplesPerSecond = 248399.0
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 121- 130, 40.62%]: ce = 1.34983063 * 2560; err = 0.41093750 * 2560; time = 0.0105s; samplesPerSecond = 244438.1
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.38891449 * 2560; err = 0.40039062 * 2560; time = 0.0107s; samplesPerSecond = 239633.1
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.32506714 * 2560; err = 0.39218750 * 2560; time = 0.0101s; samplesPerSecond = 252739.7
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.31689453 * 2560; err = 0.39375000 * 2560; time = 0.0101s; samplesPerSecond = 254195.2
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 161- 170, 53.12%]: ce = 1.25972900 * 2560; err = 0.37382813 * 2560; time = 0.0101s; samplesPerSecond = 254447.9
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.28251343 * 2560; err = 0.38828125 * 2560; time = 0.0101s; samplesPerSecond = 253766.9
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.29806213 * 2560; err = 0.39609375 * 2560; time = 0.0101s; samplesPerSecond = 252739.7
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.28545227 * 2560; err = 0.39296875 * 2560; time = 0.0101s; samplesPerSecond = 252914.4
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 201- 210, 65.62%]: ce = 1.26422424 * 2560; err = 0.38710937 * 2560; time = 0.0102s; samplesPerSecond = 251671.3
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.21907654 * 2560; err = 0.37070313 * 2560; time = 0.0102s; samplesPerSecond = 250931.2
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.21932678 * 2560; err = 0.37304688 * 2560; time = 0.0102s; samplesPerSecond = 252018.1
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.25006714 * 2560; err = 0.37890625 * 2560; time = 0.0101s; samplesPerSecond = 253314.9
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 241- 250, 78.12%]: ce = 1.22711792 * 2560; err = 0.37773438 * 2560; time = 0.0101s; samplesPerSecond = 252939.4
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.15191956 * 2560; err = 0.34804687 * 2560; time = 0.0102s; samplesPerSecond = 251943.7
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.16685791 * 2560; err = 0.35078125 * 2560; time = 0.0102s; samplesPerSecond = 249926.8
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.22696533 * 2560; err = 0.36875000 * 2560; time = 0.0101s; samplesPerSecond = 253114.5
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 281- 290, 90.62%]: ce = 1.16452332 * 2560; err = 0.36250000 * 2560; time = 0.0101s; samplesPerSecond = 252889.5
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.16859436 * 2560; err = 0.35468750 * 2560; time = 0.0101s; samplesPerSecond = 253064.5
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.16826782 * 2560; err = 0.35859375 * 2560; time = 0.0104s; samplesPerSecond = 246509.4
+12/20/2016 16:01:55:  Epoch[ 1 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.17040100 * 2560; err = 0.35039063 * 2560; time = 0.0102s; samplesPerSecond = 251276.0
+12/20/2016 16:01:55: Finished Epoch[ 1 of 2]: [Training] ce = 1.52449427 * 81920; err = 0.42756348 * 81920; totalSamplesSeen = 81920; learningRatePerSample = 0.003125; epochTime=0.432919s
+12/20/2016 16:01:55: SGD: Saving checkpoint model '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech.1'
 
-11/24/2016 19:24:13: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+12/20/2016 16:01:55: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
-11/24/2016 19:24:13: Starting minibatch loop.
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[   1-  10, 3.12%]: ce = 1.14506922 * 2560; err = 0.35273437 * 2560; time = 0.0125s; samplesPerSecond = 204800.0
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[  11-  20, 6.25%]: ce = 1.17135897 * 2560; err = 0.36289063 * 2560; time = 0.0113s; samplesPerSecond = 226188.4
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[  21-  30, 9.38%]: ce = 1.23678608 * 2560; err = 0.37109375 * 2560; time = 0.0113s; samplesPerSecond = 226128.4
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[  31-  40, 12.50%]: ce = 1.18061256 * 2560; err = 0.36015625 * 2560; time = 0.0114s; samplesPerSecond = 224227.0
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[  41-  50, 15.62%]: ce = 1.13805771 * 2560; err = 0.34648438 * 2560; time = 0.0116s; samplesPerSecond = 221434.1
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.21805611 * 2560; err = 0.36757812 * 2560; time = 0.0114s; samplesPerSecond = 223874.1
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.14249344 * 2560; err = 0.34375000 * 2560; time = 0.0114s; samplesPerSecond = 224877.0
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.12427826 * 2560; err = 0.34726563 * 2560; time = 0.0113s; samplesPerSecond = 225670.0
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[  81-  90, 28.12%]: ce = 1.14438095 * 2560; err = 0.33710937 * 2560; time = 0.0115s; samplesPerSecond = 222183.6
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.13142624 * 2560; err = 0.35312500 * 2560; time = 0.0114s; samplesPerSecond = 223756.7
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.15016861 * 2560; err = 0.34414062 * 2560; time = 0.0114s; samplesPerSecond = 224699.4
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.13406601 * 2560; err = 0.34414062 * 2560; time = 0.0114s; samplesPerSecond = 224896.8
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 121- 130, 40.62%]: ce = 1.11304169 * 2560; err = 0.34531250 * 2560; time = 0.0113s; samplesPerSecond = 225689.9
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.06919556 * 2560; err = 0.32539062 * 2560; time = 0.0113s; samplesPerSecond = 225570.5
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.05317383 * 2560; err = 0.31328125 * 2560; time = 0.0113s; samplesPerSecond = 225968.8
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.06616211 * 2560; err = 0.33046875 * 2560; time = 0.0114s; samplesPerSecond = 224286.0
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 161- 170, 53.12%]: ce = 1.14737701 * 2560; err = 0.35156250 * 2560; time = 0.0114s; samplesPerSecond = 223854.5
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.14563141 * 2560; err = 0.35781250 * 2560; time = 0.0113s; samplesPerSecond = 225610.3
-11/24/2016 19:24:13:  Epoch[ 2 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.08380737 * 2560; err = 0.33515625 * 2560; time = 0.0113s; samplesPerSecond = 225809.3
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.07361450 * 2560; err = 0.33593750 * 2560; time = 0.0114s; samplesPerSecond = 225233.2
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 201- 210, 65.62%]: ce = 1.06135559 * 2560; err = 0.32187500 * 2560; time = 0.0114s; samplesPerSecond = 225431.5
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.09151154 * 2560; err = 0.33085938 * 2560; time = 0.0113s; samplesPerSecond = 225869.1
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.12316284 * 2560; err = 0.35039063 * 2560; time = 0.0113s; samplesPerSecond = 225769.5
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.13823547 * 2560; err = 0.35625000 * 2560; time = 0.0113s; samplesPerSecond = 225829.2
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 241- 250, 78.12%]: ce = 1.09434204 * 2560; err = 0.33750000 * 2560; time = 0.0113s; samplesPerSecond = 225670.0
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.06899719 * 2560; err = 0.32734375 * 2560; time = 0.0114s; samplesPerSecond = 224817.8
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.06006470 * 2560; err = 0.31992188 * 2560; time = 0.0115s; samplesPerSecond = 223015.9
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.10214233 * 2560; err = 0.32929687 * 2560; time = 0.0114s; samplesPerSecond = 225253.0
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 281- 290, 90.62%]: ce = 1.02476196 * 2560; err = 0.33046875 * 2560; time = 0.0114s; samplesPerSecond = 225332.3
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.07595520 * 2560; err = 0.33320312 * 2560; time = 0.0114s; samplesPerSecond = 225193.5
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.06716003 * 2560; err = 0.32968750 * 2560; time = 0.0113s; samplesPerSecond = 225928.9
-11/24/2016 19:24:14:  Epoch[ 2 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.05657959 * 2560; err = 0.33125000 * 2560; time = 0.0113s; samplesPerSecond = 225709.8
-11/24/2016 19:24:14: Finished Epoch[ 2 of 2]: [Training] ce = 1.11353207 * 81920; err = 0.34135742 * 81920; totalSamplesSeen = 163840; learningRatePerSample = 0.003125; epochTime=0.368531s
-11/24/2016 19:24:14: SGD: Saving checkpoint model '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech'
+12/20/2016 16:01:55: Starting minibatch loop.
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[   1-  10, 3.12%]: ce = 1.15134373 * 2560; err = 0.35312500 * 2560; time = 0.0113s; samplesPerSecond = 227091.3
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[  11-  20, 6.25%]: ce = 1.17376041 * 2560; err = 0.36132812 * 2560; time = 0.0101s; samplesPerSecond = 252266.5
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[  21-  30, 9.38%]: ce = 1.22741013 * 2560; err = 0.37031250 * 2560; time = 0.0102s; samplesPerSecond = 251522.9
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[  31-  40, 12.50%]: ce = 1.18026123 * 2560; err = 0.35937500 * 2560; time = 0.0101s; samplesPerSecond = 252540.2
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[  41-  50, 15.62%]: ce = 1.13496513 * 2560; err = 0.34804687 * 2560; time = 0.0102s; samplesPerSecond = 251572.3
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[  51-  60, 18.75%]: ce = 1.21739044 * 2560; err = 0.36562500 * 2560; time = 0.0102s; samplesPerSecond = 251177.4
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[  61-  70, 21.88%]: ce = 1.13920593 * 2560; err = 0.34140625 * 2560; time = 0.0102s; samplesPerSecond = 252018.1
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[  71-  80, 25.00%]: ce = 1.12614746 * 2560; err = 0.35468750 * 2560; time = 0.0101s; samplesPerSecond = 252440.6
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[  81-  90, 28.12%]: ce = 1.14790039 * 2560; err = 0.34375000 * 2560; time = 0.0101s; samplesPerSecond = 253214.6
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[  91- 100, 31.25%]: ce = 1.12684402 * 2560; err = 0.34765625 * 2560; time = 0.0116s; samplesPerSecond = 220937.3
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 101- 110, 34.38%]: ce = 1.14334641 * 2560; err = 0.34648438 * 2560; time = 0.0103s; samplesPerSecond = 249172.7
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 111- 120, 37.50%]: ce = 1.12968216 * 2560; err = 0.34687500 * 2560; time = 0.0102s; samplesPerSecond = 250857.4
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 121- 130, 40.62%]: ce = 1.11384888 * 2560; err = 0.34335938 * 2560; time = 0.0104s; samplesPerSecond = 246011.9
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 131- 140, 43.75%]: ce = 1.06927795 * 2560; err = 0.32656250 * 2560; time = 0.0103s; samplesPerSecond = 249464.0
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 141- 150, 46.88%]: ce = 1.05675964 * 2560; err = 0.31250000 * 2560; time = 0.0102s; samplesPerSecond = 250024.4
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 151- 160, 50.00%]: ce = 1.06755219 * 2560; err = 0.32812500 * 2560; time = 0.0102s; samplesPerSecond = 250685.5
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 161- 170, 53.12%]: ce = 1.14282532 * 2560; err = 0.34570312 * 2560; time = 0.0103s; samplesPerSecond = 248761.1
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 171- 180, 56.25%]: ce = 1.14160461 * 2560; err = 0.35781250 * 2560; time = 0.0102s; samplesPerSecond = 250832.8
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 181- 190, 59.38%]: ce = 1.08101654 * 2560; err = 0.33320312 * 2560; time = 0.0102s; samplesPerSecond = 251745.5
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 191- 200, 62.50%]: ce = 1.07025604 * 2560; err = 0.33710937 * 2560; time = 0.0103s; samplesPerSecond = 249512.7
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 201- 210, 65.62%]: ce = 1.06245575 * 2560; err = 0.32890625 * 2560; time = 0.0102s; samplesPerSecond = 250857.4
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 211- 220, 68.75%]: ce = 1.08775940 * 2560; err = 0.33320312 * 2560; time = 0.0103s; samplesPerSecond = 248302.6
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 221- 230, 71.88%]: ce = 1.11305237 * 2560; err = 0.34765625 * 2560; time = 0.0104s; samplesPerSecond = 245210.7
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 231- 240, 75.00%]: ce = 1.12844849 * 2560; err = 0.35234375 * 2560; time = 0.0102s; samplesPerSecond = 251399.4
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 241- 250, 78.12%]: ce = 1.09436340 * 2560; err = 0.33515625 * 2560; time = 0.0103s; samplesPerSecond = 249099.9
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 251- 260, 81.25%]: ce = 1.06695557 * 2560; err = 0.33320312 * 2560; time = 0.0102s; samplesPerSecond = 251152.8
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 261- 270, 84.38%]: ce = 1.06651611 * 2560; err = 0.32773438 * 2560; time = 0.0101s; samplesPerSecond = 253114.5
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 271- 280, 87.50%]: ce = 1.10426941 * 2560; err = 0.33671875 * 2560; time = 0.0101s; samplesPerSecond = 254069.1
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 281- 290, 90.62%]: ce = 1.02084045 * 2560; err = 0.32187500 * 2560; time = 0.0101s; samplesPerSecond = 253565.8
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 291- 300, 93.75%]: ce = 1.07205505 * 2560; err = 0.33710937 * 2560; time = 0.0102s; samplesPerSecond = 252117.4
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 301- 310, 96.88%]: ce = 1.06188965 * 2560; err = 0.32734375 * 2560; time = 0.0102s; samplesPerSecond = 250244.4
+12/20/2016 16:01:56:  Epoch[ 2 of 2]-Minibatch[ 311- 320, 100.00%]: ce = 1.05428772 * 2560; err = 0.33398438 * 2560; time = 0.0103s; samplesPerSecond = 247654.1
+12/20/2016 16:01:56: Finished Epoch[ 2 of 2]: [Training] ce = 1.11169662 * 81920; err = 0.34182129 * 81920; totalSamplesSeen = 163840; learningRatePerSample = 0.003125; epochTime=0.332536s
+12/20/2016 16:01:56: SGD: Saving checkpoint model '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/Pre2/cntkSpeech'
 
-11/24/2016 19:24:14: Action "train" complete.
-
-
-11/24/2016 19:24:14: ##############################################################################
-11/24/2016 19:24:14: #                                                                            #
-11/24/2016 19:24:14: # addLayer3 command (edit action)                                            #
-11/24/2016 19:24:14: #                                                                            #
-11/24/2016 19:24:14: ##############################################################################
+12/20/2016 16:01:56: Action "train" complete.
 
 
-11/24/2016 19:24:14: Action "edit" complete.
+12/20/2016 16:01:56: ##############################################################################
+12/20/2016 16:01:56: #                                                                            #
+12/20/2016 16:01:56: # addLayer3 command (edit action)                                            #
+12/20/2016 16:01:56: #                                                                            #
+12/20/2016 16:01:56: ##############################################################################
 
 
-11/24/2016 19:24:14: ##############################################################################
-11/24/2016 19:24:14: #                                                                            #
-11/24/2016 19:24:14: # speechTrain command (train action)                                         #
-11/24/2016 19:24:14: #                                                                            #
-11/24/2016 19:24:14: ##############################################################################
+12/20/2016 16:01:56: Action "edit" complete.
 
-11/24/2016 19:24:14: 
-Starting from checkpoint. Loading network from '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.0'.
+
+12/20/2016 16:01:56: ##############################################################################
+12/20/2016 16:01:56: #                                                                            #
+12/20/2016 16:01:56: # speechTrain command (train action)                                         #
+12/20/2016 16:01:56: #                                                                            #
+12/20/2016 16:01:56: ##############################################################################
+
+12/20/2016 16:01:56: 
+Starting from checkpoint. Loading network from '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.0'.
 NDLBuilder Using GPU 0
-reading script file /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp ... 948 entries
-total 132 state names in state list /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list
-htkmlfreader: reading MLF file /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf ... total 948 entries
+reading script file /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp ... 948 entries
+total 132 state names in state list /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list
+htkmlfreader: reading MLF file /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-11/24/2016 19:24:14: 
+12/20/2016 16:01:56: 
 Model has 29 nodes. Using GPU 0.
 
-11/24/2016 19:24:14: Training criterion:   ce = CrossEntropyWithSoftmax
-11/24/2016 19:24:14: Evaluation criterion: err = ClassificationError
+12/20/2016 16:01:56: Training criterion:   ce = CrossEntropyWithSoftmax
+12/20/2016 16:01:56: Evaluation criterion: err = ClassificationError
 
-11/24/2016 19:24:14: Training 779396 parameters in 8 out of 8 parameter tensors and 20 nodes with gradient:
+12/20/2016 16:01:56: Training 779396 parameters in 8 out of 8 parameter tensors and 20 nodes with gradient:
 
-11/24/2016 19:24:14: 	Node 'HL1.W' (LearnableParameter operation) : [512 x 363]
-11/24/2016 19:24:14: 	Node 'HL1.b' (LearnableParameter operation) : [512 x 1]
-11/24/2016 19:24:14: 	Node 'HL2.W' (LearnableParameter operation) : [512 x 512]
-11/24/2016 19:24:14: 	Node 'HL2.b' (LearnableParameter operation) : [512 x 1]
-11/24/2016 19:24:14: 	Node 'HL3.W' (LearnableParameter operation) : [512 x 512]
-11/24/2016 19:24:14: 	Node 'HL3.b' (LearnableParameter operation) : [512 x 1]
-11/24/2016 19:24:14: 	Node 'OL.W' (LearnableParameter operation) : [132 x 512]
-11/24/2016 19:24:14: 	Node 'OL.b' (LearnableParameter operation) : [132 x 1]
+12/20/2016 16:01:56: 	Node 'HL1.W' (LearnableParameter operation) : [512 x 363]
+12/20/2016 16:01:56: 	Node 'HL1.b' (LearnableParameter operation) : [512 x 1]
+12/20/2016 16:01:56: 	Node 'HL2.W' (LearnableParameter operation) : [512 x 512]
+12/20/2016 16:01:56: 	Node 'HL2.b' (LearnableParameter operation) : [512 x 1]
+12/20/2016 16:01:56: 	Node 'HL3.W' (LearnableParameter operation) : [512 x 512]
+12/20/2016 16:01:56: 	Node 'HL3.b' (LearnableParameter operation) : [512 x 1]
+12/20/2016 16:01:56: 	Node 'OL.W' (LearnableParameter operation) : [132 x 512]
+12/20/2016 16:01:56: 	Node 'OL.b' (LearnableParameter operation) : [132 x 1]
 
-11/24/2016 19:24:14: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+12/20/2016 16:01:56: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-11/24/2016 19:24:14: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.900117  momentum as time constant = 2432.7 samples
+12/20/2016 16:01:56: Starting Epoch 1: learning rate per sample = 0.003125  effective momentum = 0.900117  momentum as time constant = 2432.7 samples
 minibatchiterator: epoch 0: frames [0..81920] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
-11/24/2016 19:24:14: Starting minibatch loop.
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[   1-  10, 3.12%]: ce = 3.98265686 * 2560; err = 0.81054688 * 2560; time = 0.0190s; samplesPerSecond = 134524.4
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[  11-  20, 6.25%]: ce = 2.64980240 * 2560; err = 0.63398438 * 2560; time = 0.0155s; samplesPerSecond = 164842.2
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[  21-  30, 9.38%]: ce = 2.03017731 * 2560; err = 0.54414063 * 2560; time = 0.0154s; samplesPerSecond = 165985.9
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[  31-  40, 12.50%]: ce = 1.74546738 * 2560; err = 0.47460938 * 2560; time = 0.0154s; samplesPerSecond = 166028.9
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[  41-  50, 15.62%]: ce = 1.57823792 * 2560; err = 0.44843750 * 2560; time = 0.0154s; samplesPerSecond = 165975.1
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[  51-  60, 18.75%]: ce = 1.47351074 * 2560; err = 0.41445312 * 2560; time = 0.0155s; samplesPerSecond = 165513.7
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[  61-  70, 21.88%]: ce = 1.43362732 * 2560; err = 0.40859375 * 2560; time = 0.0154s; samplesPerSecond = 166050.5
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[  71-  80, 25.00%]: ce = 1.36078033 * 2560; err = 0.39570312 * 2560; time = 0.0156s; samplesPerSecond = 163724.7
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[  81-  90, 28.12%]: ce = 1.28377380 * 2560; err = 0.38085938 * 2560; time = 0.0155s; samplesPerSecond = 165385.4
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[  91- 100, 31.25%]: ce = 1.29924469 * 2560; err = 0.39765625 * 2560; time = 0.0155s; samplesPerSecond = 165235.9
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 101- 110, 34.38%]: ce = 1.28587341 * 2560; err = 0.39062500 * 2560; time = 0.0156s; samplesPerSecond = 164176.2
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 111- 120, 37.50%]: ce = 1.27888489 * 2560; err = 0.38320312 * 2560; time = 0.0155s; samplesPerSecond = 165118.7
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 121- 130, 40.62%]: ce = 1.23967896 * 2560; err = 0.37539062 * 2560; time = 0.0154s; samplesPerSecond = 165749.4
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 131- 140, 43.75%]: ce = 1.31078186 * 2560; err = 0.38984375 * 2560; time = 0.0155s; samplesPerSecond = 165321.3
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 141- 150, 46.88%]: ce = 1.25354767 * 2560; err = 0.36796875 * 2560; time = 0.0157s; samplesPerSecond = 163130.1
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 151- 160, 50.00%]: ce = 1.26726074 * 2560; err = 0.38242188 * 2560; time = 0.0155s; samplesPerSecond = 165182.6
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 161- 170, 53.12%]: ce = 1.20307617 * 2560; err = 0.36328125 * 2560; time = 0.0155s; samplesPerSecond = 165225.2
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 171- 180, 56.25%]: ce = 1.20711365 * 2560; err = 0.36484375 * 2560; time = 0.0155s; samplesPerSecond = 165481.6
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 181- 190, 59.38%]: ce = 1.20856934 * 2560; err = 0.37070313 * 2560; time = 0.0155s; samplesPerSecond = 165545.8
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 191- 200, 62.50%]: ce = 1.20545654 * 2560; err = 0.37578125 * 2560; time = 0.0155s; samplesPerSecond = 165310.6
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 201- 210, 65.62%]: ce = 1.20523376 * 2560; err = 0.37265625 * 2560; time = 0.0155s; samplesPerSecond = 164874.1
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 211- 220, 68.75%]: ce = 1.14180908 * 2560; err = 0.34414062 * 2560; time = 0.0154s; samplesPerSecond = 165932.1
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 221- 230, 71.88%]: ce = 1.14962158 * 2560; err = 0.35078125 * 2560; time = 0.0155s; samplesPerSecond = 165492.3
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 231- 240, 75.00%]: ce = 1.19320374 * 2560; err = 0.35898438 * 2560; time = 0.0155s; samplesPerSecond = 165631.5
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 241- 250, 78.12%]: ce = 1.17249146 * 2560; err = 0.36445312 * 2560; time = 0.0155s; samplesPerSecond = 165695.8
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 251- 260, 81.25%]: ce = 1.08261414 * 2560; err = 0.33945313 * 2560; time = 0.0155s; samplesPerSecond = 165374.7
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 261- 270, 84.38%]: ce = 1.11113586 * 2560; err = 0.34375000 * 2560; time = 0.0159s; samplesPerSecond = 160733.3
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 271- 280, 87.50%]: ce = 1.17623291 * 2560; err = 0.35156250 * 2560; time = 0.0156s; samplesPerSecond = 163620.1
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.62%]: ce = 1.11094666 * 2560; err = 0.34804687 * 2560; time = 0.0156s; samplesPerSecond = 164408.2
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: ce = 1.12750549 * 2560; err = 0.34062500 * 2560; time = 0.0156s; samplesPerSecond = 164228.9
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: ce = 1.12247925 * 2560; err = 0.34492187 * 2560; time = 0.0155s; samplesPerSecond = 164704.4
-11/24/2016 19:24:14:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: ce = 1.12257080 * 2560; err = 0.34335938 * 2560; time = 0.0156s; samplesPerSecond = 164323.8
-11/24/2016 19:24:14: Finished Epoch[ 1 of 4]: [Training] ce = 1.40666771 * 81920; err = 0.40236816 * 81920; totalSamplesSeen = 81920; learningRatePerSample = 0.003125; epochTime=0.599425s
-11/24/2016 19:24:14: SGD: Saving checkpoint model '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.1'
+12/20/2016 16:01:56: Starting minibatch loop.
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[   1-  10, 3.12%]: ce = 4.01191254 * 2560; err = 0.81992188 * 2560; time = 0.0172s; samplesPerSecond = 148414.4
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[  11-  20, 6.25%]: ce = 2.65419159 * 2560; err = 0.65117187 * 2560; time = 0.0136s; samplesPerSecond = 187545.8
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[  21-  30, 9.38%]: ce = 2.04179306 * 2560; err = 0.54921875 * 2560; time = 0.0136s; samplesPerSecond = 188429.3
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[  31-  40, 12.50%]: ce = 1.74536972 * 2560; err = 0.47382812 * 2560; time = 0.0136s; samplesPerSecond = 188290.7
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[  41-  50, 15.62%]: ce = 1.57696991 * 2560; err = 0.44765625 * 2560; time = 0.0136s; samplesPerSecond = 187862.3
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[  51-  60, 18.75%]: ce = 1.47850189 * 2560; err = 0.41914062 * 2560; time = 0.0136s; samplesPerSecond = 187642.0
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[  61-  70, 21.88%]: ce = 1.43680878 * 2560; err = 0.40937500 * 2560; time = 0.0136s; samplesPerSecond = 188526.4
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[  71-  80, 25.00%]: ce = 1.36164856 * 2560; err = 0.39492187 * 2560; time = 0.0137s; samplesPerSecond = 187257.7
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[  81-  90, 28.12%]: ce = 1.27849426 * 2560; err = 0.37656250 * 2560; time = 0.0136s; samplesPerSecond = 187765.9
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[  91- 100, 31.25%]: ce = 1.30459900 * 2560; err = 0.39960937 * 2560; time = 0.0136s; samplesPerSecond = 187986.5
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 101- 110, 34.38%]: ce = 1.28589325 * 2560; err = 0.38984375 * 2560; time = 0.0136s; samplesPerSecond = 188526.4
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 111- 120, 37.50%]: ce = 1.27590027 * 2560; err = 0.38359375 * 2560; time = 0.0136s; samplesPerSecond = 188263.0
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 121- 130, 40.62%]: ce = 1.24400330 * 2560; err = 0.38710937 * 2560; time = 0.0136s; samplesPerSecond = 188124.6
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 131- 140, 43.75%]: ce = 1.31191101 * 2560; err = 0.38710937 * 2560; time = 0.0136s; samplesPerSecond = 187710.8
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 141- 150, 46.88%]: ce = 1.25154419 * 2560; err = 0.36523438 * 2560; time = 0.0137s; samplesPerSecond = 186847.7
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 151- 160, 50.00%]: ce = 1.26658783 * 2560; err = 0.38281250 * 2560; time = 0.0136s; samplesPerSecond = 187848.5
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 161- 170, 53.12%]: ce = 1.19905701 * 2560; err = 0.36015625 * 2560; time = 0.0136s; samplesPerSecond = 188512.5
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 171- 180, 56.25%]: ce = 1.20682678 * 2560; err = 0.36523438 * 2560; time = 0.0136s; samplesPerSecond = 188860.2
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 181- 190, 59.38%]: ce = 1.21596069 * 2560; err = 0.37109375 * 2560; time = 0.0136s; samplesPerSecond = 188693.2
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 191- 200, 62.50%]: ce = 1.20121765 * 2560; err = 0.37617187 * 2560; time = 0.0136s; samplesPerSecond = 187903.7
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 201- 210, 65.62%]: ce = 1.20172424 * 2560; err = 0.37031250 * 2560; time = 0.0136s; samplesPerSecond = 188014.1
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 211- 220, 68.75%]: ce = 1.13780823 * 2560; err = 0.34453125 * 2560; time = 0.0136s; samplesPerSecond = 188069.4
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 221- 230, 71.88%]: ce = 1.14899597 * 2560; err = 0.35078125 * 2560; time = 0.0136s; samplesPerSecond = 187986.5
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 231- 240, 75.00%]: ce = 1.19089355 * 2560; err = 0.35859375 * 2560; time = 0.0137s; samplesPerSecond = 187257.7
+12/20/2016 16:01:56:  Epoch[ 1 of 4]-Minibatch[ 241- 250, 78.12%]: ce = 1.17016296 * 2560; err = 0.36054687 * 2560; time = 0.0137s; samplesPerSecond = 187079.8
+12/20/2016 16:01:57:  Epoch[ 1 of 4]-Minibatch[ 251- 260, 81.25%]: ce = 1.08495178 * 2560; err = 0.34062500 * 2560; time = 0.0136s; samplesPerSecond = 188263.0
+12/20/2016 16:01:57:  Epoch[ 1 of 4]-Minibatch[ 261- 270, 84.38%]: ce = 1.11389771 * 2560; err = 0.34375000 * 2560; time = 0.0137s; samplesPerSecond = 187339.9
+12/20/2016 16:01:57:  Epoch[ 1 of 4]-Minibatch[ 271- 280, 87.50%]: ce = 1.18205566 * 2560; err = 0.35234375 * 2560; time = 0.0137s; samplesPerSecond = 186875.0
+12/20/2016 16:01:57:  Epoch[ 1 of 4]-Minibatch[ 281- 290, 90.62%]: ce = 1.11204224 * 2560; err = 0.34648438 * 2560; time = 0.0137s; samplesPerSecond = 187449.7
+12/20/2016 16:01:57:  Epoch[ 1 of 4]-Minibatch[ 291- 300, 93.75%]: ce = 1.13517761 * 2560; err = 0.34765625 * 2560; time = 0.0136s; samplesPerSecond = 187752.1
+12/20/2016 16:01:57:  Epoch[ 1 of 4]-Minibatch[ 301- 310, 96.88%]: ce = 1.12517700 * 2560; err = 0.34062500 * 2560; time = 0.0136s; samplesPerSecond = 188429.3
+12/20/2016 16:01:57:  Epoch[ 1 of 4]-Minibatch[ 311- 320, 100.00%]: ce = 1.12189941 * 2560; err = 0.34453125 * 2560; time = 0.0136s; samplesPerSecond = 188415.4
+12/20/2016 16:01:57: Finished Epoch[ 1 of 4]: [Training] ce = 1.40856180 * 81920; err = 0.40345459 * 81920; totalSamplesSeen = 81920; learningRatePerSample = 0.003125; epochTime=0.543861s
+12/20/2016 16:01:57: SGD: Saving checkpoint model '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.1'
 
-11/24/2016 19:24:15: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.810210  momentum as time constant = 2432.7 samples
+12/20/2016 16:01:57: Starting Epoch 2: learning rate per sample = 0.003125  effective momentum = 0.810210  momentum as time constant = 2432.7 samples
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 81920), data subset 0 of 1, with 1 datapasses
 
-11/24/2016 19:24:15: Starting minibatch loop.
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[   1-  10, 6.25%]: ce = 1.52495832 * 5120; err = 0.42050781 * 5120; time = 0.0280s; samplesPerSecond = 183059.8
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[  11-  20, 12.50%]: ce = 1.54641657 * 5120; err = 0.42519531 * 5120; time = 0.0243s; samplesPerSecond = 210977.4
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[  21-  30, 18.75%]: ce = 1.22311935 * 5120; err = 0.37011719 * 5120; time = 0.0242s; samplesPerSecond = 211369.4
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[  31-  40, 25.00%]: ce = 1.12978401 * 5120; err = 0.34003906 * 5120; time = 0.0241s; samplesPerSecond = 212210.4
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[  41-  50, 31.25%]: ce = 1.11905899 * 5120; err = 0.33906250 * 5120; time = 0.0241s; samplesPerSecond = 212757.1
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[  51-  60, 37.50%]: ce = 1.13513794 * 5120; err = 0.34550781 * 5120; time = 0.0242s; samplesPerSecond = 211938.1
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[  61-  70, 43.75%]: ce = 1.08784714 * 5120; err = 0.33632812 * 5120; time = 0.0241s; samplesPerSecond = 212280.8
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[  71-  80, 50.00%]: ce = 1.07431335 * 5120; err = 0.33046875 * 5120; time = 0.0241s; samplesPerSecond = 212368.8
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[  81-  90, 56.25%]: ce = 1.15605774 * 5120; err = 0.35742188 * 5120; time = 0.0241s; samplesPerSecond = 212254.4
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[  91- 100, 62.50%]: ce = 1.06616287 * 5120; err = 0.33496094 * 5120; time = 0.0241s; samplesPerSecond = 212439.3
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[ 101- 110, 68.75%]: ce = 1.05716934 * 5120; err = 0.32910156 * 5120; time = 0.0241s; samplesPerSecond = 212360.0
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[ 111- 120, 75.00%]: ce = 1.13308563 * 5120; err = 0.35664062 * 5120; time = 0.0241s; samplesPerSecond = 212210.4
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[ 121- 130, 81.25%]: ce = 1.11535950 * 5120; err = 0.34785156 * 5120; time = 0.0241s; samplesPerSecond = 212430.5
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[ 131- 140, 87.50%]: ce = 1.09246063 * 5120; err = 0.32890625 * 5120; time = 0.0241s; samplesPerSecond = 212448.1
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[ 141- 150, 93.75%]: ce = 1.04727173 * 5120; err = 0.32929687 * 5120; time = 0.0242s; samplesPerSecond = 211911.8
-11/24/2016 19:24:15:  Epoch[ 2 of 4]-Minibatch[ 151- 160, 100.00%]: ce = 1.06195679 * 5120; err = 0.32578125 * 5120; time = 0.0241s; samplesPerSecond = 212562.8
-11/24/2016 19:24:15: Finished Epoch[ 2 of 4]: [Training] ce = 1.16063499 * 81920; err = 0.35107422 * 81920; totalSamplesSeen = 163840; learningRatePerSample = 0.003125; epochTime=0.393658s
-11/24/2016 19:24:15: SGD: Saving checkpoint model '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.2'
+12/20/2016 16:01:57: Starting minibatch loop.
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[   1-  10, 6.25%]: ce = 1.50099545 * 5120; err = 0.41503906 * 5120; time = 0.0245s; samplesPerSecond = 208639.0
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[  11-  20, 12.50%]: ce = 1.29802551 * 5120; err = 0.38847656 * 5120; time = 0.0212s; samplesPerSecond = 241452.5
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[  21-  30, 18.75%]: ce = 1.19228306 * 5120; err = 0.36269531 * 5120; time = 0.0213s; samplesPerSecond = 240454.6
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[  31-  40, 25.00%]: ce = 1.12583389 * 5120; err = 0.34511719 * 5120; time = 0.0213s; samplesPerSecond = 239992.5
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[  41-  50, 31.25%]: ce = 1.12678490 * 5120; err = 0.34101562 * 5120; time = 0.0213s; samplesPerSecond = 240590.2
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[  51-  60, 37.50%]: ce = 1.13744774 * 5120; err = 0.35234375 * 5120; time = 0.0213s; samplesPerSecond = 240420.7
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[  61-  70, 43.75%]: ce = 1.09439240 * 5120; err = 0.33496094 * 5120; time = 0.0212s; samplesPerSecond = 241954.5
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[  71-  80, 50.00%]: ce = 1.06660385 * 5120; err = 0.32656250 * 5120; time = 0.0213s; samplesPerSecond = 240714.6
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[  81-  90, 56.25%]: ce = 1.17267303 * 5120; err = 0.36406250 * 5120; time = 0.0212s; samplesPerSecond = 241225.0
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[  91- 100, 62.50%]: ce = 1.10358582 * 5120; err = 0.34316406 * 5120; time = 0.0213s; samplesPerSecond = 240274.1
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[ 101- 110, 68.75%]: ce = 1.05820389 * 5120; err = 0.32832031 * 5120; time = 0.0213s; samplesPerSecond = 240386.9
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[ 111- 120, 75.00%]: ce = 1.12881165 * 5120; err = 0.35273437 * 5120; time = 0.0212s; samplesPerSecond = 241338.7
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[ 121- 130, 81.25%]: ce = 1.10886230 * 5120; err = 0.34492187 * 5120; time = 0.0213s; samplesPerSecond = 240522.4
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[ 131- 140, 87.50%]: ce = 1.08949432 * 5120; err = 0.32812500 * 5120; time = 0.0213s; samplesPerSecond = 240488.5
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[ 141- 150, 93.75%]: ce = 1.03984833 * 5120; err = 0.32441406 * 5120; time = 0.0214s; samplesPerSecond = 239521.0
+12/20/2016 16:01:57:  Epoch[ 2 of 4]-Minibatch[ 151- 160, 100.00%]: ce = 1.05730286 * 5120; err = 0.32304688 * 5120; time = 0.0212s; samplesPerSecond = 241009.2
+12/20/2016 16:01:57: Finished Epoch[ 2 of 4]: [Training] ce = 1.14382181 * 81920; err = 0.34843750 * 81920; totalSamplesSeen = 163840; learningRatePerSample = 0.003125; epochTime=0.347007s
+12/20/2016 16:01:57: SGD: Saving checkpoint model '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.2'
 
-11/24/2016 19:24:15: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.810210  momentum as time constant = 2432.7 samples
+12/20/2016 16:01:57: Starting Epoch 3: learning rate per sample = 0.003125  effective momentum = 0.810210  momentum as time constant = 2432.7 samples
 minibatchiterator: epoch 2: frames [163840..245760] (first utterance at frame 163840), data subset 0 of 1, with 1 datapasses
 
-11/24/2016 19:24:15: Starting minibatch loop.
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[   1-  10, 6.25%]: ce = 1.11231699 * 5120; err = 0.33750000 * 5120; time = 0.0249s; samplesPerSecond = 205408.0
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[  11-  20, 12.50%]: ce = 1.10804968 * 5120; err = 0.34843750 * 5120; time = 0.0241s; samplesPerSecond = 212034.6
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[  21-  30, 18.75%]: ce = 1.09022064 * 5120; err = 0.34726563 * 5120; time = 0.0241s; samplesPerSecond = 212175.2
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[  31-  40, 25.00%]: ce = 1.08266754 * 5120; err = 0.32539062 * 5120; time = 0.0241s; samplesPerSecond = 212757.1
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[  41-  50, 31.25%]: ce = 1.11265411 * 5120; err = 0.33808594 * 5120; time = 0.0242s; samplesPerSecond = 211955.6
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[  51-  60, 37.50%]: ce = 1.07451935 * 5120; err = 0.33007812 * 5120; time = 0.0241s; samplesPerSecond = 212113.7
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[  61-  70, 43.75%]: ce = 1.08691254 * 5120; err = 0.33867188 * 5120; time = 0.0242s; samplesPerSecond = 211666.5
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[  71-  80, 50.00%]: ce = 1.08186264 * 5120; err = 0.33203125 * 5120; time = 0.0241s; samplesPerSecond = 212642.2
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[  81-  90, 56.25%]: ce = 1.02816010 * 5120; err = 0.31582031 * 5120; time = 0.0241s; samplesPerSecond = 212360.0
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[  91- 100, 62.50%]: ce = 1.04833908 * 5120; err = 0.32148437 * 5120; time = 0.0241s; samplesPerSecond = 212562.8
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[ 101- 110, 68.75%]: ce = 1.05743637 * 5120; err = 0.33515625 * 5120; time = 0.0241s; samplesPerSecond = 212615.8
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[ 111- 120, 75.00%]: ce = 1.08609924 * 5120; err = 0.34160156 * 5120; time = 0.0241s; samplesPerSecond = 212245.6
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[ 121- 130, 81.25%]: ce = 1.05357971 * 5120; err = 0.31914063 * 5120; time = 0.0241s; samplesPerSecond = 212766.0
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[ 131- 140, 87.50%]: ce = 1.01892242 * 5120; err = 0.31972656 * 5120; time = 0.0241s; samplesPerSecond = 212492.2
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[ 141- 150, 93.75%]: ce = 1.04624634 * 5120; err = 0.32773438 * 5120; time = 0.0241s; samplesPerSecond = 212774.8
-11/24/2016 19:24:15:  Epoch[ 3 of 4]-Minibatch[ 151- 160, 100.00%]: ce = 1.02311554 * 5120; err = 0.31894531 * 5120; time = 0.0241s; samplesPerSecond = 212254.4
-11/24/2016 19:24:15: Finished Epoch[ 3 of 4]: [Training] ce = 1.06944389 * 81920; err = 0.33106689 * 81920; totalSamplesSeen = 245760; learningRatePerSample = 0.003125; epochTime=0.389865s
-11/24/2016 19:24:15: SGD: Saving checkpoint model '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.3'
+12/20/2016 16:01:57: Starting minibatch loop.
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[   1-  10, 6.25%]: ce = 1.10878077 * 5120; err = 0.33847656 * 5120; time = 0.0221s; samplesPerSecond = 231213.9
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[  11-  20, 12.50%]: ce = 1.11130934 * 5120; err = 0.34375000 * 5120; time = 0.0213s; samplesPerSecond = 240353.0
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[  21-  30, 18.75%]: ce = 1.10591621 * 5120; err = 0.34628906 * 5120; time = 0.0213s; samplesPerSecond = 240827.8
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[  31-  40, 25.00%]: ce = 1.13425102 * 5120; err = 0.34160156 * 5120; time = 0.0213s; samplesPerSecond = 240364.3
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[  41-  50, 31.25%]: ce = 1.12513046 * 5120; err = 0.34238281 * 5120; time = 0.0213s; samplesPerSecond = 240578.9
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[  51-  60, 37.50%]: ce = 1.07461128 * 5120; err = 0.33535156 * 5120; time = 0.0213s; samplesPerSecond = 240015.0
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[  61-  70, 43.75%]: ce = 1.07328949 * 5120; err = 0.33144531 * 5120; time = 0.0213s; samplesPerSecond = 240737.3
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[  71-  80, 50.00%]: ce = 1.07549820 * 5120; err = 0.33007812 * 5120; time = 0.0214s; samplesPerSecond = 238984.3
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[  81-  90, 56.25%]: ce = 1.02875366 * 5120; err = 0.31386719 * 5120; time = 0.0213s; samplesPerSecond = 240386.9
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[  91- 100, 62.50%]: ce = 1.04900742 * 5120; err = 0.31718750 * 5120; time = 0.0213s; samplesPerSecond = 240624.1
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[ 101- 110, 68.75%]: ce = 1.05542603 * 5120; err = 0.33769531 * 5120; time = 0.0213s; samplesPerSecond = 240386.9
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[ 111- 120, 75.00%]: ce = 1.08413391 * 5120; err = 0.33515625 * 5120; time = 0.0213s; samplesPerSecond = 240409.4
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[ 121- 130, 81.25%]: ce = 1.05125275 * 5120; err = 0.32050781 * 5120; time = 0.0213s; samplesPerSecond = 239891.3
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[ 131- 140, 87.50%]: ce = 1.02265320 * 5120; err = 0.32695313 * 5120; time = 0.0213s; samplesPerSecond = 239970.0
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[ 141- 150, 93.75%]: ce = 1.04138031 * 5120; err = 0.32832031 * 5120; time = 0.0213s; samplesPerSecond = 240499.8
+12/20/2016 16:01:57:  Epoch[ 3 of 4]-Minibatch[ 151- 160, 100.00%]: ce = 1.01894073 * 5120; err = 0.32285156 * 5120; time = 0.0213s; samplesPerSecond = 240759.9
+12/20/2016 16:01:57: Finished Epoch[ 3 of 4]: [Training] ce = 1.07252092 * 81920; err = 0.33199463 * 81920; totalSamplesSeen = 245760; learningRatePerSample = 0.003125; epochTime=0.344854s
+12/20/2016 16:01:57: SGD: Saving checkpoint model '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.3'
 
-11/24/2016 19:24:15: Starting Epoch 4: learning rate per sample = 0.003125  effective momentum = 0.810210  momentum as time constant = 2432.7 samples
+12/20/2016 16:01:57: Starting Epoch 4: learning rate per sample = 0.003125  effective momentum = 0.810210  momentum as time constant = 2432.7 samples
 minibatchiterator: epoch 3: frames [245760..327680] (first utterance at frame 245760), data subset 0 of 1, with 1 datapasses
 
-11/24/2016 19:24:15: Starting minibatch loop.
-11/24/2016 19:24:15:  Epoch[ 4 of 4]-Minibatch[   1-  10, 6.25%]: ce = 1.02844849 * 5120; err = 0.31621094 * 5120; time = 0.0249s; samplesPerSecond = 205358.6
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[  11-  20, 12.50%]: ce = 1.05641066 * 4926; err = 0.33130329 * 4926; time = 0.0658s; samplesPerSecond = 74837.1
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[  21-  30, 18.75%]: ce = 1.02023335 * 5120; err = 0.32343750 * 5120; time = 0.0241s; samplesPerSecond = 212236.8
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[  31-  40, 25.00%]: ce = 0.99176388 * 5120; err = 0.31269531 * 5120; time = 0.0241s; samplesPerSecond = 212766.0
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[  41-  50, 31.25%]: ce = 0.99810143 * 5120; err = 0.31210938 * 5120; time = 0.0241s; samplesPerSecond = 212757.1
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[  51-  60, 37.50%]: ce = 1.00280685 * 5120; err = 0.32207031 * 5120; time = 0.0241s; samplesPerSecond = 212157.6
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[  61-  70, 43.75%]: ce = 1.02889595 * 5120; err = 0.32246094 * 5120; time = 0.0241s; samplesPerSecond = 212307.2
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[  71-  80, 50.00%]: ce = 0.99928970 * 5120; err = 0.31171875 * 5120; time = 0.0242s; samplesPerSecond = 211719.0
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[  81-  90, 56.25%]: ce = 0.99335556 * 5120; err = 0.30664062 * 5120; time = 0.0242s; samplesPerSecond = 211929.3
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[  91- 100, 62.50%]: ce = 1.00106583 * 5120; err = 0.30996094 * 5120; time = 0.0241s; samplesPerSecond = 212113.7
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[ 101- 110, 68.75%]: ce = 1.01961670 * 5120; err = 0.31601563 * 5120; time = 0.0241s; samplesPerSecond = 212580.4
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[ 111- 120, 75.00%]: ce = 1.04032364 * 5120; err = 0.32480469 * 5120; time = 0.0241s; samplesPerSecond = 212845.6
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[ 121- 130, 81.25%]: ce = 0.97818832 * 5120; err = 0.29960938 * 5120; time = 0.0241s; samplesPerSecond = 212272.0
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[ 131- 140, 87.50%]: ce = 0.96928406 * 5120; err = 0.30058594 * 5120; time = 0.0241s; samplesPerSecond = 212043.4
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[ 141- 150, 93.75%]: ce = 0.98244171 * 5120; err = 0.31054688 * 5120; time = 0.0241s; samplesPerSecond = 212801.3
-11/24/2016 19:24:16:  Epoch[ 4 of 4]-Minibatch[ 151- 160, 100.00%]: ce = 0.97457886 * 5120; err = 0.29785156 * 5120; time = 0.0240s; samplesPerSecond = 212925.2
-11/24/2016 19:24:16: Finished Epoch[ 4 of 4]: [Training] ce = 1.00510321 * 81920; err = 0.31368408 * 81920; totalSamplesSeen = 327680; learningRatePerSample = 0.003125; epochTime=0.433126s
-11/24/2016 19:24:16: SGD: Saving checkpoint model '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech'
+12/20/2016 16:01:57: Starting minibatch loop.
+12/20/2016 16:01:57:  Epoch[ 4 of 4]-Minibatch[   1-  10, 6.25%]: ce = 1.03330860 * 5120; err = 0.31738281 * 5120; time = 0.0222s; samplesPerSecond = 230932.3
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[  11-  20, 12.50%]: ce = 1.03593001 * 4926; err = 0.32399513 * 4926; time = 0.0638s; samplesPerSecond = 77208.8
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[  21-  30, 18.75%]: ce = 1.00798683 * 5120; err = 0.31757812 * 5120; time = 0.0214s; samplesPerSecond = 239722.8
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[  31-  40, 25.00%]: ce = 0.99057846 * 5120; err = 0.31171875 * 5120; time = 0.0213s; samplesPerSecond = 240895.8
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[  41-  50, 31.25%]: ce = 0.99319420 * 5120; err = 0.31582031 * 5120; time = 0.0212s; samplesPerSecond = 241281.8
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[  51-  60, 37.50%]: ce = 0.99868736 * 5120; err = 0.31835938 * 5120; time = 0.0213s; samplesPerSecond = 240873.2
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[  61-  70, 43.75%]: ce = 1.01183434 * 5120; err = 0.31406250 * 5120; time = 0.0212s; samplesPerSecond = 241168.2
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[  71-  80, 50.00%]: ce = 1.00435257 * 5120; err = 0.31601563 * 5120; time = 0.0213s; samplesPerSecond = 240918.5
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[  81-  90, 56.25%]: ce = 0.99865494 * 5120; err = 0.30976562 * 5120; time = 0.0233s; samplesPerSecond = 220148.8
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[  91- 100, 62.50%]: ce = 0.99832916 * 5120; err = 0.31074219 * 5120; time = 0.0217s; samplesPerSecond = 235890.3
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[ 101- 110, 68.75%]: ce = 1.02309341 * 5120; err = 0.31660156 * 5120; time = 0.0213s; samplesPerSecond = 240782.5
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[ 111- 120, 75.00%]: ce = 1.05355072 * 5120; err = 0.33144531 * 5120; time = 0.0213s; samplesPerSecond = 240420.7
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[ 121- 130, 81.25%]: ce = 0.97934952 * 5120; err = 0.29902344 * 5120; time = 0.0213s; samplesPerSecond = 240229.0
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[ 131- 140, 87.50%]: ce = 0.96725616 * 5120; err = 0.30214844 * 5120; time = 0.0213s; samplesPerSecond = 240026.3
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[ 141- 150, 93.75%]: ce = 0.97408600 * 5120; err = 0.31152344 * 5120; time = 0.0214s; samplesPerSecond = 239151.8
+12/20/2016 16:01:58:  Epoch[ 4 of 4]-Minibatch[ 151- 160, 100.00%]: ce = 0.97509308 * 5120; err = 0.29433594 * 5120; time = 0.0213s; samplesPerSecond = 240646.7
+12/20/2016 16:01:58: Finished Epoch[ 4 of 4]: [Training] ce = 1.00266399 * 81920; err = 0.31325684 * 81920; totalSamplesSeen = 327680; learningRatePerSample = 0.003125; epochTime=0.391022s
+12/20/2016 16:01:58: SGD: Saving checkpoint model '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech'
 
-11/24/2016 19:24:16: Action "train" complete.
-
-
-11/24/2016 19:24:16: ##############################################################################
-11/24/2016 19:24:16: #                                                                            #
-11/24/2016 19:24:16: # replaceCriterionNode command (edit action)                                 #
-11/24/2016 19:24:16: #                                                                            #
-11/24/2016 19:24:16: ##############################################################################
+12/20/2016 16:01:58: Action "train" complete.
 
 
-11/24/2016 19:24:16: Action "edit" complete.
+12/20/2016 16:01:58: ##############################################################################
+12/20/2016 16:01:58: #                                                                            #
+12/20/2016 16:01:58: # replaceCriterionNode command (edit action)                                 #
+12/20/2016 16:01:58: #                                                                            #
+12/20/2016 16:01:58: ##############################################################################
 
 
-11/24/2016 19:24:16: ##############################################################################
-11/24/2016 19:24:16: #                                                                            #
-11/24/2016 19:24:16: # sequenceTrain command (train action)                                       #
-11/24/2016 19:24:16: #                                                                            #
-11/24/2016 19:24:16: ##############################################################################
+12/20/2016 16:01:58: Action "edit" complete.
 
-11/24/2016 19:24:16: 
-Starting from checkpoint. Loading network from '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence.0'.
+
+12/20/2016 16:01:58: ##############################################################################
+12/20/2016 16:01:58: #                                                                            #
+12/20/2016 16:01:58: # sequenceTrain command (train action)                                       #
+12/20/2016 16:01:58: #                                                                            #
+12/20/2016 16:01:58: ##############################################################################
+
+12/20/2016 16:01:58: 
+Starting from checkpoint. Loading network from '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence.0'.
 NDLBuilder Using GPU 0
-simplesenonehmm: reading '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/model.overalltying', '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list', '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/model.transprob'
+simplesenonehmm: reading '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/model.overalltying', '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list', '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/model.transprob'
 simplesenonehmm: 83253 units with 45 unique HMMs, 132 tied states, and 45 trans matrices read
-reading script file /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp ... 948 entries
+reading script file /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.scp ... 948 entries
 trainlayer: OOV-exclusion code enabled, but no unigram specified to derive the word set from, so you won't get OOV exclusion
-total 132 state names in state list /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list
-htkmlfreader: reading MLF file /tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf ... total 948 entries
-archive: opening 80 lattice-archive TOC files ('/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/TestData/CY2SCH010061231_1369712653.numden.lats.toc' etc.).................................................................................. 923 total lattices referenced in 80 archive files
+total 132 state names in state list /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/state.list
+htkmlfreader: reading MLF file /tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/glob_0000.mlf ... total 948 entries
+archive: opening 80 lattice-archive TOC files ('/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/TestData/CY2SCH010061231_1369712653.numden.lats.toc' etc.).................................................................................. 923 total lattices referenced in 80 archive files
 . [no lattice for An4/454/454/an70-meht-b]....... [no lattice for An4/89/89/an6-fjmd-b].. [no lattice for An4/683/683/an364-mmkw-b].. [no lattice for An4/476/476/an256-mewl-b].... [no lattice for An4/2/2/an253-fash-b]...............................................................................feature set 0: 250814 frames in 923 out of 948 utterances
 minibatchutterancesource: out of 948 files, 0 files not found in label set and 25 have no lattice
 label set 0: 129 classes
 minibatchutterancesource: 923 utterances grouped into 3 chunks, av. chunk size: 307.7 utterances, 83604.7 frames
-11/24/2016 19:24:16: 
+12/20/2016 16:01:58: 
 Model has 29 nodes. Using GPU 0.
 
-11/24/2016 19:24:16: Training criterion:   ce = SequenceWithSoftmax
-11/24/2016 19:24:16: Evaluation criterion: err = ClassificationError
+12/20/2016 16:01:58: Training criterion:   ce = SequenceWithSoftmax
+12/20/2016 16:01:58: Evaluation criterion: err = ClassificationError
 
-11/24/2016 19:24:16: Training 779396 parameters in 8 out of 8 parameter tensors and 21 nodes with gradient:
+12/20/2016 16:01:58: Training 779396 parameters in 8 out of 8 parameter tensors and 21 nodes with gradient:
 
-11/24/2016 19:24:16: 	Node 'HL1.W' (LearnableParameter operation) : [512 x 363]
-11/24/2016 19:24:16: 	Node 'HL1.b' (LearnableParameter operation) : [512 x 1]
-11/24/2016 19:24:16: 	Node 'HL2.W' (LearnableParameter operation) : [512 x 512]
-11/24/2016 19:24:16: 	Node 'HL2.b' (LearnableParameter operation) : [512 x 1]
-11/24/2016 19:24:16: 	Node 'HL3.W' (LearnableParameter operation) : [512 x 512]
-11/24/2016 19:24:16: 	Node 'HL3.b' (LearnableParameter operation) : [512 x 1]
-11/24/2016 19:24:16: 	Node 'OL.W' (LearnableParameter operation) : [132 x 512]
-11/24/2016 19:24:16: 	Node 'OL.b' (LearnableParameter operation) : [132 x 1]
+12/20/2016 16:01:58: 	Node 'HL1.W' (LearnableParameter operation) : [512 x 363]
+12/20/2016 16:01:58: 	Node 'HL1.b' (LearnableParameter operation) : [512 x 1]
+12/20/2016 16:01:58: 	Node 'HL2.W' (LearnableParameter operation) : [512 x 512]
+12/20/2016 16:01:58: 	Node 'HL2.b' (LearnableParameter operation) : [512 x 1]
+12/20/2016 16:01:58: 	Node 'HL3.W' (LearnableParameter operation) : [512 x 512]
+12/20/2016 16:01:58: 	Node 'HL3.b' (LearnableParameter operation) : [512 x 1]
+12/20/2016 16:01:58: 	Node 'OL.W' (LearnableParameter operation) : [132 x 512]
+12/20/2016 16:01:58: 	Node 'OL.b' (LearnableParameter operation) : [132 x 1]
 
-11/24/2016 19:24:16: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+12/20/2016 16:01:58: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 Setting Hsmoothing weight to 0.95 and frame-dropping threshhold to 1e-10
 Setting SeqGammar-related parameters: amf=14.00, lmf=14.00, wp=0.00, bMMIFactor=0.00, usesMBR=false
 
-11/24/2016 19:24:16: Starting Epoch 1: learning rate per sample = 0.000002  effective momentum = 0.995898  momentum as time constant = 2432.7 samples
+12/20/2016 16:01:58: Starting Epoch 1: learning rate per sample = 0.000002  effective momentum = 0.995898  momentum as time constant = 2432.7 samples
 minibatchiterator: epoch 0: frames [0..81920] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
-11/24/2016 19:24:20: Starting minibatch loop.
-dengamma value 1.001067
-dengamma value 1.080157
-dengamma value 1.019519
-dengamma value 1.062550
-dengamma value 1.039983
-dengamma value 1.067168
-dengamma value 1.015829
-dengamma value 1.014958
-dengamma value 1.129815
-dengamma value 0.953121
-dengamma value 1.001604
-dengamma value 1.048848
-dengamma value 1.041445
-dengamma value 1.071283
-dengamma value 1.024753
-dengamma value 1.075288
-dengamma value 1.059411
-dengamma value 1.070090
-dengamma value 0.993640
-dengamma value 1.031318
-dengamma value 1.043755
-dengamma value 1.073213
-11/24/2016 19:24:22:  Epoch[ 1 of 3]-Minibatch[   1-  10, 0.12%]: ce = 0.08728820 * 5566; err = 0.32411067 * 5566; time = 1.3725s; samplesPerSecond = 4055.3
-dengamma value 0.996242
-dengamma value 1.038819
-dengamma value 1.027608
-dengamma value 1.010380
-dengamma value 1.014790
-dengamma value 1.045738
-dengamma value 1.110722
-dengamma value 1.038780
-dengamma value 1.025774
-dengamma value 0.993012
-dengamma value 0.993648
-dengamma value 1.061104
-dengamma value 1.027607
-dengamma value 0.999460
-dengamma value 1.036514
-dengamma value 0.983204
-dengamma value 1.003434
-dengamma value 1.042607
-dengamma value 1.024696
-dengamma value 1.084303
-dengamma value 1.029496
-dengamma value 1.071689
-dengamma value 1.037267
-dengamma value 1.191192
-dengamma value 1.054590
-dengamma value 1.052774
-11/24/2016 19:24:22:  Epoch[ 1 of 3]-Minibatch[  11-  20, 0.24%]: ce = 0.08035404 * 7398; err = 0.31413896 * 7398; time = 0.5951s; samplesPerSecond = 12432.5
-dengamma value 1.108737
-dengamma value 0.995697
-dengamma value 1.030601
-dengamma value 0.980079
-dengamma value 1.040895
-dengamma value 1.060961
-dengamma value 1.070254
-dengamma value 1.062911
-dengamma value 1.090351
-dengamma value 1.090454
-dengamma value 1.013430
-dengamma value 1.068115
-dengamma value 1.053355
-dengamma value 0.935324
-dengamma value 1.096063
-dengamma value 1.031839
-dengamma value 1.105325
-dengamma value 1.007837
-dengamma value 1.024426
-dengamma value 1.050393
-dengamma value 1.046333
-dengamma value 1.043673
-dengamma value 1.045320
-dengamma value 1.100024
-dengamma value 1.092750
-11/24/2016 19:24:23:  Epoch[ 1 of 3]-Minibatch[  21-  30, 0.37%]: ce = 0.07849883 * 6300; err = 0.34031746 * 6300; time = 0.4989s; samplesPerSecond = 12626.8
-dengamma value 1.088808
-dengamma value 1.183811
-dengamma value 1.063196
-dengamma value 1.046023
-dengamma value 1.040785
-dengamma value 0.987674
-dengamma value 0.998533
-dengamma value 1.047166
-dengamma value 1.105286
-dengamma value 1.035654
-dengamma value 1.033787
-dengamma value 1.064993
-dengamma value 1.079161
-dengamma value 1.041030
-dengamma value 1.097539
-dengamma value 1.040048
-dengamma value 0.999721
-dengamma value 1.034257
-dengamma value 1.015447
-dengamma value 0.980989
-dengamma value 0.924786
-dengamma value 1.044859
-11/24/2016 19:24:23:  Epoch[ 1 of 3]-Minibatch[  31-  40, 0.49%]: ce = 0.08044421 * 5636; err = 0.32398864 * 5636; time = 0.4397s; samplesPerSecond = 12818.2
-dengamma value 1.034473
-dengamma value 1.028718
-dengamma value 1.039579
-dengamma value 1.061096
-dengamma value 1.052193
-dengamma value 1.074368
-dengamma value 1.056228
-dengamma value 1.031840
-dengamma value 0.944285
-dengamma value 1.034448
-dengamma value 1.018251
-dengamma value 1.055865
-dengamma value 1.041591
-dengamma value 0.952801
-dengamma value 1.052865
-dengamma value 0.980702
-dengamma value 1.085583
-dengamma value 1.011438
-dengamma value 1.054262
-dengamma value 0.965932
-11/24/2016 19:24:24:  Epoch[ 1 of 3]-Minibatch[  41-  50, 0.61%]: ce = 0.08190312 * 6970; err = 0.34304161 * 6970; time = 0.5509s; samplesPerSecond = 12652.6
-dengamma value 1.057523
-dengamma value 1.037841
-dengamma value 1.057887
-dengamma value 1.036734
-dengamma value 1.055027
-dengamma value 1.064485
-dengamma value 1.044755
-dengamma value 1.068413
-dengamma value 1.053904
-dengamma value 1.042844
-dengamma value 1.010017
-dengamma value 1.061912
-dengamma value 1.027196
-dengamma value 1.058909
-dengamma value 1.008905
-dengamma value 1.074882
-dengamma value 1.050775
-dengamma value 0.996659
-dengamma value 1.120642
-dengamma value 1.001781
-dengamma value 1.003269
-dengamma value 1.055767
-11/24/2016 19:24:24:  Epoch[ 1 of 3]-Minibatch[  51-  60, 0.73%]: ce = 0.08046273 * 6996; err = 0.31932533 * 6996; time = 0.5798s; samplesPerSecond = 12065.8
-dengamma value 1.074767
-dengamma value 1.021204
-dengamma value 1.049758
-dengamma value 1.043823
-dengamma value 0.996199
-dengamma value 1.001958
-dengamma value 1.029199
-dengamma value 0.973166
-dengamma value 1.116241
-dengamma value 0.997741
-dengamma value 1.040374
-dengamma value 1.000890
-dengamma value 1.077596
-dengamma value 1.073013
-dengamma value 1.090024
-dengamma value 0.970951
-dengamma value 0.990173
-dengamma value 1.039257
-dengamma value 1.029184
-dengamma value 1.123377
-dengamma value 1.026184
-dengamma value 1.063601
-dengamma value 1.081612
-dengamma value 1.020579
-dengamma value 1.014357
-11/24/2016 19:24:25:  Epoch[ 1 of 3]-Minibatch[  61-  70, 0.85%]: ce = 0.08633239 * 6180; err = 0.33268608 * 6180; time = 0.5058s; samplesPerSecond = 12217.1
-dengamma value 1.035052
-dengamma value 1.055853
-dengamma value 1.131026
-dengamma value 1.003569
-dengamma value 1.072652
-dengamma value 1.033863
-dengamma value 0.989076
-dengamma value 1.064374
-dengamma value 1.027989
-dengamma value 1.047838
-dengamma value 1.030231
-dengamma value 1.037395
-dengamma value 1.088592
-dengamma value 0.965899
-dengamma value 1.106665
-dengamma value 1.041253
-dengamma value 1.038023
-dengamma value 1.100284
-dengamma value 1.050025
-dengamma value 1.125211
-11/24/2016 19:24:25:  Epoch[ 1 of 3]-Minibatch[  71-  80, 0.98%]: ce = 0.08468188 * 4860; err = 0.33312757 * 4860; time = 0.3885s; samplesPerSecond = 12508.8
-dengamma value 1.024220
-dengamma value 0.963070
-dengamma value 1.022284
-dengamma value 1.057816
-dengamma value 1.027383
-dengamma value 1.084353
-dengamma value 0.998436
-dengamma value 1.072171
-dengamma value 1.014029
-dengamma value 0.987455
-dengamma value 1.034096
-dengamma value 0.947688
-dengamma value 1.018000
-dengamma value 1.072329
-dengamma value 1.039579
-dengamma value 1.084295
-dengamma value 1.057573
-dengamma value 1.035422
-dengamma value 1.036583
-dengamma value 1.000910
-dengamma value 1.099041
-dengamma value 1.061122
-11/24/2016 19:24:26:  Epoch[ 1 of 3]-Minibatch[  81-  90, 1.10%]: ce = 0.07716693 * 6046; err = 0.32798544 * 6046; time = 0.4930s; samplesPerSecond = 12263.0
-dengamma value 1.036951
-dengamma value 1.003620
-dengamma value 1.006124
-dengamma value 0.958804
-dengamma value 1.018693
-dengamma value 1.095991
-dengamma value 1.037507
-dengamma value 0.990920
-dengamma value 1.028393
-dengamma value 1.053860
-dengamma value 0.989630
-dengamma value 1.021158
-dengamma value 1.048082
-dengamma value 1.077865
-dengamma value 0.992846
-dengamma value 1.054860
-dengamma value 1.004839
-dengamma value 1.009091
-dengamma value 0.994613
-dengamma value 0.998620
-dengamma value 0.995332
-dengamma value 1.066944
-dengamma value 1.023445
-dengamma value 1.029751
-11/24/2016 19:24:26:  Epoch[ 1 of 3]-Minibatch[  91- 100, 1.22%]: ce = 0.08725246 * 6942; err = 0.33707865 * 6942; time = 0.5354s; samplesPerSecond = 12965.0
-dengamma value 1.011441
-dengamma value 1.037689
-dengamma value 0.994885
-dengamma value 0.935396
-dengamma value 1.060894
-dengamma value 1.081985
-dengamma value 1.134902
-dengamma value 1.009710
-dengamma value 1.023351
-dengamma value 1.109485
-dengamma value 1.061709
-dengamma value 1.004689
-dengamma value 1.067180
-dengamma value 1.031659
-dengamma value 1.097955
-dengamma value 1.010382
-dengamma value 1.035297
-dengamma value 1.058209
-dengamma value 1.013107
-dengamma value 0.997639
-dengamma value 0.978757
-dengamma value 1.052807
-dengamma value 1.060015
-11/24/2016 19:24:27:  Epoch[ 1 of 3]-Minibatch[ 101- 110, 1.34%]: ce = 0.08840854 * 5784; err = 0.32780083 * 5784; time = 0.4446s; samplesPerSecond = 13009.7
-dengamma value 1.077897
-dengamma value 1.078268
-dengamma value 1.006217
-dengamma value 1.009654
-dengamma value 1.118175
-dengamma value 0.993057
-dengamma value 0.963813
-dengamma value 0.955830
-dengamma value 0.940279
-dengamma value 1.031962
-dengamma value 1.028442
-dengamma value 0.984018
-dengamma value 1.061422
-dengamma value 1.027417
-dengamma value 1.069130
-dengamma value 0.985377
-dengamma value 1.020775
-dengamma value 1.038766
-dengamma value 1.068386
-dengamma value 0.986619
-dengamma value 1.089043
-11/24/2016 19:24:27:  Epoch[ 1 of 3]-Minibatch[ 111- 120, 1.46%]: ce = 0.08892063 * 6258; err = 0.33972515 * 6258; time = 0.4891s; samplesPerSecond = 12795.5
-dengamma value 1.094896
-dengamma value 1.091116
-dengamma value 1.061463
-dengamma value 1.071133
-dengamma value 1.016828
-dengamma value 1.111166
-dengamma value 1.068230
-dengamma value 1.010327
-dengamma value 1.038096
-dengamma value 1.020235
-dengamma value 1.024535
-dengamma value 1.055434
-dengamma value 1.048088
-dengamma value 1.073387
-dengamma value 0.968437
-dengamma value 1.001970
-dengamma value 1.074712
-dengamma value 1.011197
-dengamma value 1.094215
-dengamma value 0.992759
-dengamma value 1.025109
-dengamma value 0.960496
-11/24/2016 19:24:28:  Epoch[ 1 of 3]-Minibatch[ 121- 130, 1.59%]: ce = 0.08357976 * 6116; err = 0.32226946 * 6116; time = 0.4909s; samplesPerSecond = 12459.3
-dengamma value 1.036054
-dengamma value 1.051657
-dengamma value 0.995793
-dengamma value 1.051689
-11/24/2016 19:24:28: Finished Epoch[ 1 of 3]: [Training] ce = 0.08357469 * 82574; err = 0.32920774 * 82574; totalSamplesSeen = 82574; learningRatePerSample = 2e-06; epochTime=11.7008s
-11/24/2016 19:24:28: SGD: Saving checkpoint model '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence.1'
+12/20/2016 16:02:03: Starting minibatch loop.
+dengamma value 1.006863
+dengamma value 1.076726
+dengamma value 1.021282
+dengamma value 1.071934
+dengamma value 1.035840
+dengamma value 1.070977
+dengamma value 1.017756
+dengamma value 1.014051
+dengamma value 1.141197
+dengamma value 0.947160
+dengamma value 0.999889
+dengamma value 1.057862
+dengamma value 1.042335
+dengamma value 1.062237
+dengamma value 1.027882
+dengamma value 1.078353
+dengamma value 1.055012
+dengamma value 1.081793
+dengamma value 0.999289
+dengamma value 1.032549
+dengamma value 1.039615
+dengamma value 1.066485
+12/20/2016 16:02:04:  Epoch[ 1 of 3]-Minibatch[   1-  10, 0.12%]: ce = 0.08594932 * 5566; err = 0.32752425 * 5566; time = 1.3716s; samplesPerSecond = 4058.1
+dengamma value 0.995418
+dengamma value 1.043829
+dengamma value 1.027023
+dengamma value 1.020094
+dengamma value 1.016498
+dengamma value 1.055279
+dengamma value 1.112832
+dengamma value 1.038774
+dengamma value 1.025762
+dengamma value 0.993411
+dengamma value 0.995034
+dengamma value 1.061966
+dengamma value 1.028966
+dengamma value 0.993991
+dengamma value 1.041589
+dengamma value 0.988791
+dengamma value 1.001614
+dengamma value 1.047575
+dengamma value 1.016090
+dengamma value 1.087561
+dengamma value 1.028722
+dengamma value 1.068312
+dengamma value 1.042325
+dengamma value 1.196348
+dengamma value 1.059266
+dengamma value 1.054649
+12/20/2016 16:02:05:  Epoch[ 1 of 3]-Minibatch[  11-  20, 0.24%]: ce = 0.08009718 * 7398; err = 0.30981346 * 7398; time = 0.5942s; samplesPerSecond = 12450.1
+dengamma value 1.100683
+dengamma value 0.987513
+dengamma value 1.036569
+dengamma value 0.976904
+dengamma value 1.040700
+dengamma value 1.058532
+dengamma value 1.072338
+dengamma value 1.060317
+dengamma value 1.089726
+dengamma value 1.085907
+dengamma value 1.016045
+dengamma value 1.066792
+dengamma value 1.047403
+dengamma value 0.940520
+dengamma value 1.093985
+dengamma value 1.033631
+dengamma value 1.104728
+dengamma value 1.012986
+dengamma value 1.018983
+dengamma value 1.053249
+dengamma value 1.047294
+dengamma value 1.035895
+dengamma value 1.034338
+dengamma value 1.106082
+dengamma value 1.080786
+12/20/2016 16:02:05:  Epoch[ 1 of 3]-Minibatch[  21-  30, 0.37%]: ce = 0.07857835 * 6300; err = 0.33888889 * 6300; time = 0.4954s; samplesPerSecond = 12717.0
+dengamma value 1.098741
+dengamma value 1.172885
+dengamma value 1.060977
+dengamma value 1.052580
+dengamma value 1.028724
+dengamma value 0.992041
+dengamma value 0.997987
+dengamma value 1.049903
+dengamma value 1.107361
+dengamma value 1.030137
+dengamma value 1.039191
+dengamma value 1.062776
+dengamma value 1.082695
+dengamma value 1.043989
+dengamma value 1.100543
+dengamma value 1.046670
+dengamma value 0.997646
+dengamma value 1.039555
+dengamma value 1.017338
+dengamma value 0.982996
+dengamma value 0.933232
+dengamma value 1.046204
+12/20/2016 16:02:06:  Epoch[ 1 of 3]-Minibatch[  31-  40, 0.49%]: ce = 0.07975051 * 5636; err = 0.32523066 * 5636; time = 0.4367s; samplesPerSecond = 12906.2
+dengamma value 1.038769
+dengamma value 1.027744
+dengamma value 1.039448
+dengamma value 1.058685
+dengamma value 1.048647
+dengamma value 1.076718
+dengamma value 1.053376
+dengamma value 1.027307
+dengamma value 0.945339
+dengamma value 1.035984
+dengamma value 1.017093
+dengamma value 1.060678
+dengamma value 1.047557
+dengamma value 0.948682
+dengamma value 1.044801
+dengamma value 0.985225
+dengamma value 1.081916
+dengamma value 1.020182
+dengamma value 1.057349
+dengamma value 0.966733
+12/20/2016 16:02:06:  Epoch[ 1 of 3]-Minibatch[  41-  50, 0.61%]: ce = 0.08121576 * 6970; err = 0.33888092 * 6970; time = 0.5472s; samplesPerSecond = 12737.6
+dengamma value 1.059845
+dengamma value 1.034712
+dengamma value 1.053989
+dengamma value 1.039827
+dengamma value 1.066691
+dengamma value 1.066682
+dengamma value 1.044290
+dengamma value 1.068901
+dengamma value 1.055804
+dengamma value 1.045783
+dengamma value 1.003016
+dengamma value 1.055721
+dengamma value 1.028676
+dengamma value 1.055206
+dengamma value 1.010691
+dengamma value 1.083310
+dengamma value 1.047736
+dengamma value 0.991717
+dengamma value 1.125428
+dengamma value 1.001771
+dengamma value 1.005708
+dengamma value 1.059523
+12/20/2016 16:02:07:  Epoch[ 1 of 3]-Minibatch[  51-  60, 0.73%]: ce = 0.08025900 * 6996; err = 0.31918239 * 6996; time = 0.5798s; samplesPerSecond = 12066.9
+dengamma value 1.076109
+dengamma value 1.021011
+dengamma value 1.052051
+dengamma value 1.043349
+dengamma value 0.993440
+dengamma value 1.003753
+dengamma value 1.034696
+dengamma value 0.978320
+dengamma value 1.116521
+dengamma value 1.004398
+dengamma value 1.045039
+dengamma value 1.002051
+dengamma value 1.071572
+dengamma value 1.081746
+dengamma value 1.096831
+dengamma value 0.977018
+dengamma value 0.989094
+dengamma value 1.043077
+dengamma value 1.024988
+dengamma value 1.125334
+dengamma value 1.022724
+dengamma value 1.061335
+dengamma value 1.081863
+dengamma value 1.019897
+dengamma value 1.009519
+12/20/2016 16:02:07:  Epoch[ 1 of 3]-Minibatch[  61-  70, 0.85%]: ce = 0.08543662 * 6180; err = 0.33576052 * 6180; time = 0.5027s; samplesPerSecond = 12294.4
+dengamma value 1.038925
+dengamma value 1.062939
+dengamma value 1.129292
+dengamma value 1.005669
+dengamma value 1.073673
+dengamma value 1.038169
+dengamma value 0.991413
+dengamma value 1.059573
+dengamma value 1.028797
+dengamma value 1.045309
+dengamma value 1.031369
+dengamma value 1.039449
+dengamma value 1.084486
+dengamma value 0.969557
+dengamma value 1.109369
+dengamma value 1.042534
+dengamma value 1.042464
+dengamma value 1.106001
+dengamma value 1.050151
+dengamma value 1.109548
+12/20/2016 16:02:08:  Epoch[ 1 of 3]-Minibatch[  71-  80, 0.98%]: ce = 0.08466782 * 4860; err = 0.33148148 * 4860; time = 0.3830s; samplesPerSecond = 12689.3
+dengamma value 1.027109
+dengamma value 0.967233
+dengamma value 1.020813
+dengamma value 1.062381
+dengamma value 1.031821
+dengamma value 1.073602
+dengamma value 1.005169
+dengamma value 1.069811
+dengamma value 1.015763
+dengamma value 0.988120
+dengamma value 1.034201
+dengamma value 0.945225
+dengamma value 1.025771
+dengamma value 1.070876
+dengamma value 1.041344
+dengamma value 1.095692
+dengamma value 1.059328
+dengamma value 1.038477
+dengamma value 1.041350
+dengamma value 1.016779
+dengamma value 1.099936
+dengamma value 1.066919
+12/20/2016 16:02:08:  Epoch[ 1 of 3]-Minibatch[  81-  90, 1.10%]: ce = 0.07690018 * 6046; err = 0.32765465 * 6046; time = 0.4891s; samplesPerSecond = 12361.0
+dengamma value 1.040266
+dengamma value 1.002487
+dengamma value 1.009864
+dengamma value 0.963713
+dengamma value 1.019287
+dengamma value 1.095173
+dengamma value 1.036092
+dengamma value 0.988907
+dengamma value 1.024800
+dengamma value 1.052525
+dengamma value 0.991275
+dengamma value 1.020982
+dengamma value 1.047997
+dengamma value 1.073758
+dengamma value 0.988141
+dengamma value 1.052408
+dengamma value 1.003975
+dengamma value 1.007387
+dengamma value 0.997932
+dengamma value 0.999872
+dengamma value 0.990748
+dengamma value 1.062821
+dengamma value 1.021640
+dengamma value 1.034660
+12/20/2016 16:02:09:  Epoch[ 1 of 3]-Minibatch[  91- 100, 1.22%]: ce = 0.08686208 * 6942; err = 0.33938346 * 6942; time = 0.5273s; samplesPerSecond = 13165.2
+dengamma value 1.011380
+dengamma value 1.036708
+dengamma value 1.000018
+dengamma value 0.932035
+dengamma value 1.062897
+dengamma value 1.084469
+dengamma value 1.132822
+dengamma value 1.008325
+dengamma value 1.026811
+dengamma value 1.107075
+dengamma value 1.061840
+dengamma value 1.005030
+dengamma value 1.054522
+dengamma value 1.024733
+dengamma value 1.102784
+dengamma value 1.013778
+dengamma value 1.036938
+dengamma value 1.055268
+dengamma value 1.006672
+dengamma value 1.004206
+dengamma value 0.976817
+dengamma value 1.062452
+dengamma value 1.058561
+12/20/2016 16:02:09:  Epoch[ 1 of 3]-Minibatch[ 101- 110, 1.34%]: ce = 0.08793115 * 5784; err = 0.32555325 * 5784; time = 0.4377s; samplesPerSecond = 13215.9
+dengamma value 1.074496
+dengamma value 1.078124
+dengamma value 1.009661
+dengamma value 1.006846
+dengamma value 1.121623
+dengamma value 0.996558
+dengamma value 0.956061
+dengamma value 0.960314
+dengamma value 0.935304
+dengamma value 1.026964
+dengamma value 1.029889
+dengamma value 0.983464
+dengamma value 1.060634
+dengamma value 1.030787
+dengamma value 1.063768
+dengamma value 0.986319
+dengamma value 1.016549
+dengamma value 1.042679
+dengamma value 1.061996
+dengamma value 0.983276
+dengamma value 1.098684
+12/20/2016 16:02:10:  Epoch[ 1 of 3]-Minibatch[ 111- 120, 1.46%]: ce = 0.08909775 * 6258; err = 0.33541067 * 6258; time = 0.4834s; samplesPerSecond = 12945.4
+dengamma value 1.098457
+dengamma value 1.076916
+dengamma value 1.064929
+dengamma value 1.074470
+dengamma value 1.020649
+dengamma value 1.109226
+dengamma value 1.072592
+dengamma value 1.016075
+dengamma value 1.038168
+dengamma value 1.021410
+dengamma value 1.022388
+dengamma value 1.061723
+dengamma value 1.044999
+dengamma value 1.070712
+dengamma value 0.961046
+dengamma value 1.003724
+dengamma value 1.064932
+dengamma value 1.011829
+dengamma value 1.099325
+dengamma value 0.998795
+dengamma value 1.023735
+dengamma value 0.961909
+12/20/2016 16:02:10:  Epoch[ 1 of 3]-Minibatch[ 121- 130, 1.59%]: ce = 0.08275162 * 6116; err = 0.31965337 * 6116; time = 0.4882s; samplesPerSecond = 12526.7
+dengamma value 1.038860
+dengamma value 1.045746
+dengamma value 0.999766
+dengamma value 1.045776
+12/20/2016 16:02:10: Finished Epoch[ 1 of 3]: [Training] ce = 0.08315556 * 82574; err = 0.32836002 * 82574; totalSamplesSeen = 82574; learningRatePerSample = 2e-06; epochTime=12.1664s
+12/20/2016 16:02:10: SGD: Saving checkpoint model '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence.1'
 
-11/24/2016 19:24:28: Starting Epoch 2: learning rate per sample = 0.000002  effective momentum = 0.995898  momentum as time constant = 2432.7 samples
+12/20/2016 16:02:10: Starting Epoch 2: learning rate per sample = 0.000002  effective momentum = 0.995898  momentum as time constant = 2432.7 samples
 minibatchiterator: epoch 1: frames [81920..163840] (first utterance at frame 82146), data subset 0 of 1, with 1 datapasses
 
-11/24/2016 19:24:28: Starting minibatch loop.
-dengamma value 1.016223
-dengamma value 1.002652
-dengamma value 0.981605
-dengamma value 1.067915
-dengamma value 1.064984
-dengamma value 1.001766
-dengamma value 1.061643
-dengamma value 1.007925
-dengamma value 1.026279
+12/20/2016 16:02:10: Starting minibatch loop.
+dengamma value 1.026422
+dengamma value 0.999206
+dengamma value 0.982717
+dengamma value 1.070101
+dengamma value 1.064777
+dengamma value 1.004418
+dengamma value 1.050103
+dengamma value 1.013166
+dengamma value 1.028247
+dengamma value 1.027323
+dengamma value 1.036799
+dengamma value 0.995468
+dengamma value 1.048513
+dengamma value 1.090507
+dengamma value 0.965721
+dengamma value 0.997045
+dengamma value 1.017410
+dengamma value 1.022557
+dengamma value 1.059693
+dengamma value 1.042650
+dengamma value 1.059991
+dengamma value 1.089000
+12/20/2016 16:02:11:  Epoch[ 2 of 3]-Minibatch[   1-  10, 0.12%]: ce = 0.08358627 * 5826; err = 0.33848266 * 5826; time = 0.4722s; samplesPerSecond = 12337.8
+dengamma value 1.062078
+dengamma value 1.096534
+dengamma value 1.084650
+dengamma value 1.046730
+dengamma value 1.045238
+dengamma value 1.005834
+dengamma value 1.086091
+dengamma value 1.084805
+dengamma value 1.089635
+dengamma value 1.045781
+dengamma value 1.028026
+dengamma value 0.953832
+dengamma value 1.075278
+dengamma value 1.071569
+dengamma value 1.036369
+dengamma value 1.042793
+dengamma value 1.033462
+dengamma value 1.024221
+dengamma value 1.044277
+dengamma value 1.014361
+12/20/2016 16:02:11:  Epoch[ 2 of 3]-Minibatch[  11-  20, 0.24%]: ce = 0.07964599 * 6380; err = 0.31520376 * 6380; time = 0.5268s; samplesPerSecond = 12110.1
+dengamma value 1.096614
+dengamma value 1.021470
+dengamma value 1.117343
+dengamma value 0.947568
+dengamma value 1.026852
+dengamma value 1.071693
+dengamma value 1.107590
+dengamma value 1.038520
+dengamma value 1.070194
+dengamma value 1.020270
+dengamma value 0.989566
+dengamma value 1.084466
+dengamma value 1.016793
+dengamma value 1.052211
+dengamma value 1.014611
+dengamma value 1.014493
+dengamma value 1.052520
+dengamma value 1.080496
+dengamma value 1.032959
+dengamma value 1.033682
+dengamma value 1.086661
+dengamma value 1.062410
+dengamma value 0.986894
+12/20/2016 16:02:12:  Epoch[ 2 of 3]-Minibatch[  21-  30, 0.37%]: ce = 0.07719984 * 6574; err = 0.32187405 * 6574; time = 0.5671s; samplesPerSecond = 11592.4
+dengamma value 1.075134
+dengamma value 1.053402
+dengamma value 1.049077
+dengamma value 1.053553
+dengamma value 0.926433
+dengamma value 0.960124
+dengamma value 1.127155
+dengamma value 1.080496
+dengamma value 1.027681
+dengamma value 1.023398
+dengamma value 1.050464
+dengamma value 0.967391
+dengamma value 1.051451
+dengamma value 1.009550
+dengamma value 0.960826
+dengamma value 1.078494
+dengamma value 1.057943
+dengamma value 1.093421
+dengamma value 0.993407
+dengamma value 0.982165
+dengamma value 1.077586
+dengamma value 1.116585
+dengamma value 1.001485
+12/20/2016 16:02:13:  Epoch[ 2 of 3]-Minibatch[  31-  40, 0.49%]: ce = 0.08715830 * 6324; err = 0.33364959 * 6324; time = 0.4899s; samplesPerSecond = 12909.1
+dengamma value 0.961874
+dengamma value 0.939280
+dengamma value 0.934499
+dengamma value 1.052157
+dengamma value 1.074650
+dengamma value 1.105266
+dengamma value 1.037411
+dengamma value 1.136033
+dengamma value 1.027966
+dengamma value 0.982069
+dengamma value 1.008651
+dengamma value 1.010087
+dengamma value 0.960261
+dengamma value 1.087317
+dengamma value 1.040507
+dengamma value 0.992781
+dengamma value 0.943041
+dengamma value 0.994735
+dengamma value 1.019306
+dengamma value 1.050748
+12/20/2016 16:02:13:  Epoch[ 2 of 3]-Minibatch[  41-  50, 0.61%]: ce = 0.09048014 * 4800; err = 0.35645833 * 4800; time = 0.3621s; samplesPerSecond = 13256.3
+dengamma value 0.991064
+dengamma value 1.043734
+dengamma value 1.043998
+dengamma value 1.049206
+dengamma value 1.042427
+dengamma value 1.119868
+dengamma value 1.087231
+dengamma value 1.021940
+dengamma value 1.063128
+dengamma value 1.008088
+dengamma value 1.070509
+dengamma value 1.011091
+dengamma value 0.982512
+dengamma value 0.995444
+dengamma value 1.060659
+dengamma value 1.020899
+dengamma value 1.025934
+dengamma value 1.015451
+dengamma value 1.014009
+dengamma value 1.036071
+dengamma value 1.019429
+dengamma value 1.054271
+12/20/2016 16:02:13:  Epoch[ 2 of 3]-Minibatch[  51-  60, 0.73%]: ce = 0.08112513 * 6176; err = 0.34876943 * 6176; time = 0.4677s; samplesPerSecond = 13205.4
+dengamma value 1.086239
+dengamma value 1.054758
+dengamma value 1.066532
+dengamma value 0.982178
+dengamma value 1.075391
+dengamma value 1.042828
+dengamma value 1.085406
+dengamma value 0.958574
+dengamma value 1.061349
+dengamma value 1.028756
+dengamma value 1.064351
+dengamma value 1.023375
+dengamma value 1.063009
+dengamma value 0.998331
+dengamma value 1.068912
+dengamma value 1.040433
+dengamma value 1.085958
+dengamma value 1.133832
+dengamma value 1.035166
+dengamma value 0.963648
+dengamma value 1.080165
+dengamma value 1.051803
+dengamma value 1.041655
+12/20/2016 16:02:14:  Epoch[ 2 of 3]-Minibatch[  61-  70, 0.85%]: ce = 0.08963371 * 5534; err = 0.31387785 * 5534; time = 0.4650s; samplesPerSecond = 11900.3
+dengamma value 1.055753
+dengamma value 1.002714
+dengamma value 0.984974
+dengamma value 1.031356
+dengamma value 1.110693
+dengamma value 0.955688
+dengamma value 1.069133
+dengamma value 1.062240
+dengamma value 1.051912
+dengamma value 1.043233
+dengamma value 1.101155
+dengamma value 1.107201
+dengamma value 1.041808
+dengamma value 1.078212
+dengamma value 1.041916
+dengamma value 1.032960
+dengamma value 1.042128
+dengamma value 0.999490
+dengamma value 1.067177
+dengamma value 1.035245
+dengamma value 0.992431
+dengamma value 1.064358
+12/20/2016 16:02:14:  Epoch[ 2 of 3]-Minibatch[  71-  80, 0.98%]: ce = 0.08223578 * 5936; err = 0.31570081 * 5936; time = 0.5320s; samplesPerSecond = 11157.4
+dengamma value 0.915898
+dengamma value 1.071559
+dengamma value 1.065648
+dengamma value 1.052928
+dengamma value 1.069983
+dengamma value 1.011225
+dengamma value 1.073847
+dengamma value 1.034834
+dengamma value 1.026168
+dengamma value 1.063217
+dengamma value 0.900485
+dengamma value 1.061543
+dengamma value 1.117813
+dengamma value 1.071831
+dengamma value 1.001438
+dengamma value 1.086272
+dengamma value 1.091109
+dengamma value 1.076237
+dengamma value 1.094920
+dengamma value 1.097089
+dengamma value 1.057575
+12/20/2016 16:02:15:  Epoch[ 2 of 3]-Minibatch[  81-  90, 1.10%]: ce = 0.08267640 * 5248; err = 0.32507622 * 5248; time = 0.4207s; samplesPerSecond = 12475.6
+dengamma value 1.041004
+dengamma value 1.033665
+dengamma value 1.055423
+dengamma value 1.016553
+dengamma value 1.060489
+dengamma value 1.064918
+dengamma value 1.038146
+dengamma value 0.985519
+dengamma value 1.056323
+dengamma value 1.034278
+dengamma value 1.110867
+dengamma value 1.077486
+dengamma value 0.973834
+dengamma value 1.062588
+dengamma value 1.101752
+dengamma value 1.025143
+dengamma value 1.088630
+dengamma value 1.101725
+dengamma value 1.051718
+dengamma value 1.028286
+dengamma value 1.002809
+dengamma value 1.049238
+dengamma value 1.045264
+dengamma value 1.062436
+dengamma value 1.026394
+dengamma value 1.067727
+12/20/2016 16:02:15:  Epoch[ 2 of 3]-Minibatch[  91- 100, 1.22%]: ce = 0.08167099 * 6888; err = 0.31024971 * 6888; time = 0.5613s; samplesPerSecond = 12272.2
+dengamma value 1.045349
+dengamma value 1.067176
+dengamma value 1.030940
+dengamma value 1.044776
+dengamma value 1.022844
+dengamma value 1.029732
+dengamma value 1.014092
+dengamma value 1.084153
+dengamma value 1.069231
+dengamma value 1.023380
+dengamma value 1.033607
+dengamma value 1.082692
+dengamma value 1.069161
+dengamma value 1.005219
+dengamma value 1.094318
+dengamma value 1.011997
+dengamma value 1.004433
+dengamma value 1.105037
+dengamma value 1.052158
+dengamma value 1.024533
+dengamma value 1.017131
+dengamma value 1.020307
+dengamma value 0.979409
+dengamma value 1.030634
+12/20/2016 16:02:16:  Epoch[ 2 of 3]-Minibatch[ 101- 110, 1.34%]: ce = 0.08633061 * 6572; err = 0.33368837 * 6572; time = 0.5143s; samplesPerSecond = 12779.4
+dengamma value 0.993713
+dengamma value 1.078894
+dengamma value 1.007993
+dengamma value 1.086259
+dengamma value 1.038500
+dengamma value 1.007038
+dengamma value 1.007464
+dengamma value 1.066742
+dengamma value 1.032112
+dengamma value 1.002604
+dengamma value 1.059966
+dengamma value 1.052242
+dengamma value 1.056178
+dengamma value 1.035489
+dengamma value 1.026724
+dengamma value 1.031965
+dengamma value 1.022975
+dengamma value 1.099876
+dengamma value 0.997524
+dengamma value 1.048673
+dengamma value 1.050681
+dengamma value 1.126007
+dengamma value 1.065569
+dengamma value 1.027174
+12/20/2016 16:02:16:  Epoch[ 2 of 3]-Minibatch[ 111- 120, 1.46%]: ce = 0.08653845 * 6622; err = 0.31350045 * 6622; time = 0.5645s; samplesPerSecond = 11731.6
 dengamma value 1.026566
-dengamma value 1.038292
-dengamma value 1.003548
-dengamma value 1.046595
-dengamma value 1.091557
-dengamma value 0.961199
-dengamma value 0.990602
-dengamma value 1.022511
-dengamma value 1.016636
-dengamma value 1.062380
-dengamma value 1.042556
-dengamma value 1.060125
-dengamma value 1.080020
-11/24/2016 19:24:28:  Epoch[ 2 of 3]-Minibatch[   1-  10, 0.12%]: ce = 0.08417415 * 5826; err = 0.34140062 * 5826; time = 0.4793s; samplesPerSecond = 12155.5
-dengamma value 1.058698
-dengamma value 1.097357
-dengamma value 1.087208
-dengamma value 1.041382
-dengamma value 1.045358
-dengamma value 1.003941
-dengamma value 1.082558
-dengamma value 1.082099
-dengamma value 1.092521
-dengamma value 1.041313
-dengamma value 1.033947
-dengamma value 0.950830
-dengamma value 1.075499
-dengamma value 1.080184
-dengamma value 1.033289
-dengamma value 1.043421
-dengamma value 1.037847
-dengamma value 1.017983
-dengamma value 1.040474
-dengamma value 1.012613
-11/24/2016 19:24:29:  Epoch[ 2 of 3]-Minibatch[  11-  20, 0.24%]: ce = 0.08034324 * 6380; err = 0.31536050 * 6380; time = 0.5363s; samplesPerSecond = 11896.8
-dengamma value 1.092565
-dengamma value 1.024275
-dengamma value 1.116525
-dengamma value 0.943509
-dengamma value 1.032427
-dengamma value 1.078101
-dengamma value 1.105218
-dengamma value 1.037218
-dengamma value 1.073576
-dengamma value 1.020706
-dengamma value 0.988218
-dengamma value 1.080714
-dengamma value 1.022939
-dengamma value 1.052989
-dengamma value 1.013656
-dengamma value 1.018811
-dengamma value 1.054636
-dengamma value 1.082024
-dengamma value 1.035637
-dengamma value 1.037595
-dengamma value 1.083356
-dengamma value 1.065776
-dengamma value 0.993740
-11/24/2016 19:24:30:  Epoch[ 2 of 3]-Minibatch[  21-  30, 0.37%]: ce = 0.07833749 * 6574; err = 0.31700639 * 6574; time = 0.5754s; samplesPerSecond = 11425.5
-dengamma value 1.077104
-dengamma value 1.044894
-dengamma value 1.054161
-dengamma value 1.045469
-dengamma value 0.927012
-dengamma value 0.961078
-dengamma value 1.130222
-dengamma value 1.077952
-dengamma value 1.020356
-dengamma value 1.029394
-dengamma value 1.051983
-dengamma value 0.966779
-dengamma value 1.053841
-dengamma value 1.012364
-dengamma value 0.961997
-dengamma value 1.077806
-dengamma value 1.065058
-dengamma value 1.094705
-dengamma value 0.986651
-dengamma value 0.979273
-dengamma value 1.074024
-dengamma value 1.121549
-dengamma value 0.998119
-11/24/2016 19:24:30:  Epoch[ 2 of 3]-Minibatch[  31-  40, 0.49%]: ce = 0.08791709 * 6324; err = 0.33649589 * 6324; time = 0.4969s; samplesPerSecond = 12726.4
-dengamma value 0.955998
-dengamma value 0.935337
-dengamma value 0.939079
-dengamma value 1.050439
-dengamma value 1.078258
-dengamma value 1.101086
-dengamma value 1.032791
-dengamma value 1.146370
-dengamma value 1.027905
-dengamma value 0.981313
-dengamma value 1.011069
-dengamma value 1.014181
-dengamma value 0.960295
-dengamma value 1.098094
-dengamma value 1.032660
-dengamma value 0.986475
-dengamma value 0.936431
-dengamma value 0.995148
-dengamma value 1.018635
-dengamma value 1.047368
-11/24/2016 19:24:30:  Epoch[ 2 of 3]-Minibatch[  41-  50, 0.61%]: ce = 0.09136943 * 4800; err = 0.36125000 * 4800; time = 0.3697s; samplesPerSecond = 12982.3
-dengamma value 0.995049
-dengamma value 1.040118
-dengamma value 1.050226
-dengamma value 1.047880
-dengamma value 1.039695
-dengamma value 1.125882
-dengamma value 1.085326
-dengamma value 1.020683
-dengamma value 1.060347
-dengamma value 1.008885
-dengamma value 1.070962
-dengamma value 1.010869
-dengamma value 0.981059
-dengamma value 0.997017
-dengamma value 1.060546
-dengamma value 1.029930
-dengamma value 1.022045
-dengamma value 1.013874
-dengamma value 1.013099
-dengamma value 1.036016
-dengamma value 1.021430
-dengamma value 1.059550
-11/24/2016 19:24:31:  Epoch[ 2 of 3]-Minibatch[  51-  60, 0.73%]: ce = 0.08230385 * 6176; err = 0.34617876 * 6176; time = 0.4741s; samplesPerSecond = 13028.0
-dengamma value 1.091687
-dengamma value 1.054580
-dengamma value 1.068426
-dengamma value 0.982642
-dengamma value 1.074483
-dengamma value 1.042405
-dengamma value 1.092267
-dengamma value 0.957885
-dengamma value 1.061578
-dengamma value 1.029663
-dengamma value 1.066020
-dengamma value 1.014592
-dengamma value 1.054690
-dengamma value 0.998954
-dengamma value 1.072480
-dengamma value 1.037084
-dengamma value 1.096243
-dengamma value 1.132635
-dengamma value 1.037480
-dengamma value 0.965152
-dengamma value 1.081118
-dengamma value 1.048284
-dengamma value 1.039851
-11/24/2016 19:24:31:  Epoch[ 2 of 3]-Minibatch[  61-  70, 0.85%]: ce = 0.08998978 * 5534; err = 0.30791471 * 5534; time = 0.4716s; samplesPerSecond = 11733.7
-dengamma value 1.060529
-dengamma value 1.000414
-dengamma value 0.986952
-dengamma value 1.025660
-dengamma value 1.110572
-dengamma value 0.959939
-dengamma value 1.067203
-dengamma value 1.063095
-dengamma value 1.050863
-dengamma value 1.043348
-dengamma value 1.104078
-dengamma value 1.110926
-dengamma value 1.051656
-dengamma value 1.082978
-dengamma value 1.039109
-dengamma value 1.036769
-dengamma value 1.051384
-dengamma value 0.990762
-dengamma value 1.061356
-dengamma value 1.043009
-dengamma value 0.998371
-dengamma value 1.067152
-11/24/2016 19:24:32:  Epoch[ 2 of 3]-Minibatch[  71-  80, 0.98%]: ce = 0.08287587 * 5936; err = 0.30626685 * 5936; time = 0.5377s; samplesPerSecond = 11040.5
-dengamma value 0.915984
-dengamma value 1.068776
-dengamma value 1.072565
-dengamma value 1.056520
-dengamma value 1.075386
-dengamma value 1.009733
-dengamma value 1.070843
-dengamma value 1.029459
-dengamma value 1.029726
-dengamma value 1.065580
-dengamma value 0.908936
-dengamma value 1.062620
-dengamma value 1.117478
-dengamma value 1.078478
-dengamma value 1.000371
-dengamma value 1.080604
-dengamma value 1.089778
-dengamma value 1.075679
-dengamma value 1.092351
-dengamma value 1.097066
-dengamma value 1.055710
-11/24/2016 19:24:32:  Epoch[ 2 of 3]-Minibatch[  81-  90, 1.10%]: ce = 0.08365445 * 5248; err = 0.32393293 * 5248; time = 0.4266s; samplesPerSecond = 12300.8
-dengamma value 1.035227
-dengamma value 1.028046
-dengamma value 1.048955
-dengamma value 1.015732
-dengamma value 1.052929
-dengamma value 1.062983
-dengamma value 1.029182
-dengamma value 0.996526
-dengamma value 1.054619
-dengamma value 1.036449
-dengamma value 1.114403
-dengamma value 1.067392
-dengamma value 0.973700
-dengamma value 1.076753
-dengamma value 1.102290
-dengamma value 1.028348
-dengamma value 1.088040
-dengamma value 1.098103
-dengamma value 1.050145
-dengamma value 1.027048
-dengamma value 1.000811
-dengamma value 1.058132
-dengamma value 1.041159
-dengamma value 1.055889
-dengamma value 1.025248
-dengamma value 1.067705
-11/24/2016 19:24:33:  Epoch[ 2 of 3]-Minibatch[  91- 100, 1.22%]: ce = 0.08229460 * 6888; err = 0.30850755 * 6888; time = 0.5695s; samplesPerSecond = 12095.4
-dengamma value 1.041106
-dengamma value 1.069664
-dengamma value 1.030431
-dengamma value 1.045880
-dengamma value 1.030824
-dengamma value 1.029096
-dengamma value 1.008572
-dengamma value 1.083703
-dengamma value 1.066985
-dengamma value 1.027921
-dengamma value 1.026236
-dengamma value 1.091466
-dengamma value 1.070343
-dengamma value 1.011319
-dengamma value 1.090688
-dengamma value 1.007160
-dengamma value 1.002410
-dengamma value 1.107359
-dengamma value 1.054784
-dengamma value 1.032742
-dengamma value 1.019634
-dengamma value 1.021227
-dengamma value 0.982746
-dengamma value 1.038390
-11/24/2016 19:24:33:  Epoch[ 2 of 3]-Minibatch[ 101- 110, 1.34%]: ce = 0.08657044 * 6572; err = 0.33703591 * 6572; time = 0.5217s; samplesPerSecond = 12597.5
-dengamma value 0.994370
-dengamma value 1.074123
-dengamma value 1.015415
-dengamma value 1.081716
-dengamma value 1.047631
-dengamma value 1.005121
-dengamma value 1.011264
-dengamma value 1.060514
-dengamma value 1.040383
-dengamma value 0.999052
-dengamma value 1.052234
-dengamma value 1.061897
-dengamma value 1.068001
-dengamma value 1.044555
-dengamma value 1.020094
-dengamma value 1.034750
-dengamma value 1.024670
-dengamma value 1.107010
-dengamma value 0.998547
-dengamma value 1.053649
-dengamma value 1.048926
-dengamma value 1.128838
-dengamma value 1.072290
-dengamma value 1.024949
-11/24/2016 19:24:34:  Epoch[ 2 of 3]-Minibatch[ 111- 120, 1.46%]: ce = 0.08643515 * 6622; err = 0.31425551 * 6622; time = 0.5714s; samplesPerSecond = 11589.2
-dengamma value 1.027137
-dengamma value 1.091871
-dengamma value 1.016705
-dengamma value 0.986396
-dengamma value 1.035542
-dengamma value 1.020436
-dengamma value 0.946994
-dengamma value 0.983166
-dengamma value 0.939824
-dengamma value 1.041023
-dengamma value 1.067955
-dengamma value 1.129261
-dengamma value 1.107413
-dengamma value 1.092192
-dengamma value 1.025411
-dengamma value 1.043051
-dengamma value 1.001436
-dengamma value 1.038574
-dengamma value 1.028719
-dengamma value 0.966598
-dengamma value 1.045201
-dengamma value 1.081102
-dengamma value 1.032466
-11/24/2016 19:24:34:  Epoch[ 2 of 3]-Minibatch[ 121- 130, 1.59%]: ce = 0.08797539 * 5824; err = 0.31850962 * 5824; time = 0.4412s; samplesPerSecond = 13199.4
-dengamma value 0.970246
-dengamma value 1.037569
-dengamma value 1.106581
-dengamma value 0.970027
-dengamma value 1.009392
-dengamma value 1.089476
-dengamma value 1.057962
-dengamma value 1.158356
-dengamma value 1.039607
-11/24/2016 19:24:35: Finished Epoch[ 2 of 3]: [Training] ce = 0.08465804 * 81776; err = 0.32420270 * 81776; totalSamplesSeen = 164350; learningRatePerSample = 2e-06; epochTime=6.74287s
-11/24/2016 19:24:35: SGD: Saving checkpoint model '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence.2'
+dengamma value 1.089870
+dengamma value 1.014205
+dengamma value 0.981280
+dengamma value 1.034647
+dengamma value 1.014682
+dengamma value 0.948463
+dengamma value 0.980706
+dengamma value 0.939395
+dengamma value 1.045969
+dengamma value 1.069264
+dengamma value 1.136427
+dengamma value 1.088328
+dengamma value 1.091544
+dengamma value 1.019554
+dengamma value 1.042613
+dengamma value 0.994045
+dengamma value 1.040274
+dengamma value 1.025537
+dengamma value 0.962728
+dengamma value 1.039614
+dengamma value 1.089513
+dengamma value 1.034471
+12/20/2016 16:02:17:  Epoch[ 2 of 3]-Minibatch[ 121- 130, 1.59%]: ce = 0.08802074 * 5824; err = 0.32228709 * 5824; time = 0.4360s; samplesPerSecond = 13358.0
+dengamma value 0.970587
+dengamma value 1.033712
+dengamma value 1.102219
+dengamma value 0.965871
+dengamma value 1.016397
+dengamma value 1.093221
+dengamma value 1.061043
+dengamma value 1.150184
+dengamma value 1.034397
+12/20/2016 16:02:17: Finished Epoch[ 2 of 3]: [Training] ce = 0.08407320 * 81776; err = 0.32522990 * 81776; totalSamplesSeen = 164350; learningRatePerSample = 2e-06; epochTime=6.64619s
+12/20/2016 16:02:17: SGD: Saving checkpoint model '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence.2'
 
-11/24/2016 19:24:35: Starting Epoch 3: learning rate per sample = 0.000002  effective momentum = 0.995898  momentum as time constant = 2432.7 samples
+12/20/2016 16:02:17: Starting Epoch 3: learning rate per sample = 0.000002  effective momentum = 0.995898  momentum as time constant = 2432.7 samples
 minibatchiterator: epoch 2: frames [163840..245760] (first utterance at frame 163922), data subset 0 of 1, with 1 datapasses
 
-11/24/2016 19:24:35: Starting minibatch loop.
-dengamma value 1.077513
-dengamma value 1.028340
-dengamma value 1.070248
-dengamma value 1.071597
-dengamma value 1.082021
-dengamma value 0.998957
-dengamma value 1.026980
-dengamma value 0.995208
-dengamma value 1.017345
-dengamma value 1.006024
-dengamma value 1.039736
-dengamma value 1.031318
-dengamma value 1.024560
-dengamma value 1.051309
-dengamma value 1.052181
-dengamma value 1.112069
-dengamma value 1.014293
-dengamma value 1.106634
-dengamma value 1.019087
-dengamma value 1.062165
-dengamma value 1.000327
-dengamma value 1.046828
-dengamma value 1.095565
-11/24/2016 19:24:35:  Epoch[ 3 of 3]-Minibatch[   1-  10, 0.12%]: ce = 0.08370350 * 5074; err = 0.33228222 * 5074; time = 0.4416s; samplesPerSecond = 11489.8
-dengamma value 1.004078
-dengamma value 1.094245
-dengamma value 1.053059
-dengamma value 1.067764
-dengamma value 0.984299
-dengamma value 0.990464
-dengamma value 0.991427
-dengamma value 0.995815
-dengamma value 1.101860
-dengamma value 1.064553
-dengamma value 1.031844
-dengamma value 1.020694
-dengamma value 1.038801
-dengamma value 1.038781
-dengamma value 1.092339
-dengamma value 1.085981
-dengamma value 1.024932
-dengamma value 1.043635
-dengamma value 1.078083
-dengamma value 0.967163
-dengamma value 1.038559
-dengamma value 1.020986
-11/24/2016 19:24:36:  Epoch[ 3 of 3]-Minibatch[  11-  20, 0.24%]: ce = 0.08160169 * 7136; err = 0.31348094 * 7136; time = 0.5680s; samplesPerSecond = 12563.9
-dengamma value 1.089676
-dengamma value 1.004370
-dengamma value 0.993380
-dengamma value 1.007021
-dengamma value 1.071273
-dengamma value 1.022323
-dengamma value 1.106520
-dengamma value 0.991364
-dengamma value 1.019610
-dengamma value 1.057381
-dengamma value 1.082189
-dengamma value 1.048285
-dengamma value 1.094091
-dengamma value 1.019659
-dengamma value 1.068419
-dengamma value 1.017585
-dengamma value 1.044954
-dengamma value 1.009438
-dengamma value 1.106436
-dengamma value 1.111234
-dengamma value 1.027988
-dengamma value 0.997209
-dengamma value 1.010093
-11/24/2016 19:24:36:  Epoch[ 3 of 3]-Minibatch[  21-  30, 0.37%]: ce = 0.09327267 * 5504; err = 0.33975291 * 5504; time = 0.4660s; samplesPerSecond = 11810.2
-dengamma value 1.049985
-dengamma value 1.062557
-dengamma value 1.049291
-dengamma value 1.072867
-dengamma value 1.051837
-dengamma value 0.993665
-dengamma value 1.059007
-dengamma value 1.075324
-dengamma value 1.016211
-dengamma value 1.116792
-dengamma value 1.038580
-dengamma value 1.055062
-dengamma value 1.049462
-dengamma value 1.088850
-dengamma value 0.978818
-dengamma value 1.044560
-dengamma value 0.999067
-dengamma value 1.018055
-dengamma value 0.942909
-dengamma value 1.137021
-dengamma value 1.061357
-11/24/2016 19:24:37:  Epoch[ 3 of 3]-Minibatch[  31-  40, 0.49%]: ce = 0.08442294 * 6028; err = 0.32697412 * 6028; time = 0.5111s; samplesPerSecond = 11793.9
-dengamma value 1.058254
-dengamma value 1.094018
-dengamma value 1.064477
-dengamma value 1.063893
-dengamma value 0.982159
-dengamma value 0.973549
-dengamma value 1.044369
-dengamma value 0.993214
-dengamma value 1.035570
-dengamma value 1.098646
-dengamma value 1.064655
-dengamma value 1.025901
-dengamma value 1.057474
-dengamma value 1.046746
-dengamma value 1.052440
-dengamma value 0.999480
-dengamma value 1.013308
-dengamma value 1.133298
-dengamma value 1.016483
-dengamma value 1.040329
-dengamma value 1.026609
-11/24/2016 19:24:37:  Epoch[ 3 of 3]-Minibatch[  41-  50, 0.61%]: ce = 0.08535552 * 6028; err = 0.32879894 * 6028; time = 0.4754s; samplesPerSecond = 12679.4
-dengamma value 1.027486
-dengamma value 1.039581
-dengamma value 1.017419
-dengamma value 0.989204
-dengamma value 1.046541
-dengamma value 1.094041
-dengamma value 1.083693
-dengamma value 1.062080
-dengamma value 0.976675
-dengamma value 1.166793
-dengamma value 0.987811
-dengamma value 0.983069
-dengamma value 1.061961
-dengamma value 1.038545
-dengamma value 1.036140
-dengamma value 1.081587
-dengamma value 0.994295
-dengamma value 0.981019
-dengamma value 1.060685
-dengamma value 1.015593
-dengamma value 1.051523
-dengamma value 1.034331
-dengamma value 1.002601
-dengamma value 1.013739
-11/24/2016 19:24:38:  Epoch[ 3 of 3]-Minibatch[  51-  60, 0.73%]: ce = 0.08529389 * 6782; err = 0.32881156 * 6782; time = 0.5389s; samplesPerSecond = 12584.1
-dengamma value 1.062144
-dengamma value 1.052580
-dengamma value 1.100661
-dengamma value 1.017306
-dengamma value 1.086932
-dengamma value 1.035741
-dengamma value 1.092783
-dengamma value 1.094628
-dengamma value 1.072112
-dengamma value 1.014484
-dengamma value 1.080229
-dengamma value 1.090802
-dengamma value 0.987583
-dengamma value 1.134912
-dengamma value 1.126554
-dengamma value 0.999848
-dengamma value 1.046200
-dengamma value 1.121253
-dengamma value 1.060673
-dengamma value 0.988734
-dengamma value 1.012413
-11/24/2016 19:24:38:  Epoch[ 3 of 3]-Minibatch[  61-  70, 0.85%]: ce = 0.07887115 * 5458; err = 0.29461341 * 5458; time = 0.4877s; samplesPerSecond = 11192.1
-dengamma value 1.059115
-dengamma value 1.020341
-dengamma value 1.071918
-dengamma value 1.051739
-dengamma value 1.212426
-dengamma value 1.089875
-dengamma value 0.975985
-dengamma value 1.071425
-dengamma value 1.074963
-dengamma value 1.044812
-dengamma value 1.046808
-dengamma value 1.074647
-dengamma value 1.124182
-dengamma value 1.144870
-dengamma value 1.043787
-dengamma value 1.064872
-dengamma value 1.019997
-dengamma value 1.016648
-dengamma value 1.008102
-dengamma value 1.104676
-dengamma value 1.077710
-dengamma value 1.109638
-dengamma value 1.078114
-dengamma value 1.090693
-dengamma value 1.013600
-11/24/2016 19:24:39:  Epoch[ 3 of 3]-Minibatch[  71-  80, 0.98%]: ce = 0.08031831 * 6610; err = 0.29425113 * 6610; time = 0.5458s; samplesPerSecond = 12110.5
-dengamma value 1.071106
-dengamma value 1.062858
-dengamma value 1.104763
-dengamma value 1.072281
-dengamma value 1.061123
-dengamma value 0.966847
-dengamma value 1.026824
-dengamma value 1.070768
-dengamma value 1.079399
-dengamma value 1.062158
-dengamma value 1.038543
-dengamma value 0.948246
-dengamma value 1.120837
-dengamma value 1.101894
-dengamma value 1.009197
-dengamma value 1.032486
-dengamma value 0.907503
-dengamma value 1.056175
-dengamma value 1.105175
-dengamma value 1.051911
-dengamma value 1.023587
-dengamma value 1.078703
-dengamma value 1.037226
-11/24/2016 19:24:39:  Epoch[ 3 of 3]-Minibatch[  81-  90, 1.10%]: ce = 0.08624770 * 5854; err = 0.31704817 * 5854; time = 0.4538s; samplesPerSecond = 12898.8
-dengamma value 1.054835
-dengamma value 1.132081
-dengamma value 1.089594
-dengamma value 0.882583
-dengamma value 1.044460
-dengamma value 1.054645
-dengamma value 0.975773
-dengamma value 1.074114
-dengamma value 1.019529
-dengamma value 1.021785
-dengamma value 1.023403
-dengamma value 1.010108
-dengamma value 1.102825
-dengamma value 1.059770
-dengamma value 1.111265
-dengamma value 1.072562
-dengamma value 1.045677
-dengamma value 1.101950
-dengamma value 1.035794
-dengamma value 0.970651
-dengamma value 1.025532
-dengamma value 1.061960
-dengamma value 1.023248
-11/24/2016 19:24:40:  Epoch[ 3 of 3]-Minibatch[  91- 100, 1.22%]: ce = 0.08990006 * 4674; err = 0.33140779 * 4674; time = 0.3853s; samplesPerSecond = 12130.3
-dengamma value 0.988962
-dengamma value 1.031365
-dengamma value 1.056507
-dengamma value 1.067448
-dengamma value 1.029511
-dengamma value 1.070507
-dengamma value 1.040787
-dengamma value 1.002095
-dengamma value 1.116830
-dengamma value 1.033054
-dengamma value 1.030423
-dengamma value 1.053696
-dengamma value 1.065129
-dengamma value 1.004694
-dengamma value 0.920880
-dengamma value 0.974601
-dengamma value 0.999423
-dengamma value 1.053662
-dengamma value 1.027187
-dengamma value 0.973645
-dengamma value 1.081344
-11/24/2016 19:24:40:  Epoch[ 3 of 3]-Minibatch[ 101- 110, 1.34%]: ce = 0.08247624 * 6248; err = 0.31994238 * 6248; time = 0.5002s; samplesPerSecond = 12491.4
-dengamma value 0.965462
-dengamma value 1.046590
-dengamma value 1.044948
-dengamma value 1.065925
-dengamma value 1.133800
-dengamma value 1.031227
-dengamma value 1.049561
-dengamma value 1.048773
-dengamma value 1.096040
-dengamma value 1.001146
-dengamma value 1.004240
-dengamma value 1.007200
-dengamma value 1.050188
-dengamma value 1.056445
-dengamma value 0.991516
-dengamma value 1.082690
-dengamma value 1.110380
-dengamma value 1.025826
-dengamma value 1.042525
-dengamma value 1.145444
-dengamma value 1.102752
-dengamma value 1.045883
-dengamma value 1.079452
-11/24/2016 19:24:41:  Epoch[ 3 of 3]-Minibatch[ 111- 120, 1.46%]: ce = 0.07827347 * 7094; err = 0.31561883 * 7094; time = 0.5766s; samplesPerSecond = 12302.9
-dengamma value 1.044427
-dengamma value 1.066994
-dengamma value 1.049496
-dengamma value 1.054198
-dengamma value 1.044489
-dengamma value 1.054655
-dengamma value 1.051105
-dengamma value 0.973185
-dengamma value 0.990705
-dengamma value 1.053892
-dengamma value 1.064554
-dengamma value 1.033569
-dengamma value 1.008893
-dengamma value 1.085517
-dengamma value 0.992034
-dengamma value 1.090332
-dengamma value 1.054599
-dengamma value 1.050178
-dengamma value 1.027553
-dengamma value 1.039339
-dengamma value 1.055928
-dengamma value 1.041476
-11/24/2016 19:24:41:  Epoch[ 3 of 3]-Minibatch[ 121- 130, 1.59%]: ce = 0.08682572 * 6246; err = 0.31556196 * 6246; time = 0.5207s; samplesPerSecond = 11996.4
-dengamma value 1.008790
-dengamma value 1.051174
-dengamma value 1.049594
-dengamma value 1.072051
-dengamma value 1.035597
-dengamma value 0.967209
-dengamma value 1.002120
-dengamma value 1.119848
-dengamma value 1.069093
-dengamma value 0.988246
-dengamma value 0.944602
-dengamma value 1.061823
-dengamma value 1.061823
-11/24/2016 19:24:42: Finished Epoch[ 3 of 3]: [Training] ce = 0.08440978 * 81970; err = 0.32028791 * 81970; totalSamplesSeen = 246320; learningRatePerSample = 2e-06; epochTime=6.74932s
-11/24/2016 19:24:42: SGD: Saving checkpoint model '/tmp/cntk-test-20161124192404.467155/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence'
+12/20/2016 16:02:17: Starting minibatch loop.
+dengamma value 1.078789
+dengamma value 1.030453
+dengamma value 1.058080
+dengamma value 1.081221
+dengamma value 1.086825
+dengamma value 1.002083
+dengamma value 1.037549
+dengamma value 1.000106
+dengamma value 1.012095
+dengamma value 1.004430
+dengamma value 1.040228
+dengamma value 1.038987
+dengamma value 1.023485
+dengamma value 1.049729
+dengamma value 1.047929
+dengamma value 1.112697
+dengamma value 1.003396
+dengamma value 1.110372
+dengamma value 1.025726
+dengamma value 1.070689
+dengamma value 0.994006
+dengamma value 1.043803
+dengamma value 1.096460
+12/20/2016 16:02:18:  Epoch[ 3 of 3]-Minibatch[   1-  10, 0.12%]: ce = 0.08265500 * 5074; err = 0.32834056 * 5074; time = 0.4325s; samplesPerSecond = 11731.6
+dengamma value 1.006399
+dengamma value 1.095889
+dengamma value 1.058443
+dengamma value 1.067033
+dengamma value 0.986926
+dengamma value 0.986665
+dengamma value 0.995864
+dengamma value 0.994126
+dengamma value 1.097254
+dengamma value 1.066725
+dengamma value 1.031736
+dengamma value 1.022746
+dengamma value 1.035091
+dengamma value 1.022566
+dengamma value 1.087674
+dengamma value 1.087211
+dengamma value 1.028095
+dengamma value 1.043504
+dengamma value 1.076954
+dengamma value 0.962188
+dengamma value 1.039198
+dengamma value 1.022857
+12/20/2016 16:02:18:  Epoch[ 3 of 3]-Minibatch[  11-  20, 0.24%]: ce = 0.08045937 * 7136; err = 0.31754484 * 7136; time = 0.5765s; samplesPerSecond = 12377.9
+dengamma value 1.091183
+dengamma value 1.013832
+dengamma value 0.984360
+dengamma value 1.008287
+dengamma value 1.070741
+dengamma value 1.025753
+dengamma value 1.106484
+dengamma value 0.992086
+dengamma value 1.018619
+dengamma value 1.054996
+dengamma value 1.084853
+dengamma value 1.045653
+dengamma value 1.093444
+dengamma value 1.015022
+dengamma value 1.064364
+dengamma value 1.021514
+dengamma value 1.043582
+dengamma value 1.017226
+dengamma value 1.096917
+dengamma value 1.110367
+dengamma value 1.030228
+dengamma value 1.002501
+dengamma value 1.008921
+12/20/2016 16:02:19:  Epoch[ 3 of 3]-Minibatch[  21-  30, 0.37%]: ce = 0.09197325 * 5504; err = 0.34393169 * 5504; time = 0.4818s; samplesPerSecond = 11424.5
+dengamma value 1.049649
+dengamma value 1.050447
+dengamma value 1.057212
+dengamma value 1.076604
+dengamma value 1.054829
+dengamma value 0.993612
+dengamma value 1.060331
+dengamma value 1.078277
+dengamma value 1.019480
+dengamma value 1.116631
+dengamma value 1.042739
+dengamma value 1.055810
+dengamma value 1.044727
+dengamma value 1.089649
+dengamma value 0.973752
+dengamma value 1.052143
+dengamma value 0.999856
+dengamma value 1.021146
+dengamma value 0.933905
+dengamma value 1.123655
+dengamma value 1.051053
+12/20/2016 16:02:19:  Epoch[ 3 of 3]-Minibatch[  31-  40, 0.49%]: ce = 0.08375779 * 6028; err = 0.32581287 * 6028; time = 0.5223s; samplesPerSecond = 11542.3
+dengamma value 1.054790
+dengamma value 1.092617
+dengamma value 1.059417
+dengamma value 1.063710
+dengamma value 0.985154
+dengamma value 0.975720
+dengamma value 1.037727
+dengamma value 0.994491
+dengamma value 1.040335
+dengamma value 1.104326
+dengamma value 1.063656
+dengamma value 1.023660
+dengamma value 1.057519
+dengamma value 1.048204
+dengamma value 1.049812
+dengamma value 1.009224
+dengamma value 1.015804
+dengamma value 1.134448
+dengamma value 1.012165
+dengamma value 1.041159
+dengamma value 1.029857
+12/20/2016 16:02:20:  Epoch[ 3 of 3]-Minibatch[  41-  50, 0.61%]: ce = 0.08466745 * 6028; err = 0.33145322 * 6028; time = 0.4692s; samplesPerSecond = 12848.5
+dengamma value 1.027204
+dengamma value 1.037831
+dengamma value 1.014375
+dengamma value 0.987489
+dengamma value 1.047029
+dengamma value 1.093937
+dengamma value 1.092176
+dengamma value 1.063726
+dengamma value 0.962995
+dengamma value 1.166090
+dengamma value 0.989000
+dengamma value 0.986259
+dengamma value 1.055298
+dengamma value 1.035782
+dengamma value 1.037720
+dengamma value 1.079651
+dengamma value 0.992981
+dengamma value 0.982608
+dengamma value 1.050909
+dengamma value 1.011955
+dengamma value 1.053767
+dengamma value 1.041978
+dengamma value 1.005994
+dengamma value 1.016839
+12/20/2016 16:02:20:  Epoch[ 3 of 3]-Minibatch[  51-  60, 0.73%]: ce = 0.08446380 * 6782; err = 0.33456208 * 6782; time = 0.5308s; samplesPerSecond = 12777.0
+dengamma value 1.063379
+dengamma value 1.052313
+dengamma value 1.105613
+dengamma value 1.018010
+dengamma value 1.092914
+dengamma value 1.040720
+dengamma value 1.092854
+dengamma value 1.093319
+dengamma value 1.072235
+dengamma value 1.010360
+dengamma value 1.074232
+dengamma value 1.099671
+dengamma value 0.990092
+dengamma value 1.128348
+dengamma value 1.123019
+dengamma value 0.998646
+dengamma value 1.048018
+dengamma value 1.115648
+dengamma value 1.062792
+dengamma value 0.990261
+dengamma value 1.016200
+12/20/2016 16:02:21:  Epoch[ 3 of 3]-Minibatch[  61-  70, 0.85%]: ce = 0.07822180 * 5458; err = 0.29168193 * 5458; time = 0.4845s; samplesPerSecond = 11266.2
+dengamma value 1.057919
+dengamma value 1.018209
+dengamma value 1.072006
+dengamma value 1.062543
+dengamma value 1.207962
+dengamma value 1.091540
+dengamma value 0.974182
+dengamma value 1.069207
+dengamma value 1.074497
+dengamma value 1.040475
+dengamma value 1.044826
+dengamma value 1.075648
+dengamma value 1.120824
+dengamma value 1.146609
+dengamma value 1.037548
+dengamma value 1.065531
+dengamma value 1.017099
+dengamma value 1.015259
+dengamma value 0.999700
+dengamma value 1.093916
+dengamma value 1.076890
+dengamma value 1.117583
+dengamma value 1.082416
+dengamma value 1.088343
+dengamma value 1.009784
+12/20/2016 16:02:21:  Epoch[ 3 of 3]-Minibatch[  71-  80, 0.98%]: ce = 0.07973215 * 6610; err = 0.29183056 * 6610; time = 0.5399s; samplesPerSecond = 12242.4
+dengamma value 1.069624
+dengamma value 1.060800
+dengamma value 1.101717
+dengamma value 1.069384
+dengamma value 1.061370
+dengamma value 0.970520
+dengamma value 1.022864
+dengamma value 1.071220
+dengamma value 1.078129
+dengamma value 1.061282
+dengamma value 1.031065
+dengamma value 0.950482
+dengamma value 1.114151
+dengamma value 1.094002
+dengamma value 1.008162
+dengamma value 1.038709
+dengamma value 0.908190
+dengamma value 1.055314
+dengamma value 1.106881
+dengamma value 1.050261
+dengamma value 1.025150
+dengamma value 1.079210
+dengamma value 1.035925
+12/20/2016 16:02:22:  Epoch[ 3 of 3]-Minibatch[  81-  90, 1.10%]: ce = 0.08455177 * 5854; err = 0.31790229 * 5854; time = 0.4465s; samplesPerSecond = 13111.1
+dengamma value 1.049542
+dengamma value 1.123807
+dengamma value 1.093679
+dengamma value 0.877132
+dengamma value 1.044272
+dengamma value 1.060620
+dengamma value 0.971853
+dengamma value 1.079361
+dengamma value 1.021036
+dengamma value 1.018464
+dengamma value 1.023737
+dengamma value 1.006413
+dengamma value 1.092625
+dengamma value 1.049847
+dengamma value 1.108025
+dengamma value 1.078137
+dengamma value 1.044088
+dengamma value 1.099574
+dengamma value 1.034357
+dengamma value 0.968193
+dengamma value 1.025245
+dengamma value 1.059594
+dengamma value 1.019977
+12/20/2016 16:02:22:  Epoch[ 3 of 3]-Minibatch[  91- 100, 1.22%]: ce = 0.08881370 * 4674; err = 0.32862644 * 4674; time = 0.3775s; samplesPerSecond = 12380.6
+dengamma value 0.992799
+dengamma value 1.027053
+dengamma value 1.056393
+dengamma value 1.070617
+dengamma value 1.028633
+dengamma value 1.068012
+dengamma value 1.036424
+dengamma value 0.999990
+dengamma value 1.113173
+dengamma value 1.036618
+dengamma value 1.027260
+dengamma value 1.053541
+dengamma value 1.061644
+dengamma value 1.000534
+dengamma value 0.916166
+dengamma value 0.970848
+dengamma value 1.003365
+dengamma value 1.053082
+dengamma value 1.031433
+dengamma value 0.978986
+dengamma value 1.078258
+12/20/2016 16:02:23:  Epoch[ 3 of 3]-Minibatch[ 101- 110, 1.34%]: ce = 0.08137401 * 6248; err = 0.32570423 * 6248; time = 0.4929s; samplesPerSecond = 12675.1
+dengamma value 0.963636
+dengamma value 1.045714
+dengamma value 1.044621
+dengamma value 1.065415
+dengamma value 1.128077
+dengamma value 1.022988
+dengamma value 1.047534
+dengamma value 1.046489
+dengamma value 1.092607
+dengamma value 1.000033
+dengamma value 0.999314
+dengamma value 1.013837
+dengamma value 1.048409
+dengamma value 1.050613
+dengamma value 0.989481
+dengamma value 1.078696
+dengamma value 1.106206
+dengamma value 1.022428
+dengamma value 1.037218
+dengamma value 1.140517
+dengamma value 1.089525
+dengamma value 1.046260
+dengamma value 1.077538
+12/20/2016 16:02:23:  Epoch[ 3 of 3]-Minibatch[ 111- 120, 1.46%]: ce = 0.07785291 * 7094; err = 0.31942487 * 7094; time = 0.5664s; samplesPerSecond = 12525.8
+dengamma value 1.046170
+dengamma value 1.069117
+dengamma value 1.049764
+dengamma value 1.056037
+dengamma value 1.042047
+dengamma value 1.046143
+dengamma value 1.048396
+dengamma value 0.965730
+dengamma value 0.989867
+dengamma value 1.047404
+dengamma value 1.063675
+dengamma value 1.026480
+dengamma value 1.009490
+dengamma value 1.076302
+dengamma value 0.996252
+dengamma value 1.086671
+dengamma value 1.054705
+dengamma value 1.049500
+dengamma value 1.025935
+dengamma value 1.037173
+dengamma value 1.056090
+dengamma value 1.035116
+12/20/2016 16:02:24:  Epoch[ 3 of 3]-Minibatch[ 121- 130, 1.59%]: ce = 0.08639248 * 6246; err = 0.31364073 * 6246; time = 0.5134s; samplesPerSecond = 12165.9
+dengamma value 1.004479
+dengamma value 1.051038
+dengamma value 1.040064
+dengamma value 1.077011
+dengamma value 1.034544
+dengamma value 0.960288
+dengamma value 1.001882
+dengamma value 1.123456
+dengamma value 1.061002
+dengamma value 0.982714
+dengamma value 0.945535
+dengamma value 1.061520
+dengamma value 1.061520
+12/20/2016 16:02:24: Finished Epoch[ 3 of 3]: [Training] ce = 0.08355509 * 81970; err = 0.32149567 * 81970; totalSamplesSeen = 246320; learningRatePerSample = 2e-06; epochTime=6.70795s
+12/20/2016 16:02:24: SGD: Saving checkpoint model '/tmp/cntk-test-20161220160002.370246/Speech/DNN_SequenceTraining@release_gpu/models/cntkSpeech.sequence'
 
-11/24/2016 19:24:42: Action "train" complete.
+12/20/2016 16:02:24: Action "train" complete.
 
-11/24/2016 19:24:42: __COMPLETED__
+12/20/2016 16:02:24: __COMPLETED__

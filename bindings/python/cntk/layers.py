@@ -254,7 +254,7 @@ def Delay(T=1, initial_state=None):
     if T > 0:
         apply_x = past_value  (x, time_step=T, initial_state=initial_state)
     elif T < 0:
-        apply_x = future_value(x, time_step=T, initial_state=initial_state)
+        apply_x = future_value(x, time_step=-T, initial_state=initial_state)
     else:
         apply_x = x
     return Block(apply_x, 'Delay')

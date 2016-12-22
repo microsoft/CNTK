@@ -15,7 +15,7 @@ from Sequence2Sequence import sequence_to_sequence_translator
 TOLERANCE_ABSOLUTE = 1E-1
 
 def test_sequence_to_sequence(device_id):
-    from cntk.utils import cntk_device
+    from cntk.ops.tests.ops_test_utils import cntk_device
     set_default_device(cntk_device(device_id))
 
     error = sequence_to_sequence_translator(False, True)
