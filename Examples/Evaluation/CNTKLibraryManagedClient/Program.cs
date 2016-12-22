@@ -69,6 +69,8 @@ namespace CNTKLibraryManagedClientTest
             // Start evaluation on the device
             modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
+            modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+
             // Get evaluate result as dense output
             outputBuffer = new List<List<float>>();
             outputVal = outputDataMap[outputVar];

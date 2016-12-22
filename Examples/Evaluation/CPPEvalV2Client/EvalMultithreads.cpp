@@ -135,7 +135,7 @@ void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int t
 void MultiThreadsEvaluationWithLoadModel(const DeviceDescriptor& device, const int threadCount)
 {
     // The model file will be trained and copied to the current runtime directory first.
-    auto modelFuncPtr = CNTK::Function::LoadModel(L"01_OneHidden", device);
+    auto modelFuncPtr = CNTK::Function::LoadModel(L"z.model", device);
 
 
     OutputFunctionInfo(modelFuncPtr);
@@ -397,8 +397,8 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
 
 void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device)
 {
-    const std::wstring inputNodeName = L"features";
-    const std::wstring outputNodeName = L"out.z_output";
+    const std::wstring inputNodeName = L"";
+    const std::wstring outputNodeName = L"Plus2060_output";
 
     Variable inputVar;
     if (!GetInputVariableByName(evalFunc, inputNodeName, inputVar))
@@ -416,9 +416,10 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
 
     // Evaluate the network in several runs 
     size_t iterationCount = 4;   
-    size_t numSamples = 3;
+    size_t numSamples = 2;
     for (size_t t = 0; t < iterationCount; ++t)
     {
+        numSamples = 2;
         std::vector<float> inputData(inputVar.Shape().TotalSize() * numSamples);
         for (size_t i = 0; i < inputData.size(); ++i)
         {
@@ -428,8 +429,24 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
         NDShape inputShape = inputVar.Shape().AppendShape({1, numSamples});
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData, true));
 
-        ValuePtr outputValue;
-        std::unordered_map<Variable, ValuePtr> outputs = {{outputVar, outputValue}};
+        ValuePtr outputValue(nullptr);
+        std::unordered_map<Variable, ValuePtr> outputs = {{outputVar, nullptr}};
+
+        evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
+        //evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
+
+        numSamples = 1;
+        inputData = std::vector<float>(inputVar.Shape().TotalSize() * numSamples);
+        for (size_t i = 0; i < inputData.size(); ++i)
+        {
+            inputData[i] = static_cast<float>(i % 255);
+        }
+
+        inputShape = inputVar.Shape().AppendShape({1, numSamples});
+        inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData, true));
+
+        ValuePtr outputValue2;
+        // outputs[outputVar] = outputValue2;
         evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
 
         outputValue = outputs[outputVar];
@@ -458,27 +475,27 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
 void MultiThreadsEvaluation(bool isGPUAvailable)
 {
     // The number of threads running evaluation in parallel.
-    const int numOfThreads = 2;
+    const int numOfThreads = 1;
 
     fprintf(stderr, "\n##### Run evaluation on %s device with %d parallel evaluation thread(s). #####\n", isGPUAvailable ? "GPU" : "CPU", numOfThreads);
 
-    // Test multi-threads evaluation with new function
-    fprintf(stderr, "\n##### Run evaluation using new function on CPU. #####\n");
-    MultiThreadsEvaluationWithNewFunction(DeviceDescriptor::CPUDevice(), numOfThreads);
-    if (isGPUAvailable)
-    {
-        fprintf(stderr, "\n##### Run evaluation using new function on GPU. #####\n");;
-        MultiThreadsEvaluationWithNewFunction(DeviceDescriptor::GPUDevice(0), numOfThreads);
-    }
+    //// Test multi-threads evaluation with new function
+    //fprintf(stderr, "\n##### Run evaluation using new function on CPU. #####\n");
+    //MultiThreadsEvaluationWithNewFunction(DeviceDescriptor::CPUDevice(), numOfThreads);
+    //if (isGPUAvailable)
+    //{
+    //    fprintf(stderr, "\n##### Run evaluation using new function on GPU. #####\n");;
+    //    MultiThreadsEvaluationWithNewFunction(DeviceDescriptor::GPUDevice(0), numOfThreads);
+    //}
 
-    // Test multi-threads evaluation using clone.
-    fprintf(stderr, "\n##### Run evaluation using clone function on CPU. #####\n");
-    MultiThreadsEvaluationWithClone(DeviceDescriptor::CPUDevice(), numOfThreads);
-    if (isGPUAvailable)
-    {
-        fprintf(stderr, "\n##### Run evaluation using clone function on GPU. #####\n");
-        MultiThreadsEvaluationWithClone(DeviceDescriptor::GPUDevice(0), numOfThreads);
-    }
+    //// Test multi-threads evaluation using clone.
+    //fprintf(stderr, "\n##### Run evaluation using clone function on CPU. #####\n");
+    //MultiThreadsEvaluationWithClone(DeviceDescriptor::CPUDevice(), numOfThreads);
+    //if (isGPUAvailable)
+    //{
+    //    fprintf(stderr, "\n##### Run evaluation using clone function on GPU. #####\n");
+    //    MultiThreadsEvaluationWithClone(DeviceDescriptor::GPUDevice(0), numOfThreads);
+    //}
 
     // test multi-threads evaluation with loading existing models
     fprintf(stderr, "\n##### Run evaluation using pre-trained model on CPU. #####\n");
