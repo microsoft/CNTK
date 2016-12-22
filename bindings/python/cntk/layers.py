@@ -130,18 +130,24 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     #apply_x = times(x, E)
     return Block(embed, 'Embedding', Record(E=E))
 
+# helpers for convolution depths
+def _inject_singleton_dimension(x, axis):
+    return x
+def _drop_singleton_dimension(x, axis):
+    return x
+
 # Convolution -- create a convolution layer with optional non-linearity
-#             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape) )
-#    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape) )
-#    kernel : (                +  (output shape) +  (reduction shape) + (filte  shape)   )
-#    out    : ( (sample shape) +  (output shape) +                    + (shifting shape) )
+#             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape)  )
+#    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape)  )
+#    kernel : (                +  (output shape) +  (reduction shape) + (rec field shape) )
+#    out    : ( (sample shape) +  (output shape) +                    + (shifting shape)  )
 # TODO: Can we specify atrous (dilated) convolution? How?
 # TODO: sharing = false?
 # TODO: conflict of parameter order: filter_shape or num_filters first?
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
 def Convolution(rf_shape,        # e.g. (3,3)
-                num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension_
+                num_filters=None,    # e.g. 64 or None (which means 1 channel and don't add a dimension)
                 activation=default_override_or(identity),
                 init=default_override_or(glorot_uniform()),
                 pad=default_override_or(False),
@@ -158,39 +164,63 @@ def Convolution(rf_shape,        # e.g. (3,3)
     pad        = get_default_override(Convolution, pad=pad)
     bias       = get_default_override(Convolution, bias=bias)
     init_bias  = get_default_override(Convolution, init_bias=init_bias)
-    #activation = _resolve_activation(activation)
-    #pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
-    #bias = bias if _is_given(bias) else _get_current_default_options().bias
 
-    if reduction_rank != 1:
-        NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
+    # tuplify all tuple inputs that can also be given as integers if rank 1
+    rf_shape    = _as_tuple(rf_shape)
+    num_filters = _as_tuple(num_filters) if num_filters else ()
+    strides     = _as_tuple(strides)
+    sharing     = _as_tuple(sharing)
+    pad         = _as_tuple(pad)
+
+    if reduction_rank > 1:
+        NotImplementedError("Convolution: reduction_rank other than 0 or 1 currently not supported")
     if transpose:
         NotImplementedError("Convolution: transpose option currently not supported")
     if not sharing:
         NotImplementedError("Convolution: sharing option currently must be True")
-    output_channels_shape = _as_tuple(num_filters)
-    output_rank = len(output_channels_shape)
+    # The convolution() function currently requires exactly one input and one output depth axis.
+    # So we fake those dimensions on this level.
+    fake_output_depth = num_filters == ()
+    fake_input_depth  = reduction_rank == 0
+
+    actual_output_channels_shape = num_filters                if not fake_output_depth else (1,)
+    actual_reduction_shape       = _INFERRED * reduction_rank if not fake_input_depth  else _INFERRED  # BUGBUG: (1,) crashes
+
     filter_rank = len(rf_shape)
-    kernel_shape = _INFERRED * reduction_rank + rf_shape # kernel := filter plus reductionDims
+    kernel_shape = actual_reduction_shape + rf_shape # kernel := filter plus reductionDims
+
+    # init can be an np.array, which must have the correct dimensions subject to faking depth
+    # Once we no longer fake depth at this outer level, we can remove this.
+    from cntk import cntk_py
+    if isinstance(init, np.ndarray):
+        if reduction_rank != 0:
+            raise ValueError("a constant initializer can currently only used without reduction dimension")
+        # BUGBUG: ^^ no need. Instead, take whatever reduction dimension is given here as that of the input.
+        nominal_W_shape = num_filters + rf_shape
+        if init.shape != nominal_W_shape:
+            raise ValueError("a constant initializer was passed that is of wrong shape")
+        init_kernel = init.reshape(actual_output_channels_shape + kernel_shape) # make it fit
+    else:
+        init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-len(actual_output_channels_shape)))
+        # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag?
 
     # parameters bound to this Function
-    #init_kernel = glorot_uniform(filter_rank=-filter_rank, output_rank=1)
-    init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
-    # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag?
-    W = Parameter(output_channels_shape + kernel_shape,         init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
-    b = Parameter(output_channels_shape + (1,) * len(rf_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
+    W = Parameter(actual_output_channels_shape + kernel_shape,         init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
+    b = Parameter(actual_output_channels_shape + (1,) * len(rf_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
     # expression
     @Function
     def convolve(x):
         # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
         r = convolution (W, x,
-                           strides=_as_tuple(strides),
-                           sharing=_as_tuple(sharing),
-                           auto_padding=_as_tuple(pad),
-                           # TODO: can we rename auto_padding to pad?
-                           transpose=transpose,
-                           max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+                         strides=strides, sharing=sharing, auto_padding=pad,
+                         # TODO: can we rename auto_padding to pad?
+                         transpose=transpose,
+                         max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+        # if no output dimension is desired, then strip it
+        # BUGBUG: We still have it in the kernel.
+        if fake_output_depth:
+            pass # TODO: drop it. Output depth is right next to filter depth.
         if bias:
             r = r + b
         if activation is not None:

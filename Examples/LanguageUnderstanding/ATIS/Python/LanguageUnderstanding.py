@@ -76,11 +76,14 @@ def create_model_function():
   pr_rnn = Function(pr_rnn_f)
 
   from cntk.ops.sequence import last
+  from cntk.ops import plus
   with default_options(initial_state=0.1, enable_self_stabilization=False):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
         Embedding(emb_dim),
         #Stabilizer(),
-        Recurrence(LSTM(hidden_dim), go_backwards=False),
+        #Recurrence(LSTM(hidden_dim), go_backwards=False),
+        (Recurrence(LSTM(hidden_dim), go_backwards=False), Recurrence(LSTM(hidden_dim), go_backwards=True)),
+        plus,
         #Recurrence(GRU(hidden_dim), go_backwards=False),
         #Recurrence(GRU(hidden_dim, activation=relu), go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=relu), go_backwards=False),

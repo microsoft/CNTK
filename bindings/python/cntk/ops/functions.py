@@ -229,19 +229,30 @@ class Function(cntk_py.Function):
 
     def __rshift__(self, other):
         '''
-        Forward function composition (other o self), same as Sequential([self, other]).
+        Forward function composition (G o F), same as Sequential([F, G]).
+        Unlike __call__(), __rshift__() accepts tuples:
+
+         * `G` can be a tuple of Functions. They are applied in parallel, yielding a tuple result.
+           If `F` is a single-valued Function, it will be fed to all items.
+         * if `F` is a tuple-valued Function piped and `G` is a single Function, the tuple
+           values will be used as the arguments to `G`.
+         * if both are tuples, they are applied 1:1
+
+        E.g. `Embedding(500) >> (Recurrence(500), Recurrence(500, go_backwards=True)) >> splice >> Dense`
         '''
-        # TODO: accept a tuple for other, e.g. projected LSTM:
-        #   LSTM(500) >> (Dense(250), identity)
-        # Input is assumed to be a tuple of the same number of elements.
-        # Note: in Sequential(), don't start from identity, but from first item which can be a tuple.
-        # Note: We can broadcast here, to implement Parallel(), e.g.
-        #       identity >> (Recurrence(LSTM(500)), Recurrence(LSTM(500), go_backwards=True) >> splice
         # TODO: change splice() to accept a variable-number of arguments
+        inputs = self.outputs
+        input_is_tuple = len(inputs) > 1
+        # if piping into a tuple of Functions, apply item-wise
         if isinstance(other, tuple):
-            combine([f(self.outputs[i]) for i in range(len(other))])
-        # TODO: Test this ^^
-        return other(self)
+            from cntk import combine
+            return combine([other[i](inputs[i if input_is_tuple else 0]) for i in range(len(other))])
+        # if applying a single function to a tuple-valued Function, pass the items as the args
+        elif input_is_tuple:
+            return other(*inputs)
+        # regular case: one input, one Function
+        else:
+            return other(self)
 
     def __lshift__(self, other):
         '''
