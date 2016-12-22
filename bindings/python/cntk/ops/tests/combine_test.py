@@ -11,8 +11,8 @@ Unit tests for combine operation, only forward pass is tested
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import AA, I, precision, PRECISION_TO_TYPE, compare_lists_of_np_arrays
-from ...utils import sanitize_dtype_cntk, eval as cntk_eval, cntk_device
+from .ops_test_utils import AA, I, precision, PRECISION_TO_TYPE, compare_lists_of_np_arrays, cntk_device
+from ...utils import sanitize_dtype_cntk, eval as cntk_eval
 
 from .. import plus, minus, classification_error, cross_entropy_with_softmax
 

@@ -94,10 +94,10 @@ def cosine_distance(x, y, name=''):
         >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
         >>> x = C.input_variable(shape=(2,))
         >>> y = C.input_variable(shape=(2,))
-        >>> C.cosine_distance(x,y).eval({x:a,y:b}) # doctest: +SKIP
-        array([[-0.99999982,  0.99999982],
-               [ 0.99999982,  0.        ],
-               [ 0.        , -0.99999982]], dtype=float32)
+        >>> np.round(C.cosine_distance(x,y).eval({x:a,y:b}),5)
+        array([[-1.,  1.],
+               [ 1.,  0.],
+               [ 0., -1.]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
@@ -299,7 +299,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
         >>> x = C.input_variable(img.shape)
         >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
         >>> kernel = C.constant(value = filter)
-        >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}) # doctest: +SKIP
+        >>> np.round(C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}),5)
         array([[[[[  6.,   8.,  10.,  12.],
                   [ 16.,  18.,  20.,  22.],
                   [ 26.,  28.,  30.,  32.],
@@ -1099,9 +1099,9 @@ def sin(x, name=''):
     The output tensor has the same shape as ``x``.
 
     Example:
-        >>> C.sin([[0,np.pi/2],[np.pi,3*np.pi/2]]).eval()
-        array([[ 0.,  1.],
-               [ 0., -1.]], dtype=float32)
+        >>> np.round(C.sin(np.arcsin([[1,0.5],[-0.25,-0.75]])).eval(),5)
+        array([[ 1.  ,  0.5 ],
+               [-0.25, -0.75]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
@@ -1121,9 +1121,9 @@ def cos(x, name=''):
     The output tensor has the same shape as ``x``.
 
     Example:
-        >>> C.cos([[0,np.pi/2],[np.pi,3*np.pi/2]]).eval()
-        array([[ 1.,  0.],
-               [-1., -0.]], dtype=float32)
+        >>> np.round(C.cos(np.arccos([[1,0.5],[-0.25,-0.75]])).eval(),5)
+        array([[ 1.  ,  0.5 ],
+               [-0.25, -0.75]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
@@ -1392,8 +1392,9 @@ def future_value(x, initial_state=None, time_step=1, name=''):
 
     Example:
         >>> x = C.input_variable(shape=(3,2))
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
-        >>> y = C.future_value(x)
+        >>> # Create one sequence with 4 tensors of shape (3, 2)
+        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
+        >>> y = C.future_value(x) # using initial state of 0 by default
         >>> y.eval({x:x0})
         array([[[[  6.,   7.],
                  [  8.,   9.],
@@ -1443,8 +1444,9 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 
     Example:
         >>> x = C.input_variable(shape=(3,2))
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
-        >>> y = C.past_value(x)
+        >>> # Create one sequence with 4 tensors of shape (3, 2)
+        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
+        >>> y = C.past_value(x) # using initial state of 0 by default
         >>> y.eval({x:x0})
         array([[[[  0.,   0.],
                  [  0.,   0.],
@@ -1506,13 +1508,24 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         >>> W = C.parameter((InferredDimension,4), constant_initializer(0.1))
         >>> x = C.input_variable(shape=(4,))
         >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))
-        >>> f = C.optimized_rnnstack(x, W, 8, 2)
-        >>> print(*f.eval({x:s}).shape)
-        1 5 8
+        >>> t = np.reshape(np.arange(12.0, dtype=np.float32), (3,4))
+        >>> f = C.optimized_rnnstack(x, W, 8, 2) # doctest: +SKIP
+        >>> r = f.eval({x:[s,t]})                # doctest: +SKIP
+        >>> len(r)                               # doctest: +SKIP
+        2
+        >>> print(*r[0].shape)                   # doctest: +SKIP
+        5 8
+        >>> print(*r[1].shape)                   # doctest: +SKIP
+        3 8
+        >>> r[0][:3,:]-r[1]                      # doctest: +SKIP
+        array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]], dtype=float32)
 
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    # FIXME figure out how to only SKIP the doctest in CPU 
     from cntk.cntk_py import optimized_rnnstack
     operand = sanitize_input(operand)
     if recurrent_op not in set(['lstm','gru','relu','tanh']):
