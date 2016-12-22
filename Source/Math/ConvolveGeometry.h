@@ -131,13 +131,7 @@ public:
                 {
                     m_start[i] -= lo;
                     assert(m_start[i] >= 0); 
-                    int outPerMap = (int)(m_outputShape[i] / GetMapCount(i));
-                    int cells = (int)((outPerMap - 1) * GetStride(i) + 1);
-                    if (cells > 0)  // dummy if, just to get rid of warning 
-                    {
-                        assert(m_inputShape[i] >= cells);
-                        assert(m_start[i] + cells + (int)m_kernelShape[i] - 1 == m_inputShape[i] + hi);
-                    }
+                    assert(m_start[i] + cells + (int)m_kernelShape[i] - 1 == m_inputShape[i] + hi);
                 }
             }
 
