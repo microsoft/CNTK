@@ -20,6 +20,8 @@ Tutorials
 
 #.  CNTK 204: `Sequence to sequence basics`_ with CMU pronouncing dictionary
 
+#.  CNTK 205: `Artistic Style Transfer`_
+
 .. _`Logistic Regression`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_101_LogisticRegression.ipynb
 .. _`Feed Forward Network`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_102_FeedForward.ipynb
 .. _`MNIST data preparation`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_103A_MNIST_DataLoader.ipynb
@@ -30,3 +32,4 @@ Tutorials
 .. _`Language understanding`: https://github.com/Microsoft/CNTK/blob/v2.0.beta7.0/Tutorials/CNTK_202_Language_Understanding.ipynb
 .. _`Reinforcement learning basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta7.0/Tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb
 .. _`Sequence to sequence basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta7.0/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb
+.. _`Artistic Style Transfer`: https://github.com/Microsoft/CNTK/blob/v2.0.beta7.0/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb
