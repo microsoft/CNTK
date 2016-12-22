@@ -124,8 +124,9 @@ public:
     ComputationNodePtr Cos(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr CosDistance(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr CrossEntropy(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
-    ComputationNodePtr CrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
-    ComputationNodePtr DiagTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
+	ComputationNodePtr CrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
+	ComputationNodePtr NCECriterion(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
+	ComputationNodePtr DiagTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Diagonal(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Dropout(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr DummyCriterion(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction, const std::wstring nodeName = L"");

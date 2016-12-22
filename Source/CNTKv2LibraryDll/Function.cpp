@@ -814,6 +814,11 @@ namespace CNTK
             return Minus(ReduceLogSum(prediction, axis), ReduceSum(ElementTimes(labels, prediction), axis), name);
     }
 
+	FunctionPtr NCECriterion(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name)
+	{
+		return BinaryOp(PrimitiveOpType::NCECriterion, labels, prediction, Dictionary(), name);
+	}
+
     FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const Axis& axis, const std::wstring& name)
     {
         if (topN == 0)

@@ -51,6 +51,7 @@ enum StandardNetworkKind
 enum class TrainingCriterion : int // TODO: camel-case these
 {
     CrossEntropyWithSoftmax,
+	NCECriterion,
     CrossEntropy,
     SquareError,
     Logistic,
@@ -63,6 +64,7 @@ enum class TrainingCriterion : int // TODO: camel-case these
 enum class EvalCriterion : int
 {
     CrossEntropyWithSoftmax,
+	NCECriterion,
     CrossEntropy,
     SquareError,
     Logistic,

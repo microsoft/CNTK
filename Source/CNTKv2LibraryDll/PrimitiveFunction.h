@@ -66,6 +66,7 @@ namespace CNTK
         {PrimitiveOpType::Convolution, L"Convolution"},
         {PrimitiveOpType::SquaredError, L"SquaredError"},
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
+		{PrimitiveOpType::NCECriterion, L"NCECriterion" },
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::PastValue, L"PastValue"},
         {PrimitiveOpType::FutureValue, L"FutureValue"},
@@ -118,6 +119,8 @@ namespace CNTK
         }
         else if (op == PrimitiveOpType::CrossEntropyWithSoftmax)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
+		else if (op == PrimitiveOpType::NCECriterion)
+			indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
         else if (op == PrimitiveOpType::GatherPacked)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
         else if (op == PrimitiveOpType::ScatterPacked)

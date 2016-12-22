@@ -301,6 +301,7 @@ protected:
             {
                 // display Perplexity as well for crossEntropy values
                 if (evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
+					evalNodes[i]->OperationName() == OperationNameOf(NCECriterionNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(CrossEntropyNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
                     evalNodes[i]->OperationName() == OperationNameOf(NoiseContrastiveEstimationNode))

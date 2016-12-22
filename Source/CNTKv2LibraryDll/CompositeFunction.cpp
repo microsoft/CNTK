@@ -647,6 +647,9 @@ namespace CNTK
         case PrimitiveOpType::CrossEntropyWithSoftmax:
             computationNodePtr = New<CrossEntropyWithSoftmaxNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;
+		case PrimitiveOpType::NCECriterion:
+			computationNodePtr = New<NCECriterionNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+			break;
         case PrimitiveOpType::ClassificationError:
             computationNodePtr = New<ClassificationErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
             break;

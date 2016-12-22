@@ -282,6 +282,8 @@ namespace CNTK
                     opType = PrimitiveOpType::SquaredError;
                 else if (node->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode))
                     opType = PrimitiveOpType::CrossEntropyWithSoftmax;
+				else if (node->OperationName() == OperationNameOf(NCECriterionNode))
+					opType = PrimitiveOpType::NCECriterion;
                 else if (node->OperationName() == OperationNameOf(ClassificationErrorNode))
                     opType = PrimitiveOpType::ClassificationError;
                 else if (node->OperationName() == OperationNameOf(ReduceElementsNode))

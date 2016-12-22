@@ -175,6 +175,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
     else if (EqualInsensitive(nodeType, OperationNameOf(CosineNode), L"Cos")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CrossEntropyWithSoftmaxNode), L"CEWithSM")) ret = true;
+	else if (EqualInsensitive(nodeType, OperationNameOf(NCECriterionNode), L"NCECriterion")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(DiagTimesNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(DiagonalNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(DropoutNode))) ret = true;

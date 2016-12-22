@@ -359,6 +359,164 @@ private:
 template class CrossEntropyNode<float>;
 template class CrossEntropyNode<double>;
 
+
+// -----------------------------------------------------------------------
+/// NCECriterionNode (labels, prediction)
+// -----------------------------------------------------------------------
+
+// To be used with SampledTimes node.  Takes sampled output from SampledTimes.  Calculates sampled gradients.
+// You probably want to use CrossEntropyWithSoftMaxNode instead, it is more efficient in most cases.
+template <class ElemType>
+class NCECriterionNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
+{
+	typedef ComputationNodeNonLooping<ElemType> Base;
+	UsingComputationNodeMembersBoilerplate;
+	static const std::wstring TypeName()
+	{
+		return L"NCECriterion";
+	}
+
+public:
+	DeclareConstructorFromConfigWithNumInputs(NCECriterionNode);
+	NCECriterionNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name),
+		m_unigramCounts(deviceId), m_pm(deviceId), m_pn(deviceId), m_sampleLabels(deviceId), m_sampleIdx(deviceId), m_temp1(deviceId), m_temp2(deviceId)
+	{
+	}
+
+	virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override
+	{
+		FrameRange fr(InputRef(0).GetMBLayout());
+		// left Node must be a scalar
+		if (inputIndex == 0) // left derivative
+		{
+			NOT_IMPLEMENTED;
+		}
+		else
+		{
+			FrameRange fr(InputRef(0).GetMBLayout());
+			auto output1gradient = AsFlattenedMatrix(OneSampleTensorFor(1,  /*gradient=*/true, fr.AllowBroadcast()));
+			m_temp1.SetValue(m_pn);
+			m_temp1 += m_pm;
+			m_temp1.AssignElementProductOf(m_pm, m_sampleLabels);
+			m_temp1.AssignDifferenceOf(m_pm, m_temp1);
+			output1gradient->DoScatterColumnsOf(0, m_sampleIdx, m_temp1, 1);
+		}
+	}
+
+	virtual bool OutputUsedInComputingInputNodesGradients() const override
+	{
+		return false;
+	}
+
+	virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
+	{
+		Base::BeginForwardProp();
+		m_totalCount = InputRef(0).Value().GetNumRows();
+		m_unigramCounts.SetValue(Matrix<ElemType>::Ones(1, m_totalCount, GetDeviceId()));
+	}
+
+	// -sum(left_i * log(right_i))
+	virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+	{
+		FrameRange fr(InputRef(0).GetMBLayout());
+		auto input0 = AsFlattenedMatrix(OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast()));
+		auto input1 = AsFlattenedMatrix(OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()));
+		size_t MBsize = input0->GetNumNonZeroElements();
+		m_sampleIdx.Resize(1, MBsize);
+		m_sampleIdx.SetValueFromIndex(input0->GetNonZeroIndices());
+		m_sampleLabels.DoGatherColumnsOf(0, m_sampleIdx, *input0, 1);
+		m_pm.DoGatherColumnsOf(0, m_sampleIdx, *input1, 1);
+		m_pn.DoGatherColumnsOf(0, m_sampleIdx, m_unigramCounts, 1);
+		m_pm.InplaceExp();
+		m_pn.Scale(MBsize / (ElemType)m_totalCount, m_unigramCounts);
+		m_temp1.AssignSumOf(m_pm, m_pn);
+		m_pm.ElementDivideBy(m_temp1);
+		m_pn.ElementDivideBy(m_temp1);
+		m_temp1.SetValue(m_pm);
+		m_temp1.InplaceLog();
+		m_temp2.SetValue(m_pn);
+		m_temp2.InplaceLog();
+		m_temp1 -= m_temp2;
+		m_temp1.AssignElementProductOf(m_pm, m_sampleLabels);
+		m_temp1 += m_temp2;
+		Value().AssignSumOfElements(m_temp1);
+#if NANCHECK
+		Value().HasNan("SampledCriterion");
+#endif
+		//now update unigram probs and counts
+		m_totalCount += MBsize;
+		m_unigramCounts.DoScatterColumnsOf(1, m_sampleIdx, Matrix<ElemType>::Ones(1, MBsize, GetDeviceId()), 1);
+	}
+
+	virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+	{
+		ValidateBinaryReduce(isFinalValidationPass);
+	}
+
+	virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+	{
+		Base::CopyTo(nodeP, newName, flags);
+		if (flags & CopyNodeFlags::copyNodeValue)
+		{
+			auto node = dynamic_pointer_cast<NCECriterionNode<ElemType>>(nodeP);
+			node->m_unigramCounts.SetValue(m_unigramCounts);
+			node->m_totalCount = m_totalCount;
+		}
+	}
+
+	// request matrices needed to do node function value evaluation
+	virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+	{
+		Base::RequestMatricesBeforeForwardProp(matrixPool);
+		//RequestMatrixFromPool(m_logOfRight, matrixPool);
+	}
+
+	// request matrices that are needed for gradient computation
+	virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
+	{
+		Base::RequestMatricesBeforeBackprop(matrixPool);
+		//RequestMatrixFromPool(m_leftDivRight, matrixPool);
+	}
+
+	// release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+	virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+	{
+		Base::ReleaseMatricesAfterBackprop(matrixPool);
+		//ReleaseMatrixToPool(m_logOfRight, matrixPool);
+	}
+
+private:
+	TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
+	{
+		auto input = inputIndex < 0 ? this : Input(inputIndex).get();
+		auto data = gradient ? input->GradientPtr() : input->ValuePtr();
+		size_t rank = input->GetSampleLayout().GetRank();
+		if (!InputRef(0).HasMBLayout()) // left input is no MB data: run normally
+			return input->DataTensorFor(data, rank, fr);
+		auto tensorShape = input->GetOneSampleTensorSliceFor(rank, fr);
+		return TensorView<ElemType>(data, tensorShape);
+	}
+
+	shared_ptr<Matrix<ElemType>> AsFlattenedMatrix(TensorView<ElemType> a)
+	{
+		auto a_shape = a.GetShape();
+		TensorShape shape(a_shape[0], a_shape[1] * a_shape[2]);
+		return a.Reshaped(shape).AsMatrix();
+	}
+	// keeps unigram counts from data to calculate gradients
+	Matrix<ElemType> m_unigramCounts;
+	size_t m_totalCount; //sampled seen so far
+	Matrix<ElemType> m_pm;
+	Matrix<ElemType> m_pn;
+	Matrix<ElemType> m_sampleLabels;
+	Matrix<ElemType> m_sampleIdx;
+	Matrix<ElemType> m_temp1;
+	Matrix<ElemType> m_temp2;
+};
+
+template class NCECriterionNode<float>;
+template class NCECriterionNode<double>;
+
 // -----------------------------------------------------------------------
 // MatrixL1RegNode (input)
 // TODO: share most code with MatrixL2RegNode

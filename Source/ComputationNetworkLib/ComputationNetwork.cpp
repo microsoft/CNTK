@@ -442,6 +442,7 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
     if (nodePtr->OperationName() == OperationNameOf(SquareErrorNode) ||
         nodePtr->OperationName() == OperationNameOf(LogisticNode) ||
         nodePtr->OperationName() == OperationNameOf(CrossEntropyWithSoftmaxNode) ||
+		nodePtr->OperationName() == OperationNameOf(NCECriterionNode) ||
         nodePtr->OperationName() == OperationNameOf(SequenceWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||

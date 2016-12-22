@@ -2754,6 +2754,19 @@ namespace CNTK
         return CrossEntropyWithSoftmax(prediction, labels, Axis(0), name);
     }
 
+	///
+	/// Create an instance of the CNTK built-in operation to compute NCE criterion for specified input operands.
+	///
+	CNTK_API FunctionPtr NCECriterion(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = L"");
+
+	///
+	/// Create an instance of the CNTK built-in operation to compute cross-entropy with softmax for specified input operands.
+	///
+	inline FunctionPtr NCECriterion(const Variable& prediction, const Variable& labels, const std::wstring& name = L"")
+	{
+		return NCECriterion(prediction, labels, Axis(0), name);
+	}
+
     ///
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
     ///

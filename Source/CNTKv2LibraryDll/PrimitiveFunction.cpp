@@ -115,6 +115,7 @@ namespace CNTK
         if ((op == PrimitiveOpType::SumAll) ||
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
+			(op == PrimitiveOpType::NCECriterion) ||
             (op == PrimitiveOpType::ClassificationError) ||
             (op == PrimitiveOpType::Logistic) ||
             (op == PrimitiveOpType::CosDistance))
@@ -426,6 +427,7 @@ namespace CNTK
             case PrimitiveOpType::Logistic:
             case PrimitiveOpType::SquaredError:
             case PrimitiveOpType::CrossEntropyWithSoftmax:
+			case PrimitiveOpType::NCECriterion:
             case PrimitiveOpType::ClassificationError:
             {
                 if ((op == PrimitiveOpType::ClassificationError) || (op == PrimitiveOpType::Logistic))

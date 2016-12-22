@@ -48,7 +48,8 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(CosineNode))                           return New<CosineNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CropNode))                             return New<CropNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CrossEntropyNode))                     return New<CrossEntropyNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))          return New<CrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+	else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))          return New<CrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+	else if (nodeType == OperationNameOf(NCECriterionNode))						return New<NCECriterionNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DiagonalNode))                         return New<DiagonalNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DiagTimesNode))                        return New<DiagTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DropoutNode))                          return New<DropoutNode<ElemType>>(forward<_Types>(_Args)...);
@@ -472,6 +473,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<CrossEntropyWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::NCECriterion(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName)
+{
+	return net.AddNodeToNetAndAttachInputs(New<NCECriterionNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction });
 }
 
 template <class ElemType>
