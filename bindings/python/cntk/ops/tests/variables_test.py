@@ -92,14 +92,12 @@ def test_constant_shape_inf():
 def test_convert_to_variable_dtype():
     assert input_variable(1).dtype == np.float32
 
-    data = np.arange(1)
-    assert data.dtype == np.int32
+    data = np.arange(1, dtype=np.int32)
     result = (input_variable(1)+2).eval([data])
     assert result==[[[2]]]
     assert result.dtype == np.float32
 
-    data = np.arange(1.)
-    assert data.dtype == np.float64
+    data = np.arange(1., dtype=np.float64)
     (input_variable(1)+2).eval([data])
     result = (input_variable(1)+2).eval([data])
     assert result==[[[2]]]
