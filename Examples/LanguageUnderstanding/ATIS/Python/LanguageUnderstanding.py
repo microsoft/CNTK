@@ -258,8 +258,9 @@ if __name__=='__main__':
     force_deterministic_algorithms()
 
     # test per-sequence initial state
-    # TODO: move to appropriate test.py
-    if True:
+    # TODO: move to appropriate test.py (they don't run stand-alone, so cannot be debugged properly)
+    if False:
+        # test history with batch axis
         data = [
             np.array([[31,42], [5,3]]),
             np.array([[13,42], [5,3], [3,2], [6,7], [12,5], [3,22]]),
@@ -277,6 +278,17 @@ if __name__=='__main__':
         f = past_value(Input(2, dynamic_axes=[batch_axis, data_seq_axis]), time_step=2, initial_state=Input(2, dynamic_axes=[batch_axis, init_seq_axis]))
         res = f(data, initial_state)
         print(res)
+        # test audio convolution
+        from cntk.layers import Convolution
+        c = Convolution(3, init=np.array([4, 2, 1]), reduction_rank=0, bias=False)
+        #c = Convolution(3, reduction_rank=1, bias=False)
+        #c = c(Input(1))
+        c.update_signature(1)
+        data = [   # audio sequence
+            np.array([[2], [6], [4], [8], [6]])
+        ]
+        #out = c.eval(data)
+        out = c(data)
         pass
 
 
