@@ -30,12 +30,13 @@ if __name__=='__main__':
 
     from cntk.layers import Recurrence
     from cntk.ops import plus
-    #r = Recurrence(lambda a,b:a+b)
-    # BUGBUG: above fails when just passing plus, since it does not know how many args it has (due to optional args). Python has no way around.
-    #r.update_signature(1)
-    #data = [   # audio sequence
-    #    array([[2], [6], [4], [8], [6]])
-    #]
+    r = Recurrence(plus)
+    r.dump()
+    r.update_signature(1)
+    r.dump()
+    data = [   # simple sequence
+        array([[2], [6], [4], [8], [6]])
+    ]
     #out = r(data)
     # BUGBUG: fails with "ValueError: Variable(Plus5_output) with unknown shape detected when compiling the Function graph!"
     #print(out)

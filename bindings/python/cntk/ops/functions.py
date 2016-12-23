@@ -52,19 +52,20 @@ class Function(cntk_py.Function):
     #   @Function
     #   def f(x): x * x
     def __new__(cls, f, members = {}):
-        from inspect import signature
+        # get the parameter list, and also the function name, through inspection
+        from inspect import signature, Parameter
         params = signature(f).parameters
         f_name = f.__name__
+        arg_names = [name for name, param in params.items() if param.default == Parameter.empty] # only non-optional params become Placeholders
+        # execute the lambda with placeholders as inputs, which creates a piece of graph
         from cntk import placeholder_variable, combine, alias
-        args = [placeholder_variable(name=arg_name) for arg_name in list(params.keys())]
-        #print("===============================", [arg for arg in list(params.keys())])
+        args = [placeholder_variable(name=name) for name in arg_names]
         # force them into the right order
         # Placeholders are ordered in depth-first traversal order.
         # By routing them through combine(), we force their traversal order to be first to last.
         # TODO: Get evidence that this is actually doing what it is meant to do.
         #args = combine(args).outputs
         # No, it is not doing what it is meant to do.
-        # execute the lambda with placeholders as inputs, which creates a piece of graph
         out = f(*args)
         # resolve NamedOutputs
         # TODO: check for duplicates
