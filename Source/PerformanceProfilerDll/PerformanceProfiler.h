@@ -34,7 +34,6 @@
 #pragma once
 
 #include "Basics.h"
-#include <stdio.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -84,7 +83,6 @@ enum ProfilerEvents
 // customEventBufferBytes: Bytes to allocate for the custom event buffer.
 // logSuffix: Suffix string to append to log files.
 // syncGpu: Wait for GPU to complete processing for each profiling event.
-// syncCudaKernels: Synchronize every cuda kernel.
 //
 void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsigned long long customEventBufferBytes,
     const std::wstring& logSuffix, const bool syncGpu);

@@ -14,6 +14,7 @@
 #include "PerformanceProfiler.h"
 #include "Basics.h"
 #include "fileutil.h"
+#include <memory>
 #include <stdio.h>
 #include <time.h>
 #ifndef CPUONLY
@@ -107,7 +108,7 @@ struct ProfilerState
     bool                    customEventBufferFull;       // Is custom event buffer full?
     unsigned long long      customEventBufferBytes;      // Number of bytes allocated for the custom event buffer
     unsigned long long      customEventOffset;           // Offset to current place in buffer
-    char*                   customEventBuffer;           // Pointer to custom event buffer
+    unique_ptr<char[]>      customEventBuffer;           // Pointer to custom event buffer
 };
 
 
@@ -143,13 +144,17 @@ struct ScopeLock
 //
 // Initialize all resources to enable profiling.
 // profilerDir: Directory where the profiler logs will be saved.
-// customEventBufferBytes: Bytes to allocate for the custom event buffer.
-// logSuffix: Suffix string to append to log files.
-// syncGpu: Wait for GPU to complete processing for each profiling event.
+// customEventBufferBytes: Size of the custom event buffer.
+// logSuffix: Suffix string to append to log file names.
+// syncGpu: Wait for GPU to complete processing for each profiling event with syncGpu flag set.
 //
 void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsigned long long customEventBufferBytes,
     const std::wstring& logSuffix, const bool syncGpu)
 {
+    if (g_profilerState != nullptr)
+    {
+        RuntimeError("Error: ProfilerInit: Profiler already initialized.\n");
+    }
     g_profilerState = new ProfilerState();
 
     LockInit();
@@ -160,7 +165,7 @@ void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsig
     g_profilerState->customEventBufferFull = false;
     g_profilerState->customEventBufferBytes = customEventBufferBytes;
     g_profilerState->customEventOffset = 0ull;
-    g_profilerState->customEventBuffer = new char[customEventBufferBytes];
+    g_profilerState->customEventBuffer.reset(new char[customEventBufferBytes]);
 
     g_profilerState->clockFrequency = GetClockFrequency();
 
@@ -225,7 +230,7 @@ void ProfilerTimeEndInt(const char* eventDescription, const long long beginClock
         return;
     }
 
-    strcpy(g_profilerState->customEventBuffer + g_profilerState->customEventOffset, eventDescription);
+    strcpy(g_profilerState->customEventBuffer.get() + g_profilerState->customEventOffset, eventDescription);
     g_profilerState->customEventOffset += eventDescriptionBytes;
 
     CustomEventRecord eventRecord;
@@ -233,7 +238,7 @@ void ProfilerTimeEndInt(const char* eventDescription, const long long beginClock
     eventRecord.endClock = endClock;
     eventRecord.threadId = GetThreadId();
 
-    memcpy(g_profilerState->customEventBuffer + g_profilerState->customEventOffset, &eventRecord, sizeof(CustomEventRecord));
+    memcpy(g_profilerState->customEventBuffer.get() + g_profilerState->customEventOffset, &eventRecord, sizeof(CustomEventRecord));
     g_profilerState->customEventOffset += sizeof(CustomEventRecord);
 }
 
@@ -367,7 +372,6 @@ void PERF_PROFILER_API ProfilerClose()
     if (_wmkdir(g_profilerState->profilerDir.c_str()) == -1 && errno != EEXIST)
     {
         RuntimeError("Error: ProfilerClose: Cannot create directory <%ls>.\n", g_profilerState->profilerDir.c_str());
-        return;
     }
 
     time_t currentTime;
@@ -384,7 +388,8 @@ void PERF_PROFILER_API ProfilerClose()
     fileName = g_profilerState->profilerDir + L"/" + std::wstring(timeStr) + L"_detail_" + g_profilerState->logSuffix + L".csv";
     ProfilerGenerateDetailFile(fileName);
 
-    delete[] g_profilerState->customEventBuffer;
+    delete g_profilerState;
+    g_profilerState = nullptr;
 }
 
 
@@ -513,8 +518,7 @@ void ProfilerGenerateReport(const std::wstring& fileName, struct tm* timeInfo)
     FILE* f = _wfopen(fileName.c_str(), L"wt");
     if (f == NULL)
     {
-        fprintf(stderr, "Error: ProfilerGenerateReport: Cannot create file <%ls>.\n", fileName.c_str());
-        return;
+        RuntimeError("Error: ProfilerGenerateReport: Cannot create file <%ls>.\n", fileName.c_str());
     }
 
     fprintfOrDie(f, "CNTK Performance Profiler Summary Report\n\n");
@@ -648,15 +652,14 @@ void ProfilerGenerateDetailFile(const std::wstring& fileName)
     FILE* f = _wfopen(fileName.c_str(), L"wt");
     if (f == NULL)
     {
-        fprintf(stderr, "Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", fileName.c_str());
-        return;
+        RuntimeError("Error: ProfilerGenerateDetailFile: Cannot create file <%ls>.\n", fileName.c_str());
     }
 
     fprintfOrDie(f, "EventDescription,ThreadId,BeginTimeStamp(ms),EndTimeStamp(ms)\n");
 
-    char* eventPtr = g_profilerState->customEventBuffer;
+    char* eventPtr = g_profilerState->customEventBuffer.get();
 
-    while (eventPtr < (g_profilerState->customEventBuffer + g_profilerState->customEventOffset))
+    while (eventPtr < (g_profilerState->customEventBuffer.get() + g_profilerState->customEventOffset))
     {
         char* descriptionStr = eventPtr;
         eventPtr += strlen(descriptionStr) + 1;
