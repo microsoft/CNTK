@@ -310,6 +310,10 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
 
     # TODO: accept 'over' to be a Python function, including CNTK primitives like max().
     #       I.e. run it through Function(); or do those use var-length inputs?
+    #       Test by using a recurrence over plus(), but cannot really test because of missing inference.
+    # TEST THIS
+    if isinstance(over, function):
+        over = Function(over)
 
     # function that this layer represents
     @Function
@@ -403,7 +407,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     def batch_normalize(x):
         #x = Placeholder(name='batch_normalization_arg')
         return batch_normalization(x, scale, bias, run_mean, run_variance, run_count, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
-                                  use_cudnn_engine=not use_cntk_engine)
+                                   use_cudnn_engine=not use_cntk_engine)
     return Block(batch_normalize, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
 # LayerNormalization -- create a layer-normalization layer

@@ -243,6 +243,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # LSTM model function
     # in this case:
     #   (x, dh, dc) --> (h, c)
+    # Note: TF uses this: output, state = lstm(current_batch_of_words, state)
     @Function
     def lstm(x, dh, dc):
 
