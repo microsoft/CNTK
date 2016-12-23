@@ -29,7 +29,7 @@ The network achieves an error rate of around `18%` after 30 epochs. This is comp
 ### ConvNet_CIFAR10_DataAug.py
 
 The third example uses the same CNN as the previous example, but it improves by adding data augmentation to training. For this purpose, we use the `ImageDeserializer` instead of the `CTFDeserializer` to load the data. The image deserializer currently supports crop, flip, scale, color jittering, and mean subtraction.
-For a reference on image reader and transforms, please check [here](https://www.cntk.ai/pythondocs/cntk.io.html?highlight=imagedeserializer#cntk.io.ImageDeserializer).
+For a reference on image reader and transforms, please check [here](https://www.cntk.ai/pythondocs/cntk.io.html#cntk.io.ImageDeserializer).
 
 Run the example from the current folder using:
 
