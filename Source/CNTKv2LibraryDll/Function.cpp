@@ -136,7 +136,7 @@ namespace CNTK
             }
         }
 
-        auto outputsUsingNewInputs = PrimitiveFunction::GetOutputVariables(primitiveFunction->OpType(), m_inputs, this, primitiveFunction->m_attributes, true, primitiveFunction->Name());
+        auto outputsUsingNewInputs = PrimitiveFunction::GetOutputVariables(primitiveFunction->OpType(), m_inputs, primitiveFunction, primitiveFunction->m_attributes, true, primitiveFunction->Name());
         auto currentOutputs = Outputs();
         for (size_t i = 0; i < currentOutputs.size(); ++i)
         {
@@ -330,10 +330,10 @@ namespace CNTK
     {
         const PrimitiveFunction* primitiveFunction = dynamic_cast<const PrimitiveFunction*>(clonee.get());
         if (primitiveFunction == nullptr)
-            LogicError("Currently cloning of user defined Functions is unsupported");
+            clonee->LogicError("Currently cloning of user defined Functions is unsupported");
 
         if (cloneMap.find(clonee.get()) != cloneMap.end())
-            LogicError("Cloning an already visited Function");
+            clonee->LogicError("Cloning an already visited Function");
 
         cloneMap[clonee.get()] = nullptr;
 
@@ -378,7 +378,7 @@ namespace CNTK
                                 leafVariablesCloneMap[cloneeInput] = clonedInput;
                                 break;
                             default:
-                                LogicError("Unknown ParameterCloningMethod");
+                                clonee->LogicError("Unknown ParameterCloningMethod");
                             }
                         }
                         else
@@ -492,6 +492,14 @@ namespace CNTK
 
         auto clonedComposite = CompositeFunction::Create(clonedRootFunction, compositeFunction->Name());
         clonedComposite->ReplacePlaceholders(placeholderReplacements);
+
+        // propagate m_outputs updates if root is Combine()
+        auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(clonedRootFunction.get());
+        if (primitiveFunction != nullptr && primitiveFunction->OpType() == PrimitiveOpType::Combine)
+        {
+            clonedComposite->m_outputs = primitiveFunction->m_outputs;
+        }
+
         return clonedComposite;
     }
 

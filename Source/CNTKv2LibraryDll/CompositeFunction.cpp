@@ -157,7 +157,7 @@ namespace CNTK
 
             if (uidToInputMap.find(inputVar.Uid()) != uidToInputMap.end())
             {
-                LogicError("Input uids are not unique (several inputs share '%ls' uid) "
+                CNTK::LogicError("Input uids are not unique (several inputs share '%ls' uid) "
                         "(%s).", inputVar.Uid().c_str(), GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
             }
             uidToInputMap[inputVar.Uid()] = inputVar;
@@ -214,7 +214,7 @@ namespace CNTK
                 {
                     if (!it->second.IsPlaceholder())
                     {
-                        LogicError("Unexpected variable type %ls instead of a Placeholder for input %ls variable (uid = %ls)"
+                        CNTK::LogicError("Unexpected variable type %ls instead of a Placeholder for input %ls variable (uid = %ls)"
                         "(%s).", VariableKindName(it->second.Kind()), it->second.Name().c_str(), it->second.Uid().c_str(),
                         GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
                     }
@@ -229,7 +229,7 @@ namespace CNTK
 
         if (root->Uid() != rootUid)
         {
-            LogicError("Root UID '%ls' is different from the expected value '%ls'.", root->Uid().c_str(), rootUid.c_str());
+            CNTK::LogicError("Root UID '%ls' is different from the expected value '%ls'.", root->Uid().c_str(), rootUid.c_str());
         }
 
         if (placeholderReplacements.size() > 0)
@@ -364,16 +364,16 @@ namespace CNTK
 
         // The DataType, Shape and DynamicAxes of the variable must be known by now
         if (variable.GetDataType() == DataType::Unknown)
-            InvalidArgument("Variable%S with unknown DataType detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            CNTK::InvalidArgument("Variable%S with unknown DataType detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         if (variable.Shape().IsUnknown())
-            InvalidArgument("Variable%S with unknown shape detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            CNTK::InvalidArgument("Variable%S with unknown shape detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         if (variable.Shape().HasInferredDimension())
-            InvalidArgument("Variable%S with InferredDimension for at least one axis in its shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            CNTK::InvalidArgument("Variable%S with InferredDimension for at least one axis in its shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         if (variable.DynamicAxes() == Axis::UnknownDynamicAxes())
-            InvalidArgument("Variable%S with unknown dynamic axes detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            CNTK::InvalidArgument("Variable%S with unknown dynamic axes detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         // Lets add a null entry in the map for this variable, to break infinite recursion when processing recurrent graphs
         variableToNodeMap[variable] = nullptr;
@@ -407,14 +407,14 @@ namespace CNTK
             auto dynamicAxes = variable.DynamicAxes();
             auto foundDefaultBatchAxis = std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis());
             if (foundDefaultBatchAxis == dynamicAxes.end())
-                LogicError("Currently Input Variables are required to have the DefaultBatchAxis as one of their dynamic axes");
+                CNTK::LogicError("Currently Input Variables are required to have the DefaultBatchAxis as one of their dynamic axes");
 
             if (dynamicAxes.back() != Axis::DefaultBatchAxis())
-                LogicError("Currently Input Variables are required to have the DefaultBatchAxis as their last dynamic axes");
+                CNTK::LogicError("Currently Input Variables are required to have the DefaultBatchAxis as their last dynamic axes");
 
             // TODO: Support inputs with > 1 dynamic axes
             if ((dynamicAxes.size() < 1) || (dynamicAxes.size() > 2))
-                LogicError("Currently only Input variables with 1 or 2 dynamic axis are supported");
+                CNTK::LogicError("Currently only Input variables with 1 or 2 dynamic axis are supported");
 
             // Construct the dynamic axis name to be used internally for the CNTK InputNodes
             std::wstring internalDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes(dynamicAxes);
@@ -740,7 +740,7 @@ namespace CNTK
                 computationNodePtr = New<PassNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
             default:
-                LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
+                CNTK::LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
                 break;
             }
 
@@ -751,7 +751,7 @@ namespace CNTK
             {
                 auto computationNodeExpectedInputCount = computationNodePtr->As<INumInputs>()->GetExpectedNumInputs();
                 if (computationNodeExpectedInputCount != inputNodesBasePtrs.size())
-                    LogicError("Input count mismatch: The Primitive function for op %S has %d inputs while the corresponding ComputationNode has %d inputs",
+                    CNTK::LogicError("Input count mismatch: The Primitive function for op %S has %d inputs while the corresponding ComputationNode has %d inputs",
                     PrimitiveOpTypeName(op).c_str(),
                     (int)inputNodesBasePtrs.size(),
                     (int)computationNodeExpectedInputCount);
@@ -1054,7 +1054,7 @@ namespace CNTK
         MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
         auto nodeLayout = computationNode->GetMBLayout();
         if (((layout == nullptr) != (nodeLayout == nullptr)) || ((layout != nullptr) && (*layout != *nodeLayout)))
-            InvalidArgument("The layout of the specified gradient Value is incompatible with the layout of the corresponding Variable computed during Forward call");
+            CNTK::InvalidArgument("The layout of the specified gradient Value is incompatible with the layout of the corresponding Variable computed during Forward call");
         computationNode->As<ComputationNode<ElementType>>()->AssignGradient(*CNTKMatrixAndMBLayout.first);
     }
 
@@ -1110,7 +1110,7 @@ namespace CNTK
         {
             // TODO: The shape of the specified output Value object must match the actual output shape
             if ((varValue->Shape() != valueShape) && (AsTensorShape(varValue->Shape()) != AsTensorShape(valueShape)))
-                InvalidArgument("The shape %S of the specified Value object for %s does not match the actual shape %S", AsStringForErrorReporting(varValue->Shape()).c_str(), getGradient ? "gradient" : "output", AsStringForErrorReporting(valueShape).c_str());
+                CNTK::InvalidArgument("The shape %S of the specified Value object for %s does not match the actual shape %S", AsStringForErrorReporting(varValue->Shape()).c_str(), getGradient ? "gradient" : "output", AsStringForErrorReporting(valueShape).c_str());
         }
 
         ValuePtr nodeValue;
@@ -1136,7 +1136,7 @@ namespace CNTK
             break;
         }
         default:
-            LogicError("Unsupported DataType %s", DataTypeName(var.GetDataType()));
+            CNTK::LogicError("Unsupported DataType %s", DataTypeName(var.GetDataType()));
             break;
         }
 

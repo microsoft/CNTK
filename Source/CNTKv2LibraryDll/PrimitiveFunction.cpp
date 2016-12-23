@@ -72,7 +72,7 @@ namespace CNTK
 
     /*static*/ std::vector<Variable> PrimitiveFunction::GetOutputVariables(PrimitiveOpType op,
                                                                            std::vector<Variable>& inputs,
-                                                                           Function* owner,
+                                                                           PrimitiveFunction* owner,
                                                                            Dictionary& functionConfig,
                                                                            bool inferDimensions,
                                                                            const std::wstring& functionName)
@@ -104,7 +104,7 @@ namespace CNTK
                 {
                     // The DataType of all operands should match except for Constants where we allow coercion
                     if ((inputDataType != DataType::Unknown) && (inputDataType != outputDataType) && !input.IsConstant())
-                        InvalidArgument("Primitive function with op type %S has operands with different DataTypes %s and %s", PrimitiveOpTypeName(op).c_str(), DataTypeName(outputDataType), DataTypeName(inputDataType));
+                        owner->InvalidArgument("Primitive function with op type %S has operands with different DataTypes %s and %s", PrimitiveOpTypeName(op).c_str(), DataTypeName(outputDataType), DataTypeName(inputDataType));
                 }
             }
         }
@@ -178,7 +178,7 @@ namespace CNTK
                         else
                         {
                             if (currentInputDynamicAxes != outputDynamicAxes)
-                                LogicError("Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands");
+                                owner->LogicError("Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands");
                         }
                     }
                 }
@@ -224,7 +224,7 @@ namespace CNTK
                 auto axis2 = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis2].Value<Axis>(), inputs[0].Shape());
 
                 if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
-                    LogicError("TransposeAxes operation currently does not support transposing dynamic axes");
+                    owner->LogicError("TransposeAxes operation currently does not support transposing dynamic axes");
 
                 auto outputRank = std::max(inputs[0].Shape().Rank(), (size_t)(std::max(axis1.StaticAxisIndex(), axis2.StaticAxisIndex()) + 1));
                 outputShape = inputs[0].Shape().AppendShape(NDShape(outputRank - inputs[0].Shape().Rank(), 1));
@@ -239,7 +239,7 @@ namespace CNTK
                 auto beginIndex = functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
                 auto endIndex = functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
                 if (!axis.IsStaticAxis())
-                    LogicError("Built-in Slice operation currently does not support slicing along dynamic axis");
+                    owner->LogicError("Built-in Slice operation currently does not support slicing along dynamic axis");
 
                 VerifyStaticAxis(axis, inputs[0].Shape());
 
@@ -247,7 +247,7 @@ namespace CNTK
                 int realBeginIndex = (beginIndex >= 0) ? beginIndex : beginIndex + sliceAxisDim;
                 int realEndIndex = (endIndex > 0) ? endIndex : endIndex + sliceAxisDim;
                 if ((sliceAxisDim < realEndIndex) || (realEndIndex < realBeginIndex) || (realBeginIndex < 0))
-                    RuntimeError("Slice operation: Index range [%d,%d), interpreted as [%d,%d), is invalid for input's shape ([%S]).",
+                    owner->RuntimeError("Slice operation: Index range [%d,%d), interpreted as [%d,%d), is invalid for input's shape ([%S]).",
                     beginIndex,
                     endIndex,
                     realBeginIndex,
@@ -275,7 +275,7 @@ namespace CNTK
                 if (functionConfig.Contains(PrimitiveFunction::AttributeNameEndAxis))
                     endAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameEndAxis].Value<Axis>(), inputs[0].Shape());
 
-                outputShape = ReshapeOutputShape(inputs[0].Shape(), replacementShape, beginAxis, endAxis, inferDimensions);
+                outputShape = owner->ReshapeOutputShape(inputs[0].Shape(), replacementShape, beginAxis, endAxis, inferDimensions);
                 break;
             }
             case PrimitiveOpType::ROIPooling:
@@ -291,19 +291,19 @@ namespace CNTK
                 auto roisPerImage = roisShape[1];
 
                 if (roiOutputShape.Rank() != 2)
-                    InvalidArgument("ROIPoolingNode: roi output shape must have two dimensions ([W x H]).");
+                    owner->InvalidArgument("ROIPoolingNode: roi output shape must have two dimensions ([W x H]).");
 
                 if (convMapShape[0] < outW || convMapShape[1] < outH)
-                    InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
+                    owner->InvalidArgument("ROIPoolingNode: inputWidth must >= windowWidth and inputHeight must >= windowHeight.");
 
                 if (convMapShape[2] < 1)
-                    InvalidArgument("ROIPoolingNode: input must have at least one channel ([W x H x C]).");
+                    owner->InvalidArgument("ROIPoolingNode: input must have at least one channel ([W x H x C]).");
 
                 if (roisShape[0] != 4)
-                    InvalidArgument("ROIPoolingNode: ROI input must have the following shape: [4 x roisPerImage].");
+                    owner->InvalidArgument("ROIPoolingNode: ROI input must have the following shape: [4 x roisPerImage].");
 
                 if (roisPerImage < 1)
-                    InvalidArgument("ROIPoolingNode: ROI input must contain at least one ROI ([4 x roisPerImage]).");
+                    owner->InvalidArgument("ROIPoolingNode: ROI input must contain at least one ROI ([4 x roisPerImage]).");
 
                 outputShape = { outW, outH, numChannels, roisPerImage };
                 break;
@@ -325,13 +325,13 @@ namespace CNTK
                 {
                     if ((std::find(autoPadding.begin(), autoPadding.end(), true) != autoPadding.end()) ||
                         (lowerPad.TotalSize() > 0) || (upperPad.TotalSize() > 0))
-                        RuntimeError("Padding isn't allowed for Unknown shape!");
+                        owner->RuntimeError("Padding isn't allowed for Unknown shape!");
 
                     poolingWindowsShape = inputShape.SubShape(0, inputShape.Rank()-1);
                     functionConfig[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowsShape;
                 }
 
-                outputShape = ConvolutionOpOutputShape(op, inputShape, poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
+                outputShape = owner->ConvolutionOpOutputShape(op, inputShape, poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
                 break;
             }
             case PrimitiveOpType::SumAll:
@@ -359,13 +359,13 @@ namespace CNTK
 
                     // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
                     if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))
-                        LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
+                        owner->LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
 
                     //if (!initialStateVar.DynamicAxes().empty())
                     //    LogicError("Currently PastValue/FutureValue Function does not support initial state operand with dynamic axes!");
                 }
 
-                outputShape = BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);
+                outputShape = owner->BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);
                 break;
             }
             case PrimitiveOpType::Times:
@@ -373,7 +373,7 @@ namespace CNTK
                 assert(inputs.size() == 2);
                 auto outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
                 auto inferInputRankToMap = functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>();
-                outputShape = TimesOpOutputShape(inputs[0], inputs[1], outputRank, inferInputRankToMap, inferDimensions);
+                outputShape = owner->TimesOpOutputShape(inputs[0], inputs[1], outputRank, inferInputRankToMap, inferDimensions);
                 break;
             }
             case PrimitiveOpType::TransposeTimes:
@@ -389,12 +389,12 @@ namespace CNTK
                     };
 
                     if (inputs[0].Shape().Rank() > 2)
-                    LogicError("TransposeTimes operation currently only supports %s operands of rank 1 or 2", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left");
+                        owner->LogicError("TransposeTimes operation currently only supports %s operands of rank 1 or 2", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left");
 
                     NDShape transposedLeftOperandShape = transposeShapeFunc(inputs[0].Shape());
                     Variable dummyLeftOperand = PlaceholderVariable(transposedLeftOperandShape);
                     size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-                    outputShape = TimesOpOutputShape(dummyLeftOperand, inputs[1], outputRank, -1, inferDimensions);
+                    outputShape = owner->TimesOpOutputShape(dummyLeftOperand, inputs[1], outputRank, -1, inferDimensions);
                     if (dummyLeftOperand.Shape() != transposedLeftOperandShape)
                         inputs[0].m_dataFields->m_shape = transposeShapeFunc(dummyLeftOperand.Shape());
 
@@ -410,12 +410,12 @@ namespace CNTK
                 auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                 bool transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
                 if (inputs[0].Shape().Rank() < inputs[1].Shape().Rank())
-                    InvalidArgument("The convolution map should have at least as many axes as the shape of the input it operates on!");
+                    owner->InvalidArgument("The convolution map should have at least as many axes as the shape of the input it operates on!");
 
                 NDShape outputMapCount, kernelShape;
                 std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(inputs[0].Shape(), inputs[1].Shape());
                 auto originalKernelShape = kernelShape;
-                outputShape = ConvolutionOpOutputShape(op, inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, inferDimensions);
+                outputShape = owner->ConvolutionOpOutputShape(op, inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, inferDimensions);
                 if (originalKernelShape != kernelShape)
                 {
                     for (size_t i2 = 0; i2 < kernelShape.Rank(); ++i2)
@@ -438,18 +438,18 @@ namespace CNTK
                     assert(inputs.size() == 2);
 
                 if ((inputs[0].Shape().Rank() > 2) || ((inputs[0].Shape().Rank() > 1) && (inputs[0].Shape()[1] != 1)))
-                    InvalidArgument("The shape of input operands for the %S operation should have at most one axis", PrimitiveOpTypeName(op).c_str());
+                    owner->InvalidArgument("The shape of input operands for the %S operation should have at most one axis", PrimitiveOpTypeName(op).c_str());
 
                 auto predictionShape = inputs[0].Shape();
                 auto labelsShape = inputs[1].Shape();
                 if (predictionShape != labelsShape)
-                    RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %S operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(op).c_str());
+                    owner->RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %S operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(op).c_str());
 
                 std::vector<int> reductionAxes;
                 for (int i3 = 0; i3 < (int)inputs[0].Shape().Rank(); ++i3)
                 reductionAxes.push_back(i3);
 
-                outputShape = ReductionOpOutputShape(op, predictionShape, reductionAxes, /*preserveReductionAxes =*/ false);
+                outputShape = owner->ReductionOpOutputShape(op, predictionShape, reductionAxes, /*preserveReductionAxes =*/ false);
                 break;
             }
             case PrimitiveOpType::ReduceElements:
@@ -461,7 +461,7 @@ namespace CNTK
                 else
                 {
                     std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };
-                    outputShape = ReductionOpOutputShape(op, inputs[0].Shape(), reductionAxes, /*preserveReductionAxes =*/ true);
+                    outputShape = owner->ReductionOpOutputShape(op, inputs[0].Shape(), reductionAxes, /*preserveReductionAxes =*/ true);
                 }
                 break;
             }
@@ -469,7 +469,7 @@ namespace CNTK
             {
                 assert(inputs.size() == 5);
                 auto spatial = functionConfig[PrimitiveFunction::AttributeNameSpatial].Value<bool>();
-                outputShape = BatchNormalizationOutputShape(inputs, spatial, inferDimensions);
+                outputShape = owner->BatchNormalizationOutputShape(inputs, spatial, inferDimensions);
                 break;
             }
             case PrimitiveOpType::PackedIndex:
@@ -495,7 +495,7 @@ namespace CNTK
             case PrimitiveOpType::ScatterPacked:
             {
                 if (inputs[0].DynamicAxes().empty() || inputs[1].DynamicAxes().empty() || inputs[2].DynamicAxes().empty())
-                    InvalidArgument("ScatterPacked requires all its operands to have dynamic axes");
+                    owner->InvalidArgument("ScatterPacked requires all its operands to have dynamic axes");
 
                 outputShape = inputs[0].Shape();
                 break;
@@ -506,7 +506,7 @@ namespace CNTK
                 break;
             case PrimitiveOpType::Select:
                 assert(inputs.size() == 3);
-                    outputShape = NaryElementwiseOpOutputShape(op, inputs, true);
+                    outputShape = owner->NaryElementwiseOpOutputShape(op, inputs, true);
                 break;
             case PrimitiveOpType::Splice:
             {
@@ -515,12 +515,12 @@ namespace CNTK
                     auto spliceAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), NDShape(maxInputRank));
 
                     if (!spliceAxis.IsStaticAxis())
-                        LogicError("Splice operation currently does not support splicing along dynamic axis");
+                        owner->LogicError("Splice operation currently does not support splicing along dynamic axis");
 
                     if (spliceAxis.StaticAxisIndex() < 0)
-                        InvalidArgument("Splice: The axis argument's static axis index must be >= 0!");
+                        owner->InvalidArgument("Splice: The axis argument's static axis index must be >= 0!");
 
-                outputShape = SpliceOutputShape(inputs, spliceAxis.StaticAxisIndex());
+                    outputShape = owner->SpliceOutputShape(inputs, spliceAxis.StaticAxisIndex());
                 break;
             }
             case PrimitiveOpType::RandomSample:
@@ -530,13 +530,13 @@ namespace CNTK
                 auto allowDuplicates = functionConfig[PrimitiveFunction::AttributeNameAllowDuplicates].Value<bool>();
 
                 if (numSamples == 0)
-                    InvalidArgument("Number of requested samples is zero.");
+                    owner->InvalidArgument("Number of requested samples is zero.");
 
                 let& shape = inputs[0].Shape();
                 size_t numClasses = shape.Dimensions()[0];
 
                 if (numClasses != NDShape::InferredDimension && !allowDuplicates && numClasses <= numSamples)
-                    InvalidArgument("For sampling without duplicates the number of requested samples (%lu) needs to be less than the number of classes (%lu).", numSamples, numClasses);
+                    owner->InvalidArgument("For sampling without duplicates the number of requested samples (%lu) needs to be less than the number of classes (%lu).", numSamples, numClasses);
             
                 // within this block we handle RandomSample and RandomSampleInclusionFrequency
                 if (op == PrimitiveOpType::RandomSampleInclusionFrequency)
@@ -555,12 +555,12 @@ namespace CNTK
                 auto operand = inputs[0];
                 auto parameter = inputs[1];
                 if (operand.Shape().Rank() != 1)
-                    InvalidArgument("OptimizedRNNStack: input must have rank 1; actual input rank is %lu", operand.Shape().Rank());
+                    owner->InvalidArgument("OptimizedRNNStack: input must have rank 1; actual input rank is %lu", operand.Shape().Rank());
                 if (operand.DynamicAxes().empty())
-                    InvalidArgument("OptimizedRNNStack: input must have at least one dynamic axis");
+                    owner->InvalidArgument("OptimizedRNNStack: input must have at least one dynamic axis");
                 auto numLayers = functionConfig[PrimitiveFunction::AttributeNameNumLayers].Value<size_t>();
                 if (numLayers == 0)
-                    InvalidArgument("Number of layers in OptimizedRNNStack operation should be positive");
+                    owner->InvalidArgument("Number of layers in OptimizedRNNStack operation should be positive");
                 auto bidirectional = functionConfig[PrimitiveFunction::AttributeNameBidirectional].Value<bool>();
                 auto hiddenSize = functionConfig[PrimitiveFunction::AttributeNameHiddenSize].Value<size_t>();
 
@@ -588,12 +588,12 @@ namespace CNTK
                 //if (operand.DynamicAxes().empty())
                 //    InvalidArgument("ReconcileDynamicAxis: input must have at least one dynamic axis");
                 if (layout.DynamicAxes().empty())
-                    InvalidArgument("ReconcileDynamicAxis: layout must have at least one dynamic axis");
+                    owner->InvalidArgument("ReconcileDynamicAxis: layout must have at least one dynamic axis");
                 outputShape = operand.Shape();
                 break;
             }
             default:
-                LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
+                CNTK::LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
                 break;
             }
         }
@@ -642,7 +642,7 @@ namespace CNTK
         // This also applies to other enums (DataType, VariableKind, etc.)
         if (op > PrimitiveOpType::Pass)
         {
-            LogicError("Unexpected op '%ls':'%u' (%s).", 
+            CNTK::LogicError("Unexpected op '%ls':'%u' (%s).", 
                         opKey.c_str(), 
                         static_cast<std::underlying_type<CNTK::PrimitiveOpType>::type>(op),
                         GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
@@ -661,7 +661,7 @@ namespace CNTK
             const auto& inputUid = dictionaryValue.Value<std::wstring>();
             if (uidToVariableMap.find(inputUid) == uidToVariableMap.end())
             {
-                LogicError("There are no inputs corresponging to input uid = '%ls' "
+                CNTK::LogicError("There are no inputs corresponging to input uid = '%ls' "
                         "(%s).", inputUid.c_str(), GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
             }
             inputs.push_back(uidToVariableMap.at(inputUid));

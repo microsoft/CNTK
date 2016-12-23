@@ -276,7 +276,7 @@ namespace CNTK
             return operandShape;
         }
 
-        static NDShape ReshapeOutputShape(const NDShape& operandShape, NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, bool inferDimensions)
+        /*static*/ NDShape ReshapeOutputShape(const NDShape& operandShape, NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, bool inferDimensions) const
         {
             int beginAxisIdx = beginAxis.StaticAxisIndex();
             int endAxisIdx = endAxis.StaticAxisIndex();
@@ -341,7 +341,7 @@ namespace CNTK
             return maxRank;
         }
 
-        static NDShape SpliceOutputShape(const std::vector<Variable>& inputs, size_t axis)
+        /*static*/ NDShape SpliceOutputShape(const std::vector<Variable>& inputs, size_t axis) const
         {
             // We must fuse all tensor shapes
 
@@ -411,7 +411,7 @@ namespace CNTK
         }
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
-        static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool broadcastAllowed, bool inferInputDimensions)
+        /*static*/ NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool broadcastAllowed, bool inferInputDimensions) const
         {
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
@@ -465,7 +465,7 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed)
+        /*static*/ NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed) const
         {
             assert(operands.size() > 1);
 
@@ -478,7 +478,7 @@ namespace CNTK
         }
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
-        static NDShape TimesOpOutputShape(Variable& leftOperand, Variable& rightOperand, size_t outputRank, int inferInputRankToMap, bool inferInputDimensions)
+        /*static*/ NDShape TimesOpOutputShape(Variable& leftOperand, Variable& rightOperand, size_t outputRank, int inferInputRankToMap, bool inferInputDimensions) const
         {
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
@@ -565,7 +565,7 @@ namespace CNTK
             return leftOperandShape.SubShape(0, outputRank).AppendShape(rightOperandShape.SubShape(numReductionAxes));
         }
 
-        static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<int>& reductionAxes, bool preserveReductionAxes)
+        /*static*/ NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<int>& reductionAxes, bool preserveReductionAxes) const
         {
             if (reductionAxes.size() > operandShape.Rank())
                 RuntimeError("The number of reduction axes %d exceeds the rank in the operand shape %S of the reduction operation %S",
@@ -597,9 +597,9 @@ namespace CNTK
             shape = NDShape(dims);
         }
 
-        static NDShape ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
+        /*static*/ NDShape ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
                                                 std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
-                                                bool transpose, bool inferDimensions)
+                                                bool transpose, bool inferDimensions) const
         {
             if (inferDimensions)
             {
@@ -647,7 +647,7 @@ namespace CNTK
             return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad)));
         }
 
-        static NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions)
+        /*static*/ NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions) const
         {
             NDShape mainOperandShape = operands[0].Shape();
             for (size_t i = 1; i < operands.size(); i++) // all but first and last arguments must match the first; last one must be a [1]
@@ -686,7 +686,7 @@ namespace CNTK
         // Returns a pair of determined output variables and a bool indicating if any input operand shape was modified
         static std::vector<Variable> GetOutputVariables(PrimitiveOpType op,
                                                         std::vector<Variable>& inputs,
-                                                        Function* owner,
+                                                        PrimitiveFunction* owner,
                                                         Dictionary& functionConfig,
                                                         bool inferDimensions,
                                                         const std::wstring& functionName);

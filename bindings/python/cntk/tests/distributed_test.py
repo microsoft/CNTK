@@ -57,7 +57,7 @@ def run_distributed_training(tmpdir, create_func):
 
     assert found_rank
 
-    trainer = Trainer(z, ce, errs, [ dist_learner ])
+    trainer = Trainer(z, (ce, errs), [ dist_learner ])
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}

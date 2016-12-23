@@ -311,14 +311,25 @@ class Function(cntk_py.Function):
             #    shape = item.shape
             #    inputs = ''
             elif isinstance(item, cntk_py.Constant):
-                op_name = "Const"
+                op_name = "Constant"
+                shape = item.shape
+                inputs = ''
+            elif isinstance(item, cntk_py.Parameter):
+                op_name = "Parameter"
                 shape = item.shape
                 inputs = ''
             elif isinstance(item, cntk_py.Variable):
-                op_name = "Var "
+                if item.is_parameter:
+                    op_name = "Parameter"
+                elif item.is_placeholder:
+                    op_name = "Placeholder"
+                elif item.is_input:
+                    op_name = "Input"
+                else:
+                    op_name = "Variable"
                 shape = item.shape
                 inputs = ''
-            print(' ', op_name, name, inputs, '->', shape)
+            print(' ', op_name, name, inputs, ':', shape)
             pass
         print(name_it(self))
         for item in graph:

@@ -2533,6 +2533,37 @@ namespace CNTK
         /// Structurally, 'this' function graph has to be identical to the state captured in the dictionary.
         CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& dictionary);
 
+    public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
+        ///
+        /// Helpers to inject the node name into error messages.
+        ///
+        std::wstring DiagnosticsName() const
+        {
+            std::wstring name = Name();
+            if (name.empty())
+                name = Uid();
+            if (name.empty() && m_rootFunction)
+                name = m_rootFunction->DiagnosticsName();
+            return OpName() + L" " + name;
+        }
+        template <class... _Types>
+        __declspec_noreturn inline void RuntimeError(const char* format, _Types&&... _Args) const
+        {
+            auto formatString = std::string("%S: ") + format;
+            ThrowFormatted<std::runtime_error>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
+        }
+        template <class... _Types>
+        __declspec_noreturn inline void LogicError(const char* format, _Types&&... _Args) const
+        {
+            auto formatString = std::string("%S: ") + format;
+            ThrowFormatted<std::logic_error>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
+        }
+        template <class... _Types>
+        __declspec_noreturn inline void InvalidArgument(const char* format, _Types&&... _Args) const
+        {
+            auto formatString = std::string("%S: ") + format;
+            ThrowFormatted<std::invalid_argument>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
+        }
     private:
 
         CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);

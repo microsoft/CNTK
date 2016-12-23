@@ -5,15 +5,15 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{292ff4ee-d9dd-4ba7-85f7-6a22148d1e01}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>LanguageUnderstanding\ATIS\Python\LanguageUnderstanding.py</StartupFile>
-    <SearchPath />
+    <StartupFile>..\Tests\EndToEndTests\CNTKv2Python\Examples\layers_test.py</StartupFile>
+    <SearchPath>..\Tests\EndToEndTests\CNTKv2Python;..\bindings\python</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <InterpreterId />
     <InterpreterVersion />
-    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+    <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
@@ -22,6 +22,9 @@
     <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\layers_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\layers_test.py</Link>
+    </Compile>
     <Compile Include="common\nn.py" />
     <Compile Include="common\__init__.py" />
     <Compile Include="Image\Classification\ConvNet\Python\CifarConvNet.py" />
