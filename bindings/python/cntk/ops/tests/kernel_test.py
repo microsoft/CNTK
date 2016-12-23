@@ -70,17 +70,17 @@ def test_op_convolution_without_padding(convolution_map, convolution_input, devi
                     expected_backward, device_id=device_id, precision=precision)
 
 POOLING_GEOMETRY_DATA = [
-    ([1, 1, 6, 6], # input_size
-     (5, 5), # pooling_window
-     (3, 3), # strides
+    ([1, 1, 1, 6, 6], # input_size
+     (1, 5, 5), # pooling_window
+     (1, 3, 3), # strides
      [True], # padding flag 
-     [[[ 21,   23],
-       [ 33,   35]]]), # result
-    ([1, 1, 8, 8],
-     (4, 4),
-     (5, 5),
+     [[[[ 21,   23],
+       [ 33,   35]]]]), # result
+    ([1, 1, 1, 8, 8],
+     (1, 4, 4),
+     (1, 5, 5),
      [False],
-     [[[ 27 ]]])
+     [[[[ 27 ]]]])
 ]
 # the pooling geometry test also tests convolution geometry since they go through the same path 
 # in the CPU code 
