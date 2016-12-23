@@ -601,7 +601,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // Setup profiling
     ProfilerContext profilerContext;
-    SetupProfiling<ScriptableObjects::IConfigRecord>(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
+    SetupProfiling(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
 
     // execute the actions
     // std::string type = config(L"precision", "float");

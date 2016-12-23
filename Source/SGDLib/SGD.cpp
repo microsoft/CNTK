@@ -425,7 +425,8 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     // --- MAIN EPOCH LOOP
     for (int i = startEpoch; i < (int) m_maxEpochs; i++) // TODO: why is this an int, and not a size_t?
     {
-        // Awlays skip the first epoch for profiling to avoid startup behavior
+        // Always skip the first epoch for profiling to avoid startup behavior.
+        // This has effect only if the profiler is globally enabled (profilerEnabled="true" in the config).
         if (i > startEpoch)
         {
             ProfilerEnable(true);
@@ -1039,7 +1040,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (!wasDataRead)
         {
             actualMBSize = 0; // (undefined if !wasDataRead)
-            ProfilerEnable(false);
+            ProfilerEnable(false); // Profiler will be enabled at the beginning of the next epoch.
         }
 
         ProfilerTimeEnd(profGetMinibatch, profilerEvtMainGetMinibatch);
