@@ -1722,7 +1722,7 @@ def splice(*inputs, axis=-1, name=''):
     inputs = [sanitize_input(x) for x in inputs]
     axis = sanitize_axis(axis)
 
-    return splice(inputs, axis=axis, name=name) # C++ projection expects inputs as a list
+    return splice(inputs, axis, name) # C++ projection expects inputs as a list
 
 ##########################################################################
 # reduction ops

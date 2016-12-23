@@ -11,7 +11,7 @@
 from __future__ import division
 import numpy as np
 from .ops import parameter, input_variable, placeholder_variable, combine
-from .ops import times, convolution, pooling, batch_normalization, dropout
+from .ops import times, convolution, pooling, batch_normalization, dropout, splice
 from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from .utils import Record, _as_tuple
 from .blocks import *  # TODO: reduce to what we actually use
@@ -130,6 +130,16 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     #apply_x = times(x, E)
     return Block(embed, 'Embedding', Record(E=E))
 
+# helper to expand a sequence into a window, splicing them along the given axis (which must already exist)
+def _window(x, axis, begin, end, initial_state=None):
+    shifted = [
+        past_value(x, initial_state=initial_state, time_step=-t) if t < 0 else
+        x                                                        if t == 0 else
+        future_value(x, initial_state=initial_state, time_step=t)
+        for t in range(begin, end)
+    ]
+    return splice(*shifted, axis=axis)
+
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape)  )
 #    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape)  )
@@ -142,6 +152,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
 #  - num_filters first is what Keras does
 def Convolution(rf_shape,         # e.g. (3,3)
                 num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
+                sequential=False, # time convolution if True (rf_shape[0] is dynamic axis)
                 activation=default_override_or(identity),
                 init=default_override_or(glorot_uniform()),
                 pad=default_override_or(False),
@@ -183,28 +194,23 @@ def Convolution(rf_shape,         # e.g. (3,3)
     fake_output_depth = num_filters == ()
     fake_input_depth  = reduction_rank == 0
     # 1D convolution is not supported by cudnn, so we also add a fake dimension.
-    fake_1d = len(rf_shape) < 2
-    #if fake_output_depth or fake_input_depth or fake_1d:
+    fake_1D = len(rf_shape) < 2
+    #if fake_output_depth or fake_input_depth or fake_1D:
     #    UntestedBranchError("Convolution with depth faking")
 
     actual_output_channels_shape = num_filters                if not fake_output_depth else (1,)
     actual_reduction_shape       = _INFERRED * reduction_rank if not fake_input_depth  else _INFERRED  # BUGBUG: (1,) crashes
+    actual_rf_shape              = (1,) * fake_1D + rf_shape
 
     # add the dimension to the options as well
-    num_faked_axes = 0
-    if fake_input_depth:
-        num_faked_axes += 1
-    if fake_1d:
-        num_faked_axes += 1
+    num_faked_axes = fake_input_depth + fake_1D
     strides = (1,)     * num_faked_axes + strides
     sharing = (True,)  * num_faked_axes + sharing
     pad     = (False,) * num_faked_axes + pad
 
-    rf_rank = len(rf_shape)
-    actual_rf_shape = rf_shape
-    if fake_1d:
-        actual_rf_shape = (1,) + actual_rf_shape # add a second axis of dimension 1
     kernel_shape = actual_reduction_shape + actual_rf_shape # kernel := filter plus reductionDims
+
+    rf_rank = len(rf_shape)
 
     # init can be an np.array, which must have the correct dimensions subject to faking depth
     # Once we no longer fake depth at this outer level, we can remove this.
@@ -228,20 +234,35 @@ def Convolution(rf_shape,         # e.g. (3,3)
     # expression
     @Function
     def convolve(x):
-        if num_faked_axes != 0:
+        # insert additional axes for various purposes
+        sequential_rank = 1 if sequential else 0
+        num_inserted_axes = sequential_rank + num_faked_axes
+        if num_inserted_axes != 0:
             from .ops import reshape
-            x = reshape(x, (1,) * num_faked_axes, begin_axis=-rf_rank, end_axis=-rf_rank) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+            x = reshape(x, (1,) * num_inserted_axes, begin_axis=-rf_rank + sequential_rank, end_axis=-rf_rank + sequential_rank) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+        # sequential convolution is implemented through explicit stacking for now, since the C++ cannot handle it
+        # TODO: if reduction_rank==0 and sequential, we don't need the fake reduction axis, just use the sequential axis instead
+        if sequential:
+            lpad = (rf_shape[0]-1) // 2  # even frames: take from right; odd frames: symmetric
+            x = _window(x, axis=-rf_rank, begin=-lpad, end=-lpad+rf_shape[0], initial_state=None)
+        # actual convolution
         # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
         r = convolution (W, x,
                          strides=strides, sharing=sharing, auto_padding=pad,
                          # TODO: can we rename auto_padding to pad?
                          transpose=transpose,
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+        # if sequential and not padding, then strip the extraneous boundary values
+        if sequential and not pad[-rf_rank]:
+            from .ops.sequence import slice
+            r = slice(r, begin_index=lpad, end_index=-(rf_shape[0]-1-lpad))
         # if no output dimension is desired, then strip it
-        # BUGBUG: We still have it in the kernel. That can only be solved inside the C++ implementation.
-        if fake_output_depth:
+        # also need to strip the fake singleton axes, since they are not reduced away
+        # BUGBUG: We still have those axes in the kernel. That can only be solved inside the C++ implementation.
+        num_axes_to_remove = sequential + fake_1D + fake_output_depth
+        if num_axes_to_remove > 0:
             from .ops import reshape
-            r = reshape(r, (), begin_axis=-rf_rank-1, end_axis=-rf_rank) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
+            r = reshape(r, (), begin_axis=-rf_rank-num_axes_to_remove, end_axis=-rf_rank) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
         if bias:
             r = r + b
         if activation is not None:
@@ -256,17 +277,20 @@ def Convolution(rf_shape,         # e.g. (3,3)
 #   AveragePooling and GlobalAveragePooling
 #
 # Setting the filter_shape to None, mean global pooling.
+# TODO: add sequential mode like Convolution()
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
-def _Pooling(op,      # PoolingType_Max or _Average
-            rf_shape,  # e.g. (3,3)
-            strides=1,
-            pad=False):
+def _Pooling(op,       # PoolingType_Max or _Average
+             rf_shape, # e.g. (3,3)
+             sequential=False, # pooling in time if True (rf_shape[0] is dynamic axis)
+             strides=1,
+             pad=False):
+
+    if sequential:
+        raise NotImplementedError("Pooling: sequential option not implemented yet")
 
     @Function
     def pool(x):
         return pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
-    #x = Placeholder(name='pooling_arg')
-    #pool = pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
 
     if op == PoolingType_Average:
         op_name = 'AveragePooling'

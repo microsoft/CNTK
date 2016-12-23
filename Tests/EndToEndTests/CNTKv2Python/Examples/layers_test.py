@@ -41,11 +41,28 @@ if __name__=='__main__':
     #print(out)
 
     # ----------------------------------------------
-    # audio convolution
+    # sequential convolution without reduction dimension
+    # ----------------------------------------------
+
+    from cntk.layers import Convolution
+    c = Convolution(3, init=array([4, 2, 1]), sequential=True, pad=False, reduction_rank=0, bias=False)
+    c.dump()
+    c.update_signature(1)
+    c.dump()
+    data = [   # audio sequence
+        array([[2], [6], [4], [8], [6]])
+    ]
+    out = c(data)
+    print(out)
+    # [[[[ 24.  40.  38.]]]]
+
+    # ----------------------------------------------
+    # 1D convolution without reduction dimension
     # ----------------------------------------------
 
     from cntk.layers import Convolution
     c = Convolution(3, init=array([4, 2, 1]), pad=True, reduction_rank=0, bias=False)
+    # BUGBUG: pad seems ignored??
     c.dump()
     c.update_signature(5)
     c.dump()
