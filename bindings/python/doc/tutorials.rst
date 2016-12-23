@@ -22,6 +22,8 @@ Tutorials
 
 #.  CNTK 205: `Artistic Style Transfer`_
 
+For our Japanese users, you can find some of the `tutorials in Japanese`_.
+
 .. _`Logistic Regression`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_101_LogisticRegression.ipynb
 .. _`Feed Forward Network`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_102_FeedForward.ipynb
 .. _`MNIST data preparation`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_103A_MNIST_DataLoader.ipynb
@@ -33,3 +35,5 @@ Tutorials
 .. _`Reinforcement learning basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta7.0/Tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb
 .. _`Sequence to sequence basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta7.0/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb
 .. _`Artistic Style Transfer`: https://github.com/Microsoft/CNTK/blob/v2.0.beta7.0/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb
+
+.. _`tutorials in Japanese`: https://notebooks.azure.com/library/cntkbeta2_ja
