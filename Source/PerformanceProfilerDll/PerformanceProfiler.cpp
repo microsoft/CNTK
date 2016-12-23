@@ -171,6 +171,11 @@ void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsig
 
     g_profilerState->syncGpu = syncGpu;
     g_profilerState->enabled = false;
+
+    if (_wmkdir(g_profilerState->profilerDir.c_str()) == -1 && errno != EEXIST)
+    {
+        RuntimeError("Error: ProfilerInit: Cannot create directory <%ls>.\n", g_profilerState->profilerDir.c_str());
+    }
 }
 
 //
@@ -193,10 +198,10 @@ void PERF_PROFILER_API ProfilerEnable(bool enable)
 //
 void ProfilerTimeEndInt(const int eventId, const long long beginClock, const long long endClock)
 {
+    ScopeLock sl;
+
     if (!g_profilerState->enabled)
         return;
-
-    ScopeLock sl;
 
     long long delta = endClock - beginClock;
     if (g_profilerState->fixedEvents[eventId].cnt == 0)
@@ -213,10 +218,10 @@ void ProfilerTimeEndInt(const int eventId, const long long beginClock, const lon
 
 void ProfilerTimeEndInt(const char* eventDescription, const long long beginClock, const long long endClock)
 {
+    ScopeLock sl;
+
     if (!g_profilerState->enabled)
         return;
-
-    ScopeLock sl;
 
     auto eventDescriptionBytes = strlen(eventDescription) + 1;
     auto requiredBufferBytes = eventDescriptionBytes + sizeof(CustomEventRecord);
@@ -300,20 +305,6 @@ void PERF_PROFILER_API ProfilerSyncGpu()
 
 
 //
-// CUDA kernel profiling.
-// CUDA kernels are profiled using a single call to this function.
-//
-void PERF_PROFILER_API ProfilerCudaTimeEnd(const float deltaSeconds, const char* eventDescription)
-{
-    // A nullptr state indicates that the profiler is globally disabled, and not initialized
-    if (g_profilerState == nullptr)
-        return;
-
-    ProfilerTimeEndInt(eventDescription, 0ll, (long long)((double)deltaSeconds * (double)g_profilerState->clockFrequency));
-}
-
-
-//
 // Measure throughput given the number of bytes.
 // ProfilerThroughputBegin() returns a stateId that is passed to ProfilerThroughputEnd().
 // If ProfilerThroughputEnd() is not called, the event is not recorded.
@@ -332,26 +323,26 @@ void PERF_PROFILER_API ProfilerThroughputEnd(const long long stateId, const int 
     if (g_profilerState == nullptr)
         return;
 
+    ScopeLock sl;
+
     if (!g_profilerState->enabled)
         return;
-
-    ScopeLock sl;
 
     auto beginClock = stateId;
     if (endClock == beginClock)
         return;
 
-    // Use KB rather than bytes to prevent overflow
-    long long KBytesPerSec = ((bytes * g_profilerState->clockFrequency) / 1000) / (endClock - beginClock);
+    // Use kB rather than bytes to prevent overflow
+    long long kBytesPerSec = ((bytes * g_profilerState->clockFrequency) / 1000) / (endClock - beginClock);
     if (g_profilerState->fixedEvents[eventId].cnt == 0)
     {
-        g_profilerState->fixedEvents[eventId].min = KBytesPerSec;
-        g_profilerState->fixedEvents[eventId].max = KBytesPerSec;
+        g_profilerState->fixedEvents[eventId].min = kBytesPerSec;
+        g_profilerState->fixedEvents[eventId].max = kBytesPerSec;
     }
-    g_profilerState->fixedEvents[eventId].min = min(KBytesPerSec, g_profilerState->fixedEvents[eventId].min);
-    g_profilerState->fixedEvents[eventId].max = max(KBytesPerSec, g_profilerState->fixedEvents[eventId].max);
-    g_profilerState->fixedEvents[eventId].sum += KBytesPerSec;
-    g_profilerState->fixedEvents[eventId].sumsq += (double)KBytesPerSec * (double)KBytesPerSec;
+    g_profilerState->fixedEvents[eventId].min = min(kBytesPerSec, g_profilerState->fixedEvents[eventId].min);
+    g_profilerState->fixedEvents[eventId].max = max(kBytesPerSec, g_profilerState->fixedEvents[eventId].max);
+    g_profilerState->fixedEvents[eventId].sum += kBytesPerSec;
+    g_profilerState->fixedEvents[eventId].sumsq += (double)kBytesPerSec * (double)kBytesPerSec;
     g_profilerState->fixedEvents[eventId].totalBytes += bytes;
     g_profilerState->fixedEvents[eventId].cnt++;
 }
@@ -368,19 +359,14 @@ void PERF_PROFILER_API ProfilerClose()
 
     LockClose();
 
-    // Generate summary report
-    if (_wmkdir(g_profilerState->profilerDir.c_str()) == -1 && errno != EEXIST)
-    {
-        RuntimeError("Error: ProfilerClose: Cannot create directory <%ls>.\n", g_profilerState->profilerDir.c_str());
-    }
-
+    // Get current time as yyyy-mm-dd_hh-mm-ss
     time_t currentTime;
     time(&currentTime);
     struct tm* timeInfo = localtime(&currentTime);
-
     wchar_t timeStr[32];
     wcsftime(timeStr, sizeof(timeStr) / sizeof(timeStr[0]), L"%Y-%m-%d_%H-%M-%S", timeInfo);
 
+    // Generate summary report
     std::wstring fileName = g_profilerState->profilerDir + L"/" + std::wstring(timeStr) + L"_summary_" + g_profilerState->logSuffix + L".txt";
     ProfilerGenerateReport(fileName, timeInfo);
 

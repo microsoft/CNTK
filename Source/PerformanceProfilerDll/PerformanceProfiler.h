@@ -111,12 +111,6 @@ void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const char* even
 //
 void PERF_PROFILER_API ProfilerSyncGpu();
 
-//
-// CUDA kernel profiling.
-// CUDA kernels are profiled using a single call to this function.
-//
-void PERF_PROFILER_API ProfilerCudaTimeEnd(const float deltaSeconds, const char* eventDescription);
-
 
 //
 // Measure throughput given the number of bytes.
@@ -125,6 +119,7 @@ void PERF_PROFILER_API ProfilerCudaTimeEnd(const float deltaSeconds, const char*
 //
 long long PERF_PROFILER_API ProfilerThroughputBegin();
 void PERF_PROFILER_API ProfilerThroughputEnd(const long long stateId, const int eventId, const long long bytes);
+
 
 //
 // Generate reports and release all resources.

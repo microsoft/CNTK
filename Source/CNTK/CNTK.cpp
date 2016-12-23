@@ -797,7 +797,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     // Setup profiling
     ProfilerContext profilerContext;
-    SetupProfiling<ConfigParameters>(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
+    SetupProfiling(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
 
     // run commands
     std::string type = config(L"precision", "float");
