@@ -54,6 +54,7 @@ if __name__=='__main__':
     ]
     out = c(data)
     print(out)
+    # [[[[ 24.  40.  38.]]]]
 
     # ----------------------------------------------
     # per-sequence initial state

@@ -182,20 +182,29 @@ def Convolution(rf_shape,         # e.g. (3,3)
     # So we fake those dimensions on this level.
     fake_output_depth = num_filters == ()
     fake_input_depth  = reduction_rank == 0
-    #if fake_output_depth or fake_input_depth:
+    # 1D convolution is not supported by cudnn, so we also add a fake dimension.
+    fake_1d = len(rf_shape) < 2
+    #if fake_output_depth or fake_input_depth or fake_1d:
     #    UntestedBranchError("Convolution with depth faking")
 
     actual_output_channels_shape = num_filters                if not fake_output_depth else (1,)
     actual_reduction_shape       = _INFERRED * reduction_rank if not fake_input_depth  else _INFERRED  # BUGBUG: (1,) crashes
 
     # add the dimension to the options as well
+    num_faked_axes = 0
     if fake_input_depth:
-        strides = (1,)     + strides
-        sharing = (True,)  + sharing
-        pad     = (False,) + pad
+        num_faked_axes += 1
+    if fake_1d:
+        num_faked_axes += 1
+    strides = (1,)     * num_faked_axes + strides
+    sharing = (True,)  * num_faked_axes + sharing
+    pad     = (False,) * num_faked_axes + pad
 
     rf_rank = len(rf_shape)
-    kernel_shape = actual_reduction_shape + rf_shape # kernel := filter plus reductionDims
+    actual_rf_shape = rf_shape
+    if fake_1d:
+        actual_rf_shape = (1,) + actual_rf_shape # add a second axis of dimension 1
+    kernel_shape = actual_reduction_shape + actual_rf_shape # kernel := filter plus reductionDims
 
     # init can be an np.array, which must have the correct dimensions subject to faking depth
     # Once we no longer fake depth at this outer level, we can remove this.
@@ -213,15 +222,15 @@ def Convolution(rf_shape,         # e.g. (3,3)
         # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag?
 
     # parameters bound to this Function
-    W = Parameter(actual_output_channels_shape + kernel_shape,         init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
-    b = Parameter(actual_output_channels_shape + (1,) * len(rf_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
+    W = Parameter(actual_output_channels_shape + kernel_shape,                init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
+    b = Parameter(actual_output_channels_shape + (1,) * len(actual_rf_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
     # expression
     @Function
     def convolve(x):
-        if fake_input_depth:
+        if num_faked_axes != 0:
             from .ops import reshape
-            x = reshape(x, (1,), begin_axis=-rf_rank, end_axis=-rf_rank) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+            x = reshape(x, (1,) * num_faked_axes, begin_axis=-rf_rank, end_axis=-rf_rank) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
         # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
         r = convolution (W, x,
                          strides=strides, sharing=sharing, auto_padding=pad,
