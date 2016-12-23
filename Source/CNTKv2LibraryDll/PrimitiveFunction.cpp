@@ -595,7 +595,7 @@ namespace CNTK
             }
         }
 
-        return{ OutputVariable(outputShape, outputDataType, owner, outputDynamicAxes, functionName.empty() ? L"" : functionName + L"_output") };
+        return{ OutputVariable(outputShape, outputDataType, owner, outputDynamicAxes, functionName.empty() ? L"" : functionName) };
     }
 
     static const std::wstring s_primitiveFunctionTypeValue = L"PrimitiveFunction";
