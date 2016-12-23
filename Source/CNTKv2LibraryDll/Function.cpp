@@ -496,13 +496,12 @@ namespace CNTK
         // propagate m_outputs updates if root is Combine()
         auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(clonedRootFunction.get());
         if (primitiveFunction != nullptr && primitiveFunction->OpType() == PrimitiveOpType::Combine)
-        {
             clonedComposite->m_outputs = primitiveFunction->m_outputs;
-        }
+        else if (clonedRootFunction->m_outputs != clonedComposite->m_outputs)
+            LogicError("Clone: composite's m_outputs out of sync with its root function.");
 
         return clonedComposite;
     }
-
 
     /*virtual*/ void Function::RestoreFromCheckpoint(const Dictionary& modelDictionary)
     {

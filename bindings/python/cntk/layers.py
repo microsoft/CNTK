@@ -312,7 +312,8 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
     #       I.e. run it through Function(); or do those use var-length inputs?
     #       Test by using a recurrence over plus(), but cannot really test because of missing inference.
     # TEST THIS
-    if isinstance(over, function):
+    import types
+    if isinstance(over, types.FunctionType):
         over = Function(over)
 
     # function that this layer represents
