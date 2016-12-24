@@ -1329,9 +1329,15 @@ private:
                         chunk.windowbegin++; // too early
                     while (chunk.windowend < randomizedchunks[i].size() && randomizedchunks[i][chunk.windowend].globalte() - chunk.globalts < randomizationrange / 2)
                         chunk.windowend++; // got more space
-                } else if (k > 0){ // randomizationrange == 0
-                    chunk.windowbegin++; // too early
-                    chunk.windowend++; // got more space
+                // } else if (k > 0){ // randomizationrange == 0
+                //     chunk.windowbegin++; // too early
+                //     chunk.windowend++; // got more space
+                // }
+                else {  // a fake randomizationrange, 8640000 frames = 24 hours, to get proper windowbegin and windowend for each chunk
+                    while (chunk.globalts - randomizedchunks[i][chunk.windowbegin].globalts > 8640000 / 2)
+                        chunk.windowbegin++; // too early
+                    while (chunk.windowend < randomizedchunks[i].size() && randomizedchunks[i][chunk.windowend].globalte() - chunk.globalts < 8640000 / 2)
+                        chunk.windowend++; // got more space
                 }
             }
         }
