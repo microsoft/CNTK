@@ -394,12 +394,12 @@ public:
 		else
 		{
 			FrameRange fr(InputRef(0).GetMBLayout());
-			auto output1gradient = AsFlattenedMatrix(OneSampleTensorFor(1,  /*gradient=*/true, fr.AllowBroadcast()));
+			auto output1gradient = MatrixValueFor(1,  /*gradient=*/true, fr);
 			m_temp1.SetValue(m_pn);
 			m_temp1 += m_pm;
 			m_temp1.AssignElementProductOf(m_pm, m_sampleLabels);
 			m_temp1.AssignDifferenceOf(m_pm, m_temp1);
-			output1gradient->DoScatterColumnsOf(0, m_sampleIdx, m_temp1, 1);
+			output1gradient->SetValue(output1gradient->Transpose().DoScatterColumnsOf(0, m_sampleIdx, m_temp1, 1).Transpose());
 		}
 	}
 
@@ -419,26 +419,46 @@ public:
 	virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
 	{
 		FrameRange fr(InputRef(0).GetMBLayout());
-		auto input0 = AsFlattenedMatrix(OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast()));
-		auto input1 = AsFlattenedMatrix(OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()));
+		auto input0 = MatrixValueFor(0,  /*gradient=*/false, fr);
+		auto input1 = MatrixValueFor(1,  /*gradient=*/false, fr);
 		size_t MBsize = input0->GetNumNonZeroElements();
 		m_sampleIdx.Resize(1, MBsize);
 		m_sampleIdx.SetValueFromIndex(input0->GetNonZeroIndices());
-		m_sampleLabels.DoGatherColumnsOf(0, m_sampleIdx, *input0, 1);
-		m_pm.DoGatherColumnsOf(0, m_sampleIdx, *input1, 1);
+		//BUGBUG: unfortunately we need to switch the labels to dense here since Transpose is not implemented for sparse
+		auto input0Dense = input0->DeepClone();
+		input0Dense.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
+		m_sampleLabels.DoGatherColumnsOf(0, m_sampleIdx, input0Dense.Transpose(), 1);
+		m_pm.DoGatherColumnsOf(0, m_sampleIdx, input1->Transpose(), 1);
 		m_pn.DoGatherColumnsOf(0, m_sampleIdx, m_unigramCounts, 1);
+		m_pn.SetValue( Replicate(m_pn.Transpose(), m_pm.GetNumRows()) );
 		m_pm.InplaceExp();
 		m_pn.Scale(MBsize / (ElemType)m_totalCount, m_unigramCounts);
 		m_temp1.AssignSumOf(m_pm, m_pn);
+		if (GetEnvironmentPtr() && (Environment().traceLevel > 3))
+		{
+			m_pm.Print("m_pm");
+			m_pn.Print("m_pm");
+			m_temp1.Print("m_temp1");
+		}
 		m_pm.ElementDivideBy(m_temp1);
 		m_pn.ElementDivideBy(m_temp1);
 		m_temp1.SetValue(m_pm);
 		m_temp1.InplaceLog();
 		m_temp2.SetValue(m_pn);
 		m_temp2.InplaceLog();
+		if (GetEnvironmentPtr() && (Environment().traceLevel > 3))
+		{
+			m_pm.Print("m_pm");
+			m_pn.Print("m_pm");
+			m_temp1.Print("m_temp1");
+			m_temp2.Print("m_temp2");
+
+		}
 		m_temp1 -= m_temp2;
 		m_temp1.AssignElementProductOf(m_pm, m_sampleLabels);
 		m_temp1 += m_temp2;
+		m_temp1.SetValue(m_temp1.Transpose());
+		MaskMissingColumnsTo<ElemType>(m_temp1, InputRef(0).GetMBLayout(), fr, 0);
 		Value().AssignSumOfElements(m_temp1);
 #if NANCHECK
 		Value().HasNan("SampledCriterion");
@@ -486,23 +506,22 @@ public:
 	}
 
 private:
-	TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
+	shared_ptr<Matrix<ElemType>> MatrixValueFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
 	{
 		auto input = inputIndex < 0 ? this : Input(inputIndex).get();
-		auto data = gradient ? input->GradientPtr() : input->ValuePtr();
-		size_t rank = input->GetSampleLayout().GetRank();
-		if (!InputRef(0).HasMBLayout()) // left input is no MB data: run normally
-			return input->DataTensorFor(data, rank, fr);
-		auto tensorShape = input->GetOneSampleTensorSliceFor(rank, fr);
-		return TensorView<ElemType>(data, tensorShape);
+		auto data = gradient ? input->GradientPtrRef() : input->ValuePtrRef();
+		return data;
 	}
 
-	shared_ptr<Matrix<ElemType>> AsFlattenedMatrix(TensorView<ElemType> a)
+	Matrix<ElemType> Replicate(Matrix<ElemType> a, size_t numCols)
 	{
-		auto a_shape = a.GetShape();
-		TensorShape shape(a_shape[0], a_shape[1] * a_shape[2]);
-		return a.Reshaped(shape).AsMatrix();
+		Matrix<ElemType> temp(a.GetNumRows(), numCols, GetDeviceId());
+		for (size_t i = 0; i < numCols; i++)
+			temp.SetColumn(a, i);
+
+		return temp.Transpose();
 	}
+
 	// keeps unigram counts from data to calculate gradients
 	Matrix<ElemType> m_unigramCounts;
 	size_t m_totalCount; //sampled seen so far
