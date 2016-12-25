@@ -21,14 +21,14 @@ cntk_padHeight = 1000
 
 # directories
 rootDir = os.path.dirname(os.path.realpath(sys.argv[0])) + "/"
-imgDir = rootDir + "../../DataSets/" + datasetName+ "/"
-pascalDataDir = rootDir + "../../DataSets/Pascal/"
+imgDir = os.path.join(rootDir, "../../DataSets/" + datasetName+ "/")
+pascalDataDir = os.path.join(rootDir, "../../DataSets/Pascal/")
 
 # derived directories
-procDir = rootDir + "proc/" + datasetName + "_{}/".format(cntk_nrRois)
-resultsDir = rootDir + "results/" + datasetName + "_{}/".format(cntk_nrRois)
-roiDir = procDir + "rois/"
-cntkFilesDir = procDir + "cntkFiles/"
+procDir = os.path.join(rootDir, "proc/" + datasetName + "_{}/".format(cntk_nrRois))
+resultsDir = os.path.join(rootDir, "results/" + datasetName + "_{}/".format(cntk_nrRois))
+roiDir = os.path.join(procDir, "rois/")
+cntkFilesDir = os.path.join(procDir, "cntkFiles/")
 cntkTemplateDir = rootDir
 
 # ROI generation
