@@ -397,8 +397,15 @@ public:
 			auto output1gradient = MatrixValueFor(1,  /*gradient=*/true, fr);
 			m_temp1.SetValue(m_pn);
 			m_temp1 += m_pm;
-			m_temp1.AssignElementProductOf(m_pm, m_sampleLabels);
+			m_temp1.ElementMultiplyWith(m_sampleLabels);
 			m_temp1.AssignDifferenceOf(m_pm, m_temp1);
+			if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
+			{
+				m_pm.Print("m_pm");
+				m_pn.Print("m_pn");
+				m_temp1.Print("sample gradients");
+				m_sampleLabels.Print("sample labels");
+			}
 			output1gradient->SetValue(output1gradient->Transpose().DoScatterColumnsOf(0, m_sampleIdx, m_temp1, 1).Transpose());
 		}
 	}
@@ -432,13 +439,16 @@ public:
 		m_pn.DoGatherColumnsOf(0, m_sampleIdx, m_unigramCounts, 1);
 		m_pn.SetValue( Replicate(m_pn.Transpose(), m_pm.GetNumRows()) );
 		m_pm.InplaceExp();
-		m_pn.Scale(MBsize / (ElemType)m_totalCount, m_unigramCounts);
+		m_pn *= MBsize / (ElemType)m_totalCount;
 		m_temp1.AssignSumOf(m_pm, m_pn);
-		if (GetEnvironmentPtr() && (Environment().traceLevel > 3))
+		if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
 		{
 			m_pm.Print("m_pm");
-			m_pn.Print("m_pm");
-			m_temp1.Print("m_temp1");
+			m_pn.Print("m_pn");
+			m_temp1.Print("denominator");
+			input0Dense.Print("dense labels");
+			m_sampleLabels.Print("sampled labels");
+			m_unigramCounts.Print("unigram counts");
 		}
 		m_pm.ElementDivideBy(m_temp1);
 		m_pn.ElementDivideBy(m_temp1);
@@ -446,19 +456,15 @@ public:
 		m_temp1.InplaceLog();
 		m_temp2.SetValue(m_pn);
 		m_temp2.InplaceLog();
-		if (GetEnvironmentPtr() && (Environment().traceLevel > 3))
-		{
-			m_pm.Print("m_pm");
-			m_pn.Print("m_pm");
-			m_temp1.Print("m_temp1");
-			m_temp2.Print("m_temp2");
-
-		}
 		m_temp1 -= m_temp2;
-		m_temp1.AssignElementProductOf(m_pm, m_sampleLabels);
+		m_temp1.ElementMultiplyWith(m_sampleLabels);
 		m_temp1 += m_temp2;
 		m_temp1.SetValue(m_temp1.Transpose());
 		MaskMissingColumnsTo<ElemType>(m_temp1, InputRef(0).GetMBLayout(), fr, 0);
+		if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
+		{
+			m_temp1.Print("NCE value");
+		}
 		Value().AssignSumOfElements(m_temp1);
 #if NANCHECK
 		Value().HasNan("SampledCriterion");

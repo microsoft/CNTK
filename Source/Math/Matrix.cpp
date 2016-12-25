@@ -2118,10 +2118,19 @@ Matrix<ElemType>& Matrix<ElemType>::AssignDifferenceOf(const Matrix<ElemType>& a
         *this *= -1;
         return *this;
     }
-    if (this != &a)
-        SetValue(a);
-    (*this) -= b;
-    return *this;
+	if (this == &b)
+	{
+		(*this) *= -1;
+		(*this) += a;
+		return *this;
+	}
+	else
+	{
+		if (this != &a)
+			SetValue(a);
+		(*this) -= b;
+		return *this;
+	}       
 }
 
 template <class ElemType>
