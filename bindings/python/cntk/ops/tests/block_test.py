@@ -44,14 +44,26 @@ def test_op_as_block(input_shape, output_shape, expected_output_shape, device_id
     a_reshaped = reshape(a_placeholder, output_shape)
 
     const_input_reshaped = constant(input_reshaped, device=dev)
-    block_composite = element_times(a_reshaped, const_input_reshaped)
+    block_composite = element_times(a_reshaped, const_input_reshaped, name='element_times_inside_block')
     
     a = I(shape=input_tensor.shape,
           dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           needs_gradient=True,
           name='a')
 
-    input_op = as_block(block_composite, {a_placeholder : a}, 'reshape_test_op')
+    input_op = as_block(block_composite, {a_placeholder : a}, 'reshape_test_op', block_instance_name='reshape_test_op')
+
+    # Test some basic methods related to blocks
+    assert input_op.is_composite
+    block_primitive = input_op.root_function.find_by_name('reshape_test_op')
+    assert block_primitive.name == 'reshape_test_op'
+    assert block_primitive.is_primitive
+    assert block_primitive.is_block
+    element_times_inside_block = block_primitive.block_composite.root_function.find_by_name('element_times_inside_block')
+    assert element_times_inside_block.name == 'element_times_inside_block'
+    assert element_times_inside_block.is_primitive
+    block_arguments_map = block_primitive.block_arguments_mapping
+    assert len(block_arguments_map) == 1
 
     expected_forward = [[input_reshaped**2]]
     expected_backward = {a: input_tensor}

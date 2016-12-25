@@ -323,7 +323,7 @@ namespace CNTK
             {
                 for (const auto& output : function->Outputs())
                 {
-                    auto node = m_variableToNodeMap[output];
+                    auto node = m_variableToNodeMap.at(output);
                     auto attributes = function->Attributes();
                     auto seed = attributes[PrimitiveFunction::AttributeNameRngSeed].Value<size_t>();
                     auto offset = attributes[PrimitiveFunction::AttributeNameRngOffset].Value<size_t>();
@@ -875,6 +875,21 @@ namespace CNTK
             for (auto rootOutput : rootFunctionOutputs)
                 GetNode(rootOutput, m_computationNetwork, builder, m_variableToNodeMap, m_isVariableRootMap);
 
+            // We need to patch the Computation node mappings for the arguments of block functions 
+            // since for recurrent inputs, the mappings are not fully established the first time
+            std::function<void(const FunctionPtr&)> PatchBlockArgumentsMapping;
+            PatchBlockArgumentsMapping = [this, &PatchBlockArgumentsMapping](const FunctionPtr& function) {
+                if (function->IsBlock())
+                {
+                    auto& compositeArgumentsMap = function->BlockArgumentsMapping();
+                    for (auto& compositeArgumentMapping : compositeArgumentsMap)
+                        m_variableToNodeMap[compositeArgumentMapping.first] = m_variableToNodeMap.at(compositeArgumentMapping.second);
+
+                    PreorderTraverseFunctions(function->BlockComposite()->RootFunction(), PatchBlockArgumentsMapping);
+                }
+            };
+            PreorderTraverseFunctions(rootFunction, PatchBlockArgumentsMapping);
+
             std::function<bool(const Variable&)> IsVariableRoot;
             IsVariableRoot = [this, &IsVariableRoot](const Variable& outputVar) {
                 auto ownerFunc = outputVar.IsOutput() ? outputVar.Owner().get() : nullptr;
@@ -886,7 +901,7 @@ namespace CNTK
             for (auto rootOutput : rootFunctionOutputs)
             {
                 if (!IsVariableRoot(rootOutput))
-                    m_computationNetwork->AddToNodeGroup(L"output", m_variableToNodeMap[rootOutput]);
+                    m_computationNetwork->AddToNodeGroup(L"output", m_variableToNodeMap.at(rootOutput));
             }
 
             // If any of the requested outputs is not a root node, we need to explicitly add it to the 'output' group of the ComputationNetwork
@@ -910,6 +925,9 @@ namespace CNTK
             for (auto varNodePair : m_variableToNodeMap)
             {
                 auto& currentComputationNode = varNodePair.second;
+                if (!currentComputationNode)
+                    LogicError("No computation node mapping exists for Variable %S", varNodePair.first.Name().c_str());
+
                 auto& currentComputationNodeInputs = currentComputationNode->GetInputs();
                 auto& currentVar = varNodePair.first;
                 if (!currentVar.IsOutput())
@@ -932,7 +950,7 @@ namespace CNTK
 
                     std::vector<ComputationNodeBasePtr> inputNodesBasePtrs;
                     for (auto inputVar : inputVars)
-                        inputNodesBasePtrs.push_back(m_variableToNodeMap[inputVar]);
+                        inputNodesBasePtrs.push_back(m_variableToNodeMap.at(inputVar));
 
                     currentComputationNode->AttachInputs(inputNodesBasePtrs);
                 }
@@ -947,7 +965,7 @@ namespace CNTK
                 if (varNodePair.first.IsOutput())
                 {
                     auto outputVar = varNodePair.first;
-                    auto computationNodePtr = m_variableToNodeMap[outputVar];
+                    auto computationNodePtr = m_variableToNodeMap.at(outputVar);
                     auto outputShape = outputVar.Shape();
                     auto computationNodeSampleLayout = computationNodePtr->GetSampleLayout();
                     if (((outputShape.Rank() == 0) && (computationNodeSampleLayout[0] != 1)) ||
@@ -976,7 +994,7 @@ namespace CNTK
             std::vector<ComputationNodeBasePtr> forwardRootNodes;
             for (auto rootOutput : rootFunctionOutputs)
             {
-                auto currentRootNode = m_variableToNodeMap[rootOutput];
+                auto currentRootNode = m_variableToNodeMap.at(rootOutput);
                 forwardRootNodes.push_back(currentRootNode);
 
                 if (m_currentBackpropRoots.find(rootOutput) != m_currentBackpropRoots.end())
@@ -986,7 +1004,7 @@ namespace CNTK
             std::vector<ComputationNodeBasePtr> forwardOutputNodes;
             for (auto output : outputs)
             {
-                auto currentOutputNode = m_variableToNodeMap[output];
+                auto currentOutputNode = m_variableToNodeMap.at(output);
                 forwardOutputNodes.push_back(currentOutputNode);
 
                 if (m_currentBackpropRoots.find(output) != m_currentBackpropRoots.end())
@@ -1039,7 +1057,7 @@ namespace CNTK
         for (auto argumentValuePair : arguments)
         {
             auto argument = argumentValuePair.first;
-            auto argumentComputationNode = m_variableToNodeMap[argument];
+            auto argumentComputationNode = m_variableToNodeMap.at(argument);
             assert(argumentComputationNode);
             inputNodes.push_back(argumentComputationNode);
 
@@ -1086,7 +1104,7 @@ namespace CNTK
         auto functionOutputs = this->Outputs();
         for (auto gradientVarValuePair : gradients)
         {
-            auto outputComputationNode = m_variableToNodeMap[gradientVarValuePair.first];
+            auto outputComputationNode = m_variableToNodeMap.at(gradientVarValuePair.first);
             ValuePtr gradientValue = gradientVarValuePair.second;
 
             switch (gradientValue->GetDataType())
@@ -1172,7 +1190,7 @@ namespace CNTK
     {
         // Now copy the Forward values of output nodes from the network to outputs' Value objects
         for (auto outputVarValuePair : outputs)
-            GetNodeOutputOrGradient(outputVarValuePair.first, outputs[outputVarValuePair.first], m_variableToNodeMap[outputVarValuePair.first], false /*getGradient*/);
+            GetNodeOutputOrGradient(outputVarValuePair.first, outputs[outputVarValuePair.first], m_variableToNodeMap.at(outputVarValuePair.first), false /*getGradient*/);
     }
 
     void CompositeFunction::GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients)
@@ -1189,7 +1207,7 @@ namespace CNTK
             if (!gradientVarValuePair.first.NeedsGradient())
                 InvalidArgument("Gradient value incorrectly requested for an Output or Constant Variable, or an Input Variable with NeedsGradient setting of false");
 
-            auto computationNodePtr = m_variableToNodeMap[gradientVarValuePair.first];
+            auto computationNodePtr = m_variableToNodeMap.at(gradientVarValuePair.first);
 
             if (!computationNodePtr->NeedsGradient())
                 LogicError("Backpropagated gradient value cannot be read from a ComputationNode that has NeedsGradient set to false");
@@ -1271,7 +1289,7 @@ namespace CNTK
             auto& requiredArgumentsForCurrentOutput = GetArgumentDependencies(outputVarValuePair.first);
             requiredArguments.insert(requiredArgumentsForCurrentOutput.begin(), requiredArgumentsForCurrentOutput.end());
 
-            auto outputComputationNode = m_variableToNodeMap[outputVarValuePair.first];
+            auto outputComputationNode = m_variableToNodeMap.at(outputVarValuePair.first);
             outputsToEvaluate.push_back(outputComputationNode);
         }
 
@@ -1309,7 +1327,7 @@ namespace CNTK
             if (newTimeStamp > prevTimeStamp)
             {
                 paramTimeStampRecord.second = newTimeStamp;
-                m_variableToNodeMap[parameter]->BumpEvalTimeStamp();
+                m_variableToNodeMap.at(parameter)->BumpEvalTimeStamp();
             }
         }
 
@@ -1317,12 +1335,12 @@ namespace CNTK
         for (auto rootVarForBackprop : outputsToRetainBackwardStateFor)
         {
             if (outputs.find(rootVarForBackprop) == outputs.end())
-                outputsToEvaluate.push_back(m_variableToNodeMap[rootVarForBackprop]);
+                outputsToEvaluate.push_back(m_variableToNodeMap.at(rootVarForBackprop));
         }
 
         // Reset the timestamps of all backward roots to record an update in one or more inputs
         for (auto& backpropRoot : m_currentBackpropRoots)
-            m_variableToNodeMap[backpropRoot]->SetEvalTimeStampOutdatedWrtAll();
+            m_variableToNodeMap.at(backpropRoot)->SetEvalTimeStampOutdatedWrtAll();
 
         // TODO: Verify that values were supplied for all inputs that requested outputs depend on
 
@@ -1367,7 +1385,7 @@ namespace CNTK
 
         // Zero all gradients of nodes below the root nodes
         for (auto rootGradientVarValuePair : rootGradientValues)
-            m_computationNetwork->ZeroInputGradients(m_variableToNodeMap[rootGradientVarValuePair.first]);
+            m_computationNetwork->ZeroInputGradients(m_variableToNodeMap.at(rootGradientVarValuePair.first));
 
         // Feed data into the arguments of the network
         PopulateNetworkGradients(rootGradientValues);
@@ -1375,7 +1393,7 @@ namespace CNTK
         // Backpropagate through the network
         ScopedNetworkOperationMode modeGuard(m_computationNetwork, NetworkOperationMode::training);
 
-        auto rootComputationNodePtr = m_variableToNodeMap[rootGradientValues.begin()->first];
+        auto rootComputationNodePtr = m_variableToNodeMap.at(rootGradientValues.begin()->first);
         m_computationNetwork->GetNestedNetwork(rootComputationNodePtr)->Backprop(FrameRange(nullptr), true, true);
 
         GetNetworkGradients(backPropagatedGradientValuesForInputs);
