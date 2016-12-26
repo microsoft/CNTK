@@ -126,16 +126,24 @@ public:
 
     virtual void UpdateFunctionMBSize() override
     {
-        m_weightedLeftMinusRight->Resize(Input(0)->Value());
+        m_weightedSquareLeftMinusRight->Resize(Input(0)->Value());
+        m_squareWeightedLeftMinusRight->Resize(Input(0)->Value());
     }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
         FrameRange fr(InputRef(0).GetMBLayout());
-        m_weightedLeftMinusRight->AssignDifferenceOf(InputRef(0).ValueFor(fr), InputRef(1).ValueFor(fr));
-        m_weightedLeftMinusRight->ColumnElementMultiplyWith(InputRef(2).ValueFor(fr));
-        MaskMissingColumnsToZero(*m_weightedLeftMinusRight, InputRef(0).GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
-        ElemType v = m_weightedLeftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ ((I0[i] - I1[i]) * weight)^2 } )
+        shared_ptr<Matrix<ElemType>> weightedLeftMinusRight;
+        weightedLeftMinusRight->AssignDifferenceOf(InputRef(0).ValueFor(fr), InputRef(1).ValueFor(fr)); // I0-I1
+        m_weightedSquareLeftMinusRight->SetValue(*weightedLeftMinusRight);
+        m_weightedSquareLeftMinusRight->ColumnElementMultiplyWith(*weightedLeftMinusRight);
+        m_weightedSquareLeftMinusRight->ColumnElementMultiplyWith(InputRef(2).ValueFor(fr)); // m_weightedSquareLeftMinusRight = w*(I0-I1)^2
+        weightedLeftMinusRight->ColumnElementMultiplyWith(InputRef(2).ValueFor(fr));
+        m_squareWeightedLeftMinusRight->SetValue(*weightedLeftMinusRight);
+        m_squareWeightedLeftMinusRight->ColumnElementMultiplyWith(InputRef(2).ValueFor(fr)); // m_squareWeightedLeftMinusRight = w^2*(I0-I1)
+
+        MaskMissingColumnsToZero(*weightedLeftMinusRight, InputRef(0).GetMBLayout(), fr); // we are fine since it will only be called with full minibatch.
+        ElemType v = weightedLeftMinusRight->FrobeniusNorm(); // v = sqrt( sum{ (w * (I0[i] - I1[i]))^2 } )
         Value().VerifySize(1, 1);
         Value().SetValue(v * v);  // Value = sum{ ((I0[i] - I1[i]) * weight)^2 }
 #if NANCHECK
@@ -147,7 +155,14 @@ public:
     {
         FrameRange fr(InputRef(0).GetMBLayout());
         auto gradient = InputRef(inputIndex).GradientFor(fr);
-        Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 2.0f : -2.0f, Gradient() /*1x1*/, *m_weightedLeftMinusRight, 1.0f, gradient); // O = (I0-I1)^2; dO/dI0 = 2*(I0-I1); dO/dI1 = -2*(I0-I1)
+        if (inputIndex < 2)
+        {
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(inputIndex == 0 ? 2.0f : -2.0f, Gradient() /*1x1*/, *m_squareWeightedLeftMinusRight, 1.0f, gradient); // O = (w*(I0-I1))^2; dO/dI0 = 2*w^2*(I0-I1); dO/dI1 = -2*w^2*(I0-I1)
+        }
+        else
+        {
+            Matrix<ElemType>::Multiply1x1AndWeightedAdd(2.0f, Gradient() /*1x1*/, *m_weightedSquareLeftMinusRight, 1.0f, gradient); // O = (w*(I0-I1))^2; dO/dw = 2*w*(I0-I1)^2
+        }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -164,7 +179,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<WeightedSquareErrorNode<ElemType>>(nodeP);
-            node->m_weightedLeftMinusRight->SetValue(*m_weightedLeftMinusRight);
+            node->m_weightedSquareLeftMinusRight->SetValue(*m_weightedSquareLeftMinusRight);
+            node->m_squareWeightedLeftMinusRight->SetValue(*m_squareWeightedLeftMinusRight);
         }
     }
 
@@ -172,18 +188,21 @@ public:
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_weightedLeftMinusRight, matrixPool);
+        RequestMatrixFromPool(m_weightedSquareLeftMinusRight, matrixPool);
+        RequestMatrixFromPool(m_squareWeightedLeftMinusRight, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_weightedLeftMinusRight, matrixPool);
+        ReleaseMatrixToPool(m_weightedSquareLeftMinusRight, matrixPool);
+        ReleaseMatrixToPool(m_squareWeightedLeftMinusRight, matrixPool);
     }
 
 private:
-    shared_ptr<Matrix<ElemType>> m_weightedLeftMinusRight;
+    shared_ptr<Matrix<ElemType>> m_weightedSquareLeftMinusRight;
+    shared_ptr<Matrix<ElemType>> m_squareWeightedLeftMinusRight;
 };
 
 template class WeightedSquareErrorNode<float>;
