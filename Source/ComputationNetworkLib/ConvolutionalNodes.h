@@ -283,11 +283,14 @@ public:
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
 
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return m_convEng->ImplementsGradientOverwriteOptimization(); }
+
 public:
     void Save(File& fstream) const override
     {
         Base::Save(fstream);
         fstream << m_convolution2D;
+        TensorShape(1).Save(fstream); // Write out a dummy tensor, so that model created can be used later after implementing reading this tensor in this model version
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -323,6 +326,12 @@ public:
         else
         {
             fstream >> m_convolution2D;
+            if (modelVersion >= CNTK_MODEL_VERSION_18)
+            {
+                TensorShape dummyTensorHolder;
+                dummyTensorHolder.Load(fstream);
+                if(dummyTensorHolder!=TensorShape(1)) LogicError("Loading tensor that is currently not supported.");
+            }
         }
     }
 
@@ -348,7 +357,7 @@ public:
             // BackwardData adds results to the output so need to zero them out first.
             // REVIEW alexeyk: should be rolled into BackwardData itself.
             sliceOutputValue.SetValue(0);
-            m_convEng->BackwardData(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+            m_convEng->BackwardData(sliceInput1Value, input0, sliceOutputValue, /*accumulateGradient =*/ true, *m_tempMatrix);
         }
     }
 
@@ -360,16 +369,16 @@ public:
             auto& grad = InputRef(0).GradientAsMatrix();
             auto sliceInput1Value = InputRef(1).ValueFor(fr);
             if (!m_transpose)
-                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, fr.IsAllFrames(), *m_tempMatrix);
+                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrix);
             else
-                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, fr.IsAllFrames(), *m_tempMatrix);
+                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrix);
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
             auto& input0 = InputRef(0).ValueAsMatrix();
             auto sliceInput1Grad = InputRef(1).GradientFor(fr);
             if (!m_transpose)
-                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
+                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->ParentOverwritesGradient(), *m_tempMatrix);
             else
             {
                 // REVIEW alexeyk: Forward overwrites values in sliceInput1Grad. Should handle correctly instead.

@@ -278,6 +278,26 @@ void TestSettingParameterValuesManually(const DeviceDescriptor& device)
         throw std::runtime_error("Parameter value does match the expected value.");
 }
 
+void SparseSequenceBatchValueCreationTest(size_t vocabSize, size_t maxAllowedSequenceLength, const DeviceDescriptor& device)
+{
+    srand(1);
+    size_t numSequences = 5;
+    auto sequenceLengths = GenerateSequenceLengths(numSequences, maxAllowedSequenceLength);
+    std::vector<NDArrayViewPtr> denseSequences(numSequences), sparseSequences(numSequences);
+    for (size_t i = 0; i < numSequences; ++i)
+        std::tie(denseSequences[i], sparseSequences[i]) = GenerateSparseSequence<float>(vocabSize, sequenceLengths[i], 5);
+
+    // Separately batch the sequences both in dense and sparse forms
+    auto denseSequenceBatch = Value::Create({ vocabSize }, denseSequences, device);
+    auto sparseSequenceBatch = Value::Create({ vocabSize }, sparseSequences, device);
+    auto sparseSequenceBatchDataConvertedToDense = MakeSharedObject<NDArrayView>(DataType::Float, sparseSequenceBatch->Data()->Shape(), device);
+    sparseSequenceBatchDataConvertedToDense->CopyFrom(*sparseSequenceBatch->Data());
+    auto sparseSequenceBatchValueConvertedToDense = MakeSharedObject<Value>(sparseSequenceBatchDataConvertedToDense, sparseSequenceBatch->Mask());
+
+    if (!Internal::AreEqual(*denseSequenceBatch, *sparseSequenceBatchValueConvertedToDense))
+        ReportFailure("Sparse sequence batch does not match expectation");
+}
+
 void ValueTests()
 {
     fprintf(stderr, "\nValueTests..\n");
@@ -292,6 +312,8 @@ void ValueTests()
     ValueCreationOneHotNoNDMaskTest<double>(DeviceDescriptor::CPUDevice(), true);
     ValueCreationOneHotWithNDMaskTest<double>(DeviceDescriptor::CPUDevice(), false);
     ValueCreationOneHotWithNDMaskTest<float>(DeviceDescriptor::CPUDevice(), true);
+    SparseSequenceBatchValueCreationTest(300, 7, DeviceDescriptor::CPUDevice());
+    SparseSequenceBatchValueCreationTest(2300, 1, DeviceDescriptor::CPUDevice());
 
     if (IsGPUAvailable())
     {
@@ -305,5 +327,7 @@ void ValueTests()
         ValueCreationOneHotNoNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), true);
         ValueCreationOneHotWithNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), false);
         ValueCreationOneHotWithNDMaskTest<double>(DeviceDescriptor::GPUDevice(0), true);
+        SparseSequenceBatchValueCreationTest(50000, 1, DeviceDescriptor::GPUDevice(0));
+        SparseSequenceBatchValueCreationTest(6000, 6, DeviceDescriptor::GPUDevice(0));
     }
 }

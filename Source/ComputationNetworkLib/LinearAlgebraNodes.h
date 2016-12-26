@@ -60,8 +60,13 @@ public:
         if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
             MaskMissingGradientColumnsToZero(fr);
 
-        inputGradient.AddCopyOf(gradient);
+        if (Input(inputIndex)->ParentOverwritesGradient())
+            inputGradient.AssignCopyOf(gradient);
+        else
+            inputGradient.AddCopyOf(gradient);
     }
+
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
 };
 
 template class PlusNode<float>;
@@ -415,7 +420,10 @@ public:
             auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true,  fr.AllowBroadcast());
             auto input1         = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true,  fr);
-            input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
+            if (Input(inputIndex)->ParentOverwritesGradient())
+                input0Gradient.AssignMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
+            else
+                input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
         }
         else if (inputIndex == 1) // right derivative
         {
@@ -423,12 +431,17 @@ public:
             auto input0         = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
             auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true,  fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
-            input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
+            if (Input(inputIndex)->ParentOverwritesGradient())
+                input1Gradient.AssignMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
+            else
+                input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
         }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     // but both *inputs* are used, so we don't overload the InputUsed-() function which defaults to 'true'
+
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {

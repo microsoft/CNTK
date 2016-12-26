@@ -96,6 +96,10 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     // Pick up the randomizer, always picking up no randomization for the write mode.
     bool randomize = isActionWrite ? false : config(L"randomize", false);
 
+    // Check whether to use local timeline, by default we use it for better performance.
+    // Currently used only in frame mode.
+    bool localTimeline = config(L"localTimeline", true);
+
     // By default do not use omp threads for deserialization of sequences.
     // It makes sense to put it to true for cases when deserialization is CPU intensive,
     // i.e. decompression of images.
@@ -105,21 +109,18 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         // By default randomizing the whole data set.
         size_t randomizationWindow = requestDataSize;
 
-        BlockRandomizer::DecimationMode mode = BlockRandomizer::DecimationMode::chunk;
         // Currently in case of images, a single chunk is a single image. So no need to randomize, chunks will be randomized anyway.
-        // Performing decimation based on sequence position in the minibatch to be evenly distributed among workers.
-        // TODO: this won't matter when readers switch to local timeline.
         if (ContainsDeserializer(config, L"ImageDeserializer") && m_deserializers.size() == 1)
         {
             randomizationWindow = 1;
-            mode = BlockRandomizer::DecimationMode::sequence;
+            m_packingMode = PackingMode::sample;
         }
 
         randomizationWindow = config(L"randomizationWindow", randomizationWindow);
 
         // By default using STL random number generator.
         bool useLegacyRandomization = config(L"useLegacyRandomization", false);
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, true /* should Prefetch */, mode, useLegacyRandomization, multiThreadedDeserialization);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, true /* should Prefetch */, useLegacyRandomization, multiThreadedDeserialization);
     }
     else
     {
@@ -150,7 +151,8 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     case PackingMode::sample:
         m_packer = std::make_shared<FramePacker>(
             m_sequenceEnumerator,
-            m_streams);
+            m_streams,
+            localTimeline);
         break;
     case PackingMode::sequence:
         m_packer = std::make_shared<SequencePacker>(

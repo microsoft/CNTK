@@ -2,15 +2,21 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-
 #include "stdafx.h"
 #include <numeric>
 #include <random>
-#include <boost/random/uniform_int_distribution.hpp>
+
 #include "NoRandomizer.h"
 #include "DataDeserializer.h"
 #include "BlockRandomizer.h"
 #include "CorpusDescriptor.h"
+
+#pragma warning(push)
+// disable warning about possible mod 0 operation in uniform_int_distribution
+#pragma warning(disable:4724)
+#include <boost/random/uniform_int_distribution.hpp>
+#pragma warning(pop)
+
 #include "SequentialDeserializer.h"
 
 using namespace Microsoft::MSR::CNTK;
@@ -160,7 +166,7 @@ void BlockRandomizerInstantiateTest(bool prefetch)
 {
     vector<float> data;
     auto mockDeserializer = make_shared<MockDeserializer>(0, 0, data);
-    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, false);
 }
 
 BOOST_AUTO_TEST_CASE(CheckGetCurrentCursorForRandomizers)
@@ -171,7 +177,7 @@ BOOST_AUTO_TEST_CASE(CheckGetCurrentCursorForRandomizers)
     size_t randomizationWindow = chunkSizeInSamples * 5;
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
-    auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
     auto noRandomizer = make_shared<NoRandomizer>(deserializer, false);
 
     auto test = [](SequenceEnumeratorPtr r, size_t epochSize)
@@ -213,10 +219,10 @@ BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
     size_t randomizationWindow = chunkSizeInSamples * 5;
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
-    auto expectedBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto expectedBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
     auto expectedNo = make_shared<NoRandomizer>(deserializer, false);
 
-    auto underTestBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto underTestBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
     auto unterTestNo = make_shared<NoRandomizer>(deserializer, false);
 
     auto test = [](SequenceEnumeratorPtr expected, SequenceEnumeratorPtr underTest, size_t epochSize)
@@ -282,7 +288,7 @@ BOOST_AUTO_TEST_CASE(RandRollbackToEarlierEpochBetweenSweeps)
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
     // Let's randomize complete sweep, so that we have a baseline.
-    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
 
     // Let's read all sequences from the first three sweeps in the randomized order.
     auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
@@ -320,7 +326,7 @@ BOOST_AUTO_TEST_CASE(RandRollbackToEarlierEpochInTheSweep)
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
     // Let's randomize complete sweep, so that we have a baseline.
-    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
 
     // Let's read all sequences from the first three sweeps in the randomized order.
     auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
@@ -351,7 +357,7 @@ BOOST_AUTO_TEST_CASE(RandRollbackToSameEpochInTheSweep)
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
     // Let's randomize complete sweep, so that we have a baseline.
-    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
 
     // Let's read all sequences from the first three sweeps in the randomized order.
     auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
@@ -378,7 +384,7 @@ BOOST_AUTO_TEST_CASE(RandRollbackToSameEpochInBigRandomizationWindow)
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
     // Let's randomize complete sweep, so that we have a baseline.
-    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
 
     // Let's read all sequences from the first three sweeps in the randomized order.
     auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
@@ -417,7 +423,7 @@ void BlockRandomizerOneEpochTest(bool prefetch)
     iota(data.begin(), data.end(), 0.0f);
     auto mockDeserializer = make_shared<MockDeserializer>(5, 2, data);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, false);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -458,7 +464,7 @@ void BlockRandomizerOneEpochWithChunks1Test(bool prefetch)
     iota(data.begin(), data.end(), 0.0f);
     auto mockDeserializer = make_shared<MockDeserializer>(5, 2, data);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, 4, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, 4, mockDeserializer, prefetch, false);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -500,7 +506,7 @@ void BlockRandomizerOneEpochWithChunks2Test(bool prefetch)
 
     auto mockDeserializer = make_shared<MockDeserializer>(10, 2, data);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, 18, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, 18, mockDeserializer, prefetch, false);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -548,11 +554,12 @@ void BlockRandomizerChaosMonkeyTest(bool prefetch)
     vector<float> data(numChunks * numSequencesPerChunk);
     iota(data.begin(), data.end(), 0.0f);
     std::mt19937 rng(seed);
+
     boost::random::uniform_int_distribution<int> distr(1, 10);
 
     auto mockDeserializer = make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data, sequenceLength);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, windowSize, mockDeserializer, prefetch, BlockRandomizer::DecimationMode::chunk, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, windowSize, mockDeserializer, prefetch, false);
 
     for (int t = 0; t < 100; t++)
     {
@@ -608,7 +615,6 @@ void BlockRandomizerOneEpochLegacyRandomizationTest(bool prefetch)
         SIZE_MAX,
         mockDeserializer,
         prefetch,
-        BlockRandomizer::DecimationMode::sequence,
         true);
 
     EpochConfiguration epochConfiguration;
@@ -704,8 +710,8 @@ BOOST_AUTO_TEST_CASE(NumericCorpusDescriptor)
     CorpusDescriptor corpus(true);
     for (int i = 0; i < 10; ++i)
     {
-        auto value = distr(rng);
-        BOOST_CHECK_EQUAL(value, corpus.KeyToId(std::to_string(value)));
+       auto value = distr(rng);
+       BOOST_CHECK_EQUAL(value, corpus.KeyToId(std::to_string(value)));
     }
     BOOST_CHECK_EXCEPTION(
         corpus.KeyToId("not a number"),

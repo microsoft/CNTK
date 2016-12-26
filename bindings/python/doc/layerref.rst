@@ -3,12 +3,13 @@ Layers Library Reference
 
 CNTK predefines a number of common "layers," which makes it very easy to
 write simple networks that consist of standard layers layered on top of
-each other. Layers are function objects that can be used like regular
-``Functions`` but hold learnable parameters and have an additional pair
-of ``()`` to pass construction parameters or attributes.
+each other. Layers are function objects that can be used like a regular
+:class:`~cntk.ops.functions.Function` but hold learnable parameters 
+and have an additional pair of ``()`` to pass construction parameters 
+or attributes.
 
 For example, this is the network description for a simple 1-hidden layer
-model using the ``Dense()`` layer:
+model using the :class:`~cntk.layers.Dense` layer:
 
 ::
 
@@ -220,7 +221,7 @@ Parameters
 -  ``map_rank``: if given, the number of leading dimensions that are not
    transformed by ``Dense()`` (``input_rank`` must not be given)
 -  ``init`` (default: ``glorot_uniform()``): initializer descriptor for
-   the weights. `See here <cntk.html#module-cntk.initializer>`__ 
+   the weights. See `here <cntk.html#module-cntk.initializer>`_
    for a full list of random-initialization options.
 -  ``bias``: if ``False``, do not include a bias parameter
 -  ``init_bias`` (default: ``0``): initializer for the bias
@@ -265,7 +266,7 @@ will have the tensor dimensions ``(..., shape[1], shape[0])``.
 CNTK's matrix product will interpret these extra output or input
 dimensions as if they were flattened into a long vector. For more
 details on this, see the documentation of
-```Times()`` <https://github.com/Microsoft/CNTK/wiki/Times-and-TransposeTimes>`__
+`Times() <https://github.com/Microsoft/CNTK/wiki/Times-and-TransposeTimes>`_.
 
 The options ``input_rank`` and ``map_rank``, which are mutually
 exclusive, can specify that not all of the input axes of a tensor should
@@ -315,7 +316,7 @@ Parameters
 -  ``num_filters``: number of output channels (number of filters)
 -  ``activation``: optional non-linearity, e.g. ``activation=relu``
 -  ``init``: initializer descriptor for the weights, e.g.
-   ``glorot_uniform()``. `See here <cntk.html#module-cntk.initializer>`__ for a full
+   ``glorot_uniform()``. See `here <cntk.html#module-cntk.initializer>`_ for a full
    list of random-initialization options.
 -  ``pad``: if ``False`` (default), then the filter will be shifted over
    the "valid" area of input, that is, no value outside the area is
@@ -471,7 +472,7 @@ This operation is structurally very similar to convolution, except that
 the operation applied to the sliding window is of a different nature.
 
 All considerations regarding input dimensions, padding, and strides
-apply, so please see ```Convolution()`` :ref:`convolution` for more
+apply, so please see :ref:`convolution` for more
 detail.
 
 Example:
@@ -621,7 +622,7 @@ a 300-dimensional vector:
 
 In addition to ``is_sparse=True``, one would also typically read sparse
 data from disk. Here is an example of reading sparse text input with the
-```CNTKTextFormatReader`` <https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader>`__:
+`CNTKTextFormatReader <https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader>`_:
 
 ::
 
@@ -744,7 +745,7 @@ Parameters
    cell dimension to the output shape.
 -  ``use_peepholes`` (optional): if ``True``, then use peephole
    connections in the LSTM
--  ``init``: initializer descriptor for the weights. `See here <cntk.html#module-cntk.initializer>`__
+-  ``init``: initializer descriptor for the weights. See `here <cntk.html#module-cntk.initializer>`_
    for a full list of initialization options.
 -  ``enable_self_stabilization`` (optional): if ``True``, insert a
    ``Stabilizer()`` for the hidden state and cell
@@ -846,7 +847,7 @@ vector:
 
     x  = ...                   # input value, e.g. a N-dimensional one-hot vector
     xp = Delay()(x)            # previous value
-    xn = Delay(T-1)(x)         # next value (negative delay)
+    xn = Delay(T=-1)(x)         # next value (negative delay)
     tg = splice ([xp, x, xn])  # concatenate all into a 3N-dimensional three-hot vector
 
 BatchNormalization(), LayerNormalization(), Stabilizer()
@@ -1002,8 +1003,8 @@ The ``FGH`` function defined above means the same as
 
     y = H(G(F(x))) 
 
-This is known as `"function
-composition" <https://en.wikipedia.org/wiki/Function_composition>`__,
+This is known as `function
+composition <https://en.wikipedia.org/wiki/Function_composition>`_,
 and is especially convenient for expressing neural networks, which often
 have this form:
 

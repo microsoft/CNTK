@@ -9,9 +9,12 @@ from ..tensor import ArrayMixin
 from ..utils import typemap, value_to_seq
 from cntk.device import use_default_device
 
+import numpy as np
+
 INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 FULL_DATA_SWEEP = cntk_py.MinibatchSource.full_data_sweep
 INFINITE_SAMPLES = cntk_py.MinibatchSource.infinite_samples
+DEFAULT_RANDOMIZATION_WINDOW = cntk_py.MinibatchSource.default_randomization_window
 
 class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
     '''
@@ -77,18 +80,19 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
     Args:
         deserializers ('list', default is empty): list of deserializers
-         (:class:`ImageDeserializer` for now).
-        randomize (bool, default True): randomize images before every epoch
+        randomize (bool, default True): randomize before every epoch
+        randomization_window (int) : size of window that reader will shuffle, ignored if `randomize` is False
         epoch_size (int): epoch size
         distributed_after (int): sample count after which minibatch source becomes distributed
         multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
+    def __init__(self, deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
         reader_config = ReaderConfig(
             deserializers=deserializers,
             randomize=randomize,
+            randomization_window=randomization_window,
             epoch_size=epoch_size,
             distributed_after=distributed_after,
             multithreaded_deserializer=multithreaded_deserializer)
@@ -240,17 +244,18 @@ class ReaderConfig(dict):
         deserializers ('list', default is empty): list of deserializers
          (:class:`ImageDeserializer` for now).
         randomize (bool, default True): randomize images before every epoch
+        randomization_window (int) : size of window that reader will shuffle, ignored if `randomize` is False
         epoch_size (int): epoch size
         distributed_after (int): sample count after which reader becomes distributed
         multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
-
+    def __init__(self, deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
         self['epochSize'] = cntk_py.SizeTWrapper(epoch_size) # force to store in size_t
         if not isinstance(deserializers, (list, tuple)):
             deserializers = [deserializers]
         self['deserializers'] = self.deserializers = deserializers or []
         self['randomize'] = randomize
+        self['randomizationWindow'] = cntk_py.SizeTWrapper(randomization_window)
         self['distributedAfterSampleCount'] = cntk_py.SizeTWrapper(distributed_after)
         if multithreaded_deserializer != None:
             self['multiThreadedDeserialization'] = multithreaded_deserializer
@@ -492,28 +497,6 @@ class CTFDeserializer(Deserializer):
         self.input[node] = dict(dim=dim, format=format, alias=alias)
 
 
-# TODO: This should not exist; use MinibatchSource(CTFDeserializer(...))
-@typemap
-def text_format_minibatch_source(path, stream_configs, epoch_size=INFINITELY_REPEAT, randomize=True, distributed_after=INFINITE_SAMPLES):
-    '''
-    Creates a minibatch source from a CNTKTextFormatReader file.
-
-    Args:
-        path (file): filename of the data file
-        stream_configs (`list` of :class:`StreamConfiguration` instances): list
-         of stream configurations, each of which describes one stream in the
-         file
-        epoch_size (int, optional): size of an epoch. In case of 0 the size
-         of the training set will be taken. Default is max of 64bit.
-        randomize (bool, optional): whether to randomize the contents of data file.
-        distributed_after (int, optional): sample count after which minibatch source becomes distributed
-
-    Returns:
-        :class:`MinibatchSource`
-    '''
-    return cntk_py.text_format_minibatch_source(path, stream_configs, epoch_size, randomize, distributed_after)
-
-
 # TODO: this should be a private class; use StreamDef instead
 class StreamConfiguration(cntk_py.StreamConfiguration):
     '''
@@ -568,3 +551,97 @@ def StreamDef(field, shape=None, is_sparse=False, transforms=None):
 # StreamDefs for use in constructing deserializers
 # StreamDefs(query = StreamDef(...), labels = StreamDef(...), ...)
 StreamDefs = Record
+
+def _dense_to_str(data):
+    return ' '.join(data.ravel(order='C').astype(np.str))
+
+
+def _sparse_to_str(data):
+    return ' '.join('%s:%s' % (k, v) for k, v in sorted(data.items()))
+
+
+def _is_tensor(data):
+    '''
+    Checks whether the data is a tensor, i.e. whether it is a NumPy array or a
+    list of NumPy arrays.
+
+    Args:
+        data: data to check
+
+    Returns: True, if it is a tensor.
+    '''
+    if isinstance(data, np.ndarray):
+        return True
+
+    if not isinstance(data, list):
+        return False
+
+    while len(data) > 0:
+        # All but the innermost dimension's values have to be lists
+        try:
+            data[0][0]
+        except:
+            # We reached the innermost dimension
+            try:
+                data[0] + 0
+                return True
+            except:
+                # Innermost type is not a number
+                return False
+
+        if isinstance(data, np.ndarray):
+            return True
+
+        if not isinstance(data[0], list):
+            return False
+
+        data = data[0]
+
+    return True
+
+
+def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
+    '''
+    Converts a list of NumPy arrays representing tensors of inputs into a
+    format that is readable by :class:`~cntk.io.CTFDeserializer`.
+
+    Args:
+        seq_idx (int): number of current sequence
+        alias_tensor_map (dict): maps alias (str) to tensor (ndarray). Tensors
+          are assumed to have dynamic axis.
+
+    Returns:
+        String representation in `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
+    '''
+
+    max_seq_length = max(len(t) for t in alias_tensor_map.values())
+
+    if max_seq_length == 0:
+        return ''
+
+    lines = []
+    for elem_idx in range(0, max_seq_length):
+        line = []
+
+        for alias, tensor in sorted(alias_tensor_map.items()):
+            if elem_idx >= len(tensor):
+                # for this alias there no more sequence elements
+                continue
+
+            if _is_tensor(tensor):
+                if not isinstance(tensor, np.ndarray):
+                    tensor = np.asarray(tensor)
+                to_str = _dense_to_str
+            elif isinstance(tensor, list) and isinstance(tensor[0], dict):
+                to_str = _sparse_to_str
+            else:
+                raise ValueError(
+                    'expected a tensor (dense) or list of dicts (sparse), but got "%s"' % type(tensor))
+
+            line.append('%s %s' % (alias, to_str(tensor[elem_idx])))
+
+        lines.append('%i\t|' % seq_idx + ' |'.join(line))
+
+    return '\n'.join(lines)
+
+

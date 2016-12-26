@@ -4,6 +4,7 @@
 # for full license information.
 # ==============================================================================
 
+from __future__ import print_function
 import os
 import argparse
 import math
@@ -11,7 +12,7 @@ import numpy as np
 
 from cntk.utils import *
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
-from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITE_SAMPLES
+from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITE_SAMPLES, FULL_DATA_SWEEP
 from cntk import Trainer, cntk_py, distributed
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from _cntk_py import set_computation_network_trace_level
@@ -56,7 +57,7 @@ def create_reader(map_file, mean_file, train, total_data_size, distributed_after
 
 
 # Train and evaluate the network.
-def train_and_evaluate(create_train_reader, create_test_reader, network_name, max_epochs, create_dist_learner, scale_up=False):
+def train_and_evaluate(create_train_reader, test_reader, network_name, max_epochs, create_dist_learner, scale_up=False):
 
     set_computation_network_trace_level(0)
 
@@ -85,7 +86,7 @@ def train_and_evaluate(create_train_reader, create_test_reader, network_name, ma
     # ResNet110 samples-per-second is ~7x of single GPU, comparing to ~3x without scaling
     # up. However, bigger minimatch size on the same number of samples means less updates, 
     # thus leads to higher training error. This is a trade-off of speed and accuracy
-    minibatch_size = 128 * (len(distributed.Communicator.num_workers()) if scale_up else 1)
+    minibatch_size = 128 * (distributed.Communicator.num_workers() if scale_up else 1)
 
     momentum_time_constant = -minibatch_size/np.log(0.9)
     l2_reg_weight = 0.0001
@@ -135,7 +136,6 @@ def train_and_evaluate(create_train_reader, create_test_reader, network_name, ma
     sample_count    = 0
     minibatch_index = 0
 
-    test_reader=create_test_reader(epoch_size)
     while True:
         data = test_reader.next_minibatch(minibatch_size, input_map=input_map)
         if not data: break;
@@ -176,7 +176,7 @@ if __name__=='__main__':
     mean=os.path.join(data_path, 'CIFAR-10_mean.xml')
 
     create_train_reader=lambda data_size: create_reader(train_data, mean, True, data_size, distributed_after_samples)
-    test_reader=create_reader(test, mean, False, FULL_DATA_SWEEP)
+    test_reader=create_reader(test_data, mean, False, FULL_DATA_SWEEP)
 
     train_and_evaluate(create_train_reader, test_reader, network_name, epochs, create_dist_learner, scale_up)
 

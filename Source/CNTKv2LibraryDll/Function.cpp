@@ -7,6 +7,7 @@
 #include "CNTKLibrary.h"
 #include "PrimitiveFunction.h"
 #include "CompositeFunction.h"
+#include "BlockFunction.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -64,54 +65,132 @@ namespace CNTK
 
     /*virtual*/ Function::~Function() {}
 
+    bool Function::IsBlock() const
+    {
+        auto blockFunction = dynamic_cast<const BlockFunction*>(this);
+        return (blockFunction != nullptr);
+    }
+
+    FunctionPtr Function::BlockComposite() const
+    {
+        if (!IsBlock())
+            InvalidArgument("Function::BlockComposite() cannot be called for a Function which is not a block");
+
+        auto blockFunction = dynamic_cast<const BlockFunction*>(this);
+        return blockFunction->Composite();
+    }
+
+    const std::unordered_map<Variable, Variable>& Function::BlockArgumentsMapping() const
+    {
+        if (!IsBlock())
+            InvalidArgument("Function::BlockArgumentsMapping() cannot be called for a Function which is not a block");
+
+        auto blockFunction = dynamic_cast<const BlockFunction*>(this);
+        return blockFunction->CompositeArgumentsMap();
+    }
+
+    /*static*/ void Function::ReplacePlaceholderInPlace(Variable& var,
+                                                        const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                                        std::unordered_set<Variable>& replacedPlaceholders)
+    {
+        if (var.IsPlaceholder())
+        {
+            auto placeholder = var;
+            if (placeholderReplacements.find(placeholder) != placeholderReplacements.end())
+            {
+                var = placeholderReplacements.at(placeholder);
+                replacedPlaceholders.insert(placeholder);
+
+                // If shape or dynamic axes of the placeholder are known but unknown in the replacement, we update the replacement's shape/dynamic axes
+                if (var.Shape().IsUnknown() && !placeholder.Shape().IsUnknown())
+                    var.m_dataFields->m_shape = placeholder.Shape();
+
+                if ((var.DynamicAxes() == Axis::UnknownDynamicAxes()) && (placeholder.DynamicAxes() != Axis::UnknownDynamicAxes()))
+                    var.m_dataFields->m_dynamicAxes = placeholder.DynamicAxes();
+            }
+        }
+    }
+
     // Placeholders can be replaced incrementally - i.e. not all placeholders need to replaced in one go.
     // The only requirement is that they must all be replaced before making any 'Forward' calls on the Function instance.
     /*virtual*/ void Function::ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
                                                           std::unordered_set<const Function*>& visitedFunctions,
                                                           std::unordered_set<Variable>& replacedPlaceholders)
     {
-        visitedFunctions.insert(this);
-
-        auto replacePlaceholder = [&placeholderReplacements, &replacedPlaceholders](Variable& var) {
-            if (var.IsPlaceholder())
-            {
-                auto placeholder = var;
-                if (placeholderReplacements.find(placeholder) != placeholderReplacements.end())
-                {
-                    var = placeholderReplacements.at(placeholder);
-                    replacedPlaceholders.insert(placeholder);
-
-                    // If shape or dynamic axes of the placeholder are known but unknown in the replacement, we update the replacement's shape/dynamic axes
-                    if (var.Shape().IsUnknown() && !placeholder.Shape().IsUnknown())
-                        var.m_dataFields->m_shape = placeholder.Shape();
-
-                    if ((var.DynamicAxes() == Axis::UnknownDynamicAxes()) && (placeholder.DynamicAxes() != Axis::UnknownDynamicAxes()))
-                        var.m_dataFields->m_dynamicAxes = placeholder.DynamicAxes();
-                }
-            }
-        };
-
-        for (auto& inputVar : m_inputs)
+        FunctionPtr primitiveRootFunction = shared_from_this();
+        if (IsComposite())
         {
-            replacePlaceholder(inputVar);
+            primitiveRootFunction = RootFunction();
+            primitiveRootFunction->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+        }
+        else
+        {
+            visitedFunctions.insert(this);
 
-            if (inputVar.IsOutput() && (visitedFunctions.find(inputVar.Owner().get()) == visitedFunctions.end()))
+            for (auto& inputVar : m_inputs)
             {
-                inputVar.Owner()->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
+                ReplacePlaceholderInPlace(inputVar, placeholderReplacements, replacedPlaceholders);
+
+                if (inputVar.IsOutput() && (visitedFunctions.find(inputVar.Owner().get()) == visitedFunctions.end()))
+                    inputVar.Owner()->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
             }
         }
 
-        auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(this);
-        if (primitiveFunction != nullptr && primitiveFunction->OpType() == PrimitiveOpType::Combine)
+        auto primitiveRootFunctionPtr = dynamic_cast<const PrimitiveFunction*>(primitiveRootFunction.get());
+        if (primitiveRootFunctionPtr->OpType() == PrimitiveOpType::Combine)
         {
-            // Again, combine needs a special treatment, since m_inputs and m_outputs are two 
-            // different vectors, and m_outputs is created by copying m_inputs content, there
-            // still can be placeholders cached in m_outputs, need to replace those as well.
+            // Combine's outputs are just a copy of its inputs and any replacements need to be properly 
+            // reflected in the outputs as well
             for (auto& outputVar : m_outputs)
+                ReplacePlaceholderInPlace(outputVar, placeholderReplacements, replacedPlaceholders);
+        }
+
+        OnPlaceholdersReplaced(placeholderReplacements, replacedPlaceholders);
+    }
+
+    /*virtual*/ void Function::OnPlaceholdersReplaced(const std::unordered_map<Variable, Variable>& /*placeholderReplacements*/,
+                                                      std::unordered_set<Variable>& /*replacedPlaceholders*/)
+    {}
+
+    bool Function::ValidateOrUpdateOutput(const Variable& currentOutputVar, const Variable& newOutputVar, bool alwaysUpdate)
+    {
+        bool updated = false;
+        if (!alwaysUpdate)
+        {
+            if (!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape()))
             {
-                replacePlaceholder(outputVar);
+                updated = true;
+                currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
+            }
+
+            if ((currentOutputVar.GetDataType() == DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType()))
+            {
+                updated = true;
+                currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
+            }
+
+            if ((currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
+            {
+                updated = true;
+                currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
+            }
+
+            if ((!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape())) ||
+                ((newOutputVar.GetDataType() != DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType())) ||
+                ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())))
+            {
+                InvalidArgument("Inconsistency in output variable shape, DataType or Dynamic axes computed after replaced placeholders vs. existing output properties, for the Recurrent Function");
             }
         }
+        else
+        {
+            currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
+            currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
+            currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
+            updated = true;
+        }
+
+        return updated;
     }
 
     void Function::ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified)
@@ -136,47 +215,24 @@ namespace CNTK
             }
         }
 
-        auto outputsUsingNewInputs = PrimitiveFunction::GetOutputVariables(primitiveFunction->OpType(), m_inputs, this, primitiveFunction->m_attributes, true, primitiveFunction->Name());
+        auto outputsUsingNewInputs = primitiveFunction->GetOutputVariables(true);
         auto currentOutputs = Outputs();
         for (size_t i = 0; i < currentOutputs.size(); ++i)
         {
             auto newOutputVar = outputsUsingNewInputs[i];
             auto currentOutputVar = currentOutputs[i];
 
-            if (visitedFunctions[this] > 1)
-            {
-                if (!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape()))
-                {
-                    recurrentNodeOutputModified = true;
-                    currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
-                }
-
-                if ((currentOutputVar.GetDataType() == DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType()))
-                {
-                    recurrentNodeOutputModified = true;
-                    currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
-                }
-
-                if ((currentOutputVar.DynamicAxes() == Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes()))
-                {
-                    recurrentNodeOutputModified = true;
-                    currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
-                }
-
-                if ((!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape())) ||
-                    ((newOutputVar.GetDataType() != DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType())) ||
-                    ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())))
-                {
-                    InvalidArgument("Inconsistency in output variable shape, DataType or Dynamic axes computed after replaced placeholders vs. existing output properties, for the Recurrent Function");
-                }
-            }
-            else
-            {
-                currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
-                currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
-                currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
-            }
+            bool isRecurrent = (visitedFunctions[this] > 1);
+            bool outputUpdated = ValidateOrUpdateOutput(currentOutputVar, newOutputVar, !isRecurrent);
+            recurrentNodeOutputModified = recurrentNodeOutputModified || (isRecurrent && outputUpdated);
         }
+    }
+
+    void Function::Evaluate(const std::unordered_map<Variable, ValuePtr>& arguments,
+                            std::unordered_map<Variable, ValuePtr>& outputs,
+                            const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        Forward(arguments, outputs, computeDevice, {});
     }
 
     void Function::SaveModel(const std::wstring& modelFilePath)
@@ -232,7 +288,8 @@ namespace CNTK
 
         // Remove the initial state inputs of PastValue and FutureValue functions from the maps if they are a scalar constant
         // since these are not part of the internal CNTK serialized computation graph
-        auto removePastAndFutureValueInitialStateScalarConstants = [](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
+        std::function<void(const std::unordered_set<FunctionPtr>&, std::map<std::wstring, Variable>&)> RemovePastAndFutureValueInitialStateScalarConstants;
+        RemovePastAndFutureValueInitialStateScalarConstants = [&RemovePastAndFutureValueInitialStateScalarConstants](const std::unordered_set<FunctionPtr>& allPrimitiveFunctions, std::map<std::wstring, Variable>& modelLeafVariableMap) {
             for (auto funcPtr : allPrimitiveFunctions)
             {
                 auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(funcPtr.get());
@@ -242,14 +299,20 @@ namespace CNTK
                     if (initialStateInput.IsConstant() && (initialStateInput.Shape().TotalSize() == 1))
                         modelLeafVariableMap.erase(initialStateInput.Uid());
                 }
+                else if (primitiveFunction->OpType() == PrimitiveOpType::Block)
+                {
+                    auto blockFunction = dynamic_cast<const BlockFunction*>(primitiveFunction);
+                    auto blockComposite = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
+                    RemovePastAndFutureValueInitialStateScalarConstants(blockComposite->m_allPrimitiveFunctions, modelLeafVariableMap);
+                }
             }
         };
 
         auto loadedModelCompositeFunction = dynamic_cast<const CompositeFunction*>(loadedModelFunction.get());
-        removePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
+        RemovePastAndFutureValueInitialStateScalarConstants(loadedModelCompositeFunction->m_allPrimitiveFunctions, loadedModelLeafVariablesMap);
 
         auto trainerModelCompositeFunction = dynamic_cast<CompositeFunction*>(this);
-        removePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
+        RemovePastAndFutureValueInitialStateScalarConstants(trainerModelCompositeFunction->m_allPrimitiveFunctions, trainerModelLeafVariablesMap);
 
         // Now update the trainer's model parameters and constants with those from the loaded model
         for (auto nameVarPair : trainerModelLeafVariablesMap)
@@ -305,6 +368,25 @@ namespace CNTK
         std::unordered_set<Variable> replacedPlaceholders;
         ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
 
+        // Validate/update the output shapes, data types etc. to reflect any changes
+        // in inputs due to placeholder replacements
+        std::unordered_map<const Function*, size_t> functionVisitCounts;
+
+        // An arbitrary cap on changing output shape of recurrent nodes, to detect infinite inference loops
+        const size_t maxNumValidationPassesAllowed = 25;
+        bool recurrentNodeOutputModified = false;
+        size_t numValidationPasses = 0;
+        do
+        {
+            recurrentNodeOutputModified = false;
+            functionVisitCounts.clear();
+            RootFunction()->ValidateOrUpdateOutputs(functionVisitCounts, recurrentNodeOutputModified);
+            numValidationPasses++;
+        } while (recurrentNodeOutputModified && (numValidationPasses < maxNumValidationPassesAllowed));
+
+        if (numValidationPasses >= maxNumValidationPassesAllowed)
+            LogicError("A recurrent node output shape change happened in successive %d validation passes indicating a potential infinite inference loop!", (int)numValidationPasses);
+
         for (auto replacementPair : placeholderReplacements)
         {
             if (replacedPlaceholders.find(replacementPair.first) == replacedPlaceholders.end())
@@ -330,6 +412,7 @@ namespace CNTK
 
         cloneMap[clonee.get()] = nullptr;
 
+        std::unordered_map<Variable, Variable> cloneeToClonedInputMap;
         std::vector<Variable> inputs;
         auto cloneeInputs = clonee->Inputs();
         for (auto cloneeInput : cloneeInputs)
@@ -415,10 +498,31 @@ namespace CNTK
             }
 
             inputs.push_back(clonedInput);
+            cloneeToClonedInputMap.insert({cloneeInput, clonedInput});
         }
 
         Dictionary attributesCopy(primitiveFunction->Attributes());
-        auto clonedFunction = MakeSharedObject<PrimitiveFunction>(primitiveFunction->OpType(), inputs, std::move(attributesCopy), primitiveFunction->Name());
+        FunctionPtr clonedFunction;
+        if (primitiveFunction->OpType() != PrimitiveOpType::Block)
+            clonedFunction = MakeSharedObject<PrimitiveFunction>(primitiveFunction->OpType(), inputs, std::move(attributesCopy), primitiveFunction->Name());
+        else
+        {
+            auto clonedComposite = primitiveFunction->BlockComposite()->Clone(parameterCloneMethod, replacements);
+
+            auto cloneeBlockCompositeArguments = primitiveFunction->BlockComposite()->Arguments();
+            auto clonedBlockCompositeArguments = clonedComposite->Arguments();
+            std::unordered_map<Variable, Variable> cloneeToClonedBlockCompositeArgumentsMap;
+            for (size_t i = 0; i < cloneeBlockCompositeArguments.size(); ++i)
+                cloneeToClonedBlockCompositeArgumentsMap.insert({ cloneeBlockCompositeArguments[i], clonedBlockCompositeArguments[i] });
+
+            auto cloneeBlockCompositeArgumentsMap = primitiveFunction->BlockArgumentsMapping();
+            std::unordered_map<Variable, Variable> clonedBlockCompositeArgumentsMap;
+            for (auto cloneeArgumentMapping : cloneeBlockCompositeArgumentsMap)
+                clonedBlockCompositeArgumentsMap.insert({ cloneeToClonedBlockCompositeArgumentsMap.at(cloneeArgumentMapping.first), cloneeToClonedInputMap.at(cloneeArgumentMapping.second) });
+
+            clonedFunction = MakeSharedObject<BlockFunction>(std::move(clonedComposite), clonedBlockCompositeArgumentsMap, primitiveFunction->OpName(), std::move(attributesCopy), primitiveFunction->Name());
+        }
+
         cloneMap[primitiveFunction] = clonedFunction;
 
         return clonedFunction;
@@ -529,7 +633,7 @@ namespace CNTK
 
     void Function::PrintGraph() const
     {
-        CompositeFunction::Traverse(RootFunction(), [](const FunctionPtr& function) {
+        CompositeFunction::PreorderTraverseFunctions(RootFunction(), [](const FunctionPtr& function) {
         });
     }
 
@@ -682,10 +786,15 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Dropout, operand, std::move(additionalProperties), name);
     }
 
-    FunctionPtr Reshape(const Variable& operand, const NDShape& newShape, const std::wstring& name)
+    FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name)
     {
+        if (!beginAxis.IsStaticAxis() || !endAxis.IsStaticAxis())
+            LogicError("Reshape operation does not support reshaping dynamic axis");
+
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameNewShape] = newShape;
+        additionalProperties[PrimitiveFunction::AttributeNameNewShape] = replacementShape;
+        additionalProperties[PrimitiveFunction::AttributeNameBeginAxis] = beginAxis;
+        additionalProperties[PrimitiveFunction::AttributeNameEndAxis] = endAxis;
 
         return UnaryOp(PrimitiveOpType::Reshape, operand, std::move(additionalProperties), name);
     }
@@ -785,17 +894,27 @@ namespace CNTK
 
     FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name)
     {
-        auto difference = Minus(prediction, targets);
+        auto predictionPlaceholder = PlaceholderVariable(L"prediction");
+        auto targetPlaceholder = PlaceholderVariable(L"target");
+
+        auto difference = Minus(predictionPlaceholder, targetPlaceholder);
         auto squaredDifference = ElementTimes(difference, difference);
-        return Internal::ReduceElements(squaredDifference, PrimitiveFunction::InternalSumReductionOpName, Axis::AllStaticAxes(), name);
+        auto squaredErrorComposite = Internal::ReduceElements(squaredDifference, PrimitiveFunction::InternalSumReductionOpName, Axis::AllStaticAxes());
+
+        return AsBlock(std::move(squaredErrorComposite), { { predictionPlaceholder, prediction }, { targetPlaceholder, targets } }, L"SquaredError", name);
     }
 
     FunctionPtr CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name)
     {
+        auto predictionPlaceholder = PlaceholderVariable(L"prediction");
+        auto labelPlaceholder = PlaceholderVariable(L"label");
+        FunctionPtr compositeCEWithSoftmax;
         if (axis == Axis(0))
-            return Minus(ReduceLogSum(prediction, axis), TransposeTimes(labels, prediction), name);
+            compositeCEWithSoftmax = Minus(ReduceLogSum(predictionPlaceholder, axis), TransposeTimes(labelPlaceholder, predictionPlaceholder));
         else
-            return Minus(ReduceLogSum(prediction, axis), ReduceSum(ElementTimes(labels, prediction), axis), name);
+            compositeCEWithSoftmax = Minus(ReduceLogSum(predictionPlaceholder, axis), ReduceSum(ElementTimes(labelPlaceholder, predictionPlaceholder), axis));
+
+        return AsBlock(std::move(compositeCEWithSoftmax), { { predictionPlaceholder, prediction }, { labelPlaceholder, labels } }, L"CrossEntropyWithSoftmax", name);
     }
 
     FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const Axis& axis, const std::wstring& name)
@@ -805,17 +924,23 @@ namespace CNTK
 
         if (topN == 1)
         {
+            auto predictionPlaceholder = PlaceholderVariable(L"prediction");
+            auto labelPlaceholder = PlaceholderVariable(L"label");
+
+            FunctionPtr classificationErrorComposite;
             if (axis == Axis(0))
-                return Minus(Constant::Scalar(1.0f), TransposeTimes(labels, Hardmax(prediction)), name);
+                classificationErrorComposite = Minus(Constant::Scalar(1.0f), TransposeTimes(labelPlaceholder, Hardmax(predictionPlaceholder)));
             else
             {
-                auto axMax = ReduceMax(prediction, axis);
-                auto pred = Equal(prediction, axMax);
-                auto wrongPred = NotEqual(labels, pred);
+                auto axMax = ReduceMax(predictionPlaceholder, axis);
+                auto pred = Equal(predictionPlaceholder, axMax);
+                auto wrongPred = NotEqual(labelPlaceholder, pred);
                 auto axErr = ReduceSum(wrongPred, axis);
                 auto capErr = GreaterEqual(axErr, Constant::Scalar(1.0f));
-                return ReduceMean(capErr, Axis::AllStaticAxes(), name);
+                classificationErrorComposite = ReduceMean(capErr, Axis::AllStaticAxes());
             }
+
+            return AsBlock(std::move(classificationErrorComposite), { { predictionPlaceholder, prediction }, { labelPlaceholder, labels } }, L"ClassificationError", name);
         }
         else
         {
@@ -870,8 +995,11 @@ namespace CNTK
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalMinReductionOpName, axis, name);
     }
+
     FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name)
     {
+        // TODO: Should this too be encapsulated as a block?
+
         Constant meanVar(mean);
         Constant invStdDevVar(invStdDev);
 
@@ -1002,7 +1130,15 @@ namespace CNTK
     {
         // TODO: This is a temporary and expensive hack until we have a real alias implementation
         // that does not waste memory and compute cycles
-        return Plus(operand, Constant::Scalar(0.0f), name);
+        return UnaryOp(PrimitiveOpType::Pass, operand, Dictionary(), name);
+    }
+
+    FunctionPtr AsBlock(FunctionPtr&& composite, const std::unordered_map<Variable, Variable>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName)
+    {
+        if (!composite->IsComposite())
+            InvalidArgument("Block functions can only be created from a composite function");
+
+        return CompositeFunction::Create(MakeSharedObject<BlockFunction>(std::move(composite), argumentsMap, blockOpName, Dictionary(), blockName), blockName);
     }
 
     FunctionPtr OptimizedRNNStack(const Variable& operand, const Variable& weights, size_t hiddenSize, size_t numLayers, bool bidirectional, const std::wstring& recurrentOp, const std::wstring& name)
@@ -1027,12 +1163,14 @@ namespace CNTK
 
         FunctionPtr IsFirst(const Variable& operand, const std::wstring& name)
         {
-            return Internal::IsWithin(operand, 1, name);
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+            return AsBlock(std::move(Internal::IsWithin(operandPlaceholder, 1)), { { operandPlaceholder, operand} }, L"Sequence::IsFirst", name);
         }
 
         FunctionPtr IsLast(const Variable& operand, const std::wstring& name)
         {
-            return Internal::IsWithin(operand, -1, name);
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+            return AsBlock(std::move(Internal::IsWithin(operandPlaceholder, -1)), { { operandPlaceholder, operand } }, L"Sequence::IsLast", name);
         }
 
         FunctionPtr Slice(const Variable& operand, int beginIndex, int endIndex, const std::wstring& name)
@@ -1042,12 +1180,14 @@ namespace CNTK
             if ((beginIndex == 0) && (endIndex == 0))
                 return operand;
 
-            auto beginFlagsLambda = [beginIndex, operand]() {
-                return (beginIndex > 0) ? Minus(Constant::Scalar(1.0f), Internal::IsWithin(operand, beginIndex)) : Internal::IsWithin(operand, beginIndex);
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+
+            auto beginFlagsLambda = [beginIndex, operandPlaceholder]() {
+                return (beginIndex > 0) ? Minus(Constant::Scalar(1.0f), Internal::IsWithin(operandPlaceholder, beginIndex)) : Internal::IsWithin(operandPlaceholder, beginIndex);
             };
 
-            auto endFlagsLambda = [endIndex, operand]() {
-                return (endIndex > 0) ? Internal::IsWithin(operand, endIndex) : Minus(Constant::Scalar(1.0f), Internal::IsWithin(operand, endIndex));
+            auto endFlagsLambda = [endIndex, operandPlaceholder]() {
+                return (endIndex > 0) ? Internal::IsWithin(operandPlaceholder, endIndex) : Minus(Constant::Scalar(1.0f), Internal::IsWithin(operandPlaceholder, endIndex));
             };
 
             FunctionPtr flags;
@@ -1061,7 +1201,8 @@ namespace CNTK
             int sliceLength = (endIndex - beginIndex);
             size_t multiplicativeFactor = (sliceLength > 0) ? 0 : 1;
 
-            return Internal::Gather(operand, flags, { multiplicativeFactor, sliceLength }, name);
+            auto sliceComposite = Internal::Gather(operandPlaceholder, flags, std::make_pair(multiplicativeFactor, sliceLength));
+            return AsBlock(std::move(sliceComposite), { { operandPlaceholder, operand } }, L"Sequence::Slice", name);
         }
 
         FunctionPtr First(const Variable& operand, const std::wstring& name)
@@ -1081,20 +1222,27 @@ namespace CNTK
 
         FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::wstring& name)
         {
-            return Internal::Gather(operand, condition, name);
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+            auto conditionPlaceholder = PlaceholderVariable(L"condition");
+            return AsBlock(std::move(Internal::Gather(operandPlaceholder, conditionPlaceholder)), { { operandPlaceholder, operand }, { conditionPlaceholder, condition } }, L"Sequence::Gather", name);
         }
 
         FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::wstring& name)
         {
-            return Internal::Scatter(operand, condition, name);
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+            auto conditionPlaceholder = PlaceholderVariable(L"condition");
+            return AsBlock(std::move(Internal::Scatter(operandPlaceholder, conditionPlaceholder)), { { operandPlaceholder, operand }, { conditionPlaceholder, condition } }, L"Sequence::Scatter", name);
         }
 
         FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name)
         {
-            auto dataPadded = Internal::Scatter(operand, Sequence::IsFirst(broadcastAs), std::make_pair<size_t, int>(0, 1));
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+            auto broadcastAsPlaceholder = PlaceholderVariable(L"broadcastAs");
+
+            auto dataPadded = Internal::Scatter(operandPlaceholder, Sequence::IsFirst(broadcastAsPlaceholder), std::make_pair<size_t, int>(0, 1));
             auto placeHolderOutput = PlaceholderVariable(operand.Shape(), broadcastAs.DynamicAxes());
-            auto output = ElementSelect(Sequence::IsFirst(broadcastAs), dataPadded, PastValue(placeHolderOutput), name);
-            return output->ReplacePlaceholders({ { placeHolderOutput, output } });
+            auto output = ElementSelect(Sequence::IsFirst(broadcastAsPlaceholder), dataPadded, PastValue(placeHolderOutput));
+            return AsBlock(output->ReplacePlaceholders({ { placeHolderOutput, output } }), { { operandPlaceholder, operand }, { broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
         }
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)
@@ -1107,13 +1255,15 @@ namespace CNTK
             else
                 LogicError("%S reduction along dynamic axis is currently unsupported", reductionOpName.c_str());
 
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+
             // We are reducing over a dynamic axis which is currently implemented using recurrence
             auto cumulativeSumFunctionPlaceholder = PlaceholderVariable(operand.Shape());
             auto prevAccumulatedValuesFunction = PastValue(cumulativeSumFunctionPlaceholder);
-            auto cumulativeSumFunction = reductionFunctor(prevAccumulatedValuesFunction, operand);
+            auto cumulativeSumFunction = reductionFunctor(prevAccumulatedValuesFunction, operandPlaceholder);
             cumulativeSumFunction->ReplacePlaceholders({ { cumulativeSumFunctionPlaceholder, cumulativeSumFunction } });
 
-            return Sequence::Slice(cumulativeSumFunction, -1, 0, name);
+            return AsBlock(Sequence::Slice(cumulativeSumFunction, -1, 0), { { operandPlaceholder, operand} }, L"Sequence::ReduceElements", name);
         }
 
         FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)

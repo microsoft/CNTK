@@ -12,9 +12,9 @@ the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE
+from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
+from cntk.utils import eval as cntk_eval, sanitize_dtype_cntk
 from .. import constant
-from ...utils import cntk_device
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 # the backward result returned by CNTK log() for epsilon
@@ -132,7 +132,6 @@ def test_op_tanh(operand, device_id, precision):
 @pytest.mark.parametrize("dropout_rate", [0.0, 0.2, 0.5, 0.8])
 def test_op_dropout(shape, dropout_rate, device_id, precision):
     from cntk import dropout
-    from cntk.utils import eval, sanitize_dtype_cntk, cntk_device
 
     count = 10
     resulted_non_zeros = 0
@@ -152,7 +151,7 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
         value.shape = (1, 1) + value.shape
         forward_input = {a: value}
 
-        forward, backward = eval(dropout_node,
+        forward, backward = cntk_eval(dropout_node,
                                  forward_input,
                                  precision,
                                  cntk_device(device_id),
@@ -172,7 +171,6 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
 @pytest.mark.parametrize("dropout_rate", [-0.1, 1.0, 100])
 def test_op_dropout_bad_input(dropout_rate):
     from cntk import dropout
-    from cntk.utils import eval, sanitize_dtype_cntk, cntk_device
 
     a = I(shape=(1, 2), dtype='float', needs_gradient=True, name='a')
 

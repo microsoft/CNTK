@@ -161,28 +161,30 @@ class Function(cntk_py.Function):
              the input type:
 
                * dict: keys are input variable or names, and values are the input data.
+                 See :meth:`~cntk.ops.functions.Function.forward` for details on passing
+                 input data.
                * any other type: if node has an unique input, arguments is
-                 mapped to this input. 
+                 mapped to this input.
              For nodes with more than one input, only dict is allowed.
 
              In both cases, every every sample in the data will be interpreted
-             as a new sequence. 
-             
+             as a new sequence.
+
              Sequences can be marked as continuations of the same sequence in
              the previous minibatch (that is the sequence in the same slot).
              There are two possibilities for this:
-             
+
               * specifying arguments as a `tuple` where the first element is
                 used as arguments and the second one will be used as a list
                 of bools, denoting whether a sequence is a new one (`True`) or a
                 continuation of the sequence in the same slot of the previous
-                minibatch (`False`). This will be applied to all batches. 
-              * specifying arguments as a dictionary of variables to tuples 
+                minibatch (`False`). This will be applied to all batches.
+              * specifying arguments as a dictionary of variables to tuples
                 where the first element is used as arguments and the second
                 one will be used as a list of bools, denoting whether a sequence
                 is a new one (`True`) or a continuation of the sequence in the
                 same slot of the previous minibatch (`False`). This will be
-                applied to all batches. 
+                applied to all batches.
 
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
@@ -219,29 +221,33 @@ class Function(cntk_py.Function):
             arguments: maps variables to their input data. The interpretation depends on
              the input type:
 
-               * dict: keys are input variable or names, and values are the input data.
+               * dict: keys are input variable or names, and values are the
+                 input data. To specify a minibatch, provide a list of arrays.
+                 The shape of each array must be compatible with the shape of
+                 the dictionary key.If the array denotes a sequence then the
+                 elements of the sequence are grouped along axis 0.
                * any other type: if node has an unique input, arguments is
-                 mapped to this input. 
+                 mapped to this input.
              For nodes with more than one input, only dict is allowed.
 
              In both cases, every every sample in the data will be interpreted
-             as a new sequence. 
-             
+             as a new sequence.
+
              Sequences can be marked as continuations of the same sequence in
              the previous minibatch (that is the sequence in the same slot).
              There are two possibilities for this:
-             
+
               * specifying arguments as a `tuple` where the first element is
                 used as arguments and the second one will be used as a list
                 of bools, denoting whether a sequence is a new one (`True`) or a
                 continuation of the sequence in the same slot of the previous
-                minibatch (`False`). This will be applied to all batches. 
-              * specifying arguments as a dictionary of variables to tuples 
+                minibatch (`False`). This will be applied to all batches.
+              * specifying arguments as a dictionary of variables to tuples
                 where the first element is used as arguments and the second
                 one will be used as a list of bools, denoting whether a sequence
                 is a new one (`True`) or a continuation of the sequence in the
                 same slot of the previous minibatch (`False`). This will be
-                applied to all batches. 
+                applied to all batches.
 
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
@@ -427,6 +433,52 @@ class Function(cntk_py.Function):
         return super(Function, self).root_function()
 
     @property
+    def is_primitive(self):
+        '''
+        Returns a boolean indicating if this Function is a primitive Function.
+        A primitive Function is the lowest level building block for composite Function 
+        graphs and is either a CNTK built-in operator, a composite Function encapsulated 
+        as a Block or a user-defined Function
+        '''
+        return super(Function, self).is_primitive()
+
+    @property
+    def is_composite(self):
+        '''
+        Returns a boolean indicating if this Function is a composite Function.
+        A composite Function is a Function that is composed of primitive Functions.
+        '''
+        return super(Function, self).is_composite()
+
+    @property
+    def is_block(self):
+        '''
+        Returns a boolean indicating if this Function is a block function which is basically
+        a composite encapsulated as an opaque block which appears as a primitive during 
+        traversing the graph of Functions that this block is part of.
+        '''
+        return super(Function, self).is_block()
+
+    @property
+    @typemap
+    def block_composite(self):
+        '''
+        Returns the composite function underlying this block Function.
+        Throws an exception of this is not a block Function.
+        '''
+        return super(Function, self).block_composite()
+
+    @property
+    @typemap
+    def block_arguments_mapping(self):
+        '''
+        Returns the mapping from the arguments of the composite underlying this block function
+        to the Variables that they are bound to in the outer graph of Functions that this
+        block Function is part of.
+        '''
+        return super(Function, self).block_arguments_mapping()
+
+    @property
     @typemap
     def uid(self):
         '''
@@ -471,7 +523,7 @@ class Function(cntk_py.Function):
         Returns a list of primitive function with ``name`` in the graph
         starting from this node. Throws an exceptoin if ``name`` occurs
         multiple times. If you expect only one function to be returned, use
-        :func:`find_by_name`. 
+        :func:`find_by_name`.
 
         Example:
             >>> a = C.input_variable(shape=1, name='i')
@@ -481,7 +533,7 @@ class Function(cntk_py.Function):
             2
             >>> c.find_all_with_name('z')
             []
-            
+
         Args:
             name (str): names to look for
 
@@ -507,16 +559,16 @@ class Function(cntk_py.Function):
             >>> a = C.input_variable(shape=1, name='a')
             >>> b = C.input_variable(shape=1, name='b')
             >>> c = C.plus(a, b, name='c')
-            >>> c.find_by_name('b').name
-            'b'
+            >>> print(c.find_by_name('b').name)
+            b
             >>> c.find_by_name('z') is None
             True
-            
+
             If you need a full function out of it that can be evaluated, you
             need to upcast it (currently done via combine):
 
             >>> d = c * 5
-            >>> C.combine([d.find_by_name('c')]).eval({a:[1], b:[2]})
+            >>> C.combine([d.find_by_name('c')]).eval({a:[[1]], b:[[2]]})
             array([[[ 3.]]], dtype=float32)
 
         Args:

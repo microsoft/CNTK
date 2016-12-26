@@ -7,7 +7,6 @@
 #include "CNTKLibrary.h"
 #include "Utils.h"
 #include "Learner.h"
-
 namespace
 {
     const std::wstring learnersPropertyName = L"Learners";
@@ -28,6 +27,10 @@ namespace CNTK
           m_prevMinibatchNumSamples(1),
           m_distributed(false)
     {
+        // By default we set the number of threads to hardware concurrency.
+        if (!Internal::MaxNumCPUThreadsSet())
+            SetMaxNumCPUThreads(std::thread::hardware_concurrency());
+
         std::vector<Variable> combinedFunctionArgs = { m_model, m_lossFunction };
         if (!m_lossFunction->Output().DynamicAxes().empty())
         {
@@ -214,11 +217,19 @@ namespace CNTK
                 outputsToFetch[outputToFetch.first] = outputs[outputToFetch.first];
         }
 
-        ValuePtr rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_aggregatedLossFunction->Output().GetDataType(), m_prevMinibatchAggregateTrainingLossValue->Shape(), computeDevice), outputs.at(m_aggregatedLossFunction)->Mask());
+        if(!m_rootGradientValue ||
+            m_aggregatedLossFunction->Output().GetDataType() != m_rootGradientValue->GetDataType() ||
+            m_prevMinibatchAggregateTrainingLossValue->Shape() != m_rootGradientValue->Shape() ||
+            computeDevice != m_rootGradientValue->Device() ||
+            outputs.at(m_aggregatedLossFunction)->Mask() != m_rootGradientValue->Mask())
+        {
+            m_rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(m_aggregatedLossFunction->Output().GetDataType(), m_prevMinibatchAggregateTrainingLossValue->Shape(), computeDevice), outputs.at(m_aggregatedLossFunction)->Mask());
+        }
+
         if (m_aggregatedLossFunction->Output().GetDataType() == DataType::Float)
-            rootGradientValue->Data()->SetValue(1.0f);
+            m_rootGradientValue->Data()->SetValue(1.0f);
         else
-            rootGradientValue->Data()->SetValue(1.0);
+            m_rootGradientValue->Data()->SetValue(1.0);
 
         auto modelParameters = m_combinedTrainingFunction->Parameters();
         for (const auto& parameter : modelParameters)
@@ -227,7 +238,7 @@ namespace CNTK
         }
 
         // TODO: Why Backward signature does not take Parameter instead of Variable for gradients?
-        m_combinedTrainingFunction->Backward(backPropSate, { { m_aggregatedLossFunction, rootGradientValue } }, parameterGradients);
+        m_combinedTrainingFunction->Backward(backPropSate, { { m_aggregatedLossFunction, m_rootGradientValue } }, parameterGradients);
         m_prevMinibatchNumSamples = GetSampleCount(m_trainingSampleCountVar, outputs[m_trainingSampleCountVar]);
     }
 

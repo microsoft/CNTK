@@ -9,6 +9,7 @@
 # TODO: This has become too large. Need to break out some locally used stuff into another module.
 
 # TODO: further clean up the dependencies
+from __future__ import division
 import numpy as np
 from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value

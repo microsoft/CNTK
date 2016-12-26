@@ -4,6 +4,7 @@
 # for full license information.
 # ==============================================================================
 
+from __future__ import print_function
 import os
 import math
 import argparse
@@ -111,7 +112,8 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
         tag='Training',
         log_to_file=log_to_file,
         distributed_learner=learner,
-        gen_heartbeat=gen_heartbeat)
+        gen_heartbeat=gen_heartbeat,
+        num_epochs=max_epochs)
 
     # perform model training
     updated=True
@@ -144,8 +146,12 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
         metric_denom += local_mb_samples
         minibatch_index += 1
 
+
+    fin_msg = "Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom)
+    progress_printer.end_progress_print(fin_msg)
+
     print("")
-    print("Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
+    print(fin_msg)
     print("")
 
     return metric_numer/metric_denom
@@ -183,6 +189,6 @@ if __name__=='__main__':
     create_train_reader = lambda data_size: create_reader(train_data, mean, True, data_size, distributed_after_samples)
     test_reader = create_reader(test_data, mean, False, cntk.io.FULL_DATA_SWEEP)
 
-    convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, log_to_file=log_dir, num_mbs_per_log=None, gen_heartbeat=False)
+    convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, log_to_file=log_dir, num_mbs_per_log=10, gen_heartbeat=False)
 
     cntk.distributed.Communicator.finalize()

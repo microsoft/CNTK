@@ -36,9 +36,9 @@ TrainConvNet = {
         ol = model (features)
 
         # define regression loss
-        # rmse = sqrt(SquareError(regrLabels, ol) / labelDim)
-        sqerr = SquareError (regrLabels, ol)
-        rmse = Sqrt (Constant(1/labelDim).* sqerr)
+        diff = regrLabels - ol
+        sqerr = ReduceSum (diff.*diff, axis=1)
+        rmse =  Sqrt (sqerr / labelDim)
 
         featureNodes    = (features)
         labelNodes      = (regrLabels)

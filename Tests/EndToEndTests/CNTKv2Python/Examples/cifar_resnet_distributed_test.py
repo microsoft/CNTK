@@ -7,10 +7,10 @@
 import numpy as np
 import os
 import sys
-from cntk.utils import cntk_device
+from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
-from cntk.io import ReaderConfig, ImageDeserializer
+from cntk.io import FULL_DATA_SWEEP
 from cntk import distributed
 import pytest
 import subprocess
@@ -40,7 +40,7 @@ def test_cifar_resnet_distributed_error(device_id, is_1bit_sgd):
     os.chdir(os.path.join(base_path, '..'))
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    set_computation_network_trace_level(1) 
+    set_computation_network_trace_level(1)
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     #force_deterministic_algorithms()
     # TODO: do the above; they lead to slightly different results, so not doing it for now
@@ -51,9 +51,9 @@ def test_cifar_resnet_distributed_error(device_id, is_1bit_sgd):
         distributed_after=0)
 
     reader_train_factory = lambda data_size: create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True, data_size)
-    reader_test_factory = lambda data_size: create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False, data_size)
+    test_reader = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False, FULL_DATA_SWEEP)
 
-    test_error = train_and_evaluate(reader_train_factory, reader_test_factory, 'resnet20', 5, distributed_learner_factory)
+    test_error = train_and_evaluate(reader_train_factory, test_reader, 'resnet20', 5, distributed_learner_factory)
 
     expected_test_error = 0.282
 

@@ -49,18 +49,15 @@ void PackerBase::SetConfiguration(const ReaderConfiguration& config, const std::
         }
     }
 
-    m_minibatchSize = config.m_minibatchSizeInSamples;
-    if (m_minibatchSize == 0)
-    {
+    m_config = config;
+    if (m_config.m_minibatchSizeInSamples == 0)
         LogicError("Minibatch size cannot be zero.");
-    }
 }
 
 PackerBase::PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
     const std::vector<StreamDescriptionPtr>& streams,
     size_t numberOfBuffers) :
     m_sequenceEnumerator(sequenceEnumerator),
-    m_minibatchSize(0),
     m_outputStreamDescriptions(streams),
     m_numberOfBuffers(numberOfBuffers),
     m_currentBufferIndex(0)

@@ -85,6 +85,7 @@ namespace CNTK
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Pass, L"Pass"},
+        { PrimitiveOpType::Block, L"Block" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -162,7 +163,7 @@ namespace CNTK
             vec[indexPair.first] = vecCopy[indexPair.second];
     }
 
-    class PrimitiveFunction final : public Function
+    class PrimitiveFunction : public Function
     {
         friend class Function;
         template <typename T, typename ...CtorArgTypes>
@@ -184,6 +185,8 @@ namespace CNTK
         static const std::wstring AttributeNameNumSamples;
         static const std::wstring AttributeNameDropoutRate;
         static const std::wstring AttributeNameNewShape;
+        static const std::wstring AttributeNameBeginAxis;
+        static const std::wstring AttributeNameEndAxis;
         static const std::wstring AttributeNameOutputRank;
         static const std::wstring AttributeNameInferInputRankToMap;
         static const std::wstring AttributeNameOffset;
@@ -215,6 +218,11 @@ namespace CNTK
         static const std::wstring AttributeNameHiddenSize;
         static const std::wstring AttributeNameRecurrentOp;
 
+    protected:
+        PrimitiveFunction(const std::vector<Variable>& blockInputs, const std::vector<Variable>& blockOutputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
+            : Function(blockInputs, blockOutputs, std::move(functionConfig), functionName, uid), m_op(PrimitiveOpType::Block)
+        {}
+
     public:
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
             : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, GenerateUid(op))
@@ -241,6 +249,8 @@ namespace CNTK
 
         static FunctionPtr Deserialize(const Dictionary& dictionary, 
                                        const std::unordered_map<std::wstring, Variable>& uidToVariableMap, 
+                                       const std::unordered_set<FunctionPtr>& allPrimitiveFunctions,
+                                       const std::unordered_map<Variable, Variable>& placeholderReplacements,
                                        const CNTK::DeviceDescriptor& device);
 
         virtual const std::wstring& OpName() const override
@@ -274,26 +284,54 @@ namespace CNTK
             return operandShape;
         }
 
-        static NDShape ReshapeOutputShape(const NDShape& operandShape, const NDShape& newShape)
+        static NDShape ReshapeOutputShape(const NDShape& operandShape, NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, bool inferDimensions)
         {
+            int beginAxisIdx = beginAxis.StaticAxisIndex();
+            int endAxisIdx = endAxis.StaticAxisIndex();
+
+            if (beginAxisIdx > endAxisIdx)
+                InvalidArgument("Reshape op begin axis index (%d) is larger than the end axis index (%d)", beginAxisIdx, endAxisIdx);
+
+            if ((beginAxisIdx < 0) || (beginAxisIdx > operandShape.Rank()))
+                InvalidArgument("Reshape op begin axis index (%d) is invalid for operand shape (%S)", beginAxisIdx, AsStringForErrorReporting(operandShape).c_str());
+
+            if ((endAxisIdx < 0) || (endAxisIdx > operandShape.Rank()))
+                InvalidArgument("Reshape op end axis index (%d) is invalid for operand shape (%S)", endAxisIdx, AsStringForErrorReporting(operandShape).c_str());
+
             size_t inputElementsCount = 1;
-            for (size_t k = 0; k < operandShape.Rank(); k++)
+            for (size_t k = beginAxisIdx; k < endAxisIdx; k++)
                 inputElementsCount *= operandShape[k];
 
-            auto outputShape = newShape;
+            auto inferredReplacementShape = replacementShape;
             size_t targetElementsCount = 1;
             size_t inferredAxisIndex = SIZE_MAX;
-            for (size_t k = 0; k < outputShape.Rank(); k++)
+            for (size_t k = 0; k < inferredReplacementShape.Rank(); k++)
             {
-                if (outputShape[k] != NDShape::InferredDimension)
-                    targetElementsCount *= outputShape[k];
+                if (inferredReplacementShape[k] != NDShape::InferredDimension)
+                    targetElementsCount *= inferredReplacementShape[k];
                 else if (inferredAxisIndex == SIZE_MAX)
                     inferredAxisIndex = k;
                 else
-                    InvalidArgument("CNTK::Reshape: More than one axis's dimension was specified as Inferred in the replacement shape %S", AsStringForErrorReporting(outputShape).c_str());
+                    InvalidArgument("CNTK::Reshape: More than one axis's dimension was specified as Inferred in the replacement shape %S", AsStringForErrorReporting(replacementShape).c_str());
             }
+
             if (inferredAxisIndex != SIZE_MAX)
-                outputShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
+                inferredReplacementShape[inferredAxisIndex] = inputElementsCount / targetElementsCount;
+
+            auto outputShape = operandShape.SubShape(0, beginAxisIdx);
+            outputShape = outputShape.AppendShape(inferredReplacementShape);
+            outputShape = outputShape.AppendShape(operandShape.SubShape(endAxisIdx));
+
+            if (outputShape.TotalSize() != operandShape.TotalSize())
+            {
+                auto replacedSubShape = operandShape.SubShape(beginAxisIdx, endAxisIdx);
+                InvalidArgument("CNTK::Reshape: Operand (sub-)dimensions %S incompatible with desired replacement (sub-)dimensions %S. Number of elements %s.",
+                                AsStringForErrorReporting(replacedSubShape).c_str(), AsStringForErrorReporting(replacementShape).c_str(),
+                                inferredAxisIndex == SIZE_MAX ? "must be the same" : "is not an integer multiple of the non-inferred dimensions");
+            }
+
+            if (inferDimensions)
+                replacementShape = inferredReplacementShape;
 
             return outputShape;
         }
@@ -317,7 +355,9 @@ namespace CNTK
 
             // Determine maximum rank (we can stack tensors with lower rank, which will have their dimensions paded to max automatically)
             auto maxInputRank = MaxInputRank(inputs);
-            size_t maxRank = std::max<size_t>(axis + 1, maxInputRank); // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
+
+            // spliceDim may exceed all of them, which will create a new dimension, e.g. stacking column vectors into a matrix
+            size_t maxRank = std::max<size_t>(axis + 1, maxInputRank); 
 
             // The following loop does multiple things:
             //  - Count total dimension along index
@@ -643,6 +683,8 @@ namespace CNTK
             return UnaryElementwiseOpOutputShape(mainOperandShape);
         }
 
+        virtual std::vector<Variable> GetOutputVariables(bool inferDimensions);
+
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
         // Returns a pair of determined output variables and a bool indicating if any input operand shape was modified
         static std::vector<Variable> GetOutputVariables(PrimitiveOpType op,
@@ -654,6 +696,7 @@ namespace CNTK
 
     private:
         PrimitiveOpType m_op;
+
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
         static const size_t s_serializationVersion = 2;

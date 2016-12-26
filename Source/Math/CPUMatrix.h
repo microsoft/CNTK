@@ -61,7 +61,6 @@ public:
     using Base::IsEmpty;
     using Base::VerifySize;
 
-
 public:
     CPUMatrix();
     CPUMatrix(const CPUMatrix<ElemType>& shallowCopyFrom, bool shallow);     // copy constructor, shallow
@@ -390,6 +389,8 @@ public:
 public:
     // This functions do not depend on <ElemType>, i.e. you can call them on any <ElemType>
     static int SetNumThreads(int numThreads);
+    static int GetMaxNumThreads();
+
     static void SetCompatibleMode();
 
     // static BLAS functions

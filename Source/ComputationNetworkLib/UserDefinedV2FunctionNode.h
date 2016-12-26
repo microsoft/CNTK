@@ -86,7 +86,7 @@ public:
         auto newInputGradientMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElemType>(inputGradientValue.begin()->first, inputGradientValue.begin()->second);
         InputRef(inputIndex).Gradient() += *newInputGradientMatrixAndLayout.first;
 
-        if (InputRef(inputIndex).GetMBLayout() != newInputGradientMatrixAndLayout.second)
+        if (*InputRef(inputIndex).GetMBLayout() != *newInputGradientMatrixAndLayout.second)
             LogicError("The MBLayout of the input (%lu) gradient computed by the external function (%S) does not match the expected MBLayout", (unsigned long)inputIndex, this->GetName().c_str());
     }
 

@@ -1,7 +1,8 @@
+from __future__ import print_function
 import os
 import sys
 import struct
-import cPickle as cp
+import pickle as cp
 from PIL import Image
 import numpy as np
 import xml.etree.cElementTree as et
@@ -45,7 +46,7 @@ def saveMean(fname, data):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print "Usage: CifarConverter.py <path to CIFAR-10 dataset directory>\nCIFAR-10 dataset (Python version) can be downloaded from http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
+        print ("Usage: CifarConverter.py <path to CIFAR-10 dataset directory>\nCIFAR-10 dataset (Python version) can be downloaded from http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz")
         sys.exit(1)
     rootDir = sys.argv[1]
     trainDir = os.path.join(rootDir, os.path.join('data', 'train'))
@@ -59,7 +60,7 @@ if __name__ == "__main__":
     with open(os.path.join(rootDir, 'train_map.txt'), 'w') as mapFile:
         for ifile in range(1, 6):
             with open(os.path.join(rootDir, 'data_batch_' + str(ifile)), 'rb') as f:
-                data = cp.load(f)
+                data = cp.load(f, encoding='latin1')
                 for i in range(10000):
                     fname = os.path.join(trainDir, ('%05d.png' % (i + (ifile - 1) * 10000)))
                     saveImage(fname, data['data'][i, :], data['labels'][i], mapFile, 4, mean=dataMean)
@@ -67,7 +68,7 @@ if __name__ == "__main__":
     saveMean(os.path.join(rootDir, 'CIFAR-10_mean.xml'), dataMean)
     with open(os.path.join(rootDir, 'test_map.txt'), 'w') as mapFile:
         with open(os.path.join(rootDir, 'test_batch'), 'rb') as f:
-            data = cp.load(f)
+            data = cp.load(f, encoding='latin1')
             for i in range(10000):
                 fname = os.path.join(testDir, ('%05d.png' % i))
                 saveImage(fname, data['data'][i, :], data['labels'][i], mapFile, 0)

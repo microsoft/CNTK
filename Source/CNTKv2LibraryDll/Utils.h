@@ -470,7 +470,9 @@ namespace CNTK
             assert(axis.IsStaticAxis());
             assert(operandShape != NDShape::Unknown);
 
-            if (axis.StaticAxisIndex() < 0)
+            if (axis == Axis::EndStaticAxis())
+                axis = Axis((int)operandShape.Rank());
+            else if (axis.StaticAxisIndex() < 0)
                 axis = Axis((int)operandShape.Rank() + axis.StaticAxisIndex());
         }
 
@@ -545,4 +547,19 @@ namespace CNTK
         template <typename ElementType>
         static ValuePtr GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const Microsoft::MSR::CNTK::Matrix<ElementType>& matrix, const Microsoft::MSR::CNTK::MBLayoutPtr& layout, bool readOnly = true);
     };
+
+    template <typename NamedType>
+    inline std::wstring NamedListString(const std::vector<NamedType>& namedList)
+    {
+        std::wstring namedListString;
+        for (auto namedObject : namedList)
+        {
+            if (!namedListString.empty())
+                namedListString += L", ";
+
+            namedListString += namedObject.Name();
+        }
+
+        return namedListString;
+    }
 }
