@@ -38,7 +38,8 @@ namespace CNTK
     const std::wstring rngOffsetKey = L"rng_offset";
     const std::wstring blockFunctionCompositeKey = L"block_function_composite";
     const std::wstring blockFunctionOpNameKey = L"block_function_op_name";
-    const std::wstring blockFunctionCompositeArgumentsMapKey = L"block_function_composite_arguments_map";
+    const std::wstring blockFunctionCompositeArgumentsMapKeysKey = L"block_function_composite_arguments_map_keys";
+    const std::wstring blockFunctionCompositeArgumentsMapValuesKey = L"block_function_composite_arguments_map_values";
 
     template <typename T> 
     inline std::string GetVersionsString(size_t currentVersion, size_t dictVersion)

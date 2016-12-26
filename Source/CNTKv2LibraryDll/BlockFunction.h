@@ -14,7 +14,7 @@ namespace CNTK
     class BlockFunction final : public PrimitiveFunction
     {
     public:
-        BlockFunction(FunctionPtr&& composite, const std::unordered_map<Variable, Variable>& argumentsMap, const std::wstring& blockOpName, Dictionary&& attributes, const std::wstring& blockName = L"", const std::wstring& uid = GenerateUid(PrimitiveOpType::Block))
+        BlockFunction(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, Dictionary&& attributes, const std::wstring& blockName = L"", const std::wstring& uid = GenerateUid(PrimitiveOpType::Block))
             : PrimitiveFunction(DetermineInputs(composite, argumentsMap, blockName), DetermineOutputs(composite, this, blockName), std::move(attributes), blockName, uid),
             m_composite(composite), m_blockOpName(blockOpName), m_compositeArgumentsMap(argumentsMap)
         {
@@ -39,7 +39,7 @@ namespace CNTK
         }
 
         const FunctionPtr& Composite() const { return m_composite; }
-        const std::unordered_map<Variable, Variable>& CompositeArgumentsMap() const { return m_compositeArgumentsMap; }
+        const std::vector<std::pair<Variable, Variable>>& CompositeArgumentsMap() const { return m_compositeArgumentsMap; }
         const std::unordered_map<Variable, Variable>& CompositeOutputsMap() const { return m_compositeOutputsMap; }
 
     protected:
@@ -47,16 +47,24 @@ namespace CNTK
                                             std::unordered_set<Variable>& replacedPlaceholders) override
         {
             // Substitute any placeholder replacements in the arguments map
-            for (auto argMapping : m_compositeArgumentsMap)
+            for (auto& argMapping : m_compositeArgumentsMap)
             {
                 if (replacedPlaceholders.find(argMapping.second) != replacedPlaceholders.end())
-                    m_compositeArgumentsMap[argMapping.first] = placeholderReplacements.at(argMapping.second);
+                    argMapping.second = placeholderReplacements.at(argMapping.second);
             }
         }
 
     private:
-        static std::vector<Variable> DetermineInputs(const FunctionPtr& composite, const std::unordered_map<Variable, Variable>& argumentsMap, const std::wstring& blockName)
+        static std::vector<Variable> DetermineInputs(const FunctionPtr& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockName)
         {
+            std::unordered_map<Variable, Variable> argumentsMappingAsMap;
+            for (auto argumentMapping : argumentsMap)
+            {
+                auto wasInserted = argumentsMappingAsMap.insert(argumentMapping).second;
+                if (!wasInserted)
+                    InvalidArgument("CNTK::AsBlock: Multiple mappings provided for the argument (%S) of the block composite", argumentMapping.first.Name().c_str());
+            }
+
             std::vector<Variable> blockFunctionInputs;
             auto compositeInputs = composite->Inputs();
             std::vector<Variable> unmappedArguments;
@@ -76,7 +84,7 @@ namespace CNTK
                     }
 
                     // Verify that a mapping was provided for each argument of the composite
-                    if (argumentsMap.find(compositeInput) == argumentsMap.end())
+                    if (argumentsMappingAsMap.find(compositeInput) == argumentsMappingAsMap.end())
                         unmappedArguments.push_back(compositeInput);
                 }
             }
@@ -99,12 +107,12 @@ namespace CNTK
         {
             // We determine the outputs by replacing the arguments of the composite with new placeholders with updated 
             // shape etc. information matching the corresponding mapped input
-            std::unordered_map<Variable, Variable> newArgumentsMap;
+            std::vector<std::pair<Variable, Variable>> newArgumentsMap;
             std::unordered_map<Variable, Variable> replacementMap;
             for (auto argMapping : m_compositeArgumentsMap)
             {
                 auto newArgument = PlaceholderVariable(argMapping.second.Shape(), argMapping.second.GetDataType(), argMapping.second.Name(), argMapping.second.DynamicAxes());
-                newArgumentsMap.insert({ newArgument, argMapping.second });
+                newArgumentsMap.push_back({ newArgument, argMapping.second });
                 replacementMap.insert({ argMapping.first, newArgument });
             }
 
@@ -135,7 +143,7 @@ namespace CNTK
 
         // Mapping from each argument of the composite underlying the block
         // to the corresponding Variable it is mapped to
-        std::unordered_map<Variable, Variable> m_compositeArgumentsMap;
+        std::vector<std::pair<Variable, Variable>> m_compositeArgumentsMap;
 
         // Mapping from each output of the block to the corresponding
         // output of underlying composite

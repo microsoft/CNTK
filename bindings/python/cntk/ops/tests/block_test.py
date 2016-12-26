@@ -51,7 +51,7 @@ def test_op_as_block(input_shape, output_shape, expected_output_shape, device_id
           needs_gradient=True,
           name='a')
 
-    input_op = as_block(block_composite, {a_placeholder : a}, 'reshape_test_op', block_instance_name='reshape_test_op')
+    input_op = as_block(block_composite, [(a_placeholder, a)], 'reshape_test_op', block_instance_name='reshape_test_op')
 
     # Test some basic methods related to blocks
     assert input_op.is_composite

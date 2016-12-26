@@ -635,11 +635,16 @@ namespace CNTK
             dict[blockFunctionOpNameKey] = OpName();
 
             auto& blockArgumentsMap = BlockArgumentsMapping();
-            Dictionary serializedArgumentsMap;
+            std::vector<std::wstring> serializedArgumentsMapKeys;
+            std::vector<std::wstring> serializedArgumentsMapValues;
             for (auto argumentMapping : blockArgumentsMap)
-                serializedArgumentsMap[argumentMapping.first.Uid()] = argumentMapping.second.Uid();
+            {
+                serializedArgumentsMapKeys.push_back(argumentMapping.first.Uid());
+                serializedArgumentsMapValues.push_back(argumentMapping.second.Uid());
+            }
 
-            dict[blockFunctionCompositeArgumentsMapKey] = serializedArgumentsMap;
+            dict[blockFunctionCompositeArgumentsMapKeysKey] = AsDictionaryValueVector(serializedArgumentsMapKeys);
+            dict[blockFunctionCompositeArgumentsMapValuesKey] = AsDictionaryValueVector(serializedArgumentsMapValues);
         }
 
         return dict;
@@ -688,7 +693,7 @@ namespace CNTK
 
         if (op == PrimitiveOpType::Block)
         {
-            static const vector<std::wstring> s_requiredBlockFunctionDictionaryKeys = { blockFunctionCompositeKey, blockFunctionOpNameKey, blockFunctionCompositeArgumentsMapKey };
+            static const vector<std::wstring> s_requiredBlockFunctionDictionaryKeys = { blockFunctionCompositeKey, blockFunctionOpNameKey, blockFunctionCompositeArgumentsMapKeysKey, blockFunctionCompositeArgumentsMapValuesKey };
             ValidateDictionary<PrimitiveFunction>(dict, s_requiredBlockFunctionDictionaryKeys, s_primitiveFunctionTypeValue, s_serializationVersion);
 
             auto composite = CompositeFunction::DeserializeBlockComposite(dict[blockFunctionCompositeKey].Value<Dictionary>(), allPrimitiveFunctions, placeholderReplacements, device);
@@ -702,14 +707,14 @@ namespace CNTK
 
             const auto& blockOpName = dict[blockFunctionOpNameKey].Value<std::wstring>();
 
-            const Dictionary& blockArgumentsMapDict = dict[blockFunctionCompositeArgumentsMapKey].Value<Dictionary>();
-            std::unordered_map<Variable, Variable> argumentsMap;
-            for (const auto& kv : blockArgumentsMapDict)
-            {
-                const auto& argumentUid = kv.first;
-                const auto& argumentMappingUid = kv.second.Value<std::wstring>();
-                argumentsMap.insert({ findCompositeArgumentByUid(argumentUid), uidToVariableMap.at(argumentMappingUid) });
-            }
+            auto blockArgumentsMapKeys = AsVector<std::wstring>(dict[blockFunctionCompositeArgumentsMapKeysKey].Value<std::vector<DictionaryValue>>());
+            auto blockArgumentsMapValues = AsVector<std::wstring>(dict[blockFunctionCompositeArgumentsMapValuesKey].Value<std::vector<DictionaryValue>>());
+            if (blockArgumentsMapKeys.size() != blockArgumentsMapValues.size())
+                RuntimeError("Invalid block function dictionary found during deserialization; Number of block argument map keys does not match the number of map values");
+
+            std::vector<std::pair<Variable, Variable>> argumentsMap;
+            for (size_t i = 0; i < blockArgumentsMapKeys.size(); ++i)
+                argumentsMap.push_back({ findCompositeArgumentByUid(blockArgumentsMapKeys[i]), uidToVariableMap.at(blockArgumentsMapValues[i]) });
 
             return std::shared_ptr<BlockFunction>(new BlockFunction(std::move(composite), argumentsMap, blockOpName, std::move(attributes), name, uid),
                                                   [](BlockFunction* ptr) { delete ptr; });

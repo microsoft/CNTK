@@ -2423,7 +2423,7 @@ namespace CNTK
         /// to the Variables that they are bound to in the outer graph of Functions that this
         /// block Function is part of.
         ///
-        CNTK_API const std::unordered_map<Variable, Variable>& BlockArgumentsMapping() const;
+        CNTK_API const std::vector<std::pair<Variable, Variable>>& BlockArgumentsMapping() const;
 
         ///
         /// Returns all Input variables of 'this' Function.
@@ -3076,7 +3076,7 @@ namespace CNTK
     /// Creates a Block function that encapsulates a composite to create an opaque Function object that
     /// appears as any other primitive function
     ///
-    CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::unordered_map<Variable, Variable>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = L"");
+    CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = L"");
 
     namespace Sequence
     {

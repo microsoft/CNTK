@@ -80,7 +80,7 @@ namespace CNTK
         return blockFunction->Composite();
     }
 
-    const std::unordered_map<Variable, Variable>& Function::BlockArgumentsMapping() const
+    const std::vector<std::pair<Variable, Variable>>& Function::BlockArgumentsMapping() const
     {
         if (!IsBlock())
             InvalidArgument("Function::BlockArgumentsMapping() cannot be called for a Function which is not a block");
@@ -516,9 +516,9 @@ namespace CNTK
                 cloneeToClonedBlockCompositeArgumentsMap.insert({ cloneeBlockCompositeArguments[i], clonedBlockCompositeArguments[i] });
 
             auto cloneeBlockCompositeArgumentsMap = primitiveFunction->BlockArgumentsMapping();
-            std::unordered_map<Variable, Variable> clonedBlockCompositeArgumentsMap;
+            std::vector<std::pair<Variable, Variable>> clonedBlockCompositeArgumentsMap;
             for (auto cloneeArgumentMapping : cloneeBlockCompositeArgumentsMap)
-                clonedBlockCompositeArgumentsMap.insert({ cloneeToClonedBlockCompositeArgumentsMap.at(cloneeArgumentMapping.first), cloneeToClonedInputMap.at(cloneeArgumentMapping.second) });
+                clonedBlockCompositeArgumentsMap.push_back({ cloneeToClonedBlockCompositeArgumentsMap.at(cloneeArgumentMapping.first), cloneeToClonedInputMap.at(cloneeArgumentMapping.second) });
 
             clonedFunction = MakeSharedObject<BlockFunction>(std::move(clonedComposite), clonedBlockCompositeArgumentsMap, primitiveFunction->OpName(), std::move(attributesCopy), primitiveFunction->Name());
         }
@@ -1133,7 +1133,7 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Pass, operand, Dictionary(), name);
     }
 
-    FunctionPtr AsBlock(FunctionPtr&& composite, const std::unordered_map<Variable, Variable>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName)
+    FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName)
     {
         if (!composite->IsComposite())
             InvalidArgument("Block functions can only be created from a composite function");
