@@ -14,6 +14,7 @@
 #include "PerformanceProfiler.h"
 #include "Basics.h"
 #include "fileutil.h"
+#include <chrono>
 #include <memory>
 #include <stdio.h>
 #include <time.h>
@@ -141,6 +142,27 @@ struct ScopeLock
     ~ScopeLock() { LockLeave(); }
 };
 
+long long GetTimeFast()
+{
+    long long tm;
+#ifdef _WIN32
+    QueryPerformanceCounter((LARGE_INTEGER*)&tm);
+#else
+    timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
+    tm = (long long)t.tv_nsec + 1000000000ll * (long long)t.tv_sec;
+#endif
+
+    return tm;
+}
+
+
+long long GetTimeChrono()
+{
+    chrono::high_resolution_clock::time_point tp = chrono::high_resolution_clock::now();
+    return tp.time_since_epoch().count();
+}
+
 //
 // Initialize all resources to enable profiling.
 // profilerDir: Directory where the profiler logs will be saved.
@@ -176,6 +198,32 @@ void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsig
     {
         RuntimeError("Error: ProfilerInit: Cannot create directory <%ls>.\n", g_profilerState->profilerDir.c_str());
     }
+
+    const int rep_count = 1000000;
+    chrono::high_resolution_clock::time_point before, after;
+    long long dur, s;
+
+    before = chrono::high_resolution_clock::now();
+    s = 0;
+    for (int i = 0; i < rep_count; i++)
+    {
+        s += GetTimeChrono();
+    }
+    after = chrono::high_resolution_clock::now();
+    dur = (after - before).count();
+    fprintf(stderr, "Chrono: %lld ns\n", dur / rep_count);
+    fprintf(stderr, "    s=%lld\n", s);
+
+    before = chrono::high_resolution_clock::now();
+    s = 0;
+    for (int i = 0; i < rep_count; i++)
+    {
+        s += GetTimeFast();
+    }
+    after = chrono::high_resolution_clock::now();
+    dur = (after - before).count();
+    fprintf(stderr, "Fast:   %lld ns\n", dur / rep_count);
+    fprintf(stderr, "    s=%lld\n", s);
 }
 
 //
