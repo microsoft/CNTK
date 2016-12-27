@@ -3,7 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 // Real-time thread-safe profiler that generats a summary report and a detail profile log.
-// The profiler is highly performant and light weight and meant to be left on all the time.
+// The profiler is highly performant and light weight.
 //
 // Profiler Usage
 //
