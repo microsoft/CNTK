@@ -113,7 +113,7 @@ struct ProfilerState
 
 
 // We support one global instance of the profiler
-static ProfilerState* g_profilerState = nullptr;
+static unique_ptr<ProfilerState> g_profilerState;
 
 // Forward declarations
 unsigned int GetThreadId();
@@ -155,7 +155,7 @@ void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsig
     {
         RuntimeError("Error: ProfilerInit: Profiler already initialized.\n");
     }
-    g_profilerState = new ProfilerState();
+    g_profilerState.reset(new ProfilerState());
 
     LockInit();
 
@@ -374,8 +374,7 @@ void PERF_PROFILER_API ProfilerClose()
     fileName = g_profilerState->profilerDir + L"/" + std::wstring(timeStr) + L"_detail_" + g_profilerState->logSuffix + L".csv";
     ProfilerGenerateDetailFile(fileName);
 
-    delete g_profilerState;
-    g_profilerState = nullptr;
+    g_profilerState.reset();
 }
 
 
