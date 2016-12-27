@@ -621,6 +621,12 @@ namespace CNTK
             computationNodePtr = New<TransposeTimesNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputRank);
             break;
         }
+		case PrimitiveOpType::SampledTimes:
+		{
+			size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
+			computationNodePtr = New<SampledTimesNode<ElementType>>(network->GetDeviceId(), internalNodeName, outputRank);
+			break;
+		}
         case PrimitiveOpType::Convolution:
         {
             NDShape outputMapCount, kernelShape;

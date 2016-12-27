@@ -755,12 +755,15 @@ template class QuantizedTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // SampledTimesNode (A, B)
-// Same as TimesNode, except forward prob and backprop takes place only 
-// for a numSamples sample subset of the columns of A.
+// Same as TransposeTimesNode, except forward prob and backprop takes place only 
+// for a numSamples sample subset of the columns of A.  The sample subset comes
+// from the non-zero indices of input(2), which is the labels for the minibatch.
+// Thus the rest of the labels from the minibatch act as noise samples for current
+// label.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class SampledTimesNode : public TimesNodeBase<ElemType, true, 3>, public RngUser
+class SampledTimesNode : public TimesNodeBase<ElemType, true, 3>
 {
 	typedef TimesNodeBase<ElemType, true, 3> Base;
 	UsingComputationNodeMembersBoilerplate;
@@ -769,16 +772,13 @@ class SampledTimesNode : public TimesNodeBase<ElemType, true, 3>, public RngUser
 public:
 	DeclareConstructorFromConfigWithNumInputs(SampledTimesNode);
 	SampledTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, size_t outputRank = 1)
-		: Base(deviceId, name, outputRank, /*inferInputRankToMap=*/-1), m_sizeOfSampledSet(sizeOfSampledSet), 
+		: Base(deviceId, name, outputRank, /*inferInputRankToMap=*/-1), 
 		m_sampleIdx(sizeOfSampledSet, 1, deviceId), m_sampledWeights(deviceId), m_sampledOutput(deviceId)
 	{
 		if (outputRank != 1)
 			LogicError("SampledTimes does not yet support outputRank other than 1");
 
-		SetRngState((unsigned long)CreateUniqId());
 	}
-
-	void SetWeights(const std::vector<ElemType>& weights) { UpdateWeightsPrefixSum(weights); }
 
 	void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
 	{
@@ -786,54 +786,37 @@ public:
 		if (flags & CopyNodeFlags::copyNodeValue)
 		{
 			auto node = dynamic_pointer_cast<SampledTimesNode<ElemType>>(nodeP);
-			node->m_sizeOfSampledSet = m_sizeOfSampledSet;
-			node->m_allowDuplicates = m_allowDuplicates;
 		}
 	}
 
 	void Save(File& fstream) const
 	{
 		Base::Save(fstream);
-		fstream << m_sizeOfSampledSet;
-		fstream << m_allowDuplicates;
 	}
 
 	void Load(File& fstream, size_t modelVersion) override
 	{
 		Base::Load(fstream, modelVersion);
-		fstream >> m_sizeOfSampledSet;
-		fstream >> m_allowDuplicates;
 	}
 
 	void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 	{
-		// TensorView::DoMatrixProductOf() will reduce each tensor object into a 2D tensor (or fail if it cannot)
-		// and recreate actual Matrix objects (in case of sparse, they must be identical to the original tensor storage object).
-		// Transposition is applied after flattening into 2D, but only allowed if the input sample is 2D anyway.
-		auto input0 = Base::OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
-		auto input1 = AsFlattenedMatrix( Base::OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()) );
-		auto input2 = AsFlattenedMatrix( Base::OneSampleTensorFor(2,  /*gradient=*/false, fr.AllowBroadcast()) );
+		// Assign inputs and ouputs as 2D Matrix
+		auto input0 = Base::OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();				// W
+		auto input1 = AsFlattenedMatrix( Base::OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()) );	// x
+		auto input2 = AsFlattenedMatrix( Base::OneSampleTensorFor(2,  /*gradient=*/false, fr.AllowBroadcast()) );   // One-hot labels
 		auto output = AsFlattenedMatrix(Base::OneSampleTensorFor(-1, /*gradient=*/false, fr));
 
-		if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
-		{
-			input0->Print("Weight matrix");
-			input1->Print("Input matrix");
-			input2->Print("Labels");
-		}
+		//get indices of non-zero labels
 		m_sampleIdx.Resize(1, input2->GetNumNonZeroElements());
 		m_sampleIdx.SetValueFromIndex(input2->GetNonZeroIndices());
+		
 		m_sampledWeights.DoGatherColumnsOf(0, m_sampleIdx, *input0, 1); // *sampledWeights[:,j] = a[:,idx[j]]
+		//actual downsized matrix multiplication happens here
 		m_sampledOutput.AssignProductOf(*input1, true/*transA*/, m_sampledWeights, false/*transB*/);
 		output->SetValue(0);
+		//now scatter the sampled columns back to full output
 		output->SetValue( output->Transpose().DoScatterColumnsOf(0, m_sampleIdx, m_sampledOutput, 1, 0).Transpose() );
-		if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
-		{
-			m_sampleIdx.Print("Sample indices");
-			m_sampledWeights.Print("Sampled weights");
-			m_sampledOutput.Print("Sampled output");
-			output->Print("Output value");
-		}
 	}
 
 	void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -844,35 +827,31 @@ public:
 		if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
 			Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
-		if (inputIndex == 0) // left derivative
-		{
+		if (inputIndex == 0) // left derivative (W)
+		{	//assign inputs
 			auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true, fr.AllowBroadcast()).AsMatrix();
 			auto outputGradient = AsFlattenedMatrix( OneSampleTensorFor(-1, /*gradient=*/true, fr) );
 			auto input1 = AsFlattenedMatrix(OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast()));
-			if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
-			{
-				input1->Print("Input matrix");
-				outputGradient->Print("Output gradient");
-			}
+
+			//sample output
 			m_sampledOutput.DoGatherColumnsOf(0, m_sampleIdx, outputGradient->Transpose(), 1);
+			//downsampled matrix multiply to calculate weight gradient
 			m_sampledWeights.AssignProductOf(*input1, false/*transA*/, m_sampledOutput, false/*transB*/);
+			
 			input0Gradient->SetValue(0);
+			//scatter back to full output
 			input0Gradient->DoScatterColumnsOf(0, m_sampleIdx, m_sampledWeights, 1);
-			if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
-			{
-				m_sampledOutput.Print("Sampled output gradient");
-				m_sampledWeights.Print("Sampled weight gradient");
-				input0Gradient->Print("Weight gradient");
-			}
 		}
-		else if (inputIndex == 1) // right derivative
-		{
+		else if (inputIndex == 1) // right derivative (x)
+		{	//assign inputs
 			auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast()).AsMatrix();
 			auto outputGradient = AsFlattenedMatrix(OneSampleTensorFor(-1, /*gradient=*/true, fr));
 			auto input1Gradient = AsFlattenedMatrix(OneSampleTensorFor(1,  /*gradient=*/true, fr.AllowBroadcast()));
 
+			//sample columns
 			m_sampledWeights.DoGatherColumnsOf(0, m_sampleIdx, *input0, 1);
 			m_sampledOutput.DoGatherColumnsOf(0, m_sampleIdx, outputGradient->Transpose(), 1);
+			//matrix multiply to calculate input gradient
 			input1Gradient->AssignProductOf(m_sampledWeights, false/*transA*/, m_sampledOutput, true/*transB*/);
 		}
 	}
@@ -880,87 +859,11 @@ public:
 private:
 	shared_ptr<Matrix<ElemType>> AsFlattenedMatrix(TensorView<ElemType> a)
 	{
-		//SmallVector<bool> dimsToDrop(3, false);
-		//dimsToDrop[2] = true;
-
 		auto a_shape = a.GetShape();
 		TensorShape shape(a_shape[0], a_shape[1] * a_shape[2]);
-		//shape.DropDimsInPlace(dimsToDrop);
 		return a.Reshaped(shape).AsMatrix();
 	}
-	
-	void UpdateWeightsPrefixSum(const std::vector<ElemType>& samplingWeights)
-	{
-		m_samplingWeightsPrefixSum.clear();
-		ElemType runningWeightsSum = 0;
-		for (int iClass = 0; iClass < samplingWeights.size(); iClass++)
-		{
-			ElemType currentWeight = samplingWeights[iClass];
-			if (currentWeight < 0)
-				InvalidArgument("Sampling weights contain negative number %f.", currentWeight);
 
-			runningWeightsSum += currentWeight;
-			m_samplingWeightsPrefixSum.push_back(runningWeightsSum);
-		}
-	}
-
-	// Estimates the expected number of occurences of each class in the sampled set.
-	// For sampling without replacement we use estimate using average number of tries. (Inspired by TensorFlow)
-	// BUGBUG: Consider to reimplement using a less biased estimate as proposed by Nikos.
-	ElemType EstimateInSampleFrequency(ElemType p) const
-	{
-		if (m_allowDuplicates)
-		{
-			return p * m_sizeOfSampledSet;
-		}
-		else /* Since each class appears at most once, E[#occurrences of c] = P(occurrence of c) = 1 - P(non-occurrence of c) = 1 - (1-p)^n */
-		{
-			return ElemType( 1 - pow( 1-p, m_sizeOfSampledSet ));
-		}
-	}
-
-	// Runs the sampling returning a vector with the id's of the samples. 
-	void RunSampling()
-	{
-		std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
-		std::unordered_set<int> alreadySampled;
-		std::vector<ElemType> samples;
-		CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(GetDeviceId()));
-		
-		// find random samples using the specified weight
-
-		while (samples.size() < m_sizeOfSampledSet)
-		{
-			double randomValue = r(cpuRNGHandle->Generator());
-			// Find the first index where value[idx] >= randomValue.
-			auto lower = std::lower_bound(m_samplingWeightsPrefixSum.begin(), m_samplingWeightsPrefixSum.end(), randomValue);
-			int idx = (int)(lower - m_samplingWeightsPrefixSum.begin());
-
-			if (m_allowDuplicates)
-				samples.push_back((ElemType)idx);
-			else
-			{
-				// Sampling without replacement: each value can be sampled at most once. 
-				// The implementation below using rejection sampling is problematic.
-				// E.g if first class has probability p = 0.999 we typically will have to sample 1000 times or more to hit another class.
-				// BUGBUG Alternative implementions, e.g:
-				// * Weighted Random Sampling with Reservoir: http://utopia.duth.gr/~pefraimi/research/data/2007EncOfAlg.pdf
-				// * Binary tree with classes as leafes and branch probs on non-leafes.
-				// * As in numpy: https://github.com/numpy/numpy/blob/master/numpy/random/mtrand/mtrand.pyx#L1440
-				if (alreadySampled.find(idx) != alreadySampled.end()) continue;
-				else
-				{
-					samples.push_back((ElemType)idx);
-					alreadySampled.insert(idx);
-				}
-			}
-		}
-		m_sampleIdx.SetValue(m_sizeOfSampledSet, 1, GetDeviceId(), samples.data(), false /*matrixFormatRowMajor*/);
-	}
-
-	size_t m_sizeOfSampledSet;
-	bool m_allowDuplicates;
-	std::vector<ElemType> m_samplingWeightsPrefixSum;
 	Matrix<ElemType> m_sampleIdx;
 	Matrix<ElemType> m_sampledWeights;
 	Matrix<ElemType> m_sampledOutput;

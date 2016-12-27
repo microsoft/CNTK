@@ -816,7 +816,8 @@ namespace CNTK
 
 	FunctionPtr NCECriterion(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name)
 	{
-		return BinaryOp(PrimitiveOpType::NCECriterion, labels, prediction, Dictionary(), name);
+		std::vector<Variable> operands = { prediction, labels };
+		return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::NCECriterion, operands, Dictionary(), name), name);
 	}
 
     FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const Axis& axis, const std::wstring& name)

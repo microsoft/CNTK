@@ -364,8 +364,10 @@ template class CrossEntropyNode<double>;
 /// NCECriterionNode (labels, prediction)
 // -----------------------------------------------------------------------
 
-// To be used with SampledTimes node.  Takes sampled output from SampledTimes.  Calculates sampled gradients.
-// You probably want to use CrossEntropyWithSoftMaxNode instead, it is more efficient in most cases.
+// To be used with SampledTimes node.  Takes sampled output (unnormalized logprob) from SampledTimes.  Calculates NCE output and gradients.
+// Sampled set is the set of labels in minibatch.
+// Noise distribution comes from unigram probs estimated from data as is comes in
+// ref. http://mi.eng.cam.ac.uk/~xc257/papers/ICASSP2015-rnnlm-nce.pdf
 template <class ElemType>
 class NCECriterionNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>, public NumInputs<2>
 {
@@ -383,33 +385,6 @@ public:
 	{
 	}
 
-	virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override
-	{
-		FrameRange fr(InputRef(0).GetMBLayout());
-		// left Node must be a scalar
-		if (inputIndex == 0) // left derivative
-		{
-			NOT_IMPLEMENTED;
-		}
-		else
-		{
-			FrameRange fr(InputRef(0).GetMBLayout());
-			auto output1gradient = MatrixValueFor(1,  /*gradient=*/true, fr);
-			m_temp1.SetValue(m_pn);
-			m_temp1 += m_pm;
-			m_temp1.ElementMultiplyWith(m_sampleLabels);
-			m_temp1.AssignDifferenceOf(m_pm, m_temp1);
-			if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
-			{
-				m_pm.Print("m_pm");
-				m_pn.Print("m_pn");
-				m_temp1.Print("sample gradients");
-				m_sampleLabels.Print("sample labels");
-			}
-			output1gradient->SetValue(output1gradient->Transpose().DoScatterColumnsOf(0, m_sampleIdx, m_temp1, 1).Transpose());
-		}
-	}
-
 	virtual bool OutputUsedInComputingInputNodesGradients() const override
 	{
 		return false;
@@ -422,36 +397,33 @@ public:
 		m_unigramCounts.SetValue(Matrix<ElemType>::Ones(1, m_totalCount, GetDeviceId()));
 	}
 
-	// -sum(left_i * log(right_i))
+	//eq. 5,6 in ref
+	//m_pm = P_m / (P_m + k*P_n) and m_pn = k*Pn / (P_m + k*P_n) at the end of this function
 	virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
 	{
 		FrameRange fr(InputRef(0).GetMBLayout());
-		auto input0 = MatrixValueFor(0,  /*gradient=*/false, fr);
-		auto input1 = MatrixValueFor(1,  /*gradient=*/false, fr);
+		auto input0 = MatrixValueFor(0,  /*gradient=*/false, fr); // labels
+		auto input1 = MatrixValueFor(1,  /*gradient=*/false, fr); // predictions
 		size_t MBsize = input0->GetNumNonZeroElements();
+		//get sampled output indices (which come from the minibatch labels)
 		m_sampleIdx.Resize(1, MBsize);
 		m_sampleIdx.SetValueFromIndex(input0->GetNonZeroIndices());
+
 		//BUGBUG: unfortunately we need to switch the labels to dense here since Transpose is not implemented for sparse
 		auto input0Dense = input0->DeepClone();
 		input0Dense.SwitchToMatrixType(MatrixType::DENSE, MatrixFormat::matrixFormatDense, true);
+
 		m_sampleLabels.DoGatherColumnsOf(0, m_sampleIdx, input0Dense.Transpose(), 1);
-		m_pm.DoGatherColumnsOf(0, m_sampleIdx, input1->Transpose(), 1);
-		m_pn.DoGatherColumnsOf(0, m_sampleIdx, m_unigramCounts, 1);
-		m_pn.SetValue( Replicate(m_pn.Transpose(), m_pm.GetNumRows()) );
-		m_pm.InplaceExp();
-		m_pn *= MBsize / (ElemType)m_totalCount;
-		m_temp1.AssignSumOf(m_pm, m_pn);
-		if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
-		{
-			m_pm.Print("m_pm");
-			m_pn.Print("m_pn");
-			m_temp1.Print("denominator");
-			input0Dense.Print("dense labels");
-			m_sampleLabels.Print("sampled labels");
-			m_unigramCounts.Print("unigram counts");
-		}
-		m_pm.ElementDivideBy(m_temp1);
-		m_pn.ElementDivideBy(m_temp1);
+		m_pm.DoGatherColumnsOf(0, m_sampleIdx, input1->Transpose(), 1);	// m_pm = log P_m
+		m_pn.DoGatherColumnsOf(0, m_sampleIdx, m_unigramCounts, 1);		// m_pn = P_n * m_totalCount (unigram counts sampled from data seen so far)
+		m_pn.SetValue( Replicate(m_pn.Transpose(), m_pm.GetNumRows()) );// broadcast m_pn to minibatch
+		m_pm.InplaceExp();												// m_pm = P_m
+		m_pn *= MBsize / (ElemType)m_totalCount;						// m_pn = k*P_n
+		m_temp1.AssignSumOf(m_pm, m_pn);								// m_temp1 = (P_m + k*P_n)
+
+		m_pm.ElementDivideBy(m_temp1);									// m_pm = P_m / (P_m + k*P_n)
+		m_pn.ElementDivideBy(m_temp1);									// m_pn = k*Pn / (P_m + k*P_n)
+		//now calculate NCE loss as in eq.6
 		m_temp1.SetValue(m_pm);
 		m_temp1.InplaceLog();
 		m_temp2.SetValue(m_pn);
@@ -461,10 +433,6 @@ public:
 		m_temp1 += m_temp2;
 		m_temp1.SetValue(m_temp1.Transpose());
 		MaskMissingColumnsTo<ElemType>(m_temp1, InputRef(0).GetMBLayout(), fr, 0);
-		if (GetEnvironmentPtr() && (Environment().traceLevel > 0))
-		{
-			m_temp1.Print("NCE value");
-		}
 		Value().AssignSumOfElements(m_temp1);
 #if NANCHECK
 		Value().HasNan("SampledCriterion");
@@ -472,6 +440,28 @@ public:
 		//now update unigram probs and counts
 		m_totalCount += MBsize;
 		m_unigramCounts.DoScatterColumnsOf(1, m_sampleIdx, Matrix<ElemType>::Ones(1, MBsize, GetDeviceId()), 1);
+	}
+
+	// eq. 7 in ref.  Uses m_pm = P_m / (P_m + k*P_n) and m_pn = k*Pn / (P_m + k*P_n) from forward pass
+	virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override
+	{
+		FrameRange fr(InputRef(0).GetMBLayout());
+		// left Node must be a scalar
+		if (inputIndex == 0) // left derivative (labels)
+		{
+			NOT_IMPLEMENTED;
+		}
+		else //input derivative
+		{
+			FrameRange fr(InputRef(0).GetMBLayout());
+			auto output1gradient = MatrixValueFor(1,  /*gradient=*/true, fr);
+			m_temp1.SetValue(m_pn);
+			// since noise samples include current label also, we add, mask then subtract to seperate them
+			m_temp1 += m_pm;
+			m_temp1.ElementMultiplyWith(m_sampleLabels);
+			m_temp1.AssignDifferenceOf(m_pm, m_temp1);
+			output1gradient->SetValue(output1gradient->Transpose().DoScatterColumnsOf(0, m_sampleIdx, m_temp1, 1).Transpose());
+		}
 	}
 
 	virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override

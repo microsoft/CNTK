@@ -174,6 +174,29 @@ def cross_entropy_with_softmax(output_vector, target_vector, axis=-1, name=''):
     axis = sanitize_axis(axis)
     return cross_entropy_with_softmax(output_vector, target_vector, axis, name)
 
+@typemap
+def nce_criterion(output_vector, target_vector, axis=-1, name=''):
+    r'''
+    This operation computes the NCE log loss between the ``target_vector`` and
+    the ``output_vector``. 
+
+    Args:
+        output_vector: the unscaled computed sampled output values from the network
+        target_vector: it is one-hot vector where the hot bit
+         corresponds to the label index.
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the cross
+         entropy will be computed.
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import nce_criterion
+    dtype = get_data_type(output_vector, target_vector)
+    output_vector = sanitize_input(output_vector, dtype)
+    target_vector = sanitize_input(target_vector, dtype)
+    axis = sanitize_axis(axis)
+    return nce_criterion(output_vector, target_vector, axis, name)
+
 
 @typemap
 def squared_error(output, target, name=''):
@@ -865,6 +888,28 @@ def times_transpose(left, right, name=''):
     rshape = sanitize_shape(right.shape)
     right = sanitize_input(right, dtype, (1,rshape[0]) if len(rshape) == 1 else None)
     return times_transpose(right, left, 1, name)
+
+@typemap
+def sampled_times(left, right, labels, name=''):
+    '''
+    Sampled version of transpose times.
+
+    Args:
+        left: left side tensor
+        right: right side matrix or vector
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sampled_times
+    dtype = get_data_type(left, right)
+    left = sanitize_input(left, dtype)
+    rshape = sanitize_shape(right.shape)
+    right = sanitize_input(right, dtype, (1,rshape[0]) if len(rshape) == 1 else None)
+    lshape = sanitize_shape(labels.shape)
+    labels = sanitize_input(labels, dtype, (1,lshape[0]) if len(lshape) == 1 else None)
+    return sampled_times(right, left, labels, 1, name)
 
 ##########################################################################
 # non_diff ops

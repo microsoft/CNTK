@@ -1,0 +1,90 @@
+# CNTK Configuration File for creating a slot tagger and an intent tagger.
+
+command = TrainTagger:TestTagger
+
+makeMode = false ; traceLevel = 0 ; deviceId = 0
+
+rootDir = "." ; dataDir  = "$rootDir$/Data" ; modelDir = "$rootDir$/Models"
+
+modelPath = "$modelDir$/lm.cmf"
+
+vocabSize = 10000 ; numLabels = 10000    # number of words in vocab
+
+# The command to train the LSTM model
+TrainTagger = {
+    action = "train"
+    BrainScriptNetworkBuilder = {
+        inputDim = $vocabSize$
+        labelDim = $numLabels$
+        embDim = 150
+        hiddenDim = 300
+
+        model = Sequential (
+            EmbeddingLayer {embDim} :                            # embedding
+            RecurrentLSTMLayer {hiddenDim, goBackwards=false}  # LSTM
+		)
+
+        # features
+        inputWords      = Input {inputDim, sparse=true}
+        #outputLabels = Input {labelDim}
+		outputLabels = Input {labelDim, sparse=true}
+
+        # model application
+        z1 = model (inputWords)
+		b = Parameter (labelDim, 1)     # bias
+        w = Parameter (hiddenDim, labelDim)  # weights
+		#z = TransposeTimes(w, z1) + b
+        z = SampledTimes(w,z1,outputLabels) + b
+
+        # loss and metric
+        # ce   = CrossEntropyWithSoftmax (outputLabels, z)
+		#crossEntropy = ReduceLogSum(z, axis=1) - TransposeTimes(outputLabels,z)
+		#ce   = crossEntropy
+		ce = NCECriterion(outputLabels,z)
+        #errs = ClassificationError     (outputLabels, z)
+
+        featureNodes    = (inputWords)
+        labelNodes      = (outputLabels)
+        criterionNodes  = (ce)
+        evaluationNodes = (ce)
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        maxEpochs = 5 ; epochSize = 10000
+
+        minibatchSize = 500
+
+        learningRatesPerSample = 0.003*2:0.0015*12:0.0003
+        gradUpdateType = "fsAdaGrad"
+        gradientClippingWithTruncation = true ; clippingThresholdPerSample = 15.0
+
+        firstMBsToShowResult = 10 ; numMBsToShowResult = 100
+    }
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/ptb.train.txt.ctf"
+        randomize = true
+        input = {
+            inputWords    = { alias = "S0" ; dim = $vocabSize$ ;  format = "sparse" }
+            outputLabels   = { alias = "S1" ; dim = $numLabels$ ;  format = "sparse" }
+        }
+    }
+}
+
+# Test the model's accuracy (as an error count)
+TestTagger = {
+    action = "eval"
+    #modelPath = $modelPath$
+    evalNodeNames = ce
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/ptb.test.txt.ctf"
+        randomize = false
+        input = {
+            inputWords    = { alias = "S0" ; dim = $vocabSize$ ;  format = "sparse" }
+            outputLabels   = { alias = "S1" ; dim = $numLabels$ ;  format = "sparse" }
+        }
+    }
+}
