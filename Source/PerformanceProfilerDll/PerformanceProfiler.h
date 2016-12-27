@@ -103,6 +103,7 @@ void PERF_PROFILER_API ProfilerEnable(bool enable);
 //
 long long PERF_PROFILER_API ProfilerTimeBegin();
 void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const int eventId);
+void PERF_PROFILER_API ProfilerTimeEndMutex(const long long stateId, const int eventId);
 void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const char* eventDescription);
 
 //

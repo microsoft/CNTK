@@ -14,7 +14,9 @@
 #include "PerformanceProfiler.h"
 #include "Basics.h"
 #include "fileutil.h"
+#include <chrono>
 #include <memory>
+#include <mutex>
 #include <stdio.h>
 #include <time.h>
 #ifndef CPUONLY
@@ -126,6 +128,8 @@ inline void LockEnter();
 inline void LockLeave();
 void LockClose();
 
+static mutex g_stdmutex;
+
 void ProfilerGenerateReport(const std::wstring& fileName, struct tm* timeInfo);
 void FormatTimeStr(char* str, size_t strLen, double value);
 void FormatThroughputStr(char* str, size_t strLen, double value);
@@ -140,6 +144,27 @@ struct ScopeLock
     ScopeLock() { LockEnter(); }
     ~ScopeLock() { LockLeave(); }
 };
+
+long long GetTimeFast()
+{
+    long long tm;
+#ifdef _WIN32
+    QueryPerformanceCounter((LARGE_INTEGER*)&tm);
+#else
+    timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
+    tm = (long long)t.tv_nsec + 1000000000ll * (long long)t.tv_sec;
+#endif
+
+    return tm;
+}
+
+
+long long GetTimeChrono()
+{
+    chrono::high_resolution_clock::time_point tp = chrono::high_resolution_clock::now();
+    return tp.time_since_epoch().count();
+}
 
 //
 // Initialize all resources to enable profiling.
@@ -176,6 +201,30 @@ void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsig
     {
         RuntimeError("Error: ProfilerInit: Cannot create directory <%ls>.\n", g_profilerState->profilerDir.c_str());
     }
+
+    const int rep_count = 1000000;
+    chrono::high_resolution_clock::time_point before, after;
+    long long dur;
+
+    before = chrono::high_resolution_clock::now();
+    for (int i = 0; i < rep_count; i++)
+    {
+        auto prof = ProfilerTimeBegin();
+        ProfilerTimeEnd(prof, profilerEvtPrefetchMinibatch);
+    }
+    after = chrono::high_resolution_clock::now();
+    dur = chrono::duration_cast<chrono::nanoseconds>(after - before).count();
+    fprintf(stderr, "Fast:   %lld ns\n", dur / rep_count);
+
+    before = chrono::high_resolution_clock::now();
+    for (int i = 0; i < rep_count; i++)
+    {
+        auto prof = ProfilerTimeBegin();
+        ProfilerTimeEndMutex(prof, profilerEvtPrefetchMinibatch);
+    }
+    after = chrono::high_resolution_clock::now();
+    dur = chrono::duration_cast<chrono::nanoseconds>(after - before).count();
+    fprintf(stderr, "Mutex:  %lld ns\n", dur / rep_count);
 }
 
 //
@@ -247,6 +296,56 @@ void ProfilerTimeEndInt(const char* eventDescription, const long long beginClock
     g_profilerState->customEventOffset += sizeof(CustomEventRecord);
 }
 
+void ProfilerTimeEndIntMutex(const int eventId, const long long beginClock, const long long endClock)
+{
+    lock_guard<mutex> lock(g_stdmutex);
+
+    if (!g_profilerState->enabled)
+        return;
+
+    long long delta = endClock - beginClock;
+    if (g_profilerState->fixedEvents[eventId].cnt == 0)
+    {
+        g_profilerState->fixedEvents[eventId].min = delta;
+        g_profilerState->fixedEvents[eventId].max = delta;
+    }
+    g_profilerState->fixedEvents[eventId].min = min(delta, g_profilerState->fixedEvents[eventId].min);
+    g_profilerState->fixedEvents[eventId].max = max(delta, g_profilerState->fixedEvents[eventId].max);
+    g_profilerState->fixedEvents[eventId].sum += delta;
+    g_profilerState->fixedEvents[eventId].sumsq += (double)delta * (double)delta;
+    g_profilerState->fixedEvents[eventId].cnt++;
+}
+
+void ProfilerTimeEndIntMutex(const char* eventDescription, const long long beginClock, const long long endClock)
+{
+    lock_guard<mutex> lock(g_stdmutex);
+
+    if (!g_profilerState->enabled)
+        return;
+
+    auto eventDescriptionBytes = strlen(eventDescription) + 1;
+    auto requiredBufferBytes = eventDescriptionBytes + sizeof(CustomEventRecord);
+    if ((g_profilerState->customEventOffset + requiredBufferBytes) > g_profilerState->customEventBufferBytes)
+    {
+        if (!g_profilerState->customEventBufferFull)
+        {
+            fprintf(stderr, "Warning: Performance Profiler: Buffer is full, no more events will be recorded.\n");
+            g_profilerState->customEventBufferFull = true;
+        }
+        return;
+    }
+
+    strcpy(g_profilerState->customEventBuffer.get() + g_profilerState->customEventOffset, eventDescription);
+    g_profilerState->customEventOffset += eventDescriptionBytes;
+
+    CustomEventRecord eventRecord;
+    eventRecord.beginClock = beginClock;
+    eventRecord.endClock = endClock;
+    eventRecord.threadId = GetThreadId();
+
+    memcpy(g_profilerState->customEventBuffer.get() + g_profilerState->customEventOffset, &eventRecord, sizeof(CustomEventRecord));
+    g_profilerState->customEventOffset += sizeof(CustomEventRecord);
+}
 
 //
 // Measure either a fixed or custom event time.
@@ -273,6 +372,19 @@ void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const int eventI
     ProfilerTimeEndInt(c_fixedEvtDesc[eventId].eventDescription, stateId, endClock);
 }
 
+void PERF_PROFILER_API ProfilerTimeEndMutex(const long long stateId, const int eventId)
+{
+    // A nullptr state indicates that the profiler is globally disabled, and not initialized
+    if (g_profilerState == nullptr)
+        return;
+
+    if (c_fixedEvtDesc[eventId].syncGpu)
+        ProfilerSyncGpu();
+
+    long long endClock = GetClock();
+    ProfilerTimeEndIntMutex(eventId, stateId, endClock);
+    ProfilerTimeEndIntMutex(c_fixedEvtDesc[eventId].eventDescription, stateId, endClock);
+}
 
 void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const char* eventDescription)
 {
@@ -440,6 +552,7 @@ static CRITICAL_SECTION g_critSec;
 #else
 static pthread_mutex_t g_mutex;
 #endif
+
 
 //
 // Initialize lock object, to be called once at startup.
