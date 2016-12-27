@@ -13,18 +13,6 @@ and [GoogLeNet (Inception V3)](https://github.com/Microsoft/CNTK/tree/v2.0.beta7
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_7_Release_Notes)  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-***2016-12-22.*** V 2.0 Beta 7 Release  
-Highlights of this Release:
-* Python API behaviour is changed to be more strict.
-* New Examples and Tutorials ([Artistic Style Transfer](https://github.com/Microsoft/CNTK/blob/v2.0.beta7.0/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb)
-and [GoogLeNet (Inception V3)](https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Examples/Image/Classification/GoogLeNet)
-).
-* New version of CNTK Evaluation library NuGet Package.
-* CNTK Background Improvements.
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_7_Release_Notes)  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
-
 ***2016-12-13.*** V 2.0 Beta 6 Release  
 Highlights of this Release:
 * Both Windows and Linux packages are now created using NVIDIA CUDA 8.0 toolkit.

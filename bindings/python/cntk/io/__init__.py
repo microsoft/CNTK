@@ -14,6 +14,7 @@ import numpy as np
 INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 FULL_DATA_SWEEP = cntk_py.MinibatchSource.full_data_sweep
 INFINITE_SAMPLES = cntk_py.MinibatchSource.infinite_samples
+DEFAULT_RANDOMIZATION_WINDOW = cntk_py.MinibatchSource.default_randomization_window
 
 class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
     '''
@@ -79,18 +80,19 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
     Args:
         deserializers ('list', default is empty): list of deserializers
-         (:class:`ImageDeserializer` for now).
-        randomize (bool, default True): randomize images before every epoch
+        randomize (bool, default True): randomize before every epoch
+        randomization_window (int) : size of window that reader will shuffle, ignored if `randomize` is False
         epoch_size (int): epoch size
         distributed_after (int): sample count after which minibatch source becomes distributed
         multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
+    def __init__(self, deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
         reader_config = ReaderConfig(
             deserializers=deserializers,
             randomize=randomize,
+            randomization_window=randomization_window,
             epoch_size=epoch_size,
             distributed_after=distributed_after,
             multithreaded_deserializer=multithreaded_deserializer)
@@ -242,17 +244,18 @@ class ReaderConfig(dict):
         deserializers ('list', default is empty): list of deserializers
          (:class:`ImageDeserializer` for now).
         randomize (bool, default True): randomize images before every epoch
+        randomization_window (int) : size of window that reader will shuffle, ignored if `randomize` is False
         epoch_size (int): epoch size
         distributed_after (int): sample count after which reader becomes distributed
         multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
-
+    def __init__(self, deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
         self['epochSize'] = cntk_py.SizeTWrapper(epoch_size) # force to store in size_t
         if not isinstance(deserializers, (list, tuple)):
             deserializers = [deserializers]
         self['deserializers'] = self.deserializers = deserializers or []
         self['randomize'] = randomize
+        self['randomizationWindow'] = cntk_py.SizeTWrapper(randomization_window)
         self['distributedAfterSampleCount'] = cntk_py.SizeTWrapper(distributed_after)
         if multithreaded_deserializer != None:
             self['multiThreadedDeserialization'] = multithreaded_deserializer
@@ -492,28 +495,6 @@ class CTFDeserializer(Deserializer):
         if alias is None:
             alias=node
         self.input[node] = dict(dim=dim, format=format, alias=alias)
-
-
-# TODO: This should not exist; use MinibatchSource(CTFDeserializer(...))
-@typemap
-def text_format_minibatch_source(path, stream_configs, epoch_size=INFINITELY_REPEAT, randomize=True, distributed_after=INFINITE_SAMPLES):
-    '''
-    Creates a minibatch source from a CNTKTextFormatReader file.
-
-    Args:
-        path (file): filename of the data file
-        stream_configs (`list` of :class:`StreamConfiguration` instances): list
-         of stream configurations, each of which describes one stream in the
-         file
-        epoch_size (int, optional): size of an epoch. In case of 0 the size
-         of the training set will be taken. Default is max of 64bit.
-        randomize (bool, optional): whether to randomize the contents of data file.
-        distributed_after (int, optional): sample count after which minibatch source becomes distributed
-
-    Returns:
-        :class:`MinibatchSource`
-    '''
-    return cntk_py.text_format_minibatch_source(path, stream_configs, epoch_size, randomize, distributed_after)
 
 
 # TODO: this should be a private class; use StreamDef instead

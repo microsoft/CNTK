@@ -433,6 +433,52 @@ class Function(cntk_py.Function):
         return super(Function, self).root_function()
 
     @property
+    def is_primitive(self):
+        '''
+        Returns a boolean indicating if this Function is a primitive Function.
+        A primitive Function is the lowest level building block for composite Function 
+        graphs and is either a CNTK built-in operator, a composite Function encapsulated 
+        as a Block or a user-defined Function
+        '''
+        return super(Function, self).is_primitive()
+
+    @property
+    def is_composite(self):
+        '''
+        Returns a boolean indicating if this Function is a composite Function.
+        A composite Function is a Function that is composed of primitive Functions.
+        '''
+        return super(Function, self).is_composite()
+
+    @property
+    def is_block(self):
+        '''
+        Returns a boolean indicating if this Function is a block function which is basically
+        a composite encapsulated as an opaque block which appears as a primitive during 
+        traversing the graph of Functions that this block is part of.
+        '''
+        return super(Function, self).is_block()
+
+    @property
+    @typemap
+    def block_composite(self):
+        '''
+        Returns the composite function underlying this block Function.
+        Throws an exception of this is not a block Function.
+        '''
+        return super(Function, self).block_composite()
+
+    @property
+    @typemap
+    def block_arguments_mapping(self):
+        '''
+        Returns the mapping from the arguments of the composite underlying this block function
+        to the Variables that they are bound to in the outer graph of Functions that this
+        block Function is part of.
+        '''
+        return super(Function, self).block_arguments_mapping()
+
+    @property
     @typemap
     def uid(self):
         '''

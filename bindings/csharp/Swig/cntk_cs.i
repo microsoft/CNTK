@@ -158,6 +158,7 @@
 %ignore CNTK::Function::Placeholders() const;
 %ignore CNTK::Function::Attributes() const;
 %ignore CNTK::Function::PrintGraph() const;
+%ignore CNTK::Function::BlockArgumentsMapping() const;
 %ignore CNTK::Function::ReplacePlaceholders(const std::unordered_map<Variable, Variable>& placeholderReplacements);
 %ignore CNTK::Function::ReplacePlaceholder(const Variable& placeholderReplacement);
 %ignore CNTK::Function::Function(const std::vector<Variable>& inputs, 
@@ -277,6 +278,7 @@
 %ignore CNTK::Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name = L"");
 %ignore CNTK::ElementSelect(const Variable& condition, const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 %ignore CNTK::Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name = L"");
+%ignore CNTK::AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = L"");
 
 %ignore CNTK::Sequence;
 

@@ -85,6 +85,7 @@ namespace CNTK
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Pass, L"Pass"},
+        { PrimitiveOpType::Block, L"Block" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -162,7 +163,7 @@ namespace CNTK
             vec[indexPair.first] = vecCopy[indexPair.second];
     }
 
-    class PrimitiveFunction final : public Function
+    class PrimitiveFunction : public Function
     {
         friend class Function;
         template <typename T, typename ...CtorArgTypes>
@@ -217,6 +218,11 @@ namespace CNTK
         static const std::wstring AttributeNameHiddenSize;
         static const std::wstring AttributeNameRecurrentOp;
 
+    protected:
+        PrimitiveFunction(const std::vector<Variable>& blockInputs, const std::vector<Variable>& blockOutputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
+            : Function(blockInputs, blockOutputs, std::move(functionConfig), functionName, uid), m_op(PrimitiveOpType::Block)
+        {}
+
     public:
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
             : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, GenerateUid(op))
@@ -243,6 +249,8 @@ namespace CNTK
 
         static FunctionPtr Deserialize(const Dictionary& dictionary, 
                                        const std::unordered_map<std::wstring, Variable>& uidToVariableMap, 
+                                       const std::unordered_set<FunctionPtr>& allPrimitiveFunctions,
+                                       const std::unordered_map<Variable, Variable>& placeholderReplacements,
                                        const CNTK::DeviceDescriptor& device);
 
         virtual const std::wstring& OpName() const override
@@ -675,6 +683,8 @@ namespace CNTK
             return UnaryElementwiseOpOutputShape(mainOperandShape);
         }
 
+        virtual std::vector<Variable> GetOutputVariables(bool inferDimensions);
+
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
         // Returns a pair of determined output variables and a bool indicating if any input operand shape was modified
         static std::vector<Variable> GetOutputVariables(PrimitiveOpType op,
@@ -686,6 +696,7 @@ namespace CNTK
 
     private:
         PrimitiveOpType m_op;
+
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
         static const size_t s_serializationVersion = 2;

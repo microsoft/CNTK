@@ -51,6 +51,7 @@
 %template() std::vector<std::shared_ptr<CNTK::DistributedLearner>>;
 %template() std::pair<size_t, double>;
 %template() std::vector<std::pair<size_t, double>>;
+%template() std::vector<std::pair<CNTK::Variable, CNTK::Variable>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
 %ignore CNTK::Internal::Combine;

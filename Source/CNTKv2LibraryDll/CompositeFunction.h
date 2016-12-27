@@ -83,9 +83,16 @@ namespace CNTK
                               const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                               std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) override;
 
-        virtual Dictionary Serialize() const override;
+        Dictionary SerializeBlockComposite() const;
 
+        virtual Dictionary Serialize() const override;
+        
         virtual size_t CurrentVersion() const override { return s_serializationVersion; }
+
+        static FunctionPtr DeserializeBlockComposite(const Dictionary& dict,
+                                                     const std::unordered_set<FunctionPtr>& allPrimitiveFunctions,
+                                                     const std::unordered_map<Variable, Variable>& allPlaceholderReplacements,
+                                                     const CNTK::DeviceDescriptor& device);
 
         static FunctionPtr Deserialize(const Dictionary& dictionary, const CNTK::DeviceDescriptor& device);
 
@@ -95,15 +102,15 @@ namespace CNTK
         }
 
         template <typename FunctionType>
-        static void Traverse(const FunctionPtr& rootFunction, const FunctionType& functor)
+        static void PreorderTraverseFunctions(const FunctionPtr& rootFunction, const FunctionType& functor)
         {
             std::unordered_set<FunctionPtr> visitedFunctions;
-            Traverse(rootFunction, visitedFunctions, functor);
+            PreorderTraverseFunctions(rootFunction, visitedFunctions, functor);
         }
 
         // Recursively traverses the Function graph underlying the 'rootFunction' invoking the provided functor for all visited nodes in the graph.
         template <typename FunctionType>
-        static void Traverse(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor)
+        static void PreorderTraverseFunctions(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor)
         {
             visitedFunctions.insert(rootFunction);
             functor(rootFunction);
@@ -114,15 +121,61 @@ namespace CNTK
                 if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
                 {
                     const auto& function = rootInput.Owner();
-                    Traverse(function, visitedFunctions, functor);
+                    PreorderTraverseFunctions(function, visitedFunctions, functor);
+                }
+            }
+        }
+
+        template <typename FunctionType>
+        static void PreorderTraverseVariables(const FunctionPtr& rootFunction, const FunctionType& functor)
+        {
+            std::unordered_set<FunctionPtr> visitedFunctions;
+            PreorderTraverseVariables(rootFunction, visitedFunctions, functor);
+        }
+
+        // Recursively traverses the Function graph underlying the 'rootFunction' invoking the provided functor for all visited nodes in the graph.
+        template <typename FunctionType>
+        static void PreorderTraverseVariables(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor)
+        {
+            visitedFunctions.insert(rootFunction);
+            auto rootFunctionOutputs = rootFunction->Outputs();
+            for (const auto& rootOutput : rootFunctionOutputs)
+                functor(rootOutput);
+
+            auto rootFunctionInputs = rootFunction->Inputs();
+            for (const auto& rootInput : rootFunctionInputs)
+            {
+                functor(rootInput);
+                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                {
+                    const auto& function = rootInput.Owner();
+                    PreorderTraverseVariables(function, visitedFunctions, functor);
                 }
             }
         }
 
     private:
-        virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                                std::unordered_set<const Function*>& visitedFunctions,
-                                                std::unordered_set<Variable>& replacedPlaceholders) override;
+        // Replace any PlaceHolder Variables in the graph of Functions underlying 'this' CompositeFunction. All PlaceHolder variables
+        // should have been replaced before performing any Forward compute of 'this' Function.
+        virtual void OnPlaceholdersReplaced(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                            std::unordered_set<Variable>& replacedPlaceholders) override
+        {
+            // If any of the placeholders were replaced with Output variables, let's add the graph of function underneath 
+            // each of those to 'm_allPrimitiveFunctions' set
+            for (auto replacedPlaceholder : replacedPlaceholders)
+            {
+                auto replacingVariable = placeholderReplacements.at(replacedPlaceholder);
+                if (replacingVariable.IsOutput())
+                {
+                    auto ownerFunc = replacingVariable.Owner();
+                    std::unordered_set<FunctionPtr> visitedFunctions2;
+                    Collect(ownerFunc, visitedFunctions2);
+
+                    // Add the newly visited functions to 'm_allPrimitiveFunctions' set
+                    m_allPrimitiveFunctions.insert(visitedFunctions2.begin(), visitedFunctions2.end());
+                }
+            }
+        }
 
         CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name, const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
             : Function({}, rootFunction->Outputs(), Dictionary(), rootFunction, name, uid),
@@ -140,7 +193,7 @@ namespace CNTK
         static void Collect(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& functions)
         {
             // Call Traverse to get the set of all functions in the graph
-            Traverse(rootFunction, functions, [](const FunctionPtr& f){});
+            PreorderTraverseFunctions(rootFunction, functions, [](const FunctionPtr& f){});
         }
 
         // Recursively traverses the Function graph underlying the 'rootFunction' to determine all the leaves (aka inputs) of the graph
@@ -149,17 +202,13 @@ namespace CNTK
             vector<FunctionPtr> functions;
             std::vector<Variable> inputs;
             std::unordered_set<Variable> uniqueInputs;
-            Traverse(rootFunction, visitedFunctions, [&inputs, &uniqueInputs](const FunctionPtr& f) { 
-                std::vector<Variable> functionInputs = f->Inputs();
-                for (auto input : functionInputs)
+            PreorderTraverseVariables(rootFunction, visitedFunctions, [&inputs, &uniqueInputs](const Variable& var) {
+                if (!var.IsOutput() && uniqueInputs.find(var) == uniqueInputs.end())
                 {
-                    if (!input.IsOutput() && uniqueInputs.find(input) == uniqueInputs.end()) 
-                    {
-                        inputs.push_back(input);
-                        uniqueInputs.insert(input);
-                    }
+                    inputs.push_back(var);
+                    uniqueInputs.insert(var);
                 }
-            });
+           });
 
             return inputs;
         }
