@@ -429,16 +429,16 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
         NDShape inputShape = inputVar.Shape().AppendShape({1, numSamples});
         ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData, true));
 
-        // ValuePtr outputValue(nullptr);
-        NDShape outputShape = outputVar.Shape().AppendShape({1, numSamples});
+        ValuePtr outputValue(nullptr);
+        /*NDShape outputShape = outputVar.Shape().AppendShape({1, numSamples});
         std::vector<float> outputData(outputVar.Shape().TotalSize() * numSamples);
-        ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData));
+        ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData));*/
 
-        std::unordered_map<Variable, ValuePtr> outputs = {{outputVar, outputValue}};
+        std::unordered_map<Variable, ValuePtr> outputs = {{outputVar, nullptr}};
         evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
         /*ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, outputData, true));
         std::unordered_map<Variable, ValuePtr> outputs = {{outputVar, outputValue}};*/
-        evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
+        // evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
 
         numSamples = 1;
         inputData = std::vector<float>(inputVar.Shape().TotalSize() * numSamples);
@@ -450,11 +450,12 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
         inputShape = inputVar.Shape().AppendShape({1, numSamples});
         inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData, true));
 
-        ValuePtr outputValue2;
+        // ValuePtr outputValue2;
         // outputs[outputVar] = outputValue2;
+        outputs[outputVar] = nullptr;
         evalFunc->Forward({{inputVar, inputValue}}, outputs, device);
 
-       /* outputValue = outputs[outputVar];
+        outputValue = outputs[outputVar];
         NDShape outputShape = outputVar.Shape().AppendShape({1, numSamples});
         std::vector<float> outputData(outputShape.TotalSize());
         NDArrayViewPtr cpuArrayOutput = MakeSharedObject<NDArrayView>(outputShape, outputData, false);
@@ -473,7 +474,7 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
                 fprintf(stderr, "%f ", outputData[dataIndex++]);
             }
             fprintf(stderr, "\n");
-        }*/
+        }
     }
 }
 

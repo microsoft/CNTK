@@ -64,12 +64,20 @@ namespace CNTKLibraryManagedClientTest
 
             // Create ouput data map. Using null as Value to indicate using system allocated memory.
             // Alternatively, create a Value object and add it to the data map.
-            outputDataMap.Add(outputVar, null);
+            //var myOutputBuf = new List<List<float>>();
+            //myOutputBuf.Add(new List<float>());
+            //for (uint i = 0; i < outputVar.Shape.TotalSize; i++)
+            //    myOutputBuf[0].Add(0);
+            //var myOutputVal = Value.CreateBatchOfSequences(outputVar.Shape, myOutputBuf, new List<bool>(){true}, device);
+            //The myOutputVal has only 1 sequence axis, no batch axis. Need another way to create Value.
+            //outputDataMap.Add(outputVar, myOutputVal);
 
+            outputDataMap.Add(outputVar, null);
+            
             // Start evaluation on the device
             modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
-            modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+            // modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
             // Get evaluate result as dense output
             outputBuffer = new List<List<float>>();
@@ -101,11 +109,11 @@ namespace CNTKLibraryManagedClientTest
             outputDataMap[outputVar] = null;
 
             // Evaluate the model against the batch input
-            //modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+            modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
             //// Retrieve the evaluation result.
-            //outputVal = outputDataMap[outputVar];
-            //outputVal.CopyTo(outputVar, outputBuffer);
+            outputVal = outputDataMap[outputVar];
+            outputVal.CopyTo(outputVar, outputBuffer);
             
             // Output result
             PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
