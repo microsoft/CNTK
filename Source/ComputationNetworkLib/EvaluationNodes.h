@@ -456,6 +456,263 @@ protected:
 template class NDCG1EvalNode<float>;
 template class NDCG1EvalNode<double>;
 
+template<class ElemType>
+class EditDistanceNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers;
+    static const std::wstring TypeName() { return L"EditDistance"; }
+    bool m_SquashInputs;
+    float m_SubPen;
+    float m_DelPen;
+    float m_InsPen;
+    vector<int> m_SamplesToIgnore;
+public:
+    EditDistanceNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen, float delPen, float insPen, bool squashInputs, vector<int> samplesToIgnore)
+        : Base(deviceId, name), m_SubPen(subPen), m_DelPen(delPen), m_InsPen(insPen), m_SquashInputs(squashInputs), m_SamplesToIgnore(samplesToIgnore)
+    {
+    }
+
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
+    {
+        LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        FrameRange frameRange(Input(0)->GetMBLayout());
+        Input(0)->ValueFor(frameRange).VectorMax(*m_maxIndexes0, *m_maxValues, true);
+        Input(1)->ValueFor(frameRange).VectorMax(*m_maxIndexes1, *m_maxValues, true);
+
+        MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
+        MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
+        Value()(0, 0) = ComputeEditDistance(*m_maxIndexes0, *m_maxIndexes1, Input(1)->GetNumParallelSequences(), Input(0)->GetMBLayout(), Input(0)->Value().GetNumRows(), m_blanknum, m_SubPen, m_DelPen, m_InsPen, m_SquashInputs, m_SamplesToIgnore);
+    }
+
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+        ValidateBinaryReduce(isFinalValidationPass);
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        Base::UpdateFunctionMBSize();
+
+        // resize the temporaries to their proper size
+        size_t cols = Input(0)->Value().GetNumCols();
+        m_maxIndexes0->Resize(1, cols);
+        m_maxIndexes1->Resize(1, cols);
+        m_maxValues->Resize(1, cols);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr  nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<EditDistanceNode<ElemType>>(nodeP);
+            node->m_maxIndexes0 = m_maxIndexes0;
+            node->m_maxIndexes1 = m_maxIndexes1;
+            node->m_maxValues = m_maxValues;
+            node->m_blanknum = m_blanknum;
+            node->m_SquashInputs = m_SquashInputs;
+            node->m_SubPen = m_SubPen;
+            node->m_DelPen = m_DelPen;
+            node->m_InsPen = m_InsPen;
+        }
+    }
+
+    //request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_maxIndexes0, matrixPool);
+        RequestMatrixFromPool(m_maxIndexes1, matrixPool);
+        RequestMatrixFromPool(m_maxValues, matrixPool);
+    }
+
+    //release temp matrices that are only used by forward computation
+    //don't release matrices that need to be used in the gradient computation
+    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes0, matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
+        ReleaseMatrixToPool(m_maxValues, matrixPool);
+    }
+
+    void SetBlankNum(const size_t blanknum)
+    {
+        m_blanknum = blanknum;
+    }
+
+    static ElemType ComputeEditDistance(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, size_t numParallelSequences, MBLayoutPtr pMBLayout,
+        size_t allphonenum, size_t blanknum, float subPen, float delPen, float insPen, bool squashInputs, const vector<int>& samplesToIgnore)
+    {
+        std::vector<int> firstSeqVec, secondSeqVec;
+
+        // Edit distance between subsequences
+        Matrix<float> grid(CPUDEVICE);
+        
+        // Number of insertions
+        Matrix<float> insMatrix(CPUDEVICE);
+        
+        //Number of deletions
+        Matrix<float> delMatrix(CPUDEVICE);
+
+        // Number of substitutions
+        Matrix<float> subMatrix(CPUDEVICE);
+
+        float del, ins, sub;
+        ElemType wrongSampleNum = 0.0;
+        size_t totalSampleNum = 0, totalRecNum = 0;
+        size_t mbsize = firstSeq.GetNumCols() / numParallelSequences;
+        size_t lastSentEnd = 0;
+        size_t frameNum = 0;
+        size_t j = 0;
+        for (size_t seqIndex = 0; seqIndex < numParallelSequences; seqIndex++)
+        {
+            lastSentEnd = 0;
+            j = 0;
+            while (j < mbsize)
+            {
+                frameNum = 0;
+                for (j = lastSentEnd; j < mbsize; j++)
+                {
+                    if (pMBLayout->IsEnd(seqIndex, j))
+                    {
+                        frameNum = j - lastSentEnd + 1;
+                        break;
+                    }
+                }
+                if (frameNum > 0)
+                {
+                    totalRecNum += frameNum;
+
+                    ExtractSampleSequence(firstSeqVec, firstSeq, numParallelSequences, frameNum, lastSentEnd, seqIndex, squashInputs, samplesToIgnore);
+                    ExtractSampleSequence(secondSeqVec, secondSeq, numParallelSequences, frameNum, lastSentEnd, seqIndex, squashInputs, samplesToIgnore);
+
+                    //calculate edit distance
+                    size_t firstSize = firstSeqVec.size();
+                    totalSampleNum += firstSize;
+                    size_t secondSize = secondSeqVec.size();
+                    grid.Resize(firstSize + 1, secondSize + 1);
+                    insMatrix.Resize(firstSize + 1, secondSize + 1);
+                    delMatrix.Resize(firstSize + 1, secondSize + 1);
+                    subMatrix.Resize(firstSize + 1, secondSize + 1);
+                    insMatrix.SetValue(0.0f);
+                    delMatrix.SetValue(0.0f);
+                    subMatrix.SetValue(0.0f);
+
+                    for (size_t i = 0; i < firstSize + 1; i++){
+                        grid(i, 0) = (float)(i * delPen);
+                        delMatrix(i, 0) = (float)i;
+                    }
+
+                    for (size_t j = 0; j < secondSize + 1; j++)
+                    {
+                        grid(0, j) = (float)(j * insPen);
+                        insMatrix(0, j) = (float)j;
+                    }
+                    for (size_t i = 1; i < firstSize + 1; i++)
+                    {
+                        for (size_t j = 1; j < secondSize + 1; j++)
+                        {
+
+                            if (firstSeqVec[i - 1] == secondSeqVec[j - 1])
+                            {
+                                grid(i, j) = grid(i - 1, j - 1);
+                                insMatrix(i, j) = insMatrix(i - 1, j - 1);
+                                delMatrix(i, j) = delMatrix(i - 1, j - 1);
+                                subMatrix(i, j) = subMatrix(i - 1, j - 1);
+                            }
+                            else
+                            {
+                                del = grid(i - 1, j) + delPen; //deletion 
+                                ins = grid(i, j - 1) + insPen;  //insertion
+                                sub = grid(i - 1, j - 1) + subPen; //substitution 
+                                if (sub <= del && sub <= ins)
+                                {
+                                    insMatrix(i, j) = insMatrix(i - 1, j - 1);
+                                    delMatrix(i, j) = delMatrix(i - 1, j - 1);
+                                    subMatrix(i, j) = subMatrix(i - 1, j - 1) + 1.0f;
+                                    grid(i, j) = sub;
+                                }
+                                else if (del < ins)
+                                {
+                                    insMatrix(i, j) = insMatrix(i - 1, j);
+                                    subMatrix(i, j) = subMatrix(i - 1, j);
+                                    delMatrix(i, j) = delMatrix(i - 1, j) + 1.0f;
+                                    grid(i, j) = del;
+                                }
+                                else
+                                {
+                                    delMatrix(i, j) = delMatrix(i, j - 1);
+                                    subMatrix(i, j) = subMatrix(i, j - 1);
+                                    insMatrix(i, j) = insMatrix(i, j - 1) + 1.0f;
+                                    grid(i, j) = ins;
+                                }
+                            }
+                        }
+                    }
+
+                    wrongSampleNum += insMatrix(firstSize, secondSize) + delMatrix(firstSize, secondSize) + subMatrix(firstSize, secondSize);
+                }
+
+                lastSentEnd += frameNum;
+                if (lastSentEnd < mbsize)
+                {
+                    FrameRange fr(pMBLayout, lastSentEnd);
+                    if (pMBLayout->IsGap(fr.Sequence(seqIndex)))
+                        break;
+                }
+            }
+        }
+
+        return (ElemType)(wrongSampleNum * totalRecNum / totalSampleNum);
+    }
+
+protected:
+    virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
+
+private:
+    shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
+    shared_ptr<Matrix<ElemType>> m_maxValues;
+    size_t m_blanknum = 1;
+
+    static void ExtractSampleSequence(std::vector<int>& sampleSeqVec, const Matrix<ElemType>& firstSeq, size_t numParallelSequences, size_t frameNum, size_t lastSentEnd, size_t seqIndex, bool squashInputs, const vector<int>& samplesToIgnore)
+    {
+        size_t lastId = std::numeric_limits<int>::max();
+        sampleSeqVec.clear();
+        if (squashInputs)
+        {
+            //squash identical samples
+            for (size_t i = lastSentEnd; i < frameNum + lastSentEnd; i++)
+            {
+                auto refId = (int)firstSeq(0, i * numParallelSequences + seqIndex);
+                if (lastId != refId)
+                {
+                    lastId = refId;
+                    if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), refId) == samplesToIgnore.end())
+                        sampleSeqVec.push_back(refId);
+                }
+            }
+        }
+        else
+        {
+            for (size_t i = lastSentEnd; i < frameNum + lastSentEnd; i++)
+            {
+                auto refId = (int)firstSeq(0, i * numParallelSequences + seqIndex);
+                if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), refId) == samplesToIgnore.end())
+                    sampleSeqVec.push_back(refId);
+            }
+        }
+    }
+};
+
+template class EditDistanceNode<float>;
+template class EditDistanceNode<double>;
+
 #ifdef COMING_SOON
 
 // -----------------------------------------------------------------------
