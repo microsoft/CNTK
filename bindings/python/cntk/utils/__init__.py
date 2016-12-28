@@ -16,6 +16,7 @@ from cntk.device import use_default_device, cpu
 from .swig_helper import typemap
 from ..axis import Axis
 from .progress_print import *
+import warnings
 
 
 def sanitize_precision(precision):
@@ -572,8 +573,8 @@ class Value(cntk_py.Value):
 
             if isinstance(sample, np.ndarray):
                 if not _is_c_contiguous(sample):
-                    raise ValueError('supplied data is not C contiguous; use '
-                            'np.ascontiguousarray (slow) or rearrange your data/computation')
+                    warnings.warn('supplied data is not C contiguous; rearrange your data/computation to avoid this', RuntimeWarning)
+                    sample = np.ascontiguousarray(sample)
                 ndav = _create_NDArrayView_from_NumPy(sample, cpu_dev)
 
             elif sparse.issparse(sample):
