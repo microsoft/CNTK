@@ -1,5 +1,5 @@
 Working with Sequences
-=======
+======================
 
 CNTK Concepts
 ~~~~~~~~~~~~~
@@ -110,8 +110,8 @@ dealing with sequences. This includes everything from text to music to video; an
 where the current state is dependent on the previous state. While RNNs are indeed 
 powerful, the "vanilla" RNN is extremely hard to learn via gradient based methods.
 Because the gradient needs to flow back through the network to learn, the contribution 
-from an early element (for example a word at the start of a sentence) on a much later 
-elements (like the last word) can essentially vanish.
+from an early element (for example a word at the start of a sentence) on much later 
+elements (like the classification of last word) can essentially vanish.
 
 Dealing with the above problem is an active area of research. An architecture that
 seems to be successful in practice is the Long Short Term Memory (LSTM) network. 
@@ -134,9 +134,10 @@ can let a neural network sort out these details by forcing each word to be repre
 by a short learned vector.  Then in order for the network to do well on its task it 
 has to learn to map the words to these vectors effectively. For example, the vector 
 representing the word "cat" may somehow be close, in some sense, to the vector for "dog". 
-In our task, we will use a pre-computed word embedding model 
-using `GloVe <http://nlp.stanford.edu/projects/glove/>`_ and each of the words in the
-sequences will be replaced by their respective GloVe vector.
+In our task we will learn these word embeddings from scratch. However, it is also 
+possible to initialize our embedding with a pre-computed word embedding such as 
+`GloVe <http://nlp.stanford.edu/projects/glove/>`_ which has been trained on 
+corpora containing billions of words. 
 
 Now that we've decided on our word representation and the type of recurrent neural 
 network we want to use, let's define the network that we'll use to do 
@@ -146,70 +147,69 @@ sequence classification. We can think of the network as adding a series of layer
 2. LSTM layer (allow each word to depend on previous words)
 3. Softmax layer (an additional set of parameters and output probabilities per class)
 
-This network is defined as part of the example at ``Examples/SequenceClassification/SimpleExample/Python/SequenceClassification.py``. Let's go through some 
-key parts of the code::
+A very similar network is also located at ``Examples/SequenceClassification/SimpleExample/Python/SequenceClassification.py``. 
+Let's see how easy it is to work with sequences in CNTK:
 
-    # model
-    input_dim = 2000
-    cell_dim = 25
-    hidden_dim = 25
-    embedding_dim = 50
-    num_output_classes = 5
+.. literalinclude:: simplernn.py
 
-    # Input variables denoting the features and label data
-    features = input_variable(shape=input_dim, is_sparse=True)
-    label = input_variable(num_output_classes, dynamic_axes = [Axis.default_batch_axis()])
+Running this script should generate this output::
 
-    # Instantiate the sequence classification model
-    classifier_output = LSTM_sequence_classifer_net(features, num_output_classes, embedding_dim, hidden_dim, cell_dim)
-
-    ce = cross_entropy_with_softmax(classifier_output, label)
-    pe = classification_error(classifier_output, label)
-
-    rel_path = r"../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
-
-    mb_source = text_format_minibatch_source(path, [
-                    StreamConfiguration( 'features', input_dim, True, 'x' ),
-                    StreamConfiguration( 'labels', num_output_classes, False, 'y')], 0)
-
-    features_si = mb_source.stream_info(features)
-    labels_si = mb_source.stream_info(label)
-
-    # Instantiate the trainer object to drive the model training
-    trainer = Trainer(classifier_output, ce, pe, [sgd_learner(classifier_output.parameters(), lr=0.0005)])
-
-    # Get minibatches of sequences to train with and perform model training
-    minibatch_size = 200
-    training_progress_output_freq = 10
-    i = 0
-    while True:
-        mb = mb_source.get_next_minibatch(minibatch_size)
-        if  len(mb) == 0:
-            break
-
-        # Specify the mapping of input variables in the model to actual minibatch data to be trained with
-        arguments = {features : mb[features_si].m_data, label : mb[labels_si].m_data}
-        trainer.train_minibatch(arguments)
-
-        print_training_progress(trainer, i, training_progress_output_freq)
-        i += 1
+ average      since    average      since      examples
+    loss       last     metric       last
+ ------------------------------------------------------
+     1.61       1.61      0.886      0.886            44
+     1.61        1.6      0.714      0.629           133
+      1.6       1.59       0.56      0.448           316
+     1.57       1.55      0.479       0.41           682
+     1.53        1.5      0.464      0.449          1379
+     1.46        1.4      0.453      0.441          2813
+     1.37       1.28       0.45      0.447          5679
+      1.3       1.23      0.448      0.447         11365
+ error: 0.333333
 
 Let's go through some of the intricacies of the network definition above. As usual, we first set the parameters of our model. In this case we
-have a vocab (input dimension) of 2000, LSTM hidden and cell dimensions of 25, an embedding layer with dimension 50, and we have 5 possible
+have a vocabulary (input dimension) of 2000, LSTM hidden and cell dimensions of 25, an embedding layer with dimension 50, and we have 5 possible
 classes for our sequences. As before, we define two input variables: one for the features, and for the labels. We then instantiate our model. The
 ``LSTM_sequence_classifier_net`` is a simple function which looks up our input in an embedding matrix and returns the embedded representation, puts
 that input through an LSTM recurrent neural network layer, and returns a fixed-size output from the LSTM by selecting the last hidden state of the
 LSTM::
 
-    embedding_function = embedding(input, embedding_dim)
-    LSTM_function = LSTMP_component_with_self_stabilization(embedding_function.output(), LSTM_dim, cell_dim)[0]
-    thought_vector = select_last(LSTM_function)
-
+    embedded_inputs = embedding(input, embedding_dim)
+    lstm_outputs = simple_lstm(embedded_inputs, LSTM_dim, cell_dim)[0]
+    thought_vector = sequence.last(lstm_outputs)
     return linear_layer(thought_vector, num_output_classes)
 
 That is the entire network definition. We now simply set up our criterion nodes and then our training loop. In the above example we use a minibatch
 size of 200 and use basic SGD with the default parameters and a small learning rate of 0.0005. This results in a powerful state-of-the-art model for 
 sequence classification that can scale with huge amounts of training data. Note that as your training data size grows, you should give more capacity to 
-your LSTM by increasing the number of hidden dimensions. Further, you can get an even more complex network by stacking layers of LSTMs. This is also easy 
-using the LSTM layer function [coming soon].
+your LSTM by increasing the number of hidden dimensions. Further, you can get an even more complex network by stacking layers of LSTMs.
+
+Feeding Sequences with NumPy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+While CNTK has very efficient built-in readers that take care of many details for you
+(randomization, prefetching, reduced memory usage, etc.) sometimes your data is already
+in numpy arrays. Therefore it is important to know how to specify a sequence of inputs
+and how to specify a minibatch of sequences. 
+
+Each sequence must be its own NumPy array. Therefore if you have an input variable 
+that represents a small color image like this::
+
+    x = input_variable((3,32,32))
+
+and you want to feed a sequence of 4 images `img1` to `img4`, to CNTK then
+you need to create a tensor containing all 4 images. For example::
+    
+    img_seq = np.stack([img1, img2, img3, img4])
+    output = network.eval({x:[img_seq]})
+
+The stack function in NumPy stacks the inputs along a new axis (placing it in the beginning by default)
+so the shape of `img_seq` is :math:`4 \times 3 \times 32 \times 32`. You 
+might have noticed that before binding `img_seq` to  `x` we wrap it in a list.
+This list denotes a minibatch of 1 and **minibatches 
+are specified as lists**. The reason for this is because different elements of 
+the minibatch can have different lengths. If all the elements in the 
+minibatch are sequences of the same length then it is acceptable to provide
+the minibatch as one big tensor of dimnesion :math:`b \times s \times d_1 \times \ldots \times d_k`
+where `b` is the batch size, `s` is the sequence length and :math:`d_i`
+is the dimension of the i-th static axis of the input variable.
