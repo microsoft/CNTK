@@ -2,8 +2,9 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// Real-time thread-safe profiler that generats a summary report and a detail profile log.
-// The profiler is highly performant and light weight.
+// Real-time thread-safe profiler that generates a summary report and a detail profile log.
+// The profiler is highly performant and lightweight. Profiling a single event introduces an overhead
+// of approximately 100 ns.
 //
 
 #ifndef _CRT_SECURE_NO_WARNINGS
@@ -15,21 +16,17 @@
 #include "Basics.h"
 #include "fileutil.h"
 #include "TimerUtility.h"
-#include <chrono>
+#include <algorithm>
 #include <memory>
+#include <mutex>
 #include <stdio.h>
-#include <time.h>
 #ifndef CPUONLY
 #include <cuda_runtime_api.h>
-#include <cuda.h>
 #endif
 
 #ifdef _WIN32
-#include <direct.h>
+#include <Windows.h>
 #else
-#include <pthread.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/syscall.h>
 #endif 
 
@@ -116,28 +113,17 @@ struct ProfilerState
 // We support one global instance of the profiler
 static unique_ptr<ProfilerState> g_profilerState;
 
+// Mutex controlling access to g_profilerState
+static std::mutex g_mutex;
+
 // Forward declarations
 unsigned int GetThreadId();
-
-void LockInit();
-inline void LockEnter();
-inline void LockLeave();
-void LockClose();
 
 void ProfilerGenerateReport(const std::wstring& fileName, struct tm* timeInfo);
 void FormatTimeStr(char* str, size_t strLen, double value);
 void FormatThroughputStr(char* str, size_t strLen, double value);
 void FormatBytesStr(char* str, size_t strLen, long long bytes);
 void ProfilerGenerateDetailFile(const std::wstring& fileName);
-
-//
-// Convenience scope lock.
-//
-struct ScopeLock
-{
-    ScopeLock() { LockEnter(); }
-    ~ScopeLock() { LockLeave(); }
-};
 
 
 double TicksToSeconds(long long ticks)
@@ -168,8 +154,6 @@ void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsig
         RuntimeError("Error: ProfilerInit: Profiler already initialized.\n");
     }
     g_profilerState.reset(new ProfilerState());
-
-    LockInit();
 
     g_profilerState->profilerDir = profilerDir;
     g_profilerState->logSuffix = logSuffix;
@@ -206,9 +190,9 @@ void PERF_PROFILER_API ProfilerEnable(bool enable)
 //
 // Internal helper functions to record fixed and custom profiling events.
 //
-void ProfilerTimeEndInt(const int eventId, const long long beginClock, const long long endClock)
+void ProfilerTimeRecordFixedEvent(const int eventId, const long long beginClock, const long long endClock)
 {
-    ScopeLock sl;
+    std::lock_guard<std::mutex> lock(g_mutex);
 
     if (!g_profilerState->enabled)
         return;
@@ -219,16 +203,16 @@ void ProfilerTimeEndInt(const int eventId, const long long beginClock, const lon
         g_profilerState->fixedEvents[eventId].min = delta;
         g_profilerState->fixedEvents[eventId].max = delta;
     }
-    g_profilerState->fixedEvents[eventId].min = min(delta, g_profilerState->fixedEvents[eventId].min);
-    g_profilerState->fixedEvents[eventId].max = max(delta, g_profilerState->fixedEvents[eventId].max);
+    g_profilerState->fixedEvents[eventId].min = std::min(delta, g_profilerState->fixedEvents[eventId].min);
+    g_profilerState->fixedEvents[eventId].max = std::max(delta, g_profilerState->fixedEvents[eventId].max);
     g_profilerState->fixedEvents[eventId].sum += delta;
     g_profilerState->fixedEvents[eventId].sumsq += (double)delta * (double)delta;
     g_profilerState->fixedEvents[eventId].cnt++;
 }
 
-void ProfilerTimeEndInt(const char* eventDescription, const long long beginClock, const long long endClock)
+void ProfilerTimeRecordToBuffer(const char* eventDescription, const long long beginClock, const long long endClock)
 {
-    ScopeLock sl;
+    std::lock_guard<std::mutex> lock(g_mutex);
 
     if (!g_profilerState->enabled)
         return;
@@ -279,8 +263,8 @@ void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const int eventI
         ProfilerSyncGpu();
 
     long long endClock = Clock::GetTimeStamp();
-    ProfilerTimeEndInt(eventId, stateId, endClock);
-    ProfilerTimeEndInt(c_fixedEvtDesc[eventId].eventDescription, stateId, endClock);
+    ProfilerTimeRecordFixedEvent(eventId, stateId, endClock);
+    ProfilerTimeRecordToBuffer(c_fixedEvtDesc[eventId].eventDescription, stateId, endClock);
 }
 
 
@@ -290,7 +274,7 @@ void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const char* even
     if (g_profilerState == nullptr)
         return;
 
-    ProfilerTimeEndInt(eventDescription, stateId, Clock::GetTimeStamp());
+    ProfilerTimeRecordToBuffer(eventDescription, stateId, Clock::GetTimeStamp());
 }
 
 
@@ -333,7 +317,7 @@ void PERF_PROFILER_API ProfilerThroughputEnd(const long long stateId, const int 
     if (g_profilerState == nullptr)
         return;
 
-    ScopeLock sl;
+    std::lock_guard<std::mutex> lock(g_mutex);
 
     if (!g_profilerState->enabled)
         return;
@@ -349,8 +333,8 @@ void PERF_PROFILER_API ProfilerThroughputEnd(const long long stateId, const int 
         g_profilerState->fixedEvents[eventId].min = kBytesPerSec;
         g_profilerState->fixedEvents[eventId].max = kBytesPerSec;
     }
-    g_profilerState->fixedEvents[eventId].min = min(kBytesPerSec, g_profilerState->fixedEvents[eventId].min);
-    g_profilerState->fixedEvents[eventId].max = max(kBytesPerSec, g_profilerState->fixedEvents[eventId].max);
+    g_profilerState->fixedEvents[eventId].min = std::min(kBytesPerSec, g_profilerState->fixedEvents[eventId].min);
+    g_profilerState->fixedEvents[eventId].max = std::max(kBytesPerSec, g_profilerState->fixedEvents[eventId].max);
     g_profilerState->fixedEvents[eventId].sum += kBytesPerSec;
     g_profilerState->fixedEvents[eventId].sumsq += (double)kBytesPerSec * (double)kBytesPerSec;
     g_profilerState->fixedEvents[eventId].totalBytes += bytes;
@@ -366,8 +350,6 @@ void PERF_PROFILER_API ProfilerClose()
     // A nullptr state indicates that the profiler is globally disabled, and not initialized
     if (g_profilerState == nullptr)
         return;
-
-    LockClose();
 
     // Get current time as yyyy-mm-dd_hh-mm-ss
     time_t currentTime;
@@ -403,71 +385,6 @@ unsigned int GetThreadId()
     return (unsigned int)syscall(SYS_gettid);
 #endif
 }
-
-
-//
-// Locking primitives used for thread safety for the profiler.
-// These are implemented directly here for better runtime performance than the STL mutex/lock functions.
-//
-
-#ifdef _WIN32
-static CRITICAL_SECTION g_critSec;
-#else
-static pthread_mutex_t g_mutex;
-#endif
-
-//
-// Initialize lock object, to be called once at startup.
-//
-void LockInit()
-{
-#ifdef _WIN32
-    InitializeCriticalSection(&g_critSec);
-#else
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    pthread_mutex_init(&g_mutex, &attr);
-    pthread_mutexattr_destroy(&attr);
-#endif
-}
-
-//
-// Enter the lock. This can block indefinetly.
-//
-inline void LockEnter()
-{
-#ifdef _WIN32
-    EnterCriticalSection(&g_critSec);
-#else
-    pthread_mutex_lock(&g_mutex);
-#endif
-}
-
-//
-// Leave the lock.
-//
-inline void LockLeave()
-{
-#ifdef _WIN32
-    LeaveCriticalSection(&g_critSec);
-#else
-    pthread_mutex_unlock(&g_mutex);
-#endif
-}
-
-//
-// Release lock resources, to be called once when cleaning up.
-//
-void LockClose()
-{
-#ifdef _WIN32
-    DeleteCriticalSection(&g_critSec);
-#else
-    pthread_mutex_destroy(&g_mutex);
-#endif
-}
-
 
 
 //
@@ -564,7 +481,7 @@ void ProfilerGenerateReport(const std::wstring& fileName, struct tm* timeInfo)
             break;
         }
 
-        if(printLine) fprintfOrDie(f, "\n");
+        if (printLine) fprintfOrDie(f, "\n");
     }
 
     fclose(f);

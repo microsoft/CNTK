@@ -2,8 +2,9 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// Real-time thread-safe profiler that generats a summary report and a detail profile log.
-// The profiler is highly performant and light weight.
+// Real-time thread-safe profiler that generates a summary report and a detail profile log.
+// The profiler is highly performant and lightweight. Profiling a single event introduces an overhead
+// of approximately 100 ns.
 //
 // Profiler Usage
 //
@@ -33,7 +34,7 @@
 
 #pragma once
 
-#include "Basics.h"
+#include <string>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
