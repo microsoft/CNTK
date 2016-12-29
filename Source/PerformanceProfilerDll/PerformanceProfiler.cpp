@@ -14,6 +14,7 @@
 #include "PerformanceProfiler.h"
 #include "Basics.h"
 #include "fileutil.h"
+#include "TimerUtility.h"
 #include <chrono>
 #include <memory>
 #include <stdio.h>
@@ -118,8 +119,6 @@ static unique_ptr<ProfilerState> g_profilerState;
 // Forward declarations
 unsigned int GetThreadId();
 
-long long GetClock();
-
 void LockInit();
 inline void LockEnter();
 inline void LockLeave();
@@ -140,32 +139,17 @@ struct ScopeLock
     ~ScopeLock() { LockLeave(); }
 };
 
-//
-// Get current timestamp (in "ticks").
-//
-long long GetClock()
-{
-    // Overhead:
-    //                          clock_gettime/QPC         high_resolution_clock
-    // Linux (libstdc++6)             1-3 ns                     1-3 ns
-    // Windows (VS2015)                 7 ns                      27 ns
-    //
-    // The resolution of times in the summary report is 0.001 s = 1000 ns.
-    //
-    return chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-
-// Tick period in seconds, as a std::ratio
-typedef chrono::high_resolution_clock::period TickPeriod;
 
 double TicksToSeconds(long long ticks)
 {
-    return static_cast<double>(ticks) * TickPeriod::num / TickPeriod::den;
+    long long ticksPerSec = Clock::GetTicksPerSecond();
+    return static_cast<double>(ticks) / ticksPerSec;
 }
 
 double TicksSqToSecondsSq(double ticksSq)
 {
-    return ticksSq * TickPeriod::num * TickPeriod::num / TickPeriod::den / TickPeriod::den;
+    long long ticksPerSec = Clock::GetTicksPerSecond();
+    return ticksSq / ticksPerSec / ticksPerSec;
 }
 
 
@@ -281,7 +265,7 @@ void ProfilerTimeEndInt(const char* eventDescription, const long long beginClock
 //
 long long PERF_PROFILER_API ProfilerTimeBegin()
 {
-    return GetClock();
+    return Clock::GetTimeStamp();
 }
 
 
@@ -294,7 +278,7 @@ void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const int eventI
     if (c_fixedEvtDesc[eventId].syncGpu)
         ProfilerSyncGpu();
 
-    long long endClock = GetClock();
+    long long endClock = Clock::GetTimeStamp();
     ProfilerTimeEndInt(eventId, stateId, endClock);
     ProfilerTimeEndInt(c_fixedEvtDesc[eventId].eventDescription, stateId, endClock);
 }
@@ -306,7 +290,7 @@ void PERF_PROFILER_API ProfilerTimeEnd(const long long stateId, const char* even
     if (g_profilerState == nullptr)
         return;
 
-    ProfilerTimeEndInt(eventDescription, stateId, GetClock());
+    ProfilerTimeEndInt(eventDescription, stateId, Clock::GetTimeStamp());
 }
 
 
@@ -337,13 +321,13 @@ void PERF_PROFILER_API ProfilerSyncGpu()
 //
 long long PERF_PROFILER_API ProfilerThroughputBegin()
 {
-    return GetClock();
+    return Clock::GetTimeStamp();
 }
 
 
 void PERF_PROFILER_API ProfilerThroughputEnd(const long long stateId, const int eventId, const long long bytes)
 {
-    long long endClock = GetClock();
+    long long endClock = Clock::GetTimeStamp();
 
     // A nullptr state indicates that the profiler is globally disabled, and not initialized
     if (g_profilerState == nullptr)
@@ -359,7 +343,7 @@ void PERF_PROFILER_API ProfilerThroughputEnd(const long long stateId, const int 
         return;
 
     // Use kB rather than bytes to prevent overflow
-    long long kBytesPerSec = TickPeriod::den / TickPeriod::num * bytes / 1000 / (endClock - beginClock);
+    long long kBytesPerSec = Clock::GetTicksPerSecond() * bytes / 1000 / (endClock - beginClock);
     if (g_profilerState->fixedEvents[eventId].cnt == 0)
     {
         g_profilerState->fixedEvents[eventId].min = kBytesPerSec;
