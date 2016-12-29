@@ -108,10 +108,11 @@ on the right.
 As is apparent from the figure above on the right, RNNs are the natural structure for 
 dealing with sequences. This includes everything from text to music to video; anything 
 where the current state is dependent on the previous state. While RNNs are indeed 
-powerful, the "vanilla" RNN is extremely hard to learn via gradient based methods.
+powerful, a "vanilla" RNN, whose state at each step is a nonlinear function of
+the previous state and the current observation, is extremely hard to learn via gradient based methods.
 Because the gradient needs to flow back through the network to learn, the contribution 
 from an early element (for example a word at the start of a sentence) on much later 
-elements (like the classification of last word) can essentially vanish.
+elements, such as the classification of the last word in a long sentence, can essentially vanish.
 
 Dealing with the above problem is an active area of research. An architecture that
 seems to be successful in practice is the Long Short Term Memory (LSTM) network. 
@@ -125,8 +126,9 @@ In our example, we will be using an LSTM to do sequence classification. But for 
 better results, we will also introduce an additional concept here: 
 `word embeddings <https://en.wikipedia.org/wiki/Word_embedding>`_. 
 In traditional NLP approaches, words are identified with the standard basis of a high 
-dimensional space (the vocabulary) (the first word is (1, 0, 0, ...), the second one 
-is (0, 1, 0, ...) and so on).  Each word is orthogonal to all others. But that is not 
+dimensional space: The first word is (1, 0, 0, ...), the second one 
+is (0, 1, 0, ...) and so on (also known as one-hot encoding).  
+Each word is orthogonal to all others. But that is not 
 a good abstraction.  In real languages, some words are very similar (we call them 
 synonyms) or they function in similar ways (e.g. Paris, Seattle, Tokyo). The key 
 observation is that words that appear in similar contexts should be similar. We
@@ -135,7 +137,7 @@ by a short learned vector.  Then in order for the network to do well on its task
 has to learn to map the words to these vectors effectively. For example, the vector 
 representing the word "cat" may somehow be close, in some sense, to the vector for "dog". 
 In our task we will learn these word embeddings from scratch. However, it is also 
-possible to initialize our embedding with a pre-computed word embedding such as 
+possible to initialize with a pre-computed word embedding such as 
 `GloVe <http://nlp.stanford.edu/projects/glove/>`_ which has been trained on 
 corpora containing billions of words. 
 
@@ -179,10 +181,14 @@ LSTM::
     thought_vector = sequence.last(lstm_outputs)
     return linear_layer(thought_vector, num_output_classes)
 
-That is the entire network definition. We now simply set up our criterion nodes and then our training loop. In the above example we use a minibatch
+That is the entire network definition. In the second line above we select the first output from the LSTM. In
+this implementation of the LSTM this is the actual output while the second output is the state of the LSTM.
+We now simply set up our criterion nodes (such as how well we classify the labels using the thought vector) 
+and our training loop. In the above example we use a minibatch
 size of 200 and use basic SGD with the default parameters and a small learning rate of 0.0005. This results in a powerful state-of-the-art model for 
 sequence classification that can scale with huge amounts of training data. Note that as your training data size grows, you should give more capacity to 
-your LSTM by increasing the number of hidden dimensions. Further, you can get an even more complex network by stacking layers of LSTMs.
+the LSTM by increasing the number of hidden dimensions. Further, one can get an even more complex network by stacking layers of LSTMs. Conceptually,
+stacking LSTM layers is similar to stacking layers in a feedforward net. Selecting a good architecture however is very task-specific.
 
 Feeding Sequences with NumPy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -191,6 +197,9 @@ While CNTK has very efficient built-in readers that take care of many details fo
 (randomization, prefetching, reduced memory usage, etc.) sometimes your data is already
 in numpy arrays. Therefore it is important to know how to specify a sequence of inputs
 and how to specify a minibatch of sequences. 
+
+We have discussed text at length so far, so let's switch gears and do 
+an example with images. Feeding text data via NumPy arrays is not very different.
 
 Each sequence must be its own NumPy array. Therefore if you have an input variable 
 that represents a small color image like this::
