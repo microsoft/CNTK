@@ -225,6 +225,13 @@ void PERF_PROFILER_API ProfilerInit(const std::wstring& profilerDir, const unsig
     after = chrono::high_resolution_clock::now();
     dur = chrono::duration_cast<chrono::nanoseconds>(after - before).count();
     fprintf(stderr, "Mutex:  %lld ns\n", dur / rep_count);
+
+    FILE* f = fopen("/proc/cpuinfo", "r");
+    int ch;
+    while ((ch = getc(f)) != EOF)
+    {
+        fputc(ch, stderr);
+    }
 }
 
 //
