@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(ComputeEditDistanceTest)
     MBLayoutPtr pMBLayout = make_shared<MBLayout>(1, seqSize, L"X");
     pMBLayout->AddSequence(0, 0, 0, seqSize);
 
-    float ed = EditDistanceNode<float>::ComputeEditDistance(firstSeq, secondSeq, 1, pMBLayout, 1000, 0, 1, 1, 1, true, samplesToIgnore);
+    float ed = EditDistanceNode<float>::ComputeEditDistance(firstSeq, secondSeq, 1, pMBLayout, 1, 1, 1, true, samplesToIgnore);
     assert((int)ed == 2);
 
     for (size_t i = 0; i < seqSize; i++)
@@ -34,12 +34,12 @@ BOOST_AUTO_TEST_CASE(ComputeEditDistanceTest)
         secondSeq(0, i) = (float)i;
     }
 
-    ed = EditDistanceNode<float>::ComputeEditDistance(firstSeq, secondSeq, 1, pMBLayout, 1000, 0, 1, 1, 1, true, samplesToIgnore);
+    ed = EditDistanceNode<float>::ComputeEditDistance(firstSeq, secondSeq, 1, pMBLayout, 1, 1, 1, true, samplesToIgnore);
     assert((int)ed == 0);
 
     secondSeq(0, seqSize-1) = (float)123;
 
-    ed = EditDistanceNode<float>::ComputeEditDistance(firstSeq, secondSeq, 1, pMBLayout, 1000, 0, 1, 1, 1, true, samplesToIgnore);
+    ed = EditDistanceNode<float>::ComputeEditDistance(firstSeq, secondSeq, 1, pMBLayout, 1, 1, 1, true, samplesToIgnore);
     assert((int)ed == 1);
 }
 

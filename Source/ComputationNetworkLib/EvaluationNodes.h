@@ -457,18 +457,30 @@ template class NDCG1EvalNode<float>;
 template class NDCG1EvalNode<double>;
 
 template<class ElemType>
-class EditDistanceNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>
+class EditDistanceNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
 {
-    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembers;
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"EditDistance"; }
-    bool m_SquashInputs;
-    float m_SubPen;
-    float m_DelPen;
-    float m_InsPen;
-    vector<int> m_SamplesToIgnore;
+
 public:
+    // subPen - substitution penalty
+    // delPen - deletion penalty
+    // insPen - insertion penalty
+    // squashInputs - whether to merge sequences of identical samples.
+    // samplesToIgnore - list of samples to ignore during edit distance evaluation
     EditDistanceNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen, float delPen, float insPen, bool squashInputs, vector<int> samplesToIgnore)
         : Base(deviceId, name), m_SubPen(subPen), m_DelPen(delPen), m_InsPen(insPen), m_SquashInputs(squashInputs), m_SamplesToIgnore(samplesToIgnore)
+    {
+    }
+
+    EditDistanceNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : EditDistanceNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"subPen"), configp->Get(L"delPen"), configp->Get(L"insPen"), configp->Get(L"squashInputs"), configp->Get(L"samplesToIgnore"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    EditDistanceNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
     {
     }
 
@@ -485,7 +497,7 @@ public:
 
         MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
-        Value()(0, 0) = ComputeEditDistance(*m_maxIndexes0, *m_maxIndexes1, Input(1)->GetNumParallelSequences(), Input(0)->GetMBLayout(), Input(0)->Value().GetNumRows(), m_blanknum, m_SubPen, m_DelPen, m_InsPen, m_SquashInputs, m_SamplesToIgnore);
+        Value()(0, 0) = ComputeEditDistance(*m_maxIndexes0, *m_maxIndexes1, Input(1)->GetNumParallelSequences(), Input(0)->GetMBLayout(), m_SubPen, m_DelPen, m_InsPen, m_SquashInputs, m_SamplesToIgnore);
     }
 
     virtual void Validate(bool isFinalValidationPass) override
@@ -514,11 +526,11 @@ public:
             node->m_maxIndexes0 = m_maxIndexes0;
             node->m_maxIndexes1 = m_maxIndexes1;
             node->m_maxValues = m_maxValues;
-            node->m_blanknum = m_blanknum;
             node->m_SquashInputs = m_SquashInputs;
             node->m_SubPen = m_SubPen;
             node->m_DelPen = m_DelPen;
             node->m_InsPen = m_InsPen;
+            node->m_SamplesToIgnore = m_SamplesToIgnore;
         }
     }
 
@@ -541,13 +553,16 @@ public:
         ReleaseMatrixToPool(m_maxValues, matrixPool);
     }
 
-    void SetBlankNum(const size_t blanknum)
-    {
-        m_blanknum = blanknum;
-    }
-
-    static ElemType ComputeEditDistance(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, size_t numParallelSequences, MBLayoutPtr pMBLayout,
-        size_t allphonenum, size_t blanknum, float subPen, float delPen, float insPen, bool squashInputs, const vector<int>& samplesToIgnore)
+    // firstSeq - first sequence of samples
+    // secondSeq - second sequence of samples
+    // numParallelSequences - number of parallel sequences in the minibatch
+    // subPen - substitution penalty
+    // delPen - deletion penalty
+    // insPen - insertion penalty
+    // squashInputs - whether to merge sequences of identical samples.
+    // samplesToIgnore - list of samples to ignore during edit distance evaluation
+    static ElemType ComputeEditDistance(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, size_t numParallelSequences, MBLayoutPtr pMBLayout, 
+        float subPen, float delPen, float insPen, bool squashInputs, const vector<int>& samplesToIgnore)
     {
         std::vector<int> firstSeqVec, secondSeqVec;
 
@@ -672,39 +687,50 @@ public:
         return (ElemType)(wrongSampleNum * totalRecNum / totalSampleNum);
     }
 
-protected:
-    virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-
 private:
     shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
     shared_ptr<Matrix<ElemType>> m_maxValues;
-    size_t m_blanknum = 1;
+    bool m_SquashInputs;
+    float m_SubPen;
+    float m_DelPen;
+    float m_InsPen;
+    std::vector<int> m_SamplesToIgnore;
 
-    static void ExtractSampleSequence(std::vector<int>& sampleSeqVec, const Matrix<ElemType>& firstSeq, size_t numParallelSequences, size_t frameNum, size_t lastSentEnd, size_t seqIndex, bool squashInputs, const vector<int>& samplesToIgnore)
+    // Extract a vector of samples from the matrix.
+    static void ExtractSampleSequence(std::vector<int>& outputSampleSeqVec, const Matrix<ElemType>& firstSeq, size_t numParallelSequences, size_t frameNum, size_t lastSentEnd, size_t seqIndex, bool squashInputs, const vector<int>& samplesToIgnore)
     {
-        size_t lastId = std::numeric_limits<int>::max();
-        sampleSeqVec.clear();
+        outputSampleSeqVec.clear();
+
+        if (frameNum == 0) 
+            return;
+
+        // First element in the sequence
+        size_t lastId = (int)firstSeq(0, lastSentEnd * numParallelSequences + seqIndex);
+        if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), refId) == samplesToIgnore.end())
+            outputSampleSeqVec.push_back(refId);
+
+        // Remaining elements
         if (squashInputs)
         {
-            //squash identical samples
-            for (size_t i = lastSentEnd; i < frameNum + lastSentEnd; i++)
+            //squash sequences of identical samples
+            for (size_t i = lastSentEnd+1; i < frameNum + lastSentEnd; i++)
             {
                 auto refId = (int)firstSeq(0, i * numParallelSequences + seqIndex);
                 if (lastId != refId)
                 {
                     lastId = refId;
                     if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), refId) == samplesToIgnore.end())
-                        sampleSeqVec.push_back(refId);
+                        outputSampleSeqVec.push_back(refId);
                 }
             }
         }
         else
         {
-            for (size_t i = lastSentEnd; i < frameNum + lastSentEnd; i++)
+            for (size_t i = lastSentEnd+1; i < frameNum + lastSentEnd; i++)
             {
                 auto refId = (int)firstSeq(0, i * numParallelSequences + seqIndex);
                 if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), refId) == samplesToIgnore.end())
-                    sampleSeqVec.push_back(refId);
+                    outputSampleSeqVec.push_back(refId);
             }
         }
     }
