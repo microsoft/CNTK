@@ -281,10 +281,10 @@ namespace CNTK
         // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;
 
-        // The outputs specified in the most recent 'Forward' call on 'this' Function/
-        // This indicates which outputs has the memory sharing structure of the cached
-        // computation network object being setup for. Asking for outputs in subsequent
-        // 'Forward' calls that do not belong to the current set required redoing the 
+        // The outputs specified in the most recent 'Forward' call on 'this' Function.
+        // This indicates for which outputs has the memory sharing structure of the cached
+        // computation network object been setup for. Asking for outputs in subsequent
+        // 'Forward' calls that do not belong to the current set requires redoing the 
         // network memory sharing structure.
         std::unordered_set<Variable> m_currentOutputs;
 

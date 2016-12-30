@@ -52,6 +52,9 @@ namespace CNTK
             if (uniqueOutputs.find(outputVar) != uniqueOutputs.end())
                 RuntimeError("Same variable appears multiple times in the outputs vector passed to Function constructor");
 
+            if (outputVar.IsOutput() && !outputVar.Owner())
+                outputVar.SetOwner(this);
+
             if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.m_dataFields->m_ownerFunction == this)
             {
                 // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.

@@ -165,17 +165,17 @@ namespace CNTK
         {
             auto currentSequenceData = sequences[i];
             if (currentSequenceData->GetDataType() != dataType)
-                InvalidArgument("Value::Create:: All NDArrayView objects should have the same data type");
+                InvalidArgument("Value::Create:: The data for all sequences/samples must have the same data type");
 
             if (currentSequenceData->GetStorageFormat() != storageFormat)
-                InvalidArgument("Value::Create:: All NDArrayView objects should have the same storage format");
+                InvalidArgument("Value::Create:: All NDArrayView objects must have the same storage format");
 
             if ((numSequences > 1) && (currentSequenceData->Device() != DeviceDescriptor::CPUDevice()))
-                InvalidArgument("Value::Create:: All NDArrayView objects should be located on the CPU");
+                InvalidArgument("Value::Create:: All NDArrayView objects must be located on the CPU");
 
             auto currentSequenceDataShape = currentSequenceData->Shape();
 
-            // Since scalar samples can be rank-1 with dim=1, we automatically pad the sequence data shape with a leading axis 
+            // Since scalar samples can be rank=1 with dim=1, we automatically pad the sequence data shape with a leading axis 
             // of dim=1 if the sequence data shape's leading axis's dimensionality is not 1
             if ((sampleShape.Rank() == 1) && (sampleShape.TotalSize() == 1) && (currentSequenceDataShape[0] != 1))
                 currentSequenceDataShape = NDShape(1, 1).AppendShape(currentSequenceDataShape);

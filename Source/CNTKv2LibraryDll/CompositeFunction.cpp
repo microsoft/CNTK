@@ -767,7 +767,20 @@ namespace CNTK
             }
         }
         else
+        {
             computationNodePtr = New<UserDefinedV2FunctionNode<ElementType>>(network->GetDeviceId(), internalNodeName, function->shared_from_this());
+
+            // For user defined functions, we only attach unique inputs in the internal computation network since, the UDF 
+            // backward implementations directly compute aggregate gradient values for unique inputs
+            std::vector<ComputationNodeBasePtr> uniqueInputNodesBasePtrs;
+            for (auto inputNodeBasePtr : inputNodesBasePtrs)
+            {
+                if (std::find(uniqueInputNodesBasePtrs.begin(), uniqueInputNodesBasePtrs.end(), inputNodeBasePtr) == uniqueInputNodesBasePtrs.end())
+                    uniqueInputNodesBasePtrs.push_back(inputNodeBasePtr);
+            }
+
+            inputNodesBasePtrs = uniqueInputNodesBasePtrs;
+        }
 
         network->AddNodeToNetAndAttachInputs(computationNodePtr, inputNodesBasePtrs);
 
@@ -1007,6 +1020,7 @@ namespace CNTK
                 auto currentOutputNode = m_variableToNodeMap.at(output);
                 forwardOutputNodes.push_back(currentOutputNode);
 
+                // Select the root node for backpropagation
                 if (m_currentBackpropRoots.find(output) != m_currentBackpropRoots.end())
                     backpropRootNode = currentOutputNode;
             }
@@ -1035,6 +1049,9 @@ namespace CNTK
     template <typename ElementType>
     /*static*/ void CompositeFunction::PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, ComputationNodeBasePtr& computationNode)
     {
+        if (!computationNode->Is<InputValueBase<ElementType>>())
+            LogicError("CompositeFunction::Forward: Illegal to populate value of computation node type other than InputValueBase!");
+
         std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout;
         auto packedValue = dynamic_cast<PackedValue*>(variableValue.second.get());
         if (packedValue)
@@ -1304,7 +1321,7 @@ namespace CNTK
         if (!missingRequiredArguments.empty())
         {
             std::wstring missingRequiredArgumentNames = NamedListString(missingRequiredArguments);
-            InvalidArgument("Function::Forward: Required arguments (%S) values that the requested output(s) depend on has not been provided", missingRequiredArgumentNames.c_str());
+            InvalidArgument("Function::Forward: Values for %d required arguments (%S), that the requested output(s) depend on, have not been provided", (int)missingRequiredArgumentNames.size(), missingRequiredArgumentNames.c_str());
         }
 
         // Feed data into the arguments of the network

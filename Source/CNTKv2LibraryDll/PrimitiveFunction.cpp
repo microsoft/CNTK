@@ -74,7 +74,6 @@ namespace CNTK
 
     /*static*/ std::vector<Variable> PrimitiveFunction::GetOutputVariables(PrimitiveOpType op,
                                                                            std::vector<Variable>& inputs,
-                                                                           Function* owner,
                                                                            Dictionary& functionConfig,
                                                                            bool inferDimensions,
                                                                            const std::wstring& functionName)
@@ -226,6 +225,8 @@ namespace CNTK
                 if (!axis1.IsStaticAxis() || !axis2.IsStaticAxis())
                     LogicError("TransposeAxes operation currently does not support transposing dynamic axes");
 
+                // We allow to transpose with an axes that exceeds the rank of the input.
+                // The output rank is the max of the input rank, and either of the axes being transposed.
                 auto outputRank = std::max(inputs[0].Shape().Rank(), (size_t)(std::max(axis1.StaticAxisIndex(), axis2.StaticAxisIndex()) + 1));
                 outputShape = inputs[0].Shape().AppendShape(NDShape(outputRank - inputs[0].Shape().Rank(), 1));
                 std::swap(outputShape[axis1.StaticAxisIndex()], outputShape[axis2.StaticAxisIndex()]);
@@ -380,23 +381,23 @@ namespace CNTK
             {
                 assert(inputs.size() == 2);
 
-                    auto transposeShapeFunc = [](const NDShape& shape) {
-                        NDShape transposedShape(std::max<size_t>(2, shape.Rank()), 1);
-                        for (size_t i = 0; i < shape.Rank(); ++i)
-                            transposedShape[transposedShape.Rank() - i - 1] = shape[i];
+                auto transposeShapeFunc = [](const NDShape& shape) {
+                    NDShape transposedShape(std::max<size_t>(2, shape.Rank()), 1);
+                    for (size_t i = 0; i < shape.Rank(); ++i)
+                        transposedShape[transposedShape.Rank() - i - 1] = shape[i];
 
-                        return transposedShape;
-                    };
+                    return transposedShape;
+                };
 
-                    if (inputs[0].Shape().Rank() > 2)
-                    LogicError("TransposeTimes operation currently only supports %s operands of rank 1 or 2", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left");
+                if (inputs[0].Shape().Rank() > 2)
+                LogicError("TransposeTimes operation currently only supports %s operands of rank 1 or 2", Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "right" : "left");
 
-                    NDShape transposedLeftOperandShape = transposeShapeFunc(inputs[0].Shape());
-                    Variable dummyLeftOperand = PlaceholderVariable(transposedLeftOperandShape);
-                    size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
-                    outputShape = TimesOpOutputShape(dummyLeftOperand, inputs[1], outputRank, -1, inferDimensions);
-                    if (dummyLeftOperand.Shape() != transposedLeftOperandShape)
-                        inputs[0].m_dataFields->m_shape = transposeShapeFunc(dummyLeftOperand.Shape());
+                NDShape transposedLeftOperandShape = transposeShapeFunc(inputs[0].Shape());
+                Variable dummyLeftOperand = PlaceholderVariable(transposedLeftOperandShape);
+                size_t outputRank = functionConfig[PrimitiveFunction::AttributeNameOutputRank].Value<size_t>();
+                outputShape = TimesOpOutputShape(dummyLeftOperand, inputs[1], outputRank, -1, inferDimensions);
+                if (dummyLeftOperand.Shape() != transposedLeftOperandShape)
+                    inputs[0].m_dataFields->m_shape = transposeShapeFunc(dummyLeftOperand.Shape());
 
                 break;
             }
@@ -511,14 +512,14 @@ namespace CNTK
             case PrimitiveOpType::Splice:
             {
                 assert(inputs.size() >= 2);
-                    auto maxInputRank = MaxInputRank(inputs);
-                    auto spliceAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), NDShape(maxInputRank));
+                auto maxInputRank = MaxInputRank(inputs);
+                auto spliceAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), NDShape(maxInputRank));
 
-                    if (!spliceAxis.IsStaticAxis())
-                        LogicError("Splice operation currently does not support splicing along dynamic axis");
+                if (!spliceAxis.IsStaticAxis())
+                    LogicError("Splice operation currently does not support splicing along dynamic axis");
 
-                    if (spliceAxis.StaticAxisIndex() < 0)
-                        InvalidArgument("Splice: The axis argument's static axis index must be >= 0!");
+                if (spliceAxis.StaticAxisIndex() < 0)
+                    InvalidArgument("Splice: The axis argument's static axis index must be >= 0!");
 
                 outputShape = SpliceOutputShape(inputs, spliceAxis.StaticAxisIndex());
                 break;
@@ -597,12 +598,12 @@ namespace CNTK
             }
         }
 
-        return{ OutputVariable(outputShape, outputDataType, owner, outputDynamicAxes, functionName.empty() ? L"" : functionName) };
+        return{ OutputVariable(outputShape, outputDataType, outputDynamicAxes, functionName.empty() ? L"" : functionName) };
     }
 
     /*virtual*/ std::vector<Variable> PrimitiveFunction::GetOutputVariables(bool inferDimensions)
     {
-        return GetOutputVariables(m_op, m_inputs, this, m_attributes, inferDimensions, Name());
+        return GetOutputVariables(m_op, m_inputs, m_attributes, inferDimensions, Name());
     }
 
     static const std::wstring s_primitiveFunctionTypeValue = L"PrimitiveFunction";
@@ -685,7 +686,7 @@ namespace CNTK
             const auto& inputUid = dictionaryValue.Value<std::wstring>();
             if (uidToVariableMap.find(inputUid) == uidToVariableMap.end())
             {
-                LogicError("There are no inputs corresponging to input uid = '%ls' "
+                LogicError("There are no inputs corresponding to input uid = '%ls' "
                         "(%s).", inputUid.c_str(), GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
             }
             inputs.push_back(uidToVariableMap.at(inputUid));

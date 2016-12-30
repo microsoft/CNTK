@@ -810,6 +810,9 @@ namespace CNTK
 
         ///
         /// Create a new Value object containing a collection of variable length sequences.
+        /// The sequenceStartFlags argument allows specifying for each sequence whether that sequence is a 
+        /// a new sequence or continuation of a previous sequence at the same index in the
+        /// sequences vector from a previous call to this method.
         /// The created Value object contains a copy of the specified 'sequences' data.
         ///
         template <typename ElementType>
@@ -1639,7 +1642,7 @@ namespace CNTK
     // Forward declarations
     inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes());
     inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"");
+    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"");
 
     ///
     /// Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
@@ -1665,7 +1668,7 @@ namespace CNTK
     private:
         friend inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes);
         friend inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes()*/);
-        friend inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/);
+        friend inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/);
 #endif
 
     public:
@@ -1763,7 +1766,7 @@ namespace CNTK
     public:
 #endif
         Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name, const std::wstring& uid)
-            : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, /*isSparse =*/ false, name, uid)
+            : Variable(shape, varType, dataType, value, needsGradient, dynamicAxes, /*isSparse =*/ false, name, uid)
         {}
 
     protected:
@@ -1775,13 +1778,13 @@ namespace CNTK
     public:
 #endif
         Variable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes, const std::wstring& uid)
-            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, dynamicAxes, isSparse, name, uid)
+            : Variable(shape, VariableKind::Input, dataType, nullptr, needsGradient, dynamicAxes, isSparse, name, uid)
         {}
 
         // TODO: This should be a private but if not made public, the python bindings build complains about an unresolved external
         // Probably due the above ctor being a public method in SWIG codegen
     public:
-        CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
+        CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
 
 private:
         Variable Clone() const
@@ -1801,6 +1804,8 @@ private:
 
         CNTK_API static Variable Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
+        void SetOwner(Function* ownerFunction);
+
     private:
         struct VariableFields final : public std::enable_shared_from_this<VariableFields>
         {
@@ -1809,7 +1814,7 @@ private:
             NDShape m_shape;
             VariableKind m_varKind;
             ::CNTK::DataType m_dataType;
-            Function* const m_ownerFunction; // Variable does not keep the Function alive
+            Function* m_ownerFunction; // Variable does not keep the Function alive
             std::unique_ptr<std::once_flag> m_initValueFlag;
             NDArrayViewPtr m_value;
             std::unique_ptr<ParameterInitializer> m_valueInitializer;
@@ -1997,9 +2002,9 @@ private:
     ///
     /// Create an 'Output' variable
     ///
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/)
+    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/)
     {
-        return Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, /*needsGradient =*/ false, dynamicAxes, /*isSparse =*/ false, name, Internal::GenerateUid(VariableKind::Output));
+        return Variable(shape, VariableKind::Output, dataType, nullptr, /*needsGradient =*/ false, dynamicAxes, /*isSparse =*/ false, name, Internal::GenerateUid(VariableKind::Output));
     }
 
     static const int SentinelValueForInferParamInitRank = std::numeric_limits<int>::max();

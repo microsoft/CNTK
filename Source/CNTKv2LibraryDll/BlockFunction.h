@@ -15,7 +15,7 @@ namespace CNTK
     {
     public:
         BlockFunction(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, Dictionary&& attributes, const std::wstring& blockName = L"", const std::wstring& uid = GenerateUid(PrimitiveOpType::Block))
-            : PrimitiveFunction(DetermineInputs(composite, argumentsMap, blockName), DetermineOutputs(composite, this, blockName), std::move(attributes), blockName, uid),
+            : PrimitiveFunction(DetermineInputs(composite, argumentsMap, blockName), DetermineOutputs(composite, blockName), std::move(attributes), blockName, uid),
             m_composite(composite), m_blockOpName(blockOpName), m_compositeArgumentsMap(argumentsMap)
         {
             auto updatedOutputs = GetOutputVariables(true);
@@ -122,17 +122,17 @@ namespace CNTK
             std::vector<Variable> blockFunctionOutputs;
             auto compositeOutputs = m_composite->Outputs();
             for (auto compositeOutput : compositeOutputs)
-                blockFunctionOutputs.push_back(OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), this, compositeOutput.DynamicAxes(), Name()));
+                blockFunctionOutputs.push_back(OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), Name()));
 
             return blockFunctionOutputs;
         }
 
-        static std::vector<Variable> DetermineOutputs(const FunctionPtr& composite, Function* owner, const std::wstring& blockName)
+        static std::vector<Variable> DetermineOutputs(const FunctionPtr& composite, const std::wstring& blockName)
         {
             std::vector<Variable> blockFunctionOutputs;
             auto compositeOutputs = composite->Outputs();
             for (auto compositeOutput : compositeOutputs)
-                blockFunctionOutputs.push_back(OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), owner, compositeOutput.DynamicAxes(), blockName));
+                blockFunctionOutputs.push_back(OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), blockName));
 
             return blockFunctionOutputs;
         }
