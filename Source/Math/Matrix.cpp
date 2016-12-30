@@ -1802,6 +1802,16 @@ Matrix<ElemType> Matrix<ElemType>::operator+(const Matrix<ElemType>& a) const
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignSumOf(const Matrix<ElemType>& a, const Matrix<ElemType>& b)
 {
+    if (this == &a)
+    {
+        *this += b;
+        return *this;
+    }
+    if (this == &b)
+    {
+        *this += a;
+        return *this;
+    }
     if (a.GetNumElements() == 1)
     {
         SetValue(b);

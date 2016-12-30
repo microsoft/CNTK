@@ -760,6 +760,38 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    
+    // AssignSumOf
+    c.AssignSumOf(a, b);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_EQUAL(c(i, j), a(i, j) + b(i, j));
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    
+
+    // Check for self-assignment 1
+    auto tolerance = 5e-5;
+    c.AssignSumOf(c, b);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_CLOSE(c(i, j), a(i, j) + 2 * b(i, j), tolerance);
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    
+    // Check for self-assignment 2
+    c.AssignSumOf(b, c);
+    foreach_coord (i, j, c)
+    {
+        BOOST_CHECK_CLOSE(c(i, j), a(i, j) + 3 * b(i, j), tolerance);
+    }
+    a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+    c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
 
     // AssignElementProductOf
     c.AssignElementProductOf(a, b);
@@ -770,6 +802,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     c.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
+
 
     // AddElementProductOf
     Matrix<float> c_copy(c.DeepClone());
