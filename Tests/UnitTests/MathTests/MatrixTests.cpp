@@ -773,10 +773,11 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     
 
     // Check for self-assignment 1
+    auto tolerance = 5e-5;
     c.AssignSumOf(c, b);
     foreach_coord (i, j, c)
     {
-        BOOST_CHECK_EQUAL(c(i, j), a(i, j) + 2*b(i, j));
+        BOOST_CHECK_CLOSE(c(i, j), a(i, j) + 2 * b(i, j), tolerance);
     }
     a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
@@ -786,7 +787,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignXOf, RandomSeedFixture)
     c.AssignSumOf(b, c);
     foreach_coord (i, j, c)
     {
-        BOOST_CHECK_EQUAL(c(i, j), a(i, j) + 3*b(i, j));
+        BOOST_CHECK_CLOSE(c(i, j), a(i, j) + 3 * b(i, j), tolerance);
     }
     a.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
     b.TransferToDeviceIfNotThere(c_deviceIdZero, true, false, true);
