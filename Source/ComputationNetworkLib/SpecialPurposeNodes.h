@@ -842,19 +842,15 @@ public:
     }
     virtual void ForwardPropNonLooping() override   //-sum(left_i * log(softmax_i(right)))
     {
-
         m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value(), true);
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
-
 
         size_t sequenceNum = Input(1)->GetNumParallelSequences();
         m_CTCposterior->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_CTCposterior->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
 
-        //m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap, m_blanknum);
         m_GammaCal.doCTC_m(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap, m_delayConstraint);
-        //m_CTCposterior->Print("posterior");
 
 #if NANCHECK
         functionValues.HasNan("CTCwithSoftmaxNode");
@@ -862,10 +858,6 @@ public:
 #if DUMPOUTPUT
         functionValues.Print("CTCwithSoftmaxNode");
 #endif
-        /*for (long i = 0; i < lattices.size(), i++)
-        {
-        lattices[i]->second.forwardbackward()
-        }*/
     }
 
     virtual void /*ComputationNodeBase::*/Validate(bool isFinalValidationPass) override
