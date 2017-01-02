@@ -75,7 +75,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     b = Parameter(              output_shape, init=init_bias,    name='b') if bias else None
 
     # expression of this function
-    #@Function
+    @Function
     def dense(x):
         r = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
         if b:
@@ -84,7 +84,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
             r = r >> activation#activation(r)
         return r
     # BUGBUG: the 'out = combine(out, name=f_name)' in Function() messes up the parameter order. Need to fix that first.
-    dense = dense(Placeholder(name='x')) # same as Function() without the combine()
+    #dense = dense(Placeholder(name='x')) # same as Function() without the combine()
 
     return Block(dense, 'Dense', Record(W=W, b=b))
 
@@ -282,8 +282,8 @@ from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
 def _Pooling(op,       # PoolingType_Max or _Average
              rf_shape, # e.g. (3,3)
              sequential=False, # pooling in time if True (rf_shape[0] is dynamic axis)
-             strides=1,
-             pad=False):
+            strides=1,
+            pad=False):
 
     if sequential:
         raise NotImplementedError("Pooling: sequential option not implemented yet")
@@ -368,6 +368,7 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
         # previous function; that is, past or future_value with initial_state baked in
         # BUGBUG: If initial_state itself depends on a Placeholder at this point (e.g. seq2seq), previous_hook will be a binary function...
         # All state variables get delayed with the same function.
+        # TODO: Can we use Delay() here?
         def previous_hook(state):
             return past_value  (state, initial_state) if not go_backwards else \
                    future_value(state, initial_state)
@@ -401,7 +402,7 @@ def Delay(T=1, initial_state=default_override_or(0)):
         if T > 0:
             return past_value  (x, time_step=T, initial_state=initial_state)
         elif T < 0:
-            return future_value(x, time_step=T, initial_state=initial_state)
+            return future_value(x, time_step=-T, initial_state=initial_state)
         else:
             return x
     return Block(delay, 'Delay')
@@ -441,7 +442,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     def batch_normalize(x):
         #x = Placeholder(name='batch_normalization_arg')
         return batch_normalization(x, scale, bias, run_mean, run_variance, run_count, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
-                                   use_cudnn_engine=not use_cntk_engine)
+                                  use_cudnn_engine=not use_cntk_engine)
     return Block(batch_normalize, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
 # LayerNormalization -- create a layer-normalization layer

@@ -810,6 +810,9 @@ namespace CNTK
 
         ///
         /// Create a new Value object containing a collection of variable length sequences.
+        /// The sequenceStartFlags argument allows specifying for each sequence whether that sequence is a 
+        /// a new sequence or continuation of a previous sequence at the same index in the
+        /// sequences vector from a previous call to this method.
         /// The created Value object contains a copy of the specified 'sequences' data.
         ///
         template <typename ElementType>
@@ -1637,9 +1640,9 @@ namespace CNTK
     typedef Dictionary ParameterInitializer;
 
     // Forward declarations
-    inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes());
+    inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes());
     inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"");
+    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"");
 
     ///
     /// Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
@@ -1652,6 +1655,7 @@ namespace CNTK
         friend bool operator==(const Variable& first, const Variable& second);
         friend class Function;
         friend class CompositeFunction;
+        friend class BlockFunction;
         friend class Trainer;
         friend class PrimitiveFunction;
 
@@ -1662,9 +1666,9 @@ namespace CNTK
 
 #ifndef SWIG
     private:
-        friend inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes);
+        friend inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes);
         friend inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes()*/);
-        friend inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/);
+        friend inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/);
 #endif
 
     public:
@@ -1762,7 +1766,7 @@ namespace CNTK
     public:
 #endif
         Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, const std::wstring& name, const std::wstring& uid)
-            : Variable(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, /*isSparse =*/ false, name, uid)
+            : Variable(shape, varType, dataType, value, needsGradient, dynamicAxes, /*isSparse =*/ false, name, uid)
         {}
 
     protected:
@@ -1774,13 +1778,13 @@ namespace CNTK
     public:
 #endif
         Variable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes, const std::wstring& uid)
-            : Variable(shape, VariableKind::Input, dataType, nullptr, nullptr, needsGradient, dynamicAxes, isSparse, name, uid)
+            : Variable(shape, VariableKind::Input, dataType, nullptr, needsGradient, dynamicAxes, isSparse, name, uid)
         {}
 
         // TODO: This should be a private but if not made public, the python bindings build complains about an unresolved external
         // Probably due the above ctor being a public method in SWIG codegen
     public:
-        CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
+        CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
 
 private:
         Variable Clone() const
@@ -1800,6 +1804,8 @@ private:
 
         CNTK_API static Variable Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
+        void SetOwner(Function* ownerFunction);
+
     private:
         struct VariableFields final : public std::enable_shared_from_this<VariableFields>
         {
@@ -1808,7 +1814,7 @@ private:
             NDShape m_shape;
             VariableKind m_varKind;
             ::CNTK::DataType m_dataType;
-            Function* const m_ownerFunction; // Variable does not keep the Function alive
+            Function* m_ownerFunction; // Variable does not keep the Function alive
             std::unique_ptr<std::once_flag> m_initValueFlag;
             NDArrayViewPtr m_value;
             std::unique_ptr<ParameterInitializer> m_valueInitializer;
@@ -1896,10 +1902,19 @@ private:
     /// Create a Placeholder variable to be used as a temporary/placeholder input to a Function.
     /// All placeholder inputs of a Function must be replaced with non-placeholder Variables before Forward evaluation of the Function.
     ///
-    inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes)
+    inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes)
     {
         auto varKind = VariableKind::Placeholder;
-        return Variable(shape, varKind, DataType::Unknown, nullptr, false, dynamicAxes, name, Internal::GenerateUid(varKind));
+        return Variable(shape, varKind, dataType, nullptr, false, dynamicAxes, name, Internal::GenerateUid(varKind));
+    }
+
+    ///
+    /// Create a Placeholder variable to be used as a temporary/placeholder input to a Function.
+    /// All placeholder inputs of a Function must be replaced with non-placeholder Variables before Forward evaluation of the Function.
+    ///
+    inline Variable PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes)
+    {
+        return PlaceholderVariable(shape, DataType::Unknown, name, dynamicAxes);
     }
 
     ///
@@ -1987,9 +2002,9 @@ private:
     ///
     /// Create an 'Output' variable
     ///
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, Function* ownerFunction, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/)
+    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/)
     {
-        return Variable(shape, VariableKind::Output, dataType, ownerFunction, nullptr, /*needsGradient =*/ false, dynamicAxes, /*isSparse =*/ false, name, Internal::GenerateUid(VariableKind::Output));
+        return Variable(shape, VariableKind::Output, dataType, nullptr, /*needsGradient =*/ false, dynamicAxes, /*isSparse =*/ false, name, Internal::GenerateUid(VariableKind::Output));
     }
 
     static const int SentinelValueForInferParamInitRank = std::numeric_limits<int>::max();
@@ -2289,6 +2304,7 @@ namespace CNTK
     class Function : public std::enable_shared_from_this<Function>, public IDictionarySerializable
     {
         friend class CompositeFunction;
+        friend class PrimitiveFunction;
         friend class Trainer;
 
     public:
@@ -2385,6 +2401,36 @@ namespace CNTK
         }
 
         ///
+        /// Returns a boolean indicating if this Function is a composite function
+        ///
+        bool IsComposite() const { return (m_rootFunction != nullptr); }
+
+        ///
+        /// Returns a boolean indicating if this Function is a primitive function
+        ///
+        bool IsPrimitive() const { return !IsComposite(); }
+
+        ///
+        /// Returns a boolean indicating if this Function is a block function which is basically
+        /// a composite encapsulated as an opaque block which appears as a primitive during traversing
+        /// the graph of Functions that this block is part of.
+        ///
+        CNTK_API bool IsBlock() const;
+
+        ///
+        /// Returns the composite function underlying this block Function.
+        /// Throws an exception of this is not a block Function
+        ///
+        CNTK_API FunctionPtr BlockComposite() const;
+
+        ///
+        /// Returns the mapping from the arguments of the composite underlying this block function
+        /// to the Variables that they are bound to in the outer graph of Functions that this
+        /// block Function is part of.
+        ///
+        CNTK_API const std::vector<std::pair<Variable, Variable>>& BlockArgumentsMapping() const;
+
+        ///
         /// Returns all Input variables of 'this' Function.
         ///
         std::vector<Variable> Inputs() const
@@ -2414,7 +2460,7 @@ namespace CNTK
         std::vector<Variable> Arguments() const
         {
             return FilteredInputs<Variable>([](const Variable& var) {
-                return (var.IsInput() || var.IsOutput());
+                return (var.IsInput() || var.IsPlaceholder() || var.IsOutput());
             });
         }
 
@@ -2484,6 +2530,25 @@ namespace CNTK
         ///
         CNTK_API void PrintGraph() const;
 
+    protected:
+        ///
+        /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
+        ///
+        CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+
+        /// Restores the state of the 'this' function in place using the provided dictionary.
+        /// Structurally, 'this' function graph has to be identical to the state captured in the dictionary.
+        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& dictionary);
+
+        ///
+        /// Notifies the Function of any placeholder replacements
+        ///
+        CNTK_API virtual void OnPlaceholdersReplaced(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                                     std::unordered_set<Variable>& replacedPlaceholders);
+
+    protected:
+        /*static*/ bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate) const;
+
     private:
 
         template <typename VariableType, typename FilterFunction>
@@ -2508,10 +2573,13 @@ namespace CNTK
 
         void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified);
 
-        CNTK_API virtual void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
-                                                         std::unordered_set<const Function*>& visitedFunctions,
-                                                         std::unordered_set<Variable>& replacedPlaceholders);
+        static void ReplacePlaceholderInPlace(Variable& var,
+                                              const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                              std::unordered_set<Variable>& replacedPlaceholders);
 
+        void ReplacePlaceholdersInPlace(const std::unordered_map<Variable, Variable>& placeholderReplacements,
+                                        std::unordered_set<const Function*>& visitedFunctions,
+                                        std::unordered_set<Variable>& replacedPlaceholders);
 
         static FunctionPtr Clone(const FunctionPtr& clonee,
                                  ParameterCloningMethod parameterCloneMethod,
@@ -2522,16 +2590,6 @@ namespace CNTK
 
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
-
-    protected:
-        ///
-        /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
-        ///
-        CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
-
-        /// Restores the state of the 'this' function in place using the provided dictionary.
-        /// Structurally, 'this' function graph has to be identical to the state captured in the dictionary.
-        CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& dictionary);
 
     public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
         ///
@@ -3050,6 +3108,12 @@ namespace CNTK
     /// Creates a new Function instance which is just an alias of the specified operand.
     ///
     CNTK_API FunctionPtr Alias(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Creates a Block function that encapsulates a composite to create an opaque Function object that
+    /// appears as any other primitive function
+    ///
+    CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = L"");
 
     namespace Sequence
     {
@@ -3673,6 +3737,7 @@ namespace CNTK
         static const size_t InfinitelyRepeat = SIZE_MAX;
         static const size_t FullDataSweep    = SIZE_MAX - 2; // An arbitrary sentinel value
         static const size_t InfiniteSamples  = SIZE_MAX;
+        static const size_t DefaultRandomizationWindow = SIZE_MAX - 2;
 
     public:
         ///

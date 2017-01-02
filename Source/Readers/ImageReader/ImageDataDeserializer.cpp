@@ -7,68 +7,25 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <opencv2/opencv.hpp>
-#include <numeric>
-#include <limits>
 #include "ImageDataDeserializer.h"
 #include "ImageConfigHelper.h"
 #include "StringUtil.h"
 #include "ConfigUtil.h"
 #include "TimerUtility.h"
 #include "ImageTransformers.h"
-#include "SequenceData.h"
 #include "ImageUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-class ImageDataDeserializer::LabelGenerator
-{
-public:
-    virtual void CreateLabelFor(size_t classId, CategorySequenceData& data) = 0;
-    virtual ~LabelGenerator() { }
-};
-
-// A helper class to generate a typed label in a sparse format.
-// A label is just a category/class the image belongs to.
-// It is represented as a array indexed by the category with zero values for all categories the image does not belong to, 
-// and a single one for a category it belongs to: [ 0, .. 0.. 1 .. 0 ]
-// The class is parameterized because the representation of 1 is type specific.
-template <class TElement>
-class TypedLabelGenerator : public ImageDataDeserializer::LabelGenerator
-{
-public:
-    TypedLabelGenerator(size_t labelDimension) : m_value(1), m_indices(labelDimension)
-    {
-        if (labelDimension > numeric_limits<IndexType>::max())
-        {
-            RuntimeError("Label dimension (%" PRIu64 ") exceeds the maximum allowed "
-                "value (%" PRIu64 ")\n", labelDimension, (size_t)numeric_limits<IndexType>::max());
-        }
-        iota(m_indices.begin(), m_indices.end(), 0);
-    }
-
-    virtual void CreateLabelFor(size_t classId, CategorySequenceData& data) override
-    {
-        data.m_nnzCounts.resize(1);
-        data.m_nnzCounts[0] = 1;
-        data.m_totalNnzCount = 1;
-        data.m_data = &m_value;
-        data.m_indices = &(m_indices[classId]);
-    }
-
-private:
-    TElement m_value;
-    vector<IndexType> m_indices;
-};
-
 // For image, chunks correspond to a single image.
-class ImageDataDeserializer::ImageChunk : public Chunk, public std::enable_shared_from_this<ImageChunk>
+class ImageDataDeserializer::ImageChunk : public Chunk
 {
     ImageSequenceDescription m_description;
-    ImageDataDeserializer& m_parent;
+    ImageDataDeserializer& m_deserializer;
 
 public:
     ImageChunk(ImageSequenceDescription& description, ImageDataDeserializer& parent)
-        : m_description(description), m_parent(parent)
+        : m_description(description), m_deserializer(parent)
     {
     }
 
@@ -78,30 +35,12 @@ public:
         const auto& imageSequence = m_description;
 
         auto image = std::make_shared<ImageSequenceData>();
-        image->m_image = std::move(m_parent.ReadImage(m_description.m_id, imageSequence.m_path, m_parent.m_grayscale));
+        image->m_image = std::move(m_deserializer.ReadImage(m_description.m_id, imageSequence.m_path, m_deserializer.m_grayscale));
         auto& cvImage = image->m_image;
         if (!cvImage.data)
             RuntimeError("Cannot open file '%s'", imageSequence.m_path.c_str());
 
-        // Convert element type.
-        ElementType dataType = ConvertImageToSupportedDataType(cvImage);
-        if (!cvImage.isContinuous())
-            cvImage = cvImage.clone();
-        assert(cvImage.isContinuous());
-
-        ImageDimensions dimensions(cvImage.cols, cvImage.rows, cvImage.channels());
-        image->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
-        image->m_id = sequenceId;
-        image->m_numberOfSamples = 1;
-        image->m_chunk = shared_from_this();
-        image->m_elementType = dataType;
-        result.push_back(image);
-
-        auto label = std::make_shared<CategorySequenceData>();
-        label->m_chunk = shared_from_this();
-        m_parent.m_labelGenerator->CreateLabelFor(imageSequence.m_classId, *label);
-        label->m_numberOfSamples = 1;
-        result.push_back(label);
+        m_deserializer.PopulateSequenceData(cvImage, imageSequence.m_classId, sequenceId, result);
     }
 
 private:
@@ -112,9 +51,9 @@ private:
         {
             // Could not identify element type.
             // Natively unsupported image type. Let's convert it to required precision.
-            int requiredType = m_parent.m_precision == ElementType::tfloat ? CV_32F : CV_64F;
+            int requiredType = m_deserializer.m_precision == ElementType::tfloat ? CV_32F : CV_64F;
             image.convertTo(image, requiredType);
-            resultType = m_parent.m_precision;
+            resultType = m_deserializer.m_precision;
         }
         return resultType;
     }
@@ -122,58 +61,9 @@ private:
 
 // A new constructor to support new compositional configuration,
 // that allows composition of deserializers and transforms on inputs.
-ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config)
+ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config) : ImageDeserializerBase(corpus, config)
 {
-    ConfigParameters inputs = config("input");
-    std::vector<std::string> featureNames = GetSectionsWithParameter("ImageDataDeserializer", inputs, "transforms");
-    std::vector<std::string> labelNames = GetSectionsWithParameter("ImageDataDeserializer", inputs, "labelDim");
-
-    // TODO: currently support only one feature and label section.
-    if (featureNames.size() != 1 || labelNames.size() != 1)
-    {
-        RuntimeError(
-            "ImageReader currently supports a single feature and label stream. '%d' features , '%d' labels found.",
-            static_cast<int>(featureNames.size()),
-            static_cast<int>(labelNames.size()));
-    }
-
-    string precision = (ConfigValue)config("precision", "float");
-    m_precision = AreEqualIgnoreCase(precision, "float") ? ElementType::tfloat : ElementType::tdouble;
-
-    m_verbosity = config(L"verbosity", 0);
-
-    // Feature stream.
-    ConfigParameters featureSection = inputs(featureNames[0]);
-    auto features = std::make_shared<StreamDescription>();
-    features->m_id = 0;
-    features->m_name = msra::strfun::utf16(featureSection.ConfigName());
-    features->m_storageType = StorageType::dense;
-
-    // Due to performance, now we support images of different types.
-    features->m_elementType = ElementType::tvariant;
-    m_streams.push_back(features);
-
-    // Label stream.
-    ConfigParameters label = inputs(labelNames[0]);
-    size_t labelDimension = label("labelDim");
-    auto labels = std::make_shared<StreamDescription>();
-    labels->m_id = 1;
-    labels->m_name = msra::strfun::utf16(label.ConfigName());
-    labels->m_sampleLayout = std::make_shared<TensorShape>(labelDimension);
-    labels->m_storageType = StorageType::sparse_csc;
-    labels->m_elementType = m_precision;
-    m_streams.push_back(labels);
-
-    m_labelGenerator = labels->m_elementType == ElementType::tfloat ?
-        (LabelGeneratorPtr)std::make_shared<TypedLabelGenerator<float>>(labelDimension) :
-        std::make_shared<TypedLabelGenerator<double>>(labelDimension);
-
-    m_grayscale = config(L"grayscale", false);
-
-    // TODO: multiview should be done on the level of randomizer/transformers - it is responsiblity of the
-    // TODO: randomizer to collect how many copies each transform needs and request same sequence several times.
-    bool multiViewCrop = config(L"multiViewCrop", false);
-    CreateSequenceDescriptions(corpus, config(L"file"), labelDimension, multiViewCrop);
+    CreateSequenceDescriptions(corpus, config(L"file"), m_labelGenerator->LabelDimension(), m_multiViewCrop);
 }
 
 // TODO: Should be removed at some point.
@@ -255,7 +145,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
     auto mapFileDirectory = ExtractDirectory(mapPath);
     m_defaultReader = make_unique<FileByteReader>(mapFileDirectory);
 
-    size_t itemsPerLine = isMultiCrop ? 10 : 1;
+    size_t itemsPerLine = isMultiCrop ? ImageDeserializerBase::NumMultiViewCopies : 1;
     size_t curId = 0;
     std::string line;
     PathReaderMap knownReaders;

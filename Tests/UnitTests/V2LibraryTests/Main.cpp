@@ -16,6 +16,7 @@ void FeedForwardTests();
 void RecurrentFunctionTests();
 void TrainerTests();
 void TrainCifarResnet();
+void BlockTests();
 void FunctionTests();
 void TrainLSTMSequenceClassifer();
 void SerializationTests();
@@ -55,6 +56,7 @@ int main()
     ValueTests();
     TensorTests();
     FunctionTests();
+    BlockTests();
 
     FeedForwardTests();
     RecurrentFunctionTests();

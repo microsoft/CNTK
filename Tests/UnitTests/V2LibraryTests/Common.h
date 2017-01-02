@@ -551,17 +551,14 @@ using namespace CNTK;
 inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second, ParameterCloningMethod parameterCloningMethod, const std::unordered_map<Variable, Variable>& replacements, std::unordered_set<FunctionPtr>& visitedFunctions)
 {
     // TODO: try to refactor this some more, using AreEqual functions above.
-    if ((first->RootFunction() == nullptr) != (second->RootFunction() == nullptr))
-        throw std::runtime_error("CompareFunctions: Both functions should be primitives or both should be composites");
-
     if (first->Name() != second->Name())
         throw std::runtime_error("CompareFunctions: Both functions' names should match");
 
     if (first->Attributes() != second->Attributes())
         throw std::runtime_error("CompareFunctions: Both functions' attributes should match");
 
-    auto firstPrimitive = (first->RootFunction() == nullptr) ? first : first->RootFunction();
-    auto secondPrimitive = (second->RootFunction() == nullptr) ? second : second->RootFunction();
+    auto firstPrimitive = first->RootFunction();
+    auto secondPrimitive = second->RootFunction();
 
     if (firstPrimitive->Name() != secondPrimitive->Name())
         throw std::runtime_error("CompareFunctions: Both functions' names should match");

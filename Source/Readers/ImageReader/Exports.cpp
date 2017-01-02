@@ -14,6 +14,7 @@
 #include "ImageDataDeserializer.h"
 #include "ImageTransformers.h"
 #include "CorpusDescriptor.h"
+#include "Base64ImageDeserializer.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -38,10 +39,12 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
 // A factory method for creating image deserializers.
-extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool)
+extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus, bool isPrimary)
 {
     if (type == L"ImageDeserializer")
         *deserializer = new ImageDataDeserializer(corpus, deserializerConfig);
+    else if (type == L"Base64ImageDeserializer")
+        *deserializer = new Base64ImageDeserializer(corpus, deserializerConfig, isPrimary);
     else
         // Unknown type.
         return false;

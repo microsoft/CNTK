@@ -58,13 +58,14 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>.\API;.\proto;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\API;.\proto;$(SolutionDir)Source\SGDLib;$(SolutionDir)Source\Readers\ReaderLib;$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\SequenceTrainingLib;$(SolutionDir)Source\Math;$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTK\BrainScript;$(SolutionDir)Source\ActionsLib;$(MSMPI_INC);$(NvmlInclude);$(ProtobufInclude);$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">$(SolutionDir)Source\1BitSGD;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions Condition="'$(CNTK_ENABLE_1BitSGD)'=='true'">CNTK_PARALLEL_TRAINING_SUPPORT;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(NvmlLibPath);$(ProtobufLibPath)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>$(ReaderLibs);ComputationNetworkLib.lib;SequenceTrainingLib.lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(HasProtobuf)">
@@ -88,7 +89,6 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ComputationNetworkLib.lib;Math.lib;Common.lib;SequenceTrainingLib.lib;ReaderLib.lib;kernel32.lib;user32.lib;shell32.lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -106,7 +106,6 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ComputationNetworkLib.lib; Math.lib; Common.lib; ReaderLib.lib; kernel32.lib; user32.lib; shell32.lib; SequenceTrainingLib.lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -136,6 +135,7 @@
     <ClInclude Include="API\CNTKLibraryExperimental.h" />
     <ClInclude Include="API\CNTKLibraryInternals.h" />
     <ClInclude Include="BackCompat.h" />
+    <ClInclude Include="BlockFunction.h" />
     <ClInclude Include="CompositeFunction.h" />
     <ClInclude Include="DataParallelDistributedLearner.h" />
     <ClInclude Include="DistributedCommunicator.h" />

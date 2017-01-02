@@ -398,7 +398,7 @@ void RunEvaluationClassifier(FunctionPtr evalFunc, const DeviceDescriptor& devic
 void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device)
 {
     const std::wstring inputNodeName = L"features";
-    const std::wstring outputNodeName = L"out.z_output";
+    const std::wstring outputNodeName = L"out.z";
 
     Variable inputVar;
     if (!GetInputVariableByName(evalFunc, inputNodeName, inputVar))

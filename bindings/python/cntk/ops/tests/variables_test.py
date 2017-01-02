@@ -9,7 +9,7 @@ Unit tests for Variable and its descendents.
 """
 
 from ..variables import *
-from .. import times, placeholder_variable, constant, plus
+from .. import times, placeholder_variable, constant, plus, input_variable
 import numpy as np
 
 import pytest
@@ -88,3 +88,18 @@ def test_constant_shape_inf():
     assert np.allclose(c.shape, shape)
     with pytest.raises(ValueError):
         c.value
+
+def test_convert_to_variable_dtype():
+    assert input_variable(1).dtype == np.float32
+
+    data = np.arange(1, dtype=np.int32)
+    result = (input_variable(1)+2).eval([data])
+    assert result==[[[2]]]
+    assert result.dtype == np.float32
+
+    data = np.arange(1., dtype=np.float64)
+    (input_variable(1)+2).eval([data])
+    result = (input_variable(1)+2).eval([data])
+    assert result==[[[2]]]
+    assert result.dtype == np.float32
+

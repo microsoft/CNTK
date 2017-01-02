@@ -24,6 +24,17 @@ namespace CNTK
             return nullptr;
     }
 
+    void Variable::SetOwner(Function* ownerFunction)
+    {
+        if (Kind() != VariableKind::Output)
+            LogicError("Variable::SetOwner: Owner can only be set for Output Variables!");
+
+        if (m_dataFields->m_ownerFunction != nullptr)
+            LogicError("Variable::SetOwner: An Output Variable whose owner has previously been set, cannot be reset!");
+
+        m_dataFields->m_ownerFunction = ownerFunction;
+    }
+
     Variable::operator FunctionPtr() const
     {
         auto varOwner = Owner();
@@ -237,8 +248,8 @@ namespace CNTK
         return newInitializerWithRanks;
     }
 
-    Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, name, uid))
+    Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
+        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, isSparse, name, uid))
     {}
 
     template <typename ElementType>
@@ -382,13 +393,13 @@ namespace CNTK
 
             // TODO: this copying here is redundant, value should be moved from the dictionary to the variable.
             // Also, the correct device should be used upfront when deserializing NDArrayView.
-            Variable var(shape, kind, dataType, nullptr, value.DeepClone(device, kind == VariableKind::Constant), needsGradient, dynamicAxis, isSparse, name, uid);
+            Variable var(shape, kind, dataType, value.DeepClone(device, kind == VariableKind::Constant), needsGradient, dynamicAxis, isSparse, name, uid);
             if (var.IsParameter())
                 return Parameter(var);
             else
                 return Constant(var);
         }
 
-        return Variable(shape, kind, dataType, nullptr, nullptr, needsGradient, dynamicAxis, isSparse, name, uid);
+        return Variable(shape, kind, dataType, nullptr, needsGradient, dynamicAxis, isSparse, name, uid);
     }
 }

@@ -13,7 +13,7 @@ from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "_PyTests", "common"))
+sys.path.append(os.path.join(abs_path, "..", "..", "..", "common"))
 from nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, print_training_progress
 
 # Creates the reader

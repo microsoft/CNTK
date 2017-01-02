@@ -18,6 +18,7 @@
 #include "DataReader.h"
 #include "ReaderShim.h"
 #include "DataTransferer.h"
+#include "PerformanceProfiler.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -346,6 +347,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 template <class ElemType>
 typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMinibatch(size_t currentDataTransferIndex)
 {
+    PROFILE_SCOPE(profilerEvtPrefetchMinibatch);
+
     // Resetting layouts.
     for (auto& mx : m_prefetchBuffers)
         mx.second.m_mbLayout = std::make_shared<MBLayout>();

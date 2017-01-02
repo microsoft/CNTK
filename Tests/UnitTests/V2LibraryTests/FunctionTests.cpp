@@ -643,6 +643,88 @@ void TestRecurrenceShapeInference()
     testShapeInferenceInRecurrence(2, 2);
 }
 
+void TestOuputVariableName(const DeviceDescriptor& device)
+{
+    size_t inputDim = 10;
+    size_t outputDim = 20;
+    const std::wstring timesFuncName = L"TimesFunc";
+    const std::wstring plusFuncName = L"PlusFunc";
+    const std::wstring combineFuncName = L"CombineFunc";
+    const std::wstring outputName = L"ModelOutput";
+
+    auto inputVar = InputVariable({inputDim}, DataType::Float, L"features");
+
+    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({inputDim}, -0.05, 0.05, 1, device));
+    auto plusFunc = CNTK::Plus(plusParam, inputVar, plusFuncName);
+
+    auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({outputDim, inputDim}, -0.05, 0.05, 1, device));
+    auto timesFunc = CNTK::Times(timesParam, plusFunc, timesFuncName);
+
+    auto combineFunc = CNTK::Combine({timesFunc, plusFunc}, combineFuncName);
+
+    FunctionPtr output = Alias(combineFunc->Outputs()[0], outputName);
+
+    // Check function name and output variable name
+    if (timesFunc->Name() != timesFuncName)
+        ReportFailure("The function name does not match. expected = %S, actual = %S\n", timesFuncName.c_str(), timesFunc->Name().c_str());
+
+    if (timesFunc->Output().Name() != timesFuncName)
+        ReportFailure("The output variable name does not match. expected = %S, actual = %S\n", timesFuncName.c_str(), timesFunc->Output().Name().c_str());
+
+    if (plusFunc->Name() != plusFuncName)
+        ReportFailure("The function name does not match. expected = %S, actual = %S\n", plusFuncName.c_str(), plusFunc->Name().c_str());
+
+    if (plusFunc->Output().Name() != plusFuncName)
+        ReportFailure("The output variable name does not match. expected = %S, actual = %S\n", plusFuncName.c_str(), plusFunc->Output().Name().c_str());
+
+    // Check combined function with multiple outputs
+    if (combineFunc->Name() != combineFuncName)
+        ReportFailure("The function name does not match. expected = %S, actual = %S\n", combineFuncName.c_str(), combineFunc->Name().c_str());
+
+    if (combineFunc->Outputs()[0].Name() != timesFuncName)
+        ReportFailure("The output variable name of combine function does not match. expected = %S, actual = %S\n", timesFuncName.c_str(), combineFunc->Outputs()[0].Name().c_str());
+
+    if (combineFunc->Outputs()[1].Name() != plusFuncName)
+        ReportFailure("The output variable name of combine function does not match. expected = %S, actual = %S\n", plusFuncName.c_str(), combineFunc->Outputs()[0].Name().c_str());
+
+    // Check output variable using alias.
+    if (output->Output().Name() != outputName)
+        ReportFailure("THe output variable created by alias does not match. expected = %S, actual = %S\n", outputName.c_str(), output->Output().Name().c_str());
+
+    // Check the output variable has correct shape size.
+    if (output->Output().Shape().TotalSize() != outputDim)
+        ReportFailure("The output variable does not have expected shape size. exptected = %ld, actual = %ld\n",
+                      static_cast<unsigned long>(outputDim),
+                      static_cast<unsigned long>(output->Output().Shape().TotalSize()));
+
+    // Change the output order of combine function.
+    // Todo: it is allowed to have duplicated function name?
+    combineFunc = CNTK::Combine({plusFunc, timesFunc}, combineFuncName);
+
+    // Make sure that the alias maps to the correct output variable when the output order changes
+    output = Alias(combineFunc->Outputs()[1], outputName);
+
+    // Check combined function with multiple outputs
+    if (combineFunc->Name() != combineFuncName)
+        ReportFailure("The function name does not match. expected = %S, actual = %S\n", combineFuncName.c_str(), combineFunc->Name().c_str());
+
+    if (combineFunc->Outputs()[0].Name() != plusFuncName)
+        ReportFailure("The output variable name of combine function does not match. expected = %S, actual = %S\n", plusFuncName.c_str(), combineFunc->Outputs()[0].Name().c_str());
+
+    if (combineFunc->Outputs()[1].Name() != timesFuncName)
+        ReportFailure("The output variable name of combine function does not match. expected = %S, actual = %S\n", timesFuncName.c_str(), combineFunc->Outputs()[0].Name().c_str());
+
+    // Check that the output variable using alias is not affected
+    if (output->Output().Name() != outputName)
+        ReportFailure("THe output variable created by alias does not match. expected = %S, actual = %S\n", outputName.c_str(), output->Output().Name().c_str());
+
+    // Check the output variable has correct shape size.
+    if (output->Output().Shape().TotalSize() != outputDim)
+        ReportFailure("The output variable does not have expected shape size. exptected = %ld, actual = %ld\n",
+        static_cast<unsigned long>(outputDim),
+        static_cast<unsigned long>(output->Output().Shape().TotalSize()));
+}
+
 void FunctionTests()
 {
     fprintf(stderr, "\nFunctionTests..\n");
@@ -671,5 +753,7 @@ void FunctionTests()
     TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
     if (IsGPUAvailable())
         TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
+
+    TestOuputVariableName(DeviceDescriptor::CPUDevice());
 }
 
