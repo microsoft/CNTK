@@ -1,7 +1,6 @@
 dataDir: ../../../../Speech/Data
 
 tags:
-    - weekly-e (build_sku == 'gpu') and (flavor=='release') and (device=='gpu')
 
 testCases:
   CNTK Run must be completed:

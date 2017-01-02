@@ -4,6 +4,7 @@
 # for full license information.
 # ==============================================================================
 
+from __future__ import print_function
 import os, sys
 import numpy as np
 from cntk import DeviceDescriptor
@@ -33,7 +34,7 @@ def create_test_model():
         ])
 
 def test_seq_classification_error(device_id):
-    from cntk.utils import cntk_device
+    from cntk.ops.tests.ops_test_utils import cntk_device
     DeviceDescriptor.set_default_device(cntk_device(device_id))
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed

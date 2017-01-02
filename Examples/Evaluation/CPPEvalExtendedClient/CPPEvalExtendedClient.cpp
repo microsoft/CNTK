@@ -6,6 +6,7 @@
 //
 
 #include <sys/stat.h>
+#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <algorithm>
 #include <fstream>

@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 
-from ...utils import sanitize_input, sanitize_shape, get_data_type, typemap
+from ...utils import sanitize_input, get_data_type, typemap
 
 ##########################################################################
 # sequence ops
@@ -17,11 +17,10 @@ def is_first(seq, name=''):
     first element of the sequence is 1 and all others are 0.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.is_first(x)
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> # create one sequence of 4 tensors each with shape (3,2)
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[ 1.,  0.,  0.,  0.]], dtype=float32)
 
@@ -44,11 +43,10 @@ def is_last(seq, name=''):
     last element of the sequence is 1 and all others are 0.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.is_last(x)
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> # create one sequence of 4 tensors each with shape (3,2)
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[ 0.,  0.,  0.,  1.]], dtype=float32)
 
@@ -92,11 +90,10 @@ def first(seq, name=''):
     Returns the first element of its symbolic input sequence ``seq``
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.first(x)
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> # create one sequence of 4 tensors each with shape (3,2)
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[[[ 0.,  1.],
                  [ 2.,  3.],
@@ -119,11 +116,10 @@ def last(seq, name=''):
     Returns the last element of its symbolic input sequence ``seq``
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> y = C.sequence.last(x)
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> # create one sequence of 4 tensors each with shape (3,2)
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[[[ 18.,  19.],
                  [ 20.,  21.],
@@ -148,16 +144,19 @@ def where(condition, name=''):
     a new sequence containing the indices for which the values were true.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
-        >>> z = C.greater(C.reduce_sum(x),60)
-        >>> y = C.sequence.where(z)
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> z = C.greater(C.reduce_sum(x), 60)
+        >>> # create one sequence of 4 tensors each with shape (3,2)
+        >>> x0 = np.reshape(np.arange(24.0, dtype=np.float32), (1,4,3,2))
         >>> z.eval({x:x0})
-        array([[ 0.,  0.,  1.,  1.]], dtype=float32)
+        array([[[ 0.],
+                [ 0.],
+                [ 1.],
+                [ 1.]]], dtype=float32)
+        >>> y = C.sequence.where(z)
         >>> y.eval({x:x0})
-        array([[ 2.,  3.]], dtype=float32)
+        array([[[ 2.],
+                [ 3.]]], dtype=float32)
 
     Args:
         condition: the symbolic sequence of booleans
@@ -183,7 +182,8 @@ def gather(seq, condition, name=''):
         >>> x = C.input_variable(shape=(3,2))
         >>> z = C.greater(C.reduce_sum(x),60)
         >>> y = C.sequence.gather(x,z)
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> # create one sequence of 4 tensors each with shape (3,2)
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[[[ 12.,  13.],
                  [ 14.,  15.],
@@ -218,13 +218,12 @@ def scatter(seq, condition, name=''):
     preserving their order.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> t = C.sequence.last(x)
         >>> b = C.sequence.is_first(x)
         >>> y = C.sequence.scatter(t, b)
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> # create one sequence of 4 tensors each with shape (3,2)
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[[[ 18.,  19.],
                  [ 20.,  21.],
@@ -265,13 +264,12 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
     and broadcasting the value of the ``operand`` along those dynamic axes.
 
     Example:
-        >>> import cntk.ops as C
-        >>> import numpy as np
         >>> x = C.input_variable(shape=(3,2))
         >>> t = C.sequence.last(x)
         >>> b = C.sequence.is_first(x)
         >>> y = C.sequence.broadcast_as(t, b)
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
+        >>> # create one sequence of 4 tensors each with shape (3,2)
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
         array([[[[ 18.,  19.],
                  [ 20.,  21.],
@@ -310,7 +308,15 @@ def reduce_sum(seq, name=''):
     Computes the sum of the input sequence's elements across the sequence axis.
 
     Examples:
-        TBA
+        >>> x = C.input_variable(shape=(3,2))
+        >>> # create one sequence of 4 tensors each with shape (3,2)
+        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
+        >>> y = C.sequence.reduce_sum(x)
+        >>> y.eval({x:x0})
+        array([[[[ 36.,  40.],
+                 [ 44.,  48.],
+                 [ 52.,  56.]]]], dtype=float32)
+
     Args:
         seq: sequence input tensor
         name (`str`, optional): the name of the Function instance in the network

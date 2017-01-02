@@ -141,6 +141,9 @@
     <ClInclude Include="..\Common\Include\ASGDHelper.h">
       <Filter>Parallelization</Filter>
     </ClInclude>
+    <ClInclude Include="AccumulatorAggregation.h">
+      <Filter>Parallelization</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">

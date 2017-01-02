@@ -478,7 +478,7 @@ write = [
 
         # write definition
         wfile = "$OutputDir$/sequenceSentence.bin"
-        # wsize - inital size of the file in MB
+        # wsize - initial size of the file in MB
         # if calculated size would be bigger, that is used instead
         wsize = 256
 

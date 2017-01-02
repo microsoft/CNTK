@@ -9,6 +9,7 @@
 # TODO: This has become too large. Need to break out some locally used stuff into another module.
 
 # TODO: further clean up the dependencies
+from __future__ import division
 import numpy as np
 from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
@@ -114,6 +115,10 @@ def default_options_for(layer_subset, **kwargs):
     if not isinstance(layer_subset, list):
         layer_subset = [layer_subset]
     return _OptionsStack(layer_subset, **kwargs)
+
+# return the up-to-date default option.
+def _get_current_default_options():
+    return _current_default_options
 
 # resolve activation option against current default
 def _resolve_activation(activation):

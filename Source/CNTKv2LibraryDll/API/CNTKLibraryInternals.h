@@ -149,8 +149,10 @@ namespace CNTK
 namespace CNTK
 {
     // Forward declarations
+    class Utils;
     class PrimitiveFunction;
     class CompositeFunction;
+    class BlockFunction;
     class Function;
     class Variable;
     class Axis;
@@ -185,6 +187,9 @@ namespace CNTK
     class Learner;
     typedef std::shared_ptr<Learner> LearnerPtr;
 
+    class Learners;
+    typedef std::shared_ptr<Learners> LearnersPtr;
+
     class Dictionary;
     typedef std::shared_ptr<Dictionary> DictionaryPtr;
 
@@ -197,8 +202,8 @@ namespace CNTK
     class QuantizedDistributedCommunicator;
     typedef std::shared_ptr<QuantizedDistributedCommunicator> QuantizedDistributedCommunicatorPtr;
 
-    class DistributedTrainer;
-    typedef std::shared_ptr<DistributedTrainer> DistributedTrainerPtr;
+    class DistributedLearner;
+    typedef std::shared_ptr<DistributedLearner> DistributedLearnerPtr;
 
     namespace Internal
     {
@@ -215,6 +220,9 @@ namespace CNTK
         CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
 
+        // This is meant for debugging purposes only and is very likely to be deprecated in the future.
+        CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
+
         CNTK_API size_t NewUniqueId();
 
         // Internal hooks for testing and higher-level bindings
@@ -226,31 +234,35 @@ namespace CNTK
         bool IsSettingDefaultDeviceAlwaysAllowed();
 
         CNTK_API void SetAutomaticUnpackingOfPackedValues(bool disable);
-        bool IsAutomaticUnpackingOfPackedValuesDisabled();
+        CNTK_API bool IsAutomaticUnpackingOfPackedValuesDisabled();
 
         CNTK_API void SetComputationNetworkTraceLevel(int traceLevel);
         int GetComputationNetworkTraceLevel();
 
         CNTK_API void SetGPUMemoryAllocationTraceLevel(int traceLevel);
 
-        CNTK_API void ForceSynchronousCUDAKernelExecutions();
-
         CNTK_API void ForceDeterministicAlgorithms();
+        CNTK_API bool ShouldForceDeterministicAlgorithms();
 
         CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
 
         CNTK_API void EnableForwardValuesSharing();
         CNTK_API void EnableHyperMemoryCompress();
 
+        CNTK_API void EnableGradientAccumulationOptimization();
+        CNTK_API void DisableGradientAccumulationOptimization();
+
         CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
+        CNTK_API bool AreEqual(const ::CNTK::Value& value1, const ::CNTK::Value& value2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
 
-        template <typename ElementType>
-        Variable GetVariable(const  Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                             std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, ::CNTK::Variable>& nodeToVariableMap,
-                             std::unordered_map<::CNTK::Variable, ::CNTK::Variable>& placeholderReplacements,
-                             std::unordered_set<::CNTK::FunctionPtr>& allPrimitiveFunctions);
+        class VariableResolver;
+
+        ///
+        /// Returns true if num CPU Threads was set.
+        ///
+        bool MaxNumCPUThreadsSet();
     }
 }

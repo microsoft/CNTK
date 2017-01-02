@@ -7,7 +7,7 @@
 import numpy as np
 import os
 import sys
-from cntk.utils import cntk_device
+from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
 from cntk.io import ReaderConfig, ImageDeserializer
@@ -15,7 +15,7 @@ import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ResNet", "Python"))
-from CifarResNet import train_and_evaluate, create_reader
+from TrainResNet_CIFAR10 import train_and_evaluate, create_reader
 
 TOLERANCE_ABSOLUTE = 2E-1
 
@@ -37,7 +37,7 @@ def test_cifar_resnet_error(device_id):
     os.chdir(os.path.join(base_path, '..'))
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    set_computation_network_trace_level(1) 
+    set_computation_network_trace_level(1)
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     #force_deterministic_algorithms()
     # TODO: do the above; they lead to slightly different results, so not doing it for now
@@ -45,7 +45,7 @@ def test_cifar_resnet_error(device_id):
     reader_train = create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
 
-    test_error = train_and_evaluate(reader_train, reader_test, max_epochs=5)
+    test_error = train_and_evaluate(reader_train, reader_test, 'resnet20', 5)
     expected_test_error = 0.282
 
     assert np.allclose(test_error, expected_test_error,

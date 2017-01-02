@@ -5,8 +5,8 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
+#include "CompositeFunction.h"
 #include "Serialization.h"
-#include "Function.h"
 #include "InputAndParamNodes.h"
 
 namespace CNTK
@@ -22,6 +22,17 @@ namespace CNTK
             return m_dataFields->m_ownerFunction->shared_from_this();
         else
             return nullptr;
+    }
+
+    void Variable::SetOwner(Function* ownerFunction)
+    {
+        if (Kind() != VariableKind::Output)
+            LogicError("Variable::SetOwner: Owner can only be set for Output Variables!");
+
+        if (m_dataFields->m_ownerFunction != nullptr)
+            LogicError("Variable::SetOwner: An Output Variable whose owner has previously been set, cannot be reset!");
+
+        m_dataFields->m_ownerFunction = ownerFunction;
     }
 
     Variable::operator FunctionPtr() const
@@ -71,6 +82,37 @@ namespace CNTK
         return m_dataFields->m_value;
     }
 
+    void Variable::SetValue(const NDArrayViewPtr& value)
+    {
+        if (!IsParameter())
+            LogicError("Variable::SetValue can be only invoked on a Parameter variable!");
+        else if (GetDataType() != value->GetDataType()) 
+            LogicError("Variable::SetValue: 'source' and 'destination' have different data types!");
+        else if (Shape() != value->Shape() && (AsTensorShape(Shape()) != AsTensorShape(value->Shape())))
+            LogicError("Variable::SetValue: 'source' and 'destination' have different shapes!");
+
+        bool alreadySet = false;
+        if (m_dataFields->m_initValueFlag)
+        {
+            // In the case of lazy initialization, try to avoid the redundant call to the initializer. 
+            std::call_once(*m_dataFields->m_initValueFlag, [=, &value, &alreadySet] {
+                // If the variable hasn't been initialized yet, clone the content of the supplied value and delete the initializer.
+                m_dataFields->m_value = value->DeepClone(*m_dataFields->m_valueInitializationDevice, false);
+                m_dataFields->m_valueInitializer = nullptr;
+                m_dataFields->m_valueInitializationDevice = nullptr;
+                alreadySet = true;
+            });
+        }
+
+        assert(m_dataFields->m_value != nullptr);
+        if (!alreadySet)
+        {
+            // alreadySet is false, the lambda above wasn't called and the variable has been initialized before,
+            // get a pointer to its value and simply copy the content of the supplied value.
+            m_dataFields->m_value->CopyFrom(*value);
+        }
+    }
+
     static const std::wstring InitializerTypeAttributeName = L"initializerType";
     static const std::wstring OutputRankAttributeName = L"outputRank";
     static const std::wstring FilterRankAttributeName = L"filterRank";
@@ -104,7 +146,7 @@ namespace CNTK
 
     static std::atomic<unsigned long> s_currentRandomSeed(1);
 
-    static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, int outputRank, int filterRank, double scale, unsigned long seed)
+    static ParameterInitializer CreateInitializer(const std::wstring& initializerTypeName, double scale, int outputRank, int filterRank, unsigned long seed)
     {
         Dictionary initConfig;
         initConfig[InitializerTypeAttributeName] = initializerTypeName;
@@ -140,34 +182,34 @@ namespace CNTK
         return initConfig;
     }
 
-    ParameterInitializer GaussianInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer NormalInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::GaussianInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::NormalInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
-    ParameterInitializer XavierInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer XavierInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::XavierInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::XavierInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
-    ParameterInitializer GlorotUniformInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer GlorotUniformInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::GlorotUniformInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::GlorotUniformInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
-    ParameterInitializer GlorotNormalInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer GlorotNormalInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::GlorotNormalInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::GlorotNormalInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
-    ParameterInitializer HeUniformInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer HeUniformInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::HeUniformInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::HeUniformInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
-    ParameterInitializer HeNormalInitializer(int outputRank, int filterRank, double scale, unsigned long seed)
+    ParameterInitializer HeNormalInitializer(double scale, int outputRank, int filterRank, unsigned long seed)
     {
-        return CreateInitializer(Microsoft::MSR::CNTK::HeNormalInitializerTypeName, outputRank, filterRank, scale, seed);
+        return CreateInitializer(Microsoft::MSR::CNTK::HeNormalInitializerTypeName, scale, outputRank, filterRank, seed);
     }
 
     ParameterInitializer BilinearInitializer(size_t kernelWidth, size_t kernelHeight)
@@ -206,8 +248,8 @@ namespace CNTK
         return newInitializerWithRanks;
     }
 
-    Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, name, uid))
+    Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
+        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, isSparse, name, uid))
     {}
 
     template <typename ElementType>
@@ -351,13 +393,13 @@ namespace CNTK
 
             // TODO: this copying here is redundant, value should be moved from the dictionary to the variable.
             // Also, the correct device should be used upfront when deserializing NDArrayView.
-            Variable var(shape, kind, dataType, nullptr, value.DeepClone(device, kind == VariableKind::Constant), needsGradient, dynamicAxis, isSparse, name, uid);
+            Variable var(shape, kind, dataType, value.DeepClone(device, kind == VariableKind::Constant), needsGradient, dynamicAxis, isSparse, name, uid);
             if (var.IsParameter())
                 return Parameter(var);
             else
                 return Constant(var);
         }
 
-        return Variable(shape, kind, dataType, nullptr, nullptr, needsGradient, dynamicAxis, isSparse, name, uid);
+        return Variable(shape, kind, dataType, nullptr, needsGradient, dynamicAxis, isSparse, name, uid);
     }
 }

@@ -18,16 +18,16 @@ def _check(init, name):
     assert np.var(val) > 0.01, name
 
 def test_initializer_init(device_id):
-    from cntk.utils import cntk_device
+    from cntk.ops.tests.ops_test_utils import cntk_device
     from cntk import cntk_py
-    from cntk.device import set_default_device
     cntk_py.always_allow_setting_default_device()
+    from cntk.device import set_default_device
     set_default_device(cntk_device(device_id))
 
-    _check(uniform(scale=10), 'uniform')
-    _check(gaussian(output_rank=1, filter_rank=2, scale=10), 'gaussian')
-    _check(xavier(output_rank=1, filter_rank=2, scale=10), 'xavier')
-    _check(glorot_uniform(output_rank=1, filter_rank=2, scale=10), 'glorot_uniform')
-    _check(glorot_normal(output_rank=1, filter_rank=2, scale=10), 'glorot_normal')
-    _check(he_uniform(output_rank=1, filter_rank=2, scale=10), 'he_uniform')
-    _check(he_normal(output_rank=1, filter_rank=2, scale=10), 'he_normal')
+    _check(uniform(scale=1), 'uniform')
+    _check(normal(scale=1, output_rank=1, filter_rank=2), 'normal')
+    _check(xavier(scale=10, output_rank=1, filter_rank=2), 'xavier')
+    _check(glorot_uniform(scale=10, output_rank=1, filter_rank=2), 'glorot_uniform')
+    _check(glorot_normal(scale=10, output_rank=1, filter_rank=2), 'glorot_normal')
+    _check(he_uniform(scale=10, output_rank=1, filter_rank=2), 'he_uniform')
+    _check(he_normal(scale=10, output_rank=1, filter_rank=2), 'he_normal')

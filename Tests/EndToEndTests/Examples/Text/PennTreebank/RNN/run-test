@@ -5,5 +5,6 @@
 ConfigDir=$TEST_DIR/../../../../../../Examples/SequenceToSequence/PennTreebank/Config
 
 # cntkrun <CNTK config file name> <additional CNTK args>
-cntkrun rnn.cntk "initOnCPUOnly=true command=writeWordAndClassInfo:train:test train=[SGD=[maxEpochs=3]] train=[epochSize=2048]] test=[SGD=[maxEpochs=3]] train=[epochSize=2048]]" || exit $?
-
+# Note: the result of writeWordAndClassInfo command is non-deterministic across compiler / platform,
+# so we're not doing it in test, and using a static wordclass file vocab.txt
+cntkrun rnn.cntk 'initOnCPUOnly=true command=train:test train=[SGD=[maxEpochs=3]] train=[epochSize=2048] test=[SGD=[maxEpochs=3]] test=[epochSize=2048] train=[reader=[wordclass="$DataDir$/vocab.txt"]] train=[cvreader=[wordclass="$DataDir$/vocab.txt"]] test=[reader=[wordclass="$DataDir$/vocab.txt"]]' || exit $?

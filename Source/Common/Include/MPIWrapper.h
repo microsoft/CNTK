@@ -459,6 +459,12 @@ public:
     }
 
     template <class ElemType>
+    void AllGather(const ElemType *sendData, size_t numSendElements, ElemType *receiveData, size_t numRecvElements) const
+    {
+        MPI_Allgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator()) || MpiFail("AllReduceAsync: MPI_Allgather");
+    }
+
+    template <class ElemType>
     void AllReduceAsync(ElemType *sendData, ElemType *receiveData, size_t numElements, MPI_Request* request, MPI_Op op = MPI_SUM) const
     {
         MPI_Iallreduce(sendData, receiveData, (int)numElements, GetDataType(sendData), op, Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallreduce");

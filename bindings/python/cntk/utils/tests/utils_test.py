@@ -4,7 +4,9 @@
 # for full license information.
 # ==============================================================================
 
-import numpy
+import numpy as np
+import scipy.sparse as sparse
+csr = sparse.csr_matrix
 import pytest
 
 from cntk.device import default
@@ -12,67 +14,7 @@ from cntk.tests.test_utils import precision, PRECISION_TO_TYPE
 from cntk.ops import *
 from cntk.utils import *
 
-# Keeping things short
 AA = np.asarray
-C = constant
-
-# TOOD: adapt to v2 when needed
-
-
-@pytest.mark.parametrize("idx, alias_tensor_map, expected", [
-    (0, {'A': [object()]}, ValueError),
-])
-def test_tensor_conversion_exceptions(idx, alias_tensor_map, expected):
-    with pytest.raises(expected):
-        tensors_to_text_format(idx, alias_tensor_map)
-
-
-@pytest.mark.parametrize("idx, alias_tensor_map, expected", [
-    (0, {'W': AA([])}, ""),
-    (0, {'W': AA([[[1, 0, 0, 0], [1, 0, 0, 0]]])}, """\
-0\t|W 1 0 0 0 1 0 0 0\
-"""),
-    (0, {
-        'W': AA([[[1, 0, 0, 0], [1, 0, 0, 0]]]),
-        'L': AA([[[2]]])
-    },
-        """\
-0\t|L 2 |W 1 0 0 0 1 0 0 0\
-"""),
-    (0, {
-        'W': AA([[[1, 0], [1, 0]], [[5, 6], [7, 8]]]),
-        'L': AA([[[2]]])
-    },
-        """\
-0\t|L 2 |W 1 0 1 0
-0\t|W 5 6 7 8"""),
-])
-def test_tensor_conversion_dense(idx, alias_tensor_map, expected):
-    assert tensors_to_text_format(idx, alias_tensor_map) == expected
-
-
-@pytest.mark.parametrize("data, expected", [
-    ([1], True),
-    ([[1, 2]], True),
-    ([[AA([1, 2])]], False),
-    ([AA([1, 2])], False),
-    ([AA([1, 2]), AA([])], False),
-])
-def test_is_tensor(data, expected):
-    assert is_tensor(data) == expected
-
-
-@pytest.mark.parametrize("data, expected", [
-    ([], False),
-    ([1], False),
-    ([[1, 2]], False),
-    ([[]], False),
-    ([[AA([1, 2])]], False),
-    ([AA([1, 2])], True),
-    ([AA([1, 2]), AA([])], True),
-])
-def test_is_tensor_list(data, expected):
-    assert is_tensor_list(data) == expected
 
 def test_sanitize_dtype_numpy():
     for dtype in ['float', 'float32', np.float32, int]:
@@ -90,27 +32,90 @@ def test_sanitize_dtype_cntk():
     ([1], np.float32),
     ([[1, 2]], np.float64),
     (2, np.float64),
-    (np.asarray([1,2], dtype=np.float32), np.float64),
+    (AA([1,2], dtype=np.float32), np.float64),
 ])
 def test_sanitize_input(data, dtype):
     inp = sanitize_input(data, dtype)
     assert np.allclose(inp.value, data)
     assert inp.dtype == dtype
 
+def test_axes():
+    axes = [Axis.default_batch_axis(), Axis.default_dynamic_axis()]
+    assert tuple(axes) == Axis.default_input_variable_dynamic_axes()
+    assert sanitize_dynamic_axes(axes) == \
+            tuple(reversed(Axis.default_input_variable_dynamic_axes()))
+
+    assert (Axis.default_dynamic_axis(),) == \
+            sanitize_dynamic_axes(Axis.default_dynamic_axis())
+
 def test_get_data_type():
-    pa = parameter(init=2)
+    pa32 = parameter(init=np.asarray(2, dtype=np.float32))
+    pa64 = parameter(init=np.asarray(2, dtype=np.float64))
     pl = placeholder_variable(shape=(2))
     c = constant(value=3.0)
-    n32 = np.asarray(1, dtype=np.float32)
-    n64 = np.asarray(1, dtype=np.float64)
+    n32 = AA(1, dtype=np.float32)
+    n64 = AA(1, dtype=np.float64)
 
-    assert get_data_type(pa) == np.float32
-    assert get_data_type(pa, n32) == np.float32
-    assert get_data_type(pa, n64) == np.float64
-    assert get_data_type(pa, pl, n64) == np.float64
+    assert get_data_type(pa32) == np.float32
+    assert get_data_type(pa32, n32) == np.float32
     assert get_data_type(n32, n32) == np.float32
     assert get_data_type(n32, n64) == np.float64
     assert get_data_type(pl, n64) == np.float64
     assert get_data_type(pl, n32) == np.float32
     assert get_data_type(pl, pl) == None
-    
+    # variable's type shall take precedence over provided data
+    assert get_data_type(pa32, n64) == np.float32
+    assert get_data_type(pa64, n64) == np.float64
+    assert get_data_type(pa32, pl, n64) == np.float32
+    assert get_data_type(pa64, pl, n64) == np.float64
+
+def test_sanitize_batch_sparse():
+    batch = [csr([[1,0,2],[2,3,0]]),
+             csr([5,0,1])]
+
+    var = input_variable(3, is_sparse=True)
+    b = sanitize_batch(var, batch)
+    # 2 sequences, with max seq len of 2 and dimension 3
+    assert b.shape == (2,2,3)
+
+@pytest.mark.parametrize("batch, seq_starts, expected", [
+    ([AA([5, 6, 7]), AA([8])],
+       [True, False],
+       [[2, 1, 1], [1, 0, 0]]),
+
+    ([AA([5]), AA([8])],
+       [True, False],
+       [[2], [1]]),
+
+    ([[5, 6, 7], [8]],
+       [True, False],
+       [[2, 1, 1], [1, 0, 0]]),
+
+    (one_hot([[3, 4, 5, 1], [60, 61]], num_classes=62),
+        [True, False],
+        ValueError),
+        #[[2, 1, 1, 1], [2, 1, 0, 0]]),
+])
+def test_mask(batch, seq_starts, expected):
+    shape = ()
+    var = input_variable(shape)
+    if type(expected) == type(ValueError):
+        with pytest.raises(expected):
+            s = sanitize_batch(var, batch, seq_starts)
+    else:
+        s = sanitize_batch(var, batch, seq_starts)
+        assert np.allclose(s.mask, expected)
+
+def test_sanitize_batch_contiguity():
+    a1 = AA([[1,2],[3,4]])
+    a2 = AA([[5,6],[7,8]])
+    var = input_variable((2,2), is_sparse=True)
+
+    batch = [a1.T,a2.T]
+    with pytest.raises(ValueError):
+        b = sanitize_batch(var, batch)
+
+    batch = [a1,a2]
+    b = sanitize_batch(var, batch)
+    assert b.shape == (2,1,2,2)
+

@@ -15,8 +15,10 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 static const wchar_t* ConstantInitializerTypeName =         L"constant";
-static const wchar_t* UniformInitializerTypeName =          L"uniform";
-static const wchar_t* GaussianInitializerTypeName =         L"gaussian";
+static const wchar_t* UniformBSInitializerTypeName =        L"uniform";     // for legacy reason, "uniform" is taken in BrainScript to represent uniform distribution [-0.05, 0.05]
+static const wchar_t* UniformInitializerTypeName =          L"uniform1";
+static const wchar_t* GaussianInitializerTypeName =         L"gaussian";    // legacy for BrainScript normal distribution pre-scaled by sqrt(0.04 / fanin)
+static const wchar_t* NormalInitializerTypeName =           L"normal";
 static const wchar_t* XavierInitializerTypeName =           L"xavier";
 static const wchar_t* GlorotUniformInitializerTypeName =    L"glorotUniform";
 static const wchar_t* GlorotNormalInitializerTypeName =     L"glorotNormal";
@@ -103,9 +105,9 @@ private:
         bool log = GetEnvironmentPtr() && Environment().traceLevel > 0; // note: this will not log before node is part of network
         if (log)
         {
-            fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f*%f, onCPU=%s.\n)",
+            fprintf(stderr, "%ls: Initializing Parameter[%s] <- %ls(seed=%d, init dims=[%d x %d], range=%f(%f*%f), onCPU=%s.\n)",
                     NodeDescription().c_str(), string(GetSampleLayout()).c_str(), m_initString.c_str(),
-                    (int)randomSeed, (int)fanOut, (int)fanIn, range, initValueScale, initOnCPUOnly ? "true" : "false");
+                    (int)randomSeed, (int)fanOut, (int)fanIn, range, range/initValueScale, initValueScale, initOnCPUOnly ? "true" : "false");
         }
     }
 

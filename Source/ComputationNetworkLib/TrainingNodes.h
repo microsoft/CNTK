@@ -11,7 +11,6 @@
 #include "InputAndParamNodes.h"
 #include "CPURNGHandle.h"
 
-
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <map>
@@ -1151,7 +1150,7 @@ class IRngUser
 {
 public:
     virtual RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) = 0;
-    virtual void SetRandomSeed(const unsigned long val) = 0;
+    virtual void SetRngState(uint64_t seed, uint64_t offset = 0) = 0;
 };
 
 // This implements IRngUser using RNGHandle.
@@ -1161,21 +1160,67 @@ public:
     RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) override
     {
         if (!m_RNGHandle)
-            m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
+            m_RNGHandle = RNGHandle::Create(deviceId, m_rngSeed, m_rngOffset);
 
         return *m_RNGHandle;
     }
 
     // E.g. called from ComputationNetwork to make sure that CNTK running on different nodes will have different seed.
-    void SetRandomSeed(const unsigned long val) override
+    void SetRngState(uint64_t seed, uint64_t offset = 0) override
     {
-        m_randomSeed = (unsigned long)val;
-
+        m_rngSeed = seed;
+        m_rngOffset = offset;
         m_RNGHandle.reset(); // Reset handle. New handle will be generated with next call of GetRNGHandle(...).
     }
 
+    uint64_t GetRngSeed() const
+    {
+        return m_rngSeed;
+    }
+
+    uint64_t GetRngOffset() const
+    {
+        return m_rngOffset;
+    }
+
+    void UpdateRngOffset(uint64_t val)
+    {
+        m_rngOffset = val;
+    }
+
 protected:
-    unsigned long m_randomSeed = 0;
+
+    void Load(File& fstream, size_t modelVersion)
+    {
+        if (modelVersion < CNTK_MODEL_VERSION_16)
+            return;
+
+        uint64_t seed;
+        uint64_t offset;
+
+        if (modelVersion == CNTK_MODEL_VERSION_16)
+        {
+            unsigned long seed_16;
+            fstream >> seed_16;
+            seed = seed_16;
+        }
+        else 
+        {
+            fstream >> seed;
+        }
+
+        fstream >> offset;
+        SetRngState(seed, offset);  
+    }
+
+    void Save(File& fstream) const
+    {
+        fstream << GetRngSeed();
+        fstream << GetRngOffset();
+    }
+
+    uint64_t m_rngSeed = 0;
+    uint64_t m_rngOffset = 0;
     std::shared_ptr<RNGHandle> m_RNGHandle;
 };
 
@@ -1200,7 +1245,7 @@ public:
     RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates)
     {
-        SetRandomSeed((unsigned long)CreateUniqId());
+        SetRngState(CreateUniqId());
     }
 
     RandomSampleNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
@@ -1211,8 +1256,7 @@ public:
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
 
-    void Save(File& fstream) const;
-
+    virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
 
 protected:
@@ -2075,10 +2119,13 @@ public:
     DeclareConstructorFromConfigWithNumInputs(DropoutNode);
     DropoutNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name),
-          m_dropoutRate(0)
+        m_dropoutRate(0)
     {
-        SetRandomSeed((unsigned long)CreateUniqId());
+        SetRngState(CreateUniqId());
     }
+
+    virtual void Save(File& fstream) const override;
+    virtual void Load(File& fstream, size_t modelVersion) override;
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
@@ -2118,6 +2165,7 @@ public:
             sliceMask.SetUniformRandomMask((ElemType)m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate)) /*pre-scaled*/, GetRNGHandle());
             // apply dropout mask
             sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
+            UpdateRngOffset(GetRngOffset() + sliceMask.GetNumElements());
         }
     }
 
@@ -2146,7 +2194,7 @@ public:
         {
             auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
             node->m_dropoutRate = m_dropoutRate;
-            node->SetRandomSeed(m_randomSeed);
+            node->SetRngState(GetRngSeed(), GetRngOffset());
             node->m_maskOfDropout = m_maskOfDropout;
         }
     }
@@ -2170,9 +2218,6 @@ private:
     double m_dropoutRate;
     shared_ptr<Matrix<ElemType>> m_maskOfDropout;
 };
-
-template class DropoutNode<float>;
-template class DropoutNode<double>;
 
 // -----------------------------------------------------------------------
 // BatchNormalizationNode (input, scale, bias, runMean, runVariance,

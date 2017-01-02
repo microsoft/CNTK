@@ -31,8 +31,9 @@
 %rename("%(utitle)s", %$isfunction, notregexmatch$name="RandomUniform") "";
 %rename("%(utitle)s", %$isvariable) "";
 
-%template() std::vector<size_t>;
 %template() std::vector<bool>;
+%template() std::vector<size_t>;
+%template() std::vector<float>;
 %template() std::vector<double>;
 %template() std::vector<std::vector<size_t>>;
 %template() std::vector<std::vector<float>>;
@@ -44,10 +45,13 @@
 %template() std::vector<CNTK::Axis>;
 %template() std::vector<CNTK::DeviceDescriptor>;
 %template() std::vector<CNTK::StreamConfiguration>;
+%template() std::vector<std::shared_ptr<CNTK::NDArrayView>>;
 %template() std::vector<std::shared_ptr<CNTK::Function>>;
 %template() std::vector<std::shared_ptr<CNTK::Learner>>;
+%template() std::vector<std::shared_ptr<CNTK::DistributedLearner>>;
 %template() std::pair<size_t, double>;
 %template() std::vector<std::pair<size_t, double>>;
+%template() std::vector<std::pair<CNTK::Variable, CNTK::Variable>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
 %ignore CNTK::Internal::Combine;
@@ -55,7 +59,7 @@
 %ignore CNTK::Internal::Gather;
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
-%ignore CNTK::DistributedCommunicator::AggregateAsync;
+%ignore CNTK::Internal::MaxNumCPUThreadsSet;
 
 // These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
@@ -337,9 +341,40 @@ fail:
 %eq_for(Variable, Variable_eq)
 %eq_for(Constant, Variable_eq)
 %eq_for(Parameter, Variable_eq)
-%eq_for(NDShape, NDShape_eq)
+%eq_for(Axis, Axis_eq)
 %eq_for(DeviceDescriptor, DeviceDescriptor_eq)
 
+//
+// size_t converter and extend DictionaryValue constructor
+//
+
+// declare python type
+struct SizeTWrapper
+{
+public:
+    size_t value;
+    SizeTWrapper(int v) : value(static_cast<size_t>(v)) {}
+    SizeTWrapper(size_t v) : value(v) {}
+};
+
+//inject to c++
+%{
+struct SizeTWrapper
+{
+public:
+    size_t value;
+    SizeTWrapper(int v) : value(static_cast<size_t>(v)) {}
+    SizeTWrapper(size_t v) : value(v) {}
+};
+%}
+
+// extend constructor
+%extend CNTK::DictionaryValue {
+    DictionaryValue(const SizeTWrapper& w)
+    {
+        return new DictionaryValue(w.value);
+    }
+}
 
 %extend CNTK::Dictionary {
     CNTK::DictionaryValue __getitem__(const wchar_t* key) {
@@ -375,9 +410,9 @@ fail:
     try { $action }
     catch (Swig::DirectorException &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
     catch (std::runtime_error &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
-    catch (std::invalid_argument &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
+    catch (std::invalid_argument &e) { SWIG_exception(SWIG_ValueError,e.what()); }
     catch (std::logic_error &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
-    catch (...) { SWIG_exception(SWIG_RuntimeError,"Runtime exception"); }
+    catch (...) { SWIG_exception(SWIG_UnknownError,"Runtime exception"); }
 }
 
 
@@ -842,6 +877,29 @@ fail:
 }
 %enddef
 
+// Trainer initializers.
+// Because SWIG cannot properly handle smart pointers to derived classes (causes memory leak during the check),
+// we need custom constructors.
+
+%extend CNTK::Trainer
+{
+    Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<DistributedLearnerPtr>& parameterLearners)
+    {
+        std::vector<LearnerPtr> learners;
+        learners.reserve(parameterLearners.size());
+        for(const auto& l : parameterLearners)
+            learners.push_back(l);
+        return new CNTK::Trainer(model, lossFunction, evaluationFunction, learners);
+    }
+
+    Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners)
+    {
+        return new CNTK::Trainer(model, lossFunction, evaluationFunction, parameterLearners);
+    }
+}
+
+%ignore CNTK::Trainer::Trainer;
+
 %unordered_set_conversion(CNTK::Variable, SWIGTYPE_p_CNTK__Variable)
 %unordered_set_conversion(CNTK::Constant, SWIGTYPE_p_CNTK__Constant)
 %unordered_set_conversion(CNTK::Parameter, SWIGTYPE_p_CNTK__Parameter)
@@ -902,7 +960,7 @@ fail:
 %shared_ptr(CNTK::MinibatchSource)
 %shared_ptr(CNTK::DistributedCommunicator)
 %shared_ptr(CNTK::QuantizedDistributedCommunicator)
-%shared_ptr(CNTK::DistributedTrainer)
+%shared_ptr(CNTK::DistributedLearner)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
@@ -914,7 +972,7 @@ fail:
 // FIXME ignore is ignored
 %ignore CNTK::NDMask::DataBuffer();
 %extend CNTK::NDMask {
-    PyObject* to_numpy() {
+    PyObject* to_ndarray() {
         std::vector<size_t> cntk_dims = (*self).Shape().Dimensions();
         static_assert(cntk_dims.size()==2, "mask requires exactly two dimensions");
         std::vector<size_t> dimensions = {cntk_dims[1], cntk_dims[0]};
@@ -952,6 +1010,8 @@ fail:
 
 // end NDMask
 
+%include "CNTKValueExtend.i"
+
 //
 // NDArrayView
 //
@@ -978,7 +1038,7 @@ fail:
         for (int i=0; i<rank; i++)
         {
             shape[rank-i-1] = np_shape[i];
-            num_elements *= np_shape[i];            
+            num_elements *= np_shape[i];
         }
 
         int typecode = PyArray_TYPE(array);
@@ -1004,7 +1064,65 @@ fail:
         return view;
     }
 
-    PyObject* to_numpy() {
+    NDArrayView(const CNTK::NDShape& shape, PyObject* pyData, PyObject* pyColStarts, PyObject* pyRowIndices, const CNTK::DeviceDescriptor& device, bool readOnly) 
+    {
+        //
+        // pyData, pyColStarts, and pyRowIndices are fed by
+        // scipy.sparse.csr_matrix's data, indptr, and indices
+        //
+
+        if (!PyArray_Check((PyArrayObject*)pyData))
+        {
+            throw std::logic_error("sparse data must be a NumPy array");
+        }
+
+        if (!PyArray_Check((PyArrayObject*)pyColStarts))
+        {
+            throw std::logic_error("indices must be a NumPy array");
+        }
+
+        if (!PyArray_Check((PyArrayObject*)pyRowIndices))
+        {
+            throw std::logic_error("index pointers must be a NumPy array");
+        }
+
+        PyArrayObject* data = (PyArrayObject*)pyData;
+        PyArrayObject* indices = (PyArrayObject*)pyColStarts;
+        PyArrayObject* indptr = (PyArrayObject*)pyRowIndices;
+
+        int typecode = PyArray_TYPE(data);
+        size_t numNonZeroValues = PyArray_SIZE(data);
+        
+        NDArrayView* view;
+        if (typecode == NPY_FLOAT)
+        {
+            NDArrayView  tmp(shape, 
+             (CNTK::SparseIndexType*)PyArray_DATA(indices), 
+             (CNTK::SparseIndexType*)PyArray_DATA(indptr), 
+             (float*)PyArray_DATA(data), numNonZeroValues, 
+             DeviceDescriptor::CPUDevice(), readOnly);
+            view = new NDArrayView(DataType::Float, StorageFormat::SparseCSC, tmp.Shape(), device);
+            view->CopyFrom(tmp);
+        }
+        else if (typecode == NPY_DOUBLE)
+        {
+            NDArrayView  tmp(shape, 
+             (CNTK::SparseIndexType*)PyArray_DATA(indices), 
+             (CNTK::SparseIndexType*)PyArray_DATA(indptr), 
+             (double*)PyArray_DATA(data), numNonZeroValues, 
+             DeviceDescriptor::CPUDevice(), readOnly);
+            view = new NDArrayView(DataType::Double, StorageFormat::SparseCSC, tmp.Shape(), device);
+            view->CopyFrom(tmp);
+        }
+        else
+        {
+            throw std::logic_error("NumPy array of type float32 or float64 expected");
+        }
+
+        return view;
+    }
+
+    PyObject* to_ndarray() {
         PyObject *NDArrayViewToNumPy(const CNTK::NDArrayView*);
         return NDArrayViewToNumPy(self);
     }
@@ -1077,6 +1195,9 @@ DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
 
 %py_eq_for(NDShape, NDShape_eq)
 %py_hash_for(NDShape)
+
+%py_eq_for(Axis, Axis_eq)
+%py_hash_for(Axis)
 
 %py_eq_for(DeviceDescriptor, DeviceDescriptor_eq)
 

@@ -387,7 +387,7 @@ class mgram_map
         {
             if (id < 0)
                 return nindex;
-            index_t i;
+
             if (level1nonsparse)
                 i = (index_t) id;
             else // sparse: use a look-up table
@@ -404,7 +404,7 @@ class mgram_map
         const int24_vector &ids_m1 = ids[m + 1];
         while (beg < end)
         {
-            index_t i = (beg + end) / 2;
+            i = (beg + end) / 2;
             int v = ids_m1[i];
             if (id == v)
                 return i; // found it
@@ -836,11 +836,11 @@ public:
     {
         const std::vector<int> &wrank;             // assigns a rank to each w
         const char *i;                             // hide coord::i against accidental access
-        std::vector<std::vector<index_t>> indexes; // coord::i <- indexes[m][this->i]
-        std::vector<index_t> indexbase;            // indexes[m] is indexbase[m]-based
-        inline index_t &index_at(int m, index_t i)
+        std::vector<std::vector<index_t>> indexes; // coord::i <- indexes[m2][this->i]
+        std::vector<index_t> indexbase;            // indexes[m2] is indexbase[m2]-based
+        inline index_t &index_at(int m2, index_t i2)
         {
-            return indexes[m][i - indexbase[m]];
+            return indexes[m2][i2 - indexbase[m2]];
         }
         std::vector<std::pair<int, int>> sortTemp; // temp for creating indexes
         void operator=(const reordering_iterator &);
@@ -881,10 +881,10 @@ public:
                 sortTemp.resize(end - beg);
                 foreach_index (k, sortTemp)
                 {
-                    index_t i = beg + k;
-                    int id = map.ids[m][i];
+                    index_t i2 = beg + k;
+                    int id = map.ids[m][i2];
                     int w = map.id2w[id];
-                    sortTemp[k] = std::make_pair(wrank[w], i);
+                    sortTemp[k] = std::make_pair(wrank[w], i2);
                 }
                 std::sort(sortTemp.begin(), sortTemp.end());
                 // remember sorted i's
@@ -1536,9 +1536,9 @@ public:
                 double thisLogP = scoreVal * ln10xLMF; // convert to natural log
 
                 bool skipEntry = false;
-                for (int n = 1; n <= m; n++)
+                for (int n2 = 1; n2 <= m; n2++)
                 {
-                    const char *tok = tokens[n];
+                    const char *tok = tokens[n2];
                     // map to id
                     int id;
                     if (m == 1) // unigram: build vocab table
@@ -1557,8 +1557,8 @@ public:
                     }
                     else // mgram: look up word in vocabulary
                     {
-                        if (prevmgram[n] >= 0 && strcmp(idToSymbol(prevmgram[n]), tok) == 0)
-                            id = prevmgram[n]; // optimization: most of the time, it's the same
+                        if (prevmgram[n2] >= 0 && strcmp(idToSymbol(prevmgram[n2]), tok) == 0)
+                            id = prevmgram[n2]; // optimization: most of the time, it's the same
                         else
                         {
                             id = symbolToId(tok);
@@ -1566,7 +1566,7 @@ public:
                                 RuntimeError("read: mal-formed LM file, m-gram contains unknown word (%d): %ls", lineNo, pathname.c_str());
                         }
                     }
-                    mgram[n] = id;             // that's our id
+                    mgram[n2] = id;             // that's our id
                     skipEntry |= skipWord[id]; // skip entry if any token is unknown
                 }
 
@@ -1955,9 +1955,9 @@ public:
     {
         return lm.logB[c];
     }
-    msra::lm::mgram_map::coord locate(const int *mgram, int m) const
+    msra::lm::mgram_map::coord locate(const int *mgram, int m2) const
     {
-        msra::lm::mgram_map::foundcoord c = lm.map[msra::lm::mgram_map::key(mgram, m)];
+        msra::lm::mgram_map::foundcoord c = lm.map[msra::lm::mgram_map::key(mgram, m2)];
         if (!c.valid_w())
             LogicError("locate: attempting to locate a non-existing history");
         return c;

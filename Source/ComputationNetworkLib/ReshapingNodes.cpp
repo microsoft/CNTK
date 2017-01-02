@@ -544,11 +544,16 @@ void CropNode<ElemType>::Validate(bool isFinalValidationPass)
     TensorShape inputShape1 = Input(1)->GetSampleLayout();
 
     SmallVector<size_t> inDims = inputShape0.GetDims();
-    SmallVector<size_t> outDims = inputShape1.GetDims();
+    SmallVector<size_t> inDimsCropped = inputShape1.GetDims();
 
     // We assume we have at least two dimensions (first two are to be cropped).
-    if (outDims.size() < 2)
+    if (inDims.size() < 2 || inDimsCropped.size() < 2)
         RuntimeError("Crop input samples must have at least two dimensions.");
+
+    // Output dimensions are equal to input dimensions with first two axis copied from cropped dimensions.
+    SmallVector<size_t> outDims = inDims;
+    outDims[0] = inDimsCropped[0];
+    outDims[1] = inDimsCropped[1];
 
     // Set output dimensions.
     SetDims(TensorShape(outDims), HasMBLayout());
@@ -662,6 +667,10 @@ template <class ElemType>
 void CropNode<ElemType>::ComputeCropOffsets()
 {
     // Helper method for traversing the tree and calculating node transforms.
+    // For currNode, calculates coordinate maps of its inputs based on known coordinate maps of its outputs.
+    // nodeToTransformMap contains coordinate maps for all nodes traversed so far, and is updated by this function.
+    // Traversal stack contains all nodes traversed so far. Inputs of currNode are pushed to traversal stack so that their
+    // inputs can be processed later on.
     auto ProcessInputs = [](ComputationNodeBase* currNode, stack<ComputationNodeBase*>& traversalStack, unordered_map<ComputationNodeBase*, SpaceTransform>& nodeToTransformMap)
     {
         if (!currNode->Is<TransformerNode>())
@@ -780,7 +789,7 @@ void CropNode<ElemType>::ComputeCropOffsets()
             break;
         }
         // No connected path, keep searching.
-        ProcessInputs(currNode, traversalStack, nodeToCropInput0TransformMap);
+        ProcessInputs(currNode, traversalStack, nodeToCropInput1TransformMap);
     }
     if (xOffset == numeric_limits<double>::max() || yOffset == numeric_limits<double>::max())
         LogicError("Connected path between crop inputs not found. Unable to compute crop offsets.");
@@ -795,6 +804,7 @@ void CropNode<ElemType>::ComputeTransforms()
 {
     if (m_transforms[0].m_axisTransforms.empty())
     {
+        m_transforms[0].m_axisTransforms.resize(2);
         m_transforms[0].m_axisTransforms[0].scale = 1;
         m_transforms[0].m_axisTransforms[0].translate = -m_xOffset;
         m_transforms[0].m_axisTransforms[1].scale = 1;

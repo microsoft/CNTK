@@ -4,22 +4,24 @@
 # for full license information.
 # ==============================================================================
 
+from __future__ import print_function
 import os
+import argparse
 import math
 import numpy as np
 
 from cntk.utils import *
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-from cntk import Trainer, persist, cntk_py
-from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
+from cntk import Trainer, cntk_py
+from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from _cntk_py import set_computation_network_trace_level
 
 from resnet_models import *
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
-data_path  = os.path.join(abs_path, "..", "..", "..", "Datasets", "CIFAR-10")
+data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
 
 # model dimensions
@@ -51,7 +53,7 @@ def create_reader(map_file, mean_file, train):
 
 
 # Train and evaluate the network.
-def train_and_evaluate(reader_train, reader_test, network_name):
+def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
 
     set_computation_network_trace_level(0)
 
@@ -76,13 +78,12 @@ def train_and_evaluate(reader_train, reader_test, network_name):
     # shared training parameters 
     epoch_size = 50000                    # for now we manually specify epoch size
     minibatch_size = 128
-    max_epochs = 160
     momentum_time_constant = -minibatch_size/np.log(0.9)
     l2_reg_weight = 0.0001
 
     # Set learning parameters
     lr_per_sample = [lr/minibatch_size for lr in lr_per_mb]
-    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size)
+    lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
     
     # trainer object
@@ -105,10 +106,10 @@ def train_and_evaluate(reader_train, reader_test, network_name):
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size-sample_count), input_map=input_map) # fetch minibatch.
             trainer.train_minibatch(data)                                   # update model with it
-            sample_count += data[label_var].num_samples                     # count samples processed so far
+            sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
-        persist.save_model(z, os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
+        z.save_model(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
     
     # Evaluation parameters
     epoch_size     = 10000
@@ -138,17 +139,15 @@ def train_and_evaluate(reader_train, reader_test, network_name):
     return metric_numer/metric_denom
 
 if __name__=='__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
+    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='160')
+
+    args = vars(parser.parse_args())
+    epochs = int(args['epochs'])
+    network_name = args['network']
+    
     reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 
-    if ('--help' in sys.argv) or ('-h' in sys.argv):
-        print("Trains a neural network on CIFAR-10 using CNTK.")
-        print("Usage: %s [MODEL_NAME]" % sys.argv[0])
-        print("MODEL_NAME: name of the model to be trained. Available models: 'resnet20' or 'resnet110'.")
-    else:
-        if len(sys.argv) != 2: 
-            print("Please specify MODEL_NAME. ")
-        else: 
-            network_name = sys.argv[1]
-            train_and_evaluate(reader_train, reader_test, network_name)
-
+    train_and_evaluate(reader_train, reader_test, network_name, epochs)

@@ -7,6 +7,10 @@ Microsoft (R) Test Execution Command Line Tool Version 12.0.30723.0
 Copyright (c) Microsoft Corporation.  All rights reserved.
 
 Starting test execution, please wait...
+Passed   EvalManagedEvaluateNoInputTest
+Passed   EvalManagedEvaluateSingleOutputTest
+Passed   EvalManagedEvaluateDualOutputsTest
+Passed   EvalManagedEvaluateHiddenLayerTest
 Passed   EvalManagedValuesBufferTest
 Passed   EvalManagedVariableSchemaTest
 Passed   EvalManagedConstantNetworkTest
@@ -14,7 +18,9 @@ Passed   EvalManagedScalarTimesTest
 Passed   EvalManagedSparseTimesTest
 Passed   EvalManagedScalarTimesDualOutputTest
 Passed   EvalManagedCrossAppDomainExceptionTest
+Passed   EvalManagedImageApiErrorHandling
+Passed   EvalManagedRNNTest
 
-Total tests: 7. Passed: 7. Failed: 0. Skipped: 0.
+Total tests: 13. Passed: 13. Failed: 0. Skipped: 0.
 Test Run Successful.
-Test execution time: 0.4305 Seconds
+Test execution time: 1.0004 Seconds

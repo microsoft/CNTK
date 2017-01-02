@@ -1,7 +1,6 @@
 #!/bin/bash
 # TODO nvidia-smi to check availability of GPUs for GPU tests
 
-CNTK_REPO=\$HOME/repos/cntk
 CNTK_DROP=\$HOME/cntk
 
 RUN_TEST=/home/testuser/run-test.sh
@@ -21,47 +20,42 @@ TEST_DEVICE_ID=-1
 which cntk
 MODULE_DIR="\$(python -c "import cntk, os, sys; sys.stdout.write(os.path.dirname(os.path.abspath(cntk.__file__)))")"
 [ \$? -eq 0 ]
-pytest "\$MODULE_DIR" --deviceid \$TEST_DEVICE --doctest-modules
+
+[ "\$TEST_DEVICE" = "gpu" ] && pytest "\$MODULE_DIR" --deviceid \$TEST_DEVICE --doctest-modules
+# TODO not all (doc) tests run on CPU
 
 # Installation validation example from CNTK.wiki (try from two different paths):
-cd "$CNTK_REPO/bindings/python/examples"
-
-# TODO
-git checkout master
+cd "$CNTK_DROP/Tutorials"
 
 python NumpyInterop/FeedForwardNet.py
 cd NumpyInterop
 python FeedForwardNet.py
 
-cd "$CNTK_REPO/Examples/Image/DataSets/MNIST"
+cd "$CNTK_DROP/Examples/Image/DataSets/MNIST"
 python install_mnist.py
 
-cd "$CNTK_REPO/Examples/Image/DataSets/CIFAR-10"
+cd "$CNTK_DROP/Examples/Image/DataSets/CIFAR-10"
 python install_cifar10.py
 
-cd "$CNTK_REPO/bindings/python/examples"
-pytest --deviceid \$TEST_DEVICE
-
-# TODO CifarResNet/CifarResNet.py
-# TODO LanguageUnderstanding/LanguageUnderstanding.py
-# TODO MNIST/SimpleMNIST.py
-# TODO NumpyInterop/FeedForwardNet.py
-# TODO Sequence2Sequence/Sequence2Sequence.py
-# TODO SequenceClassification/SequenceClassification.py
-# TODO untested elsewhere: CifarConvNet/CifarConvNet.py
-# TODO untested elsewhere: Distributed/CifarResNet_Distributed.py
-# TODO untested elsewhere: Distributed/run.py
+# TODO run some examples
 
 # TODO actually do different device and syntax.
 
+if [ "\$TEST_DEVICE" = "gpu" ]; then
+  cd "$CNTK_DROP/Tutorials"
+  for f in *.ipynb; do
+    # TODO 203 fails when run without GUI?
+    if [ "\$f" != "CNTK_203_Reinforcement_Learning_Basics.ipynb" ]; then
+      jupyter nbconvert --to notebook --execute --ExecutePreprocessor.timeout=1200 --output \$(basename \$f .ipynb)-out.ipynb \$f
+    fi
+  done
+fi
+
 # CNTK.wiki example:
-cd $CNTK_DROP/Tutorials/HelloWorld-LogisticRegression 
+cd "$CNTK_DROP/Tutorials/HelloWorld-LogisticRegression"
 cntk configFile=lr_bs.cntk deviceId=\$TEST_DEVICE_ID
 
-cd $CNTK_DROP/Examples/Image/DataSets/MNIST
-python install_mnist.py
-
-cd $CNTK_DROP/Examples/Image/GettingStarted
+cd "$CNTK_DROP/Examples/Image/GettingStarted"
 cntk configFile=01_OneHidden.cntk deviceId=\$TEST_DEVICE_ID
 
 RUNTEST

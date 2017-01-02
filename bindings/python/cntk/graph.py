@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-def dfs_walk(node, visitor):
+def depth_first_search(node, visitor):
     '''
     Generic function that walks through the graph starting at ``node`` and
     uses function ``visitor`` on each node to check whether it should be
@@ -15,7 +15,7 @@ def dfs_walk(node, visitor):
         visitor (Python function or lambda): function that takes a node as
          argument and returns ``True`` if that node should be returned.
     Returns:
-        List of nodes, for which ``visitor`` was ``True``
+        List of functions, for which ``visitor`` was ``True``
     '''
     stack = [node]
     accum = []
@@ -34,6 +34,8 @@ def dfs_walk(node, visitor):
             try:
                 if node.is_output:
                     stack.append(node.owner)
+                    visited.add(node)
+                    continue
             except AttributeError:
                 pass
 
@@ -44,17 +46,55 @@ def dfs_walk(node, visitor):
 
     return accum
 
-def find_nodes_by_name(node, node_name):
+def find_all_with_name(node, node_name):
     '''
-    Finds nodes in the graph starting from `node` and doing a depth-first
+    Finds functions in the graph starting from ``node`` and doing a depth-first
     search.
+
     Args:
         node (graph node): the node to start the journey from
         node_name (`str`): name for which we are search nodes
+
     Returns:
-        List of nodes having the specified name
+        List of primitive functions having the specified name
+
+    See also:
+        :func:`~cntk.ops.functions.Function.find_all_with_name` in class
+        :class:`~cntk.ops.functions.Function`.
     '''
-    return dfs_walk(node, lambda x: x.name == node_name)
+    return depth_first_search(node, lambda x: x.name == node_name)
+
+def find_by_name(node, node_name):
+    '''
+    Finds a function in the graph starting from ``node`` and doing a depth-first
+    search. It assumes that the name occurs only once.
+
+    Args:
+        node (graph node): the node to start the journey from
+        node_name (`str`): name for which we are search nodes
+
+    Returns:
+        Primitive function having the specified name
+
+    See also:
+        :func:`~cntk.ops.functions.Function.find_by_name` in class
+        :class:`~cntk.ops.functions.Function`.
+
+    '''
+    if not isinstance(node_name, str):
+        raise ValueError('node name has to be a string. You gave '
+                'a %s'%type(node_name))
+
+    result = depth_first_search(node, lambda x: x.name == node_name)
+
+    if len(result)>1:
+        raise ValueError('found multiple functions matching "%s". '
+                'If that was expected call find_all_with_name'%node_name)
+
+    if not result:
+        return None
+
+    return result[0]
 
 def output_function_graph(node,dot_file_path=None,png_file_path=None):
     '''
@@ -62,9 +102,11 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
     creates a network graph, and saves it as a string. If dot_file_name or 
     png_file_name specified corresponding files will be saved.
     
-    
-    Requirements for DOT output: pydot_ng
-    Requirements for PNG output: pydot_ng and graphviz
+    Requirements:
+
+     * for DOT output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_
+     * for PNG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_ 
+       and `graphviz <http://graphviz.org>`_
 
     Args:
         node (graph node): the node to start the journey from

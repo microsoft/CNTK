@@ -23,7 +23,6 @@
 #include "NDLNetworkBuilder.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
-#include "GPUMatrix.h" // used for SyncGuard::EnableSync()
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
@@ -36,6 +35,7 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+#include "PerformanceProfiler.h"
 
 #include <string>
 #include <chrono>
@@ -68,6 +68,20 @@ using namespace Microsoft::MSR::CNTK;
 // internal test routine forward declaration
 template <typename ElemType>
 void TestCn(const ConfigParameters& config);
+
+// Setup profiling
+template <typename ConfigParamType>
+void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& config, int nodeRank)
+{
+    if (config(L"profilerEnabled", false))
+    {
+        wstring workDir = config(L"WorkDir", L".");
+        profilerContext.Init(workDir + L"/profiler",
+                             config(L"profilerBufferSize", static_cast<uint64_t>(32 * 1024 * 1024)),
+                             std::to_wstring(nodeRank),
+                             config(L"profilerSyncGpu", true));
+    }
+}
 
 void RedirectStdErr(wstring logpath)
 {
@@ -398,6 +412,12 @@ void PrintBuiltInfo()
 #ifdef _BUILDPATH_
     LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
 #endif
+#ifdef _MPI_NAME_
+    LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);
+#endif
+#ifdef _MPI_VERSION_
+    LOGPRINTF(stderr, "\t\tMPI version: %s\n", _MPI_VERSION_);
+#endif
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
 
@@ -428,7 +448,7 @@ void PrintGpuInfo()
     for (GpuData& data : gpusData)
     {
         LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
-                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), data.totalMemory);
+                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 #endif
@@ -528,12 +548,12 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
     auto valpp = config.Find(L"deviceId");
     if (valpp)
     {
-        auto valp = *valpp;
-        if (!valp.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
+        auto valp2 = *valpp;
+        if (!valp2.Is<ScriptableObjects::String>()) // if it's not string 'auto' or 'cpu', then it's a gpu
         {
-            if (static_cast<int>(valp) >= 0) // gpu (id >= 0)
+            if (static_cast<int>(valp2) >= 0) // gpu (id >= 0)
             {
-                CheckSupportForGpu(valp); // throws if gpu is not supported
+                CheckSupportForGpu(valp2); // throws if gpu is not supported
             }
         }
     }
@@ -565,12 +585,10 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         Globals::EnableShareNodeValueMatrices();
     if (config(L"hyperCompressMemory", false))
         Globals::EnableHyperCompressMemory();
+    if (config(L"optimizeGradientAccumulation", true))
+        Globals::EnableGradientAccumulationOptimization();
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
-
-    bool synchronizeCUDAKernelExecutions = config(L"synchronizeCUDAKernelExecutions", false);
-    if (synchronizeCUDAKernelExecutions)
-        SyncGuard::EnableSync();
 
     // logging
     wstring logpath = config(L"stderr", L"");
@@ -586,6 +604,10 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // echo gpu info to log
     PrintGpuInfo();
+
+    // Setup profiling
+    ProfilerContext profilerContext;
+    SetupProfiling(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
 
     // execute the actions
     // std::string type = config(L"precision", "float");
@@ -645,7 +667,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 2.0.beta3.0+ (");
+    fprintf(stderr, "CNTK 2.0.beta7.0+ (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
@@ -710,6 +732,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         Globals::EnableShareNodeValueMatrices();
     if (config(L"hyperCompressMemory", false))
         Globals::EnableHyperCompressMemory();
+    if (config(L"optimizeGradientAccumulation", true))
+        Globals::EnableGradientAccumulationOptimization();
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -744,11 +768,8 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     }
 
     // full config info
-    if (traceLevel > 0)
-    {
-        PrintBuiltInfo();
+    PrintBuiltInfo();
     PrintGpuInfo();
-    }
 
 #ifdef _DEBUG
     if (traceLevel > 0)
@@ -779,6 +800,10 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
         fprintf(stderr, " %s", command[i].c_str());
     fprintf(stderr, "\n");
     }
+
+    // Setup profiling
+    ProfilerContext profilerContext;
+    SetupProfiling(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
 
     // run commands
     std::string type = config(L"precision", "float");
@@ -857,27 +882,26 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     {
         fprintf(stderr, "\n");
         err.PrintError(ProgressTracing::GetTimeStampPrefix() + L"EXCEPTION occurred.");
-        return EXIT_FAILURE;
     }
     catch (const IExceptionWithCallStackBase& err)
     {
         fprintf(stderr, "\n");
         fprintf(stderr, "%s", err.CallStack());
         LOGPRINTF(stderr, "EXCEPTION occurred: %s\n", dynamic_cast<const std::exception&>(err).what());
-        return EXIT_FAILURE;
     }
     catch (const std::exception& err)
     {
         fprintf(stderr, "\n");
         LOGPRINTF(stderr, "EXCEPTION occurred: %s\n", err.what());
-        return EXIT_FAILURE;
     }
     catch (...)
     {
         fprintf(stderr, "\n");
         LOGPRINTF(stderr, "Unknown ERROR occurred.\n");
-        return EXIT_FAILURE;
     }
+
+    fflush(stderr);
+    return EXIT_FAILURE;
 }
 
 #ifdef __WINDOWS__

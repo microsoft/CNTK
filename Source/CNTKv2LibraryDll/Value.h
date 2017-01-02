@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Sequences.h"
+#include "TensorView.h"
 #include "Utils.h"
 
 namespace CNTK

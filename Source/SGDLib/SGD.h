@@ -249,8 +249,6 @@ protected:
 
     bool m_useAllDataForPreComputedNode;
 
-    int m_perfTraceLevel;
-
     // Parallel training
     MPIWrapperPtr m_mpi;
 
@@ -288,7 +286,7 @@ protected:
     double m_L1RegWeight;
 
     // Parallel training related with ASGD 
-    intargvector m_nFramesBetweenASGDSync;
+    intargvector m_nSyncSamplesPerWorker;
     bool m_isAsyncBufferEnabled;
     bool m_isSimulateMA;
     AdjustLearningRateAtBeginning m_adjustLearningRateAtBeginning;

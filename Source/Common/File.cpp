@@ -27,6 +27,7 @@
 #endif
 
 #define PCLOSE_ERROR -1
+#define WRITE_BUFFER_SIZE (1024 * 1024)
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -648,6 +649,12 @@ int File::EndOfLineOrEOF(bool skip)
         return fskipNewline(m_file, skip);
     else
         return false;
+}
+
+// Buffer write stream
+int File::Setvbuf()
+{
+    return setvbuf(this->m_file, NULL, _IOFBF, WRITE_BUFFER_SIZE);
 }
 
 // Get a marker from the file

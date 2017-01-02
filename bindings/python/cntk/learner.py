@@ -15,12 +15,12 @@ class UnitType(Enum):
     per-minibatch basis.
     '''
 
-    sample = 1
+    sample = 'sample'
     '''
     Schedule contains per-sample values.
     '''
 
-    minibatch = 2
+    minibatch = 'minibatch'
     '''
     Schedule contains per-minibatch values (and need to be re-scaled by the learner
     using the actual minibatch size in samples).
@@ -90,7 +90,7 @@ class Learner(cntk_py.Learner):
         Update the parameters associated with this learner.
 
         Args:
-            gradient_values (dict): maps :class:`~cntk.variables.Parameter` to
+            gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter` to
              a NumPy array containing the first order gradient values for the
              Parameter w.r.t. the training objective.
             training_sample_count (int): training sample count
@@ -98,8 +98,8 @@ class Learner(cntk_py.Learner):
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
         '''
-        from .utils import create_NDArrayView_from_NumPy
-        var_nd_map = { var:create_NDArrayView_from_NumPy(val) for var, val in
+        from .utils import _create_NDArrayView_from_NumPy
+        var_nd_map = { var: _create_NDArrayView_from_NumPy(val) for var, val in
                 gradient_values.items() }
 
         return super(Learner, self).update(var_nd_map, training_sample_count)
@@ -169,10 +169,6 @@ def training_parameter_schedule(schedule, unit, epoch_size=1):
     See also:
         :func:`learning_rate_schedule`
     '''
-    if not isinstance(unit, UnitType):
-            raise ValueError('schedule unit "%s" is not supported' %
-                    str(method))
-
     if unit == UnitType.sample:
         if isinstance(schedule, cntk_py.training_parameter_per_sample_schedule):
             return schedule
@@ -181,13 +177,16 @@ def training_parameter_schedule(schedule, unit, epoch_size=1):
             return schedule
 
     if isinstance(schedule, (int, float)):
-        if unit is UnitType.sample:
+        if epoch_size != 1:
+            raise ValueError('when providing the schedule as a number,'
+                    ' epoch_size is ignored')
+        if UnitType(unit) is UnitType.sample:
             return cntk_py.training_parameter_per_sample_schedule(schedule)
         else:
             return cntk_py.training_parameter_per_minibatch_schedule(schedule)
 
     if isinstance(schedule, list):
-        if unit is UnitType.sample:
+        if UnitType(unit) is UnitType.sample:
             return cntk_py.training_parameter_per_sample_schedule(schedule, epoch_size)
         else:
             return cntk_py.training_parameter_per_minibatch_schedule(schedule, epoch_size)
@@ -370,7 +369,8 @@ def momentum_sgd(parameters, lr, momentum,
          with truncation
 
     Returns:
-        Instance of a :class:`cntk.learner.Learner` that can be passed to the :class:`cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learner.Learner` that can be passed to the
+        :class:`~cntk.trainer.Trainer`
     '''
     _verify_learning_rate_type(lr)
     _verify_momentum_type(momentum)

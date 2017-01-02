@@ -37,6 +37,7 @@ class OptimizedRNNStackNode : public ComputationNode<ElemType>, public NumInputs
 public:
     OptimizedRNNStackNode(DEVICEID_TYPE deviceId, const wstring& name);
     OptimizedRNNStackNode(const ScriptableObjects::IConfigRecordPtr configp);
+    OptimizedRNNStackNode(DEVICEID_TYPE deviceId, const std::wstring& name, bool bidirectional, size_t numLayers, size_t hiddenSize, const std::wstring& recurrentOp);
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
     virtual void Save(File& fstream) const;
@@ -83,6 +84,7 @@ public:
 
     virtual bool OutputUsedInComputingInputNodesGradients() const { return false; }
     virtual bool InputUsedInComputingInputNodesGradients(size_t childIndex) const { return 0 == childIndex; }
+    RnnAttributes Attributes() const { return m_rnnAttributes; }
 
 protected:
     bool m_BackwardDataCalledYet;

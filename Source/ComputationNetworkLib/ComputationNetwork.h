@@ -567,6 +567,8 @@ public:
     // add a node to a node group
     void AddToNodeGroup(const std::wstring& groupTag, const ComputationNodeBasePtr& node)
     {
+        assert(node);
+
         // determine the node group by its group tag string
         auto& nodeGroup = GetNodeGroup(groupTag);
         // if node is already in the list then we are done
