@@ -59,7 +59,7 @@
         "category": ["Image"],
         "name":  "MNIST CNN OCR",
         "url":  "https://github.com/Microsoft/CNTK/wiki/Tutorial2",
-        "description":  "Use CNN on a OCR problem.",
+        "description":  "Use CNN on an OCR problem.",
         "language":  ["Python", "BrainScript"],
         "type":  ["Tutorial", "Recipe"]
     },
@@ -67,7 +67,7 @@
         "category": ["Image"],
         "name":  "MNIST Feed Forward OCR",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103A_MNIST_DataLoader.ipynb",
-        "description":  "Use Feed Forward networks on a OCR problem.",
+        "description":  "Use Feed Forward networks on an OCR problem.",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },
@@ -203,7 +203,7 @@
         "category": ["Speech"],
         "name":  "Speech Multi Input",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
-        "description":  "Train with 2 different inputs: fbank and mfcc trained on the TIMIT dataset.",
+        "description":  "Train with two different inputs: fbank and mfcc trained on the TIMIT dataset.",
         "language":  ["BrainScript"],
         "type":  ["Recipe"]
     },
@@ -259,7 +259,7 @@
         "category": ["Text"],
         "name":  "RNN LM",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceToSequence/PennTreebank",
-        "description":  "Recurrent neural network for language modeling on the Pentreebank dataset.",
+        "description":  "Recurrent neural network for language modeling on the PennTreebank dataset.",
         "language":  ["BrainScript"],
         "type":  ["Recipe"]
     },
@@ -267,14 +267,14 @@
         "category": ["Text"],
         "name":  "Sequence Classification",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceClassification/SimpleExample/Python",
-        "description":  "Creates and trains a LSTM sequence classification model.",
+        "description":  "Creates and trains an LSTM sequence classification model.",
         "language":  ["Python"],
         "type":  ["Recipe"]
     },
     {
         "category": ["Text"],
         "name":  "Sequence-to-Sequence",
-        "url":  "https://github.com/Microsoft/CNTK/tree/Examples/SequenceToSequence/CMUDict/Python",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceToSequence/CMUDict/Python",
         "description":  "Creates and trains a sequence to sequence translation model.",
         "language":  ["Python"],
         "type":  ["Recipe"]

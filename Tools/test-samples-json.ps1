@@ -1,61 +1,113 @@
 [CmdletBinding()]
-Param()
-
-$ErrorActionPreference = 'Stop'
+Param([string]$WikiRepoPath)
 
 $scriptDir = Split-Path $MyInvocation.MyCommand.Definition
 
-try {
-  Push-Location $scriptDir
+function gitGetFilesAndDirs {
+  [CmdletBinding()]
+  Param(
+    [parameter(Mandatory=$true)]
+    [ref]
+    $FileHash,
 
-  # Note: case-sensitive comparison
-  $filesInGitHead = New-Object -TypeName System.Collections.Hashtable
-  $dirsInGitHead = New-Object -TypeName System.Collections.Hashtable
+    [parameter(Mandatory=$true)]
+    [ref]
+    $DirHash,
 
-  git ls-tree -r HEAD --full-tree --name-only | ForEach-Object {
-    $filesInGitHead[$_] = $true
+    [parameter(Mandatory=$true)]
+    [ValidateScript({Test-Path $_})]
+    [string]
+    $RepoPath,
+
+    [parameter(Mandatory=$true)]
+    [string]
+    $Treeish
+  )
+
+  if ($FileHash.Value -isnot [hashtable]) {
+    throw "-FileHash parameter not a [hashtable] reference"
   }
-  git ls-tree -r HEAD -d --full-tree --name-only | ForEach-Object {
-    $dirsInGitHead[$_] = $true
+  if ($DirHash.Value -isnot [hashtable]) {
+    throw "-DirHash parameter not a [hashtable] reference"
   }
-  
-  $jsonFile = 'samples.json'
-  
-  $jsonPath = Join-Path $scriptDir $jsonFile
-  
-  $null = Test-Path $jsonPath
-  
-  $json = Get-Content $jsonPath | ConvertFrom-JSON
-  
-  # TODO more checks
-  
-  $json.url | ForEach-Object {
-    $uri = [Uri]$_
-    #$uri
-  
-    if (-not $uri.IsAbsoluteUri) {
-      throw "URL $_ not absolute"
-    }
-    if (-not ($uri.Scheme -in 'https', 'http')) {
-      throw "URL $_ not http:// or https://"
-    }
-  
-    if ($uri.Host -eq 'github.com') {
-      if ($uri.LocalPath.StartsWith('/Microsoft/CNTK/tree/master/')) {
-        $path = $uri.LocalPath.Substring(28)
-        if (-not $dirsInGitHead.ContainsKey($path)) {
-          throw "Cannot find $_ as a directory in Git HEAD"
-        }
-      } elseif ($uri.LocalPath.StartsWith('/Microsoft/CNTK/tree/blob/')) {
-        $path = $uri.LocalPath.Substring(26)
-        if (-not $filesInGitHead.ContainsKey($path)) {
-          throw "Cannot find $_ as a file in Git HEAD"
-        }
-      }
-    }
+  if (-not (Get-Command git)) {
+    throw "git command not in path"
   }
-} finally {
-  Pop-Location
+
+  $FileHash.Value.Clear()
+  $DirHash.Value.Clear()
+
+  try {
+    Push-Location -ErrorAction Stop $RepoPath
+
+    $outFile = git ls-tree -r $Treeish --full-tree --name-only
+    if ($LASTEXITCODE -ne 0) {
+      throw "git ls-tree failed"
+    }
+
+    $outDir = git ls-tree -r $Treeish -d --full-tree --name-only
+    if ($LASTEXITCODE -ne 0) {
+      throw "git ls-tree -d failed"
+    }
+
+    $outFile | ForEach-Object { $FileHash.Value[$_] = $true }
+    $outDir | ForEach-Object { $DirHash.Value[$_] = $true }
+
+  } finally {
+    Pop-Location
+  }
 }
 
+function splitPrefix($Prefix, $String) {
+  if ($String.StartsWith($Prefix)) {
+    $String.Substring($Prefix.Length)
+  }
+}
+
+# Note: case-sensitive comparison
+$sourceFileHash = New-Object -TypeName System.Collections.Hashtable
+$sourceDirHash = New-Object -TypeName System.Collections.Hashtable
+
+gitGetFilesAndDirs -FileHash ([ref]$sourceFileHash) -DirHash ([ref]$sourceDirHash) -RepoPath $scriptDir -Treeish HEAD
+
+$wikiFileHash = New-Object -TypeName System.Collections.Hashtable
+$wikiDirHash = New-Object -TypeName System.Collections.Hashtable
+if ($WikiRepoPath) {
+  gitGetFilesAndDirs -FileHash ([ref]$wikiFileHash) -DirHash ([ref]$wikiDirHash) -RepoPath $WikiRepoPath -Treeish HEAD
+}
+
+$jsonFile = 'samples.json'
+
+$jsonPath = Join-Path $scriptDir $jsonFile
+
+$json = Get-Content -ErrorAction Stop $jsonPath | ConvertFrom-JSON -ErrorAction Stop
+
+$json.url | ForEach-Object {
+  $uri = [Uri]$_
+
+  if ($uri.IsAbsoluteUri -and $uri.Scheme -ceq 'https' -and $uri.Host -ceq 'github.com') {
+    $path = $uri.LocalPath
+    if ($rest = splitPrefix '/Microsoft/CNTK/tree/master/' $path) {
+      if (-not $sourceDirHash.ContainsKey($rest)) {
+        Write-Error "Cannot find $_ as a directory in Git HEAD"
+      }
+    } elseif ($rest = splitPrefix '/Microsoft/CNTK/blob/master/' $path) {
+      if (-not $sourceFileHash.ContainsKey($rest)) {
+        Write-Error "Cannot find $_ as a file in Git HEAD"
+      }
+    } elseif ($rest = splitPrefix '/Microsoft/CNTK/wiki/' $path) {
+      if ($WikiRepoPath) {
+        if (-not ($wikiFileHash.ContainsKey("$rest.md") -or $wikiDirHash.ContainsKey($rest))) {
+          Write-Error "Cannot find $_ in Wiki Git HEAD"
+        }
+      } else {
+        Write-Warning "Cannot validate $_, -WikiRepoPath not specified"
+      }
+    } else {
+      throw "Unsupported URL $_"
+    }
+  } else {
+    Write-Error "URL $_ not pointing to https://github.com/"
+  }
+}
 # vim:set expandtab shiftwidth=2 tabstop=2:
