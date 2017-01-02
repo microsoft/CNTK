@@ -94,7 +94,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     int verbosity = config(L"verbosity", 0);
 
     // Pick up the randomizer, always picking up no randomization for the write mode.
-    bool randomize = isActionWrite ? false : config(L"randomize", false);
+    bool randomize = isActionWrite ? false : config(L"randomize", true);
 
     // Check whether to use local timeline, by default we use it for better performance.
     // Currently used only in frame mode.
