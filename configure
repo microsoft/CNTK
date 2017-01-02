@@ -22,7 +22,7 @@ nccl_path=
 nccl_check=include/nccl.h
 
 # CNTK Custom MKL Version
-cntk_custom_mkl_version=2
+cntk_custom_mkl_version=3
 
 have_mkl=no
 mkl_path=
