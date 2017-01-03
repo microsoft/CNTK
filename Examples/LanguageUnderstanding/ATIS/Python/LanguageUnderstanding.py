@@ -112,20 +112,12 @@ def create_model_function():
 # This function is generic and could be a stock function create_ce_classification_criterion().
 def create_criterion_function(model):
     @Function
-    def criterion(x, y):
-        z = model(x=x)
-        ce   = cross_entropy_with_softmax(z, y)
-        errs = classification_error      (z, y)
+    def criterion(query, labels):
+        z = model(query)
+        ce   = cross_entropy_with_softmax(z, labels)
+        errs = classification_error      (z, labels)
         return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
     return criterion
-
-# alternative way of doing it, e.g. for use with Beta2
-def create_criterion_function1(model):
-    x, y = Placeholders(2)
-    z = model(x)
-    ce   = cross_entropy_with_softmax(z, y)
-    errs = classification_error      (z, y)
-    return combine ([ce, errs]) # (features, labels) -> (loss, metric)
 
 ###########################
 # helper to try the model #
@@ -161,7 +153,8 @@ def peek(model, epoch):
 def train(reader, model, max_epochs):
 
     # declare the model's input dimension, so that the saved model is usable
-    model.update_signature(Type(vocab_size, is_sparse=False))
+    model.update_signature(Type(vocab_size, is_sparse=True))
+    # BUGBUG (layers): need to verify compatibility when using it as part of another function
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)
@@ -171,14 +164,16 @@ def train(reader, model, max_epochs):
     #labels = reader.streams.intent_labels  # needs 3 changes to switch to this
 
     # declare argument types
-    criterion.update_signature(x=Type(vocab_size, is_sparse=False), y=Type(num_labels, is_sparse=True))
-    # note: keywords are optional
+    criterion.update_signature(query=Type(vocab_size, is_sparse=False), labels=Type(num_labels, is_sparse=True))
+    # note: keywords are optional and used for illustration only
+    # BUGBUG: is_sparse=True for query fails with "Matrix.cpp  Line: 1655  Function: Microsoft::MSR::CNTK::Matrix<float>::FSAdagradUpdate  -> Feature Not Implemented."
+    #         Works in eval though.
     #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
     minibatch_size = 70
-    #epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
+    epoch_size = 1000 ; max_epochs = 1 # uncomment for faster testing
 
     # SGD parameters
     learner = adam_sgd(criterion.parameters,
@@ -190,8 +185,6 @@ def train(reader, model, max_epochs):
                        gradient_clipping_with_truncation = True)
 
     # trainer
-    # TODO: try to pass None as model, and fix the C++ code to accept that
-    #trainer = Trainer(model, criterion, learner)
     trainer = Trainer(None, criterion, learner)
 
     # process minibatches and perform model training
@@ -204,13 +197,11 @@ def train(reader, model, max_epochs):
         peek(model, epoch)                  # log some interesting info
         epoch_end = (epoch+1) * epoch_size
         while t < epoch_end:                # loop over minibatches on the epoch
-            # BUGBUG? The change of minibatch_size parameter vv has no effect.
+            # BUGBUG: The change of minibatch_size parameter vv has no effect.
             data = reader.next_minibatch(min(minibatch_size, epoch_end-t))     # fetch minibatch
-            #loss, metric = criterion(data[reader.streams.query], data[labels])  # update model with it
             trainer.train_minibatch(data[reader.streams.query], data[labels])  # update model with it
-            #trainer.train_minibatch_from_data(criterion, data[reader.streams.query], data[labels])  # update model with it
-            t += data[labels].num_samples                  # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
+            t += data[labels].num_samples                                      # count samples processed so far
+            progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric # return values from last epoch
@@ -222,21 +213,10 @@ def train(reader, model, max_epochs):
 
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
-    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
+    criterion.update_signature(Type(vocab_size, is_sparse=True), Type(num_labels, is_sparse=True))
 
     # process minibatches and perform evaluation
     evaluator = Evaluator(None, criterion)
-
-    #x = Placeholder(name='x')
-    #y = Placeholder(name='y')
-    #z = model(x)
-    ##criterion = 0*cross_entropy_with_softmax(z, y) + classification_error (z, y)
-    #criterion = classification_error (z, y)
-    #print([arg.name for arg in criterion.placeholders])
-    #
-    #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
-    ##criterion.update_signature(x=Type(vocab_size, is_sparse=False), y=Type(num_labels, is_sparse=True))
-    #evaluator = Evaluator(model, 0*criterion, criterion)
 
     #progress_printer = ProgressPrinter(freq=100, first=10, tag='Evaluation') # more detailed logging
     progress_printer = ProgressPrinter(tag='Evaluation')
@@ -245,8 +225,7 @@ def evaluate(reader, model):
         data = reader.next_minibatch(minibatch_size) # fetch minibatch
         if not data:                                 # until we hit the end
             break
-        #metric = evaluator.test_minibatch({ criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[reader.streams.slot_labels] })
-        metric = evaluator.test_minibatch(x=data[reader.streams.query], y=data[reader.streams.slot_labels])
+        metric = evaluator.test_minibatch(query=data[reader.streams.query], labels=data[reader.streams.slot_labels])
         # note: keyword syntax ^^ is optional; this is to demonstrate it
         progress_printer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
@@ -268,11 +247,30 @@ if __name__=='__main__':
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     #force_deterministic_algorithms()
 
+    # repro for Amit
+    #from cntk import as_block
+    #from cntk.ops.functions import CloneMethod
+    ## identity function
+    #f = combine([placeholder_variable()])
+    #f = as_block(f, [(f.placeholders[0], placeholder_variable())], 'id')
+    ## function under test
+    ##  function args
+    #x = placeholder_variable()
+    #y = placeholder_variable()
+    ##  function body
+    ##x = f.clone(CloneMethod.share, {f.placeholders[0]: x})
+    ## BUGBUG: Wiht this ^^ line, it crashes later with "ValueError: Variable with unknown DataType detected when compiling the Function graph!"
+    #z = x-y
+    ## connect to inputs
+    #z.replace_placeholders({z.placeholders[0]: input_variable(1), z.placeholders[1]: input_variable(1)})
+    ## evaluate
+    #res = z.eval({z.arguments[0]: [[5.0]], z.arguments[1]: [[3.0]]})
+    #print(res)
+
+
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True) 
-    model1 = create_model_function()
-    @Function
-    def model(x): return model1(x)
-    names = [arg.name for arg in model.placeholders]
+    model = create_model_function()
+
     # train
     train(reader, model, max_epochs=8)
 

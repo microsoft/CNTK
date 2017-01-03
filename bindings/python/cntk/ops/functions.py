@@ -87,8 +87,8 @@ class Function(cntk_py.Function):
             unused_arg_names = [arg.name for arg in unused_args]
             raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
         # wrap into a block as to ensure ordering of parameters
-        # BUGBUG: clone() does not seem to work with this, so for now skip unless order must be changed (which will fail)
-        if out.placeholders != tuple(args):
+        # BUGBUG: clone() on identity() does not seem to work with this. Luckily we don't need BlockFunction for unary functions.
+        if len(out.placeholders) > 1: # skip for unary functions for now due to identity/clone bug
             args2 = [placeholder_variable(name=name) for name in arg_names]
             arg_map = list(zip(args,args2))
             out = as_block(out, arg_map, f_name);
