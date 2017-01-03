@@ -14,7 +14,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
                      element_select, alias, hardmax, placeholder_variable, combine, parameter, times
 from cntk.ops.functions import CloneMethod, load_model
 from cntk.ops.sequence import broadcast_as
-from cntk.graph import find_nodes_by_name
+from cntk.graph import find_by_name, find_all_with_name
 from cntk.blocks import LSTM, Stabilizer
 from cntk.layers import Dense
 from cntk.initializer import glorot_uniform
@@ -39,7 +39,7 @@ hidden_dim = 128
 num_layers = 2
 attention_dim = 128
 attention_span = 20
-use_attention = True
+use_attention = False   #True  --BUGBUG (layers): not working for now due to has_aux
 use_embedding = True
 embedding_dim = 200
 
@@ -70,11 +70,12 @@ def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_
         else:
             aux_input = augment_input_hook
 
-    LSTM_cell = LSTM(output_dim, auxiliary_input=has_aux, enable_self_stabilization=True)
     if has_aux:    
-        f_x_h_c = LSTM_cell(input, (dh, dc), aux_input)
+        LSTM_cell = LSTM(output_dim, has_aux=has_aux, enable_self_stabilization=True) # BUGBUG (layers): currently not supported
+        f_x_h_c = LSTM_cell(input, dh, dc, aux_input)
     else:
-        f_x_h_c = LSTM_cell(input, (dh, dc))
+        LSTM_cell = LSTM(output_dim, enable_self_stabilization=True)
+        f_x_h_c = LSTM_cell(input, dh, dc)
     h_c = f_x_h_c.outputs
 
     h = recurrence_hook_h(h_c[0])
@@ -156,7 +157,7 @@ def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word
                                                            label_embedded, encoder_output_h)
         recurrence_hook_h = past_value
         recurrence_hook_c = past_value
-        else:
+    else:
         def recurrence_hook_h(operand):
             return element_select(
             is_first_label, thought_vector_broadcast_h, past_value(operand))
@@ -164,7 +165,7 @@ def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word
             return element_select(
             is_first_label, thought_vector_broadcast_c, past_value(operand))
 
-    decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, past_value, past_value, augment_input_hook)    
+    decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
 
     # dense Linear output layer    
     z = Dense(label_vocab_dim) (Stabilizer()(decoder_output_h))    
@@ -178,25 +179,29 @@ def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word
 def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size):
 
     # do some hooks so that we can direct data to the right place
-    label_sequence = find_nodes_by_name(model, 'label_sequence')[0]    
-    decoder_history_hook = find_nodes_by_name(model, 'decoder_history_hook')[0]  
+    label_sequence = find_by_name(model, 'label_sequence')
+    decoder_history_hook = find_by_name(model, 'decoder_history_hook')
 
-    embedding = find_nodes_by_name(model, 'embedding')
+    # TODO: this is funky; how to know which is which?
+    embedding = find_all_with_name(model, 'embedding')
     embed_param = 1
     if len(embedding) > 0:
         embed_param = embedding[0]
 
     # Criterion nodes
+    # TODO: change to @Function to ensure parameter order (William seemed to have worked around it by naming them)
     ce = cross_entropy_with_softmax(model, label_sequence)
     errs = classification_error(model, label_sequence)
+
+    ce.dump()
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though
     def clone_and_hook():
-    # network output for decoder history
+        # network output for decoder history
         net_output = times(hardmax(model), embed_param)
 
-    # make a clone of the graph where the ground truth is replaced by the network output
+        # make a clone of the graph where the ground truth is replaced by the network output
         return model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
 
     # get a new model that uses the network output as input to the decoder
@@ -223,13 +228,23 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     log_number_of_parameters(model) ; print()
     progress_printer = ProgressPrinter(freq=30, tag='Training')
 
+    # dummy for printing the input sequence below
+    from cntk.blocks import Constant, Type
+    from cntk import Function
+    I = Constant(np.eye(input_vocab_dim))
+    @Function
+    def noop(input):
+        return times(input, I)
+    noop.update_signature(Type(input_vocab_dim, is_sparse=True))
+
     for epoch in range(max_epochs):
 
         while i < (epoch+1) * epoch_size:
             # get next minibatch of training data
             mb_train = train_reader.next_minibatch(minibatch_size)
-            trainer.train_minibatch({find_arg_by_name('raw_input' , model) : mb_train[train_reader.streams.features], 
-                                     find_arg_by_name('raw_labels', model) : mb_train[train_reader.streams.labels]})
+            #trainer.train_minibatch({find_arg_by_name('raw_input' , model) : mb_train[train_reader.streams.features], 
+            #                         find_arg_by_name('raw_labels', model) : mb_train[train_reader.streams.labels]})
+            trainer.train_minibatch(mb_train[train_reader.streams.features], mb_train[train_reader.streams.labels])
 
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
@@ -238,10 +253,14 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
                 mb_valid = valid_reader.next_minibatch(minibatch_size)
                 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
-                e = decoder_output_model.eval({find_arg_by_name('raw_input' , decoder_output_model) : 
-                                               mb_valid[valid_reader.streams.features], 
-                                               find_arg_by_name('raw_labels', decoder_output_model) : 
-                                               mb_valid[valid_reader.streams.labels]})
+                #e = decoder_output_model.eval({find_arg_by_name('raw_input' , decoder_output_model) : 
+                #                               mb_valid[valid_reader.streams.features], 
+                #                               find_arg_by_name('raw_labels', decoder_output_model) : 
+                #                               mb_valid[valid_reader.streams.labels]})
+                q = noop(mb_valid[valid_reader.streams.features])
+                e = decoder_output_model(mb_valid[valid_reader.streams.features], mb_valid[valid_reader.streams.labels])
+                print_sequences(q, i2w)
+                print(end=" -> ")
                 print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
@@ -335,10 +354,12 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
     for t in range(len(l)):
         labels[t,l[t]] = 1
     
-    pred = model.eval({find_arg_by_name('raw_input' , model) : [features], 
-                       find_arg_by_name('raw_labels', model) : [labels]})
+    #pred = model.eval({find_arg_by_name('raw_input' , model) : [features], 
+    #                   find_arg_by_name('raw_labels', model) : [labels]})
+    pred = model([features], [labels])
     
     # print out translation and stop at the sequence-end tag
+    print(input_string, "->", end='')
     tlen = 1 # length of the output sequence
     prediction = np.argmax(pred, axis=2)[0]
     for i in prediction:
@@ -355,7 +376,7 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
         import seaborn as sns
         import pandas as pd
     
-        att = find_nodes_by_name(model, 'attention_weights')[0]
+        att = find_by_name(model, 'attention_weights')
         q = combine([model, att])
         output = q.forward({find_arg_by_name('raw_input' , model) : [features], 
                          find_arg_by_name('raw_labels', model) : [labels]},
@@ -412,17 +433,18 @@ def find_arg_by_name(name, expression):
 
 # to help debug the attention window
 def debug_attention(model, mb, reader):
-    att = find_nodes_by_name(model, 'attention_weights')[0]
-    q = combine([model, att])
-    output = q.forward({find_arg_by_name('raw_input' , model) : 
-                         mb[reader.streams.features], 
-                         find_arg_by_name('raw_labels', model) : 
-                         mb[reader.streams.labels]},
-                         att.outputs)
+    att = find_by_name(model, 'attention_weights')
+    if att:
+        q = combine([model, att])
+        output = q.forward({find_arg_by_name('raw_input' , model) : 
+                             mb[reader.streams.features], 
+                             find_arg_by_name('raw_labels', model) : 
+                             mb[reader.streams.labels]},
+                             att.outputs)
 
-    att_key = list(output[1].keys())[0]
-    att_value = output[1][att_key]
-    print(att_value[0,0,:])
+        att_key = list(output[1].keys())[0]
+        att_value = output[1][att_key]
+        print(att_value[0,0,:])
 
 # function to model the inputs
 def create_inputs():
@@ -447,6 +469,9 @@ def create_inputs():
 #############################
 
 if __name__ == '__main__':
+
+    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
+    set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
 
     # hook up data
     train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)

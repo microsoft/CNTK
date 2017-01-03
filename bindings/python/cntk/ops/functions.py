@@ -114,6 +114,7 @@ class Function(cntk_py.Function):
     # This does not require the arguments to be Variables or Functions. It is also called by train_minibatch().
     def argument_map(self, *args, **kwargs):
         params = self._get_arguments()    # function parameters
+        #param_names = [param.name for param in params] # (debugging)
         if len(args) + len(kwargs) != len(params):
             raise TypeError("CNTK Function expected {} arguments, got {}".format(len(params), len(args)))
 
@@ -331,9 +332,12 @@ class Function(cntk_py.Function):
                     op_name = "Placeholder"
                 elif item.is_input:
                     op_name = "Input"
+                elif item.is_constant:
+                    op_name = "Constant"
                 else:
                     op_name = "Variable"
                 shape = item.shape
+                name = name + " " + item.uid
                 inputs = ''
             print(' ', op_name, name, inputs, ':', shape)
             pass

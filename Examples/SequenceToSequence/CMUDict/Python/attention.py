@@ -39,8 +39,8 @@ def past_value_window(N, x, axis=0):
         last_valid.append(last(valid))
 
     # stack rows 'beside' each other, so axis=axis-2 (create a new static axis that doesn't exist)
-    value = splice(last_value, axis=axis-2, name='value')
-    valid = splice(last_valid, axis=axis-2, name='valid')
+    value = splice(*last_value, axis=axis-2, name='value')
+    valid = splice(*last_valid, axis=axis-2, name='valid')
 
     # value[t] = value of t steps in the past; valid[t] = true if there was a value t steps in the past
     return (value, valid)

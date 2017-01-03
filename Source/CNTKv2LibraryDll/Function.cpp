@@ -1324,9 +1324,10 @@ namespace CNTK
         FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand)
         {
 #if 1
-            return ReconcileDynamicAxis(Constant({ 1 }, operand.GetDataType(), 0.0), operand/*acts as layout input*/);
-#else
-            // ^^ a simple fix to ReconcileDynamicAxisNode to accept data without dynamic axes makes this easy and efficient
+            if (operand.GetDataType() != DataType::Unknown)
+                return ReconcileDynamicAxis(Constant({ 1 }, operand.GetDataType(), 0.0), operand/*acts as layout input*/);
+            // BUGBUG: If data type is unknown, it does not get rectified later, so we cannot use this optimization here.
+#endif
             if (operand.IsSparse())
             {
                 if (operand.Shape().Rank() > 1)
@@ -1335,13 +1336,14 @@ namespace CNTK
                 // TODO: A matrix multiplication is too expensive for something like this
                 // Replace this with a cheaper operation.
                 return Times(Constant({ 1, operand.Shape()[0] }, operand.GetDataType(), 0.0), operand);
+                // BUGBUG: fails is operand has no shape The 1 leading dimensions of the right operand with shape [18446744073709551614] do not match the left operand's trailing dimensions with shape [69]"
             }
             else
             {
                 auto reduceAllStaticAxesFunc = Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, Axis::AllStaticAxes());
                 return Minus(reduceAllStaticAxesFunc, reduceAllStaticAxesFunc);
+                // BUGBUG: This is not correct in presence of NaNs.
             }
-#endif
         }
 
         FunctionPtr Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name)
