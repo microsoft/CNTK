@@ -147,7 +147,7 @@
         "category": ["Numeric"],
         "name":  "Feed Forward Classification",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_102_FeedForward.ipynb",
-        "description":  "Train feed forward network for a classification problem using NumPy (and CNTK).",
+        "description":  "Use Feed Forward networks on a classification problem with CNTK and NumPy.",
         "language":  ["Python", "BrainScript"],
         "type":  ["Tutorial", "Recipe"]
     },
