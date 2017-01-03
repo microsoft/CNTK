@@ -1,60 +1,44 @@
 CPU info:
-    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 0 @ 2.00GHz
     Hardware threads: 24
-    Total Memory: 268381192 kB
+    Total Memory: 33476276 kB
 -------------------------------------------------------------------
-=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\Spatial/02_BatchNormConv.cntk currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\Spatial OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu DeviceId=0 timestamping=true batchNormalizationEngine=cudnn
--------------------------------------------------------------------
-Build info: 
+=== Running /cygdrive/e/NetScale/CNTK/git_repos/git_cntkv2Library_5/x64/debug/cntk.exe configFile=E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Tests\EndToEndTests\BatchNormalization\Spatial/02_BatchNormConv.cntk currentDirectory=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData RunDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu DataDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData ConfigDir=E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Tests\EndToEndTests\BatchNormalization\Spatial OutputDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu DeviceId=0 timestamping=true batchNormalizationEngine=cudnn
+CNTK 2.0.beta7.0+ (amitaga/dataInteropFeatures 5ea312, Jan  3 2017 23:37:25) on Amitaga-Win-DT3 at 2017/01/04 07:42:50
 
-		Built time: Aug 23 2016 03:29:14
-		Last modified date: Mon Aug 22 21:29:13 2016
-		Build type: Release
-		Build target: GPU
-		With 1bit-SGD: no
-		Math lib: mkl
-		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
-		CUB_PATH: C:\src\cub-1.4.1
-		CUDNN_PATH: C:\NVIDIA\cudnn-5.0\cuda
-		Build Branch: HEAD
-		Build SHA1: 66498cf414f4bbf6392730c2abfbef6a5eeb8f7b
-		Built by svcphil on LIANA-09-w
-		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
--------------------------------------------------------------------
-Changed current directory to C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData
-08/23/2016 03:52:13: -------------------------------------------------------------------
-08/23/2016 03:52:13: Build info: 
+E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\x64\debug\cntk.exe  configFile=E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Tests\EndToEndTests\BatchNormalization\Spatial/02_BatchNormConv.cntk  currentDirectory=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData  RunDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu  DataDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData  ConfigDir=E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Tests\EndToEndTests\BatchNormalization\Spatial  OutputDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu  DeviceId=0  timestamping=true  batchNormalizationEngine=cudnn
+Changed current directory to C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData
+01/04/2017 07:42:52: -------------------------------------------------------------------
+01/04/2017 07:42:52: Build info: 
 
-08/23/2016 03:52:13: 		Built time: Aug 23 2016 03:29:14
-08/23/2016 03:52:13: 		Last modified date: Mon Aug 22 21:29:13 2016
-08/23/2016 03:52:13: 		Build type: Release
-08/23/2016 03:52:13: 		Build target: GPU
-08/23/2016 03:52:13: 		With 1bit-SGD: no
-08/23/2016 03:52:13: 		Math lib: mkl
-08/23/2016 03:52:13: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.5
-08/23/2016 03:52:13: 		CUB_PATH: C:\src\cub-1.4.1
-08/23/2016 03:52:13: 		CUDNN_PATH: C:\NVIDIA\cudnn-5.0\cuda
-08/23/2016 03:52:13: 		Build Branch: HEAD
-08/23/2016 03:52:13: 		Build SHA1: 66498cf414f4bbf6392730c2abfbef6a5eeb8f7b
-08/23/2016 03:52:13: 		Built by svcphil on LIANA-09-w
-08/23/2016 03:52:13: 		Build Path: c:\jenkins\workspace\CNTK-Build-Windows\Source\CNTK\
-08/23/2016 03:52:13: -------------------------------------------------------------------
-08/23/2016 03:52:14: -------------------------------------------------------------------
-08/23/2016 03:52:14: GPU info:
+01/04/2017 07:42:52: 		Built time: Jan  3 2017 23:37:25
+01/04/2017 07:42:52: 		Last modified date: Tue Jan  3 18:50:06 2017
+01/04/2017 07:42:52: 		Build type: Debug
+01/04/2017 07:42:52: 		Build target: GPU
+01/04/2017 07:42:52: 		With 1bit-SGD: yes
+01/04/2017 07:42:52: 		With ASGD: no
+01/04/2017 07:42:52: 		Math lib: mkl
+01/04/2017 07:42:52: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v7.0
+01/04/2017 07:42:52: 		CUB_PATH: C:\cub-1.4.1
+01/04/2017 07:42:52: 		CUDNN_PATH: C:\cudnn-5.1
+01/04/2017 07:42:52: 		Build Branch: amitaga/dataInteropFeatures
+01/04/2017 07:42:52: 		Build SHA1: 5ea3126709951e8b903eeffbd2c3bc1b6bf1db53 (modified)
+01/04/2017 07:42:52: 		Built by amitaga on Amitaga-Win-DT3
+01/04/2017 07:42:52: 		Build Path: E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Source\CNTK\
+01/04/2017 07:42:52: 		MPI distribution: msmpi
+01/04/2017 07:42:52: 		MPI version: 7.0.12437.6
+01/04/2017 07:42:52: -------------------------------------------------------------------
+01/04/2017 07:42:53: -------------------------------------------------------------------
+01/04/2017 07:42:53: GPU info:
 
-08/23/2016 03:52:14: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
-08/23/2016 03:52:14: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
-08/23/2016 03:52:14: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3072 MB
-08/23/2016 03:52:14: -------------------------------------------------------------------
+01/04/2017 07:42:53: 		Device[0]: cores = 1536; computeCapability = 3.0; type = "GeForce GTX 690"; memory = 2048 MB
+01/04/2017 07:42:53: 		Device[1]: cores = 384; computeCapability = 3.0; type = "GeForce GTX 650"; memory = 1024 MB
+01/04/2017 07:42:53: 		Device[2]: cores = 1536; computeCapability = 3.0; type = "GeForce GTX 690"; memory = 2048 MB
+01/04/2017 07:42:53: -------------------------------------------------------------------
 
-08/23/2016 03:52:14: Running on DPHAIM-25 at 2016/08/23 03:52:14
-08/23/2016 03:52:14: Command line: 
-C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\Spatial/02_BatchNormConv.cntk  currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu  DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\Spatial  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu  DeviceId=0  timestamping=true  batchNormalizationEngine=cudnn
+Configuration, Raw:
 
-
-
-08/23/2016 03:52:14: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-08/23/2016 03:52:14: RootDir = "."
+01/04/2017 07:42:53: RootDir = "."
 ConfigDir = "$RootDir$"
 DataDir = "$RootDir$"
 OutputDir = "$RootDir$/Output"
@@ -117,24 +101,24 @@ Test = [
         ]
     ]    
 ]
-currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu
-DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData
-ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\Spatial
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu
+currentDirectory=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData
+RunDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu
+DataDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData
+ConfigDir=E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Tests\EndToEndTests\BatchNormalization\Spatial
+OutputDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu
 DeviceId=0
 timestamping=true
 batchNormalizationEngine=cudnn
 
-08/23/2016 03:52:14: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
 
-08/23/2016 03:52:14: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-08/23/2016 03:52:14: RootDir = "."
+Configuration After Variable Resolution:
+
+01/04/2017 07:42:53: RootDir = "."
 ConfigDir = "."
 DataDir = "."
 OutputDir = "./Output"
-ModelDir = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu/Models"
-ndlMacros = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\Spatial/Macros.ndl"
+ModelDir = "C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu/Models"
+ndlMacros = "E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Tests\EndToEndTests\BatchNormalization\Spatial/Macros.ndl"
 precision = "float"
 deviceId = 0
 imageLayout = "cudnn"
@@ -145,9 +129,9 @@ traceLevel = 1
 numMBsToShowResult = 500
 Train = [
     action = "train"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu/Models/02_BatchNormConv"
+    modelPath = "C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu/Models/02_BatchNormConv"
      NDLNetworkBuilder = [
-        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\Spatial/02_BatchNormConv.ndl"
+        networkDescription = "E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Tests\EndToEndTests\BatchNormalization\Spatial/02_BatchNormConv.ndl"
     ]
     SGD = [
         epochSize = 1024
@@ -160,7 +144,7 @@ Train = [
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData/Train_cntk_text.txt"
+        file = "C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData/Train_cntk_text.txt"
         input = [
             features = [
                 dim = 3072
@@ -175,11 +159,11 @@ Train = [
 ]
 Test = [
     action = "test"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu/Models/02_BatchNormConv"
+    modelPath = "C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu/Models/02_BatchNormConv"
     minibatchSize = 16
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData/Test_cntk_text.txt"
+        file = "C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData/Test_cntk_text.txt"
         input = [
             features = [
                 dim = 3072
@@ -192,40 +176,40 @@ Test = [
         ]
     ]    
 ]
-currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData
-RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu
-DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData
-ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\Spatial
-OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu
+currentDirectory=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData
+RunDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu
+DataDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData
+ConfigDir=E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Tests\EndToEndTests\BatchNormalization\Spatial
+OutputDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu
 DeviceId=0
 timestamping=true
 batchNormalizationEngine=cudnn
 
-08/23/2016 03:52:14: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
 
-08/23/2016 03:52:14: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
+Configuration After Processing and Variable Resolution:
+
 configparameters: 02_BatchNormConv.cntk:batchNormalizationEngine=cudnn
 configparameters: 02_BatchNormConv.cntk:command=Train:Test
-configparameters: 02_BatchNormConv.cntk:ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\Spatial
-configparameters: 02_BatchNormConv.cntk:currentDirectory=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData
-configparameters: 02_BatchNormConv.cntk:DataDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData
+configparameters: 02_BatchNormConv.cntk:ConfigDir=E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Tests\EndToEndTests\BatchNormalization\Spatial
+configparameters: 02_BatchNormConv.cntk:currentDirectory=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData
+configparameters: 02_BatchNormConv.cntk:DataDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData
 configparameters: 02_BatchNormConv.cntk:deviceId=0
 configparameters: 02_BatchNormConv.cntk:imageLayout=cudnn
 configparameters: 02_BatchNormConv.cntk:initOnCPUOnly=true
-configparameters: 02_BatchNormConv.cntk:ModelDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu/Models
-configparameters: 02_BatchNormConv.cntk:ndlMacros=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\Spatial/Macros.ndl
+configparameters: 02_BatchNormConv.cntk:ModelDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu/Models
+configparameters: 02_BatchNormConv.cntk:ndlMacros=E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Tests\EndToEndTests\BatchNormalization\Spatial/Macros.ndl
 configparameters: 02_BatchNormConv.cntk:numMBsToShowResult=500
-configparameters: 02_BatchNormConv.cntk:OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu
+configparameters: 02_BatchNormConv.cntk:OutputDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu
 configparameters: 02_BatchNormConv.cntk:precision=float
 configparameters: 02_BatchNormConv.cntk:RootDir=.
-configparameters: 02_BatchNormConv.cntk:RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu
+configparameters: 02_BatchNormConv.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu
 configparameters: 02_BatchNormConv.cntk:Test=[
     action = "test"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu/Models/02_BatchNormConv"
+    modelPath = "C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu/Models/02_BatchNormConv"
     minibatchSize = 16
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData/Test_cntk_text.txt"
+        file = "C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData/Test_cntk_text.txt"
         input = [
             features = [
                 dim = 3072
@@ -243,9 +227,9 @@ configparameters: 02_BatchNormConv.cntk:timestamping=true
 configparameters: 02_BatchNormConv.cntk:traceLevel=1
 configparameters: 02_BatchNormConv.cntk:Train=[
     action = "train"
-    modelPath = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu/Models/02_BatchNormConv"
+    modelPath = "C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu/Models/02_BatchNormConv"
      NDLNetworkBuilder = [
-        networkDescription = "C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\BatchNormalization\Spatial/02_BatchNormConv.ndl"
+        networkDescription = "E:\NetScale\CNTK\git_repos\git_cntkv2Library_5\Tests\EndToEndTests\BatchNormalization\Spatial/02_BatchNormConv.ndl"
     ]
     SGD = [
         epochSize = 1024
@@ -258,7 +242,7 @@ configparameters: 02_BatchNormConv.cntk:Train=[
     ]
     reader = [
         readerType = "CNTKTextFormatReader"
-        file = "C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu\TestData/Train_cntk_text.txt"
+        file = "C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu\TestData/Train_cntk_text.txt"
         input = [
             features = [
                 dim = 3072
@@ -272,185 +256,110 @@ configparameters: 02_BatchNormConv.cntk:Train=[
     ]    
 ]
 
-08/23/2016 03:52:14: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-08/23/2016 03:52:14: Commands: Train Test
-08/23/2016 03:52:14: Precision = "float"
-08/23/2016 03:52:14: CNTKModelPath: C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu/Models/02_BatchNormConv
-08/23/2016 03:52:14: CNTKCommandTrainInfo: Train : 2
-08/23/2016 03:52:14: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 2
+01/04/2017 07:42:53: Commands: Train Test
+01/04/2017 07:42:53: precision = "float"
 
-08/23/2016 03:52:14: ##############################################################################
-08/23/2016 03:52:14: #                                                                            #
-08/23/2016 03:52:14: # Action "train"                                                             #
-08/23/2016 03:52:14: #                                                                            #
-08/23/2016 03:52:14: ##############################################################################
+01/04/2017 07:42:53: ##############################################################################
+01/04/2017 07:42:53: #                                                                            #
+01/04/2017 07:42:53: # Train command (train action)                                               #
+01/04/2017 07:42:53: #                                                                            #
+01/04/2017 07:42:53: ##############################################################################
 
-08/23/2016 03:52:14: CNTKCommandTrainBegin: Train
-
-08/23/2016 03:52:14: Creating virgin network.
+01/04/2017 07:42:53: 
+Creating virgin network.
 NDLBuilder Using GPU 0
-Node 'featOffs' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 0.000000.
-Node 'b' (LearnableParameter operation): Initializing Parameter[3 x 1] <- 0.000000.
-Node 'sc' (LearnableParameter operation): Initializing Parameter[3 x 1] <- 0.000000.
-Node 'm' (LearnableParameter operation): Initializing Parameter[3 x 1] <- 0.000000.
-Node 'var' (LearnableParameter operation): Initializing Parameter[3 x 1] <- 0.000000.
-Node 'h1.W' (LearnableParameter operation): Initializing Parameter[64 x 15 x 15 x 3] <- 0.000000.
-Node 'h1.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
-Node 'OutputNodes.W' (LearnableParameter operation): Initializing Parameter[10 x 64] <- 0.000000.
-Node 'OutputNodes.b' (LearnableParameter operation): Initializing Parameter[10] <- 0.000000.
-Node 'featOffs' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 128.000000.
-Node 'featOffs' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 128.000000.
-Node 'featOffs' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 128.000000.
-Node 'featOffs' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 128.000000.
-Node 'featOffs' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 128.000000.
-Node 'featOffs' (LearnableParameter operation): Initializing Parameter[1 x 1] <- 128.000000.
-Node 'b' (LearnableParameter operation): Initializing Parameter[3 x 1] <- 0.000000.
-Node 'sc' (LearnableParameter operation): Initializing Parameter[3 x 1] <- 1.000000.
-Node 'm' (LearnableParameter operation): Initializing Parameter[3 x 1] <- 0.000000.
-Node 'var' (LearnableParameter operation): Initializing Parameter[3 x 1] <- 0.000000.
-Node 'h1.W' (LearnableParameter operation): Initializing Parameter[64 x 15 x 15 x 3] <- gaussian(seed=1, range=0.007698*12.000000, onCPU=false).
-Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetGaussianRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
-Node 'h1.b' (LearnableParameter operation): Initializing Parameter[64 x 1] <- 0.000000.
-Node 'OutputNodes.W' (LearnableParameter operation): Initializing Parameter[10 x 64] <- gaussian(seed=2, range=0.025000*1.500000, onCPU=false).
-Node 'OutputNodes.b' (LearnableParameter operation): Initializing Parameter[10] <- 0.000000.
-
-Post-processing network...
-
-3 roots:
-	CE = CrossEntropyWithSoftmax()
-	Err = ErrorPrediction()
-	OutputNodes.z = Plus()
-
-Validating network. 22 nodes to process in pass 1.
-
-Validating --> labels = InputValue() :  -> [10 x *]
-Validating --> OutputNodes.W = LearnableParameter() :  -> [10 x 64]
-Validating --> h1.W = LearnableParameter() :  -> [64 x 15 x 15 x 3]
-Validating --> features = InputValue() :  -> [32 x 32 x 3 x *]
-Validating --> featOffs = LearnableParameter() :  -> [1 x 1]
-Validating --> featScaled = Minus (features, featOffs) : [32 x 32 x 3 x *], [1 x 1] -> [32 x 32 x 3 x *]
-Validating --> sc = LearnableParameter() :  -> [3 x 1]
-Validating --> b = LearnableParameter() :  -> [3 x 1]
-Validating --> m = LearnableParameter() :  -> [3 x 1]
-Validating --> var = LearnableParameter() :  -> [3 x 1]
-Validating --> y = BatchNormalization (featScaled, sc, b, m, var) : [32 x 32 x 3 x *], [3 x 1], [3 x 1], [3 x 1], [3 x 1] -> [32 x 32 x 3 x *]
-Validating --> conv1 = RectifiedLinear (y) : [32 x 32 x 3 x *] -> [32 x 32 x 3 x *]
-Validating --> pool1 = MaxPooling (conv1) : [32 x 32 x 3 x *] -> [15 x 15 x 3 x *]
-Validating --> h1.t = Times (h1.W, pool1) : [64 x 15 x 15 x 3], [15 x 15 x 3 x *] -> [64 x *]
-Validating --> h1.b = LearnableParameter() :  -> [64 x 1]
-Validating --> h1.z = Plus (h1.t, h1.b) : [64 x *], [64 x 1] -> [64 x 1 x *]
-Validating --> h1.y = RectifiedLinear (h1.z) : [64 x 1 x *] -> [64 x 1 x *]
-Validating --> OutputNodes.t = Times (OutputNodes.W, h1.y) : [10 x 64], [64 x 1 x *] -> [10 x 1 x *]
-Validating --> OutputNodes.b = LearnableParameter() :  -> [10]
-Validating --> OutputNodes.z = Plus (OutputNodes.t, OutputNodes.b) : [10 x 1 x *], [10] -> [10 x 1 x *]
-Validating --> CE = CrossEntropyWithSoftmax (labels, OutputNodes.z) : [10 x *], [10 x 1 x *] -> [1]
-Validating --> Err = ErrorPrediction (labels, OutputNodes.z) : [10 x *], [10 x 1 x *] -> [1]
-
-Validating network. 11 nodes to process in pass 2.
-
-
-Validating network, final pass.
-
-
+Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetGaussianRandomValue (GPU): creating curand object with seed 2, sizeof(ElemType)==4
+c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 3, Kernel: 5 x 5 x 3, Map: 1 x 1 x 3, Stride: 1 x 1 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 Using cuDNN batch normalization engine.
-
 pool1: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 15 x 15 x 3, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
+01/04/2017 07:42:58: 
+Model has 24 nodes. Using GPU 0.
 
-
-11 out of 22 nodes do not share the minibatch layout with the input data.
-
-Post-processing network complete.
-
-08/23/2016 03:52:16: Created model with 22 nodes on GPU 0.
-
-08/23/2016 03:52:16: Training criterion node(s):
-08/23/2016 03:52:16: 	CE = CrossEntropyWithSoftmax
-
-08/23/2016 03:52:16: Evaluation criterion node(s):
-08/23/2016 03:52:16: 	Err = ErrorPrediction
+01/04/2017 07:42:58: Training criterion:   CE = CrossEntropyWithSoftmax
+01/04/2017 07:42:58: Evaluation criterion: Err = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 37 matrices, 18 are shared as 8, and 19 are not shared.
+Memory Sharing: Out of 41 matrices, 19 are shared as 7, and 22 are not shared.
 
-	{ pool1 : [15 x 15 x 3 x *]
-	  y : [32 x 32 x 3 x *] (gradient) }
-	{ b : [3 x 1] (gradient)
-	  conv1 : [32 x 32 x 3 x *] (gradient)
-	  h1.t : [64 x *] }
-	{ conv1 : [32 x 32 x 3 x *]
-	  sc : [3 x 1] (gradient) }
-	{ h1.W : [64 x 15 x 15 x 3] (gradient)
-	  h1.z : [64 x 1 x *] }
 	{ OutputNodes.t : [10 x 1 x *]
-	  h1.z : [64 x 1 x *] (gradient)
-	  pool1 : [15 x 15 x 3 x *] (gradient) }
-	{ h1.t : [64 x *] (gradient)
-	  h1.y : [64 x 1 x *] }
-	{ h1.b : [64 x 1] (gradient)
-	  h1.y : [64 x 1 x *] (gradient) }
+	  h1.z : [64 x 1 x *] }
 	{ OutputNodes.W : [10 x 64] (gradient)
 	  OutputNodes.z : [10 x 1 x *] (gradient) }
+	{ OutputNodes.t : [10 x 1 x *] (gradient)
+	  h1.W : [64 x 15 x 15 x 3] (gradient)
+	  h1.z : [64 x 1 x *] (gradient) }
+	{ c : [32 x 32 x 3 x *] (gradient)
+	  conv1 : [32 x 32 x 3 x *] }
+	{ h1.b : [64 x 1] (gradient)
+	  h1.y : [64 x 1 x *] (gradient) }
+	{ pool1 : [15 x 15 x 3 x *]
+	  y : [32 x 32 x 3 x *]
+	  y : [32 x 32 x 3 x *] (gradient) }
+	{ conv1 : [32 x 32 x 3 x *] (gradient)
+	  h1.t : [64 x *]
+	  h1.t : [64 x *] (gradient)
+	  h1.y : [64 x 1 x *]
+	  sc : [3 x 1] (gradient) }
 
 
-08/23/2016 03:52:16: Training 43920 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
+01/04/2017 07:42:58: Training 44145 parameters in 7 out of 7 parameter tensors and 17 nodes with gradient:
 
-08/23/2016 03:52:16: 	Node 'OutputNodes.W' (LearnableParameter operation) : [10 x 64]
-08/23/2016 03:52:16: 	Node 'OutputNodes.b' (LearnableParameter operation) : [10]
-08/23/2016 03:52:16: 	Node 'b' (LearnableParameter operation) : [3 x 1]
-08/23/2016 03:52:16: 	Node 'h1.W' (LearnableParameter operation) : [64 x 15 x 15 x 3]
-08/23/2016 03:52:16: 	Node 'h1.b' (LearnableParameter operation) : [64 x 1]
-08/23/2016 03:52:16: 	Node 'sc' (LearnableParameter operation) : [3 x 1]
+01/04/2017 07:42:58: 	Node 'OutputNodes.W' (LearnableParameter operation) : [10 x 64]
+01/04/2017 07:42:58: 	Node 'OutputNodes.b' (LearnableParameter operation) : [10]
+01/04/2017 07:42:58: 	Node 'W' (LearnableParameter operation) : [3 x 75]
+01/04/2017 07:42:58: 	Node 'b' (LearnableParameter operation) : [3 x 1]
+01/04/2017 07:42:58: 	Node 'h1.W' (LearnableParameter operation) : [64 x 15 x 15 x 3]
+01/04/2017 07:42:58: 	Node 'h1.b' (LearnableParameter operation) : [64 x 1]
+01/04/2017 07:42:58: 	Node 'sc' (LearnableParameter operation) : [3 x 1]
 
-08/23/2016 03:52:16: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+01/04/2017 07:42:58: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-08/23/2016 03:52:16: Starting Epoch 1: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-BlockRandomizer::StartEpoch: epoch 1: samples [0..1024] (first sequence at sample 0), worker rank 0, total workers 1
+01/04/2017 07:42:58: Starting Epoch 1: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-08/23/2016 03:52:16: Starting minibatch loop.
-08/23/2016 03:52:20: Finished Epoch[ 1 of 2]: [Training] CE = 2.32012272 * 1024; Err = 0.89355469 * 1024; totalSamplesSeen = 1024; learningRatePerSample = 0.00046874999; epochTime=4.45523s
-08/23/2016 03:52:20: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu/Models/02_BatchNormConv.1'
+01/04/2017 07:43:00: Starting minibatch loop.
+01/04/2017 07:44:23: Finished Epoch[ 1 of 2]: [Training] CE = 2.27208638 * 1024; Err = 0.85546875 * 1024; totalSamplesSeen = 1024; learningRatePerSample = 0.00046874999; epochTime=84.4367s
+01/04/2017 07:44:23: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu/Models/02_BatchNormConv.1'
 
-08/23/2016 03:52:20: Starting Epoch 2: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
-BlockRandomizer::StartEpoch: epoch 2: samples [1024..2048] (first sequence at sample 1024), worker rank 0, total workers 1
+01/04/2017 07:44:23: Starting Epoch 2: learning rate per sample = 0.000469  effective momentum = 0.000000  momentum as time constant = 0.0 samples
 
-08/23/2016 03:52:20: Starting minibatch loop.
-08/23/2016 03:52:20: Finished Epoch[ 2 of 2]: [Training] CE = 2.24044609 * 1024; Err = 0.83984375 * 1024; totalSamplesSeen = 2048; learningRatePerSample = 0.00046874999; epochTime=0.037262s
-08/23/2016 03:52:20: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20160823035118.956998\BatchNormalization\Spatial_CuDNN@release_gpu/Models/02_BatchNormConv'
-08/23/2016 03:52:20: CNTKCommandTrainEnd: Train
+01/04/2017 07:44:23: Starting minibatch loop.
+01/04/2017 07:44:23: Finished Epoch[ 2 of 2]: [Training] CE = 2.21359444 * 1024; Err = 0.80859375 * 1024; totalSamplesSeen = 2048; learningRatePerSample = 0.00046874999; epochTime=0.253057s
+01/04/2017 07:44:23: SGD: Saving checkpoint model 'C:\cygwin64\tmp\cntk-test-20170103234236.850903\BatchNormalization\Spatial_CuDNN@debug_gpu/Models/02_BatchNormConv'
 
-08/23/2016 03:52:20: Action "train" complete.
+01/04/2017 07:44:24: Action "train" complete.
 
 
-08/23/2016 03:52:20: ##############################################################################
-08/23/2016 03:52:20: #                                                                            #
-08/23/2016 03:52:20: # Action "test"                                                              #
-08/23/2016 03:52:20: #                                                                            #
-08/23/2016 03:52:20: ##############################################################################
+01/04/2017 07:44:24: ##############################################################################
+01/04/2017 07:44:24: #                                                                            #
+01/04/2017 07:44:24: # Test command (test action)                                                 #
+01/04/2017 07:44:24: #                                                                            #
+01/04/2017 07:44:24: ##############################################################################
 
-INFO: y: initialized samplesSeen from mbCount when loading pre-CuDNNv5 model
 
 Post-processing network...
 
 3 roots:
 	CE = CrossEntropyWithSoftmax()
-	Err = ErrorPrediction()
+	Err = ClassificationError()
 	OutputNodes.z = Plus()
 
-Validating network. 22 nodes to process in pass 1.
+Validating network. 24 nodes to process in pass 1.
 
 Validating --> labels = InputValue() :  -> [10 x *1]
 Validating --> OutputNodes.W = LearnableParameter() :  -> [10 x 64]
 Validating --> h1.W = LearnableParameter() :  -> [64 x 15 x 15 x 3]
+Validating --> W = LearnableParameter() :  -> [3 x 75]
 Validating --> features = InputValue() :  -> [32 x 32 x 3 x *1]
 Validating --> featOffs = LearnableParameter() :  -> [1 x 1]
 Validating --> featScaled = Minus (features, featOffs) : [32 x 32 x 3 x *1], [1 x 1] -> [32 x 32 x 3 x *1]
+Validating --> c = Convolution (W, featScaled) : [3 x 75], [32 x 32 x 3 x *1] -> [32 x 32 x 3 x *1]
 Validating --> sc = LearnableParameter() :  -> [3 x 1]
 Validating --> b = LearnableParameter() :  -> [3 x 1]
 Validating --> m = LearnableParameter() :  -> [3 x 1]
-Validating --> var = LearnableParameter() :  -> [3 x 1]
-Validating --> y = BatchNormalization (featScaled, sc, b, m, var) : [32 x 32 x 3 x *1], [3 x 1], [3 x 1], [3 x 1], [3 x 1] -> [32 x 32 x 3 x *1]
+Validating --> v = LearnableParameter() :  -> [3 x 1]
+Validating --> y = BatchNormalization (c, sc, b, m, v) : [32 x 32 x 3 x *1], [3 x 1], [3 x 1], [3 x 1], [3 x 1] -> [32 x 32 x 3 x *1]
 Validating --> conv1 = RectifiedLinear (y) : [32 x 32 x 3 x *1] -> [32 x 32 x 3 x *1]
 Validating --> pool1 = MaxPooling (conv1) : [32 x 32 x 3 x *1] -> [15 x 15 x 3 x *1]
 Validating --> h1.t = Times (h1.W, pool1) : [64 x 15 x 15 x 3], [15 x 15 x 3 x *1] -> [64 x *1]
@@ -461,20 +370,18 @@ Validating --> OutputNodes.t = Times (OutputNodes.W, h1.y) : [10 x 64], [64 x 1 
 Validating --> OutputNodes.b = LearnableParameter() :  -> [10]
 Validating --> OutputNodes.z = Plus (OutputNodes.t, OutputNodes.b) : [10 x 1 x *1], [10] -> [10 x 1 x *1]
 Validating --> CE = CrossEntropyWithSoftmax (labels, OutputNodes.z) : [10 x *1], [10 x 1 x *1] -> [1]
-Validating --> Err = ErrorPrediction (labels, OutputNodes.z) : [10 x *1], [10 x 1 x *1] -> [1]
+Validating --> Err = ClassificationError (labels, OutputNodes.z) : [10 x *1], [10 x 1 x *1] -> [1]
 
-Validating network. 11 nodes to process in pass 2.
+Validating network. 12 nodes to process in pass 2.
 
 
 Validating network, final pass.
 
-
+c: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 32 x 32 x 3, Kernel: 5 x 5 x 3, Map: 1 x 1 x 3, Stride: 1 x 1 x 3, Sharing: (1), AutoPad: (1), LowerPad: 0, UpperPad: 0.
 Using cuDNN batch normalization engine.
-
 pool1: using cuDNN convolution engine for geometry: Input: 32 x 32 x 3, Output: 15 x 15 x 3, Kernel: 3 x 3 x 1, Map: 1, Stride: 2 x 2 x 1, Sharing: (1), AutoPad: (0), LowerPad: 0, UpperPad: 0.
 
 
-11 out of 22 nodes do not share the minibatch layout with the input data.
 
 Post-processing network complete.
 
@@ -483,14 +390,23 @@ evalNodeNames are not specified, using all the default evalnodes and training cr
 
 Allocating matrices for forward and/or backward propagation.
 
-Memory Sharing: Out of 22 matrices, 0 are shared as 0, and 22 are not shared.
+Memory Sharing: Out of 24 matrices, 10 are shared as 2, and 14 are not shared.
 
+	{ OutputNodes.z : [10 x 1 x *1]
+	  c : [32 x 32 x 3 x *1]
+	  conv1 : [32 x 32 x 3 x *1]
+	  h1.t : [64 x *1]
+	  h1.y : [64 x 1 x *1] }
+	{ OutputNodes.t : [10 x 1 x *1]
+	  featScaled : [32 x 32 x 3 x *1]
+	  h1.z : [64 x 1 x *1]
+	  pool1 : [15 x 15 x 3 x *1]
+	  y : [32 x 32 x 3 x *1] }
 
-BlockRandomizer::StartEpoch: epoch 1: samples [0..10000] (first sequence at sample 0), worker rank 0, total workers 1
-08/23/2016 03:52:22: Minibatch[1-500]: Err = 0.80987500 * 8000; CE = 2.19471007 * 8000
-08/23/2016 03:52:22: Minibatch[501-625]: Err = 0.82000000 * 2000; CE = 2.21734574 * 2000
-08/23/2016 03:52:22: Final Results: Minibatch[1-625]: Err = 0.81190000 * 10000; CE = 2.19923720 * 10000; perplexity = 9.01813187
+01/04/2017 07:44:43: Minibatch[1-500]: Err = 0.81237500 * 8000; CE = 2.18292270 * 8000
+01/04/2017 07:44:45: Minibatch[501-625]: Err = 0.81300000 * 2000; CE = 2.18584554 * 2000
+01/04/2017 07:44:45: Final Results: Minibatch[1-625]: Err = 0.81250000 * 10000; CE = 2.18350727 * 10000; perplexity = 8.87738714
 
-08/23/2016 03:52:22: Action "test" complete.
+01/04/2017 07:44:45: Action "test" complete.
 
-08/23/2016 03:52:22: __COMPLETED__
+01/04/2017 07:44:45: __COMPLETED__

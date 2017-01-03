@@ -40,10 +40,9 @@ void CNTKEvalBase<ElemType>::Init(const std::string& config)
     m_config.Parse(config);
     size_t nThreads = m_config("numCPUThreads", "1");
     CPUMatrix<ElemType>::SetNumThreads(nThreads);
-    if (m_config(L"shareNodeValueMatrices", false))
-        Globals::EnableShareNodeValueMatrices();
-    if (m_config(L"hyperCompressMemory", false))
-        Globals::EnableHyperCompressMemory();
+
+    Globals::SetShareNodeValueMatrices(m_config(L"shareNodeValueMatrices", true));
+    Globals::SetHyperCompressMemory(m_config(L"hyperCompressMemory", false));
 }
 
 
@@ -377,11 +376,12 @@ void CNTKEvalExtended<ElemType>::ForwardPassT(const std::vector<ValueBuffer<Elem
     }
 
     ComputationNetwork::BumpEvalTimeStamp(m_inputNodes);
+    this->m_net->ForwardProp(m_outputNodes);
 
     for (size_t i2 = 0; i2 < m_outputNodes.size(); ++i2)
     {
         auto node = m_outputNodes[i2];
-        this->m_net->ForwardProp(node);
+        
         shared_ptr<Matrix<ElemType>> outputMatrix = dynamic_pointer_cast<Matrix<ElemType>>(node->ValuePtr());
         auto pMBLayout = node->GetMBLayout();
         if (!pMBLayout)

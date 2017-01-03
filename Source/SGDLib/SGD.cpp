@@ -1014,6 +1014,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         epochStartSample = trainSetDataReader->GetCurrentSamplePosition();
     }
 
+    auto forwardPropRoots = evaluationNodes;
+    forwardPropRoots.push_back(criterionNodes[0]);
+
     bool noMoreSamplesToProcess = false;
     bool isFirstMinibatch = true;
     for (;;)
@@ -1104,13 +1107,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
                 // compute eval node first since when gradient is computed the forward function values
                 // may be changed and need to be recomputed when gradient and function value share the same matrix
-                net->ForwardProp(evaluationNodes); // the bulk of this evaluation is reused in ComputeGradient() below
-
-                // ===========================================================
-                // forward prop for training criterion
-                // ===========================================================
-
-                net->ForwardProp(criterionNodes[0]);
+                net->ForwardProp(forwardPropRoots); // the bulk of this evaluation is reused in ComputeGradient() below
 
                 // ===========================================================
                 // backprop

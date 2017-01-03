@@ -985,7 +985,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     // Allocate memory for forward/backward computation
     if (TraceLevel() > 0)
-    fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
+        fprintf(stderr, "\n\nAllocating matrices for forward and/or backward propagation.\n");
 
     VerifyIsCompiled("AllocateAllMatrices");
 
@@ -1026,18 +1026,13 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                     outputValueNeededDuringBackProp[input] |= (node->NeedsGradient() && node->InputUsedInComputingInputNodesGradients(i));
                 }
                 else
-                {
                     outputValueNeededDuringBackProp[input] = false;
-                }
             }
         }
     }
 
-    std::unordered_map<ComputationNodeBasePtr, int> parentCount;
     for (auto& keyValue : parentsMap)
     {
-        parentCount[keyValue.first] = keyValue.second.size();
-
         // Indicate on the node that it's parent overwrites its gradient if the node is not part of a loop
         // and has exactly one parent who implements the gradient overwrite optimization
         if (Globals::ShouldOptimizeGradientAccumulation() &&
@@ -1057,16 +1052,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     // Construct the composite forward prop eval order by enumerating the
     // nodes corresponding to each of our roots and then arranging them in the
     // relative order that they appear in the global evaluation order
-    const std::list<ComputationNodeBasePtr>& allNodesEvalOrder = GetEvalOrder(nullptr);
+
     std::list<ComputationNodeBasePtr> nodesForForwardPropRoots = ComputationNodeBase::EnumerateNodes(forwardPropRoots);
-    std::vector<ComputationNodeBasePtr> compositeForwardPropEvalOrder;
-    for (auto& node : allNodesEvalOrder)
-    {
-        if (std::find(nodesForForwardPropRoots.cbegin(), nodesForForwardPropRoots.cend(), node) != nodesForForwardPropRoots.cend())
-        {
-            compositeForwardPropEvalOrder.push_back(node);
-        }
-    }
+    std::vector<ComputationNodeBasePtr> compositeForwardPropEvalOrder = SortByGlobalEvalOrder(nodesForForwardPropRoots);
 
     set<ComputationNodeBasePtr> completedEvaluate;
     for (auto& nodeIter : compositeForwardPropEvalOrder)
@@ -1083,17 +1071,15 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                 recInfo->RequestMatricesBeforeForwardProp(m_matrixPool);
 
                 for (auto& nodeLoopIter : recInfo->m_nestedNodes)
-                {
-                    ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentCount);
-                }
+                    ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentsMap);
             }
         }
         else
         {
             nodeIter->RequestMatricesBeforeForwardProp(m_matrixPool);
-            // we only release matrices for the children since the root node's information will be used and should not be shared
-            // with others
-            ReleaseMatricesAfterEvalForChildren(nodeIter, parentCount);
+            // we only release matrices for the children since the root node's information will be used
+            // and should not be shared with others
+            ReleaseMatricesAfterEvalForChildren(nodeIter, parentsMap);
         }
     }
 
@@ -1139,17 +1125,20 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     // print the memory sharing structure
     if (TraceLevel() > 0)
-    PrintMemorySharingStructure(GetAllNodes());
+        PrintMemorySharingStructure(GetAllNodes());
 }
 
-void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount)
+void ComputationNetwork::ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>>& parentsMap)
 {
     for (int i = 0; i < n->GetNumInputs(); i++)
     {
         ComputationNodeBasePtr pNode = n->GetInputs()[i];
-        parentCount[pNode]--;
-        if (parentCount[pNode] == 0)
-            pNode->ReleaseMatricesAfterForwardProp(m_matrixPool);
+        if (!parentsMap[pNode].empty())
+        {
+            parentsMap[pNode].erase(n);
+            if (parentsMap[pNode].empty())
+                pNode->ReleaseMatricesAfterForwardProp(m_matrixPool);
+        }
     }
 }
 
