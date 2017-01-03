@@ -1,0 +1,282 @@
+[
+    {
+        "category": [""],
+        "name":  "CNTK Evaluation on Azure",
+        "url":  "https://github.com/Microsoft/CNTK/wiki/Evaluate-a-model-in-an-Azure-WebApi",
+        "description":  "Host an already trained CNTK model on Azure.",
+        "language":  [],
+        "type":  ["Tutorial"]
+    },
+    {
+        "category": [""],
+        "name":  "Using the C# Eval Client",
+        "url":  "https://github.com/Microsoft/CNTK/wiki/Managed-Evaluation-Interface",
+        "description":  "Evaluation or inference of an already trained CNTK model.",
+        "language":  ["C#"],
+        "type":  ["Example"]
+    },
+    {
+        "category": [""],
+        "name":  "Using the C++ Eval Client",
+        "url":  "https://github.com/Microsoft/CNTK/wiki/Native-Evaluation-Interface",
+        "description":  "Evaluation or inference of an already trained CNTK model.",
+        "language":  ["C++"],
+        "type":  ["Example"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "AlexNet",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/AlexNet",
+        "description":  "CNN based network by Alex Krizhevsky winning model of ILSVRC2012 classification task.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "ConvNet",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/ConvNet#cntk-examples-imageclassificationconvnet",
+        "description":  "One of the most popular neural networks for image-related tasks.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "Fast R-CNN",
+        "url":  "https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN",
+        "description":  "Training object detection from images by adapting pre-trained classification models on arbitrarily sized region-of-interest using ROI pulling.",
+        "language":  ["BrainScript"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "MLP",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/MLP#cntk-examples-imageclassificationmlp",
+        "description":  "Multilayer perceptron is a permutation invariant model using a feed-forward neural network that consists of multiple layers of nodes in a directed graph, where each layer fully connected to the next one.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "MNIST CNN OCR",
+        "url":  "https://github.com/Microsoft/CNTK/wiki/Tutorial2",
+        "description":  "Use CNN on a OCR problem.",
+        "language":  ["Python", "BrainScript"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "MNIST Feed Forward OCR",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103A_MNIST_DataLoader.ipynb",
+        "description":  "Use Feed Forward networks on a OCR problem.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "One Conv",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#02_oneconvcntk",
+        "description":  "This is a simple network example showing one convolutional layer.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "One Conv BN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#04_oneconvbncntk",
+        "description":  "This is a simple network example showing how to add batch normalization to a CNN.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "One Conv Dropout",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#03_oneconvdropoutcntk",
+        "description":  "This is a simple network example showing how to add dropout to a CNN.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "One Hidden",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#01_onehiddencntk",
+        "description":  "This is a simple network example showing one hidden layer.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "One Regr",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#05_oneconvregrcntk",
+        "description":  "This is a simple network example showing how to treat MNIST as a regression problem using Root Mean Square Error.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "RegrSimple",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Regression#cntk-examples-imageregression",
+        "description":  "A simple neural network to predict the average RGB values of normalized images.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "ResNet",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/ResNet#cntk-examples-imageclassificationresnet",
+        "description":  "Deep residual learning invented by Microsoft Research and winning model of ILSVRC and MS-COCO challenges in 2015.",
+        "language":  ["Python", "BrainScript"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "VGG",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/VGG",
+        "description":  "Deep CNN from University of Oxford winning model for ILSVRC2014 localization task.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Numeric"],
+        "name":  "Feed Forward Classification",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_102_FeedForward.ipynb",
+        "description":  "Use Feed Forward networks on a classification problem with CNTK and NumPy.",
+        "language":  ["Python", "BrainScript"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Numeric"],
+        "name":  "Logistic Regression",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_101_LogisticRegression.ipynb",
+        "description":  "Logistic regression example with Synthetic data.",
+        "language":  ["Python", "BrainScript"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "Reinforcement Learning",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb",
+        "description":  "Inspired by behaviorist psychology, concerned with how software agents ought to take actions in an environment so as to maximize some notion of cumulative reward.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Speech"],
+        "name":  "AN4 Speech DNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/AN4",
+        "description":  "Train a speech recognition DNN acoustic model trained on the CMU AN4 dataset.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Speech"],
+        "name":  "AN4 Speech LSTM",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/AN4",
+        "description":  "Train a speech recognition LSTM acoustic model trained on the CMU AN4 dataset.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Speech"],
+        "name":  "Kaldi Speech DNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/AMI",
+        "description":  "Train a speech recognition DNN acoustic model on top of fMLLR features generated using the Kaldi toolchain.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Speech"],
+        "name":  "Speech Adapt Learn Rate",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
+        "description":  "Train a speech recognition model with learning rate adapted based on dev set trained on the TIMIT dataset.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Speech"],
+        "name":  "Speech Auto Encoder",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
+        "description":  "Train autoencoder with bottleneck layer trained on the TIMIT dataset.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Speech"],
+        "name":  "Speech Multi Input",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
+        "description":  "Train with 2 different inputs: fbank and mfcc trained on the TIMIT dataset.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Speech"],
+        "name":  "Speech Multi Task",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
+        "description":  "Train with multi-task learning with joint prediction of senone labels and dialect region trained on the TIMIT dataset.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Speech"],
+        "name":  "Speech with PreTrain",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
+        "description":  "Pre-train using layerwise discriminative pre-training, then do full network training trained on the TIMIT dataset.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Speech"],
+        "name":  "TIMIT Speech DNN",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
+        "description":  "Train a speech recognition DNN acoustic model trained on the TIMIT dataset (TrainSimpleNetwork).",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Speech"],
+        "name":  "TIMIT Speech LSTM",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Speech/Miscellaneous/TIMIT/config",
+        "description":  "Train a speech recognition LSTM acoustic model trained on the TIMIT dataset (TrainNDLNetwork).",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Speech", "Text"],
+        "name":  "G2P",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceToSequence/CMUDict",
+        "description":  "Sequence-to-sequence model with attention mechanism for a grapheme to phoneme translation task on the CMUDict dataset.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Text"],
+        "name":  "RNN ATIS LU",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/LanguageUnderstanding/ATIS",
+        "description":  "LSTM based model for language understanding on the ATIS dataset.",
+        "language":  ["Python", "BrainScript"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Text"],
+        "name":  "RNN LM",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceToSequence/PennTreebank",
+        "description":  "Recurrent neural network for language modeling on the Pentreebank dataset.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Text"],
+        "name":  "Sequence Classification",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceClassification/SimpleExample/Python",
+        "description":  "Creates and trains a LSTM sequence classification model.",
+        "language":  ["Python"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Text"],
+        "name":  "Sequence-to-Sequence",
+        "url":  "https://github.com/Microsoft/CNTK/tree/Examples/SequenceToSequence/CMUDict/Python",
+        "description":  "Creates and trains a sequence to sequence translation model.",
+        "language":  ["Python"],
+        "type":  ["Recipe"]
+    }
+]
