@@ -364,7 +364,7 @@ namespace CNTK
                 if (i != 0)
                     wStrStream << L" x ";
 
-                wStrStream << m_shapeDims[i];
+                wStrStream << ((int)m_shapeDims[i]);
             }
 
             wStrStream << L"]";
