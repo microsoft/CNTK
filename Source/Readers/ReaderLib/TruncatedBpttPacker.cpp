@@ -130,28 +130,28 @@ TruncatedBPTTPacker::TruncatedBPTTPacker(
 
 void TruncatedBPTTPacker::SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
 {
-    auto currentMinibatchSize = m_config.m_minibatchSizeInSamples;
-    auto currentTruncationSize = m_config.m_truncationSize;
+    auto oldMinibatchSize = m_config.m_minibatchSizeInSamples;
+    auto oldTruncationSize = m_config.m_truncationSize;
 
     PackerBase::SetConfiguration(config, memoryProviders);
 
     if (m_config.m_truncationSize == 0)
         LogicError("Truncation size cannot be zero.");
 
-    if (currentMinibatchSize != config.m_minibatchSizeInSamples ||
-        currentTruncationSize != config.m_truncationSize)
+    if (oldMinibatchSize != m_config.m_minibatchSizeInSamples ||
+        oldTruncationSize != m_config.m_truncationSize)
     {
         // Estimating the number of parallel sequences to pack (slots) from the minibatch size and truncation size.
         m_numParallelSequences = max(1, static_cast<int>(std::floor(m_config.m_minibatchSizeInSamples / m_config.m_truncationSize)));
 
-        if (config.m_numberOfWorkers > m_numParallelSequences)
+        if (m_config.m_numberOfWorkers > m_numParallelSequences)
         {
             InvalidArgument("Too many workers for minibatch size; please increase minibatch size or decrease number of workers.");
         }
 
         m_numParallelSequences =
-            (m_numParallelSequences / config.m_numberOfWorkers) +
-            (config.m_workerRank < (m_numParallelSequences % config.m_numberOfWorkers) ? 1 : 0);
+            (m_numParallelSequences / m_config.m_numberOfWorkers) +
+            (m_config.m_workerRank < (m_numParallelSequences % m_config.m_numberOfWorkers) ? 1 : 0);
 
         m_sequenceBufferPerStream.clear();
 
@@ -311,7 +311,8 @@ void TruncatedBPTTPacker::ReadSequencesToSlot(size_t slotIndex)
     {
         // We need a single sequence, potentially we can request (m_truncationSize - slot.AvailableNumberOfSamples())
         // to be more efficient. In reality the truncation size usually is less the sequence size.
-        auto s = m_sequenceEnumerator->GetNextSequences(1);
+        // Bptt always operates on a local timeline, so we do not limit the global minibatch count.
+        auto s = m_sequenceEnumerator->GetNextSequences(SIZE_MAX, 1);
 
         // Adding sequence to the slot for all streams.
         for (size_t i = 0; i < s.m_data.size(); ++i)

@@ -96,10 +96,6 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     // Pick up the randomizer, always picking up no randomization for the write mode.
     bool randomize = isActionWrite ? false : config(L"randomize", true);
 
-    // Check whether to use local timeline, by default we use it for better performance.
-    // Currently used only in frame mode.
-    bool localTimeline = config(L"localTimeline", true);
-
     // By default do not use omp threads for deserialization of sequences.
     // It makes sense to put it to true for cases when deserialization is CPU intensive,
     // i.e. decompression of images.
@@ -118,9 +114,8 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
 
         randomizationWindow = config(L"randomizationWindow", randomizationWindow);
 
-        // By default using STL random number generator.
-        bool useLegacyRandomization = config(L"useLegacyRandomization", false);
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, true /* should Prefetch */, useLegacyRandomization, multiThreadedDeserialization);
+        bool shouldPrefetch = true;
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, multiThreadedDeserialization);
     }
     else
     {
@@ -146,18 +141,27 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         m_streams.push_back(stream);
     }
 
+    // Currently for prefetch we use two alternativing buffers,
+    // same is the default.
+    size_t numAlternatingBuffers = 2;
+
+    // Check whether to use local timeline, by default we use it for better performance.
+    bool localTimeline = config(L"localTimeline", true);
     switch (m_packingMode)
     {
     case PackingMode::sample:
         m_packer = std::make_shared<FramePacker>(
             m_sequenceEnumerator,
             m_streams,
+            numAlternatingBuffers,
             localTimeline);
         break;
     case PackingMode::sequence:
         m_packer = std::make_shared<SequencePacker>(
             m_sequenceEnumerator,
-            m_streams);
+            m_streams,
+            numAlternatingBuffers,
+            localTimeline);
         break;
     case PackingMode::truncated:
     {
