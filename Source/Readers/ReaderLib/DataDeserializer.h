@@ -60,7 +60,7 @@ typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 // TODO: add type casts (As<T>() or AsRef<>() or AsPtr<>()) to subclasses as members here.
 struct SequenceDataBase
 {
-    SequenceDataBase() : m_id(0), m_numberOfSamples(0), m_elementType(ElementType::tvariant) {}
+    SequenceDataBase() : m_id(0), m_numberOfSamples(0), m_elementType(ElementType::tvariant), m_isValid(true) {}
     virtual ~SequenceDataBase() = default;
 
     // Sequence id.
@@ -73,6 +73,7 @@ struct SequenceDataBase
 
     ElementType m_elementType;     // Sequence element type.
     TensorShapePtr m_sampleLayout; // Sample layout, can be shared by several sequences.
+    bool m_isValid;                // Flag indicating if sequence is valid.
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 
