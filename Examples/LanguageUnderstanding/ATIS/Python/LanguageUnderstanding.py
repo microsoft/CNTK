@@ -160,11 +160,8 @@ def peek(model, epoch):
 
 def train(reader, model, max_epochs):
 
-    # declare the model's input dimension
-    #model.replace_placeholders({model.placeholders[0]: input_variable(vocab_size, name=model.placeholders[0].name)})
-    # BUGBUG: replace_placeholders() looses the input's name
-    model.update_signature(vocab_size)
-    # BUGBUG: ^^ Trainer requires this, although the criterion roots are not part of this.
+    # declare the model's input dimension, so that the saved model is usable
+    model.update_signature(Type(vocab_size, is_sparse=False))
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)
@@ -174,7 +171,8 @@ def train(reader, model, max_epochs):
     #labels = reader.streams.intent_labels  # needs 3 changes to switch to this
 
     # declare argument types
-    criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
+    criterion.update_signature(x=Type(vocab_size, is_sparse=False), y=Type(num_labels, is_sparse=True))
+    # note: keywords are optional
     #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
     # iteration parameters  --needed here because learner schedule needs it
