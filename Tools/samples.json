@@ -306,7 +306,7 @@
     {
         "category": ["Text"],
         "name":  "Language Understanding with Recurrent Networks",
-        "url":  "https://github.com/Microsoft/CNTK/blobg/master/Tutorials/CNTK_202_Language_Understanding.ipynb",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_202_Language_Understanding.ipynb",
         "description":  "Implement a recurrent network for language understanding of the ATIS dataset.",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
