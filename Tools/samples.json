@@ -24,6 +24,14 @@
         "type":  ["Example"]
     },
     {
+        "category": [""],
+        "name":  "Video action recognition",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Video/GettingStarted",
+        "description":  "Train a Basic 3-D convolutional neural network for video action recognition on the UCF11 dataset.",
+        "language":  ["Python"],
+        "type":  ["Recipe"]
+    },
+    {
         "category": ["Image"],
         "name":  "AlexNet",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/AlexNet",
@@ -49,6 +57,14 @@
     },
     {
         "category": ["Image"],
+        "name":  "GoogLeNet (Inception V3)",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet#cntk-examples-imageclassificationgooglenet",
+        "description":  "GoogLeNet (Inception V3) network for image classification.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
         "name":  "MLP",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/MLP#cntk-examples-imageclassificationmlp",
         "description":  "Training a multilayer perceptron (MLP) network for image classification. An MLP is a permutation invariant model using a feed-forward neural network that consists of multiple layers of nodes in a directed graph. Each layer is fully connected to the next one.",
@@ -68,6 +84,22 @@
         "name":  "MNIST Feed Forward OCR",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103B_MNIST_FeedForwardNetwork.ipynb",
         "description":  "Use Feed Forward networks on an OCR problem.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "Image Recognition",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_201B_CIFAR-10_ImageHandsOn.ipynb",
+        "description":  "Hands-on lab that shows how to implement an image recognition task using convolutional neural networks.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "Neural Artistic Style Transfer",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb",
+        "description":  "This tutorial shows how to transfer the style of one image to another. This allows us to take our ordinary photos and render them in the style of famous images or paintings.",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },
@@ -148,6 +180,14 @@
         "name":  "Feed Forward Classification",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_102_FeedForward.ipynb",
         "description":  "Use Feed Forward networks on a classification problem with CNTK and NumPy.",
+        "language":  ["Python"],
+        "type":  ["Tutorial"]
+    },
+    {
+        "category": ["Numeric"],
+        "name":  "Finance Timeseries Basic",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy.ipynb",
+        "description":  "Time Series with Pandas and NumPy",
         "language":  ["Python"],
         "type":  ["Tutorial"]
     },
@@ -248,12 +288,36 @@
         "type":  ["Recipe"]
     },
     {
+        "category": ["Speech", "Text"],
+        "name":  "Grapheme to Phoneme (G2P)",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb",
+        "description":  "Sequence-to-sequence model with attention mechanism for a grapheme to phoneme translation task on the CMUDict dataset.",
+        "language":  ["Python"],
+        "type":  ["Recipe"]
+    },
+    {
         "category": ["Text"],
         "name":  "LTSM LU on ATIS",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/LanguageUnderstanding/ATIS",
         "description":  "LSTM based model for language understanding on the ATIS dataset.",
         "language":  ["Python", "BrainScript"],
         "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Text"],
+        "name":  "Language Understanding with Recurrent Networks",
+        "url":  "https://github.com/Microsoft/CNTK/blobg/master/Tutorials/CNTK_202_Language_Understanding.ipynb",
+        "description":  "Implement a recurrent network for language understanding of the ATIS dataset.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Text"],
+        "name":  "Neural Character Language Model",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/CharacterLM",
+        "description":  "Create and train a neural character language model.",
+        "language":  ["Python"],
+        "type":  ["Recipe"]
     },
     {
         "category": ["Text"],
