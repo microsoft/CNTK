@@ -209,7 +209,8 @@ def train(reader, model, max_epochs):
             # BUGBUG? The change of minibatch_size parameter vv has no effect.
             data = reader.next_minibatch(min(minibatch_size, epoch_end-t))     # fetch minibatch
             #loss, metric = criterion(data[reader.streams.query], data[labels])  # update model with it
-            trainer.train_minibatch_from_data(criterion, data[reader.streams.query], data[labels])  # update model with it
+            trainer.train_minibatch(data[reader.streams.query], data[labels])  # update model with it
+            #trainer.train_minibatch_from_data(criterion, data[reader.streams.query], data[labels])  # update model with it
             t += data[labels].num_samples                  # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
@@ -226,7 +227,7 @@ def evaluate(reader, model):
     criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_labels, is_sparse=True))
 
     # process minibatches and perform evaluation
-    evaluator = Evaluator(model, criterion)
+    evaluator = Evaluator(None, criterion)
 
     #x = Placeholder(name='x')
     #y = Placeholder(name='y')
@@ -246,7 +247,9 @@ def evaluate(reader, model):
         data = reader.next_minibatch(minibatch_size) # fetch minibatch
         if not data:                                 # until we hit the end
             break
-        metric = evaluator.test_minibatch({ criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[reader.streams.slot_labels] })
+        #metric = evaluator.test_minibatch({ criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[reader.streams.slot_labels] })
+        metric = evaluator.test_minibatch(x=data[reader.streams.query], y=data[reader.streams.slot_labels])
+        # note: keyword syntax ^^ is optional; this is to demonstrate it
         progress_printer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 

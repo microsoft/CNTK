@@ -57,7 +57,23 @@ class Trainer(cntk_py.Trainer):
             parameter_learners = [parameter_learners]
         super(Trainer, self).__init__(model, loss_function, eval_function, parameter_learners)
 
-    def train_minibatch(self, arguments, outputs=None, device=None):
+    def _train_test_mb_map_args(self, *args, **kwargs):
+        '''helper function for mimicking Python calling convention in train/test_minibatch()'''
+        # one argument, which is an arg map
+        if len(args) == 1 and isinstance(args[0], dict):
+            return args[0]
+        # map to function arguments
+        args = self.loss_function.argument_map(*args, **kwargs)
+        # in this use case, all must have the same inputs
+        if self.model:
+            if self.loss_function.arguments != self.model.arguments:
+                raise ValueError("model function must have the same signature and inputs as the loss function")
+        if self.evaluation_function:
+            if self.loss_function.arguments != self.evaluation_function.arguments:
+                raise ValueError("evaluation function must have the same signature and inputs as the loss function")
+        return args
+
+    def train_minibatch(self, *arguments, outputs=None, device=None, **kwargs):
         '''
         Optimize model parameters using the specified 'arguments' minibatch of training samples.
 
@@ -69,6 +85,7 @@ class Trainer(cntk_py.Trainer):
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
+                TODO: document more complex use case
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
@@ -93,6 +110,9 @@ class Trainer(cntk_py.Trainer):
         if not device:
             device = use_default_device()
 
+        # mimic Python function-call semantics unique input or multiple arguments are given
+        arguments = self._train_test_mb_map_args(*arguments, **kwargs)
+
         if arguments: # arguments must feed all inputs (model, loss, eval)
             all_args = set(self.loss_function.arguments)
             if self.model:
@@ -114,7 +134,7 @@ class Trainer(cntk_py.Trainer):
 
         return updated
 
-    def test_minibatch(self, arguments, device=None):
+    def test_minibatch(self, *arguments, device=None, **kwargs):
         '''
         Test the model on the specified batch of samples using the evaluation
         Function specified during construction of the Trainer. 
@@ -127,6 +147,7 @@ class Trainer(cntk_py.Trainer):
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
+               TODO: update this
              In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
@@ -144,6 +165,10 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device = use_default_device()
+
+        # mimic Python function-call semantics unique input or multiple arguments are given
+        arguments = self._train_test_mb_map_args(*arguments, **kwargs)
+
         # pass all args of all parts (model, loss, eval)
         all_args = set(self.loss_function.arguments)
         if self.model:
@@ -258,7 +283,12 @@ def Evaluator(model, criterion):
     '''
     loss, metric = Trainer._get_loss_metric(criterion)
     from .learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
-    dummy_learner = momentum_sgd(model.parameters, 
+    parameters = set(loss.parameters)
+    if model:
+        parameters |= set(model.parameters)
+    if metric:
+        parameters |= set(metric.parameters)
+    dummy_learner = momentum_sgd(tuple(parameters), 
                                  lr = learning_rate_schedule(1, UnitType.minibatch),
                                  momentum = momentum_as_time_constant_schedule(0))
     return Trainer(model, (loss, metric), dummy_learner)

@@ -111,6 +111,7 @@ class Function(cntk_py.Function):
     # determine the {placeholder: variable} map for use with various call operations
     # Accepted are both positional and keyword arguments.
     # This mimics Python's argument interpretation, except that keyword arguments are not optional.
+    # This does not require the arguments to be Variables or Functions. It is also called by train_minibatch().
     def argument_map(self, *args, **kwargs):
         params = self._get_arguments()    # function parameters
         if len(args) + len(kwargs) != len(params):
