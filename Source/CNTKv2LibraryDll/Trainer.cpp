@@ -31,7 +31,10 @@ namespace CNTK
         if (!Internal::MaxNumCPUThreadsSet())
             SetMaxNumCPUThreads(std::thread::hardware_concurrency());
 
-        std::vector<Variable> combinedFunctionArgs = { m_model, m_lossFunction };
+        std::vector<Variable> combinedFunctionArgs;
+        if (m_model) // model is optional, since it may not be adding any information on top of lossFunction
+            combinedFunctionArgs.push_back(m_model);
+        combinedFunctionArgs.push_back(m_lossFunction);
         if (!m_lossFunction->Output().DynamicAxes().empty())
         {
             m_aggregatedLossFunction = ReduceSum(lossFunction);

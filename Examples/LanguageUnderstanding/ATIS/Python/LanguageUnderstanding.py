@@ -193,7 +193,8 @@ def train(reader, model, max_epochs):
 
     # trainer
     # TODO: try to pass None as model, and fix the C++ code to accept that
-    trainer = Trainer(model, criterion, learner)
+    #trainer = Trainer(model, criterion, learner)
+    trainer = Trainer(None, criterion, learner)
 
     # process minibatches and perform model training
     log_number_of_parameters(model) ; print()

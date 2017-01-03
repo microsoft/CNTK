@@ -139,8 +139,7 @@ class Function(cntk_py.Function):
         e.g.
         model.update_signature(42)
         pass a list of objects that define the dimensions etc. of the placeholders
-        Currently you can pass either
-        TODO: honor the names
+        Currently you can pass an int, a tuple, an Input, or a dict created with Type()
         '''
         arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
         #params = self._get_arguments()  # the function arguments to fill in
