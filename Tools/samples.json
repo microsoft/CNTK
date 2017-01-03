@@ -24,8 +24,8 @@
         "type":  ["Example"]
     },
     {
-        "category": [""],
-        "name":  "Video action recognition",
+        "category": ["Image"],
+        "name":  "Video Action Recognition",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Video/GettingStarted",
         "description":  "Train a Basic 3-D convolutional neural network for video action recognition on the UCF11 dataset.",
         "language":  ["Python"],
@@ -177,11 +177,11 @@
     },
     {
         "category": ["Numeric"],
-        "name":  "Finance Timeseries Basic",
+        "name":  "Finance Timeseries with CNTK, Pandas and Numpy",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy.ipynb",
-        "description":  "Time Series with Pandas and NumPy",
+        "description":  ": Looking at the predictive potential on classification of an Exchange-traded Funds (ETF), and in this simplified setting how one could trade it.",
         "language":  ["Python"],
-        "type":  ["Tutorial"]
+        "type":  ["Tutorial", "Recipe"]
     },
     {
         "category": ["Numeric"],
@@ -289,9 +289,9 @@
     },
     {
         "category": ["Speech", "Text"],
-        "name":  "Grapheme to Phoneme (G2P)",
+        "name":  "Sequence-to-Sequence",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb",
-        "description":  "Sequence-to-sequence model with attention mechanism for a grapheme to phoneme translation task on the CMUDict dataset.",
+        "description":  "The input is a sequence with a dynamic length, and the output is also a sequence with some dynamic length. This is a natural fit for machine translation , automatic text summarization , word to pronunciation models and even parse tree generation.",
         "language":  ["Python"],
         "type":  ["Tutorial"]
     },
@@ -315,7 +315,7 @@
         "category": ["Text"],
         "name":  "Neural Character Language Model",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/CharacterLM",
-        "description":  "Create and train a neural character language model.",
+        "description":  "A neural language model uses a recurrent neural network to predict words (or characters) with a richer context than traditional n-gram models allow.",
         "language":  ["Python"],
         "type":  ["Recipe"]
     },
