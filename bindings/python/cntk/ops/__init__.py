@@ -140,13 +140,13 @@ def cosine_distance(x, y, name=''):
 @typemap
 def binary_cross_entropy(output, target, name=''):
     r'''
-    Computes the binary cross entropy between the ``output`` and ``target``.
+    Computes the binary cross entropy (aka logistic loss) between the ``output`` and ``target``.
 
     Example:
         TBA
 
     Args:
-        output: the computed posterior probability from the network
+        output: the computed posterior probability for a variable to be 1 from the network (typ. a ``sigmoid``)
         target: ground-truth label, 0 or 1
         name (str, optional): the name of the Function instance in the network
     Returns:
@@ -161,7 +161,7 @@ def binary_cross_entropy(output, target, name=''):
 @typemap
 def weighted_binary_cross_entropy(output, target, weight, name=''):
     r'''
-    This operation computes the weighted binary cross entropy between the ``output`` and ``target``.
+    This operation computes the weighted binary cross entropy (aka logistic loss) between the ``output`` and ``target``.
 
     Example:
         TBA
