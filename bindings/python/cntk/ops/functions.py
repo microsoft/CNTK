@@ -58,14 +58,8 @@ class Function(cntk_py.Function):
         f_name = f.__name__
         arg_names = [name for name, param in params.items() if param.default == Parameter.empty] # only non-optional params become Placeholders
         # execute the lambda with placeholders as inputs, which creates a piece of graph
-        from cntk import placeholder_variable, combine, alias
+        from cntk import placeholder_variable, combine, alias, as_block
         args = [placeholder_variable(name=name) for name in arg_names]
-        # force them into the right order
-        # Placeholders are ordered in depth-first traversal order.
-        # By routing them through combine(), we force their traversal order to be first to last.
-        # TODO: Get evidence that this is actually doing what it is meant to do.
-        #args = combine(args).outputs
-        # No, it is not doing what it is meant to do.
         out = f(*args)
         # resolve NamedOutputs
         # TODO: check for duplicates
@@ -78,16 +72,27 @@ class Function(cntk_py.Function):
                 #  TODO: verify that this is still the case. Either way, alias() is slow.
                 # BUGBUG: Without alias, the names are not propagated into outputs.
                 # BUGBUG: Forgetting [] in combine will hang combine().
+            # BUGBUG: as_block() only accepts Functions, not Variables
+            elif isinstance(output, cntk_py.Variable):
+                output = combine([output]) # workaround: wrap in another combine() call
             return output
         if isinstance(out, tuple): # multi-value function, returned as a tuple
             out = [resolve_named(output) for output in out]
-            out = combine(out, name=f_name)
-            #out = alias(out, name=f_name)
+            out = combine(out)
         else:
-            out = [resolve_named(out)]
-            out = out[0]
-        # implant the function name as the node name --TODO: should be op_name in a BlockFunction
-        #out = combine(out, name=f_name)
+            out = resolve_named(out)
+            #out = [resolve_named(out)]
+            #out = out[0]
+        # BUGBUG: as_block() cannot *not* use an argument (e.g. temporarily changing a function to not use an input)
+        if len(out.placeholders) != len(args):
+            unused_args = set(args) - set(out.placeholders)
+            unused_arg_names = [arg.name for arg in unused_args]
+            raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
+        # wrap into a block as to ensure ordering of parameters
+        args2 = [placeholder_variable(name=name) for name in arg_names]
+        arg_map = list(zip(args,args2))
+        out = as_block(out, arg_map, f_name);
+
         # add all members to the Python class
         # TODO: This should really be a dictionary inside BlockFunction
         for key in members:   # UNTESTED
@@ -217,7 +222,7 @@ class Function(cntk_py.Function):
         arg_map = self.argument_map(*args, **kwargs)
 
         # determine whether this is eval() or clone()
-        from .variables import Variable
+        #from .variables import Variable
         is_symbolic = any(isinstance(arg, (cntk_py.Function, cntk_py.Variable)) for arg in arg_map.values())
 
         # symbolic: return a cloned Function

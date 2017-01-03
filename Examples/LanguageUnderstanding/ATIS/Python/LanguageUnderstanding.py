@@ -65,7 +65,7 @@ def create_model_function():
       # similar to relu for large sc, but not as good with sc=1.
       # Which makes no sense since it should cancel out.
 
-  softmux = Function(lambda sel, a, b: a)   # sel * a + (1-sel) * b)
+  softmux = Function(lambda sel, a, b: sel * a + (1-sel) * b)
   rnn = RNNUnit(hidden_dim, activation=relu)
   #gate = Dense(hidden_dim, activation=sigmoid)
   #pr_rnn = Function(lambda x, h: softmux(gate(x), x, rnn(x, h)))
@@ -192,6 +192,7 @@ def train(reader, model, max_epochs):
                        gradient_clipping_with_truncation = True)
 
     # trainer
+    # TODO: try to pass None as model, and fix the C++ code to accept that
     trainer = Trainer(model, criterion, learner)
 
     # process minibatches and perform model training

@@ -33,8 +33,13 @@ class Trainer(cntk_py.Trainer):
 
     @staticmethod
     def _get_loss_metric(criterion): # helper to interpret criterion parameter
-        if isinstance(criterion, cntk_py.Function): # input can be a tuple of Functions of a tuple Function
-            criterion = criterion.outputs
+        if isinstance(criterion, cntk_py.Function): # input can be a tuple of Functions or a tuple-valued Function
+            criterion = criterion.outputs           # break up tuple-valued Function into tuple of Functions
+        # map Variable to Function
+        #criterion = tuple([sanitize_function(output) for output in criterion])
+        # BUGBUG: for tuple-valued BlockFunctions, sanitize_function() returns the tuple; must use combine() instead
+        from cntk import combine
+        criterion = tuple([combine([output], output.name) if isinstance(output, cntk_py.Variable) else output for output in criterion])
         if not isinstance(criterion, tuple): # input can be a single value or a tuple (loss, metric)
             criterion = (criterion, None)    # if single then pad with None for the metric
         if len(criterion) == 1:
@@ -46,12 +51,10 @@ class Trainer(cntk_py.Trainer):
     def __init__(self, model, criterion, parameter_learners):
         loss_function, eval_function = Trainer._get_loss_metric(criterion)
         # TODO sanitizing should be removed once Swig's typemaps are in place
-        model = sanitize_function(model)
-        loss_function = sanitize_function(loss_function)
-        eval_function = sanitize_function(eval_function)
+        if model is not None:  # None means dummy model that is, e.g., the same as a criterion
+            model = sanitize_function(model)
         if not isinstance(parameter_learners, list):
             parameter_learners = [parameter_learners]
-
         super(Trainer, self).__init__(model, loss_function, eval_function, parameter_learners)
 
     def train_minibatch(self, arguments, outputs=None, device=None):

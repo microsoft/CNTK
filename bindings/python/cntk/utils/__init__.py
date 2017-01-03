@@ -307,6 +307,8 @@ def sanitize_function(arg):
 
     if isinstance(arg, cntk_py.Variable):
         arg = arg.owner
+        if len(arg.outputs) != 1: # BUGBUG: This seems to happen with BlockFunctions?
+            raise TypeError("casting Variable to Function unexpectedly returned a tuple")
 
     if not isinstance(arg, cntk_py.Function):
         raise TypeError("Object of type '%s' cannot be cast to Variable" %
