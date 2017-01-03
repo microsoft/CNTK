@@ -360,7 +360,12 @@ namespace CNTK
             InvalidArgument("Variable%S with unknown DataType detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         if (variable.Shape().IsUnknown())
-            InvalidArgument("Variable%S with unknown shape detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+				{
+
+					fprintf(stderr, "Variable%S with unknown shape detected when compiling the Function graph, owner: %S!\n", ParanthesizedName(variable.Name()).c_str(), ParanthesizedName(variable.Owner()->Name()).c_str());
+					fprintf(stderr, "Quit\n");
+					InvalidArgument("Variable%S with unknown shape detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+				}
 
         if (variable.Shape().HasInferredDimension())
             InvalidArgument("Variable%S with InferredDimension for at least one axis in its shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
