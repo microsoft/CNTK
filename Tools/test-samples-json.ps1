@@ -3,7 +3,7 @@ Param([string]$WikiRepoPath)
 
 $scriptDir = Split-Path $MyInvocation.MyCommand.Definition
 
-function gitGetFilesAndDirs {
+function GetGitFilesAndDirs {
   [CmdletBinding()]
   Param(
     [parameter(Mandatory=$true)]
@@ -37,8 +37,9 @@ function gitGetFilesAndDirs {
   $FileHash.Value.Clear()
   $DirHash.Value.Clear()
 
+  $originalLocation = Get-Location
   try {
-    Push-Location -ErrorAction Stop $RepoPath
+    Set-Location -ErrorAction Stop $RepoPath
 
     $outFile = git ls-tree -r $Treeish --full-tree --name-only
     if ($LASTEXITCODE -ne 0) {
@@ -54,11 +55,11 @@ function gitGetFilesAndDirs {
     $outDir | ForEach-Object { $DirHash.Value[$_] = $true }
 
   } finally {
-    Pop-Location
+    Set-Location $originalLocation
   }
 }
 
-function splitPrefix($Prefix, $String) {
+function SplitPrefix($Prefix, $String) {
   if ($String.StartsWith($Prefix)) {
     $String.Substring($Prefix.Length)
   }
@@ -68,12 +69,12 @@ function splitPrefix($Prefix, $String) {
 $sourceFileHash = New-Object -TypeName System.Collections.Hashtable
 $sourceDirHash = New-Object -TypeName System.Collections.Hashtable
 
-gitGetFilesAndDirs -FileHash ([ref]$sourceFileHash) -DirHash ([ref]$sourceDirHash) -RepoPath $scriptDir -Treeish HEAD
+GetGitFilesAndDirs -FileHash ([ref]$sourceFileHash) -DirHash ([ref]$sourceDirHash) -RepoPath $scriptDir -Treeish HEAD
 
 $wikiFileHash = New-Object -TypeName System.Collections.Hashtable
 $wikiDirHash = New-Object -TypeName System.Collections.Hashtable
 if ($WikiRepoPath) {
-  gitGetFilesAndDirs -FileHash ([ref]$wikiFileHash) -DirHash ([ref]$wikiDirHash) -RepoPath $WikiRepoPath -Treeish HEAD
+  GetGitFilesAndDirs -FileHash ([ref]$wikiFileHash) -DirHash ([ref]$wikiDirHash) -RepoPath $WikiRepoPath -Treeish HEAD
 }
 
 $jsonFile = 'samples.json'
@@ -87,15 +88,15 @@ $json.url | ForEach-Object {
 
   if ($uri.IsAbsoluteUri -and $uri.Scheme -ceq 'https' -and $uri.Host -ceq 'github.com') {
     $path = $uri.LocalPath
-    if ($rest = splitPrefix '/Microsoft/CNTK/tree/master/' $path) {
+    if ($rest = SplitPrefix '/Microsoft/CNTK/tree/master/' $path) {
       if (-not $sourceDirHash.ContainsKey($rest)) {
         Write-Error "Cannot find $_ as a directory in Git HEAD"
       }
-    } elseif ($rest = splitPrefix '/Microsoft/CNTK/blob/master/' $path) {
+    } elseif ($rest = SplitPrefix '/Microsoft/CNTK/blob/master/' $path) {
       if (-not $sourceFileHash.ContainsKey($rest)) {
         Write-Error "Cannot find $_ as a file in Git HEAD"
       }
-    } elseif ($rest = splitPrefix '/Microsoft/CNTK/wiki/' $path) {
+    } elseif ($rest = SplitPrefix '/Microsoft/CNTK/wiki/' $path) {
       if ($WikiRepoPath) {
         if (-not ($wikiFileHash.ContainsKey("$rest.md") -or $wikiDirHash.ContainsKey($rest))) {
           Write-Error "Cannot find $_ in Wiki Git HEAD"
