@@ -168,7 +168,7 @@ void TextParser<ElemType>::Initialize()
                 "UTF-16 encoding is currently not supported.", m_filename.c_str());
         }
 
-        m_indexer = make_unique<Indexer>(m_file, m_isPrimary, m_skipSequenceIds, m_chunkSizeBytes);
+        m_indexer = make_unique<Indexer>(m_file, m_isPrimary, m_skipSequenceIds, NAME_PREFIX, m_chunkSizeBytes);
 
         m_indexer->Build(m_corpus);
     });

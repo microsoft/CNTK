@@ -166,7 +166,7 @@ void BlockRandomizerInstantiateTest(bool prefetch)
 {
     vector<float> data;
     auto mockDeserializer = make_shared<MockDeserializer>(0, 0, data);
-    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch);
 }
 
 BOOST_AUTO_TEST_CASE(CheckGetCurrentCursorForRandomizers)
@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE(CheckGetCurrentCursorForRandomizers)
     size_t randomizationWindow = chunkSizeInSamples * 5;
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
-    auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
+    auto blockRandomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
     auto noRandomizer = make_shared<NoRandomizer>(deserializer, false);
 
     auto test = [](SequenceEnumeratorPtr r, size_t epochSize)
@@ -219,11 +219,11 @@ BOOST_AUTO_TEST_CASE(CheckSetCurrentCursorForRandomizers)
     size_t randomizationWindow = chunkSizeInSamples * 5;
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
-    auto expectedBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
-    auto expectedNo = make_shared<NoRandomizer>(deserializer, false);
+    auto expectedBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
+    auto expectedNo = make_shared<NoRandomizer>(deserializer);
 
-    auto underTestBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
-    auto unterTestNo = make_shared<NoRandomizer>(deserializer, false);
+    auto underTestBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
+    auto unterTestNo = make_shared<NoRandomizer>(deserializer);
 
     auto test = [](SequenceEnumeratorPtr expected, SequenceEnumeratorPtr underTest, size_t epochSize)
     {
@@ -288,7 +288,7 @@ BOOST_AUTO_TEST_CASE(RandRollbackToEarlierEpochBetweenSweeps)
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
     // Let's randomize complete sweep, so that we have a baseline.
-    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
 
     // Let's read all sequences from the first three sweeps in the randomized order.
     auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
@@ -326,7 +326,7 @@ BOOST_AUTO_TEST_CASE(RandRollbackToEarlierEpochInTheSweep)
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
     // Let's randomize complete sweep, so that we have a baseline.
-    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
 
     // Let's read all sequences from the first three sweeps in the randomized order.
     auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
@@ -357,7 +357,7 @@ BOOST_AUTO_TEST_CASE(RandRollbackToSameEpochInTheSweep)
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
     // Let's randomize complete sweep, so that we have a baseline.
-    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
 
     // Let's read all sequences from the first three sweeps in the randomized order.
     auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
@@ -384,7 +384,7 @@ BOOST_AUTO_TEST_CASE(RandRollbackToSameEpochInBigRandomizationWindow)
     auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
 
     // Let's randomize complete sweep, so that we have a baseline.
-    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
 
     // Let's read all sequences from the first three sweeps in the randomized order.
     auto firstSweep = ReadFullSweep(randomizer, 0, sweepNumberOfSamples);
@@ -423,7 +423,7 @@ void BlockRandomizerOneEpochTest(bool prefetch)
     iota(data.begin(), data.end(), 0.0f);
     auto mockDeserializer = make_shared<MockDeserializer>(5, 2, data);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, SIZE_MAX, mockDeserializer, prefetch);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -438,7 +438,7 @@ void BlockRandomizerOneEpochTest(bool prefetch)
     vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
     {
-        Sequences sequences = randomizer->GetNextSequences(1);
+        Sequences sequences = randomizer->GetNextSequences(1, 1);
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
@@ -464,7 +464,7 @@ void BlockRandomizerOneEpochWithChunks1Test(bool prefetch)
     iota(data.begin(), data.end(), 0.0f);
     auto mockDeserializer = make_shared<MockDeserializer>(5, 2, data);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, 4, mockDeserializer, prefetch, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, 4, mockDeserializer, prefetch);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -479,7 +479,7 @@ void BlockRandomizerOneEpochWithChunks1Test(bool prefetch)
     vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
     {
-        Sequences sequences = randomizer->GetNextSequences(1);
+        Sequences sequences = randomizer->GetNextSequences(1, 1);
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
@@ -506,7 +506,7 @@ void BlockRandomizerOneEpochWithChunks2Test(bool prefetch)
 
     auto mockDeserializer = make_shared<MockDeserializer>(10, 2, data);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, 18, mockDeserializer, prefetch, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, 18, mockDeserializer, prefetch);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -524,7 +524,7 @@ void BlockRandomizerOneEpochWithChunks2Test(bool prefetch)
     vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
     {
-        Sequences sequences = randomizer->GetNextSequences(1);
+        Sequences sequences = randomizer->GetNextSequences(1, 1);
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
@@ -559,7 +559,7 @@ void BlockRandomizerChaosMonkeyTest(bool prefetch)
 
     auto mockDeserializer = make_shared<MockDeserializer>(numChunks, numSequencesPerChunk, data, sequenceLength);
 
-    auto randomizer = make_shared<BlockRandomizer>(0, windowSize, mockDeserializer, prefetch, false);
+    auto randomizer = make_shared<BlockRandomizer>(0, windowSize, mockDeserializer, prefetch);
 
     for (int t = 0; t < 100; t++)
     {
@@ -580,7 +580,7 @@ void BlockRandomizerChaosMonkeyTest(bool prefetch)
         for (int i = 0; i < epochConfiguration.m_totalEpochSizeInSamples + 1; i += samplesToGet)
         {
             samplesToGet = distr(rng);
-            Sequences sequences = randomizer->GetNextSequences(samplesToGet);
+            Sequences sequences = randomizer->GetNextSequences(samplesToGet, samplesToGet);
 
             // In case end of epoch/decimation/single sequence -> skip the mbSize check.
             if (sequences.m_endOfEpoch || sequences.m_data.empty() || sequences.m_data.front().size() < 2)
@@ -614,8 +614,7 @@ void BlockRandomizerOneEpochLegacyRandomizationTest(bool prefetch)
     auto randomizer = make_shared<BlockRandomizer>(0,
         SIZE_MAX,
         mockDeserializer,
-        prefetch,
-        true);
+        prefetch);
 
     EpochConfiguration epochConfiguration;
     epochConfiguration.m_numberOfWorkers = 1;
@@ -630,7 +629,7 @@ void BlockRandomizerOneEpochLegacyRandomizationTest(bool prefetch)
     vector<float> actual;
     for (int i = 0; i < data.size() + 1; i++)
     {
-        Sequences sequences = randomizer->GetNextSequences(1);
+        Sequences sequences = randomizer->GetNextSequences(1, 1);
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < 10)
         {
@@ -672,7 +671,7 @@ BOOST_AUTO_TEST_CASE(NoRandomizerOneEpoch)
     vector<float> actual;
     for (int i = 0; i < data.size() + 2; i++)
     {
-        Sequences sequences = randomizer->GetNextSequences(1);
+        Sequences sequences = randomizer->GetNextSequences(1, 1);
         BOOST_CHECK_EQUAL(sequences.m_data.size(), 1 - (i / data.size()));
         if (i < data.size())
         {
@@ -750,6 +749,53 @@ BOOST_AUTO_TEST_CASE(CorpusDescriptorFromFile)
 
     remove("test.tmp");
 }
+
+BOOST_AUTO_TEST_CASE(CheckEpochBoundarySingleWorker)
+{
+    size_t chunkSizeInSamples = 1000;
+    size_t sweepNumberOfSamples = 15000;
+    uint32_t maxSequenceLength = 1;
+    size_t randomizationWindow = chunkSizeInSamples * 5;
+    auto deserializer = make_shared<SequentialDeserializer>(0, chunkSizeInSamples, sweepNumberOfSamples, maxSequenceLength);
+
+    auto test = [](SequenceEnumeratorPtr underTest)
+    {
+        size_t epochSize = 128 * 3 + 63;
+
+        EpochConfiguration config;
+        config.m_numberOfWorkers = 1;
+        config.m_workerRank = 0;
+        config.m_minibatchSizeInSamples = 128;
+        config.m_totalEpochSizeInSamples = epochSize;
+        config.m_epochIndex = 0;
+        underTest->StartEpoch(config);
+
+        Sequences s;
+        size_t numberOfSamples = 0;
+        bool globalsMoreThanLocals = false;
+        do
+        {
+            s = underTest->GetNextSequences(globalsMoreThanLocals ? 256 : 128, globalsMoreThanLocals ? 128 : 256);
+            globalsMoreThanLocals = !globalsMoreThanLocals;
+            for (const auto& seq : s.m_data.front())
+                numberOfSamples += seq->m_numberOfSamples;
+        }
+        while (!s.m_endOfEpoch);
+
+        // Check the last minibatch is 63.
+        BOOST_CHECK_EQUAL(s.m_data.front().size(), 63);
+
+        // Check total number.
+        BOOST_CHECK_EQUAL(numberOfSamples, epochSize);
+    };
+
+    auto underTestBlock = make_shared<BlockRandomizer>(0, randomizationWindow, deserializer, true);
+    auto underTestNo = make_shared<NoRandomizer>(deserializer);
+
+    test(underTestBlock);
+    test(underTestNo);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END()
 

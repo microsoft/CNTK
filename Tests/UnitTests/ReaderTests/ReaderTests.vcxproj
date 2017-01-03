@@ -118,7 +118,6 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\Indexer.cpp" />
     <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\TextParser.cpp" />
   </ItemGroup>
   <ItemGroup>

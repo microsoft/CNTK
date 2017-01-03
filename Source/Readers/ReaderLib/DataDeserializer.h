@@ -67,7 +67,6 @@ struct SequenceDataBase
     size_t m_id;
     uint32_t m_numberOfSamples;      // Number of samples in the sequence
 
-    ChunkPtr m_chunk;
     // Returns a pointer to the data buffer.
     // The actual size is provided for particular sequences,i.e. see DenseSequenceData, or SparseSequenceData.
     virtual const void* GetDataBuffer() = 0;

@@ -108,9 +108,11 @@
     <ClInclude Include="..\..\Common\Include\DataReader.h" />
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
+    <ClInclude Include="Base64ImageDeserializer.h" />
     <ClInclude Include="ByteReader.h" />
     <ClInclude Include="ImageConfigHelper.h" />
     <ClInclude Include="ImageDataDeserializer.h" />
+    <ClInclude Include="ImageDeserializerBase.h" />
     <ClInclude Include="ImageReader.h" />
     <ClInclude Include="ImageTransformers.h" />
     <ClInclude Include="ImageUtil.h" />
@@ -118,12 +120,14 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Base64ImageDeserializer.cpp" />
     <ClCompile Include="ImageConfigHelper.cpp" />
     <ClCompile Include="ImageDataDeserializer.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="Exports.cpp">
       <ExcludedFromBuild Condition="!$(HasOpenCv)">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="ImageDeserializerBase.cpp" />
     <ClCompile Include="ImageReader.cpp" />
     <ClCompile Include="ImageTransformers.cpp" />
     <ClCompile Include="stdafx.cpp">
