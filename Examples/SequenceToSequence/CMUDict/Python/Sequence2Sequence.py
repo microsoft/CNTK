@@ -6,29 +6,402 @@
 
 from __future__ import print_function
 import numpy as np
-import sys
 import os
 from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.device import cpu, set_default_device
-from cntk.learner import learning_rate_schedule, UnitType, momentum_sgd, momentum_as_time_constant_schedule
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, element_select, alias, hardmax
-from cntk.ops.functions import CloneMethod
+from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
+                     element_select, alias, hardmax, placeholder_variable, combine, parameter, times
+from cntk.ops.functions import CloneMethod, load_model
+from cntk.ops.sequence import broadcast_as
+from cntk.graph import find_nodes_by_name
+from cntk.blocks import LSTM, Stabilizer
+from cntk.layers import Dense
+from cntk.initializer import glorot_uniform
+from cntk.utils import log_number_of_parameters, ProgressPrinter
+from attention import create_attention_augment_hook
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "common"))
-from nn import LSTMP_component_with_self_stabilization, stabilize, linear_layer, print_training_progress
+########################
+# variables and stuff  #
+########################
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data")
+MODEL_DIR = "."
+TRAINING_DATA = "cmudict-0.7b.train-dev-20-21.ctf"
+TESTING_DATA = "cmudict-0.7b.test.ctf"
+VALIDATION_DATA = "tiny.ctf"
+VOCAB_FILE = "cmudict-0.7b.mapping"
+
+# model dimensions
+input_vocab_dim  = 69
+label_vocab_dim  = 69
+hidden_dim = 128
+num_layers = 2
+attention_dim = 128
+attention_span = 20
+use_attention = True
+use_embedding = True
+embedding_dim = 200
+
+########################
+# define the reader    #
+########################
+
+def create_reader(path, is_training):
+    return MinibatchSource(CTFDeserializer(path, StreamDefs(
+        features = StreamDef(field='S0', shape=input_vocab_dim, is_sparse=True),
+        labels   = StreamDef(field='S1', shape=label_vocab_dim, is_sparse=True)
+    )), randomize = is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+
+########################
+# define the model     #
+########################
+
+def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None, create_aux=False):
+    dh = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
+    dc = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
+
+    aux_input = None
+    has_aux   = False
+    if augment_input_hook != None:
+        has_aux = True
+        if create_aux:
+            aux_input = augment_input_hook(dh)
+        else:
+            aux_input = augment_input_hook
+
+    LSTM_cell = LSTM(output_dim, auxiliary_input=has_aux, enable_self_stabilization=True)
+    if has_aux:    
+        f_x_h_c = LSTM_cell(input, (dh, dc), aux_input)
+    else:
+        f_x_h_c = LSTM_cell(input, (dh, dc))
+    h_c = f_x_h_c.outputs
+
+    h = recurrence_hook_h(h_c[0])
+    c = recurrence_hook_c(h_c[1])
+
+    replacements = { dh: h.output, dc: c.output }
+    f_x_h_c.replace_placeholders(replacements)
+
+    h = f_x_h_c.outputs[0]
+    c = f_x_h_c.outputs[1]
+
+    return combine([h]), combine([c]), aux_input
+
+def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None):
+
+    create_aux = False
+    if augment_input_hook != None:
+        create_aux = True
+
+    # only the first layer should create an auxiliary input (the attention weights are shared amongs the layers)
+    output_h, output_c, aux = LSTM_layer(Stabilizer()(input), output_dim, 
+                                         recurrence_hook_h, recurrence_hook_c, augment_input_hook, create_aux)
+    for layer_index in range(1, num_layers):
+        (output_h, output_c, aux) = LSTM_layer(output_h.output, output_dim, recurrence_hook_h, recurrence_hook_c, aux, False)
+
+    return (output_h, output_c)
+
+def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+
+    # get inputs to the model (has to include labels for input to the decoder)
+    raw_input, raw_labels = inputs
+
+    # Set up sequences...
+    input_sequence = raw_input
+
+    # Drop the sequence start token from the label, for decoder training
+    label_sequence = sequence.slice(raw_labels, 1, 0, 
+                                    name='label_sequence') # <s> A B C </s> --> A B C </s>
+    label_sequence_start = sequence.first(raw_labels)      # <s>
+
+    # Embedding (right now assumes shared embedding and shared vocab size)
+    embedding = parameter(shape=(input_vocab_dim, embedding_dim), init=glorot_uniform(), name='embedding')
+    input_embedded = times(input_sequence, embedding) if use_embedding else input_sequence
+    label_embedded = times(label_sequence, embedding) if use_embedding else label_sequence
+
+    # Setup primer for decoder
+    is_first_label = sequence.is_first(label_sequence)  # 1 0 0 0 ...
+    label_sequence_start_embedded = times(label_sequence_start, embedding) if use_embedding else label_sequence_start
+    label_sequence_start_embedded_scattered = sequence.scatter(label_sequence_start_embedded,
+                                                               is_first_label)
+
+    # Encoder: create multiple layers of LSTMs by passing the output of the i-th layer
+    # to the (i+1)th layer as its input
+    encoder_output_h, encoder_output_c = LSTM_stack(input_embedded, num_layers, hidden_dim, 
+                                                    recurrence_hook_h=future_value, recurrence_hook_c=future_value)
+
+    # Prepare encoder output to be used in decoder
+    thought_vector_h = sequence.first(encoder_output_h)
+    thought_vector_c = sequence.first(encoder_output_c)
+
+    # Here we broadcast the single-time-step thought vector along the dynamic axis of the decoder
+    thought_vector_broadcast_h = broadcast_as(thought_vector_h, label_embedded)
+    thought_vector_broadcast_c = broadcast_as(thought_vector_c, label_embedded)
+
+    # Decoder: during training we use the ground truth as input to the decoder. During model execution,
+    # we need to redirect the output of the network back in as the input to the decoder. We do this by
+    # setting up a 'hook' whose output will be changed during model execution
+    decoder_history_hook = alias(label_embedded, name='decoder_history_hook') # copy label_embedded
+
+    # The input to the decoder always starts with the special label sequence start token.
+    # Then, use the previous value of the label sequence (for training) or the output (for execution)
+    decoder_input = element_select(is_first_label, label_sequence_start_embedded_scattered, past_value(
+        decoder_history_hook))
+
+    # Parameters to the decoder stack depend on the model type (use attention or not)
+    augment_input_hook = None
+    if use_attention:
+        augment_input_hook = create_attention_augment_hook(attention_dim, attention_span, 
+                                                           label_embedded, encoder_output_h)
+        recurrence_hook_h = past_value
+        recurrence_hook_c = past_value
+        else:
+        def recurrence_hook_h(operand):
+            return element_select(
+            is_first_label, thought_vector_broadcast_h, past_value(operand))
+        def recurrence_hook_c(operand):
+            return element_select(
+            is_first_label, thought_vector_broadcast_c, past_value(operand))
+
+    decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, past_value, past_value, augment_input_hook)    
+
+    # dense Linear output layer    
+    z = Dense(label_vocab_dim) (Stabilizer()(decoder_output_h))    
+    
+    return z
+
+########################
+# train action         #
+########################
+
+def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size):
+
+    # do some hooks so that we can direct data to the right place
+    label_sequence = find_nodes_by_name(model, 'label_sequence')[0]    
+    decoder_history_hook = find_nodes_by_name(model, 'decoder_history_hook')[0]  
+
+    embedding = find_nodes_by_name(model, 'embedding')
+    embed_param = 1
+    if len(embedding) > 0:
+        embed_param = embedding[0]
+
+    # Criterion nodes
+    ce = cross_entropy_with_softmax(model, label_sequence)
+    errs = classification_error(model, label_sequence)
+
+    # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
+    # This does not need to be done in training generally though
+    def clone_and_hook():
+    # network output for decoder history
+        net_output = times(hardmax(model), embed_param)
+
+    # make a clone of the graph where the ground truth is replaced by the network output
+        return model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
+
+    # get a new model that uses the network output as input to the decoder
+    decoder_output_model = clone_and_hook()
+
+    # Instantiate the trainer object to drive the model training
+    lr_per_sample = learning_rate_schedule(0.005, UnitType.sample)
+    minibatch_size = 72
+    momentum_time_constant = momentum_as_time_constant_schedule(1100)
+    clipping_threshold_per_sample = 2.3
+    gradient_clipping_with_truncation = True
+    learner = momentum_sgd(model.parameters,
+                           lr_per_sample, momentum_time_constant,
+                           gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
+                           gradient_clipping_with_truncation=gradient_clipping_with_truncation)
+    trainer = Trainer(model, (ce, errs), learner)
+
+    # Get minibatches of sequences to train with and perform model training
+    i = 0
+    mbs = 0
+    sample_freq = 100
+
+    # print out some useful training information
+    log_number_of_parameters(model) ; print()
+    progress_printer = ProgressPrinter(freq=30, tag='Training')
+
+    for epoch in range(max_epochs):
+
+        while i < (epoch+1) * epoch_size:
+            # get next minibatch of training data
+            mb_train = train_reader.next_minibatch(minibatch_size)
+            trainer.train_minibatch({find_arg_by_name('raw_input' , model) : mb_train[train_reader.streams.features], 
+                                     find_arg_by_name('raw_labels', model) : mb_train[train_reader.streams.labels]})
+
+            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
+
+            # every N MBs evaluate on a test sequence to visually show how we're doing
+            if mbs % sample_freq == 0:
+                mb_valid = valid_reader.next_minibatch(minibatch_size)
+                
+                # run an eval on the decoder output model (i.e. don't use the groundtruth)
+                e = decoder_output_model.eval({find_arg_by_name('raw_input' , decoder_output_model) : 
+                                               mb_valid[valid_reader.streams.features], 
+                                               find_arg_by_name('raw_labels', decoder_output_model) : 
+                                               mb_valid[valid_reader.streams.labels]})
+                print_sequences(e, i2w)
+
+                # debugging attention (uncomment to print out current attention window on validation sequence)
+                debug_attention(decoder_output_model, mb_valid, valid_reader)                
+
+            i += mb_train[train_reader.streams.labels].num_samples
+            mbs += 1
+
+        # log a summary of the stats for the epoch
+        progress_printer.epoch_summary(with_metric=True)
+        
+        # save the model every epoch
+        model_filename = os.path.join(MODEL_DIR, "model_epoch%d.cmf" % epoch)
+        
+        # NOTE: we are saving the model with the greedy decoder wired-in. This is NOT necessary and in some
+        # cases it would be better to save the model without the decoder to make it easier to wire-in a 
+        # different decoder such as a beam search decoder. For now we save this one though so it's easy to 
+        # load up and start using.
+        decoder_output_model.save_model(model_filename)
+        print("Saved model to '%s'" % model_filename)
+
+########################
+# write action         #
+########################
+
+def write(reader, model, vocab, i2w):
+    
+    minibatch_size = 1024
+    progress_printer = ProgressPrinter(tag='Evaluation')
+    
+    while True:
+        # get next minibatch of data
+        mb = reader.next_minibatch(minibatch_size)
+        if not mb: break
+                
+        e = model.eval({find_arg_by_name('raw_input' , model) : mb[reader.streams.features], 
+                        find_arg_by_name('raw_labels', model) : mb[reader.streams.labels]})
+        print_sequences(e, i2w)
+        
+        progress_printer.update(0, mb[reader.streams.labels].num_samples, None)
+
+#######################
+# test action         #
+#######################
+
+def test(reader, model, num_minibatches=None):
+    
+    # we use the test_minibatch() function so need to setup a trainer
+    label_sequence = sequence.slice(find_arg_by_name('raw_labels', model), 1, 0)
+    lr = learning_rate_schedule(0.007, UnitType.sample)
+    momentum = momentum_as_time_constant_schedule(1100)
+    ce = cross_entropy_with_softmax(model, label_sequence)
+    errs = classification_error(model, label_sequence)
+    trainer = Trainer(model, ce, errs, [momentum_sgd(model.parameters, lr, momentum)])
+
+    test_minibatch_size = 1024
+
+    # Get minibatches of sequences to test and perform testing
+    i = 0
+    total_error = 0.0
+    while True:
+        mb = reader.next_minibatch(test_minibatch_size)
+        if not mb: break
+        mb_error = trainer.test_minibatch({find_arg_by_name('raw_input' , model) : mb[reader.streams.features], 
+                                           find_arg_by_name('raw_labels', model) : mb[reader.streams.labels]})
+        total_error += mb_error
+        i += 1
+        
+        if num_minibatches != None:
+            if i == num_minibatches:
+                break
+
+    # and return the test error
+    return total_error/i
+
+########################
+# interactive session  #
+########################
+
+def translate_string(input_string, model, vocab, i2w, show_attention=False, max_label_length=20):
+
+    vdict = {vocab[i]:i for i in range(len(vocab))}
+    w = [vdict["<s>"]] + [vdict[w] for w in input_string] + [vdict["</s>"]]
+    
+    features = np.zeros([len(w),len(vdict)], np.float32)
+    for t in range(len(w)):
+        features[t,w[t]] = 1    
+    
+    l = [vdict["<s>"]] + [0 for i in range(max_label_length)]
+    labels = np.zeros([len(l),len(vdict)], np.float32)
+    for t in range(len(l)):
+        labels[t,l[t]] = 1
+    
+    pred = model.eval({find_arg_by_name('raw_input' , model) : [features], 
+                       find_arg_by_name('raw_labels', model) : [labels]})
+    
+    # print out translation and stop at the sequence-end tag
+    tlen = 1 # length of the output sequence
+    prediction = np.argmax(pred, axis=2)[0]
+    for i in prediction:
+        phoneme = i2w[i]
+        if phoneme == "</s>": break
+        tlen += 1
+        print(phoneme, end=' ')
+    print()
+    
+    # show attention window (requires matplotlib, seaborn, and pandas)
+    if show_attention:
+    
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        import pandas as pd
+    
+        att = find_nodes_by_name(model, 'attention_weights')[0]
+        q = combine([model, att])
+        output = q.forward({find_arg_by_name('raw_input' , model) : [features], 
+                         find_arg_by_name('raw_labels', model) : [labels]},
+                         att.outputs)
+                         
+        # set up the actual words/letters for the heatmap axis labels
+        columns = [i2w[ww] for ww in prediction[:tlen]]
+        index = [i2w[ww] for ww in w]
+ 
+        att_key = list(output[1].keys())[0]
+        att_value = output[1][att_key]
+        
+        # get the attention data up to the length of the output (subset of the full window)
+        X = att_value[0,:tlen,:len(w)]
+        dframe = pd.DataFrame(data=np.fliplr(X.T), columns=columns, index=index)
+    
+        # show the attention weight heatmap
+        sns.heatmap(dframe)
+        plt.show()
+
+def interactive_session(model, vocab, i2w, show_attention=False):
+
+    import sys
+
+    while True:
+        user_input = input("> ").upper()
+        if user_input == "QUIT":
+            break
+        translate_string(user_input, model, vocab, i2w, show_attention=True)
+        sys.stdout.flush()
+
+########################
+# helper functions     #
+########################
+
+def get_vocab(path):
+    # get the vocab for printing output sequences in plaintext
+    vocab = [w.strip() for w in open(path).readlines()]
+    i2w = { i:ch for i,ch in enumerate(vocab) }
+    
+    return (vocab, i2w)
 
 # Given a vocab and tensor, print the output
 def print_sequences(sequences, i2w):
     for s in sequences:
         print([i2w[np.argmax(w)] for w in s], sep=" ")
-
-def create_reader(path, randomize, input_vocab_dim, label_vocab_dim, size=INFINITELY_REPEAT):
-    return MinibatchSource(CTFDeserializer(path, StreamDefs(
-        features  = StreamDef(field='S0', shape=input_vocab_dim,  is_sparse=True),
-        labels    = StreamDef(field='S1', shape=label_vocab_dim,  is_sparse=True)
-    )), randomize=randomize, epoch_size = size)
 
 # helper function to find variables by name
 # which is necessary when cloning or loading the model
@@ -37,46 +410,23 @@ def find_arg_by_name(name, expression):
     assert len(vars) == 1
     return vars[0]
 
-# Average of evaluation errors of all test minibatches
-def translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim, debug_output=False):
-    # now setup a test run
-    test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data", "cmudict-0.7b.test.ctf")
+# to help debug the attention window
+def debug_attention(model, mb, reader):
+    att = find_nodes_by_name(model, 'attention_weights')[0]
+    q = combine([model, att])
+    output = q.forward({find_arg_by_name('raw_input' , model) : 
+                         mb[reader.streams.features], 
+                         find_arg_by_name('raw_labels', model) : 
+                         mb[reader.streams.labels]},
+                         att.outputs)
 
-    test_reader = create_reader(test_path, False, input_vocab_dim, label_vocab_dim, FULL_DATA_SWEEP)
+    att_key = list(output[1].keys())[0]
+    att_value = output[1][att_key]
+    print(att_value[0,0,:])
 
-    test_bind = {
-        find_arg_by_name('raw_input',z)  : test_reader.streams.features,
-        find_arg_by_name('raw_labels',z) : test_reader.streams.labels
-    }
-
-    test_minibatch_size = 1024
-
-    # Get minibatches of sequences to test and perform testing
-    i = 0
-    total_error = 0.0
-    while True:
-        mb = test_reader.next_minibatch(test_minibatch_size, input_map=test_bind)
-        if not mb: break
-        mb_error = trainer.test_minibatch(mb)
-        total_error += mb_error
-
-        if debug_output:
-            print("Minibatch {}, Error {} ".format(i, mb_error))
-        i += 1
-    return total_error/i
-
-
-# Creates and trains a sequence to sequence translation model
-
-def sequence_to_sequence_translator(debug_output=False, run_test=False):
-
-    input_vocab_dim = 69
-    label_vocab_dim = 69
-
-    # network complexity; initially low for faster testing
-    hidden_dim = 256
-    num_layers = 1
-
+# function to model the inputs
+def create_inputs():
+    
     # Source and target inputs to the model
     batch_axis = Axis.default_batch_axis()
     input_seq_axis = Axis('inputAxis')
@@ -90,169 +440,37 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     raw_labels = input_variable(
         shape=(label_vocab_dim), dynamic_axes=label_dynamic_axes, name='raw_labels')
 
-    # Instantiate the sequence to sequence translation model
-    input_sequence = raw_input
+    return (raw_input, raw_labels)
 
-    # Drop the sentence start token from the label, for decoder training
-    label_sequence = sequence.slice(raw_labels, 1, 0) # <s> A B C </s> --> A B C </s>
-    label_sentence_start = sequence.first(raw_labels)        # <s>
-
-    is_first_label = sequence.is_first(label_sequence)       # <s> 0 0 0 ...
-    label_sentence_start_scattered = sequence.scatter(
-        label_sentence_start, is_first_label)
-
-    # Encoder
-    encoder_outputH = stabilize(input_sequence)
-    for i in range(0, num_layers):
-        (encoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
-            encoder_outputH.output, hidden_dim, hidden_dim, future_value, future_value)
-
-    thought_vectorH = sequence.first(encoder_outputH)
-    thought_vectorC = sequence.first(encoder_outputC)
-
-    thought_vector_broadcastH = sequence.broadcast_as(
-        thought_vectorH, label_sequence)
-    thought_vector_broadcastC = sequence.broadcast_as(
-        thought_vectorC, label_sequence)
-
-    # Decoder
-    decoder_history_hook = alias(label_sequence, name='decoder_history_hook') # copy label_sequence
-
-    decoder_input = element_select(is_first_label, label_sentence_start_scattered, past_value(
-        decoder_history_hook))
-
-    decoder_outputH = stabilize(decoder_input)
-    for i in range(0, num_layers):
-        if (i > 0):
-            recurrence_hookH = past_value
-            recurrence_hookC = past_value
-        else:
-            isFirst = sequence.is_first(label_sequence)
-            recurrence_hookH = lambda operand: element_select(
-                isFirst, thought_vector_broadcastH, past_value(operand))
-            recurrence_hookC = lambda operand: element_select(
-                isFirst, thought_vector_broadcastC, past_value(operand))
-
-        (decoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
-            decoder_outputH.output, hidden_dim, hidden_dim, recurrence_hookH, recurrence_hookC)
-
-    decoder_output = decoder_outputH
-
-    # Softmax output layer
-    z = linear_layer(stabilize(decoder_output), label_vocab_dim)
-
-    # Criterion nodes
-    ce = cross_entropy_with_softmax(z, label_sequence)
-    errs = classification_error(z, label_sequence)
-
-    # network output for decoder history
-    net_output = hardmax(z)
-
-    # make a clone of the graph where the ground truth is replaced by the network output
-    ng = z.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
-
-    # Instantiate the trainer object to drive the model training
-    lr_per_minibatch = learning_rate_schedule(0.5, UnitType.minibatch)
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
-    clipping_threshold_per_sample = 2.3
-    gradient_clipping_with_truncation = True
-    learner = momentum_sgd(z.parameters, 
-                           lr_per_minibatch, momentum_time_constant, 
-                           gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
-                           gradient_clipping_with_truncation=gradient_clipping_with_truncation)
-    trainer = Trainer(z, (ce, errs), learner)
-
-    # setup data
-    train_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data", "cmudict-0.7b.train-dev-20-21.ctf")
-    valid_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data", "tiny.ctf")
-
-    # readers
-    randomize_data = True
-    if run_test:
-        randomize_data = False # because we want to get an exact error
-
-    train_reader = create_reader(train_path, randomize_data, input_vocab_dim, label_vocab_dim)
-    train_bind = {
-        raw_input  : train_reader.streams.features,
-        raw_labels : train_reader.streams.labels
-    }
-
-    # get the vocab for printing output sequences in plaintext
-    vocab_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data", "cmudict-0.7b.mapping")
-    vocab = [w.strip() for w in open(vocab_path).readlines()]
-    i2w = { i:ch for i,ch in enumerate(vocab) }
-
-    # Get minibatches of sequences to train with and perform model training
-    i = 0
-    mbs = 0
-    minibatch_size = 72
-    epoch_size = 908241
-    max_epochs = 10
-    training_progress_output_freq = 500
-
-    # make things more basic for running a quicker test
-    if run_test:
-        epoch_size = 5000
-        max_epochs = 1
-        training_progress_output_freq = 30
-
-    valid_reader = create_reader(valid_path, False, input_vocab_dim, label_vocab_dim)
-    valid_bind = {
-            find_arg_by_name('raw_input',ng)  : valid_reader.streams.features,
-            find_arg_by_name('raw_labels',ng) : valid_reader.streams.labels
-        }
-
-    for epoch in range(max_epochs):
-        loss_numer = 0
-        metric_numer = 0
-        denom = 0
-
-        while i < (epoch+1) * epoch_size:
-            # get next minibatch of training data
-            mb_train = train_reader.next_minibatch(minibatch_size, input_map=train_bind)
-            trainer.train_minibatch(mb_train)
-
-            # collect epoch-wide stats
-            samples = trainer.previous_minibatch_sample_count
-            loss_numer += trainer.previous_minibatch_loss_average * samples
-            metric_numer += trainer.previous_minibatch_evaluation_average * samples
-            denom += samples
-
-            # every N MBs evaluate on a test sequence to visually show how we're doing
-            if mbs % training_progress_output_freq == 0:
-                mb_valid = valid_reader.next_minibatch(minibatch_size, input_map=valid_bind)
-                e = ng.eval(mb_valid)
-                print_sequences(e, i2w)
-
-            print_training_progress(trainer, mbs, training_progress_output_freq)
-            i += mb_train[raw_labels].num_samples
-            mbs += 1
-
-        print("--- EPOCH %d DONE: loss = %f, errs = %f ---" % (epoch, loss_numer/denom, 100.0*(metric_numer/denom)))
-
-
-    error1 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
-
-    z.save_model("seq2seq.dnn")
-    z.restore_model("seq2seq.dnn")
-
-    label_seq_axis = Axis('labelAxis')
-    label_sequence = sequence.slice(find_arg_by_name('raw_labels',z), 1, 0)
-    ce = cross_entropy_with_softmax(z, label_sequence)
-    errs = classification_error(z, label_sequence)
-    trainer = Trainer(z, (ce, errs), [momentum_sgd(
-                    z.parameters, lr_per_minibatch, momentum_time_constant, clipping_threshold_per_sample, gradient_clipping_with_truncation)])
-
-    error2 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
-
-    assert error1 == error2
-
-    return error1
+#############################
+# main function boilerplate #
+#############################
 
 if __name__ == '__main__':
-    # Specify the target device to be used for computing, if you do not want to
-    # use the best available one, e.g.
-    #set_default_device(cpu())
 
-    error = sequence_to_sequence_translator(debug_output=False, run_test=True)
-    print("Error: %f" % error)
+    # hook up data
+    train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
+    valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
+    vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
+
+    # create inputs and create model
+    inputs = create_inputs()
+    model = create_model(inputs)
+    
+    # train
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+
+    # write
+    #model = load_model("model_epoch0.cmf")
+    #write(valid_reader, model, vocab, i2w)
+    
+    # test
+    #model = load_model("model_epoch0.cmf")
+    #test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
+    #test(test_reader, model)
+
+    # test the model out in an interactive session
+    #print('loading model...')
+    #model_filename = "model_epoch0.cmf"
+    #model = load_model(model_filename)
+    #interactive_session(model, vocab, i2w, show_attention=True)

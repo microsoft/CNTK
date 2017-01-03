@@ -171,9 +171,9 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True))
     # expression
     @Function
     def stabilize(x):
-        # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
-        # this behaves linear for weights around 1, yet guarantees positiveness
-        # TODO: risk of confusion; can these functions be namespaced?
+    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
+    # this behaves linear for weights around 1, yet guarantees positiveness
+    # TODO: risk of confusion; can these functions be namespaced?
         return beta * x
     return Block(stabilize, 'Stabilizer', Record(beta=beta))
 
@@ -183,10 +183,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
                     enable_self_stabilization):
 
     has_projection = cell_shape is not None
-    has_aux = False
-
-    if has_aux:
-        UntestedBranchError("LSTM, has_aux option")
+    has_aux = False # TODO: implement this differently; LSTM must have a unique signature
 
     shape = _as_tuple(shape)
 
@@ -260,7 +257,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         ft_proj  = slice (proj4, stack_axis, 2*stacked_dim, 3*stacked_dim)
         ot_proj  = slice (proj4, stack_axis, 3*stacked_dim, 4*stacked_dim)
 
-        # helper to inject peephole connection if requested
+            # helper to inject peephole connection if requested
         def peep(x, c, C):
             return x + C * c if use_peepholes else x
 
@@ -290,6 +287,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
     # TODO: Is this the same definition as NVidia's? Should we enable multiple definitions of this?
     # BUGBUG: gru(x,dh,dc) passes, too. Since 'dc' is not referenced, it is just ignored. Also when routing it through combine().
+    #          This may have changed with as_block(), which cannot handle unused inputs. TODO: test this.
     @Function
     def gru(x, dh):
 
