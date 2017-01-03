@@ -93,8 +93,13 @@ class Trainer(cntk_py.Trainer):
         if not device:
             device = use_default_device()
 
-        if arguments:
-            arguments = sanitize_var_map(self.model.arguments, arguments)
+        if arguments: # arguments must feed all inputs (model, loss, eval)
+            all_args = set(self.loss_function.arguments)
+            if self.model:
+                all_args |= set(self.model.arguments)
+            if self.evaluation_function:
+                all_args |= set(self.evaluation_function.arguments)
+            arguments = sanitize_var_map(tuple(all_args), arguments)
 
         if outputs:
             output_map = {v: None for v in outputs}
@@ -139,7 +144,13 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device = use_default_device()
-        arguments = sanitize_var_map(self.model.arguments, arguments)
+        # pass all args of all parts (model, loss, eval)
+        all_args = set(self.loss_function.arguments)
+        if self.model:
+            all_args |= set(self.model.arguments)
+        if self.evaluation_function:
+            all_args |= set(self.evaluation_function.arguments)
+        arguments = sanitize_var_map(tuple(all_args), arguments)
 
         return super(Trainer, self).test_minibatch(arguments, device)
 

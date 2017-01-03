@@ -50,7 +50,7 @@ class Function(cntk_py.Function):
     # where the Function's input signature is defined by the lambda
     # Use this as a decorator, e.g.:
     #   @Function
-    #   def f(x): x * x
+    #   def f(x): return x * x
     def __new__(cls, f, members = {}):
         # get the parameter list, and also the function name, through inspection
         from inspect import signature, Parameter
@@ -81,17 +81,17 @@ class Function(cntk_py.Function):
             out = combine(out)
         else:
             out = resolve_named(out)
-            #out = [resolve_named(out)]
-            #out = out[0]
         # BUGBUG: as_block() cannot *not* use an argument (e.g. temporarily changing a function to not use an input)
         if len(out.placeholders) != len(args):
             unused_args = set(args) - set(out.placeholders)
             unused_arg_names = [arg.name for arg in unused_args]
             raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
         # wrap into a block as to ensure ordering of parameters
-        args2 = [placeholder_variable(name=name) for name in arg_names]
-        arg_map = list(zip(args,args2))
-        out = as_block(out, arg_map, f_name);
+        # BUGBUG: clone() does not seem to work with this, so for now skip unless order must be changed (which will fail)
+        if out.placeholders != tuple(args):
+            args2 = [placeholder_variable(name=name) for name in arg_names]
+            arg_map = list(zip(args,args2))
+            out = as_block(out, arg_map, f_name);
 
         # add all members to the Python class
         # TODO: This should really be a dictionary inside BlockFunction
