@@ -5,11 +5,11 @@
 # ==============================================================================
 
 from __future__ import print_function
+import os
 import numpy as np
 from cntk import load_model
 from cntk.ops import combine
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-
 
 #####################################################
 #####################################################
@@ -83,6 +83,7 @@ if __name__ == '__main__':
     output_file = "fcOutput.txt"
 
     # evaluate model and write out the desired layer output
+    os.chdir(cntk_root + "Examples/Image/DataSets/grocery/")
     eval_and_write(model_file, node_name, out_folder + output_file, minibatch_source, num_objects=5)
 
     print("Done. Wrote output to %s" % (out_folder + output_file))
