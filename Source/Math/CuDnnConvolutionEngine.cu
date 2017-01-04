@@ -514,16 +514,18 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
     // detect asymmetric padding (either by auto-padding or by specifying lowerPad/upperPad) and choose  
     // the reference convolution implementation instead 
     const auto& autopad = geometry->AutoPad();
+    assert (autopad.size() == kernelRank); 
     const auto& lowerpad = geometry->LowerPad();
-    const auto& upperpad = geometry->UpperPad();
+    const auto& upperpad = geometry->UpperPad(); 
+    const auto& padRank = min(lowerpad.GetRank(), upperpad.GetRank());  // there are cases where padRank < kernelRank 
     for (int i = 0; i < kernelRank; i++)
     {
         if (autopad[i])
             retVal = retVal && (kernel[i] % 2 != 0);  // make sure kernel size is odd 
-        else
+        else if (i < padRank)
             retVal = retVal && (lowerpad[i] == upperpad[i]);  // make sure lower and upper padding are equal 
     }
-    return retVal; 
+    return retVal;
 }
 
 template class CuDnnConvolutionEngineFactory<float>;
