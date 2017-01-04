@@ -510,20 +510,17 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
                    (poolKind == PoolKind::None ||
                    inputRank <= 3 && (kernelRank < 3 || kernel[2] == 1)));
 
-    // cuDNN as of version 8.0 does not handle asymmetric padding correctly. We need to 
-    // detect asymmetric padding (either by auto-padding or by specifying lowerPad/upperPad) and choose  
-    // the reference convolution implementation instead 
-    const auto& autopad = geometry->AutoPad();
-    assert (autopad.size() == kernelRank); 
-    const auto& lowerpad = geometry->LowerPad();
-    const auto& upperpad = geometry->UpperPad(); 
-    const auto& padRank = min(lowerpad.GetRank(), upperpad.GetRank());  // there are cases where padRank < kernelRank 
-    for (int i = 0; i < kernelRank; i++)
+    // cuDNN as of version 8.0 does not handle asymmetric padding for convolution correctly. We need to detect asymmetric 
+    // padding due to auto-padding and choose the reference convolution implementation instead 
+    if (poolKind == PoolKind::None)     // only for convolution, pooling seems fine 
     {
-        if (autopad[i])
-            retVal = retVal && (kernel[i] % 2 != 0);  // make sure kernel size is odd 
-        else if (i < padRank)
-            retVal = retVal && (lowerpad[i] == upperpad[i]);  // make sure lower and upper padding are equal 
+        for (int i = 0; i < kernelRank; i++)
+        {
+            if (geometry->GetAutoPad(i))
+                retVal = retVal && (kernel[i] % 2 != 0);  // make sure kernel size is odd 
+            else
+                retVal = retVal && (geometry->GetLowerPad(i) == geometry->GetUpperPad(i));   // lower pad is same as upper pad 
+        }
     }
     return retVal;
 }
