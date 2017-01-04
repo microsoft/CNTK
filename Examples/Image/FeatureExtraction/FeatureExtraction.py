@@ -60,9 +60,10 @@ def eval_and_write(model_file, node_name, output_file, minibatch_source, num_obj
 
 if __name__ == '__main__':
     # define location of model and data
-    base_folder = os.path.join(os.getcwd(), "..")
-    model_file  = os.path.join(base_folder, "PretrainedModels/AlexNetBS.model")
-    map_file    = os.path.join(base_folder, "DataSets/grocery/test.txt")
+    base_folder = os.getcwd()
+    model_file  = os.path.join(base_folder, "../PretrainedModels/AlexNetBS.model")
+    map_file    = os.path.join(base_folder, "../DataSets/grocery/test.txt")
+    os.chdir(os.path.join(base_folder, "../DataSets/grocery/"))
 
     # create minibatch source
     image_height = 227
@@ -73,17 +74,15 @@ if __name__ == '__main__':
     # use this to print all node names of the model (and knowledge of the model to pick the correct one)
     # print_all_node_names(model_file)
 
-    # use t his to get 1000 class predictions (not yet softmaxed!)
+    # use this to get 1000 class predictions (not yet softmaxed!)
     # node_name = "z"
-    # out_file_name = "predOutput.txt"
+    # output_file = os.path.join(base_folder, "predOutput.txt")
 
     # use this to get 4096 features from the last fc layer
     node_name = "z.x._._"
-    out_file_name = "fcOutput.txt"
+    output_file = os.path.join(base_folder, "fcOutput.txt")
 
     # evaluate model and write out the desired layer output
-    os.chdir(os.path.join(base_folder, "DataSets/grocery/"))
-    output_file = os.path.join(base_folder, out_file_name)
     eval_and_write(model_file, node_name, output_file, minibatch_source, num_objects=5)
 
     print("Done. Wrote output to %s" % output_file)
