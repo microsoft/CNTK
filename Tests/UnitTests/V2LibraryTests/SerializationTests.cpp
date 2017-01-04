@@ -317,7 +317,9 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::CosDistance) == 53 &&
                   static_cast<size_t>(PrimitiveOpType::Sin) == 54 &&
                   static_cast<size_t>(PrimitiveOpType::Cos) == 55 &&
-                  static_cast<size_t>(PrimitiveOpType::Pass) == 56,
+                  static_cast<size_t>(PrimitiveOpType::Pass) == 56 &&
+                  static_cast<size_t>(PrimitiveOpType::Block) == 57 &&
+                  static_cast<size_t>(PrimitiveOpType::Unpooling) == 58,
                   "PrimitiveOpType enum value was modified.");
 }
 

@@ -707,7 +707,7 @@ namespace CNTK
 
         dict[inputsKey] = std::move(inputUids);
 
-        if (m_op == PrimitiveOpType::Block)
+        if (m_op == PrimitiveOpType::Unpooling)
         {
             auto blockFunction = dynamic_cast<const BlockFunction*>(this);
             auto blockCompositeFunc = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
