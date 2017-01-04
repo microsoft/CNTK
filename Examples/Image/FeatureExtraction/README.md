@@ -4,7 +4,7 @@
 
 |Data:     |A small toy data set of food items in a fridge (grocery).
 |:---------|:---
-|Purpose   |Demonstrate how to evaluate and write out different layers of a trained model.
+|Purpose   |Demonstrate how to evaluate and write out different layers of a trained model using python.
 |Network   |Pre-trained AlexNet model.
 |Training  |None, only evaluation of different layers of the model.
 
@@ -18,8 +18,4 @@ Additionally the example requires a pre-trained AlexNet model. Download this mod
 
 ### Details
 
-This example is available in Python and BrainScript. Please refer to the comments in the example code directly.
-
-### [Python](./Python)
-
-### [BrainScript](./BrainScript)
+Run `python FeatureExtraction.py` to generate the output of a specific layer. Please refer to the comments in the python code directly for how to choose different layers for evaluation.

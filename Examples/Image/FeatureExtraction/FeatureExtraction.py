@@ -59,11 +59,10 @@ def eval_and_write(model_file, node_name, output_file, minibatch_source, num_obj
     return
 
 if __name__ == '__main__':
-    # define location of model, images and results
-    cntk_root  = "C:/src/CNTK/"
-    model_file = cntk_root + "Examples/Image/PretrainedModels/AlexNetBS.model"
-    map_file   = cntk_root + "Examples/Image/DataSets/grocery/test.txt"
-    out_folder = cntk_root + "Examples/Image/"
+    # define location of model and data
+    base_folder = os.path.join(os.getcwd(), "..")
+    model_file  = os.path.join(base_folder, "PretrainedModels/AlexNetBS.model")
+    map_file    = os.path.join(base_folder, "DataSets/grocery/test.txt")
 
     # create minibatch source
     image_height = 227
@@ -76,14 +75,15 @@ if __name__ == '__main__':
 
     # use t his to get 1000 class predictions (not yet softmaxed!)
     # node_name = "z"
-    # output_file = "predOutput.txt"
+    # out_file_name = "predOutput.txt"
 
     # use this to get 4096 features from the last fc layer
     node_name = "z.x._._"
-    output_file = "fcOutput.txt"
+    out_file_name = "fcOutput.txt"
 
     # evaluate model and write out the desired layer output
-    os.chdir(cntk_root + "Examples/Image/DataSets/grocery/")
-    eval_and_write(model_file, node_name, out_folder + output_file, minibatch_source, num_objects=5)
+    os.chdir(os.path.join(base_folder, "DataSets/grocery/"))
+    output_file = os.path.join(base_folder, out_file_name)
+    eval_and_write(model_file, node_name, output_file, minibatch_source, num_objects=5)
 
-    print("Done. Wrote output to %s" % (out_folder + output_file))
+    print("Done. Wrote output to %s" % output_file)
