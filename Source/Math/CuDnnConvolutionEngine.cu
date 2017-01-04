@@ -22,7 +22,9 @@ const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x)
 #define TENSOR_FORMAT CUDNN_TENSOR_NCHW
 #define FILTER_FORMAT CUDNN_TENSOR_NCHW
 
-namespace Microsoft { namespace MSR { namespace CNTK {
+namespace Microsoft {
+namespace MSR {
+namespace CNTK {
 
 static bool IsGpu(DEVICEID_TYPE deviceId)
 {
@@ -90,8 +92,8 @@ public:
         }
         SmallVector<int> upscale(stride.size(), 1);
         CUDNN_CALL(cudnnSetConvolutionNdDescriptor(m_conv, (int)stride.size(), pad.data(),
-                                                   stride.data(), upscale.data(),
-                                                   CUDNN_CROSS_CORRELATION, dataType));
+            stride.data(), upscale.data(),
+            CUDNN_CROSS_CORRELATION, dataType));
     }
 
     ~CuDnnConv()
@@ -139,9 +141,9 @@ public:
 
         // Must use CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING to get the same results as in reference engine.
         CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
-                                               kind == PoolKind::Max && !forceDeterministicAlgorithms ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
-                                               CUDNN_PROPAGATE_NAN,
-                                               (int)dims.size(), dims.data(), pad.data(), stride.data()));
+            kind == PoolKind::Max && !forceDeterministicAlgorithms ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
+            CUDNN_PROPAGATE_NAN,
+            (int)dims.size(), dims.data(), pad.data(), stride.data()));
     }
 
     ~CuDnnPool()
@@ -183,7 +185,9 @@ public:
     {
     }
 
-    virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
+    virtual bool ImplementsGradientOverwriteOptimization() const override {
+        return true;
+    }
 
 protected:
     using Base::m_geometry;
@@ -204,8 +208,8 @@ protected:
     {
         if (m_kernelT == nullptr)
         {
-            m_kernelT = std::make_unique<CuDnnKernel>(*m_geometry, m_dataType), 
-            m_conv = std::make_unique<CuDnnConv>(*m_geometry, m_dataType);
+            m_kernelT = std::make_unique<CuDnnKernel>(*m_geometry, m_dataType),
+                m_conv = std::make_unique<CuDnnConv>(*m_geometry, m_dataType);
         }
     }
 
@@ -219,7 +223,7 @@ protected:
             if (m_forceDeterministicAlgorithms)
             {
                 auto found = std::find_if(algoPerf, algoPerf + calgo,
-                    [](const cudnnConvolutionFwdAlgoPerf_t& a)  { return a.algo == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM && a.status == CUDNN_STATUS_SUCCESS; });
+                                          [](const cudnnConvolutionFwdAlgoPerf_t& a)  { return a.algo == CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM && a.status == CUDNN_STATUS_SUCCESS; });
                 if (found == algoPerf + calgo)
                     RuntimeError("cuDNN could not find a deterministic algorithm. Set 'forceDeterministicAlgorithms=false' in your configuration.");
                 calgo = 1;
@@ -267,7 +271,7 @@ protected:
             if (m_forceDeterministicAlgorithms)
             {
                 auto found = std::find_if(algoPerf, algoPerf + calgo,
-                    [](const cudnnConvolutionBwdDataAlgoPerf_t& a)  { return a.algo == CUDNN_CONVOLUTION_BWD_DATA_ALGO_1 && a.status == CUDNN_STATUS_SUCCESS; });
+                                          [](const cudnnConvolutionBwdDataAlgoPerf_t& a)  { return a.algo == CUDNN_CONVOLUTION_BWD_DATA_ALGO_1 && a.status == CUDNN_STATUS_SUCCESS; });
                 if (found == algoPerf + calgo)
                     RuntimeError("cuDNN could not find a deterministic algorithm. Set 'forceDeterministicAlgorithms=false' in your configuration.");
                 calgo = 1;
@@ -284,7 +288,7 @@ protected:
             workspace.Resize((m_backDataAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardData(*m_cudnn, &C::One, *m_kernelT, ptr(kernel), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.Algo.algo,
-                                                ptr(workspace), m_backDataAlgo.Algo.memory, accumulateGradient ? &C::One : &C::Zero, m_inT, ptr(grad)));
+            ptr(workspace), m_backDataAlgo.Algo.memory, accumulateGradient ? &C::One : &C::Zero, m_inT, ptr(grad)));
         workspace.Resize(0, 0);
     }
 
@@ -298,7 +302,7 @@ protected:
             if (m_forceDeterministicAlgorithms)
             {
                 auto found = std::find_if(algoPerf, algoPerf + calgo,
-                    [](const cudnnConvolutionBwdFilterAlgoPerf_t& a)  { return a.algo == CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1 && a.status == CUDNN_STATUS_SUCCESS; });
+                                          [](const cudnnConvolutionBwdFilterAlgoPerf_t& a)  { return a.algo == CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1 && a.status == CUDNN_STATUS_SUCCESS; });
                 if (found == algoPerf + calgo)
                     RuntimeError("cuDNN could not find a deterministic algorithm. Set 'forceDeterministicAlgorithms=false' in your configuration.");
                 calgo = 1;
@@ -315,7 +319,7 @@ protected:
             workspace.Resize((m_backFiltAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardFilter(*m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), *m_conv, m_backFiltAlgo.Algo.algo,
-                                                  ptr(workspace), m_backFiltAlgo.Algo.memory, accumulateGradient ? &C::One : &C::Zero, *m_kernelT, ptr(kernelGrad)));
+            ptr(workspace), m_backFiltAlgo.Algo.memory, accumulateGradient ? &C::One : &C::Zero, *m_kernelT, ptr(kernelGrad)));
         workspace.Resize(0, 0);
     }
 
@@ -339,7 +343,7 @@ protected:
         m_inT.UpdateBatchSize(batchSize);
         m_outT.UpdateBatchSize(batchSize);
         CUDNN_CALL(cudnnPoolingBackward(*m_cudnn, *(m_pool), &C::One, m_outT, ptr(out), m_outT, ptr(srcGrad),
-                                        m_inT, ptr(in), &C::One, m_inT, ptr(grad)));
+            m_inT, ptr(in), &C::One, m_inT, ptr(grad)));
     }
 
     void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) override
@@ -393,7 +397,7 @@ private:
         size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : inputSampleSize * m_maxTempMemSizeInSamples * sizeof(ElemType);
         // Find best (fastest) algorithm which satisfies workspace requirements.
         auto res = std::find_if(algoPerf, algoPerf + calgo,
-            [=](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem; });
+                                [=](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem; });
 
         if (res == algoPerf + calgo)
             RuntimeError("cuDNN could not find suitable algorithm for the current convolution configuration.");
@@ -405,8 +409,8 @@ private:
 
         // Find fastest algorithm that does NOT require workspace. It is used as a fallback algo in Forward function.
         // Currently all Forward algorithms are deterministic, so no need for checking.
-        res = std::find_if(algoPerf, algoPerf + calgo, 
-            [](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory == 0; });
+        res = std::find_if(algoPerf, algoPerf + calgo,
+                           [](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory == 0; });
         if (res == algoPerf + calgo)
         {
             // In theory, this should never happen.
@@ -497,14 +501,33 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
     const auto& kernel = geometry->KernelShape();
     const auto& sharing = geometry->Sharing();
     const auto& mapCount = geometry->MapCount();
+
+    const auto& inputRank = input.GetRank();
+    const auto& kernelRank = kernel.GetRank();
+    const auto& mapRank = mapCount.GetRank();
     // cuDNN supports 2D and 3D convolutions at the moment with full sharing.
     // In case map count size > 1, then it should have all ones except last dimension.
     // If pooling is requested, then cuDNN supports only 2D/3D inputs and 2D pooling kernels.
-    return (input.GetRank() <= 4 &&
-            std::find(begin(sharing), end(sharing), false) == sharing.end() &&
-            mapCount.GetNumElements() == mapCount[mapCount.GetRank() - 1] &&
-            (poolKind == PoolKind::None || 
-             input.GetRank() <= 3 && (kernel.GetRank() < 3 || kernel[2] == 1)));
+    bool retVal = (inputRank <= 4 &&
+                   std::find(begin(sharing), end(sharing), false) == sharing.end() &&
+                   mapCount.GetNumElements() == mapCount[mapRank - 1] &&
+                   (poolKind == PoolKind::None ||
+                   inputRank <= 3 && (kernelRank < 3 || kernel[2] == 1)));
+
+    // cuDNN as of version 8.0 does not handle asymmetric padding correctly. We need to 
+    // detect asymmetric padding (either by auto-padding or by specifying lowerPad/upperPad) and choose  
+    // the reference convolution implementation instead 
+    const auto& autopad = geometry->AutoPad();
+    const auto& lowerpad = geometry->LowerPad();
+    const auto& upperpad = geometry->UpperPad();
+    for (int i = 0; i < kernelRank; i++)
+    {
+        if (autopad[i])
+            retVal = retVal && (kernel[i] % 2 != 0);  // make sure kernel size is odd 
+        else
+            retVal = retVal && (lowerpad[i] == upperpad[i]);  // make sure lower and upper padding are equal 
+    }
+    return retVal; 
 }
 
 template class CuDnnConvolutionEngineFactory<float>;
