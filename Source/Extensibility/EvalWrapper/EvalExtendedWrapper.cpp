@@ -71,7 +71,7 @@ public ref class ValueBuffer
             Buffer = gcnew cli::array<ElemType>(bufferSize);
             Indices = gcnew cli::array<int>(bufferSize);
             ColIndices = gcnew cli::array<int>(colIndicesSize);
-            Size = colIndicesSize - 1;
+            Size = colIndicesSize;
         }
 
         //
