@@ -1,12 +1,18 @@
-This directory contains different scripts to support CNTK.
+﻿This directory contains different scripts to support CNTK.
 
 ## CNTK Binary Installers
 
 The directory `install` contains scripts which are used in the CNTK binary download to install 
-CNTK on a users system. They are not intended to run from this location in the repository.
+CNTK on a users system. They are NOT intended to run from this location in the repository.
 
 * `install/windows` - A script for installing a Windows CNTK *binary* drop, cf. [here](https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script).
 * `install/linux` - A script for installing a Linux CNTK *binary* drop, cf. [here](https://github.com/Microsoft/CNTK/wiki/Setup-Linux-Binary-Script).
+
+## CNTK Development Environment Installer
+
+The directory `devInstall` contains scripts which are used to create setup an environment to build CNTK from source. They are intended to run from this location in the repository.
+
+* `devInstall/Windows` - Create a Visual Studio based development environment on Windows
 
 ## CNTK Text format Converters
 
