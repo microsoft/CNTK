@@ -54,7 +54,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(DropoutNode))                          return New<DropoutNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DummyCriterionNode))                   return New<DummyCriterionNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DynamicAxisNode))                      return New<DynamicAxisNode<ElemType>>(forward<_Types>(_Args)...);
-    else if (nodeType == OperationNameOf(EditDistanceNode))                     return New<EditDistanceNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(EditDistanceErrorNode))                     return New<EditDistanceErrorNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ElementTimesNode))                     return New<ElementTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(EnvironmentInputNode))                 return New<EnvironmentInputNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(EpochAccumulatorNode))                 return New<EpochAccumulatorNode<ElemType>>(forward<_Types>(_Args)...);
@@ -429,9 +429,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Class
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::EditDistance(const ComputationNodePtr a, const ComputationNodePtr b, float subPen, float delPen, float insPen, bool squashInputs, vector<int> samplesToIgnore, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::EditDistanceError(const ComputationNodePtr a, const ComputationNodePtr b, float subPen, float delPen, float insPen, bool squashInputs, vector<int> samplesToIgnore, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<EditDistanceNode<ElemType>>(net.GetDeviceId(), nodeName, subPen, delPen, insPen, squashInputs, samplesToIgnore), { a, b });
+    return net.AddNodeToNetAndAttachInputs(New<EditDistanceErrorNode<ElemType>>(net.GetDeviceId(), nodeName, subPen, delPen, insPen, squashInputs, samplesToIgnore), { a, b });
 }
 
 template <class ElemType>

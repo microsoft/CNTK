@@ -10,7 +10,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 BOOST_AUTO_TEST_SUITE(EditDistanceTests)
 
-BOOST_AUTO_TEST_CASE(ComputeEditDistanceTest)
+BOOST_AUTO_TEST_CASE(ComputeEditDistanceErrorTest)
 {
     Matrix<float> firstSeq(CPUDEVICE);
     Matrix<float> secondSeq(CPUDEVICE);
@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(ComputeEditDistanceTest)
     MBLayoutPtr pMBLayout = make_shared<MBLayout>(1, seqSize, L"X");
     pMBLayout->AddSequence(0, 0, 0, seqSize);
 
-    float ed = EditDistanceNode<float>::ComputeEditDistance(firstSeq, secondSeq, 1, pMBLayout, 1, 1, 1, true, samplesToIgnore);
+    float ed = EditDistanceErrorNode<float>::ComputeEditDistanceError(firstSeq, secondSeq, 1, pMBLayout, 1, 1, 1, true, samplesToIgnore);
     assert((int)ed == 2);
 
     for (size_t i = 0; i < seqSize; i++)
@@ -34,12 +34,12 @@ BOOST_AUTO_TEST_CASE(ComputeEditDistanceTest)
         secondSeq(0, i) = (float)i;
     }
 
-    ed = EditDistanceNode<float>::ComputeEditDistance(firstSeq, secondSeq, 1, pMBLayout, 1, 1, 1, true, samplesToIgnore);
+    ed = EditDistanceErrorNode<float>::ComputeEditDistanceError(firstSeq, secondSeq, 1, pMBLayout, 1, 1, 1, true, samplesToIgnore);
     assert((int)ed == 0);
 
     secondSeq(0, seqSize-1) = (float)123;
 
-    ed = EditDistanceNode<float>::ComputeEditDistance(firstSeq, secondSeq, 1, pMBLayout, 1, 1, 1, true, samplesToIgnore);
+    ed = EditDistanceErrorNode<float>::ComputeEditDistanceError(firstSeq, secondSeq, 1, pMBLayout, 1, 1, 1, true, samplesToIgnore);
     assert((int)ed == 1);
 }
 
