@@ -145,7 +145,17 @@ namespace CNTK
                     }
                     else
                     {
-                        outputDynamicAxes.push_back(Axis::NewUniqueDynamicAxis(L"whereNodeDynamicAxis"));
+                        std::function<Variable(const Variable&)> GetActualSourceVariable;
+                        GetActualSourceVariable = [&GetActualSourceVariable](const Variable& var) -> Variable {
+                            if (var.BlockFunctionVariableMapping() == Variable())
+                                return var;
+                            else
+                                return GetActualSourceVariable(var.BlockFunctionVariableMapping());
+                        };
+
+                        auto whereNodeConditionSourceVar = GetActualSourceVariable(inputs[0]);
+                        auto whereNodeSequenceAxis = Axis(std::wstring(L"whereNodeDynamicAxis_conditionVar_") + whereNodeConditionSourceVar.Uid());
+                        outputDynamicAxes.push_back(whereNodeSequenceAxis);
                     }
 
                     for (size_t i2 = 1; i2 < inputs[0].DynamicAxes().size(); ++i2)
