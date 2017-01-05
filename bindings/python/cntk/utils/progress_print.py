@@ -15,16 +15,21 @@ class ProgressPrinter(object):
 
     It provides the number of samples, average loss and average metric
     since the last print or since the start of accumulation.
+
+    Args:
+        freq (int or None, default None):  determines how often
+         printing will occur. The value of 0 means an geometric
+         schedule (1,2,4,...). A value > 0 means a arithmetic schedule
+         (a log print for minibatch number: ``freq``, a log print for minibatch number: 2*``freq``, a log print for minibatch number: 3*``freq``,...), and a value of None means no per-minibatch log.
+        first (int, default 0): Only start logging after the minibatch number is greater or equal to ``first``.
+        tag (string, default EmptyString): prepend minibatch log lines with your own string
+        log_to_file (string or None, default None): if None, output log data to stdout.  If a string is passed, the string is path to a file for log data.
+        distributed_learner (:class:`~cntk.distributed.DistributedLearner` or None, default None): Your learner if you are using distributed parallelism -- each rank's log will go to seperate file.
+        gen_heartbeat (bool, default False): If True output a progress message every 10 seconds or so to stdout.
+        num_epochs (int, default 300): The total number of epochs to be trained.  Used for some metadata.  This parameter is optional.
     '''
+    
     def __init__(self, freq=None, first=0, tag='', log_to_file=None, distributed_learner=None, gen_heartbeat=False, num_epochs=300):
-        '''
-        Constructor. The optional ``freq`` parameter determines how often
-        printing will occur. The value of 0 means an geometric
-        schedule (1,2,4,...). A value > 0 means a arithmetic schedule
-        (freq, 2*freq, 3*freq,...), and a value of None means no per-minibatch log.
-        set log_to_file if you want the output to go file instead of stdout.
-        set distributed_learner to your learner if you are using distibuted parallelism -- each rank's log will go to seperate file.
-        '''
         from sys import maxsize
         if freq is None:
             freq = maxsize
