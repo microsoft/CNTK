@@ -412,6 +412,12 @@ void PrintBuiltInfo()
 #ifdef _BUILDPATH_
     LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
 #endif
+#ifdef _MPI_NAME_
+    LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);
+#endif
+#ifdef _MPI_VERSION_
+    LOGPRINTF(stderr, "\t\tMPI version: %s\n", _MPI_VERSION_);
+#endif
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
 

@@ -7,6 +7,7 @@ import math
 from . import cntk_py
 from .utils import typemap
 from enum import Enum, unique
+import numpy as np
 
 @unique
 class UnitType(Enum):
@@ -298,7 +299,7 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=1):
 @typemap
 def sgd(parameters, lr,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
-        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10,
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
     '''
     Creates an SGD learner instance to learn the parameters. See [1] for more
@@ -344,7 +345,7 @@ def sgd(parameters, lr,
 @typemap
 def momentum_sgd(parameters, lr, momentum,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
-        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10,
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
     '''
     Creates a Momentum SGD learner instance to learn the parameters.
@@ -390,7 +391,7 @@ def momentum_sgd(parameters, lr, momentum,
 @typemap
 def nesterov(parameters, lr, momentum,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
-        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10,
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
     '''
     Creates a Nesterov SGD learner instance to learn the parameters. This was
@@ -447,7 +448,7 @@ def nesterov(parameters, lr, momentum,
 @typemap
 def adagrad(parameters, lr, need_ave_multiplier=True,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
-        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10,
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
     '''
     Creates an AdaGrad learner instance to learn the parameters. See [1] for
@@ -498,7 +499,7 @@ def adam_sgd(parameters, lr, momentum,
         variance_momentum = momentum_as_time_constant_schedule(720000),
         low_memory=True,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
-        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10,
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
     '''
     Creates an Adam learner instance to learn the parameters. See [1] for more
@@ -558,7 +559,7 @@ def rmsprop(parameters, lr,
         gamma, inc, dec, max, min,
         need_ave_multiplier=True,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
-        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=1E10,
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
     '''
     Creates an RMSProp learner instance to learn the parameters.

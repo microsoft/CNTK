@@ -73,7 +73,15 @@ public:
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        auto input = m_externalFunction->Inputs()[inputIndex];
+        std::vector<::CNTK::Variable> externalFunctionUniqueInputs;
+        auto externalFunctionInputs = m_externalFunction->Inputs();
+        for (auto input : externalFunctionInputs)
+        {
+            if (std::find(externalFunctionUniqueInputs.begin(), externalFunctionUniqueInputs.end(), input) == externalFunctionUniqueInputs.end())
+                externalFunctionUniqueInputs.push_back(input);
+        }
+
+        auto input = externalFunctionUniqueInputs[inputIndex];
 
         auto gradientValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(m_externalFunction->Output(), Gradient(), GetMBLayout());
         std::unordered_map<::CNTK::Variable, ::CNTK::ValuePtr> outputGradientValue = { { m_externalFunction->Output(), gradientValue } };
