@@ -37,13 +37,17 @@ DNN=[
     cMap1 = 3
     hStride1 = 1
     vStride1 = 1
+
     # weight[cMap1, kW1 * kH1 * ImageC]
+    W = LearnableParameter(cMap1, 75, init = Gaussian, initValueScale = conv1WScale, initOnCPUOnly=true)
+    c = Convolution(W, featScaled, kW1, kH1, cMap1, hStride1, vStride1, zeroPadding = true, imageLayout = $imageLayout$)
+
     b = LearnableParameter(cMap1, 1, init = fixedValue, value = conv1BValue)
     sc = LearnableParameter(cMap1, 1, init = fixedValue, value = scValue)
     m = LearnableParameter(cMap1, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
     v = LearnableParameter(cMap1, 1, init = fixedValue, value = 0, learningRateMultiplier = 0)
     
-    y = BatchNormalization(featScaled, sc, b, m, v, spatial = true, normalizationTimeConstant = bnTimeConst, imageLayout = $imageLayout$, engine=$batchNormalizationEngine$)
+    y = BatchNormalization(c, sc, b, m, v, spatial = true, normalizationTimeConstant = bnTimeConst, imageLayout = $imageLayout$, engine=$batchNormalizationEngine$)
     conv1 = RectifiedLinear(y)
 
     # pool1

@@ -417,7 +417,9 @@
 %ignore CNTK::Internal::ForceDeterministicAlgorithms();
 %ignore CNTK::Internal::SetFixedRandomSeed(unsigned long fixedRandomSeed);
 %ignore CNTK::Internal::EnableForwardValuesSharing();
+%ignore CNTK::Internal::DisableForwardValuesSharing();
 %ignore CNTK::Internal::EnableHyperMemoryCompress();
+%ignore CNTK::Internal::DisableHyperMemoryCompress();
 %ignore CNTK::Internal::AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
 %ignore CNTK::Internal::AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 %ignore CNTK::Internal::AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
