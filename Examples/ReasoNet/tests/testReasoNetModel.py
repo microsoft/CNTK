@@ -2,6 +2,7 @@ import sys
 import os
 import numpy as np
 from ReasoNet.model import create_model, create_reader, gru_cell
+import ReasoNet.model as rsn
 import ReasoNet.asr as asr
 from cntk.blocks import Placeholder, Constant,initial_state_default_or_None, _is_given, _get_current_default_options
 from cntk.ops import input_variable, past_value, future_value
@@ -21,12 +22,68 @@ def testModel(data):
       data_bind[arg] = reader.streams.context
     if arg.name == 'entities':
       data_bind[arg] = reader.streams.entities
-  batch = reader.next_minibatch(1, data_bind)
+  batch = reader.next_minibatch(2, data_bind)
   var = model.eval(batch)
   for o in model.outputs:
     print('-----------------------')
     print(o.name)
     print(np.around(var[o], decimals=3))
+
+def testReasoNetLoss(data):
+  reader = create_reader(data, 10, False)
+  model = create_model(10, 5, 3)
+  loss = rsn.loss(model)
+  data_bind = {}
+  for arg in loss.arguments:
+    if arg.name == 'query':
+      data_bind[arg] = reader.streams.query
+    if arg.name == 'context':
+      data_bind[arg] = reader.streams.context
+    if arg.name == 'entities':
+      data_bind[arg] = reader.streams.entities
+    if arg.name == 'labels':
+      data_bind[arg] = reader.streams.label
+  batch = reader.next_minibatch(100, data_bind)
+  var = loss.eval(batch)
+  for o in loss.outputs:
+    print('-----------------------')
+    print(o.name)
+    print(np.around(var[o], decimals=3))
+  #pred = var[loss.outputs[-1]]
+  #for i in pred:
+  #  print("Prediction: {0}".format(np.argmin(np.reshape(i, 10))))
+
+def testReasoNetPred(data):
+  reader = create_reader(data, 10, False)
+  model = create_model(10, 5, 3)
+  pred = rsn.pred(model)
+  data_bind = {}
+  for arg in pred.arguments:
+    if arg.name == 'query':
+      data_bind[arg] = reader.streams.query
+    if arg.name == 'context':
+      data_bind[arg] = reader.streams.context
+    if arg.name == 'entities':
+      data_bind[arg] = reader.streams.entities
+    if arg.name == 'labels':
+      data_bind[arg] = reader.streams.label
+  #data_bind = {model.context:reader.streams.context, model.query:reader.streams.query, model.entities:reader.streams.entities}
+  batch = reader.next_minibatch(100, data_bind)
+  var = pred.eval(batch)
+  for o in pred.outputs:
+    print('-----------------------')
+    print(o.name)
+    print(np.around(var[o], decimals=3))
+  pred = var[pred.outputs[-1]]
+  print('-----------------------')
+  for i in pred:
+    print('')
+    print("Prediction: {0}\n\t=>{1}\n".format(i, np.argmax(np.reshape(i, 10))))
+
+def testReasoNetTrain(data):
+  reader = create_reader(data, 10, False)
+  model = create_model(10, 5, 3)
+  rsn.train(model, reader, epoch_size=10)
 
 def testASR(data):
   reader = asr.create_reader(data, 10, False)
@@ -39,8 +96,9 @@ def testASR(data):
       data_bind[arg] = reader.streams.context
     if arg.name == 'entities':
       data_bind[arg] = reader.streams.entities
-  batch = reader.next_minibatch(1, data_bind)
+  batch = reader.next_minibatch(2, data_bind)
   var = model.eval(batch)
+
   for o in model.outputs:
     print('-----------------------')
     print(o.name)
@@ -61,4 +119,7 @@ def testGRU():
 
 #testGRU()
 #testASR("test.idx")
-testModel("test.idx")
+#testModel("test.idx")
+#testReasoNetLoss("test.idx")
+testReasoNetTrain("test.idx")
+#testReasoNetPred("test.idx")
