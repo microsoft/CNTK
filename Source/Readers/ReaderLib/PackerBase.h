@@ -55,11 +55,6 @@ protected:
     // (sampleOffset is equal to the sum of sample sizes of all preceding samples).
     void PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize);
 
-    virtual Sequences GetNextSequences()
-    {
-        return m_sequenceEnumerator->GetNextSequences(m_config.m_minibatchSizeInSamples);
-    }
-
     SequenceEnumeratorPtr m_sequenceEnumerator;
 
     // Input stream descriptions provided by the transformer.

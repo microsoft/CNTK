@@ -119,6 +119,13 @@ namespace CNTK
             m_composite->ReplacePlaceholders(replacementMap);
             m_compositeArgumentsMap = std::move(newArgumentsMap);
 
+            // Substitute any placeholder replacements in the outputs map
+            for (auto& outputMapping : m_compositeOutputsMap)
+            {
+                if (replacementMap.find(outputMapping.second) != replacementMap.end())
+                    outputMapping.second = replacementMap.at(outputMapping.second);
+            }
+
             std::vector<Variable> blockFunctionOutputs;
             auto compositeOutputs = m_composite->Outputs();
             for (auto compositeOutput : compositeOutputs)

@@ -415,6 +415,7 @@ class Function(cntk_py.Function):
         # BUGBUG: This is a workaround, I think, since for other cases, this happens automatically.
         #         Without, SWIG throws "TypeError: cannot convert value of dictionary".
         #         This mapping should be removed once the TypeError has been fixed.
+        # TODO: latest master still does not have it, so try if it works without by now.
         substitutions = { param: (arg.output if isinstance(arg, Function) else arg) for param, arg in substitutions.items() }
         return super(Function, self).clone(method, substitutions)
 
@@ -438,27 +439,27 @@ class Function(cntk_py.Function):
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing
                  input data.
                * any other type: if node has an unique input, arguments is
-                 mapped to this input. 
+                 mapped to this input.
              For nodes with more than one input, only dict is allowed.
 
              In both cases, every every sample in the data will be interpreted
-             as a new sequence. 
-             
+             as a new sequence.
+
              Sequences can be marked as continuations of the same sequence in
              the previous minibatch (that is the sequence in the same slot).
              There are two possibilities for this:
-             
+
               * specifying arguments as a `tuple` where the first element is
                 used as arguments and the second one will be used as a list
                 of bools, denoting whether a sequence is a new one (`True`) or a
                 continuation of the sequence in the same slot of the previous
-                minibatch (`False`). This will be applied to all batches. 
-              * specifying arguments as a dictionary of variables to tuples 
+                minibatch (`False`). This will be applied to all batches.
+              * specifying arguments as a dictionary of variables to tuples
                 where the first element is used as arguments and the second
                 one will be used as a list of bools, denoting whether a sequence
                 is a new one (`True`) or a continuation of the sequence in the
                 same slot of the previous minibatch (`False`). This will be
-                applied to all batches. 
+                applied to all batches.
 
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
@@ -467,7 +468,8 @@ class Function(cntk_py.Function):
              to be performed.
 
         Returns:
-            map of outputs to NumPy arrays; or a single NumPy array if Function has only one output
+           dict or NumPy Array: Dict with keys of ouput variable names and values of 
+           output variable. A single NumPy array if there is only one output value.
         '''
 
         _, output_map = self.forward(arguments, self.outputs, device=device)
@@ -501,27 +503,27 @@ class Function(cntk_py.Function):
                  the dictionary key.If the array denotes a sequence then the
                  elements of the sequence are grouped along axis 0.
                * any other type: if node has an unique input, arguments is
-                 mapped to this input. 
+                 mapped to this input.
              For nodes with more than one input, only dict is allowed.
 
              In both cases, every every sample in the data will be interpreted
-             as a new sequence. 
-             
+             as a new sequence.
+
              Sequences can be marked as continuations of the same sequence in
              the previous minibatch (that is the sequence in the same slot).
              There are two possibilities for this:
-             
+
               * specifying arguments as a `tuple` where the first element is
                 used as arguments and the second one will be used as a list
                 of bools, denoting whether a sequence is a new one (`True`) or a
                 continuation of the sequence in the same slot of the previous
-                minibatch (`False`). This will be applied to all batches. 
-              * specifying arguments as a dictionary of variables to tuples 
+                minibatch (`False`). This will be applied to all batches.
+              * specifying arguments as a dictionary of variables to tuples
                 where the first element is used as arguments and the second
                 one will be used as a list of bools, denoting whether a sequence
                 is a new one (`True`) or a continuation of the sequence in the
                 same slot of the previous minibatch (`False`). This will be
-                applied to all batches. 
+                applied to all batches.
 
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
@@ -797,7 +799,7 @@ class Function(cntk_py.Function):
         Returns a list of primitive function with ``name`` in the graph
         starting from this node. Throws an exceptoin if ``name`` occurs
         multiple times. If you expect only one function to be returned, use
-        :func:`find_by_name`. 
+        :func:`find_by_name`.
 
         Example:
             >>> a = C.input_variable(shape=1, name='i')
@@ -807,7 +809,7 @@ class Function(cntk_py.Function):
             2
             >>> c.find_all_with_name('z')
             []
-            
+
         Args:
             name (str): names to look for
 
@@ -837,7 +839,7 @@ class Function(cntk_py.Function):
             b
             >>> c.find_by_name('z') is None
             True
-            
+
             If you need a full function out of it that can be evaluated, you
             need to upcast it (currently done via combine):
 

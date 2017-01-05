@@ -211,7 +211,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         std::vector<float> result;
         while (result.size() < numSamples)
         {
-            auto sequences = sequenceEnumerator->GetNextSequences(mbSize);
+            auto sequences = sequenceEnumerator->GetNextSequences(mbSize, mbSize);
             assert(!sequences.m_endOfEpoch);
             assert(sequences.m_data.size() == 1 || sequences.m_data.size() == 0);
             if (sequences.m_data.empty())
@@ -245,7 +245,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         std::vector<float> epoch;
         while (!shouldBreak)
         {
-            auto sequences = sequenceEnumerator->GetNextSequences(mbSize);
+            auto sequences = sequenceEnumerator->GetNextSequences(mbSize, mbSize);
             shouldBreak = sequences.m_endOfEpoch;
             assert(sequences.m_data.size() == 1 || sequences.m_data.size() == 0);
             if (sequences.m_data.size() == 0)
