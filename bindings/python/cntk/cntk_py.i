@@ -52,7 +52,9 @@
 %template() std::vector<std::shared_ptr<CNTK::DistributedLearner>>;
 %template() std::vector<std::shared_ptr<CNTK::Trainer>>;
 %template() std::pair<size_t, double>;
+%template() std::pair<size_t, size_t>;
 %template() std::vector<std::pair<size_t, double>>;
+%template() std::vector<std::pair<size_t, size_t>>;
 %template() std::vector<std::pair<CNTK::Variable, CNTK::Variable>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
@@ -419,6 +421,17 @@ public:
     catch (...) { SWIG_exception(SWIG_UnknownError,"Runtime exception"); }
 }
 
+%feature("director:except") {
+    if ($error != NULL) {
+        throw Swig::DirectorMethodException();
+    }
+}
+
+// Common directors
+%feature("director") CNTK::TrainingSession;
+%feature("nodirector") CNTK::TrainingSession::OnMinibatchStart;
+%feature("nodirector") CNTK::TrainingSession::OnCheckpointStart;
+%feature("nodirector") CNTK::TrainingSession::GetMinibatchSize;
 
 //
 // NDShape
@@ -950,12 +963,15 @@ public:
 %unordered_map_conversion(CNTK::Variable, CNTK::Variable, SWIGTYPE_p_CNTK__Variable, SWIGTYPE_p_CNTK__Variable)
 %unordered_map_conversion(CNTK::Parameter, const CNTK::NDArrayViewPtr, SWIGTYPE_p_CNTK__Parameter, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t)
 %unordered_map_conversion(CNTK::Parameter, CNTK::NDArrayViewPtr, SWIGTYPE_p_CNTK__Parameter, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t)
+%unordered_map_conversion(CNTK::Variable, CNTK::StreamInformation, SWIGTYPE_p_CNTK__Variable, SWIGTYPE_p_CNTK__StreamInformation)
 
 %unordered_map_ref_conversion(CNTK::StreamInformation, SWIGTYPE_p_CNTK__StreamInformation, CNTK::MinibatchData, SWIGTYPE_p_CNTK__MinibatchData);
 %unordered_map_ref_conversion(CNTK::Parameter, SWIGTYPE_p_CNTK__Parameter, CNTK::NDArrayViewPtr, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView);
 %unordered_map_ref_conversion(CNTK::Variable, SWIGTYPE_p_CNTK__Variable, CNTK::Variable, SWIGTYPE_p_CNTK__Variable);
 
 %shared_ptr(CNTK::Trainer)
+%shared_ptr(CNTK::TrainingSession)
+%shared_ptr(CNTK::BasicTrainingSession)
 %shared_ptr(CNTK::Function)
 %shared_ptr(CNTK::NDArrayView)
 %shared_ptr(CNTK::Value)
@@ -969,6 +985,20 @@ public:
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
+
+%inline {
+    // Global rank of current worker
+    size_t WorkerGlobalRank()
+    {
+        return CNTK::MPICommunicator()->CurrentWorker().m_globalRank;
+    }
+
+    // Number of workers
+    size_t NumberOfWorkers()
+    {
+        return CNTK::MPICommunicator()->Workers().size();
+    }
+}
 
 
 //
@@ -1147,6 +1177,9 @@ public:
 
 %template(training_parameter_per_sample_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
 %template(training_parameter_per_minibatch_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Minibatch>;
+
+typedef CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample> MinibatchSizeSchedule;
+%template(minibatch_size_schedule) CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSchedule<size_t>::UnitType::Sample>;
 
 //
 // The following callback code is only for testing. Will have to be merged with

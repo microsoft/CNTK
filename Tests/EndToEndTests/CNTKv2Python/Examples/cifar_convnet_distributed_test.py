@@ -39,6 +39,7 @@ def test_cifar_convnet_distributed_mpiexec(device_id):
             raise RuntimeError('Timeout in mpiexec, possibly hang')
     str_out = out.decode(sys.getdefaultencoding())
     results = re.findall("Final Results: Minibatch\[.+?\]: errs = (.+?)%", str_out)
+
     assert len(results) == 2
     assert results[0] == results[1]
     expected_test_error = 0.617

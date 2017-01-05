@@ -17,7 +17,7 @@ import subprocess
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ResNet", "Python"))
-from TrainResNet_CIFAR10_Distributed import train_and_evaluate, create_reader
+from TrainResNet_CIFAR10_Distributed import resnet_cifar10
 
 TOLERANCE_ABSOLUTE = 2E-1
 
@@ -45,15 +45,11 @@ def test_cifar_resnet_distributed_error(device_id, is_1bit_sgd):
     #force_deterministic_algorithms()
     # TODO: do the above; they lead to slightly different results, so not doing it for now
 
-    distributed_learner_factory = lambda learner: distributed.data_parallel_distributed_learner(
-        learner=learner,
-        num_quantization_bits=32,
-        distributed_after=0)
+    train_data=os.path.join(base_path, 'train_map.txt')
+    test_data=os.path.join(base_path, 'test_map.txt')
+    mean_data=os.path.join(base_path, 'CIFAR-10_mean.xml')
 
-    reader_train_factory = lambda data_size: create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True, data_size)
-    test_reader = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False, FULL_DATA_SWEEP)
-
-    test_error = train_and_evaluate(reader_train_factory, test_reader, 'resnet20', 5, distributed_learner_factory)
+    test_error = resnet_cifar10(train_data, test_data, mean_data, 'resnet20')
 
     expected_test_error = 0.282
 

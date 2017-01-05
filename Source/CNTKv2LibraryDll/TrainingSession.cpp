@@ -5,7 +5,6 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
-#include "TrainingSession.h"
 #include "fileutil.h"
 
 namespace CNTK
@@ -13,14 +12,15 @@ namespace CNTK
     const std::wstring TrainingSession::s_checkpointIndex = L"CheckpointIndex";
     const std::wstring TrainingSession::s_trainingMinibatchSource = L"TrainingMinibatchSource";
 
-    TrainingSessionPtr CreateBasicTrainingSession(const MinibatchSourcePtr& trainingSource,
+    TrainingSessionPtr CreateBasicTrainingSession(
+        const MinibatchSourcePtr& trainingSource,
         const TrainerPtr& trainer,
         const std::unordered_map<Variable, StreamInformation>& modelInputToMinibatchSourceStream,
         const MinibatchSizeSchedule& minibatchSizeSchedule,
         size_t checkpointFrequencyinSamples,
         const std::wstring& checkPointFileName)
     {
-        return MakeSharedObject<BasicTrainingSession>(trainingSource,
+        return MakeSharedObject<TrainingSession>(trainingSource,
             trainer,
             modelInputToMinibatchSourceStream,
             minibatchSizeSchedule,
@@ -32,6 +32,7 @@ namespace CNTK
         const MinibatchSourcePtr& trainingSource,
         const TrainerPtr& trainer,
         const std::unordered_map<Variable, StreamInformation>& modelInputToMinibatchSourceStream,
+        const MinibatchSizeSchedule& schedule,
         size_t checkpointFrequencyInSamples,
         const std::wstring& checkPointFileName) :
         m_trainingSource(trainingSource),
@@ -42,7 +43,8 @@ namespace CNTK
         m_currentCheckpointIndex(0),
         m_parallelAfterSamples(0),
         m_workerRank(0),
-        m_numberOfWorkers(1)
+        m_numberOfWorkers(1),
+        m_minibatchSizeSchedule(schedule)
     {
         if (!trainingSource)
             InvalidArgument("Minibatch source is not allowed to be null.");
@@ -50,7 +52,7 @@ namespace CNTK
             InvalidArgument("Trainer is not allowed to be null.");
         if(modelInputToMinibatchSourceStream.empty())
             InvalidArgument("Input mapping is not allowed to be empty.");
-        if (m_checkPointFileName.empty())
+        if (m_checkPointFileName.empty() && checkpointFrequencyInSamples != 0)
             InvalidArgument("Checkpoint file name is not allowed to be empty.");
 
         // Let's calculate the warm up period the distributed learners may need.
@@ -69,22 +71,22 @@ namespace CNTK
         }
     }
 
-    void TrainingSession::Run(const DeviceDescriptor& computeDevice)
+    void TrainingSession::Train(const DeviceDescriptor& computeDevice)
     {
         std::unordered_map<Variable, ValuePtr> minibatch;
         bool shouldTrain = true;
-        size_t numberOfWorkers = 1;
-        size_t workerRank = 0;
+        size_t workerRank = 0, numberOfWorkers = 1;
+        size_t samplesInEpoch = 0;
         while (shouldTrain)
         {
-            size_t mbSize = GetMinibatchSize();
-
+            // Check if we are operating in distributed mode.
             if (m_parallelAfterSamples >= m_trainer->TotalNumberOfSamplesSeen())
             {
                 numberOfWorkers = m_numberOfWorkers;
                 workerRank = m_workerRank;
             }
 
+            size_t mbSize = GetMinibatchSize();
             auto minibatchData = m_trainingSource->GetNextMinibatch(0 /*numberOfSequences*/, mbSize, numberOfWorkers, workerRank, computeDevice);
 
             minibatch.clear();
@@ -96,17 +98,26 @@ namespace CNTK
 
             OnMinibatchStart();
             shouldTrain = m_trainer->TrainMinibatch(minibatch, computeDevice);
+            OnMinibatchEnd();
+
+            // Local number of samples.
+            samplesInEpoch += m_trainer->PreviousMinibatchSampleCount();
 
             // Check whether to create a checkpoint
-            size_t checkpointIndex = m_trainer->TotalNumberOfSamplesSeen() / m_checkpointFrequencyinSamples;
-            if (checkpointIndex > m_currentCheckpointIndex)
+            if (m_checkpointFrequencyinSamples > 0)
             {
-                m_currentCheckpointIndex = checkpointIndex;
-                SaveCheckpoint();
+                size_t checkpointIndex = m_trainer->TotalNumberOfSamplesSeen() / m_checkpointFrequencyinSamples;
+                if (checkpointIndex > m_currentCheckpointIndex)
+                {
+                    samplesInEpoch = 0;
+                    m_currentCheckpointIndex = checkpointIndex;
+                    SaveCheckpoint();
+                }
             }
         }
 
-        SaveCheckpoint();
+        if (m_checkpointFrequencyinSamples > 0)
+            SaveCheckpoint();
     }
 
     void TrainingSession::RestoreFromCheckpoint(const std::wstring& checkpointFileName)
@@ -118,6 +129,7 @@ namespace CNTK
 
     void TrainingSession::SaveCheckpoint()
     {
+        OnCheckpointStart();
         Dictionary externalState;
         externalState[s_checkpointIndex] = m_currentCheckpointIndex;
         externalState[s_trainingMinibatchSource] = m_trainingSource->GetCheckpointState();
@@ -131,5 +143,6 @@ namespace CNTK
             _wunlink(m_checkPointFileName.c_str());
             renameOrDie(tempFileName, m_checkPointFileName);
         }
+        OnCheckpointEnd();
     }
 }
