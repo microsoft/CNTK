@@ -21,7 +21,8 @@ BlockRandomizer::BlockRandomizer(
     size_t randomizationRangeInSamples,
     IDataDeserializerPtr deserializer,
     bool shouldPrefetch,
-    bool multithreadedGetNextSequence)
+    bool multithreadedGetNextSequence,
+    size_t maxNumberOfInvalidSequences)
     : m_verbosity(verbosity),
       m_deserializer(deserializer),
       m_sweep(SIZE_MAX),
@@ -31,7 +32,8 @@ BlockRandomizer::BlockRandomizer(
       m_sweepTotalNumberOfSamples(0),
       m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples)),
       m_multithreadedGetNextSequences(multithreadedGetNextSequence),
-      m_prefetchedChunk(CHUNKID_MAX)
+      m_prefetchedChunk(CHUNKID_MAX),
+      m_cleaner(maxNumberOfInvalidSequences)
 {
     assert(deserializer != nullptr);
 
@@ -155,6 +157,8 @@ Sequences BlockRandomizer::GetNextSequences(size_t globalSampleCount, size_t loc
         for (int i = 0; i < m_sequenceBuffer.size(); ++i)
             process(i);
     }
+
+    m_cleaner.Clean(result);
 
     // Now it is safe to start the new chunk prefetch.
     ChunkIdType chunkToPrefetchNext = GetChunkToPrefetch(windowRange);

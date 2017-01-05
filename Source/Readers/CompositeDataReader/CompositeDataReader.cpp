@@ -96,6 +96,9 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
     // Pick up the randomizer, always picking up no randomization for the write mode.
     bool randomize = isActionWrite ? false : config(L"randomize", true);
 
+    // Get maximum number of allowed errors per worker.
+    size_t maxErrors = config(L"maxErrors", 0);
+
     // By default do not use omp threads for deserialization of sequences.
     // It makes sense to put it to true for cases when deserialization is CPU intensive,
     // i.e. decompression of images.
@@ -115,11 +118,11 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         randomizationWindow = config(L"randomizationWindow", randomizationWindow);
 
         bool shouldPrefetch = true;
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, multiThreadedDeserialization);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, multiThreadedDeserialization, maxErrors);
     }
     else
     {
-        m_sequenceEnumerator = std::make_shared<NoRandomizer>(deserializer, multiThreadedDeserialization);
+        m_sequenceEnumerator = std::make_shared<NoRandomizer>(deserializer, multiThreadedDeserialization, maxErrors);
     }
 
     // In case when there are transforms, applying them to the data.

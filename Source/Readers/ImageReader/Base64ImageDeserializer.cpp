@@ -41,7 +41,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // Read chunk into memory.
             int rc = _fseeki64(m_deserializer.m_dataFile.get(), m_chunkOffset, SEEK_SET);
             if (rc)
-                RuntimeError("Error seeking to position %" PRId64 " in the input file (%ls), error %d", m_chunkOffset, m_deserializer.m_fileName.c_str(), rc);
+                RuntimeError("Error seeking to position '%" PRId64 "' in the input file '%ls', error code '%d'", m_chunkOffset, m_deserializer.m_fileName.c_str(), rc);
 
             freadOrDie(m_buffer.data(), descriptor.m_byteSize, 1, m_deserializer.m_dataFile.get());
         }
@@ -69,13 +69,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
             // Let's get the label.
             if (!token)
-                RuntimeError("Empty label value for sequence '%s'", KeyOf(sequence).c_str());
+                RuntimeError("Empty label value for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
 
             char* eptr = nullptr;
             errno = 0;
             size_t classId = strtoull(token, &eptr, 10);
             if (token == eptr || errno == ERANGE)
-                RuntimeError("Cannot parse label value for sequence '%s'", KeyOf(sequence).c_str());
+                RuntimeError("Cannot parse label value for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
 
             size_t labelDimension = m_deserializer.m_labelGenerator->LabelDimension();
             if (classId >= labelDimension)
@@ -91,22 +91,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             // Find line end or end of buffer.
             char* endToken = strchr(token, 0);
             if (!endToken)
-                RuntimeError("Cannot find the end of the image for sequence '%s'", KeyOf(sequence).c_str());
+                RuntimeError("Cannot find the end of the image for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
 
             // Remove non base64 characters at the end of the string (tabs/spaces)
             while (endToken > token &&  !IsBase64Char(*(endToken - 1)))
                 endToken--;
 
-            std::vector<char> decodedImage = DecodeBase64(token, endToken);
-            cv::Mat img = cv::imdecode(decodedImage, m_deserializer.m_grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+            std::vector<char> decodedImage;
+            cv::Mat image;
+            if (!DecodeBase64(token, endToken, decodedImage))
+            {
+                fprintf(stderr, "WARNING: Cannot decode sequence with id %" PRIu64 " in the input file '%ls'\n", sequence.m_key.m_sequence, m_deserializer.m_fileName.c_str());
+            }
+            else
+            {
+                image = cv::imdecode(decodedImage, m_deserializer.m_grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+            }
 
-            auto image = std::make_shared<ImageSequenceData>();
-            image->m_image = std::move(img);
-            auto& cvImage = image->m_image;
-            if (!cvImage.data)
-                RuntimeError("Cannot decode sequence '%s'", KeyOf(sequence).c_str());
-
-            m_deserializer.PopulateSequenceData(cvImage, classId, sequenceId, result);
+            m_deserializer.PopulateSequenceData(image, classId, sequenceId, result);
         }
     };
 

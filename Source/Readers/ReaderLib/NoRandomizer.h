@@ -8,6 +8,7 @@
 #include <vector>
 #include "SequenceEnumerator.h"
 #include "DataDeserializer.h"
+#include "ReaderUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -18,7 +19,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class NoRandomizer : public SequenceEnumerator
 {
 public:
-    NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences = false);
+    NoRandomizer(
+        IDataDeserializerPtr deserializer, 
+        bool multithreadedGetNextSequences = false,
+        size_t maxNumberOfInvalidSequences = 0); // per worker
 
     virtual void StartEpoch(const EpochConfiguration& config) override;
     virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) override;
@@ -89,9 +93,8 @@ private:
     // Temp buffer to avoid allocations.
     std::vector<SequenceDescription> m_sequenceBuffer;
 
-    // Flag, indicating whether in distributed mode the minibatch is filled completely
-    // with data local to the worker.
-    bool m_useLocalTimeline;
+    // Helper class for removing invalid sequences.
+    SequenceCleaner m_cleaner;
 };
 
 }}}

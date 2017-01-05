@@ -71,18 +71,27 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     void ImageDeserializerBase::PopulateSequenceData(cv::Mat image, size_t classId, size_t sequenceId, std::vector<SequenceDataPtr>& result)
     {
-        ElementType dataType = ConvertImageToSupportedDataType(image, m_precision);
-        if (!image.isContinuous())
-            image = image.clone();
-        assert(image.isContinuous());
-
-        ImageDimensions dimensions(image.cols, image.rows, image.channels());
         auto imageData = make_shared<ImageSequenceData>();
-        imageData->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
-        imageData->m_id = sequenceId;
-        imageData->m_image = image;
-        imageData->m_numberOfSamples = 1;
-        imageData->m_elementType = dataType;
+        if (!image.data)
+        {
+            imageData->m_isValid = false;
+        }
+        else
+        {
+            ElementType dataType = ConvertImageToSupportedDataType(image, m_precision);
+            if (!image.isContinuous())
+                image = image.clone();
+            assert(image.isContinuous());
+
+            ImageDimensions dimensions(image.cols, image.rows, image.channels());
+
+            imageData->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
+            imageData->m_id = sequenceId;
+            imageData->m_image = image;
+            imageData->m_numberOfSamples = 1;
+            imageData->m_elementType = dataType;
+            imageData->m_isValid = true;
+        }
         result.push_back(imageData);
 
         auto label = std::make_shared<CategorySequenceData>();

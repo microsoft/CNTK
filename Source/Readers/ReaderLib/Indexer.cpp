@@ -166,7 +166,7 @@ void Indexer::AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceI
     auto key = std::to_string(sequenceId);
     if (corpus->IsIncluded(key))
     {
-        sd.m_key.m_sequence = sequenceId;
+        sd.m_key.m_sequence = corpus->KeyToId(key);
         sd.m_key.m_sample = 0;
         m_index.AddSequence(sd);
     }
