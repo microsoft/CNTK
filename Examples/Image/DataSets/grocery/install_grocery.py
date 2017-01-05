@@ -13,11 +13,11 @@ try:
 except ImportError: 
     from urllib import urlretrieve
     
-if __name__ == "__main__":
+def download_grocery_data():
     base_folder = os.path.dirname(os.path.abspath(__file__))
-    directory = os.path.join(base_folder, "..", "DataSets")
-    if not os.path.exists(os.path.join(directory, "grocery", "testImages")):
-        filename = os.path.join(directory, "Grocery.zip")
+    dataset_folder = os.path.join(base_folder, "..")
+    if not os.path.exists(os.path.join(dataset_folder, "grocery", "testImages")):
+        filename = os.path.join(dataset_folder, "Grocery.zip")
         if not os.path.exists(filename):
             url = "https://www.cntk.ai/DataSets/Grocery/Grocery.zip"
             print('Downloading data from ' + url + '...')
@@ -26,9 +26,13 @@ if __name__ == "__main__":
         try:
             print('Extracting ' + filename + '...')
             with zipfile.ZipFile(filename) as myzip:
-                myzip.extractall(directory)
+                myzip.extractall(dataset_folder)
         finally:
             os.remove(filename)
         print('Done.')
     else:
-        print('Data already available at ' + directory + '/grocery')
+        print('Data already available at ' + dataset_folder + '/grocery')
+    
+if __name__ == "__main__":
+    download_grocery_data()
+    

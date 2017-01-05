@@ -12,7 +12,9 @@
 
 ### Getting the data
 
-We use the `grocery` toy data set ([Examples/Image/DataSets/grocery](../DataSets/grocery)) and a pre-trained AlexNet model [Examples/Image/PretrainedModels/AlexNetBS.model](../PretrainedModels). To download both run `python install_data_and_model.py` from this folder.
+We use the `grocery` toy data set ([Examples/Image/DataSets/grocery](../DataSets/grocery)) and a pre-trained AlexNet model [Examples/Image/PretrainedModels/AlexNetBS.model](../PretrainedModels). To download both run 
+
+`python install_data_and_model.py`
 
 ### Details
 
