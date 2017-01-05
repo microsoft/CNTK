@@ -7,37 +7,29 @@
 from __future__ import print_function
 import os
 import numpy as np
-from cntk import load_model
+from cntk import load_model, graph
 from cntk.ops import combine
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
+from cntk import graph
 
-#####################################################
-#####################################################
-# helpers to print all node names
-def dfs_walk(node, visited):
-    if node in visited:
-        return
-    visited.add(node)
-    print("visiting %s"%node.name)
-    if hasattr(node, 'root_function'):
-        node = node.root_function
-        for child in node.inputs:
-            dfs_walk(child, visited)
-    elif hasattr(node, 'is_output') and node.is_output:
-        dfs_walk(node.owner, visited)
-
-def print_all_node_names(model_file):
+# helper to print all node names
+def print_all_node_names(model_file, is_BrainScript):
     loaded_model = load_model(model_file)
-    dfs_walk(loaded_model, set())
-#####################################################
-#####################################################
+    if is_BrainScript:
+        loaded_model = combine([loaded_model.outputs[0]])
+    node_list = graph.depth_first_search(loaded_model, lambda x: x.is_output)
+    print("printing node information in the format")
+    print("node name (tensor shape)")
+    for node in node_list:
+        print(node.name, node.shape)
 
 
 def create_mb_source(image_height, image_width, num_channels, map_file):
     transforms = [ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')]
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
         features=StreamDef(field='image', transforms=transforms),  # first column in map file is referred to as 'image'
-        labels=StreamDef(field='label', shape=1000))))             # and second as 'label'. TODO: add option to ignore labels
+        labels=StreamDef(field='label', shape=1000))),             # and second as 'label'. TODO: add option to ignore labels
+        randomize=False)
 
 
 def eval_and_write(model_file, node_name, output_file, minibatch_source, num_objects):
@@ -56,14 +48,16 @@ def eval_and_write(model_file, node_name, output_file, minibatch_source, num_obj
             # write results to file
             out_values = output[0,0].flatten()
             np.savetxt(results_file, out_values[np.newaxis], fmt="%.6f")
-    return
 
 if __name__ == '__main__':
-    # define location of model and data
-    base_folder = os.getcwd()
-    model_file  = os.path.join(base_folder, "../PretrainedModels/AlexNetBS.model")
-    map_file    = os.path.join(base_folder, "../DataSets/grocery/test.txt")
-    os.chdir(os.path.join(base_folder, "../DataSets/grocery/"))
+    # define location of model and data and check existence
+    base_folder = os.path.dirname(os.path.abspath(__file__))
+    model_file  = os.path.join(base_folder, "..", "PretrainedModels", "ResNet_18.model")
+    map_file    = os.path.join(base_folder, "..", "DataSets", "grocery", "test.txt")
+    os.chdir(os.path.join(base_folder, "..", "DataSets", "grocery"))
+    if not (os.path.exists(model_file) and os.path.exists(map_file)):
+        print("Please run 'python install_data_and_model.py' first to get the required data and model.")
+        exit(0)
 
     # create minibatch source
     image_height = 227
@@ -72,15 +66,15 @@ if __name__ == '__main__':
     minibatch_source = create_mb_source(image_height, image_width, num_channels, map_file)
 
     # use this to print all node names of the model (and knowledge of the model to pick the correct one)
-    # print_all_node_names(model_file)
+    print_all_node_names(model_file, True)
 
     # use this to get 1000 class predictions (not yet softmaxed!)
     # node_name = "z"
     # output_file = os.path.join(base_folder, "predOutput.txt")
 
-    # use this to get 4096 features from the last fc layer
-    node_name = "z.x._._"
-    output_file = os.path.join(base_folder, "fcOutput.txt")
+    # use this to get 512 features from the last but one layer of ResNet_18
+    node_name = "z.x"
+    output_file = os.path.join(base_folder, "layerOutput.txt")
 
     # evaluate model and write out the desired layer output
     eval_and_write(model_file, node_name, output_file, minibatch_source, num_objects=5)

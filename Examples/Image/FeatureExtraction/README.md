@@ -4,7 +4,7 @@
 
 |Data:     |A small toy data set of food items in a fridge (grocery).
 |:---------|:---
-|Purpose   |Demonstrate how to evaluate and write out different layers of a trained model using python.
+|Purpose   |Demonstrate how to evaluate and write out different layers of a trained model using Python.
 |Network   |Pre-trained AlexNet model.
 |Training  |None, only evaluation of different layers of the model.
 
@@ -12,10 +12,10 @@
 
 ### Getting the data
 
-We use the `grocery` toy data set. To download it go to the folder [DataSets/grocery](../DataSets/grocery) and run `python install_grocery.py`. 
+We use the `grocery` toy data set ([Examples/Image/DataSets/grocery](../DataSets/grocery)) and a pre-trained AlexNet model [Examples/Image/PretrainedModels/AlexNetBS.model](../PretrainedModels). To download both run 
 
-Additionally the example requires a pre-trained AlexNet model. Download this model from [https://www.cntk.ai/Models/AlexNet/AlexNetBS.model](https://www.cntk.ai/Models/AlexNet/AlexNetBS.model) and store it in [Examples/Image/PretrainedModels](../PretrainedModels).
+`python install_data_and_model.py`
 
 ### Details
 
-Run `python FeatureExtraction.py` to generate the output of a specific layer. Please refer to the comments in the python code directly for how to choose different layers for evaluation.
+Run `python FeatureExtraction.py` to generate the output of a specific layer. Please refer to the comments in the Python code directly for how to choose different layers for evaluation.
