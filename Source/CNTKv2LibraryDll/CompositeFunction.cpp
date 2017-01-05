@@ -39,7 +39,7 @@ namespace CNTK
         dict[typeKey] = s_compositeFunctionTypeValue;
         dict[rootKey] = RootFunction()->Uid();
         if (!Name().empty())
-            dict[nameKey] = Name();
+        dict[nameKey] = Name();
         dict[uidKey] = Uid();
 
         return dict;
@@ -892,7 +892,6 @@ namespace CNTK
             // TODO: Support changing the device across different invocations of the forward method on a Function instance
             if (AsDeviceDescriptor(m_computationNetwork->GetDeviceId()) != device)
                 LogicError("Changing device across different Forward calls on a CNTK composite Function is currently unsupported");
-
             if (!backpropRoots.empty() && (inputsToExcludeGradientsFor != m_inputsExcludedFromGradientComputation))
                 LogicError("Changing the set of inputs to exclude from gradient computation, across different Forward calls on a CNTK composite Function, is currently unsupported");
         }
@@ -909,7 +908,6 @@ namespace CNTK
             }
 
             m_inputsExcludedFromGradientComputation = inputsToExcludeGradientsFor;
-
             ComputationNetworkBuilder<ElementType> builder(*m_computationNetwork);
 
             // TODO: We currently only support one backprop root
@@ -1031,6 +1029,7 @@ namespace CNTK
                 m_lastRecordedParameterValueTimeStamps.insert({ parameter, parameter.CurrentValueTimeStamp() });
         }
 
+
         if (!m_networkMatricesAllocated && allocateNetworkMatrices)
         {
             ComputationNodeBasePtr backpropRootNode;
@@ -1055,7 +1054,6 @@ namespace CNTK
             allNetworkRoots.insert(forwardRootNodes.begin(), forwardRootNodes.end());
             allNetworkRoots.insert(forwardOutputNodes.begin(), forwardOutputNodes.end());
             m_allNetworkRootsInGlobalEvalOrder = m_computationNetwork->SortByGlobalEvalOrder(allNetworkRoots);
-
             m_currentOutputs = outputs;
             m_currentOutputs.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
             m_currentOutputs.insert(m_currentBackpropRoots.begin(), m_currentBackpropRoots.end());
@@ -1080,15 +1078,12 @@ namespace CNTK
         if (!computationNode->Is<InputValueBase<ElementType>>())
             LogicError("CompositeFunction::Forward: Illegal to populate value of computation node type other than InputValueBase!");
 
-        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout;
-        auto packedValue = dynamic_cast<PackedValue*>(variableValue.second.get());
-        if (packedValue)
-            CNTKMatrixAndMBLayout = packedValue->PackedData<ElementType>();
-        else
-            CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableValue.first, variableValue.second);
+        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableValue.first, variableValue.second);
+
+        MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
+        auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
 
         // Switch the node matrix to the right matrix type
-        auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
         nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
 
         auto layout = CNTKMatrixAndMBLayout.second;
@@ -1117,6 +1112,7 @@ namespace CNTK
             inputNodes.push_back(argumentComputationNode);
 
             ValuePtr argumentValue = arguments.at(argument);
+
             switch (argumentValue->GetDataType())
             {
             case DataType::Float:
@@ -1137,12 +1133,7 @@ namespace CNTK
     template <typename ElementType>
     /*static*/ void CompositeFunction::PopulateComputationNodeGradient(const std::pair<Variable, ValuePtr>& variableGradient, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode)
     {
-        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout;
-        auto packedValue = dynamic_cast<PackedValue*>(variableGradient.second.get());
-        if (packedValue)
-            CNTKMatrixAndMBLayout = packedValue->PackedData<ElementType>();
-        else
-            CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableGradient.first, variableGradient.second);
+        std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableGradient.first, variableGradient.second);
 
         MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
         auto nodeLayout = computationNode->GetMBLayout();
