@@ -1787,6 +1787,8 @@ namespace CNTK
         CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
 
 private:
+        CNTK_API const Variable& BlockFunctionVariableMapping() const;
+
         CNTK_API Variable Clone() const;
 
         CNTK_API virtual Dictionary Serialize() const override;
@@ -2346,7 +2348,10 @@ namespace CNTK
         /// to the Variables that they are bound to in the outer graph of Functions that this
         /// block Function is part of.
         ///
-        CNTK_API const std::vector<std::pair<Variable, Variable>>& BlockArgumentsMapping() const;
+        std::vector<std::pair<Variable, Variable>> BlockArgumentsMapping() const
+        {
+            return *BlockArgumentsMappingImpl().get();
+        }
 
         ///
         /// Returns all Input variables of 'this' Function.
@@ -2468,6 +2473,8 @@ namespace CNTK
         static bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate);
 
     private:
+
+        CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
 
         template <typename VariableType, typename FilterFunction>
         std::vector<VariableType> FilteredInputs(FilterFunction&& filterFunc) const

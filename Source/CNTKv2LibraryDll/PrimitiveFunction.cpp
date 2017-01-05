@@ -635,7 +635,7 @@ namespace CNTK
             dict[blockFunctionCompositeKey] = blockCompositeFunc->SerializeBlockComposite();
             dict[blockFunctionOpNameKey] = OpName();
 
-            auto& blockArgumentsMap = BlockArgumentsMapping();
+            const auto& blockArgumentsMap = BlockArgumentsMapping();
             std::vector<std::wstring> serializedArgumentsMapKeys;
             std::vector<std::wstring> serializedArgumentsMapValues;
             for (auto argumentMapping : blockArgumentsMap)

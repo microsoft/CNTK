@@ -83,13 +83,13 @@ namespace CNTK
         return blockFunction->Composite();
     }
 
-    const std::vector<std::pair<Variable, Variable>>& Function::BlockArgumentsMapping() const
+    std::shared_ptr<std::vector<std::pair<Variable, Variable>>> Function::BlockArgumentsMappingImpl() const
     {
         if (!IsBlock())
             InvalidArgument("Function::BlockArgumentsMapping() cannot be called for a Function which is not a block");
 
         auto blockFunction = dynamic_cast<const BlockFunction*>(this);
-        return blockFunction->CompositeArgumentsMap();
+        return std::shared_ptr<std::vector<std::pair<Variable, Variable>>>(new std::vector<std::pair<Variable, Variable>>(std::move(blockFunction->CompositeArgumentsMap())), [](std::vector<std::pair<Variable, Variable>>* ptr) { delete ptr; });
     }
 
     /*static*/ void Function::ReplacePlaceholderInPlace(Variable& var,

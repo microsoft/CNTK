@@ -833,12 +833,11 @@ namespace CNTK
             // For block function, map each argument placeholder of the underlying composite to
             // the computation node corresponding to the block input that the argument placeholder
             // of the composite is mapped to.
-            auto& compositeArgumentsMap = blockFunction->CompositeArgumentsMap();
-            for (auto& compositeArgumentMapping : compositeArgumentsMap)
-                variableToNodeMap[compositeArgumentMapping.first] = variableToNodeMap.at(compositeArgumentMapping.second);
+            auto compositeArguments = blockFunction->Composite()->Arguments();
+            for (auto compositeArgument : compositeArguments)
+                variableToNodeMap[compositeArgument] = variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
 
-            auto& compositeOutputsMap = blockFunction->CompositeOutputsMap();
-            return GetNode(compositeOutputsMap.at(variable), network, builder, variableToNodeMap, isVariableRootMap);
+            return GetNode(variable.BlockFunctionVariableMapping(), network, builder, variableToNodeMap, isVariableRootMap);
         }
         else
             computationNodePtr = CreateComputationNode(variable, function, inputNodes, network, variableToNodeMap);
@@ -892,11 +891,12 @@ namespace CNTK
             // since for recurrent inputs, the mappings are not fully established the first time
             std::function<void(const FunctionPtr&)> PatchBlockArgumentsMapping;
             PatchBlockArgumentsMapping = [this, &PatchBlockArgumentsMapping](const FunctionPtr& function) {
-                if (function->IsBlock())
+                BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(function.get());
+                if (blockFunction)
                 {
-                    auto& compositeArgumentsMap = function->BlockArgumentsMapping();
-                    for (auto& compositeArgumentMapping : compositeArgumentsMap)
-                        m_variableToNodeMap[compositeArgumentMapping.first] = m_variableToNodeMap.at(compositeArgumentMapping.second);
+                    auto compositeArguments = blockFunction->Composite()->Arguments();
+                    for (auto compositeArgument : compositeArguments)
+                        m_variableToNodeMap[compositeArgument] = m_variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
 
                     PreorderTraverseFunctions(function->BlockComposite()->RootFunction(), PatchBlockArgumentsMapping);
                 }

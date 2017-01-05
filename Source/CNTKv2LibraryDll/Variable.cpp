@@ -65,6 +65,11 @@ namespace CNTK
         return clonedVariable;
     }
 
+    const Variable& Variable::BlockFunctionVariableMapping() const
+    {
+        return m_dataFields->m_blockFunctionVariableMapping;
+    }
+
     FunctionPtr Variable::Owner() const 
     {
         if (m_dataFields->m_ownerFunction != nullptr)
@@ -366,13 +371,12 @@ namespace CNTK
         dict[uidKey] = Uid();
         dict[kindKey] = static_cast<size_t>(Kind());
         dict[dataTypeKey] = static_cast<size_t>(GetDataType());
-        const auto& dynamicAxis = DynamicAxes();
+        const auto& dynamicAxes = DynamicAxes();
         vector<DictionaryValue> dictionaryValueVector; 
-        dictionaryValueVector.reserve(dynamicAxis.size());
-        for (const auto& axis : dynamicAxis)
-        {
+        dictionaryValueVector.reserve(dynamicAxes.size());
+        for (const auto& axis : dynamicAxes)
             dictionaryValueVector.push_back(axis);
-        }
+
         dict[dynamicAxisKey] = dictionaryValueVector;
         dict[isSparseKey] = IsSparse();
         dict[nameKey] = Name();
@@ -389,6 +393,7 @@ namespace CNTK
             // TODO: add a dictionary value constructor with an rvalue parameter.
             dict[valueKey] = DictionaryValue(*value);
         }
+        
         return dict;
     }
 

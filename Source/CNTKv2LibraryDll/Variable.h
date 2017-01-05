@@ -29,6 +29,7 @@ namespace CNTK
         bool m_isSparse;
         std::wstring m_uid;
         std::atomic<size_t> m_valueTimeStamp;
+        Variable m_blockFunctionVariableMapping;
 
         VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
             : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)
@@ -50,6 +51,8 @@ namespace CNTK
         {
             if (m_ownerFunction != nullptr)
                 InvalidArgument("Output variables cannot be cloned");
+
+            // Note: We do not clone m_blockFunctionVariableMapping
 
             auto clone = MakeSharedObject<VariableFields>(m_shape,
                 m_varKind,
