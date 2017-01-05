@@ -61,6 +61,7 @@ class Function(cntk_py.Function):
         from cntk import placeholder_variable, combine, alias, as_block
         args = [placeholder_variable(name=name) for name in arg_names]
         out = f(*args)
+
         # resolve NamedOutputs
         # TODO: check for duplicates
         def resolve_named(output):
@@ -86,12 +87,39 @@ class Function(cntk_py.Function):
             unused_args = set(args) - set(out.placeholders)
             unused_arg_names = [arg.name for arg in unused_args]
             raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
+
+        # BEGIN WORKAROUND
+        # force parameter order
+        # BUGBUG: as_block() on the entire function is not really working, it looses names of its contents.
+        #         As a workaround, wrap the args themselves into alias(), combine(), as_block().
+        out_arg_names = [arg.name for arg in out.placeholders]
+        if out_arg_names != arg_names   and False: # if order changed then force the order
+            args1 = [placeholder_variable(name=name) for name in arg_names]
+            combined_args = combine([alias(arg, arg.name) for arg in args1])
+            args2 = [placeholder_variable(name=name) for name in arg_names]
+            arg_map = list(zip(args1,args2))
+            combined_args = as_block(combined_args, arg_map, f_name + '_parameter_ordering')
+            # this now is a BlockFunction that maps all args to themselves, with forced ordering
+            combined_args.replace_placeholders(list(zip(args2,args)))
+            args = combined_args.outputs
+            # and try it again
+            out = f(*args)
+            if isinstance(out, tuple): # multi-value function, returned as a tuple
+                out = [resolve_named(output) for output in out]
+                out = combine(out)
+            else:
+                out = resolve_named(out)
+            out_arg_names = [arg.name for arg in out.placeholders]
+            assert out_arg_names == arg_names
+        # END WORKAROUND
+
         # wrap into a block as to ensure ordering of parameters
         # BUGBUG: clone() on identity() does not seem to work with this. Luckily we don't need BlockFunction for unary functions.
-        if len(out.placeholders) > 1: # skip for unary functions for now due to identity/clone bug
-            args2 = [placeholder_variable(name=name) for name in arg_names]
-            arg_map = list(zip(args,args2))
-            out = as_block(out, arg_map, f_name);
+        #if len(out.placeholders) > 1: # skip for unary functions for now due to identity/clone bug
+        ## BUGBUG: This looses names. So avoid as_block() entirely unless needed; hoping it will not be used for where it matters
+        #    args2 = [placeholder_variable(name=name) for name in arg_names]
+        #    arg_map = list(zip(args,args2))
+        #    out = as_block(out, arg_map, f_name)
 
         # add all members to the Python class
         # TODO: This should really be a dictionary inside BlockFunction
@@ -283,8 +311,6 @@ class Function(cntk_py.Function):
 
         raise AttributeError("'%s' object has no attribute '%s'" %
                              (type(self), name))
-
-    _ = "(argument placeholder)" # pass Function._ to any expression to create a Scala-like lambda
 
     def dump(self):
         from ..graph import depth_first_search

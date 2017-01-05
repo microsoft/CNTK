@@ -104,13 +104,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """
 
     from cntk.ops.variables import Constant, Variable, Parameter
-    from cntk.ops.functions import Function # for _
     from cntk.ops import constant, placeholder_variable
-
-    # is it Function._?
-    # BUGBUG: Does not work in some cases where it determines dtype first, e.g. element_times()
-    if arg is Function._:
-        return placeholder_variable()
 
     # is it a Variable?
     if isinstance(arg,

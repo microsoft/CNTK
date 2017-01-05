@@ -12,7 +12,7 @@ from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INF
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
                      element_select, alias, hardmax, placeholder_variable, combine, parameter, times
-from cntk.ops.functions import CloneMethod, load_model
+from cntk.ops.functions import CloneMethod, load_model, Function
 from cntk.ops.sequence import broadcast_as
 from cntk.graph import find_by_name, find_all_with_name
 from cntk.blocks import LSTM, Stabilizer
@@ -103,10 +103,8 @@ def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recu
 
     return (output_h, output_c)
 
-def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-
-    # get inputs to the model (has to include labels for input to the decoder)
-    raw_input, raw_labels = inputs
+@Function
+def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
 
     # Set up sequences...
     input_sequence = raw_input
@@ -168,20 +166,64 @@ def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word
     decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
 
     # dense Linear output layer    
+    label_sequence = find_by_name(decoder_output_h, 'label_sequence', max_depth=200)
     z = Dense(label_vocab_dim) (Stabilizer()(decoder_output_h))    
-    
+    #label_sequence = find_by_name(z, 'label_sequence', max_depth=200)
+
+    #arg_names = [arg.name for arg in z.arguments]
+    #z.dump()
+
     return z
+
+def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+
+    # get inputs to the model (has to include labels for input to the decoder)
+    raw_input, raw_labels = inputs
+
+    arg_names = [arg.name for arg in model.arguments]
+
+    return model(raw_input, raw_labels)
 
 ########################
 # train action         #
 ########################
 
-def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size):
+def train(train_reader, valid_reader, vocab, i2w, model, inputs, max_epochs, epoch_size):
+
+    from cntk.blocks import Constant, Type
+    #model = Function(model) # temp
+    #model.dump()
+
+    raw_input, raw_labels = inputs
+
+    arg_names = [arg.name for arg in model.arguments]
+
+    label_sequence = find_by_name(model, 'label_sequence')
+    #model = model(raw_input, raw_labels)
+    batch_axis = Axis.default_batch_axis()
+    input_seq_axis = Axis('inputAxis')
+    label_seq_axis = Axis('labelAxis')
+
+    input_dynamic_axes = [batch_axis, input_seq_axis]
+    raw_input = Type(
+        shape=(input_vocab_dim), dynamic_axes=input_dynamic_axes)
+
+    label_dynamic_axes = [batch_axis, label_seq_axis]
+    raw_labels = Type(
+        shape=(label_vocab_dim), dynamic_axes=label_dynamic_axes)
+
+    inputs = (raw_input, raw_labels)
+    model.update_signature(raw_input, raw_labels)
+    model.dump()
+
+    arg_names = [arg.name for arg in model.arguments]
 
     # do some hooks so that we can direct data to the right place
     label_sequence = find_by_name(model, 'label_sequence')
     decoder_history_hook = find_by_name(model, 'decoder_history_hook')
 
+    sh = model.shape
+    sh1 = label_sequence.shape
     # TODO: this is funky; how to know which is which?
     embedding = find_all_with_name(model, 'embedding')
     embed_param = 1
@@ -190,10 +232,15 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
 
     # Criterion nodes
     # TODO: change to @Function to ensure parameter order (William seemed to have worked around it by naming them)
+    arg_names = [arg.name for arg in model.arguments]
+
     ce = cross_entropy_with_softmax(model, label_sequence)
     errs = classification_error(model, label_sequence)
 
+    arg_names = [arg.name for arg in ce.arguments]
     ce.dump()
+
+    arg_names = [arg.name for arg in errs.arguments]
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though
@@ -229,8 +276,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     progress_printer = ProgressPrinter(freq=30, tag='Training')
 
     # dummy for printing the input sequence below
-    from cntk.blocks import Constant, Type
-    from cntk import Function
+    #from cntk import Function
     I = Constant(np.eye(input_vocab_dim))
     @Function
     def noop(input):
@@ -252,15 +298,16 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
             if mbs % sample_freq == 0:
                 mb_valid = valid_reader.next_minibatch(minibatch_size)
                 
+                q = noop(mb_valid[valid_reader.streams.features])
+                print_sequences(q, i2w)
+                print(end=" -> ")
+                
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
                 #e = decoder_output_model.eval({find_arg_by_name('raw_input' , decoder_output_model) : 
                 #                               mb_valid[valid_reader.streams.features], 
                 #                               find_arg_by_name('raw_labels', decoder_output_model) : 
                 #                               mb_valid[valid_reader.streams.labels]})
-                q = noop(mb_valid[valid_reader.streams.features])
                 e = decoder_output_model(mb_valid[valid_reader.streams.features], mb_valid[valid_reader.streams.labels])
-                print_sequences(q, i2w)
-                print(end=" -> ")
                 print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
@@ -480,10 +527,10 @@ if __name__ == '__main__':
 
     # create inputs and create model
     inputs = create_inputs()
-    model = create_model(inputs)
-    
+    #model = create_model(inputs)
+
     # train
-    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    train(train_reader, valid_reader, vocab, i2w, model, inputs, max_epochs=10, epoch_size=908241)
 
     # write
     #model = load_model("model_epoch0.cmf")
