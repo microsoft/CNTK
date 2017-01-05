@@ -22,9 +22,6 @@ from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _
 # variables and stuff  #
 ########################
 
-data_dir = "./data"
-model_dir = "./models"
-
 # model dimensions
 #vocab_dim = 40000
 #embed_dim = 200
@@ -34,6 +31,14 @@ model_dir = "./models"
 
 # stabilizer
 stabilize = Stabilizer()
+
+def create_reader(path, vocab_dim, randomize, size=INFINITELY_REPEAT):
+  return MinibatchSource(CTFDeserializer(path, StreamDefs(
+    context  = StreamDef(field='C', shape=vocab_dim, is_sparse=True),
+    query    = StreamDef(field='Q', shape=vocab_dim, is_sparse=True),
+    entities  = StreamDef(field='E', shape=1, is_sparse=False),
+    label   = StreamDef(field='L', shape=1, is_sparse=False)
+    )), randomize=randomize, epoch_size = size)
 
 def text_convolution(win_size, in_dim, out_dim):
   #activation = _resolve_activation(activation)
@@ -69,13 +74,6 @@ def text_convolution(win_size, in_dim, out_dim):
   #    apply_x = apply_x + b
   apply_x = apply_x >> sigmoid
   return Block(apply_x, 'Convolution', Record(W=W))
-
-def create_reader(path, randomize, size=INFINITELY_REPEAT):
-  return MinibatchSource(CTFDeserializer(path, StreamDefs(
-    context  = StreamDef(field='C', shape=vocab_dim, is_sparse=True),
-    query    = StreamDef(field='Q', shape=vocab_dim, is_sparse=True),
-    answer   = StreamDef(field='A', shape=vocab_dim, is_sparse=True)
-    )), randomize=randomize, epoch_size = size)
 
   ########################
 # define the model     #
@@ -179,33 +177,15 @@ def attention_rlunit(context_memory, query_memory, candidate_memory, candidate_i
   answers = times(ans_attention, candidate_ids, name='answers')
   return combine([answers, termination_prob, new_status], name='ReinforcementAttention')
 
-def attention_rlunit2(hidden_dim, vocab_dim, init = init_default_or_glorot_uniform):
-  status = Placeholder(name='status')
-  context_memory = Placeholder(name='context_memory')
-  query_memory = Placeholder(name='query_memory')
-  candidate_memory = Placeholder(name='candidate_memory')
-  candidate_ids = Placeholder(name='candidate_ids')
-  context_attention_weight = project_cosine_sim(status, context_memory, hidden_dim)
-  query_attention_weight = project_cosine_sim(status, query_memory, hidden_dim)
-  context_attention = reduce_sum(element_times(context_attention_weight, context_memory), axis = 0)
-  query_attention = reduce_sum(element_times(query_attention_weight, query_memory), axis = 0)
-  attention = splice((query_attention, context_attention))
-  gru = gru_cell((hidden_dim, ), name='status')
-  new_status = gru(attention, status).output
-  termination_prob = termination_gate(new_status, dim=hidden_dim, name='prob')
-  ans_attention = project_cosine_sim(new_status, candidate_memory, hidden_dim)
-  answers = times(ans_attention, candidate_ids, name='ans2')
-  return combine([answers, termination_prob, new_status], name='ReinforcementAttention')
-
 def seq_cross_entropy(pred, label, gama=10, name=''):
   pred_exp = ops.exp(pred, name='pred_exp')
   sum_exp = sequence.reduce_sum(pred_exp, name='sum_exp')
   pred_sum = element_divide(pred_exp, sequence.broadcast_as(sum_exp, pred), name='exp_divid')
   log_pred_sum = ops.log(pred_sum, name='log_pred')
   label_pred = times(label, log_pred_sum, name = 'label_softmax')
-  entroy = ops.negate(sequence.reduce_sum(label_pred, name='sum_log'), name=name)
+  entropy = ops.negate(sequence.reduce_sum(label_pred, name='sum_log'), name=name)
   #loss = ops.negate(sequence.reduce_sum(times(label, ops.log(pred_exp/(sequence.broadcast_as(sum_exp, pred))))), name = name)
-  return entroy
+  return entropy
 
 def mask_cross_entropy(pred, label, mask, gama=10, name=''):
   pred_exp = element_select(mask, ops.exp(gama*pred), 0)
@@ -234,6 +214,8 @@ def create_model(vocab_dim, hidden_dim, max_rl_iter=5, init=init_default_or_glor
   embed_dim = hidden_dim
   embedding = parameter(shape=(vocab_dim, embed_dim), init=uniform(1))
 
+  # TODO: Use Golve to initialize the embedding
+  # TODO: Add dropout to embedding
   query_embedding  = times(query_sequence , embedding)
   context_embedding = times(context_sequence, embedding)
 
@@ -244,7 +226,6 @@ def create_model(vocab_dim, hidden_dim, max_rl_iter=5, init=init_default_or_glor
   candidate_memory = sequence.scatter(sequence.gather(context_memory, candidate_filter, name='Candidate_Mem'), candidate_sc)
   candidate_ids = sequence.scatter(sequence.gather(candidate_indicates, candidate_filter, name = 'Candidate_Ids'), candidate_sc)
   entity_raw_ids = sequence.scatter(sequence.gather(reshape(context_raw, vocab_dim), candidate_filter), candidate_sc)
-  
   qfwd, qbwd  = bidirectional_gru(hidden_dim, query_embedding, splice_outputs=False) # shape=(hidden_dim*2, *), *=query_seq_axis
   query_memory = splice((qfwd, qbwd), name='Query_SP')
   # get the source (aka 'query') representation
@@ -298,12 +279,92 @@ def loss(model):
   item_labels = sequence.reduce_sum(times(reshape(labels, (1,)), entity_ids), name='item_labels')
   mask = sequence.reduce_sum(entity_ids)
   cross_entroy = mask_cross_entropy(item_preds, item_labels, mask, name='CrossEntropyLoss')
-  return combine([cross_entroy, answers, labels, item_preds])
+  probs = ops.element_select(mask, ops.exp(item_preds), 0, name='item_probs')
+  apply_loss = combine([cross_entroy, answers, labels, item_preds, probs])
+  return Block(apply_loss, 'AvgSoftMaxCrossEntropy', Record(labels=item_labels))
 
-def create_reader(path, vocab_dim, randomize, size=INFINITELY_REPEAT):
-  return MinibatchSource(CTFDeserializer(path, StreamDefs(
-    context  = StreamDef(field='C', shape=vocab_dim, is_sparse=True),
-    query    = StreamDef(field='Q', shape=vocab_dim, is_sparse=True),
-    entities  = StreamDef(field='E', shape=1, is_sparse=False),
-    label   = StreamDef(field='L', shape=1, is_sparse=False)
-    )), randomize=randomize, epoch_size = size)
+#TODO: Add AUC for evaluation
+
+def train(model, reader, max_epochs=1, save_model_flag=False, epoch_size=270000):
+  # Criterion nodes
+  criterion_loss = loss(model)
+  loss_func = criterion_loss.outputs[0]
+  eval_func = classification_error(criterion_loss.outputs[-1], criterion_loss.labels)
+  
+  # Instantiate the trainer object to drive the model training
+  learning_rate = 0.005
+  lr_per_sample = learning_rate_schedule(learning_rate, UnitType.minibatch)
+
+  #minibatch_size = 30000 # max(sequence_length) --> so with avg length of context=1000 this is like 30 "full samples"
+  minibatch_size = 5000
+
+  momentum_time_constant = momentum_as_time_constant_schedule(1100)
+  clipping_threshold_per_sample = 10.0
+  gradient_clipping_with_truncation = True
+  learner = momentum_sgd(model.parameters,
+             lr_per_sample, momentum_time_constant,
+             gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
+             gradient_clipping_with_truncation=gradient_clipping_with_truncation)
+  trainer = Trainer(model.outputs[-1], loss_func, eval_func, learner)
+
+  # Get minibatches of sequences to train with and perform model training
+  i = 0
+  mbs = 0
+  #epoch_size = 270000 # this number is in sequences -- need to fix (unfortunately has to be in 'elements' for now)
+  # for ^^, we just need to keep adding up all the samples (1 per sequence) and end the epoch once we get to 270000
+  training_progress_output_freq = 1
+
+  # bind inputs to data from readers
+  data_bind = {}
+  label_key = None
+  for arg in criterion_loss.arguments:
+    if arg.name == 'query':
+      data_bind[arg] = reader.streams.query
+    if arg.name == 'context':
+      data_bind[arg] = reader.streams.context
+    if arg.name == 'entities':
+      data_bind[arg] = reader.streams.entities
+    if arg.name == 'labels':
+      label_key = arg
+      data_bind[arg] = reader.streams.label
+
+  for epoch in range(max_epochs):
+    loss_numer = 0
+    metric_numer = 0
+    denom = 0
+
+    while i < (epoch+1) * epoch_size:
+
+      # get next minibatch of training data
+      #mb_train = train_reader.next_minibatch(minibatch_size_in_samples=minibatch_size, input_map=train_bind)
+      # TODO: When will next_minibatch ended?
+      # TODO: Shuffle entities? @yelong
+      mb_train = reader.next_minibatch(1024, input_map=data_bind)
+      trainer.train_minibatch(mb_train)
+
+      # collect epoch-wide stats
+      samples = trainer.previous_minibatch_sample_count
+      loss_numer += trainer.previous_minibatch_loss_average * samples
+      metric_numer += trainer.previous_minibatch_evaluation_average * samples
+      denom += samples
+
+      # debugging
+      #print("previous minibatch sample count = %d" % samples)
+      #print("mb_train[labels] num samples = %d" % mb_train[labels].num_samples)
+      #print("previous minibatch loss average = %f" % trainer.previous_minibatch_loss_average)
+
+      if mbs % training_progress_output_freq == 0:
+        print("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(mbs, 
+            get_train_loss(trainer), get_train_eval_criterion(trainer)))
+        print("previous minibatch sample count = %d" % samples)
+
+      i += mb_train[label_key].num_samples
+      mbs += 1
+
+    print("--- EPOCH %d DONE: loss = %f, errs = %f ---" % (epoch, loss_numer/denom, 100.0*(metric_numer/denom)))
+
+    if save_model_flag:
+      # save the model every epoch
+      model_filename = os.path.join('model', "model_epoch%d.dnn" % epoch)
+      model.save_model(model_filename)
+      print("Saved model to '%s'" % model_filename)
