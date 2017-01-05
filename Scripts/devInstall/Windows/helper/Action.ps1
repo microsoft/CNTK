@@ -326,30 +326,66 @@ function ExtractAllFromZip(
     }
 
     $tempDir = [System.IO.Path]::GetTempFileName();
-
     remove-item $tempDir | Out-Null
 
     $completeTempDestination = join-path -Path $tempDir -ChildPath $destinationFolder
     new-item -type directory -path $completeTempDestination -Force -ErrorAction Stop | Out-Null
 
+    $obj = new-object -com shell.application
+    $zipFile = $obj.NameSpace($zipFileName)
+    $destinationNS = $obj.NameSpace($completeTempDestination)
 
-    if ($Execute) {
-        $obj = new-object -com shell.application
-        $zipFile = $obj.NameSpace($zipFileName)
-        $destinationNS = $obj.NameSpace($completeTempDestination)
+    $destinationNS.CopyHere($zipFile.Items())
 
-        $destinationNS.CopyHere($zipFile.Items())
-
-        if ($zipSubTree -ne $null) {
-            $completeTempDestination = join-path $completeTempDestination $zipSubTree
-        }
-
-        RobocopySourceDestination $completeTempDestination $completeDestination $copyAdditive
-
-        rm -r tempDir -Force -ErrorAction SilentlyContinue | Out-Null
+    if ($zipSubTree) {
+        $completeTempDestination = join-path $completeTempDestination $zipSubTree
     }
 
-    return
+    RobocopySourceDestination $completeTempDestination $completeDestination $copyAdditive
+
+    rm -r $tempDir -Force -ErrorAction SilentlyContinue | Out-Null
+}
+
+
+function Extract7zipSelfExtractingArchive(
+    [Parameter(Mandatory = $true)][hashtable] $table)
+{
+    FunctionIntro $table
+
+    $func = $table["Function"]
+    $archiveName = $table["archiveName"]
+    $destination = $table["destination"]
+    $destinationFolder = $table["destinationFolder"]
+    $archiveSubTree = $table["archiveSubTree"]
+    $copyAdditive = GetTableDefaultBool -table $table -entryName "AddToDirectory" -defaultValue $false
+    
+    Write-Verbose "Extract7zipSelfExtractingArchive: archiveName [$archiveName] destination [$destination] Folder [$destinationFolder]"
+
+    if (-not $Execute) {
+        return
+    }
+    $completeDestination = join-path -Path $destination -ChildPath $destinationFolder
+
+    if (-not (test-path $archiveName -PathType Leaf)) {
+        throw  "Extract7zipSelfExtractingArchive: zipFileName [$zipFileName] not found!"
+    }
+
+    $tempDir = [System.IO.Path]::GetTempFileName();
+    remove-item $tempDir | Out-Null
+
+    $completeTempDestination = $tempDir
+    new-item -type directory -path $completeTempDestination -Force -ErrorAction Stop | Out-Null
+
+    $cmdParm  = "-o`"$completeTempDestination`" -y"
+    $newTable = @{ Function = "InstallExe"; Command = $archiveName; Param = $cmdParm; runAs=$false }
+    InstallExe $newTable
+          
+    if ($archiveSubTree) {
+        $completeTempDestination = join-path $completeTempDestination $archiveSubTree
+    }
+    RobocopySourceDestination $completeTempDestination $completeDestination $copyAdditive
+
+    rm -r $tempDir -Force -ErrorAction SilentlyContinue | Out-Null
 }
 
 function ExtractAllFromTarGz(

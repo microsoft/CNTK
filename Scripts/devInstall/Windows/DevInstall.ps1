@@ -57,11 +57,6 @@ Param(
     [parameter(Mandatory=$false)] [string] $ServerLocation,
     [parameter(Mandatory=$false)] [string] $CloneDirectory)
     
-
-
-    $Execute = $true
-
-
 $roboCopyCmd = "robocopy.exe"
 $localDir = $InstallLocation
 
@@ -141,6 +136,7 @@ Function main
         $operation += OpSwig3010 -cache $localCache -targetFolder $localDir
         $operation += OpProtoBuf310VS15 -cache $localCache -targetFolder $localDir
         $operation += OpZlibVS15 -cache $localCache -targetFolder $localDir
+        $operation += OpOpenCV31 -cache $localCache -targetFolder $localDir
         if ($ServerLocation) {
             $operation += OpProtoBuf310VS15Internal -server $ServerLocation -cache $localCache -targetFolder $localDir
             $operation += OpZLibVS15Internal -server $ServerLocation -cache $localCache -targetFolder $localDir
@@ -153,12 +149,7 @@ Function main
         #$operation += OpGitClone -targetFolder $repositoryRootDir -targetDir $reponame
         #$operation += OpSysinternals -cache $localCache -targetFolder $localDir
         #$operation += OpOpenCVInternal $ServerLocation -cache $localCache -targetFolder $localDir
-        #$operation += OpOpenCV31 -cache $localCache -targetFolder $localDir
-        #$operation += OpCygwin -cache $localCache -targetFolder $localDir
-
-        #$operation += AddOpDisableJITDebug
-        #$operation += OpTestData "c:\Data\CNTKTestData" "\\storage.ccp.philly.selfhost.corp.microsoft.com\public\CNTKTestData"
-        #$operation += OpSysinternals -cache $localCache -targetFolder $localDir
+        
 
 
         $operationList = @()

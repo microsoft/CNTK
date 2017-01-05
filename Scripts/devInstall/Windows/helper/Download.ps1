@@ -61,7 +61,7 @@ function Download(
         DownloadFileWebRequest -SourceFile $source -OutFile $destination -ExpectedSize $ExpectedSize
     }
     else {
-        DownloadFile -SourceFile $source -OutFile $destination
+        DownloadFileWebClient -SourceFile $source -OutFile $destination
     }
     return
 }
@@ -130,7 +130,7 @@ function DownloadAndExtract(
 ){
     $outFileName  = Join-Path $tPath $fileName
 
-    DownloadFile -SourceFile $sAddress `
+    DownloadFileWebClient -SourceFile $sAddress `
                     -OutFile $outFileName `
                     -tempFileName $fileName
 
@@ -189,7 +189,7 @@ function DownloadFileWebRequest (
     Remove-Item -path $TempFile -ErrorAction SilentlyContinue
 }
 
-function DownloadFile(
+function DownloadFileWebClient(
     [string] $SourceFile,
     [string] $OutFile,
     [int] $timeout = 600,
@@ -203,7 +203,7 @@ function DownloadFile(
     #---------------
 
     $startTime = Get-Date
-    Write-Host "Downloading [$SourceFile], please be patient...."
+    Write-Host "Downloading [$SourceFile], please be patient, no progress message is shown ..."
     if (-not $Execute) {
          Write-Host  "$message ** Running in DEMOMODE - no download performed"
          return
