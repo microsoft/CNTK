@@ -1637,7 +1637,7 @@ private:
     private:
 #ifdef SWIGCSHARP
     public:
-        // Todo: a better way to get hash value?
+        // TODO: a better way to get hash value?
         size_t GetHashValue()
         {
             return std::hash<const void *>()(m_dataFields.get());
@@ -2078,53 +2078,37 @@ namespace CNTK
         ///
         /// Returns the descriptor of the device that 'this' Value resides on
         ///
-        virtual DeviceDescriptor Device() const {
-            return m_data->Device();
-        }
+        virtual DeviceDescriptor Device() const { return m_data->Device(); }
 
         ///
         /// Returns the data type of 'this' Value's contents.
         ///
-        virtual DataType GetDataType() const {
-            return m_data->GetDataType();
-        }
+        virtual DataType GetDataType() const { return m_data->GetDataType(); }
 
         ///
         /// Returns the storage format of 'this' Value.
         ///
-        virtual StorageFormat GetStorageFormat() const {
-            return m_data->GetStorageFormat();
-        }
+        virtual StorageFormat GetStorageFormat() const { return m_data->GetStorageFormat(); }
 
         ///
         /// Returns the shape 'this' Value.
         ///
-        virtual const NDShape& Shape() const {
-            return m_data->Shape();
-        }
+        virtual const NDShape& Shape() const { return m_data->Shape(); }
 
         ///
         /// Returns a boolean indicating if 'this' Value contains data in sparse storage format.
         ///
-        bool IsSparse() const
-        {
-            return (GetStorageFormat() != StorageFormat::Dense);
-        }
+        bool IsSparse() const { return (GetStorageFormat() != StorageFormat::Dense); }
 
         ///
         /// Returns a boolean indicating if 'this' Value is read-only.
         ///
-        virtual bool IsReadOnly() const {
-            return m_data->IsReadOnly();
-        }
+        virtual bool IsReadOnly() const { return m_data->IsReadOnly(); }
 
         ///
         /// Returns the number of masked/invalid values
         ///
-        virtual size_t MaskedCount() const
-        {
-            return m_mask ? m_mask->MaskedCount() : 0;
-        }
+        virtual size_t MaskedCount() const { return m_mask ? m_mask->MaskedCount() : 0; }
 
         ///
         /// Returns the NDArrayView object corresponding to the data contents of 'this value object.
@@ -2144,10 +2128,7 @@ namespace CNTK
         ///
         /// Creates a new Value with newly allocated storage on the same device as 'this' Value and copies 'this' Value's contents into the newly allocated Value.
         ///
-        ValuePtr DeepClone() const
-        {
-            return DeepClone(IsReadOnly());
-        }
+        ValuePtr DeepClone() const { return DeepClone(IsReadOnly()); }
 
         ///
         /// Creates a new Value which is an alias of 'this' Value.
@@ -2166,22 +2147,12 @@ namespace CNTK
         /// The Value should have the same tensor shape as outputVariable.
         ///
         template <typename ElementType>
-        void CopyTo(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
+        void CopyVariableValueTo(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
-            std::vector<size_t> seqLens;
-            CopyTo(outputVariable, sequences, seqLens, true);
-        }
-
-        ///
-        /// Same as above, except if isResizable is false, the sequence buffer will not be resized. Instead, a runtime error is thrown.
-        /// In addition, on return, sequenceLengths contains the length of each sequence in sequences.
-        /// The sequenceLengths will be resized if necessary, even isResizable is false.
-        ///
-        template <typename ElementType>
-        void CopyTo(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizable = true)
-        {
-            ResizeOutputBuffer(outputVariable, outputVariable.Shape().TotalSize(), sequences, sequenceLengths, isResizable);
-            CopyToVector<ElementType>(outputVariable, sequences, sequenceLengths);
+            if (outputVariable.GetDataType() != GetDataType())
+                InvalidArgument("The outputVariable has a different data type than the Value object.");
+            ResizeOutputBuffer(outputVariable, sequences);
+            CopyVariableValueToVector<ElementType>(outputVariable, sequences);
         }
 
         ///
@@ -2190,29 +2161,20 @@ namespace CNTK
         /// The sequence buffer will be resized if ncessary.
         /// The Value should have the same tensor shape as outputVariable.
         ///
-        void CopyTo(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences)
+        void CopyVariableValueTo(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences)
         {
-            std::vector<size_t> seqLens;
-            CopyTo(outputVariable, sequences, seqLens, true);
-        }
-
-        ///
-        /// Same as buffer, except if isResizable is false, the sequence buffer will not be resized. Instead, a runtime error is thrown.
-        /// In addition, sequenceLengths contains the length of each sequence in the sequence buffer.
-        /// The sequenceLengths will be resized if necessary, even isResizable is false.
-        ///
-        void CopyTo(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizable = true)
-        {
-            // For OneHot vector, only 1 value is needed for a sample.
-            ResizeOutputBuffer(outputVariable, 1, sequences, sequenceLengths, isResizable);
             auto dataType = GetDataType();
+            if (outputVariable.GetDataType() != dataType)
+                InvalidArgument("The outputVariable has a different data type than the Value object.");
+
+            ResizeOutputBuffer(outputVariable, sequences);
             if (dataType == DataType::Float)
             {
-                CopyToVector<float>(outputVariable, sequences, sequenceLengths);
+                CopyVariableValueToVector<float>(outputVariable, sequences);
             }
             else if (dataType == DataType::Double)
             {
-                CopyToVector<double>(outputVariable, sequences, sequenceLengths);
+                CopyVariableValueToVector<double>(outputVariable, sequences);
             }
         }
 
@@ -2222,29 +2184,63 @@ namespace CNTK
 
         CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly, bool createNewCopy);
 
+        ///
+        /// Copy the data stored in 'this' Value object to the buffer 'sequences' as a collection of variable length sequences.
+        /// The output data is in the dense format.
+        /// Assumption: The 'sequences' buffer has been resized to match the number of sequences and the length of each sequence stored in the Value object.
+        /// The resizing is done by ResizeOutputBuffer() and needs to be done on the heap of the caller.
+        ///
         template <typename ElementType>
-        CNTK_API void CopyToVector(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths);
+        void CopyVariableValueToVector(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences);
 
+        ///
+        /// Copy the data stored in 'this' Value object to the buffer 'sequences' as a collection of variable length sequences.
+        /// The output data is in the one-hot format.
+        /// The resizing is done by ResizeOutputBuffer() and needs to be done on the heap of the caller.
+        /// Assumption: The 'sequences' buffer has been resized to match the number of sequences and the length of each sequence stored in the Value object.
+        ///
         template <typename ElementType>
-        CNTK_API void CopyToVector(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences, std::vector<size_t>& sequenceLengths);
+        void CopyVariableValueToVector(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences);
 
         template <typename ValueType, typename DestType>
-        void CopyToImpl(const Variable& outputVariable, std::vector<std::vector<DestType>>& sequences, std::vector<size_t>& sequenceLengths);
+        void CopyVariableValueToImpl(const Variable& outputVariable, std::vector<std::vector<DestType>>& sequences);
 
         virtual std::pair<size_t, size_t> GetSequenceAndBatchLength(const Variable& outputVariable);
 
+        ///
+        /// Resize the 'sequences' buffer if needed.
+        /// It should be kept in the header file, as the memory should be allocated at the caller side, not the CNTKLibarary.dll side.
+        /// outputVariable defines tensor, the sequence axis and the batch axis.
+        /// The 'sequences' is the output buffer which is used to store data from 'this' Value. On return, its size and the size of its each element are adjusted
+        /// to match the number of sequences and the length of each sequence stored in the Value object.
+        ///
         template <typename ElementType>
-        void ResizeOutputBuffer(const Variable& outputVariable, size_t sampleSize, std::vector<std::vector<ElementType>>& sequences, std::vector<size_t>& sequenceLengths, bool isResizable)
+        void ResizeOutputBuffer(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
+            auto shape = outputVariable.Shape();
+            if (shape == NDShape::Unknown || shape.HasInferredDimension())
+                RuntimeError("It is not supported that the outputVariable has a unknown shape or inferred dimension.");
+
             size_t numOfSequences;
             size_t maxSequenceLen;
             std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable);
 
-            // resize the sequnce length buffer to reflect the number of sequences in output.
-            if (sequenceLengths.size() < numOfSequences)
-                sequenceLengths.resize(numOfSequences);
+            // Calculate the number of elements is needed to represent a sample in output buffer.
+            // For dense output, it is the total size of the shape.
+            // For one-hot output, only 1 index is needed to represent the sample.
+            size_t outputSizeOfSample;
+            if (std::is_same<ElementType, size_t>::value)
+            {
+                outputSizeOfSample = 1;
+            }
+            else
+            {
+                outputSizeOfSample = shape.TotalSize();
+            }
 
-            // Check whether the output buffer is sufficient and allocate new space if isResizable is true.
+            // resize the output buffer size to reflect the number of sequences in output.
+            sequences.resize(numOfSequences);
+
             const MaskKind* maskData = nullptr;
             NDMaskPtr cpuMask = nullptr;
             if (Mask() != nullptr)
@@ -2253,15 +2249,8 @@ namespace CNTK
                 maskData = cpuMask->DataBuffer();
             }
 
+            // Check whether each sequence has enough space allocated and resize if necessary.
             size_t sampleCount = 0, seqStart;
-            if (sequences.size() < numOfSequences)
-            {
-                if (isResizable)
-                    sequences.resize(numOfSequences);
-                else
-                    RuntimeError("The size of output buffer is too small");
-            }
-
             for (auto seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
             {
                 if (maskData == nullptr)
@@ -2271,40 +2260,31 @@ namespace CNTK
                 else
                 {
                     seqStart = seqIndex * maxSequenceLen;
+                    // The assumption here is that a sequence always start at 0 with SequenceBegin (as no SequenceStart flag is returned) or
+                    // with Invalid (empty sequence), and ends at the first invalid mask.
                     if (maskData[seqStart] == MaskKind::Invalid)
-                        RuntimeError("No leading invalid mask is allowed for a sequence.");
-                    // The assumption here is that a sequence always start at 0 (no invalid mark at the beginning),
-                    // and ends at the first invalid mask. 
-                    bool isEnd = false;
-                    sampleCount = 0;
-                    for (size_t i = 0; i < maxSequenceLen; i++)
                     {
-                        if (!isEnd)
+                        // The sequence is empty.
+                        sampleCount = 0;
+                    }
+                    else
+                    {
+                        if (maskData[seqStart] != MaskKind::SequenceBegin)
+                            RuntimeError("Currently, only sequence starting with SequenceBegin is supported.");
+                        sampleCount = 1;
+                        while (sampleCount < maxSequenceLen)
                         {
-                            if (maskData[seqStart + i] != MaskKind::Invalid)
+                            if (maskData[seqStart + sampleCount] == MaskKind::Valid)
                                 sampleCount++;
                             else
-                                isEnd = true;
+                                break;
                         }
-                        // Todo: remove the check below if the assumption above is confirmed.
-                        if (isEnd && (maskData[seqStart + i] != MaskKind::Invalid))
-                            RuntimeError("Invalid sequence.");
                     }
-                    assert(isEnd || (maskData[seqStart + maxSequenceLen - 1] != MaskKind::Invalid && sampleCount == maxSequenceLen));
                 }
-                sequenceLengths[seqIndex] = sampleCount;
 
-                if (sequences[seqIndex].size() < sampleCount * sampleSize)
-                {
-                    if (isResizable)
-                        sequences[seqIndex].resize(sampleCount * sampleSize);
-                    else
-                        RuntimeError("The size of output buffer is too small");
-                }
+                // resize the sequence buffer to reflect the actual length in output.
+                sequences[seqIndex].resize(sampleCount * outputSizeOfSample);
             }
-
-            for (size_t i = numOfSequences; i < sequenceLengths.size(); i++)
-                sequenceLengths[i] = 0;
         }
 
         // Disallow copy and move construction and assignment
