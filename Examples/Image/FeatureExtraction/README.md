@@ -12,9 +12,7 @@
 
 ### Getting the data
 
-We use the `grocery` toy data set. To download it go to the folder [DataSets/grocery](../DataSets/grocery) and run `python install_grocery.py`. 
-
-Additionally the example requires a pre-trained AlexNet model. Download this model from [https://www.cntk.ai/Models/AlexNet/AlexNetBS.model](https://www.cntk.ai/Models/AlexNet/AlexNetBS.model) and store it in [Examples/Image/PretrainedModels](../PretrainedModels).
+We use the `grocery` toy data set ([Examples/Image/DataSets/grocery](../DataSets/grocery)) and a pre-trained AlexNet model [Examples/Image/PretrainedModels/AlexNetBS.model](../PretrainedModels). To download both run `python install_data_and_model.py` from this folder.
 
 ### Details
 

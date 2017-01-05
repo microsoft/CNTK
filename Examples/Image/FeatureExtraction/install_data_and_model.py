@@ -32,3 +32,16 @@ if __name__ == "__main__":
         print('Done.')
     else:
         print('Data already available at ' + directory + '/grocery')
+       
+    directory = os.path.join(base_folder, "..", "PretrainedModels")
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    filename = os.path.join(directory, "AlexNetBS.model")
+    if not os.path.exists(filename):
+        url = "https://www.cntk.ai/Models/AlexNet/AlexNetBS.model"
+        print('Downloading model from ' + url + ', may take a while...')
+        urlretrieve(url, filename)
+        print('Saved model as ' + filename)
+    else:
+        print('CNTK model already available at ' + filename)
+        

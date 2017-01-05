@@ -1,5 +1,13 @@
 [
     {
+        "category": ["Image"],
+        "name":  "Feature Extraction",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/FeatureExtraction",
+        "description":  "Evaluate and write out different layers of a trained model using python.",
+        "language":  [Python],
+        "type":  ["Recipe"]
+    },
+    {
         "category": [""],
         "name":  "Model Evaluation on Azure",
         "url":  "https://github.com/Microsoft/CNTK/wiki/Evaluate-a-model-in-an-Azure-WebApi",

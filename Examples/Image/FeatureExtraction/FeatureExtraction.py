@@ -59,11 +59,14 @@ def eval_and_write(model_file, node_name, output_file, minibatch_source, num_obj
     return
 
 if __name__ == '__main__':
-    # define location of model and data
-    base_folder = os.getcwd()
-    model_file  = os.path.join(base_folder, "../PretrainedModels/AlexNetBS.model")
-    map_file    = os.path.join(base_folder, "../DataSets/grocery/test.txt")
-    os.chdir(os.path.join(base_folder, "../DataSets/grocery/"))
+    # define location of model and data and check existence
+    base_folder = os.path.dirname(os.path.abspath(__file__))
+    model_file  = os.path.join(base_folder, "..", "PretrainedModels", "AlexNetBS.model")
+    map_file    = os.path.join(base_folder, "..", "DataSets", "grocery", "test.txt")
+    os.chdir(os.path.join(base_folder, "..", "DataSets", "grocery"))
+    if not (os.path.exists(model_file) and os.path.exists(map_file)):
+        print("Please run 'python install_data_and_model.py' first to get the required data and model.")
+        exit(0)
 
     # create minibatch source
     image_height = 227
