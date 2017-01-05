@@ -150,7 +150,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         }
 
         // Extreme Tracing, part 1/4
-        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace())
+        if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
             DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
     }
 }
@@ -167,7 +167,7 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         node->EndBackprop();
 
         // Extreme Tracing, part 2/4
-        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace() && node->NeedsGradient())
+        if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode() && node->NeedsGradient())
             DumpNode<float>(node, /*dumpGradient=*/true) || DumpNode<double>(node, true);
     }
 }
@@ -197,12 +197,13 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
     let dataPtr = dumpGradient ? node->GradientPtr() : node->ValuePtr();
     if (!dataPtr)
         return true; // e.g. SEQ sentinel node
-    if (dataPtr->GetMatrixType() != MatrixType::DENSE) // for now we can only print dense matrices; since this is for debugging, don't fail just skip
-        return true;
+
+    bool concise = !(nodep->Environment().IsLogLevelNodeTrace());
+
     fprintf(stderr, "Dump --> %s%s\n", node->FormatOperationPrototype("").c_str(), dumpGradient ? " Grad" : "");
     node->WriteMinibatchWithFormatting(stderr, FrameRange(), SIZE_MAX, SIZE_MAX, false/*transpose*/, /*isCategoryLabel=*/false, /*isSparse=*/false, std::vector<std::string>(),
                                        ""/*sequenceSeparator*/, "  "/*sequencePrologue*/, "\n"/*sequenceEpilogue*/, " "/*elementSeparator*/, "\n  "/*sampleSeparator*/,
-                                       "%13.10f"/*valueFormatString*/, dumpGradient);
+                                       "%13.10f"/*valueFormatString*/, dumpGradient, concise);
     return true;
 }
 
@@ -257,7 +258,7 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
     // Extreme Tracing, part 3/4
     for (auto& node : m_nestedNodes)
     {
-        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace())
+        if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
         {
             DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
         }
@@ -298,7 +299,7 @@ static bool DumpNode(ComputationNodeBasePtr nodep, bool dumpGradient)
     // Extreme Tracing, part 4
     for (auto& node : m_nestedNodes)
     {
-        if (node->HasEnvironmentPtr() && node->Environment().IsLogLevelNodeTrace() && node->NeedsGradient())
+        if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode() && node->NeedsGradient())
         {
             DumpNode<float>(node, /*dumpGradient=*/true) || DumpNode<double>(node, true);
         }
