@@ -50,6 +50,7 @@
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="DataParallelDistributedLearner.h" />
     <ClInclude Include="BlockFunction.h" />
+    <ClInclude Include="Variable.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

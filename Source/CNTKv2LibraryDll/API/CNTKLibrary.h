@@ -1693,22 +1693,22 @@ namespace CNTK
         ///
         /// Returns the shape of 'this' variable
         ///
-        const NDShape& Shape() const { return m_dataFields->m_shape; }
+        CNTK_API const NDShape& Shape() const;
 
         ///
         /// Returns the dynamic axes of 'this' variable
         ///
-        const std::vector<Axis>& DynamicAxes() const { return m_dataFields->m_dynamicAxes; }
+        CNTK_API const std::vector<Axis>& DynamicAxes() const;
 
         ///
         /// Returns the VariableKind of 'this' variable
         ///
-        VariableKind Kind() const { return m_dataFields->m_varKind; }
+        CNTK_API VariableKind Kind() const;
 
         ///
         /// Returns a boolean value indicating if 'this' variable denotes sparse data
         ///
-        bool IsSparse() const { return m_dataFields->m_isSparse; }
+        CNTK_API bool IsSparse() const;
 
         ///
         /// Returns a boolean value indicating if 'this' variable is an Input
@@ -1738,12 +1738,12 @@ namespace CNTK
         ///
         /// Returns the name of 'this' variable
         ///
-        const std::wstring& Name() const { return m_dataFields->m_name; }
+        CNTK_API const std::wstring& Name() const;
 
         ///
         /// Returns the internally generated unique name of the variable
         ///
-        const std::wstring& Uid() const { return m_dataFields->m_uid; }
+        CNTK_API const std::wstring& Uid() const;
 
         ///
         /// Returns the Function object which 'this' variable is an output of.
@@ -1754,12 +1754,12 @@ namespace CNTK
         ///
         /// Returns the DataType of the data that 'this' Variable symbolically represents
         ///
-        DataType GetDataType() const { return m_dataFields->m_dataType; }
+        CNTK_API DataType GetDataType() const;
 
         ///
         /// Returns a boolean value indicating if gradient computation is enabled for this variable.
         ///
-        bool NeedsGradient() const { return m_dataFields->m_needsGradient; }
+        CNTK_API bool NeedsGradient() const;
 
     protected:
 #ifdef SWIG
@@ -1787,13 +1787,7 @@ namespace CNTK
         CNTK_API Variable(const NDShape& shape, VariableKind varType, ::CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid);
 
 private:
-        Variable Clone() const
-        {
-            Variable clonedVariable;
-            clonedVariable.m_dataFields = m_dataFields->Clone();
-
-            return clonedVariable;
-        }
+        CNTK_API Variable Clone() const;
 
         CNTK_API virtual Dictionary Serialize() const override;
 
@@ -1807,71 +1801,6 @@ private:
         void SetOwner(Function* ownerFunction);
 
     private:
-        struct VariableFields final : public std::enable_shared_from_this<VariableFields>
-        {
-            friend class CompositeFunction;
-
-            NDShape m_shape;
-            VariableKind m_varKind;
-            ::CNTK::DataType m_dataType;
-            Function* m_ownerFunction; // Variable does not keep the Function alive
-            std::unique_ptr<std::once_flag> m_initValueFlag;
-            NDArrayViewPtr m_value;
-            std::unique_ptr<ParameterInitializer> m_valueInitializer;
-            std::unique_ptr<DeviceDescriptor> m_valueInitializationDevice;
-            bool m_needsGradient;
-            std::wstring m_name;
-            std::vector<Axis> m_dynamicAxes;
-            bool m_isSparse;
-            std::wstring m_uid;
-            std::atomic<size_t> m_valueTimeStamp;
-
-            VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-                : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)
-            {
-                if (value && (type != value->GetDataType()))
-                    InvalidArgument("The DataType of the Parameter/Constant Variable does not match the DataType of the associated Value");
-
-                // Validate that each of the dynamic axes are unique
-                std::unordered_set<Axis> uniqueDynamicAxis;
-                for (auto& currentDynamicAxis : dynamicAxes)
-                {
-                    auto retVal = uniqueDynamicAxis.insert(currentDynamicAxis);
-                    if (!retVal.second)
-                        InvalidArgument("Dynamic axis named %S is specified more than once for Variable object", currentDynamicAxis.Name().c_str());
-                }
-            }
-
-            std::shared_ptr<VariableFields> Clone() const
-            {
-                if (m_ownerFunction != nullptr)
-                    InvalidArgument("Output variables cannot be cloned");
-
-                auto clone = MakeSharedObject<VariableFields>(m_shape,
-                                                              m_varKind,
-                                                              m_dataType,
-                                                              m_ownerFunction,
-                                                              (m_value) ? m_value->DeepClone() : nullptr,
-                                                              m_needsGradient,
-                                                              m_dynamicAxes,
-                                                              m_isSparse,
-                                                              m_name,
-                                                              Internal::GenerateUid(m_varKind));
-
-                if (m_valueInitializer)
-                    clone->SetValueInitialization(*m_valueInitializer, *m_valueInitializationDevice);
-
-                return clone;
-            }
-
-            CNTK_API void SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device);
-
-        private:
-            // Disallow copy and move construction and assignment
-            VariableFields(const VariableFields&) = delete; VariableFields& operator=(const VariableFields& other) = delete; VariableFields(VariableFields&&) = delete; VariableFields& operator=(VariableFields&&) = delete;
-        };
-        typedef std::shared_ptr<VariableFields> VariableFieldsPtr;
-
 #ifdef SWIGCSHARP
     public:
         // Todo: a better way to get hash value?
@@ -2061,11 +1990,7 @@ private:
         ///
         /// Construct a constant of specified shape whose contents are initialized using the specified initializer
         ///
-        Parameter(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Parameter, dataType, nullptr, true, {}, name, Internal::GenerateUid(VariableKind::Parameter))
-        {
-            m_dataFields->SetValueInitialization(initializer, device);
-        }
+        CNTK_API Parameter(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"");
 
         ///
         /// DownCast a Variable to a Parameter. Only allowed if the VariableKind is Parameter and throws an exception otherwise.
@@ -2095,12 +2020,9 @@ private:
             RecordValueUpdate();
         }
 
-        size_t CurrentValueTimeStamp() const { return m_dataFields->m_valueTimeStamp.load(); }
+        CNTK_API size_t CurrentValueTimeStamp() const;
 
-        void RecordValueUpdate()
-        {
-            m_dataFields->m_valueTimeStamp++;
-        }
+        CNTK_API void RecordValueUpdate();
 
     private:
         explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
@@ -2192,11 +2114,7 @@ private:
         ///
         /// Construct a constant of specified shape whose contents are initialized using the specified initializer
         ///
-        Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"")
-            : Variable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, Internal::GenerateUid(VariableKind::Parameter))
-        {
-            m_dataFields->SetValueInitialization(initializer, device);
-        }
+        CNTK_API Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), const std::wstring& name = L"");
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 

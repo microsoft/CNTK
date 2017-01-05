@@ -149,6 +149,7 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Value.h" />
+    <ClInclude Include="Variable.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BackCompat.cpp" />

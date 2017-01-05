@@ -205,6 +205,9 @@ namespace CNTK
     class DistributedLearner;
     typedef std::shared_ptr<DistributedLearner> DistributedLearnerPtr;
 
+    struct VariableFields;
+    typedef std::shared_ptr<VariableFields> VariableFieldsPtr;
+
     namespace Internal
     {
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
