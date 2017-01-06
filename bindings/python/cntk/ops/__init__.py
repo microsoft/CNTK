@@ -73,7 +73,7 @@ def as_block(composite, block_arguments_map, block_op_name, block_instance_name=
 
     Args:
         composite: The composite Function that the block encapsulates
-        block_arguments_map: A list of tuples, mapping from block's underlying composite's arguments to 
+        block_arguments_map: A list of tuples, mapping from block's underlying composite's arguments to
         actual variables they are connected to
         block_op_name: Name of the op that the block represents
         block_instance_name (str, optional): the name of the block Function in the network
@@ -439,20 +439,20 @@ MAX_UNPOOLING = UnpoolingType_Max
 def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
             lower_pad=(0,), upper_pad=(0,), name=''):
     '''
-    The pooling operations compute a new tensor by selecting the maximum or average value in the pooling input.
-    In the case of average pooling with padding, the average is only over the valid region.
-
-    N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
+    Unpools the ``operand`` using information from ``pooling_input``. Unpooling mirrors the operations
+    performed by pooling and depends on the values provided to the corresponding pooling node. The output
+    should have the same shape as pooling_input. Pooling the result of an unpooling operation should
+    give back the original input.
 
     Example:
         >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
         >>> x = C.input_variable(img.shape)
-        >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
-        array([[[[[  2.5,   4.5],
-                  [ 10.5,  12.5]]]]], dtype=float32)
-        >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : [img]})
-        array([[[[[  5.,   7.],
-                  [ 13.,  15.]]]]], dtype=float32)
+        >>> y = C.pooling(x, C.MAX_POOLING, (2,2), (2,2))
+        >>> C.unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2)).eval({x : [img]})
+	array([[[[[  0.,   0.,   0.,   0.],
+		  [  0.,   5.,   0.,   7.],
+		  [  0.,   0.,   0.,   0.],
+		  [  0.,  13.,   0.,  15.]]]]], dtype=float32)
 
     Args:
         operand: unpooling input
@@ -474,7 +474,7 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
     strides = sanitize_shape(strides)
     lower_pad = sanitize_shape(lower_pad)
     upper_pad = sanitize_shape(upper_pad)
-    return unpooling(operand, pooling_input, unpooling_type, 
+    return unpooling(operand, pooling_input, unpooling_type,
                      unpooling_window_shape, strides, auto_padding,
                      lower_pad, upper_pad, name)
 
@@ -1596,7 +1596,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    # FIXME figure out how to only SKIP the doctest in CPU 
+    # FIXME figure out how to only SKIP the doctest in CPU
     from cntk.cntk_py import optimized_rnnstack
     operand = sanitize_input(operand)
     if recurrent_op not in set(['lstm','gru','relu','tanh']):
