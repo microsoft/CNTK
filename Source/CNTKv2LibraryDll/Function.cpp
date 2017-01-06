@@ -52,6 +52,9 @@ namespace CNTK
             if (uniqueOutputs.find(outputVar) != uniqueOutputs.end())
                 RuntimeError("Same variable appears multiple times in the outputs vector passed to Function constructor");
 
+            if (outputVar.IsOutput() && !outputVar.Owner())
+                outputVar.SetOwner(this);
+
             if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.m_dataFields->m_ownerFunction == this)
             {
                 // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
@@ -80,13 +83,13 @@ namespace CNTK
         return blockFunction->Composite();
     }
 
-    const std::vector<std::pair<Variable, Variable>>& Function::BlockArgumentsMapping() const
+    std::shared_ptr<std::vector<std::pair<Variable, Variable>>> Function::BlockArgumentsMappingImpl() const
     {
         if (!IsBlock())
             InvalidArgument("Function::BlockArgumentsMapping() cannot be called for a Function which is not a block");
 
         auto blockFunction = dynamic_cast<const BlockFunction*>(this);
-        return blockFunction->CompositeArgumentsMap();
+        return std::shared_ptr<std::vector<std::pair<Variable, Variable>>>(new std::vector<std::pair<Variable, Variable>>(std::move(blockFunction->CompositeArgumentsMap())), [](std::vector<std::pair<Variable, Variable>>* ptr) { delete ptr; });
     }
 
     /*static*/ void Function::ReplacePlaceholderInPlace(Variable& var,

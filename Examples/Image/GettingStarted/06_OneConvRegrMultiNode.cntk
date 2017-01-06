@@ -74,6 +74,7 @@ trainNetwork = {
                 syncPeriod = 64
                 usePipeline = false
             ]
+        ]
     }
 
     reader = {

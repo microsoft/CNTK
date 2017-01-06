@@ -1,5 +1,5 @@
 Working with Sequences
-=======
+======================
 
 CNTK Concepts
 ~~~~~~~~~~~~~
@@ -92,8 +92,11 @@ Sequence classification
 
 One of the most exciting areas in deep learning is the powerful idea of recurrent 
 neural networks (RNNs). RNNs are in some ways the Hidden Markov Models of the deep 
-learning world. They are networks with loops in them and they allow us to model the 
-current state given the result of a previous state. In other words, they allow information 
+learning world. They are networks that process variable length sequences using 
+a fixed set of parameters. Therefore they have to learn to summarize all the
+observations in the input sequence into a finite dimensional state, predict the
+next observation using that state and transform their current state and the observed
+input into their next state. In other words, they allow information 
 to persist. So, while a traditional neural network layer can be thought of as having data 
 flow through as in the figure on the left below, an RNN layer can be seen as the figure 
 on the right.
@@ -105,121 +108,117 @@ on the right.
 As is apparent from the figure above on the right, RNNs are the natural structure for 
 dealing with sequences. This includes everything from text to music to video; anything 
 where the current state is dependent on the previous state. While RNNs are indeed 
-powerful, the "vanilla" RNN suffers from an important problem: long-term dependencies. 
+powerful, a "vanilla" RNN, whose state at each step is a nonlinear function of
+the previous state and the current observation, is extremely hard to learn via gradient based methods.
 Because the gradient needs to flow back through the network to learn, the contribution 
-from an early element (for example a word at the start of a sentence) on a much later 
-elements (like the last word) can essentially vanish.
+from an early element (for example a word at the start of a sentence) on much later 
+elements, such as the classification of the last word in a long sentence, can essentially vanish.
 
-To deal with the above problem, we turn to the Long Short Term Memory (LSTM) network. 
+Dealing with the above problem is an active area of research. An architecture that
+seems to be successful in practice is the Long Short Term Memory (LSTM) network. 
 LSTMs are a type of RNN that are exceedingly useful and in practice are what we commonly 
-use when implementing an RNN. For more on why LSTMs are so powerful, see, e.g. 
-http://colah.github.io/posts/2015-08-Understanding-LSTMs. For our purposes, we will 
-concentrate on the central feature of the LSTM model: the `memory cell`. 
-
-.. figure:: images/lstm_cell.png
-    :width: 400px
-    :alt: LSTM cell
-
-    An LSTM cell.
-
-The LSTM cell is associated with three gates that control how information is stored / 
-remembered in the LSTM. The *forget gate* determines what information should be kept 
-after a single element has flowed through the network. It makes this determination 
-using data for the current time step and the previous hidden state. 
-
-The *input gate* uses the same information as the forget gate, but passes it through 
-a `tanh` to determine what to add to the state. The final gate is the *output gate* 
-and it modulates what information should be output from the LSTM cell. This time we 
-also take the previous state's value into account in addition to the previous hidden 
-state and the data of the current state. We have purposely left the full details out 
-for conciseness, so please see the link above for a full understanding of how an LSTM 
-works.
+use when implementing an RNN. A good explanation of the merits of LSTMs is at 
+http://colah.github.io/posts/2015-08-Understanding-LSTMs. An LSTM is a 
+a differentiable function that takes an input and a state and produces an output
+and a new state.
 
 In our example, we will be using an LSTM to do sequence classification. But for even 
 better results, we will also introduce an additional concept here: 
 `word embeddings <https://en.wikipedia.org/wiki/Word_embedding>`_. 
-In traditional NLP approaches, words are seen as single points in a high dimensional 
-space (the vocabulary). A word is represented by an arbitrary id and that single number 
-contains no information about the meaning of the word or how it is used. However, with 
-word embeddings each word is represented by a learned vector that has some meaning. For 
-example, the vector representing the word "cat" may somehow be close, in some sense, to 
-the vector for "dog", and each dimension is encoding some similarities or differences 
-between those words that were learned usually by analyzing a large corpus. In our task, 
-we will use a pre-computed word embedding model using `GloVe <http://nlp.stanford.edu/projects/glove/>`_
-and each of the words in the sequences will be replaced by their respective GloVe vector.
+In traditional NLP approaches, words are identified with the standard basis of a high 
+dimensional space: The first word is (1, 0, 0, ...), the second one 
+is (0, 1, 0, ...) and so on (also known as one-hot encoding).  
+Each word is orthogonal to all others. But that is not 
+a good abstraction.  In real languages, some words are very similar (we call them 
+synonyms) or they function in similar ways (e.g. Paris, Seattle, Tokyo). The key 
+observation is that words that appear in similar contexts should be similar. We
+can let a neural network sort out these details by forcing each word to be represented 
+by a short learned vector.  Then in order for the network to do well on its task it 
+has to learn to map the words to these vectors effectively. For example, the vector 
+representing the word "cat" may somehow be close, in some sense, to the vector for "dog". 
+In our task we will learn these word embeddings from scratch. However, it is also 
+possible to initialize with a pre-computed word embedding such as 
+`GloVe <http://nlp.stanford.edu/projects/glove/>`_ which has been trained on 
+corpora containing billions of words. 
 
 Now that we've decided on our word representation and the type of recurrent neural 
-network we want to use, let's define the computational network that we'll use to do 
+network we want to use, let's define the network that we'll use to do 
 sequence classification. We can think of the network as adding a series of layers:
 
 1. Embedding layer (individual words in each sequence become vectors)
 2. LSTM layer (allow each word to depend on previous words)
 3. Softmax layer (an additional set of parameters and output probabilities per class)
 
-This network is defined as part of the example at ``Examples/SequenceClassification/SimpleExample/Python/SequenceClassification.py``. Let's go through some 
-key parts of the code::
+A very similar network is also located at ``Examples/SequenceClassification/SimpleExample/Python/SequenceClassification.py``. 
+Let's see how easy it is to work with sequences in CNTK:
 
-    # model
-    input_dim = 2000
-    cell_dim = 25
-    hidden_dim = 25
-    embedding_dim = 50
-    num_output_classes = 5
+.. literalinclude:: simplernn.py
 
-    # Input variables denoting the features and label data
-    features = input_variable(shape=input_dim, is_sparse=True)
-    label = input_variable(num_output_classes, dynamic_axes = [Axis.default_batch_axis()])
+Running this script should generate this output::
 
-    # Instantiate the sequence classification model
-    classifier_output = LSTM_sequence_classifer_net(features, num_output_classes, embedding_dim, hidden_dim, cell_dim)
-
-    ce = cross_entropy_with_softmax(classifier_output, label)
-    pe = classification_error(classifier_output, label)
-
-    rel_path = r"../../../../Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
-
-    mb_source = text_format_minibatch_source(path, [
-                    StreamConfiguration( 'features', input_dim, True, 'x' ),
-                    StreamConfiguration( 'labels', num_output_classes, False, 'y')], 0)
-
-    features_si = mb_source.stream_info(features)
-    labels_si = mb_source.stream_info(label)
-
-    # Instantiate the trainer object to drive the model training
-    trainer = Trainer(classifier_output, ce, pe, [sgd_learner(classifier_output.parameters(), lr=0.0005)])
-
-    # Get minibatches of sequences to train with and perform model training
-    minibatch_size = 200
-    training_progress_output_freq = 10
-    i = 0
-    while True:
-        mb = mb_source.get_next_minibatch(minibatch_size)
-        if  len(mb) == 0:
-            break
-
-        # Specify the mapping of input variables in the model to actual minibatch data to be trained with
-        arguments = {features : mb[features_si].m_data, label : mb[labels_si].m_data}
-        trainer.train_minibatch(arguments)
-
-        print_training_progress(trainer, i, training_progress_output_freq)
-        i += 1
+ average      since    average      since      examples
+    loss       last     metric       last
+ ------------------------------------------------------
+     1.61       1.61      0.886      0.886            44
+     1.61        1.6      0.714      0.629           133
+      1.6       1.59       0.56      0.448           316
+     1.57       1.55      0.479       0.41           682
+     1.53        1.5      0.464      0.449          1379
+     1.46        1.4      0.453      0.441          2813
+     1.37       1.28       0.45      0.447          5679
+      1.3       1.23      0.448      0.447         11365
+ error: 0.333333
 
 Let's go through some of the intricacies of the network definition above. As usual, we first set the parameters of our model. In this case we
-have a vocab (input dimension) of 2000, LSTM hidden and cell dimensions of 25, an embedding layer with dimension 50, and we have 5 possible
+have a vocabulary (input dimension) of 2000, LSTM hidden and cell dimensions of 25, an embedding layer with dimension 50, and we have 5 possible
 classes for our sequences. As before, we define two input variables: one for the features, and for the labels. We then instantiate our model. The
 ``LSTM_sequence_classifier_net`` is a simple function which looks up our input in an embedding matrix and returns the embedded representation, puts
 that input through an LSTM recurrent neural network layer, and returns a fixed-size output from the LSTM by selecting the last hidden state of the
 LSTM::
 
-    embedding_function = embedding(input, embedding_dim)
-    LSTM_function = LSTMP_component_with_self_stabilization(embedding_function.output(), LSTM_dim, cell_dim)[0]
-    thought_vector = select_last(LSTM_function)
-
+    embedded_inputs = embedding(input, embedding_dim)
+    lstm_outputs = simple_lstm(embedded_inputs, LSTM_dim, cell_dim)[0]
+    thought_vector = sequence.last(lstm_outputs)
     return linear_layer(thought_vector, num_output_classes)
 
-That is the entire network definition. We now simply set up our criterion nodes and then our training loop. In the above example we use a minibatch
+That is the entire network definition. In the second line above we select the first output from the LSTM. In
+this implementation of the LSTM this is the actual output while the second output is the state of the LSTM.
+We now simply set up our criterion nodes (such as how well we classify the labels using the thought vector) 
+and our training loop. In the above example we use a minibatch
 size of 200 and use basic SGD with the default parameters and a small learning rate of 0.0005. This results in a powerful state-of-the-art model for 
 sequence classification that can scale with huge amounts of training data. Note that as your training data size grows, you should give more capacity to 
-your LSTM by increasing the number of hidden dimensions. Further, you can get an even more complex network by stacking layers of LSTMs. This is also easy 
-using the LSTM layer function [coming soon].
+the LSTM by increasing the number of hidden dimensions. Further, one can get an even more complex network by stacking layers of LSTMs. Conceptually,
+stacking LSTM layers is similar to stacking layers in a feedforward net. Selecting a good architecture however is very task-specific.
+
+Feeding Sequences with NumPy
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+While CNTK has very efficient built-in readers that take care of many details for you
+(randomization, prefetching, reduced memory usage, etc.) sometimes your data is already
+in numpy arrays. Therefore it is important to know how to specify a sequence of inputs
+and how to specify a minibatch of sequences. 
+
+We have discussed text at length so far, so let's switch gears and do 
+an example with images. Feeding text data via NumPy arrays is not very different.
+
+Each sequence must be its own NumPy array. Therefore if you have an input variable 
+that represents a small color image like this::
+
+    x = input_variable((3,32,32))
+
+and you want to feed a sequence of 4 images `img1` to `img4`, to CNTK then
+you need to create a tensor containing all 4 images. For example::
+    
+    img_seq = np.stack([img1, img2, img3, img4])
+    output = network.eval({x:[img_seq]})
+
+The stack function in NumPy stacks the inputs along a new axis (placing it in the beginning by default)
+so the shape of `img_seq` is :math:`4 \times 3 \times 32 \times 32`. You 
+might have noticed that before binding `img_seq` to  `x` we wrap it in a list.
+This list denotes a minibatch of 1 and **minibatches 
+are specified as lists**. The reason for this is because different elements of 
+the minibatch can have different lengths. If all the elements in the 
+minibatch are sequences of the same length then it is acceptable to provide
+the minibatch as one big tensor of dimnesion :math:`b \times s \times d_1 \times \ldots \times d_k`
+where `b` is the batch size, `s` is the sequence length and :math:`d_i`
+is the dimension of the i-th static axis of the input variable.

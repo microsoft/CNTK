@@ -19,9 +19,6 @@
     <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\TextParser.cpp">
       <Filter>Linked Source</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Source\Readers\CNTKTextFormatReader\Indexer.cpp">
-      <Filter>Linked Source</Filter>
-    </ClCompile>
     <ClCompile Include="CNTKBinaryReaderTests.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -193,7 +193,8 @@ class Function(cntk_py.Function):
              to be performed.
 
         Returns:
-            `bool`: `True` if updates have been performed
+           dict or NumPy Array: Dict with keys of ouput variable names and values of 
+           output variable. A single NumPy array if there is only one output value.
         '''
 
         _, output_map = self.forward(arguments, self.outputs, device=device)

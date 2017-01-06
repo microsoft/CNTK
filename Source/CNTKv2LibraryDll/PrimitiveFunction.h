@@ -11,6 +11,7 @@
 #include "Utils.h"
 #include "ConvolveGeometry.h"
 #include "ConvolutionalNodes.h"
+#include "Variable.h"
 
 namespace std
 {
@@ -277,7 +278,7 @@ namespace CNTK
     private:
 
         PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
-            : Function(inputs, GetOutputVariables(op, inputs, this, functionConfig, true, (functionName != L"" ? functionName : uid)), std::move(functionConfig), functionName, uid), m_op(op)
+            : Function(inputs, GetOutputVariables(op, inputs, functionConfig, true, (functionName != L"" ? functionName : uid)), std::move(functionConfig), functionName, uid), m_op(op)
         {}
 
         // The following helper functions are used to determine the output shape for different 
@@ -692,7 +693,6 @@ namespace CNTK
         // Returns a pair of determined output variables and a bool indicating if any input operand shape was modified
         static std::vector<Variable> GetOutputVariables(PrimitiveOpType op,
                                                         std::vector<Variable>& inputs,
-                                                        Function* owner,
                                                         Dictionary& functionConfig,
                                                         bool inferDimensions,
                                                         const std::wstring& functionName);

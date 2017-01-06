@@ -23,7 +23,6 @@
 #include "NDLNetworkBuilder.h"
 #include "ModelEditLanguage.h"
 #include "CPUMatrix.h" // used for SetNumThreads()
-#include "GPUMatrix.h" // used for SyncGuard::EnableSync()
 #include "CommonMatrix.h"
 #include "SGD.h"
 #include "MPIWrapper.h"
@@ -36,6 +35,7 @@
 #include "ScriptableObjects.h"
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
+#include "PerformanceProfiler.h"
 
 #include <string>
 #include <chrono>
@@ -68,6 +68,20 @@ using namespace Microsoft::MSR::CNTK;
 // internal test routine forward declaration
 template <typename ElemType>
 void TestCn(const ConfigParameters& config);
+
+// Setup profiling
+template <typename ConfigParamType>
+void SetupProfiling(ProfilerContext& profilerContext, const ConfigParamType& config, int nodeRank)
+{
+    if (config(L"profilerEnabled", false))
+    {
+        wstring workDir = config(L"WorkDir", L".");
+        profilerContext.Init(workDir + L"/profiler",
+                             config(L"profilerBufferSize", static_cast<uint64_t>(32 * 1024 * 1024)),
+                             std::to_wstring(nodeRank),
+                             config(L"profilerSyncGpu", true));
+    }
+}
 
 void RedirectStdErr(wstring logpath)
 {
@@ -398,6 +412,12 @@ void PrintBuiltInfo()
 #ifdef _BUILDPATH_
     LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
 #endif
+#ifdef _MPI_NAME_
+    LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);
+#endif
+#ifdef _MPI_VERSION_
+    LOGPRINTF(stderr, "\t\tMPI version: %s\n", _MPI_VERSION_);
+#endif
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
 
@@ -463,6 +483,8 @@ static wstring PathToBSStringLiteral(const wstring& path) // quote a pathname fo
         return L'"' + path + L'"';
 }
 
+// TODO: There is a lot of duplication between this function and the NDL version.
+// The code here should be properly refactored to enable sharing.
 int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
     vector<wstring> args(argv, argv + argc);
@@ -561,18 +583,11 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         mpi = MPIWrapper::GetInstance(true /*create*/);
     }  
 
-    if (config(L"shareNodeValueMatrices", false))
-        Globals::EnableShareNodeValueMatrices();
-    if (config(L"hyperCompressMemory", false))
-        Globals::EnableHyperCompressMemory();
-    if (config(L"optimizeGradientAccumulation", true))
-        Globals::EnableGradientAccumulationOptimization();
+    Globals::SetShareNodeValueMatrices(config(L"shareNodeValueMatrices", true));
+    Globals::SetGradientAccumulationOptimization(config(L"optimizeGradientAccumulation", true));
+    Globals::SetHyperCompressMemory(config(L"hyperCompressMemory", false));
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
-
-    bool synchronizeCUDAKernelExecutions = config(L"synchronizeCUDAKernelExecutions", false);
-    if (synchronizeCUDAKernelExecutions)
-        SyncGuard::EnableSync();
 
     // logging
     wstring logpath = config(L"stderr", L"");
@@ -588,6 +603,10 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     // echo gpu info to log
     PrintGpuInfo();
+
+    // Setup profiling
+    ProfilerContext profilerContext;
+    SetupProfiling(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
 
     // execute the actions
     // std::string type = config(L"precision", "float");
@@ -708,12 +727,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
        mpi = MPIWrapper::GetInstance(true /*create*/);
     } 
 
-    if (config(L"shareNodeValueMatrices", false))
-        Globals::EnableShareNodeValueMatrices();
-    if (config(L"hyperCompressMemory", false))
-        Globals::EnableHyperCompressMemory();
-    if (config(L"optimizeGradientAccumulation", true))
-        Globals::EnableGradientAccumulationOptimization();
+    Globals::SetShareNodeValueMatrices(config(L"shareNodeValueMatrices", true));
+    Globals::SetGradientAccumulationOptimization(config(L"optimizeGradientAccumulation", true));
+    Globals::SetHyperCompressMemory(config(L"hyperCompressMemory", false));
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -757,12 +773,12 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.
         fprintf(stderr, "\nConfiguration, Raw:\n\n");
-    LOGPRINTF(stderr, "%s\n", rawConfigString.c_str());
+        LOGPRINTF(stderr, "%s\n", rawConfigString.c_str());
 
     // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overridden at command line),
     // All of these assignments will appear, even though only the last assignment matters.
         fprintf(stderr, "\nConfiguration After Variable Resolution:\n\n");
-    LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
+        LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
     }
 #endif
 
@@ -773,13 +789,17 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     if (traceLevel > 0)
     {
         fprintf(stderr, "\nConfiguration After Processing and Variable Resolution:\n\n");
-    config.dumpWithResolvedVariables();
+        config.dumpWithResolvedVariables();
 
-    LOGPRINTF(stderr, "Commands:");
-    for (int i = 0; i < command.size(); i++)
-        fprintf(stderr, " %s", command[i].c_str());
-    fprintf(stderr, "\n");
+        LOGPRINTF(stderr, "Commands:");
+        for (int i = 0; i < command.size(); i++)
+            fprintf(stderr, " %s", command[i].c_str());
+        fprintf(stderr, "\n");
     }
+
+    // Setup profiling
+    ProfilerContext profilerContext;
+    SetupProfiling(profilerContext, config, paralleltrain ? (int)mpi->CurrentNodeRank() : 0);
 
     // run commands
     std::string type = config(L"precision", "float");

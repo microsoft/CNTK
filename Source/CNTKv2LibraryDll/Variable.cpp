@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "CNTKLibrary.h"
+#include "Variable.h"
 #include "CompositeFunction.h"
 #include "Serialization.h"
 #include "InputAndParamNodes.h"
@@ -16,12 +17,76 @@ namespace CNTK
     {
     }
 
+    const NDShape& Variable::Shape() const
+    {
+        return m_dataFields->m_shape; 
+    }
+
+    const std::vector<Axis>& Variable::DynamicAxes() const
+    {
+        return m_dataFields->m_dynamicAxes; 
+    }
+
+    VariableKind Variable::Kind() const 
+    {
+        return m_dataFields->m_varKind; 
+    }
+
+    bool Variable::IsSparse() const
+    {
+        return m_dataFields->m_isSparse; 
+    }
+
+    const std::wstring& Variable::Name() const
+    {
+        return m_dataFields->m_name; 
+    }
+
+    const std::wstring& Variable::Uid() const
+    {
+        return m_dataFields->m_uid; 
+    }
+    
+    DataType Variable::GetDataType() const
+    {
+        return m_dataFields->m_dataType; 
+    }
+
+    bool Variable::NeedsGradient() const
+    {
+        return m_dataFields->m_needsGradient; 
+    }
+
+    Variable Variable::Clone() const
+    {
+        Variable clonedVariable;
+        clonedVariable.m_dataFields = m_dataFields->Clone();
+
+        return clonedVariable;
+    }
+
+    const Variable& Variable::BlockFunctionVariableMapping() const
+    {
+        return m_dataFields->m_blockFunctionVariableMapping;
+    }
+
     FunctionPtr Variable::Owner() const 
     {
         if (m_dataFields->m_ownerFunction != nullptr)
             return m_dataFields->m_ownerFunction->shared_from_this();
         else
             return nullptr;
+    }
+
+    void Variable::SetOwner(Function* ownerFunction)
+    {
+        if (Kind() != VariableKind::Output)
+            LogicError("Variable::SetOwner: Owner can only be set for Output Variables!");
+
+        if (m_dataFields->m_ownerFunction != nullptr)
+            LogicError("Variable::SetOwner: An Output Variable whose owner has previously been set, cannot be reset!");
+
+        m_dataFields->m_ownerFunction = ownerFunction;
     }
 
     Variable::operator FunctionPtr() const
@@ -111,7 +176,7 @@ namespace CNTK
     static const std::wstring KernelWidthAttributeName = L"kernelWidth";
     static const std::wstring KernelHeightAttributeName = L"kernelHeight";
 
-    void Variable::VariableFields::SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device)
+    void VariableFields::SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device)
     {
         if (m_value != nullptr)
             LogicError("Value initialization config cannot be set if a value already exists");
@@ -237,8 +302,8 @@ namespace CNTK
         return newInitializerWithRanks;
     }
 
-    Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, ownerFunction, value, needsGradient, dynamicAxes, isSparse, name, uid))
+    Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
+        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, isSparse, name, uid))
     {}
 
     template <typename ElementType>
@@ -306,13 +371,12 @@ namespace CNTK
         dict[uidKey] = Uid();
         dict[kindKey] = static_cast<size_t>(Kind());
         dict[dataTypeKey] = static_cast<size_t>(GetDataType());
-        const auto& dynamicAxis = DynamicAxes();
+        const auto& dynamicAxes = DynamicAxes();
         vector<DictionaryValue> dictionaryValueVector; 
-        dictionaryValueVector.reserve(dynamicAxis.size());
-        for (const auto& axis : dynamicAxis)
-        {
+        dictionaryValueVector.reserve(dynamicAxes.size());
+        for (const auto& axis : dynamicAxes)
             dictionaryValueVector.push_back(axis);
-        }
+
         dict[dynamicAxisKey] = dictionaryValueVector;
         dict[isSparseKey] = IsSparse();
         dict[nameKey] = Name();
@@ -329,6 +393,7 @@ namespace CNTK
             // TODO: add a dictionary value constructor with an rvalue parameter.
             dict[valueKey] = DictionaryValue(*value);
         }
+        
         return dict;
     }
 
@@ -382,13 +447,35 @@ namespace CNTK
 
             // TODO: this copying here is redundant, value should be moved from the dictionary to the variable.
             // Also, the correct device should be used upfront when deserializing NDArrayView.
-            Variable var(shape, kind, dataType, nullptr, value.DeepClone(device, kind == VariableKind::Constant), needsGradient, dynamicAxis, isSparse, name, uid);
+            Variable var(shape, kind, dataType, value.DeepClone(device, kind == VariableKind::Constant), needsGradient, dynamicAxis, isSparse, name, uid);
             if (var.IsParameter())
                 return Parameter(var);
             else
                 return Constant(var);
         }
 
-        return Variable(shape, kind, dataType, nullptr, nullptr, needsGradient, dynamicAxis, isSparse, name, uid);
+        return Variable(shape, kind, dataType, nullptr, needsGradient, dynamicAxis, isSparse, name, uid);
+    }
+
+    Parameter::Parameter(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
+        : Variable(shape, VariableKind::Parameter, dataType, nullptr, true, {}, name, Internal::GenerateUid(VariableKind::Parameter))
+    {
+        m_dataFields->SetValueInitialization(initializer, device);
+    }
+
+    size_t Parameter::CurrentValueTimeStamp() const
+    {
+        return m_dataFields->m_valueTimeStamp.load(); 
+    }
+
+    void Parameter::RecordValueUpdate()
+    {
+        m_dataFields->m_valueTimeStamp++;
+    }
+
+    Constant::Constant(const NDShape& shape, DataType dataType, const ParameterInitializer& initializer, const DeviceDescriptor& device, const std::wstring& name)
+        : Variable(shape, VariableKind::Constant, dataType, nullptr, false, {}, name, Internal::GenerateUid(VariableKind::Constant))
+    {
+        m_dataFields->SetValueInitialization(initializer, device);
     }
 }

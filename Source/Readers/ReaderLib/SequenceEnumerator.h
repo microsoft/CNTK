@@ -48,8 +48,8 @@ public:
     // Set current sample position
     virtual void SetCurrentSamplePosition(size_t currentSamplePosition) = 0;
 
-    // Gets next sequences up to a maximum count of samples.
-    virtual Sequences GetNextSequences(size_t sampleCount) = 0;
+    // Gets next sequences up to a maximum count of local and global samples.
+    virtual Sequences GetNextSequences(size_t globalSampleCount, size_t localSampleCount) = 0;
 
     // Returns current position in the global timeline. The returned value is in samples.
     virtual size_t GetCurrentSamplePosition() = 0;

@@ -60,7 +60,7 @@ class imdb_data(fastRCNN.imdb):
         image_index = []
         image_subdirs = []
         for subdir in self._imgSubdirs[self._image_set]:
-            imgFilenames = getFilesInDirectory(self._imgDir + subdir, self._image_ext)
+            imgFilenames = getFilesInDirectory(os.path.join(self._imgDir,subdir), self._image_ext)
             image_index += imgFilenames
             image_subdirs += [subdir] * len(imgFilenames)
         return image_index, image_subdirs

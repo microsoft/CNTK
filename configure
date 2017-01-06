@@ -904,10 +904,12 @@ fi
 
 if test $enable_python = yes
 then
+    # TODO disabled for now. Default Python versions may miss dependencies we do not
+    # check for here yet, only support explicitly specified paths.
     # Fill unfilled default paths
-    [ -z "${py_paths[27]}" ] && find_python 27 && py_paths[27]=$(find_python 27)
-    [ -z "${py_paths[34]}" ] && find_python 34 && py_paths[34]=$(find_python 34)
-    [ -z "${py_paths[35]}" ] && find_python 35 && py_paths[35]=$(find_python 35)
+    #[ -z "${py_paths[27]}" ] && find_python 27 && py_paths[27]=$(find_python 27)
+    #[ -z "${py_paths[34]}" ] && find_python 34 && py_paths[34]=$(find_python 34)
+    #[ -z "${py_paths[35]}" ] && find_python 35 && py_paths[35]=$(find_python 35)
 
     # Unless there's a specified order or restriction, take all configured Python versions (old to new)
     [ -z "$py_versions" ] && py_versions=${!py_paths[@]}
