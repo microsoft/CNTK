@@ -80,11 +80,6 @@ def testReasoNetPred(data):
     print('')
     print("Prediction: {0}\n\t=>{1}\n".format(i, np.argmax(np.reshape(i, 10))))
 
-def testReasoNetTrain(data):
-  reader = create_reader(data, 10, False)
-  model = create_model(10, 5, 3)
-  rsn.train(model, reader, epoch_size=10)
-
 def testASR(data):
   reader = asr.create_reader(data, 10, False)
   model = asr.create_model(10, 5, 1)
@@ -121,5 +116,4 @@ def testGRU():
 #testASR("test.idx")
 #testModel("test.idx")
 #testReasoNetLoss("test.idx")
-testReasoNetTrain("test.idx")
-#testReasoNetPred("test.idx")
+testReasoNetPred("test.idx")
