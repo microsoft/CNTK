@@ -1,5 +1,7 @@
 import sys
 import os
+import cntk.device as device
+#device.set_default_device(device.cpu())
 import numpy as np
 from ReasoNet.model import create_model, create_reader, gru_cell
 import ReasoNet.model as rsn
@@ -10,6 +12,8 @@ from cntk.io import MinibatchSource
 from cntk import Trainer, Axis, device, combine
 from cntk.layers import Recurrence, Convolution
 from cntk.utils import _as_tuple
+import cntk.ops as ops
+import cntk
 
 def testModel(data):
   reader = create_reader(data, 10, False)
@@ -30,8 +34,8 @@ def testModel(data):
     print(np.around(var[o], decimals=3))
 
 def testReasoNetLoss(data):
-  reader = create_reader(data, 10, False)
-  model = create_model(10, 5, 3)
+  reader = create_reader(data, 101000, False)
+  model = create_model(101000, 300, 3)
   loss = rsn.loss(model)
   data_bind = {}
   for arg in loss.arguments:
@@ -80,10 +84,10 @@ def testReasoNetPred(data):
     print('')
     print("Prediction: {0}\n\t=>{1}\n".format(i, np.argmax(np.reshape(i, 10))))
 
-def testReasoNetTrain(data):
-  reader = create_reader(data, 10, False)
-  model = create_model(10, 5, 3)
-  rsn.train(model, reader, epoch_size=10)
+def testReasoNetTrain(data, epoch_size, max_epochs=1, vocab_dim=101000, hidden_dim=300, max_rl_iter =5):
+  reader = create_reader(data, vocab_dim, True)
+  model = create_model(vocab_dim, hidden_dim, embedded_dim=100, max_rl_iter=max_rl_iter)
+  rsn.train(model, reader, max_epochs=max_epochs, epoch_size=epoch_size)
 
 def testASR(data):
   reader = asr.create_reader(data, 10, False)
@@ -117,9 +121,31 @@ def testGRU():
   rt = r(a).eval({a:x})
   print(rt)
 
+def testSparse(data, vocab_dim=101000, hidden_dim=300, max_rl_iter =5):
+  reader = create_reader(data, vocab_dim, False)
+  data = reader.next_minibatch(1)
+  context_data = data[reader.streams.context]
+  context_dynamic_axes = [cntk.Axis.default_batch_axis(), cntk.Axis('Context')]
+  context_var= input_variable(shape=(vocab_dim), is_sparse=True, dynamic_axes=context_dynamic_axes, name='context')
+  q = ops.times(1, context_var)
+  print(q.output.is_sparse)
+  su = ops.sequence.reduce_sum(ops.reshape(context_var, vocab_dim))
+  o = su.eval({context_var:context_data})
+  print(o)
+
 #testGRU()
 #testASR("test.idx")
 #testModel("test.idx")
 #testReasoNetLoss("test.idx")
-testReasoNetTrain("test.idx")
+#testReasoNetLoss("test.idx")
+#testReasoNetTrain("test.idx", 10, vocab_dim=10, hidden_dim=5, max_rl_iter=3)
 #testReasoNetPred("test.idx")
+
+#testReasoNetTrain("test.5.idx", 5968, max_epochs=5, vocab_dim=101000, hidden_dim=300, max_rl_iter=5)
+#testReasoNetTrain("test.7.idx", 7394, max_epochs=5, vocab_dim=101000, hidden_dim=300, max_rl_iter=5)
+#testReasoNetTrain("test.10.idx", 11238, max_epochs=5, vocab_dim=101000, hidden_dim=300, max_rl_iter=5)
+testReasoNetTrain("test.1000.idx", 1168157, max_epochs=5, vocab_dim=101000, hidden_dim=384, max_rl_iter=5)
+#testReasoNetTrain("test.1000.40k.idx", 1168157, max_epochs=5, vocab_dim=40000, hidden_dim=384, max_rl_iter=5)
+
+
+#testSparse("test.idx", 101000)
