@@ -11,7 +11,7 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, AA, I, precision, PRECISION_TO_TYPE, constant, cntk_device
-from cntk.ops import AVG_POOLING, MAX_POOLING
+from cntk.ops import AVG_POOLING, MAX_POOLING, MAX_UNPOOLING
 from ...utils import sanitize_dtype_cntk
 
 CONVOLUTION_OPERANDS = [
@@ -153,14 +153,16 @@ MAX_POOLING_DATA = [
     ([1, 2, 2, 4, 3], # input_size
      (2, 2, 1), # pooling_window
      (2, 2, 1), # strides
+     [False],   # autopad
      [[[[ 16.,  17.,  18.],
          [ 22.,  23.,  24.]]],
        [[[ 40.,  41.,  42.],
          [ 46.,  47.,  48.]]]]), # result
 
-    ([1, 2, 4, 4 ,4],
+    ([1, 2, 4, 4, 4],
      (2, 2, 2),
      (2, 2, 2),
+     [False],
      [[[[  22.,   24.],
         [  30.,   32.]],
        [[  54.,   56.],
@@ -169,11 +171,20 @@ MAX_POOLING_DATA = [
         [  94.,   96.]],
        [[ 118.,  120.],
         [ 126.,  128.]]]]),
+
+    ([1, 1, 1, 8, 8],
+     (5, 5),
+     (2, 2),
+     [True],
+     [[[[ 19.,  21.,  23.,  24.],
+        [ 35.,  37.,  39.,  40.],
+        [ 51.,  53.,  55.,  56.],
+        [ 59.,  61.,  63.,  64.]]]])
 ]
 
 
-@pytest.mark.parametrize("input_size, pooling_window, strides, result", MAX_POOLING_DATA)
-def test_op_max_pooling(input_size, pooling_window, strides, result, device_id, precision):
+@pytest.mark.parametrize("input_size, pooling_window, strides, autopad, result", MAX_POOLING_DATA)
+def test_op_max_pooling(input_size, pooling_window, strides, autopad, result, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
     # fill input operand with a sequence 1,2,3,... til total size and then
@@ -196,7 +207,7 @@ def test_op_max_pooling(input_size, pooling_window, strides, result, device_id, 
         backward += np.asarray(input_operand == element)
 
     from cntk import pooling
-    input_op = pooling(a, MAX_POOLING, pooling_window, strides)
+    input_op = pooling(a, MAX_POOLING, pooling_window, strides, autopad)
 
     forward_input = {a: input_operand}
 
@@ -206,6 +217,45 @@ def test_op_max_pooling(input_size, pooling_window, strides, result, device_id, 
     unittest_helper(input_op,
                 forward_input, expected_forward, expected_backward,
                 device_id=device_id, precision=precision)
+
+
+@pytest.mark.parametrize("input_size, pooling_window, strides, autopad, result", MAX_POOLING_DATA)
+def test_op_max_unpooling(input_size, pooling_window, strides, autopad, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(1, total_size + 1, 1, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = I(shape=input_operand.shape[2:],
+        dtype=sanitize_dtype_cntk(precision),
+        needs_gradient=True,
+        name='a')
+
+    pooling_result = np.asarray(result, dtype=dt)
+    max_elements = pooling_result.reshape(pooling_result.size).tolist()
+
+    # place 1.0s where maximum elements are
+    backward = np.zeros_like(input_operand)
+    for element in max_elements:
+        backward += np.asarray(input_operand == element)
+
+    from cntk import pooling, unpooling
+    p = pooling(a, MAX_POOLING, pooling_window, strides, autopad)
+    u = unpooling(p, a, MAX_UNPOOLING, pooling_window, strides, autopad)
+    q = pooling(u, MAX_POOLING, pooling_window, strides, autopad)
+
+    forward_input = {a: input_operand}
+
+    expected_forward = backward * input_operand
+    expected_backward = {a: backward}
+
+    unittest_helper(u,
+                forward_input, expected_forward, expected_backward,
+                device_id=device_id, precision=precision)
+    assert np.allclose(p.eval(forward_input), q.eval(forward_input))
 
 # ROI pooling test setup
 # --- forward ---

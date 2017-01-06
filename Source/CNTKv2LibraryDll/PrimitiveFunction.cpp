@@ -71,6 +71,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRecurrentOp = L"recurrentOp";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngSeed = L"rngSeed";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngOffset = L"rngOffset";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameUnpoolingType = L"unpoolingType";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameUnpoolingWindowShape = L"unpoolingWindowShape";
 
     /*static*/ std::vector<Variable> PrimitiveFunction::GetOutputVariables(PrimitiveOpType op,
                                                                            std::vector<Variable>& inputs,
@@ -332,6 +334,33 @@ namespace CNTK
                 }
 
                 outputShape = ConvolutionOpOutputShape(op, inputShape, poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
+                break;
+            }
+            case PrimitiveOpType::Unpooling:
+            {
+                assert(inputs.size() == 2);
+
+                auto inputShape = inputs[0].Shape();
+                auto poolInputShape = inputs[1].Shape();
+                outputShape = poolInputShape;
+
+                // Finding the shape of an unpooling operation is ambiguous
+                // For example a 4x4x1 input with a 5x5 kernel a stride of 2x2
+                // and padding could have resulted from pooling a 7x7 or 8x8 image
+                // Therefore what needs to happen here is to check whether the
+                // outputShape can be pooled into the inputShape using the specified attributes
+                auto unpoolingWindowShape = functionConfig[PrimitiveFunction::AttributeNameUnpoolingWindowShape].Value<NDShape>();
+                auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
+                auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                NDShape inputMapCount = { 1 };
+                std::vector<bool> sharing = { true };
+
+                NDShape inferredInputShape = ConvolutionOpOutputShape(PrimitiveOpType::Pooling, outputShape, unpoolingWindowShape, inputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
+                if (inferredInputShape != inputShape)
+                    RuntimeError("The shape of the unpooling operand is different from the result of pooling the poolingInput argument using the provided options");
+
                 break;
             }
             case PrimitiveOpType::SumAll:

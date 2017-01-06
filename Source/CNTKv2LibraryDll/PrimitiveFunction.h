@@ -86,6 +86,7 @@ namespace CNTK
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Pass, L"Pass"},
         { PrimitiveOpType::Block, L"Block" },
+        { PrimitiveOpType::Unpooling, L"Unpooling" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -217,6 +218,8 @@ namespace CNTK
         static const std::wstring AttributeNameNumLayers;
         static const std::wstring AttributeNameHiddenSize;
         static const std::wstring AttributeNameRecurrentOp;
+        static const std::wstring AttributeNameUnpoolingType;
+        static const std::wstring AttributeNameUnpoolingWindowShape;
 
     protected:
         PrimitiveFunction(const std::vector<Variable>& blockInputs, const std::vector<Variable>& blockOutputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)

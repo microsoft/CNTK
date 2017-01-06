@@ -577,6 +577,20 @@ namespace CNTK
                 computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
                 break;
             }
+            case PrimitiveOpType::Unpooling:
+            {
+                UnpoolingType unpoolingType = (UnpoolingType)(functionConfig[PrimitiveFunction::AttributeNameUnpoolingType].Value<size_t>());
+                auto unpoolingWindowShape = functionConfig[PrimitiveFunction::AttributeNameUnpoolingWindowShape].Value<NDShape>();
+                auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
+                auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                if (unpoolingType == UnpoolingType::Max)
+                    computationNodePtr = New<MaxUnpoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(unpoolingWindowShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
+                else
+                    LogicError("Unknown unpooling type");
+                break;
+            }
             case PrimitiveOpType::SumAll:
                 computationNodePtr = New<SumElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;

@@ -433,6 +433,52 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
                    lower_pad, upper_pad, name)
 
 
+from cntk.cntk_py import UnpoolingType_Max
+MAX_UNPOOLING = UnpoolingType_Max
+@typemap
+def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
+            lower_pad=(0,), upper_pad=(0,), name=''):
+    '''
+    The pooling operations compute a new tensor by selecting the maximum or average value in the pooling input.
+    In the case of average pooling with padding, the average is only over the valid region.
+
+    N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
+
+    Example:
+        >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+        >>> x = C.input_variable(img.shape)
+        >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
+        array([[[[[  2.5,   4.5],
+                  [ 10.5,  12.5]]]]], dtype=float32)
+        >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : [img]})
+        array([[[[[  5.,   7.],
+                  [ 13.,  15.]]]]], dtype=float32)
+
+    Args:
+        operand: unpooling input
+        pooling_input: input to the corresponding pooling node
+        unpooling_type: only :const:`~cntk.ops.MAX_UNPOOLING` is supported now
+        unpooling_window_shape: dimensions of the unpooling window
+        strides (default 1): strides.
+        auto_padding: automatic padding flags for each input dimension.
+        lower_pad: precise lower padding for each input dimension
+        upper_pad: precise upper padding for each input dimension
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import unpooling
+    operand = sanitize_input(operand)
+    pooling_input = sanitize_input(pooling_input)
+    unpooling_window_shape = sanitize_shape(unpooling_window_shape)
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+    return unpooling(operand, pooling_input, unpooling_type, 
+                     unpooling_window_shape, strides, auto_padding,
+                     lower_pad, upper_pad, name)
+
+
 @typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
                         normalization_time_constant=5000, blend_time_constant=0,

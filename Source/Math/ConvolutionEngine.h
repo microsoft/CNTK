@@ -33,6 +33,7 @@ enum class PoolKind
     Average
 };
 
+
 #pragma warning(push)
 #pragma warning(disable : 4251)
 

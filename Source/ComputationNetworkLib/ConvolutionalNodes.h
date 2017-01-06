@@ -915,8 +915,12 @@ public:
 
         // Same as in case of deconvolution, node input (inputShape) is really the output of the max pooling
         // and node output (outDims) is pooling input.
-        auto outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+        auto outputShape = GetInputSampleLayout(1);
+        auto inferredShape = ConvolveGeometry::ComputeOutputShape(outputShape, m_kernelShape, m_mapCount, m_stride,
                                                                m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+        if (inputShape != inferredShape)
+            InvalidArgument("The shape of the unpooling operand is different from the result of pooling the poolingInput argument using the provided options");
+
         SetDims(outputShape, HasMBLayout());
         if (isFinalValidationPass)
         {
