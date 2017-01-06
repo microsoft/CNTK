@@ -475,7 +475,7 @@ class Value(cntk_py.Value):
         value (None or value that can be cast to NumPy array): the value to
          be converted
         dtype: data type (np.float32 or np.float64)
-        batch: batch input for `var`. 
+        batch: batch input for `var`.
          It can be:
           * a pure Python structure (list of lists, ...),
           * a list of NumPy arrays or SciPy sparse CSR matrices
@@ -516,7 +516,7 @@ class Value(cntk_py.Value):
         Args:
             var (:class:`~cntk.ops.variables.Variable`): input variable into which
              ``batch`` is passed
-            batch: batch input. 
+            batch: batch input.
              It can be:
               * a single NumPy array denoting the full minibatch
               * a list of NumPy arrays or SciPy sparse CSR matrices
@@ -541,8 +541,7 @@ class Value(cntk_py.Value):
                         'of NumPy arrays')
 
             # FIXME if not seq_starts: directly pass it to Value constructor
-
-            batch = list(batch)
+            batch = list(np.atleast_1d(batch))
 
         if not isinstance(batch, list):
             raise ValueError('batch has to be a list of NumPy arrays or '
@@ -559,6 +558,9 @@ class Value(cntk_py.Value):
                 if sample.dtype != var.dtype:
                     raise ValueError('could not convert sample data to '
                             'NumPy array')
+
+            if isinstance(sample, np.number):
+                sample = np.asarray(sample)
 
             if not (isinstance(sample, np.ndarray) or sparse.issparse(sample)):
                 raise ValueError('sample type "%s" is not supported. Please '

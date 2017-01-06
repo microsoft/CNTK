@@ -666,6 +666,9 @@ namespace CNTK
             case PrimitiveOpType::ClassificationError:
                 computationNodePtr = New<ClassificationErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::LambdaRank:
+                computationNodePtr = New<LambdaRankNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
             case PrimitiveOpType::PastValue:
             case PrimitiveOpType::FutureValue:
             {

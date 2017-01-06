@@ -252,12 +252,39 @@ def squared_error(output, target, name=''):
     output = sanitize_input(output, dtype)
     target = sanitize_input(target, dtype)
     return squared_error(output, target, name)
+    
+@typemap
+def lambda_rank(output, gain, group, name=''):
+    r'''
+    Groups examples according to ``group``, sorts 
+    them within each group based on ``output`` and 
+    computes the Normalized Discounted Cumulative Gain 
+    (NDCG) of the resulting ranking. In the backward 
+    direction it back-propagates LambdaRank gradients .
+
+    Example:
+        TBA
+
+    Args:
+        output: score of each document 
+        gain: gain of each document
+        group: group of each document
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import lambda_rank
+    dtype = get_data_type(output, gain, group)
+    output = sanitize_input(output, dtype)
+    gain = sanitize_input(gain, dtype)
+    group = sanitize_input(group, dtype)
+    return lambda_rank(output, gain, group, name)
 
 
 @typemap
 def classification_error(output_vector, target_vector, axis=-1, topN=1, name=''):
     '''
-    This operation computes the classification_error error. It finds the index of the highest
+    This operation computes the classification error. It finds the index of the highest
     value in the output_vector and compares it to the actual ground truth label
     (the index of the hot bit in the target vector). The result is a scalar
     (i.e., one by one matrix). This is often used as an evaluation criterion.

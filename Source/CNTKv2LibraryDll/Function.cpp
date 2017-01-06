@@ -895,6 +895,12 @@ namespace CNTK
         return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Logistic, operands, Dictionary(), name), name);
     }
 
+    FunctionPtr LambdaRank(const Variable& prediction, const Variable& gains, const Variable& groupId, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { prediction, gains, groupId };
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::LambdaRank, operands, Dictionary(), name), name);
+    }
+
     FunctionPtr SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name)
     {
         auto predictionPlaceholder = PlaceholderVariable(L"prediction");

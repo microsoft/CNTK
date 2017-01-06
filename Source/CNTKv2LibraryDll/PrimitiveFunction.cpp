@@ -122,7 +122,8 @@ namespace CNTK
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::ClassificationError) ||
             (op == PrimitiveOpType::Logistic) ||
-            (op == PrimitiveOpType::CosDistance))
+            (op == PrimitiveOpType::CosDistance) || 
+            (op == PrimitiveOpType::LambdaRank))
         {
             outputDynamicAxes = std::vector<Axis>({});
         }
@@ -471,9 +472,12 @@ namespace CNTK
             case PrimitiveOpType::SquaredError:
             case PrimitiveOpType::CrossEntropyWithSoftmax:
             case PrimitiveOpType::ClassificationError:
+            case PrimitiveOpType::LambdaRank:
             {
                 if ((op == PrimitiveOpType::ClassificationError) || (op == PrimitiveOpType::Logistic))
                     assert(inputs.size() >= 2);
+                else if (op == PrimitiveOpType::LambdaRank)
+                    assert(inputs.size() == 3);
                 else
                     assert(inputs.size() == 2);
 
