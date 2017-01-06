@@ -189,9 +189,9 @@ class Vocabulary:
           index.write("{0}".format(seq_id))
           for i in range(max(len(context_ids), len(query_ids))):
             if i < len(query_ids):
-              index.write(" |Q {0}".format(query_ids[i]))
+              index.write(" |Q {0}:1".format(query_ids[i]))
             if i < len(context_ids):
-              index.write(" |C {0}".format(context_ids[i]))
+              index.write(" |C {0}:1".format(context_ids[i]))
               index.write(" |E {0}".format(is_entity[i]))
               index.write(" |L {0}".format(labels[i]))
             index.write("\n")

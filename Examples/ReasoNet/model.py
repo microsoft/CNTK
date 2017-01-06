@@ -7,7 +7,6 @@ import os
 import numpy as np
 from cntk import Trainer, Axis, device, combine
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
-from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, reduce_sum, \
     parameter, times, element_times, past_value, plus, placeholder_variable, splice, reshape, constant, sigmoid, convolution, tanh, times_transpose, greater, cosine_distance, element_divide, element_select
 import cntk.ops as ops
@@ -16,6 +15,8 @@ from cntk.layers import Recurrence, Convolution
 from cntk.initializer import uniform, glorot_uniform
 from cntk.utils import get_train_eval_criterion, get_train_loss, Record, _as_tuple, sanitize_input, value_to_seq
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
+import cntk.utils as utils
+import cntk.learner as learner
 
 
 ########################
@@ -147,8 +148,11 @@ def broadcast_as(op, seq_op, name=''):
   return combine([rlt], name=name)
 
 def cosine_similarity(src, tgt, name=''):
-  src_br = broadcast_as(src, tgt, name='cos_br')
-  sim = cosine_distance(src_br, tgt, name=name)
+  src_br = sequence.broadcast_as(src, tgt, name='cos_br')
+  dot = ops.times_transpose(src_br, tgt)
+  src_norm = ops.sqrt(ops.reduce_sum(ops.square(src_br)))
+  tgt_norm = ops.sqrt(ops.reduce_sum(ops.square(tgt)))
+  sim = ops.element_divide(dot, (src_norm*tgt_norm), name=name)
   return sim
 
 def project_cosine_sim(status, memory, dim, init = init_default_or_glorot_uniform, name=''):
@@ -163,56 +167,35 @@ def termination_gate(status, dim, init = init_default_or_glorot_uniform, name=''
   Wt = Parameter((dim, 1), init = init, name='Wt')
   return sigmoid(times(status, Wt), name=name)
 
-def attention_rlunit(context_memory, query_memory, candidate_memory, candidate_ids,hidden_dim, vocab_dim, init = init_default_or_glorot_uniform):
+def attention_rlunit(context_memory, query_memory, entity_memory, hidden_dim, init = init_default_or_glorot_uniform):
   status = Placeholder(name='status', shape=hidden_dim)
   context_attention_weight = project_cosine_sim(status, context_memory, hidden_dim, name='context_attention')
   query_attention_weight = project_cosine_sim(status, query_memory, hidden_dim, name='query_attetion')
-  context_attention = sequence.reduce_sum(element_times(context_attention_weight, context_memory), name='C-Att')
-  query_attention = sequence.reduce_sum(element_times(query_attention_weight, query_memory), name='Q-Att')
+  context_attention = sequence.reduce_sum(times(context_attention_weight, context_memory), name='C-Att')
+  query_attention = sequence.reduce_sum(times(query_attention_weight, query_memory), name='Q-Att')
   attention = splice((query_attention, context_attention), name='att-sp')
-  gru = gru_cell((hidden_dim, ), name='status')
+  gru = gru_cell((hidden_dim, ), name='control_status')
   new_status = gru(attention, status).output
-  termination_prob = termination_gate(new_status, dim=hidden_dim, name='prob')
-  ans_attention = project_cosine_sim(new_status, candidate_memory, hidden_dim, name='ans_attention')
-  answers = times(ans_attention, candidate_ids, name='answers')
-  return combine([answers, termination_prob, new_status], name='ReinforcementAttention')
+  termination_prob = termination_gate(new_status, dim=hidden_dim, name='terminate_prob')
+  ans_attention = project_cosine_sim(new_status, entity_memory, hidden_dim, name='ans_attention')
+  return combine([ans_attention, termination_prob, new_status], name='ReinforcementAttention')
 
-def seq_cross_entropy(pred, label, gama=10, name=''):
-  pred_exp = ops.exp(pred, name='pred_exp')
-  sum_exp = sequence.reduce_sum(pred_exp, name='sum_exp')
-  pred_sum = element_divide(pred_exp, sequence.broadcast_as(sum_exp, pred), name='exp_divid')
-  log_pred_sum = ops.log(pred_sum, name='log_pred')
-  label_pred = times(label, log_pred_sum, name = 'label_softmax')
-  entropy = ops.negate(sequence.reduce_sum(label_pred, name='sum_log'), name=name)
-  #loss = ops.negate(sequence.reduce_sum(times(label, ops.log(pred_exp/(sequence.broadcast_as(sum_exp, pred))))), name = name)
-  return entropy
-
-def mask_cross_entropy(pred, label, mask, gama=10, name=''):
-  pred_exp = element_select(mask, ops.exp(gama*pred), 0)
-  label_msk = element_select(label, 1, 0)
-  sum_exp = ops.reduce_sum(pred_exp)
-  soft_max = ops.element_select(mask, ops.negate(ops.element_times(label_msk, ops.log(pred_exp/sum_exp))), 0)
-  return ops.reduce_sum(soft_max, name=name)
-
-def create_model(vocab_dim, hidden_dim, max_rl_iter=5, init=init_default_or_glorot_uniform):
+#
+# TODO: CNTK current will convert sparse variable to dense after reshape function
+def create_model(vocab_dim, hidden_dim, embedded_dim=100, max_rl_iter=5, init=init_default_or_glorot_uniform):
   # Query and Doc/Context/Paragraph inputs to the model
   batch_axis = Axis.default_batch_axis()
   query_seq_axis = Axis('sourceAxis')
   context_seq_axis = Axis('contextAxis')
   query_dynamic_axes = [batch_axis, query_seq_axis]
-  query_raw = input_variable(shape=(vocab_dim), is_sparse=True, dynamic_axes=query_dynamic_axes, name='query')
+  query_sequence = input_variable(shape=(vocab_dim), is_sparse=True, dynamic_axes=query_dynamic_axes, name='query')
   context_dynamic_axes = [batch_axis, context_seq_axis]
-  context_raw = input_variable(shape=(vocab_dim), is_sparse=True, dynamic_axes=context_dynamic_axes, name='context')
+  context_sequence = input_variable(shape=(vocab_dim), is_sparse=True, dynamic_axes=context_dynamic_axes, name='context')
   candidate_dynamic_axes = [batch_axis, context_seq_axis]
-  candidate_indicates = input_variable(shape=(1,), is_sparse=False, dynamic_axes=context_dynamic_axes, name='entities')
+  entity_ids_mask = input_variable(shape=(1,), is_sparse=False, dynamic_axes=context_dynamic_axes, name='entities')
 
-  # Query sequences
-  query_sequence = query_raw
-  # Doc/Context sequences
-  context_sequence = context_raw
   # embedding
-  embed_dim = hidden_dim
-  embedding = parameter(shape=(vocab_dim, embed_dim), init=uniform(1))
+  embedding = parameter(shape=(vocab_dim, embedded_dim), init=uniform(1))
 
   # TODO: Use Golve to initialize the embedding
   # TODO: Add dropout to embedding
@@ -221,23 +204,23 @@ def create_model(vocab_dim, hidden_dim, max_rl_iter=5, init=init_default_or_glor
 
   # get source and context representations
   context_memory = bidirectional_gru(hidden_dim, context_embedding, name='Context_Mem')            # shape=(hidden_dim*2, *), *=context_seq_axis
-  candidate_filter = greater(candidate_indicates, 0)
-  candidate_sc = sequence.gather(candidate_filter, candidate_filter)
-  candidate_memory = sequence.scatter(sequence.gather(context_memory, candidate_filter, name='Candidate_Mem'), candidate_sc)
-  candidate_ids = sequence.scatter(sequence.gather(candidate_indicates, candidate_filter, name = 'Candidate_Ids'), candidate_sc)
-  entity_raw_ids = sequence.scatter(sequence.gather(reshape(context_raw, vocab_dim), candidate_filter), candidate_sc)
+  entity_condition = greater(entity_ids_mask, 0)
+  entities_all = sequence.gather(entity_condition, entity_condition)
+  entity_memory = sequence.scatter(sequence.gather(context_memory, entity_condition, name='Candidate_Mem'), entities_all)
   qfwd, qbwd  = bidirectional_gru(hidden_dim, query_embedding, splice_outputs=False) # shape=(hidden_dim*2, *), *=query_seq_axis
   query_memory = splice((qfwd, qbwd), name='Query_SP')
   # get the source (aka 'query') representation
-  status = splice((sequence.last(qfwd), sequence.first(qbwd)), name='Init_Status') # get last fwd status and first bwd status
-  attention_rlu = attention_rlunit(context_memory, query_memory, candidate_memory, candidate_ids, hidden_dim*2, vocab_dim, init)
+  init_status = splice((sequence.last(qfwd), sequence.first(qbwd)), name='Init_Status') # get last fwd status and first bwd status
+  attention_rlu = attention_rlunit(context_memory, query_memory, entity_memory, hidden_dim*2, init)
   status_controls = []
   arlus = [None] * max_rl_iter
   answers = None
   probs = None
   for i in range(0, max_rl_iter):
-    arlus[i] = attention_rlu(status)
-    status = arlus[i].outputs[2]
+    if i == 0:
+      arlus[i] = attention_rlu(init_status)
+    else:
+      arlus[i] = attention_rlu(arlus[i-1].outputs[2])
     status_controls += list(arlus[i].outputs[0:2])
     if answers == None:
       answers = element_times(arlus[i].outputs[0], sequence.broadcast_as(arlus[i].outputs[1], arlus[i].outputs[0]))
@@ -245,75 +228,96 @@ def create_model(vocab_dim, hidden_dim, max_rl_iter=5, init=init_default_or_glor
     else:
       answers += element_times(arlus[i].outputs[0], sequence.broadcast_as(arlus[i].outputs[1], arlus[i].outputs[0]))
       probs += arlus[i].outputs[1]
-  final_answers = element_divide(answers, sequence.broadcast_as(probs, answers), name='final_answers')
-  result = combine(status_controls+[final_answers], name='ReasoNet')
-  return Block(result, 'ReasoNet', Record(vocab_dim=vocab_dim, hidden_dim=hidden_dim, max_ite =max_rl_iter, context=context_raw,
-    query=query_raw, entities=candidate_indicates, entity_masks=candidate_filter,
-    entity_seqs=candidate_sc, entity_ids=entity_raw_ids))
+  final_answers = reshape(element_divide(answers, sequence.broadcast_as(probs, answers)), (1,), name='final_answers')
+  result = combine([final_answers], name='ReasoNet')
+  #result = combine(status_controls+[final_answers], name='ReasoNet')
+  return Block(result, 'ReasoNet', Record(vocab_dim=vocab_dim, hidden_dim=hidden_dim, max_iter =max_rl_iter, context=context_sequence,
+    query=query_sequence, entities=entity_ids_mask, entity_condition=entity_condition,
+    entities_all=entities_all))
 
 def pred(model):
   context = model.context
   entities = model.entities
   wordvocab_dim = model.vocab_dim
-  candidate_filter = model.entity_masks
-  candidate_sc = model.entity_seqs
-  answers = sequence.scatter(model.outputs[-1], candidate_sc, name='answers_prob')
-  entity_ids = model.entity_ids
+  entity_condition = model.entity_condition
+  entities_all = model.entities_all
+  answers = sequence.scatter(model.outputs[-1], entities_all, name='answers_prob')
+  entity_ids = sequence.scatter(sequence.gather(reshape(model.context, wordvocab_dim), entity_condition), entities_all)
   item_preds = sequence.reduce_sum(times(reshape(answers, (1,)), entity_ids), name = 'item_preds')
   mask = sequence.reduce_sum(entity_ids, name='mask')
   probs = ops.element_select(mask, ops.exp(item_preds), 0, name='item_prob')
   return combine([mask, probs])
+
+def accuracy_func(pred, label, name='accuracy'):
+  pred_max = ops.hardmax(pred, name='pred_max')
+  norm_label = ops.equal(label, [1], name='norm_label')
+  acc = ops.times_transpose(pred_max, norm_label, name='accuracy')
+  return acc
+
+def seq_accuracy(pred, label, name=''):
+  m = placeholder_variable(shape=(1,), dynamic_axes = pred.dynamic_axes, name='max')
+  o = element_select(greater(pred, past_value(m)), pred, past_value(m))
+  rlt = o.replace_placeholders({m:sanitize_input(o)})
+  max_val = sequence.broadcast_as(sequence.last(rlt), rlt)
+  first_max = sequence.first(sequence.where(ops.greater_equal(pred, max_val)))
+  label_idx = sequence.first(sequence.where(ops.equal(label, 1)))
+  return ops.equal(first_max, label_idx, name=name)
+
+def seq_cross_entropy(pred, label, gama=10, name=''):
+  #loss = ops.negate(sequence.reduce_sum(times(label, ops.log(pred_exp/(sequence.broadcast_as(sum_exp, pred))))), name = name)
+  pred_exp = ops.exp(pred*gama, name='pred_exp')
+  sum_exp = sequence.reduce_sum(pred_exp, name='sum_exp')
+  pred_prob = element_divide(pred_exp, sequence.broadcast_as(sum_exp, pred), name='prob')
+  log_prob = ops.log(pred_prob, name='log_prob')
+  label_softmax = ops.element_times(label, log_prob, name = 'label_softmax')
+  entropy = ops.negate(sequence.reduce_sum(label_softmax), name=name)
+  accuracy = seq_accuracy(pred_prob, label, name='accuracy')
+  return (entropy, accuracy)
+
+def mask_cross_entropy(pred, label, mask, gama=10, name=''):
+  pred_exp = element_select(mask, ops.exp(gama*pred), 0)
+  label_msk = element_select(label, 1, 0)
+  sum_exp = ops.reduce_sum(pred_exp)
+  soft_max = ops.element_select(mask, ops.negate(ops.element_times(label_msk, ops.log(pred_exp/sum_exp))), 0)
+  return ops.reduce_sum(soft_max, name=name)
 
 def loss(model):
   context = model.context
   entities = model.entities
   wordvocab_dim = model.vocab_dim
   labels_raw = input_variable(shape=(1,), is_sparse=False, dynamic_axes=context.dynamic_axes, name='labels')
-  candidate_filter = model.entity_masks
-  candidate_sc = model.entity_seqs
-  answers = sequence.scatter(model.outputs[-1], candidate_sc, name='answers_prob')
-  entity_ids = model.entity_ids
-  item_preds = sequence.reduce_sum(times(reshape(answers, (1,)), entity_ids), name = 'item_preds')
-  labels = sequence.scatter(sequence.gather(labels_raw, candidate_filter, name='EntityLabels'), candidate_sc, name='seq_labels')
-  #cross_entroy = seq_cross_entroy(reshape(answers, (1,)), labels, name='CrossEntropyLoss')
-  item_labels = sequence.reduce_sum(times(reshape(labels, (1,)), entity_ids), name='item_labels')
-  mask = sequence.reduce_sum(entity_ids)
-  cross_entroy = mask_cross_entropy(item_preds, item_labels, mask, name='CrossEntropyLoss')
-  probs = ops.element_select(mask, ops.exp(item_preds), 0, name='item_probs')
-  apply_loss = combine([cross_entroy, answers, labels, item_preds, probs])
-  return Block(apply_loss, 'AvgSoftMaxCrossEntropy', Record(labels=item_labels))
-
-#TODO: Add AUC for evaluation
+  entity_condition = model.entity_condition
+  entities_all = model.entities_all
+  answers = model.outputs[-1]
+  labels = sequence.scatter(sequence.gather(labels_raw, entity_condition, name='EntityLabels'), entities_all, name='seq_labels')
+  cross_entroy, accuracy = seq_cross_entropy(answers, labels, name='CrossEntropyLoss')
+  apply_loss = combine([cross_entroy, answers, labels, accuracy])
+  return Block(apply_loss, 'AvgSoftMaxCrossEntropy', Record(labels=labels_raw))
 
 def train(model, reader, max_epochs=1, save_model_flag=False, epoch_size=270000):
   # Criterion nodes
   criterion_loss = loss(model)
   loss_func = criterion_loss.outputs[0]
-  eval_func = classification_error(criterion_loss.outputs[-1], criterion_loss.labels)
+  eval_func = criterion_loss.outputs[-1]
+  #eval_func = accuracy_func(criterion_loss.outputs[-1], criterion_loss.labels)
   
   # Instantiate the trainer object to drive the model training
   learning_rate = 0.005
-  lr_per_sample = learning_rate_schedule(learning_rate, UnitType.minibatch)
-
-  #minibatch_size = 30000 # max(sequence_length) --> so with avg length of context=1000 this is like 30 "full samples"
-  minibatch_size = 5000
-
-  momentum_time_constant = momentum_as_time_constant_schedule(1100)
+  lr_schedule = learner.learning_rate_schedule(learning_rate, learner.UnitType.minibatch)
+  minibatch_size = 1024*12
+  momentum = learner.momentum_schedule(0.9) 
+  momentum_var = learner.momentum_schedule(0.999)
   clipping_threshold_per_sample = 10.0
   gradient_clipping_with_truncation = True
-  learner = momentum_sgd(model.parameters,
-             lr_per_sample, momentum_time_constant,
-             gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
-             gradient_clipping_with_truncation=gradient_clipping_with_truncation)
-  trainer = Trainer(model.outputs[-1], loss_func, eval_func, learner)
+  #learn = learner.adam_sgd(model.parameters, lr_schedule, momentum, momentum_var, 
+  #           gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
+  #           gradient_clipping_with_truncation=gradient_clipping_with_truncation)
+  learn = learner.momentum_sgd(model.parameters, lr_schedule, momentum, 
+              gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
+              gradient_clipping_with_truncation=gradient_clipping_with_truncation)
+  trainer = Trainer(model.outputs[-1], loss_func, eval_func, learn)
 
   # Get minibatches of sequences to train with and perform model training
-  i = 0
-  mbs = 0
-  #epoch_size = 270000 # this number is in sequences -- need to fix (unfortunately has to be in 'elements' for now)
-  # for ^^, we just need to keep adding up all the samples (1 per sequence) and end the epoch once we get to 270000
-  training_progress_output_freq = 1
-
   # bind inputs to data from readers
   data_bind = {}
   label_key = None
@@ -328,40 +332,36 @@ def train(model, reader, max_epochs=1, save_model_flag=False, epoch_size=270000)
       label_key = arg
       data_bind[arg] = reader.streams.label
 
+  i = 0
+  minibatch_count = 0
+  training_progress_output_freq = 100
+
   for epoch in range(max_epochs):
     loss_numer = 0
     metric_numer = 0
-    denom = 0
+    total_samples = 0
 
     while i < (epoch+1) * epoch_size:
-
       # get next minibatch of training data
-      #mb_train = train_reader.next_minibatch(minibatch_size_in_samples=minibatch_size, input_map=train_bind)
-      # TODO: When will next_minibatch ended?
       # TODO: Shuffle entities? @yelong
-      mb_train = reader.next_minibatch(1024, input_map=data_bind)
+      mb_train = reader.next_minibatch(minibatch_size, input_map=data_bind)
+
       trainer.train_minibatch(mb_train)
 
       # collect epoch-wide stats
       samples = trainer.previous_minibatch_sample_count
       loss_numer += trainer.previous_minibatch_loss_average * samples
       metric_numer += trainer.previous_minibatch_evaluation_average * samples
-      denom += samples
+      total_samples += samples
 
-      # debugging
-      #print("previous minibatch sample count = %d" % samples)
-      #print("mb_train[labels] num samples = %d" % mb_train[labels].num_samples)
-      #print("previous minibatch loss average = %f" % trainer.previous_minibatch_loss_average)
-
-      if mbs % training_progress_output_freq == 0:
-        print("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(mbs, 
-            get_train_loss(trainer), get_train_eval_criterion(trainer)))
-        print("previous minibatch sample count = %d" % samples)
-
+      if int(total_samples/training_progress_output_freq) != int((total_samples-samples)/training_progress_output_freq):
+        print("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(minibatch_count,
+        get_train_loss(trainer), get_train_eval_criterion(trainer)))
+        print("Total sample count = {}, previous minibatch size={}".format(total_samples, samples))
       i += mb_train[label_key].num_samples
-      mbs += 1
+      minibatch_count += 1
 
-    print("--- EPOCH %d DONE: loss = %f, errs = %f ---" % (epoch, loss_numer/denom, 100.0*(metric_numer/denom)))
+    print("--- EPOCH %d DONE: loss = %f, errs = %.2f%% ---" % (epoch, loss_numer/total_samples, 100.0*(metric_numer/total_samples)))
 
     if save_model_flag:
       # save the model every epoch
