@@ -291,6 +291,11 @@ void GPUSparseMatrix<ElemType>::CopyToDenseMatrix(GPUMatrix<ElemType>& denseMatr
             CUSPARSE_CALL(cusparseDcsc2dense(cusparseHandle, int(GetNumRows()), int(GetNumCols()), descr, (double*) Buffer(), RowLocation(), ColLocation(), (double*) denseMatrix.Data(), int(GetNumRows())));
         }
     }
+    else if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol || GetFormat() == MatrixFormat::matrixFormatSparseBlockRow)
+    {
+        denseMatrix.SetValue((ElemType)0);
+        ScaleAndAdd(1, *this, denseMatrix);
+    }
     else
     {
         NOT_IMPLEMENTED;
@@ -2727,6 +2732,7 @@ template void GPUSparseMatrix<char>::SetValue(CPUSparseMatrix<char> const&);
 template void GPUSparseMatrix<char>::SetValue(GPUSparseMatrix<char> const&);
 template void GPUSparseMatrix<char>::SetValue(GPUMatrix<char> const&);
 //template void GPUSparseMatrix<char>::SetValue(CPUMatrix<char> const&);
+template GPUMatrix<char> GPUSparseMatrix<char>::CopyToDenseMatrix() const;
 template void GPUSparseMatrix<char>::CopyToDenseMatrix(GPUMatrix<char>&) const;
 template void GPUSparseMatrix<char>::CopyToCPUSparseMatrix(CPUSparseMatrix<char>&) const;
 template void GPUSparseMatrix<char>::ChangeDeviceTo(int);
@@ -2750,6 +2756,7 @@ template void GPUSparseMatrix<short>::SetValue(CPUSparseMatrix<short> const&);
 template void GPUSparseMatrix<short>::SetValue(GPUSparseMatrix<short> const&);
 template void GPUSparseMatrix<short>::SetValue(GPUMatrix<short> const&);
 //template void GPUSparseMatrix<short>::SetValue(CPUMatrix<short> const&);
+template GPUMatrix<short> GPUSparseMatrix<short>::CopyToDenseMatrix() const;
 template void GPUSparseMatrix<short>::CopyToDenseMatrix(GPUMatrix<short>&) const;
 template void GPUSparseMatrix<short>::CopyToCPUSparseMatrix(CPUSparseMatrix<short>&) const;
 template void GPUSparseMatrix<short>::ChangeDeviceTo(int);
