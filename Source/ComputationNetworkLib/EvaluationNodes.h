@@ -7,7 +7,7 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "gammacalculation.h"
-
+#include "InputAndParamNodes.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -456,17 +456,17 @@ protected:
 template class NDCG1EvalNode<float>;
 template class NDCG1EvalNode<double>;
 
-// Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion
-// Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties
+// Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
+// Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
 // 
-// The node has the option to squash sequences of repeating labels and ignore certain labels, e.g. if squashInputs is true and samplesToIgnore contain label '-' then
-// given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance error will be computed after squashing the sequences, i.e. between sequence s1' = "aab" and s2' = "aab"
+// The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and samplesToIgnore contains label '-' then
+// given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
 //
 // The returned error is computed as: EditDistance(s1,s2) * length(s1') / length(s1)
 //
 // Just like ClassificationError and other evaluation nodes, when used as an evaluation criterion, the SGD process will aggregate all values over an epoch and report the average, i.e. the error rate.
 // Primary objective of this node is for error evaluation of CTC training, see formula (1) in "Connectionist Temporal Classification: Labelling Unsegmented
-// equence Data with Recurrent Neural Networks", http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// Sequence Data with Recurrent Neural Networks", http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
 template<class ElemType>
 class EditDistanceErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
 {
@@ -511,7 +511,7 @@ public:
 
         MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
-        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(1)->GetNumParallelSequences(), Input(0)->GetMBLayout(), m_SubPen, m_DelPen, m_InsPen, m_SquashInputs, m_SamplesToIgnore);
+        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_SubPen, m_DelPen, m_InsPen, m_SquashInputs, m_SamplesToIgnore);
     }
 
     virtual void Validate(bool isFinalValidationPass) override
@@ -575,7 +575,7 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // samplesToIgnore - list of samples to ignore during edit distance evaluation
-    static ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, size_t numParallelSequences, MBLayoutPtr pMBLayout, 
+    static ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
         float subPen, float delPen, float insPen, bool squashInputs, const vector<int>& samplesToIgnore)
     {
         std::vector<int> firstSeqVec, secondSeqVec;
@@ -609,8 +609,8 @@ public:
             {
                 totalframeNum += frameNum;
 
-                ExtractSampleSequence(firstSeq, numParallelSequences, sequenceStartFrame, frameNum, seqIndex, squashInputs, samplesToIgnore, firstSeqVec);
-                ExtractSampleSequence(secondSeq, numParallelSequences, sequenceStartFrame, frameNum, seqIndex, squashInputs, samplesToIgnore, secondSeqVec);
+                ExtractSampleSequence(firstSeq, pMBLayout->GetNumParallelSequences(), sequenceStartFrame, frameNum, seqIndex, squashInputs, samplesToIgnore, firstSeqVec);
+                ExtractSampleSequence(secondSeq, pMBLayout->GetNumParallelSequences(), sequenceStartFrame, frameNum, seqIndex, squashInputs, samplesToIgnore, secondSeqVec);
 
                 //calculate edit distance
                 size_t firstSize = firstSeqVec.size();
