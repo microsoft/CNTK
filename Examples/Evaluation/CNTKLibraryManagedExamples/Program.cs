@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,16 +19,16 @@ namespace CNTKLibraryManagedExampleTest
     public class Program
     {
         // 
-        // The example shows 
+        // The example shows
         // - how to load model.
-        // - how to prepare input data for a signle sample, a batch of samples in dense format.
-        // - how to prepare input and output data map
-        // - how to evaluate a model
+        // - how to prepare input data for a single sample.
+        // - how to prepare input and output data map.
+        // - how to evaluate a model.
         // - how to retrieve evaluation result and retrieve output data in dense format.
         //
-        static void EvaluationWithDenseData(DeviceDescriptor device)
+        static void EvaluationSingleImage(DeviceDescriptor device)
         {
-            const string outputName = "Plus2060_output";
+            const string outputName = "Plus2060";
             var inputDataMap = new Dictionary<Variable, Value>();
 
             // Load the model.
@@ -50,7 +51,6 @@ namespace CNTKLibraryManagedExampleTest
             uint imageChannels = inputShape[2];
             uint imageSize = inputShape.TotalSize;
 
-            // Use case 1: Evaluate with single image
             Console.WriteLine("Evaluate single image");
 
             // Image preprocessing to match input requirements of the model.
@@ -72,12 +72,48 @@ namespace CNTKLibraryManagedExampleTest
             // Get evaluate result as dense output
             outputBuffer = new List<List<float>>();
             outputVal = outputDataMap[outputVar];
-            outputVal.CopyTo(outputVar, outputBuffer);
+            outputVal.CopyVariableValueTo(outputVar, outputBuffer);
 
             PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+        }
 
-            // Use case 2: Evaluate with batch of images
+        //
+        // The example shows
+        // - how to load model.
+        // - how to prepare input data for a batch of samples.
+        // - how to prepare input and output data map.
+        // - how to evaluate a model.
+        // - how to retrieve evaluation result and retrieve output data in dense format.
+        //
+        static void EvaluationBatchOfImages(DeviceDescriptor device)
+        {
+            const string outputName = "Plus2060";
+            var inputDataMap = new Dictionary<Variable, Value>();
+
+            // Load the model.
+            Function modelFunc = Function.LoadModel("z.model");
+
+            // Get output variable based on name
+            Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
+
+            // Get input variable. The model has only one single input.
+            // The same way described above for output variable can be used here to get input variable by name.
+            Variable inputVar = modelFunc.Arguments.Single();
+            var outputDataMap = new Dictionary<Variable, Value>();
+            Value inputVal, outputVal;
+            List<List<float>> outputBuffer;
+
+            // Get shape data for the input variable
+            NDShape inputShape = inputVar.Shape;
+            uint imageWidth = inputShape[0];
+            uint imageHeight = inputShape[1];
+            uint imageChannels = inputShape[2];
+            uint imageSize = inputShape.TotalSize;
+
             Console.WriteLine("\nEvaluate batch of images");
+
+            Bitmap bmp, resized;
+            List<float> resizedCHW;
 
             var fileList = new List<string>() { "00000.png", "00001.png", "00002.png" };
             var seqData = new List<float>();
@@ -91,38 +127,44 @@ namespace CNTKLibraryManagedExampleTest
             }
 
             // Create Value for the batch data.
-            // inputVal = Value.CreateBatch(inputVar.Shape, seqData, device);
-            inputVal = Value.CreateSequence(inputVar.Shape, seqData, true, device);
+            inputVal = Value.CreateBatch(inputVar.Shape, seqData, device);
 
-            // Create input and output data map.
-            inputDataMap[inputVar] = inputVal;
-            outputDataMap[outputVar] = null;
+            // Create input data map.
+            inputDataMap.Add(inputVar, inputVal);
+
+            // Create ouput data map. Using null as Value to indicate using system allocated memory.
+            // Alternatively, create a Value object and add it to the data map.
+            outputDataMap.Add(outputVar, null);
 
             // Evaluate the model against the batch input
-            //modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+            modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
-            //// Retrieve the evaluation result.
-            //outputVal = outputDataMap[outputVar];
-            //outputVal.CopyTo(outputVar, outputBuffer);
-            
+            // Retrieve the evaluation result.
+            outputBuffer = new List<List<float>>();
+            outputVal = outputDataMap[outputVar];
+            outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+
             // Output result
             PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
         }
 
-        // 
-        // The example shows 
-        // - how to use OneHot vector as input and output for evaluation
-        //   The input data contains multiple sequences and each sequence contains multiple samples.
-        //   There is only one non-zero value in each sample, so the sample can be represented by the index of this non-zero value
-        // - use variable name, instead of Variable, for as parameters for evaluate.
         //
-        static void EvaluationWithOneHot(DeviceDescriptor device)
+        // The example shows
+        // - how to load model.
+        // - how to prepare input data as sequence.
+        // - how to retrieve input and output variables by name.
+        // - how to prepare input and output data map.
+        // - how to evaluate a model.
+        // - how to retrieve evaluation result and retrieve output data in the one-hot vector format.
+        //
+        static void EvaluationSingleSequenceUsingOneHot(DeviceDescriptor device)
         {
-            // Todo: fill both index values
-            var vocabToIndex = new Dictionary<string, uint>();
-            var indexToVocab = new Dictionary<uint, string>();
+            var vocabToIndex = buildVocabIndex("ATIS.vocab");
+            var indexToVocab = buildInvVocabIndex("ATIS.label");
 
             Function myFunc = Function.LoadModel("atis.model");
+
+            Console.WriteLine("Evaluate single sequence using one-hot vector");
 
             // Get input variable 
             const string inputName = "features";
@@ -154,7 +196,7 @@ namespace CNTKLibraryManagedExampleTest
             inputDataMap.Add(inputVar, inputValue);
 
             // Prepare output
-            const string outputName = "out.z_output";
+            const string outputName = "out.z";
             Variable outputVar = myFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
 
             // Create ouput data map. Using null as Value to indicate using system allocated memory.
@@ -167,52 +209,7 @@ namespace CNTKLibraryManagedExampleTest
             // Get output result
             var outputData = new List<List<uint>>();
             Value outputVal = outputDataMap[outputVar];
-            outputVal.CopyTo(outputVar, outputData);
-
-            // Use case 2: evaluate batch of sequences using OneHot vector as input.
-
-            // Prepare the input data. 
-            // Each sample is represented by an index to the onehot vector, so the index of the non-zero value of each sample is saved in the inner list.
-            // The outer list represents sequences contained in the batch.
-            var inputBatch = new List<List<uint>>();
-            // SeqStartFlagBatch is used to indicate whether this sequence is a new sequence (true) or concatenating the previous sequence (false).
-            var seqStartFlagBatch = new List<bool>();
-
-            var inputSentences = new List<string>() { 
-                "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS",
-                "BOS I want to book a flight from NewYork to Seattle EOS"
-            };
-
-            int numOfSequences = inputSentences.Count;
-            for (int seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
-            {
-                // The input for one sequence 
-                seqData = new List<uint>();
-                // Get the index of each word in the sentence.
-                substring = inputSentences[seqIndex].Split(' ');
-                foreach (var str in substring)
-                {
-                    var index = vocabToIndex[str];
-                    seqData.Add(index);
-                }
-                inputBatch.Add(seqData);
-                seqStartFlagBatch.Add(true);
-            }
-
-            // Create the Value representing the batch data.
-            inputValue = Value.CreateBatchOfSequences<float>(vocabSize, inputBatch, seqStartFlagBatch, DeviceDescriptor.CPUDevice);
-
-            // Build input and output data map
-            inputDataMap[inputVar] = inputValue;
-            outputDataMap[outputVar] = null;
-
-            // Evalaute the model
-            myFunc.Evaluate(inputDataMap, outputDataMap, device);
-
-            // Get evaluation result.
-            outputData = new List<List<uint>>();
-            outputVal = outputDataMap[outputVar];
-            outputVal.CopyTo(outputVar, outputData);
+            outputVal.CopyVariableValueTo(outputVar, outputData);
 
             // output the result
             var numOfElementsInSample = vocabSize;
@@ -231,7 +228,101 @@ namespace CNTKLibraryManagedExampleTest
             }
         }
 
-        static void PrintOutput<T>(uint sampleSize, List<List<T>> outputBuffer)
+        //
+        // The example shows
+        // - how to load model.
+        // - how to prepare input data as batch of sequences with variable length.
+        // - how to retrieve input and output variables by name.
+        // - how to prepare input and output data map.
+        // - how to evaluate a model.
+        // - how to retrieve evaluation result and retrieve output data in the one-hot vector format.
+        //
+        static void EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor device)
+        {
+            var vocabToIndex = buildVocabIndex("ATIS.vocab");
+            var indexToVocab = buildInvVocabIndex("ATIS.label");
+
+            Function myFunc = Function.LoadModel("atis.model");
+
+            Console.WriteLine("Evaluate batch of sequences with variable length using one-hot vector");
+
+            // Get input variable 
+            const string inputName = "features";
+            var inputVar = myFunc.Arguments.Where(variable => string.Equals(variable.Name, inputName)).Single();
+
+            uint vocabSize = inputVar.Shape.TotalSize;
+
+            // Prepare the input data. 
+            // Each sample is represented by an index to the onehot vector, so the index of the non-zero value of each sample is saved in the inner list.
+            // The outer list represents sequences contained in the batch.
+            var inputBatch = new List<List<uint>>();
+            // SeqStartFlagBatch is used to indicate whether this sequence is a new sequence (true) or concatenating the previous sequence (false).
+            var seqStartFlagBatch = new List<bool>();
+
+            var inputSentences = new List<string>() { 
+                "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS",
+                "BOS I want to book a flight from New York to Seattle EOS"
+            };
+
+            List<uint> seqData;
+            string[] substring;
+            int numOfSequences = inputSentences.Count;
+            for (int seqIndex = 0; seqIndex < numOfSequences; seqIndex++)
+            {
+                // The input for one sequence 
+                seqData = new List<uint>();
+                // Get the index of each word in the sentence.
+                substring = inputSentences[seqIndex].Split(' ');
+                foreach (var str in substring)
+                {
+                    var index = vocabToIndex[str];
+                    seqData.Add(index);
+                }
+                inputBatch.Add(seqData);
+                seqStartFlagBatch.Add(true);
+            }
+
+            // Create the Value representing the batch data.
+            var inputValue = Value.CreateBatchOfSequences<float>(vocabSize, inputBatch, seqStartFlagBatch, DeviceDescriptor.CPUDevice);
+
+            // Build input data map.
+            var inputDataMap = new Dictionary<Variable, Value>();
+            inputDataMap.Add(inputVar, inputValue);
+
+            // Prepare output
+            const string outputName = "out.z";
+            Variable outputVar = myFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
+
+            // Create ouput data map. Using null as Value to indicate using system allocated memory.
+            var outputDataMap = new Dictionary<Variable, Value>();
+            outputDataMap.Add(outputVar, null);
+
+            // Evalaute the model
+            myFunc.Evaluate(inputDataMap, outputDataMap, device);
+
+            // Get evaluation result.
+            var outputData = new List<List<uint>>();
+            var outputVal = outputDataMap[outputVar];
+            outputVal.CopyVariableValueTo(outputVar, outputData);
+
+            // output the result
+            var numOfElementsInSample = vocabSize;
+            uint seqNo = 0;
+            foreach (var seq in outputData)
+            {
+                Console.Write("Seq=" + seqNo + ":");
+                foreach (var index in seq)
+                {
+                    // get the word based on index
+                    Console.Write(indexToVocab[index]);
+                }
+                Console.WriteLine();
+                // next sequence.
+                seqNo++;
+            }
+        }
+
+        private static void PrintOutput<T>(uint sampleSize, List<List<T>> outputBuffer)
         {
             Console.WriteLine("The number of sequences in the batch: " + outputBuffer.Count);
             int seqNo = 0;
@@ -261,16 +352,35 @@ namespace CNTKLibraryManagedExampleTest
             }
         }
 
+        private static Dictionary<string, uint> buildVocabIndex(string filePath)
+        {
+            var vocab = new Dictionary<string,uint>();
+
+            string[] lines = File.ReadAllLines(filePath);
+            for (uint idx = 0; idx < (uint)lines.Count(); idx++)
+                vocab.Add(lines[idx], idx);
+
+            return vocab;
+        }
+
+        private static string[] buildInvVocabIndex(string filePath)
+        {
+            return File.ReadAllLines(filePath);
+        }
+
         static void Main(string[] args)
         {
             Console.WriteLine("======== Evaluate model using C# ========");
 
-            EvaluationWithDenseData(DeviceDescriptor.CPUDevice);
-            EvaluationWithOneHot(DeviceDescriptor.CPUDevice);
+            EvaluationSingleImage(DeviceDescriptor.CPUDevice);
+            EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
+            //TODO: Add examples with OneHot.
+            //EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
+            //EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.CPUDevice);
 
-            // For using GPU:
-            //EvaluationWithDenseData(DeviceDescriptor.GPUDevice(0));
-            //EvaluationWithOneHot(DeviceDescriptor.GPUDevice(1));
+            // TODO: using GPU.
+            //EvaluationSingleImage(DeviceDescriptor.GPUDevice(0));
+            //EvaluationBatchOfImages(DeviceDescriptor.GPUDevice(0));
 
             Console.WriteLine("======== Evaluation completes. ========");
         }
