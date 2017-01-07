@@ -919,7 +919,11 @@ public:
         auto inferredShape = ConvolveGeometry::ComputeOutputShape(outputShape, m_kernelShape, m_mapCount, m_stride,
                                                                m_sharing, m_autoPad, m_lowerPad, m_upperPad);
         if (inputShape != inferredShape)
-            InvalidArgument("The shape of the unpooling operand is different from the result of pooling the poolingInput argument using the provided options");
+            InvalidArgument("%ls %ls the shape of the unpooling operand %ls is different from "
+                            "the result of pooling the poolingInput argument using"
+                            "the provided options %ls", NodeName().c_str(), OperationName().c_str(), 
+                            static_cast<std::wstring>(inputShape).c_str(), 
+                            static_cast<std::wstring>(inferredShape).c_str());
 
         SetDims(outputShape, HasMBLayout());
         if (isFinalValidationPass)

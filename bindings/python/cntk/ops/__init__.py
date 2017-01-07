@@ -384,8 +384,11 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    return convolution(convolution_map, operand, tuple(strides), sharing, auto_padding,
-                       tuple(lower_pad), tuple(upper_pad), transpose,
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+    return convolution(convolution_map, operand, strides, sharing, auto_padding,
+                       lower_pad, upper_pad, transpose,
                        max_temp_mem_size_in_samples, name)
 
 
@@ -460,8 +463,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
                    lower_pad, upper_pad, name)
 
 
-from cntk.cntk_py import UnpoolingType_Max
-MAX_UNPOOLING = UnpoolingType_Max
+MAX_UNPOOLING = PoolingType_Max
 @typemap
 def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
             lower_pad=(0,), upper_pad=(0,), name=''):

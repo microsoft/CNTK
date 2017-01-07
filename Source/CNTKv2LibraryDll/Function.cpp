@@ -1073,7 +1073,7 @@ namespace CNTK
 
     FunctionPtr Unpooling(const Variable& operand,
                           const Variable& poolingInput,
-                          UnpoolingType unpoolingType,
+                          PoolingType unpoolingType,
                           const NDShape& poolingWindowShape,
                           const NDShape& strides,
                           const std::vector<bool>& autoPadding,
@@ -1082,7 +1082,7 @@ namespace CNTK
                           const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameUnpoolingType] = (size_t)unpoolingType;
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)unpoolingType;
         additionalProperties[PrimitiveFunction::AttributeNameUnpoolingWindowShape] = poolingWindowShape;
         additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
         additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);

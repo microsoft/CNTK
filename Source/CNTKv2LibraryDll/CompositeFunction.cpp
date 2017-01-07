@@ -579,16 +579,13 @@ namespace CNTK
             }
             case PrimitiveOpType::Unpooling:
             {
-                UnpoolingType unpoolingType = (UnpoolingType)(functionConfig[PrimitiveFunction::AttributeNameUnpoolingType].Value<size_t>());
                 auto unpoolingWindowShape = functionConfig[PrimitiveFunction::AttributeNameUnpoolingWindowShape].Value<NDShape>();
                 auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
                 auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
                 auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
                 auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
-                if (unpoolingType == UnpoolingType::Max)
-                    computationNodePtr = New<MaxUnpoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(unpoolingWindowShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
-                else
-                    LogicError("Unknown unpooling type");
+                //We only get here after validation so it is safe to assume unpooling is max
+                computationNodePtr = New<MaxUnpoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(unpoolingWindowShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
                 break;
             }
             case PrimitiveOpType::SumAll:

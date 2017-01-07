@@ -222,7 +222,6 @@ namespace CNTK
         static const std::wstring AttributeNameNumLayers;
         static const std::wstring AttributeNameHiddenSize;
         static const std::wstring AttributeNameRecurrentOp;
-        static const std::wstring AttributeNameUnpoolingType;
         static const std::wstring AttributeNameUnpoolingWindowShape;
 
     protected:
