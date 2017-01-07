@@ -113,6 +113,16 @@ namespace CNTK
         if (outputDataType == DataType::Unknown)
             outputDataType = firstKnownInputDataType;
 
+        // Propagate the data type to any input Parameters/Constants with unknown data type
+        if (inferDimensions && (outputDataType != DataType::Unknown))
+        {
+            for (auto& input : inputs)
+            {
+                if ((input.GetDataType() == DataType::Unknown) && (input.IsConstant() || input.IsParameter()))
+                    input.m_dataFields->m_dataType = outputDataType;
+            }
+        }
+
         // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
         if ((op == PrimitiveOpType::SumAll) ||

@@ -12,7 +12,9 @@ import numpy as np
 import pytest
 from ..functions import *
 from ...trainer import *
+from ...initializer import glorot_uniform
 from .. import constant, parameter, input_variable, placeholder_variable, times, plus
+from ... import InferredDimension
 from .ops_test_utils import compare_lists_of_np_arrays
 
 def test_variable_forwarding():
@@ -144,3 +146,12 @@ def test_set_name():
     cntk_py.allow_renaming_functions()
 
     x_plus_y_2.name = 'x_plus_y_2_new'
+
+
+def test_data_type_inference():
+    x_float = input_variable((1,), dtype = np.float64)
+    param1 = parameter((InferredDimension, 1), init = glorot_uniform(), dtype = cntk_py.DataType_Unknown)
+    assert (param1.get_data_type() == cntk_py.DataType_Unknown)
+
+    x_times_param1 = times(x_float, param1)
+    assert (param1.dtype == np.float64)
