@@ -433,8 +433,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
                    lower_pad, upper_pad, name)
 
 
-from cntk.cntk_py import UnpoolingType_Max
-MAX_UNPOOLING = UnpoolingType_Max
+MAX_UNPOOLING = PoolingType_Max
 @typemap
 def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
             lower_pad=(0,), upper_pad=(0,), name=''):

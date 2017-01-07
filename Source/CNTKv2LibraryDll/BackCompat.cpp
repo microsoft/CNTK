@@ -347,7 +347,7 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(MaxUnpoolingNode))
                 {
                     auto unpoolingNode = node->As<MaxUnpoolingNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUnpoolingType] = (size_t)UnpoolingType::Max;
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingType] = (size_t)PoolingType::Max;
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUnpoolingWindowShape] = AsNDShape(unpoolingNode->KernelShape());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(unpoolingNode->Strides());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(unpoolingNode->AutoPad());
