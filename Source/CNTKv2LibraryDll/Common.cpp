@@ -49,6 +49,17 @@ namespace CNTK
             return s_alwaysAllowSettingDefaultDevice.load();
         }
 
+        std::atomic<bool> s_allowRenamingFunctions(false);
+        void AllowRenamingFunctions()
+        {
+            s_allowRenamingFunctions.store(true);
+        }
+
+        bool IsRenamingFunctionsAllowed()
+        {
+            return s_allowRenamingFunctions.load();
+        }
+
         std::atomic<bool> s_disableAutomaticUnpackingOfPackedValues(false);
         void SetAutomaticUnpackingOfPackedValues(bool disable)
         {

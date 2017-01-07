@@ -386,6 +386,18 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).name()
 
+    @name.setter
+    def name(self, function_name):
+        '''
+        Sets the name of this Function.
+        Setting the name of a Function is only allowed if the Function does not already have a name.
+        Calling this method, when this Function already has a name, results in an exception.
+
+        Args:
+            function_name (`str`): name for this Function.
+        '''
+        super(Function, self).set_name(function_name)
+
     @property
     def op_name(self):
         '''
