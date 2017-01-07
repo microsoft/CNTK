@@ -256,19 +256,44 @@ def squared_error(output, target, name=''):
 @typemap
 def lambda_rank(output, gain, group, name=''):
     r'''
-    Groups examples according to ``group``, sorts 
+    Groups samples according to ``group``, sorts 
     them within each group based on ``output`` and 
-    computes the Normalized Discounted Cumulative Gain 
-    (NDCG) of the resulting ranking. In the backward 
-    direction it back-propagates LambdaRank gradients .
+    computes the Normalized Discounted Cumulative Gain
+    (NDCG) at infinity for each group. Concretely,
+    the Discounted Cumulative Gain (DCG) at infinity is:
+    
+    :math:`\mathrm{DCG_{\infty}}()=\sum_{i=0}^{\infty} \frac{gain_i}{\log(i+2)}`
+    
+    and the NDCG is just the DCG  divided by the 
+    maximum achievable DCG (obtained by placing the samples with 
+    the largest gain at the top of the ranking).
+
+    It returns 1 minus the average NDCG across all the groups in the minibatch 
+    multiplied by 100 times the number of samples in the minibatch.
+    
+    In the backward direction it back-propagates LambdaRank gradients.
 
     Example:
-        TBA
+        >>> group = C.input_variable((1,))
+        >>> score = C.input_variable((1,), needs_gradient=True)
+        >>> gain  = C.input_variable((1,))
+        >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1,1)
+        >>> s = np.array([1, 2, 3, 4], dtype=np.float32).reshape(4,1,1)
+        >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
+        >>> f = C.lambda_rank(score, gain, group)
+        >>> np.round(f.grad({score:s, gain:n, group: g}, wrt=[score])[0],4)
+        array([[[-0.2121]],
+               <BLANKLINE>
+               [[ 0.2121]],
+               <BLANKLINE>
+               [[-0.1486]],
+               <BLANKLINE>
+               [[ 0.1486]]], dtype=float32)
 
     Args:
-        output: score of each document 
-        gain: gain of each document
-        group: group of each document
+        output: score of each sample 
+        gain: gain of each sample
+        group: group of each sample
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
