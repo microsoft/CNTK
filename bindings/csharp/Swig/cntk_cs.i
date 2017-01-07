@@ -408,6 +408,8 @@
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled();
 %ignore CNTK::Internal::AlwaysAllowSettingDefaultDevice();
 %ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed();
+%ignore CNTK::Internal::AllowRenamingFunctions();
+%ignore CNTK::Internal::IsRenamingFunctionsAllowed();
 %ignore CNTK::Internal::SetAutomaticUnpackingOfPackedValues(bool disable);
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled();
 %ignore CNTK::Internal::SetComputationNetworkTraceLevel(int traceLevel);

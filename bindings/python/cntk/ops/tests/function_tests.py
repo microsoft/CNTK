@@ -126,3 +126,21 @@ def test_getting_output_from_non_existent_node():
 
     with pytest.raises(ValueError):
         sum_output = times_node.forward({x: x0, y: y0}, sum_node.outputs)
+
+def test_set_name():
+    x = input_variable((1,))
+    y = input_variable((1,))
+    x_plus_y = x + y
+    assert (x_plus_y.name == '')
+    x_plus_y.name = 'x_plus_y'
+    assert (x_plus_y.name == 'x_plus_y')
+
+    x_plus_y_2 = plus(x, y, name='x_plus_y_2')
+    assert (x_plus_y_2.name == 'x_plus_y_2')
+    with pytest.raises(ValueError):
+        x_plus_y_2.name = 'x_plus_y_2_new'
+
+    from ... import cntk_py
+    cntk_py.allow_renaming_functions()
+
+    x_plus_y_2.name = 'x_plus_y_2_new'

@@ -68,6 +68,14 @@ namespace CNTK
 
     /*virtual*/ Function::~Function() {}
 
+    void Function::SetName(const std::wstring& name)
+    {
+        if (!Name().empty() && !Internal::IsRenamingFunctionsAllowed())
+            InvalidArgument("Function::SetName: Illegal to set name of a Function with an existing name (%S)", Name().c_str());
+
+        m_name = name;
+    }
+
     bool Function::IsBlock() const
     {
         auto blockFunction = dynamic_cast<const BlockFunction*>(this);

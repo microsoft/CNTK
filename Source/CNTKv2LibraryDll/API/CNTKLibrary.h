@@ -1512,7 +1512,7 @@ namespace CNTK
         CNTK_API Variable(const FunctionPtr& function);
 
         ///
-        /// Implicit conversion to a FunctionPtr; creates a pass through primitive function
+        /// Implicit conversion to a FunctionPtr; creates a pass through primitive Function
         ///
         CNTK_API operator FunctionPtr() const;
 
@@ -2347,7 +2347,7 @@ namespace CNTK
     ///
     /// Represents a function (optionally differentiable w.r.t. its inputs)
     /// A Function denotes a symbolic computation with zero or more input arguments and one or more outputs. 
-    /// A Function may be primitive or composite (comprised of other function instances whose inputs and outputs are wired together).
+    /// A Function may be primitive or composite (comprised of other Function instances whose inputs and outputs are wired together).
     /// A Function effectively is a computation graph composed of other primitive Functions (denoting computation) as nodes and Variable objects
     /// (denoting data) as the edges and leaves of the graph.
     /// Function class inherits from  IDictionarySerializable to allow derived 'Function' types to specify custom serialization procedure.
@@ -2361,17 +2361,17 @@ namespace CNTK
     public:
         ///
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values corresponding
-        /// to each leaf variable of the function of VariableKind 'Input'.
+        /// to each leaf variable of the Function of VariableKind 'Input'.
         /// The variables specified in the 'outputs' map denote the subset of 'this' Function's output variables that the caller wants to obtain values of. 
         /// Callers may specify the storage to be used for storing the 'outputs' Values or pass null in which case the implementation allocates the actual storage
         /// for the 'outputs' for which the ValuePtr mapping was left null by the caller.
         /// The optional 'outputsToRetainBackwardStateFor' parameter specifies the subset of the Function's output variables for which gradients will be specified
         /// in a subsequent Backward call for backpropagation.
         /// The method returns a BackPropState object containing all intermediate variable values needed during backpropagation of gradients from the 
-        /// 'outputsToRetainBackwardStateFor' outputs of the function to any of the inputs of the Function, in a subsequent Backward call.
+        /// 'outputsToRetainBackwardStateFor' outputs of the Function to any of the inputs of the Function, in a subsequent Backward call.
         /// Note that the returned BackPropState instance also stores a reference to the supplied 'inputs' Values and generated 'outputs' Values
         /// and the user is responsible for ensuring that the contents of the inputs and outputs are unchanged until after any uses of the BackPropState instance
-        /// for backpropagating gradients through this function.
+        /// for backpropagating gradients through this Function.
         ///
         virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                          std::unordered_map<Variable, ValuePtr>& outputs,
@@ -2426,25 +2426,32 @@ namespace CNTK
 
         ///
         /// Deserializes a Function from the dictionary.
-        /// TODO: add a second overload with a 'function builder' parameter that would allow hooking
+        /// TODO: add a second overload with a 'Function builder' parameter that would allow hooking
         /// user-defined op-codes with custom functionality.
         ///
         CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
     public:
         ///
-        /// Returns the name of 'this' function.
+        /// Returns the name of 'this' Function.
         ///
         const std::wstring& Name() const { return m_name; }
 
         ///
-        /// Returns the internally generated unique name of the function
+        /// Sets the name of 'this' Function.
+        /// Setting the name of a Function is only allowed if the Function does not already have a name.
+        /// Calling this method, when 'this' Function already has a name, results in an exception.
+        ///
+        CNTK_API void SetName(const std::wstring& name);
+
+        ///
+        /// Returns the internally generated unique name of the Function
         ///
         const std::wstring& Uid() const { return m_uid; }
 
         ///
         /// Returns the primitive Function at the root of the graph of Functions underlying this Function.
-        /// If 'this' Function itself is a primitive function then (this->RootFunction() == this).
+        /// If 'this' Function itself is a primitive Function then (this->RootFunction() == this).
         ///
         FunctionPtr RootFunction() const
         {
@@ -2452,30 +2459,30 @@ namespace CNTK
         }
 
         ///
-        /// Returns a boolean indicating if this Function is a composite function
+        /// Returns a boolean indicating if this Function is a composite Function
         ///
         bool IsComposite() const { return (m_rootFunction != nullptr); }
 
         ///
-        /// Returns a boolean indicating if this Function is a primitive function
+        /// Returns a boolean indicating if this Function is a primitive Function
         ///
         bool IsPrimitive() const { return !IsComposite(); }
 
         ///
-        /// Returns a boolean indicating if this Function is a block function which is basically
+        /// Returns a boolean indicating if this Function is a block Function which is basically
         /// a composite encapsulated as an opaque block which appears as a primitive during traversing
         /// the graph of Functions that this block is part of.
         ///
         CNTK_API bool IsBlock() const;
 
         ///
-        /// Returns the composite function underlying this block Function.
+        /// Returns the composite Function underlying this block Function.
         /// Throws an exception of this is not a block Function
         ///
         CNTK_API FunctionPtr BlockComposite() const;
 
         ///
-        /// Returns the mapping from the arguments of the composite underlying this block function
+        /// Returns the mapping from the arguments of the composite underlying this block Function
         /// to the Variables that they are bound to in the outer graph of Functions that this
         /// block Function is part of.
         ///
@@ -2565,7 +2572,7 @@ namespace CNTK
         CNTK_API FunctionPtr ReplacePlaceholder(const Variable& placeholderReplacement);
 
         ///
-        /// Save this function graph into a model file.
+        /// Save this Function graph into a model file.
         ///
         CNTK_API void SaveModel(const std::wstring& modelFile);
 
@@ -2575,12 +2582,12 @@ namespace CNTK
         CNTK_API void RestoreModel(const std::wstring& modelFilePath);
 
         ///
-        /// Load a function from a model file
+        /// Load a Function from a model file
         ///
         CNTK_API static FunctionPtr LoadModel(const std::wstring& modelFile, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
-        /// Prints the entire graph underlying this function to stderr
+        /// Prints the entire graph underlying this Function to stderr
         ///
         CNTK_API void PrintGraph() const;
 
@@ -2590,8 +2597,8 @@ namespace CNTK
         ///
         CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
-        /// Restores the state of the 'this' function in place using the provided dictionary.
-        /// Structurally, 'this' function graph has to be identical to the state captured in the dictionary.
+        /// Restores the state of the 'this' Function in place using the provided dictionary.
+        /// Structurally, 'this' Function graph has to be identical to the state captured in the dictionary.
         CNTK_API virtual void RestoreFromCheckpoint(const Dictionary& dictionary);
 
         ///
@@ -2654,7 +2661,7 @@ namespace CNTK
         std::vector<Variable> m_inputs;
         std::vector<Variable> m_outputs;
 
-        FunctionPtr m_rootFunction; // nullptr for primitive function instances
+        FunctionPtr m_rootFunction; // nullptr for primitive Function instances
         std::wstring m_name;
         std::wstring m_uid;
         Dictionary m_attributes;
@@ -3134,8 +3141,8 @@ namespace CNTK
     CNTK_API FunctionPtr Alias(const Variable& operand, const std::wstring& name = L"");
 
     ///
-    /// Creates a Block function that encapsulates a composite to create an opaque Function object that
-    /// appears as any other primitive function
+    /// Creates a Block Function that encapsulates a composite to create an opaque Function object that
+    /// appears as any other primitive Function
     ///
     CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = L"");
 
@@ -3352,7 +3359,7 @@ namespace CNTK
     };
 
     ///
-    /// Abstraction for learning a subset of parameters of a learnable function using first order gradient values
+    /// Abstraction for learning a subset of parameters of a learnable Function using first order gradient values
     /// For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
     /// learning parameter values using first order gradients.
     ///
@@ -3648,7 +3655,7 @@ namespace CNTK
         FunctionPtr Model() const { return m_model; }
 
         ///
-        /// Loss function that is used as the optimization criterion for learning the model's parameters.
+        /// Loss Function that is used as the optimization criterion for learning the model's parameters.
         ///
         FunctionPtr LossFunction() const { return m_lossFunction; }
 
