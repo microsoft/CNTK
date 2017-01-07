@@ -1447,6 +1447,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerformanceProfilerDll", "S
 	ProjectSection(ProjectDependencies) = postProject
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKLibraryManagedExamplesTest", "Tests\EndToEndTests\EvalClientTests\CNTKLibraryManagedExamplesTest\CNTKLibraryManagedExamplesTest.csproj", "{3500A847-E024-4E7D-92DD-CC587C17460B}"
 EndProject
 Global
