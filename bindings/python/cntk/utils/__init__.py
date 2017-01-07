@@ -44,8 +44,7 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     '''
     Converts ``batch`` into a :class:`Value` object of ``dtype``
     such that the integer data in ``batch`` is interpreted as the indices
-    representing one-hot vectors. Additionally, a SciPy CSR matrix can be obtained
-    by calling :meth:`~cntk.utils.Value.to_csr`.
+    representing one-hot vectors.
 
     Example:
         >>> num_classes = 6
