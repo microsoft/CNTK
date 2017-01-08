@@ -24,7 +24,8 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{277EBD9D-2504-49FA-AC72-59D5515130C3}</ProjectGuid>
-    <RootNamespace>CSharpBindings</RootNamespace>
+    <RootNamespace>CNTKLibraryCSBinding</RootNamespace>
+    <ProjectName>CNTKLibraryCSBinding</ProjectName>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
@@ -51,7 +52,7 @@
   <PropertyGroup>
     <!-- TODO intentional for all? -->
     <LinkIncremental>false</LinkIncremental>
-    <!-- TargetName>CSharpBindings</TargetName -->
+    <!-- TargetName>CNTKLibraryCSBinding</TargetName -->
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -108,7 +109,7 @@
   <ItemGroup Condition="$(HasSwig)">
     <CustomBuild Include="cntk_cs.i">
       <FileType>Document</FileType>
-      <Command>$(SWIG_PATH)\swig.exe -c++ -csharp -DMSC_VER -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(SolutionDir)bindings\csharp\CSEvalV2Library\SwigProxyClasses -dllimport CSharpBindings cntk_cs.i</Command>
+      <Command>$(SWIG_PATH)\swig.exe -c++ -csharp -DMSC_VER -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(SolutionDir)bindings\csharp\CNTKLibraryManagedDll\SwigProxyClasses -dllimport CNTKLibraryCSBinding cntk_cs.i</Command>
       <Outputs>cntk_cs_wrap.cxx; cntk_cs_warp.h</Outputs>
       <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;std_unordered_map.i</AdditionalInputs>
     </CustomBuild>
@@ -116,10 +117,13 @@
   <ItemGroup Condition="$(HasSwig)">
     <ClCompile Include="cntk_cs_wrap.cxx" />
   </ItemGroup>
-  <ItemGroup  Condition="$(HasSwig)">
+  <ItemGroup Condition="$(HasSwig)">
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibrary.h" />
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h" />
     <ClInclude Include="cntk_cs_wrap.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\common\CNTKValueExtend.i" />
   </ItemGroup>
   <Target Name="CheckDependencies" Condition="!$(HasSwig)">
     <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed." />
