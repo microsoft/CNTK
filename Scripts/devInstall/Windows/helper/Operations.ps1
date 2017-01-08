@@ -59,7 +59,7 @@ function OpBoost160VS15(
                         @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $targetPath },
                         @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVarLib; Content  = $envContentLib } );
         Download = @( @{Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
-        Actionssssss = @( @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content = $targetPath },
+        Action = @( @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content = $targetPath },
                     @{Function = "SetEnvironmentVariable"; EnvVar = $envVarLib; Content  = $envContentLib },
                     @{Function = "InstallExe"; Command = "$cache\$prodFile"; Param = "/dir=$targetPath /SP- /SILENT /NORESTART"; runAs=$false } );
      } )
@@ -111,7 +111,7 @@ function OpMSMPI70([parameter(
     $remoteFilename = "MSMpiSetup.exe"
     $localFilename = "MSMpiSetup70.exe"
     $downloadSource = "https://download.microsoft.com/download/D/7/B/D7BBA00F-71B7-436B-80BC-4D22F2EE9862/$remoteFilename";
-    $downloadSize = 2285568
+    $downloadSize = 5277808
 
     @( @{Name = "MSMPI Installation"; ShortName = "CNTK"; VerifyInfo = "Checking for installed MSMPI 70"; ActionInfo = "Installing MSMPI 70";
          Verification = @( @{Function = "VerifyWinProductVersion"; Match = "^Microsoft MPI \(\d+\."; Version = "7.0.12437.6"; MatchExact = $false } );
@@ -126,7 +126,7 @@ function OpMSMPI70SDK(
     $remoteFilename = "msmpisdk.msi"
     $localFilename = "msmpisdk70.msi"
     $downloadSource = "https://download.microsoft.com/download/D/7/B/D7BBA00F-71B7-436B-80BC-4D22F2EE9862/$remoteFilename";
-    $downloadSize = 5277808  
+    $downloadSize = 2285568  
 
     @( @{Name = "MSMPI SDK70 Installation"; ShortName = "CNTK"; VerifyInfo = "Checking for installed MSMPI 70 SDK"; ActionInfo = "Install MSMPI 70 SDK";
          Verification = @( @{Function = "VerifyWinProductVersion"; Match = "^Microsoft MPI SDK \(\d+\."; Version = "7.0.12437.6"; MatchExact = $false } );
@@ -197,13 +197,13 @@ function OpOpenCV31(
     $envVar = "OPENCV_PATH_V31";
     $envValue = "$targetPath\build"
     $downloadSource = "https://netcologne.dl.sourceforge.net/project/opencvlibrary/opencv-win/3.1.0/opencv-3.1.0.exe"
-    $downloadSize = 115129966
+    $downloadSize = 0
     $archiveSubTree = "opencv"
 
     @(  @{ShortName = "OPENCV310"; Name = $prodName; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
           Verification = @( @{Function = "VerifyDirectory"; Path = "$targetPath" },
                             @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
+          Download = @( @{ Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
           Action = @( @{Function = "Extract7zipSelfExtractingArchive"; archiveName = "$cache\$prodFile"; destination = "$targetFolder"; destinationFolder = $prodSubDir; archiveSubTree= $archiveSubTree },
                       @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } );
          } )
@@ -232,7 +232,7 @@ function OpProtoBuf310VS15(
     $downloadSize = 5648581    
 
     @( @{ShortName = "PROTO310VS15"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
-         Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath } );
+         Verification = @( @{Function = "VerifyDirectory"; Path = $protoSourceDir } );
          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize} );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $protoSourceDir; zipSubTree =$prodName; destinationFolder =$prodName },
                      @{Function = "MakeDirectory"; Path = $scriptDirectory },
@@ -280,12 +280,12 @@ function OpSwig3010(
     $envVar = "SWIG_PATH"
     $envValue = $targetPath
     $downloadSource = "http://prdownloads.sourceforge.net/project/swig/swigwin/swigwin-3.0.10/swigwin-3.0.10.zip"
-    $downloadSize = 56429
+    $downloadSize = 0
 
     @( @{ShortName = "SWIG3010"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";  
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
+         Download = @( @{ Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; zipSubTree =$prodSubDir; destinationFolder =$prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue } );
         } )
@@ -320,9 +320,9 @@ function OpZlibVS15(
     # the script file can be used to create the compiled protobuf libraries in $targetPath = $targetFolder\$prodSubDir
 
     $prodName = "zlib / libzip from source"
-    $zlibProdName = "zlib-1.2.8"
-    $zlibFilename = "zlib128.zip" 
-    $zlibDownloadSource = "http://zlib.net/zlib128.zip"
+    $zlibProdName = "zlib-1.2.10"
+    $zlibFilename = "zlib1210.zip" 
+    $zlibDownloadSource = "http://zlib.net/zlib1210.zip"
     $downloadSizeZlib = 0
     
     $libzipProdName = "libzip-1.1.3"
