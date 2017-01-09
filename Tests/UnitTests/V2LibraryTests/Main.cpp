@@ -44,36 +44,36 @@ int main()
     fprintf(stderr, "Run tests using CPU-only build.\n");
 #endif
 
-    // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking 
-    // which will have a silent performance degradation otherwise
-    Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
+    //// Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking 
+    //// which will have a silent performance degradation otherwise
+    //Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
 
-    // Note: Run the device selection tests first since later tests
-    // may interfere with device selection by freezing default device
-    DeviceSelectionTests();
+    //// Note: Run the device selection tests first since later tests
+    //// may interfere with device selection by freezing default device
+    //DeviceSelectionTests();
 
-    NDArrayViewTests();
-    ValueTests();
-    TensorTests();
-    FunctionTests();
-    BlockTests();
+    //NDArrayViewTests();
+    //ValueTests();
+    //TensorTests();
+    //FunctionTests();
+    //BlockTests();
 
-    FeedForwardTests();
-    RecurrentFunctionTests();
+    //FeedForwardTests();
+    //RecurrentFunctionTests();
 
-    UserDefinedFunctionTests();
+    //UserDefinedFunctionTests();
 
-    SerializationTests();
-    LearnerTests();
+    //SerializationTests();
+    //LearnerTests();
 
-    TrainerTests();
-    TrainCifarResnet();
-    TrainLSTMSequenceClassifer();
+    //TrainerTests();
+    //TrainCifarResnet();
+    //TrainLSTMSequenceClassifer();
 
-    TrainSequenceToSequenceTranslator();
-    TrainTruncatedLSTMAcousticModelClassifer();
+    //TrainSequenceToSequenceTranslator();
+    //TrainTruncatedLSTMAcousticModelClassifer();
 
-    MinibatchSourceTests();
+    //MinibatchSourceTests();
 
     MultiThreadsEvaluation(IsGPUAvailable());
 

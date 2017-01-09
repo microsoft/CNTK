@@ -69,6 +69,10 @@ namespace CNTKLibraryManagedExampleTest
             // Start evaluation on the device
             modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
+            // Bug: this time we use the Value oject returned by the last evaluation,
+            // Wy do we have exception??
+            modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+
             // Get evaluate result as dense output
             outputBuffer = new List<List<float>>();
             outputVal = outputDataMap[outputVar];
