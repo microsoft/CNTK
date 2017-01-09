@@ -153,14 +153,14 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 // 2.2. model update 
                 {
                     // alias for better readability 
-                    Matrix<ElemType>& smoothedGradient = *m_blockLevelSmoothedGradient[name];       // smoothed gradient                   
+                    Matrix<ElemType>& smoothedGradientUpdate = *m_blockLevelSmoothedGradient[name];       // smoothed gradient                   
                     // 2.2.1 update block level smoothed gradient; 
                     // This is essentially a first-order infinite impulse response (IIR) filter with the gain (1 - blockMomentum)*m_blockLearningRate:
-                    // smoothedGradient(t)=blockMomentum * smoothedGradients(t-1) + (1 - blockMomentum)*m_blockLearningRate*blockGrad(t)
-                    Matrix<ElemType>::ScaleAndAdd((ElemType)((1 - blockMomentum)*m_blockLearningRate), blockGrad, (ElemType)blockMomentum, smoothedGradient); 
+                    // smoothedGradientUpdate(t)=blockMomentum * smoothedGradients(t-1) + (1 - blockMomentum)*m_blockLearningRate*blockGrad(t)
+                    Matrix<ElemType>::ScaleAndAdd((ElemType)((1 - blockMomentum)*m_blockLearningRate), blockGrad, (ElemType)blockMomentum, smoothedGradientUpdate); 
                     // 2.2.2 update parameters; 
                     currentWeight.SetValue(prevWeight);
-                    currentWeight -= smoothedGradient;
+                    currentWeight -= smoothedGradientUpdate;
                     // 2.2.3 Nesterov Momentum 
                     // A Nesterov momentum here is to do a partial weight update before calculating the gradient, i.e., 
                     // (step 1) w(t) <-- w(t) - \eta* v(t) 
@@ -171,7 +171,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     // without step 1, this becomes stanard momentum
                     if (m_useNesterovMomentum)
                     {
-                        Matrix<ElemType>::ScaleAndAdd((ElemType)-blockMomentum, smoothedGradient, currentWeight);
+                        Matrix<ElemType>::ScaleAndAdd((ElemType)-blockMomentum, smoothedGradientUpdate, currentWeight);
                     }
                     // 2.2.4 update bookkeeping
                     prevWeight.SetValue(currentWeight);
