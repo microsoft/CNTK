@@ -144,7 +144,7 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         m_streams.push_back(stream);
     }
 
-    // Currently for prefetch we use two alternativing buffers,
+    // Currently for prefetch we use two alternating buffers,
     // same is the default.
     size_t numAlternatingBuffers = 2;
 
