@@ -211,7 +211,8 @@ function OpOpenCV31(
 
 function OpProtoBuf310VS15(
     [parameter(Mandatory=$true)][string] $cache,
-    [parameter(Mandatory=$true)][string] $targetFolder)
+    [parameter(Mandatory=$true)][string] $targetFolder,
+    [parameter(Mandatory=$true)][string] $repoDirectory)
 {
     # unzip protobuf source in $protoSourceDir = $targetfolder\src\$prodsubdir
     # create batch file to build protobuf files in $scriptDirectory = $targetFolder\script
@@ -221,9 +222,10 @@ function OpProtoBuf310VS15(
     $prodFile = "protobuf310.zip"
     $prodName = "protobuf-3.1.0"
     $prodSubDir =  "protobuf-3.1.0-vs15"
-    $batchFile = "buildProto.cmd"
+    $batchFile = "buildProtoVS15.cmd"
 
     $protoSourceDir = join-path $targetFolder "src"
+    $completeProtoSourceDir = join-Path $protoSourceDir $prodName
     $scriptDirectory = join-path $targetFolder "script"
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "PROTOBUF_PATH"
@@ -232,11 +234,11 @@ function OpProtoBuf310VS15(
     $downloadSize = 5648581    
 
     @( @{ShortName = "PROTO310VS15"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
-         Verification = @( @{Function = "VerifyDirectory"; Path = $protoSourceDir } );
+         Verification = @( @{Function = "VerifyDirectory"; Path = $completeProtoSourceDir } );
          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize} );
-         Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $protoSourceDir; zipSubTree =$prodName; destinationFolder =$prodName },
+         Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $protoSourceDir; zipSubTree = $prodName; destinationFolder = $prodName },
                      @{Function = "MakeDirectory"; Path = $scriptDirectory },
-                     @{Function = "CreateBuildProtobufBatch"; FileName = "$scriptDirectory\$batchFile"; SourceDir = (join-path $protoSourceDir $prodName); TargetDir = $targetPath } );
+                     @{Function = "CreateBuildProtobufBatch"; FileName = "$scriptDirectory\$batchFile"; SourceDir = $completeProtoSourceDir; TargetDir = $targetPath; RepoDirectory = $repoDirectory } );
         } )
 }
 
@@ -313,16 +315,17 @@ function OpCheckCuda8
 
 function OpZlibVS15(
     [parameter(Mandatory=$true)][string] $cache,
-    [parameter(Mandatory=$true)][string] $targetFolder)
+    [parameter(Mandatory=$true)][string] $targetFolder,
+    [parameter(Mandatory=$true)][string] $repoDirectory)
 {
     # unzip protobuf source in $protoSourceDir = $targetfolder\src\$prodsubdir
     # create batch file to build protobuf files in $scriptDirectory = $targetFolder\script
     # the script file can be used to create the compiled protobuf libraries in $targetPath = $targetFolder\$prodSubDir
 
     $prodName = "zlib / libzip from source"
-    $zlibProdName = "zlib-1.2.10"
-    $zlibFilename = "zlib1210.zip" 
-    $zlibDownloadSource = "http://zlib.net/zlib1210.zip"
+    $zlibProdName = "zlib-1.2.8"
+    $zlibFilename = "zlib128.zip" 
+    $zlibDownloadSource= "https://netix.dl.sourceforge.net/project/libpng/zlib/1.2.8/zlib128.zip"
     $downloadSizeZlib = 0
     
     $libzipProdName = "libzip-1.1.3"
@@ -348,7 +351,7 @@ function OpZlibVS15(
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$zlibFilename"; destination = $sourceCodeDir; zipSubTree =$zlibProdName; destinationFolder =$zlibProdName },
                      @{Function = "ExtractAllFromTarGz"; SourceFile =  "$cache\$libzipFilename"; TargzFileName = "$libzipFilename"; destination = $sourceCodeDir },
                      @{Function = "MakeDirectory"; Path = $scriptDirectory },
-                     @{Function = "CreateBuildZlibBatch"; FileName = "$scriptDirectory\$batchFile"; zlibSourceDir = (join-path $sourceCodeDir $zlibProdName); libzipSourceDir = (join-path $sourceCodeDir $libzipProdName); TargetDir = $targetPath } );
+                     @{Function = "CreateBuildZlibBatch"; FileName = "$scriptDirectory\$batchFile"; zlibSourceDir = (join-path $sourceCodeDir $zlibProdName); libzipSourceDir = (join-path $sourceCodeDir $libzipProdName); TargetDir = $targetPath; RepoDirectory = $repoDirectory } );
         } )
 }
 

@@ -523,11 +523,12 @@ function CreateBuildProtobufBatch(
     $filename = $table["FileName"]
     $sourceDir  = $table["SourceDir"]
     $targetDir  = $table["TargetDir"]
+    $repoDirectory = $table["repoDirectory"]
         
     if ($Execute) {
         Remove-Item -Path $filename -ErrorAction SilentlyContinue | Out-Null
 
-        $batchScript = GetBatchBuildProtoBuf $sourceDir $targetDir
+        $batchScript = GetBatchBuildProtoBuf $sourceDir $targetDir $repoDirectory
 
         add-content -Path $filename -Encoding Ascii -Value $batchScript
     }
@@ -543,11 +544,12 @@ function CreateBuildZlibBatch(
     $zlibSourceDir  = $table["zlibSourceDir"]
     $libzipSourceDir  = $table["libzipSourceDir"]
     $targetDir  = $table["TargetDir"]
+    $repoDirectory = $table["repoDirectory"]
         
     if ($Execute) {
         Remove-Item -Path $filename -ErrorAction SilentlyContinue | Out-Null
 
-        $batchScript = GetBatchBuildZlibBuf $zlibSourceDir $libzipSourceDir $targetDir
+        $batchScript = GetBatchBuildZlibBuf $zlibSourceDir $libzipSourceDir $targetDir $repoDirectory
 
         add-content -Path $filename -Encoding Ascii -Value $batchScript
     }
@@ -703,116 +705,26 @@ function CallGetCommand(
 
 function GetBatchBuildProtoBuf(
     [string] $sourceDir,
-    [string] $targetDir)
+    [string] $targetDir,
+    [string] $repoDirectory)
 {
-    $batchscript = @"
-@SET VCDIRECTORY=C:\Program Files (x86)\Microsoft Visual Studio 14.0
-@SET SOURCEDIR=$sourceDir
-@SET TARGETDIR=$targetDir
-
-@echo.
-@echo This will build Protobuf-3.1.0
-@echo ------------------------------
-@echo The configured settings for the batch file:
-@echo    Visual Studio directory: %VCDIRECTORY%
-@echo    Protobuf source directory: %SOURCEDIR%
-@echo    Protobuf target directory: %TARGETDIR%
-@echo.
-@echo.
-@echo Please edit the batch file if this doesn't match your directory layout!
-@echo.
-
-@pause 
-
-@call "%VCDIRECTORY%\VC\vcvarsall.bat" amd64 
-
-@pushd %SOURCEDIR%
-@cd cmake
-@md build && cd build
-
-@md debug && cd debug
-@cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Debug -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF -DCMAKE_INSTALL_PREFIX="%TARGETDIR%" ..\..
-@nmake 
-@nmake install
-@cd ..
-
-@md release && cd release
-@cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -Dprotobuf_BUILD_TESTS=OFF -Dprotobuf_MSVC_STATIC_RUNTIME=OFF -DCMAKE_INSTALL_PREFIX="%TARGETDIR%" ..\..
-@nmake 
-@nmake install
-@cd ..
-
-@popd
-
-setx PROTOBUF_PATH %TARGETDIR%
+    $batchFile = join-path $repoDirectory "Scripts\devInstall\Windows\buildProtoVS15.bat"
+@"
+call $batchFile $sourceDir $targetDir
 "@
-
-    return $batchscript
 }
 
 function GetBatchBuildZlibBuf(
     [string] $zlibSourceDir,
     [string] $libzipSourceDir,
-    [string] $targetDir)
+    [string] $targetDir,
+    [string] $repoDirectory)
 {
-    $batchscript = @"
-@SET VCDIRECTORY=C:\Program Files (x86)\Microsoft Visual Studio 14.0
-@SET LIBZIPSOURCEDIR=$libzipSourceDir
-@SET ZLIBSOURCEDIR=$zlibSourceDir
-@SET TARGETDIR=$targetDir
-@SET CMAKEGEN="Visual Studio 14 2015 Win64"
+    $batchFile = join-path $repoDirectory "Scripts\devInstall\Windows\buildZlibVS15.bat"
 
-@echo.
-@echo This will build ZLib using Visual Studio 2015
-@echo ---------------------------------------------
-@echo The configured settings for the batch file:
-@echo    Visual Studio directory: %VCDIRECTORY%
-@echo    CMake Generator: %CMAKEGEN%
-@echo    LibZip source directory: %LIBZIPSOURCEDIR%
-@echo    Zlib source directory: %ZLIBSOURCEDIR%
-@echo    Zlib-VS15 target directory: %TARGETDIR%
-@echo.
-@echo.
-@echo Please edit the batch file if this doesn't match your directory layout!
-@echo.
-
-@pause 
-
-@call "%VCDIRECTORY%\VC\vcvarsall.bat" amd64 
-
-@pushd %ZLIBSOURCEDIR%
-@mkdir build
-@cd build
-@cmake .. -G%CMAKEGEN% -DCMAKE_INSTALL_PREFIX="%TARGETDIR%"
-@msbuild /P:Configuration=Release INSTALL.vcxproj
-@popd
-
-@pushd %LIBZIPSOURCEDIR%
-@md build
-@cd build
-@cmake .. -G%CMAKEGEN% -DCMAKE_INSTALL_PREFIX="%TARGETDIR%"
-@msbuild libzip.sln /t:zip /P:Configuration=Release
-@cmake -DBUILD_TYPE=Release -P cmake_install.cmake
-@popd
-
-setx ZLIB_PATH %TARGETDIR%
+@"
+call $batchFile $libzipSourceDir $zlibSourceDir $targetDir
 "@
-
-    return $batchscript
 }
-
-
-
-function GetCygwinBashScript
-{
-    $batchscript = @"
-easy_install-2.7 pip
-pip install six
-pip install pytest
-"@
-
-    return $batchscript
-}
-
 
 # vim:set expandtab shiftwidth=2 tabstop=2:

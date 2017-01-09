@@ -134,8 +134,8 @@ Function main
         $operation += OpBoost160VS15 -cache $localCache -targetFolder $localDir
         $operation += OpCNTKMKL3 -cache $localCache -targetFolder $localDir
         $operation += OpSwig3010 -cache $localCache -targetFolder $localDir
-        $operation += OpProtoBuf310VS15 -cache $localCache -targetFolder $localDir
-        $operation += OpZlibVS15 -cache $localCache -targetFolder $localDir
+        $operation += OpProtoBuf310VS15 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
+        $operation += OpZlibVS15 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
         $operation += OpOpenCV31 -cache $localCache -targetFolder $localDir
         if ($ServerLocation) {
             $operation += OpProtoBuf310VS15Internal -server $ServerLocation -cache $localCache -targetFolder $localDir
