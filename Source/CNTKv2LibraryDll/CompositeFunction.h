@@ -74,10 +74,18 @@ namespace CNTK
             return MakeSharedObject<CompositeFunction>(rootFunction, std::move(visitedFunctions), name, uid);
         }
 
-        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
-                                         std::unordered_map<Variable, ValuePtr>& outputs,
-                                         const DeviceDescriptor& computeDevice,
-                                         const std::unordered_set<Variable>& outputsToRetainBackwardStateFor) override;
+        BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                 std::unordered_map<Variable, ValuePtr>& outputs,
+                                 const DeviceDescriptor& computeDevice,
+                                 const std::unordered_set<Variable>& outputsToRetainBackwardStateFor);
+
+        virtual BackPropStatePtr Forward(const std::vector<ValuePtr>& /*inputValues*/,
+                                         std::unordered_map<Variable, ValuePtr>& /*outputs*/,
+                                         const DeviceDescriptor& /*computeDevice*/,
+                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/)
+        {
+            NOT_IMPLEMENTED;
+        }
 
         virtual void Backward(const BackPropStatePtr& state,
                               const std::unordered_map<Variable, ValuePtr>& rootGradientValues,

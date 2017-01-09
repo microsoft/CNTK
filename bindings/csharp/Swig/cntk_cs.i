@@ -151,6 +151,10 @@
                                 std::unordered_map<Variable, ValuePtr>& outputs, 
                                 const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), 
                                 const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {});
+%ignore CNTK::Function::Forward(const std::vector<ValuePtr>& inputValues, 
+                                std::unordered_map<Variable, ValuePtr>& outputs, 
+                                const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), 
+                                const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {});
 %ignore CNTK::Function::Serialize() const;
 %ignore CNTK::Function::Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 %ignore CNTK::Function::Parameters() const;
