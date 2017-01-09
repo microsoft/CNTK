@@ -8,12 +8,14 @@
 #include "ComputationNode.h"
 #include "gammacalculation.h"
 #include "InputAndParamNodes.h"
+#include "Sequences.h"
 #include <map>
 #include <string>
 #include <vector>
 #include <stdexcept>
 #include <list>
 #include <memory>
+
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -502,7 +504,9 @@ public:
 
     virtual void ForwardPropNonLooping() override
     {
-        if (Input(0)->Is<SparseInputValue<ElemType>>() || Input(1)->Is<SparseInputValue<ElemType>>())
+        bool isInput0Sparse = Input(0)->template Is<SparseInputValue<ElemType>>();
+        bool isInput1Sparse = Input(1)->template Is<SparseInputValue<ElemType>>();
+        if (isInput0Sparse || isInput1Sparse)
             LogicError("EditDistanceError node was not tested for sparse inputs.");
 
         FrameRange frameRange(Input(0)->GetMBLayout());
@@ -583,13 +587,13 @@ public:
         // Edit distance between subsequences
         Matrix<float> grid(CPUDEVICE);
         
-        // Number of insertions
+        // Number of insertions between subsequences
         Matrix<float> insMatrix(CPUDEVICE);
         
-        //Number of deletions
+        //Number of deletions between subsequences
         Matrix<float> delMatrix(CPUDEVICE);
 
-        // Number of substitutions
+        // Number of substitutions between subsequences
         Matrix<float> subMatrix(CPUDEVICE);
 
         float del, ins, sub;
@@ -602,15 +606,16 @@ public:
             if (sequence.seqId == GAP_SEQUENCE_ID)
                 continue;
 
-            auto seqIndex = sequence.s;
-            auto frameNum = min(sequence.tEnd, pMBLayout->GetNumTimeSteps()) - (size_t)(max(sequence.tBegin, (ptrdiff_t)0));
+            auto numFrames = pMBLayout->GetNumSequenceFramesInCurrentMB(sequence);
 
-            if (frameNum > 0)
+            if (numFrames > 0)
             {
-                totalframeNum += frameNum;
+                totalframeNum += numFrames;
 
-                ExtractSampleSequence(firstSeq, pMBLayout->GetNumParallelSequences(), sequenceStartFrame, frameNum, seqIndex, squashInputs, samplesToIgnore, firstSeqVec);
-                ExtractSampleSequence(secondSeq, pMBLayout->GetNumParallelSequences(), sequenceStartFrame, frameNum, seqIndex, squashInputs, samplesToIgnore, secondSeqVec);
+                auto columnIndices = pMBLayout->GetColumnIndices(sequence);
+
+                ExtractSampleSequence(firstSeq, columnIndices, squashInputs, samplesToIgnore, firstSeqVec);
+                ExtractSampleSequence(secondSeq, columnIndices, squashInputs, samplesToIgnore, secondSeqVec);
 
                 //calculate edit distance
                 size_t firstSize = firstSeqVec.size();
@@ -639,7 +644,6 @@ public:
                 {
                     for (size_t j = 1; j < secondSize + 1; j++)
                     {
-
                         if (firstSeqVec[i - 1] == secondSeqVec[j - 1])
                         {
                             grid(i, j) = grid(i - 1, j - 1);
@@ -680,7 +684,7 @@ public:
                 wrongSampleNum += insMatrix(firstSize, secondSize) + delMatrix(firstSize, secondSize) + subMatrix(firstSize, secondSize);
             }
 
-            sequenceStartFrame += frameNum;
+            sequenceStartFrame += numFrames;
         }
 
         return (ElemType)(wrongSampleNum * totalframeNum / totalSampleNum);
@@ -696,12 +700,12 @@ private:
     std::vector<int> m_SamplesToIgnore;
 
     // Clear out_SampleSeqVec and extract a vector of samples from the matrix into out_SampleSeqVec.
-    static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, size_t numParallelSequences, size_t sequenceStartFrame, size_t frameNum, size_t seqIndex, bool squashInputs, const vector<int>& samplesToIgnore, std::vector<int>& out_SampleSeqVec)
+    static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, vector<size_t>& columnIndices, bool squashInputs, const vector<int>& samplesToIgnore, std::vector<int>& out_SampleSeqVec)
     {
         out_SampleSeqVec.clear();
 
         // Get the first element in the sequence
-        size_t lastId = (int)firstSeq(0, sequenceStartFrame * numParallelSequences + seqIndex);
+        size_t lastId = (int)firstSeq(0, columnIndices[0]);
         if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), lastId) == samplesToIgnore.end())
             out_SampleSeqVec.push_back(lastId);
 
@@ -709,9 +713,9 @@ private:
         if (squashInputs)
         {
             //squash sequences of identical samples
-            for (size_t i = sequenceStartFrame+1; i < frameNum + sequenceStartFrame; i++)
+            for (size_t i = 1; i < columnIndices.size(); i++)
             {
-                size_t refId = (int)firstSeq(0, i * numParallelSequences + seqIndex);
+                size_t refId = (int)firstSeq(0, columnIndices[i]);
                 if (lastId != refId)
                 {
                     lastId = refId;
@@ -722,9 +726,9 @@ private:
         }
         else
         {
-            for (size_t i = sequenceStartFrame+1; i < frameNum + sequenceStartFrame; i++)
+            for (size_t i = 1; i < columnIndices.size(); i++)
             {
-                auto refId = (int)firstSeq(0, i * numParallelSequences + seqIndex);
+                auto refId = (int)firstSeq(0, columnIndices[i]);
                 if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), refId) == samplesToIgnore.end())
                     out_SampleSeqVec.push_back(refId);
             }
