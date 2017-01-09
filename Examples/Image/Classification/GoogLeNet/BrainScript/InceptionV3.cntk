@@ -89,17 +89,6 @@ Train = {
                 gradientBits = 32
             }
         }
-        
-        ParallelTrain = {
-            parallelizationMethod = BlockMomentumSGD
-            distributedMBReading = true
-            syncPerfStats = 5
-            BlockMomentumSGD={
-                syncPeriod = 120000
-                resetSGDMomentum = true
-                useNesterovMomentum = true
-            }
-        }
     }
 
     reader = {
