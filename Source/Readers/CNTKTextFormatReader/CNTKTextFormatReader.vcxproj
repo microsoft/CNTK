@@ -95,7 +95,6 @@
     <ClInclude Include="..\..\Common\Include\File.h" />
     <ClInclude Include="..\..\Common\Include\fileutil.h" />
     <ClInclude Include="TextReaderConstants.h" />
-    <ClInclude Include="Indexer.h" />
     <ClInclude Include="TextConfigHelper.h" />
     <ClInclude Include="TextParser.h" />
     <ClInclude Include="Descriptors.h" />
@@ -104,7 +103,6 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Indexer.cpp" />
     <ClCompile Include="TextConfigHelper.cpp" />
     <ClCompile Include="TextParser.cpp" />
     <ClCompile Include="dllmain.cpp" />

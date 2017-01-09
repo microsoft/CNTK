@@ -456,6 +456,34 @@ namespace CNTK
 #endif
     }
 
+    std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes) 
+    {
+        size_t maxNumTimeSteps = 1;
+        size_t numSequences = 1;
+        if (maskShape.Rank() > 1)
+        {
+            // since only 2 axes are supported at the moment, sequence axis should be the first and batch axis -- the second.
+            // sequence axis dimension determines the maximum number of time steps (= maximum sequence length),
+            // batch axis dimension -- the number of sequences (= 'training units') in a batch.
+            maxNumTimeSteps = maskShape[0];
+            numSequences = maskShape[1];
+        }
+        else if (maskShape.Rank() > 0)
+        {
+            if (numDynamicAxes > 1)
+            {
+                maxNumTimeSteps = maskShape[0];
+            }
+            else
+            {
+                // there's only one axis (the default batch axis).
+                numSequences = maskShape[0];
+            }
+        }
+
+        return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
+    }
+
     template <typename ElementType>
     std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value)
     {
@@ -505,45 +533,19 @@ namespace CNTK
         auto mask = value->Mask();
         if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
             InvalidArgument("Invalid Value object; the sum of the rank of the mask and data does not equal the Variable's rank + number of dynamic axes");
-        
-        auto getNumTimeStepsAndSequencesFunc = [numDynamicAxes](const NDShape& maskShape, size_t numDynamicAxes) {
-            size_t maxNumTimeSteps = 1;
-            size_t numSequences = 1;
-            if (maskShape.Rank() > 1)
-            {
-                // since only 2 axes are supported at the moment, sequence axis should be the first and batch axis -- the second.
-                // sequence axis dimension determines the maximum number of time steps (= maximum sequence length),
-                // batch axis dimension -- the number of sequences (= 'training units') in a batch.
-                maxNumTimeSteps = maskShape[0];
-                numSequences = maskShape[1];
-            }
-            else if (maskShape.Rank() > 0)
-            {
-                if (numDynamicAxes > 1)
-                {
-                    maxNumTimeSteps = maskShape[0];
-                }
-                else
-                {
-                    // there's only one axis (the default batch axis).
-                    numSequences = maskShape[0];
-                }
-            }
 
-            return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
-        };
 
         size_t maxNumTimeSteps, numSequences;
-        std::tie(maxNumTimeSteps, numSequences) = getNumTimeStepsAndSequencesFunc(valueShape.SubShape(varShape.Rank()), numDynamicAxes);
+        std::tie(maxNumTimeSteps, numSequences) = GetNumTimeStepsAndSequences(valueShape.SubShape(varShape.Rank()), numDynamicAxes);
 
-        auto getSequenceStartsAndLengthsFunc = [&getNumTimeStepsAndSequencesFunc](const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes) {
+        auto getSequenceStartsAndLengthsFunc = [](const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes) {
             auto cpuMask = mask;
             if (mask->Device() != DeviceDescriptor::CPUDevice())
                 cpuMask = mask->DeepClone(DeviceDescriptor::CPUDevice());
 
             const MaskKind* maskBuffer = cpuMask->DataBuffer();
             size_t maxNumTimeSteps, numSequences;
-            std::tie(maxNumTimeSteps, numSequences) = getNumTimeStepsAndSequencesFunc(mask->Shape(), numDynamicAxes);
+            std::tie(maxNumTimeSteps, numSequences) = GetNumTimeStepsAndSequences(mask->Shape(), numDynamicAxes);
 
             for (size_t i = 0; i < numSequences; ++i)
             {

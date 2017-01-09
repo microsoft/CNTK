@@ -221,7 +221,7 @@ bindings/python/cntk/i_plus_i_0.mod
 # CSharp bindings
 bindings/csharp/Swig/cntk_cs_wrap.h
 bindings/csharp/Swig/cntk_cs_wrap.cxx
-bindings/csharp/CSEvalV2Library/SwigProxyClasses/*.cs
+bindings/csharp/CNTKLibraryManagedDll/SwigProxyClasses/*.cs
 
 # Examples and Tutorials
 Examples/Image/DataSets/Pascal/VOC*

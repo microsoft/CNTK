@@ -408,6 +408,8 @@
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled();
 %ignore CNTK::Internal::AlwaysAllowSettingDefaultDevice();
 %ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed();
+%ignore CNTK::Internal::AllowRenamingFunctions();
+%ignore CNTK::Internal::IsRenamingFunctionsAllowed();
 %ignore CNTK::Internal::SetAutomaticUnpackingOfPackedValues(bool disable);
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled();
 %ignore CNTK::Internal::SetComputationNetworkTraceLevel(int traceLevel);
@@ -417,7 +419,9 @@
 %ignore CNTK::Internal::ForceDeterministicAlgorithms();
 %ignore CNTK::Internal::SetFixedRandomSeed(unsigned long fixedRandomSeed);
 %ignore CNTK::Internal::EnableForwardValuesSharing();
+%ignore CNTK::Internal::DisableForwardValuesSharing();
 %ignore CNTK::Internal::EnableHyperMemoryCompress();
+%ignore CNTK::Internal::DisableHyperMemoryCompress();
 %ignore CNTK::Internal::AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
 %ignore CNTK::Internal::AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 %ignore CNTK::Internal::AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
@@ -956,54 +960,131 @@
     }
 
     // Create Value object from dense input: batch, sequence or batch of sequences.
-
-    public static Value CreateBatch<T>(NDShape shape, System.Collections.Generic.List<T> batch, DeviceDescriptor computeDevice)
+    public static Value CreateBatch<T>(NDShape shape, System.Collections.Generic.List<T> batch, DeviceDescriptor device, bool readOnly = false)
     {
-        throw new System.ArgumentException("Not implemented yet.");
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<T>>();
+        var shapeSize = shape.TotalSize;
+        int i = 0;
+        System.Collections.Generic.List<T> seq = null;
+        foreach (var element in batch)
+        {
+            if (i++ % shapeSize == 0)
+            {
+                seq = new System.Collections.Generic.List<T>();
+                input.Add(seq);
+            }
+            seq.Add(element);
+        }
+        return Create(shape, input, device, readOnly);
     }
 
-    public static Value CreateSequence<T>(NDShape shape, System.Collections.Generic.List<T> sequence,
-                                          bool seqStartFalg,
-                                          DeviceDescriptor computeDevice)
+     public static Value CreateSequence<T>(NDShape shape,
+                                          System.Collections.Generic.List<T> sequence,
+                                          DeviceDescriptor device,
+                                          bool readOnly = false)
     {
-        throw new System.ArgumentException("Not implemented yet.");
+        return CreateSequence<T>(shape, sequence, true, device, readOnly);
+    }
+
+    public static Value CreateSequence<T>(NDShape shape,
+                                          System.Collections.Generic.List<T> sequence,
+                                          bool seqStartFlag,
+                                          DeviceDescriptor device,
+                                          bool readOnly = false)
+    {
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<T>>(1) {sequence};
+        return Create(shape, input, new System.Collections.Generic.List<bool>(1) {seqStartFlag}, device, readOnly);
     }
 
     public static Value CreateBatchOfSequences<T>(NDShape shape,
                                                   System.Collections.Generic.List<System.Collections.Generic.List<T>> batchOfSequences,
-                                                  System.Collections.Generic.List<bool> seqStartFalg,
-                                                  DeviceDescriptor computeDevice)
+                                                  System.Collections.Generic.List<bool> seqStartFlags,
+                                                  DeviceDescriptor device,
+                                                  bool readOnly = false)
     {
-        var dim = shape.TotalSize;
+        return Create(shape, batchOfSequences, seqStartFlags, device, readOnly);
+    }
 
-        // Todo: deal with seqStartFlag
+    // Create Value object from OneHotVector input: batch, sequence or batch of sequences
+    public static Value CreateBatch<T>(uint dimension, System.Collections.Generic.List<uint> batch, DeviceDescriptor device, bool readOnly = false)
+    {
+        // Is CreateBatch for OneHot really useful? 
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>();
+        batch.ForEach(element => input.Add(new System.Collections.Generic.List<uint>(1) {element}));
+ 
+        return Create<T>(dimension, input, device, readOnly);
+    }
+
+    public static Value CreateSequence<T>(uint dimension,
+                                          System.Collections.Generic.List<uint> sequence,
+                                          DeviceDescriptor device,
+                                          bool readOnly = false)
+    {
+        return CreateSequence<T>(dimension, sequence, true, device, readOnly);
+    }
+
+    public static Value CreateSequence<T>(uint dimension,
+                                          System.Collections.Generic.List<uint> sequence,
+                                          bool seqStartFlag,
+                                          DeviceDescriptor device,
+                                          bool readOnly = false)
+    {
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>(1) {sequence};
+        return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(1) {seqStartFlag}, device, readOnly);
+    }
+
+    public static Value CreateBatchOfSequences<T>(uint dimension, 
+                                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
+                                                  System.Collections.Generic.List<bool> seqStartFlags,
+                                                  DeviceDescriptor device,
+                                                  bool readOnly = false)
+    {
+        return Create<T>(dimension, batchOfSequences, seqStartFlags, device, readOnly);
+    }
+
+    public static Value Create(NDShape sampleShape,
+                               System.Collections.Generic.List<NDArrayView> sequences,
+                               System.Collections.Generic.List<bool> sequenceStartFlags,
+                               DeviceDescriptor device,
+                               bool readOnly = false)
+    {
+        var seqVector = new NDArrayViewVector(sequences);
+        var startVector = new BoolVector(sequenceStartFlags);
+        return Create(sampleShape, seqVector, startVector, device, false);
+    }
+
+    public static Value Create(NDShape sampleShape,
+                               System.Collections.Generic.List<NDArrayView> sequences,
+                               DeviceDescriptor device,
+                               bool readOnly = false)
+    {
+        return Create(sampleShape, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+    }
+
+    public static Value Create<T>(NDShape sampleShape,
+                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences,
+                                  System.Collections.Generic.List<bool> sequenceStartFlags,
+                                  DeviceDescriptor device,
+                                  bool readOnly = false)
+    {
+        var seqFlags = new BoolVector(sequenceStartFlags);
         if (typeof(T).Equals(typeof(float)))
         {
             var inputSeqVector = new FloatVectorVector();
-            foreach (var seq in batchOfSequences)
+            foreach (var seq in sequences)
             {
-                if (seq.Count % dim != 0)
-                {
-                    throw new System.ArgumentException("the number of data in sequences does not match the input dimension");
-                }
-                var samples = new FloatVector(seq);
-                inputSeqVector.Add(samples);
+                inputSeqVector.Add(new FloatVector(seq));
             }
-            return Value.CreateDenseFloat(shape, inputSeqVector, computeDevice);
+            return Value.CreateDenseFloat(sampleShape, inputSeqVector, seqFlags, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
             var inputSeqVector = new DoubleVectorVector();
-            foreach (var seq in batchOfSequences)
+            foreach (var seq in sequences)
             {
-                if (seq.Count % dim != 0)
-                {
-                    throw new System.ArgumentException("the number of data in sequences does not match the input dimension");
-                }
-                var samples = new DoubleVector(seq);
-                inputSeqVector.Add(samples);
+                inputSeqVector.Add(new DoubleVector(seq));
             }
-            return Value.CreateDenseDouble(shape, inputSeqVector, computeDevice);
+            return Value.CreateDenseDouble(sampleShape, inputSeqVector, seqFlags, device, readOnly);
         }
         else
         {
@@ -1011,62 +1092,65 @@
         }
     }
 
-    // Create Value object from OneHotVector input: batch, sequence or batch of sequences
-    public static Value CreateBatch<T>(uint vacabSize, System.Collections.Generic.List<uint> batch, DeviceDescriptor computeDevice)
+    public static Value Create<T>(NDShape sampleShape,
+                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences,
+                                  DeviceDescriptor device,
+                                  bool readOnly = false)
     {
-        throw new System.ArgumentException("Not implemented yet.");
+        return Create<T>(sampleShape, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
-    public static Value CreateSequence<T>(uint vacabSize,
-                                          System.Collections.Generic.List<uint> sequence,
-                                          bool seqStartFalg,
-                                          DeviceDescriptor computeDevice)
+    public static Value Create<T>(uint dimension,
+                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
+                                  System.Collections.Generic.List<bool> sequenceStartFlags,
+                                  DeviceDescriptor device,
+                                  bool readOnly = false)
     {
-        throw new System.ArgumentException("Not implemented yet.");
+        var seqFlags = new BoolVector(sequenceStartFlags);
+        if (typeof(T).Equals(typeof(float)))
+        {
+            var inputSeqVector = new SizeTVectorVector();
+            foreach (var seq in sequences)
+            {
+                inputSeqVector.Add(new SizeTVector(seq));
+            }
+            return Value.CreateOneHotFloat(dimension, inputSeqVector, seqFlags, device, readOnly);
+        }
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            var inputSeqVector = new SizeTVectorVector();
+            foreach (var seq in sequences)
+            {
+                inputSeqVector.Add(new SizeTVector(seq));
+            }
+            return Value.CreateOneHotDouble(dimension, inputSeqVector, seqFlags, device, readOnly);
+        }
+        else
+        {
+            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+        }
     }
 
-    public static Value CreateBatchOfSequences<T>(uint vacabSize, 
-                                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
-                                                  System.Collections.Generic.List<bool> seqStartFalg,
-                                                  DeviceDescriptor computeDevice)
+    public static Value Create<T>(uint dimension,
+                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
+                                  DeviceDescriptor device,
+                                  bool readOnly = false)
     {
-        throw new System.NotImplementedException("Not implemented");
-    }
-
-    // Create Value object from sparse input: batch, sequence or batch of sequences.
-    public static Value CreateBatch<T>(NDShape shape, 
-                                       System.Collections.Generic.List<T> data,
-                                       System.Collections.Generic.List<uint> indexes,
-                                       System.Collections.Generic.List<uint> nnzCounts,
-                                       DeviceDescriptor computeDevice)
-    {
-        throw new System.ArgumentException("Not implemented yet.");
-    }
-
-    public static Value CreateSequence<T>(NDShape shape, 
-                                          System.Collections.Generic.List<T> data,
-                                          System.Collections.Generic.List<uint> indexes,
-                                          System.Collections.Generic.List<uint> nnzCounts,
-                                          bool SequenceStartFlag,
-                                          DeviceDescriptor computeDevice)
-    {
-        throw new System.ArgumentException("Not implemented yet.");
-    }
-
-    // Create Value based on sparse input
-    // Todo: could this be a extension to Value class??
-    // Todo: use Variable instead of varName. VarName as extension method
-    public static Value CreateBatchOfSequences<T>(NDShape shape,
-                                                 System.Collections.Generic.List<System.Collections.Generic.List<T>> data,
-                                                 System.Collections.Generic.List<System.Collections.Generic.List<uint>> indexes,
-                                                 System.Collections.Generic.List<System.Collections.Generic.List<uint>> nnzCounts,
-                                                 System.Collections.Generic.List<bool> SequenceStartFlag,
-                                                 DeviceDescriptor computeDevice)
-    {
-        throw new System.NotImplementedException("Not implemented");
+        return Create<T>(dimension, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 %}
 
+%extend CNTK::Value {
+    void CNTK::Value::CopyVariableValueToFloat(const CNTK::Variable& sampleVariable, std::vector<std::vector<float>>& sequences)
+    {
+        return self->CopyVariableValueTo<float>(sampleVariable, sequences);
+    }
+
+    void CNTK::Value::CopyVariableValueToDouble(const CNTK::Variable& sampleVariable, std::vector<std::vector<double>>& sequences)
+    {
+        return self->CopyVariableValueTo<double>(sampleVariable, sequences);
+    }
+}
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
