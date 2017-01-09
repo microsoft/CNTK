@@ -60,7 +60,7 @@ def load(dataSrc, labelsSrc, cimg):
     return np.hstack((data, labels))
 
 def savetxt(filename, ndarray):
-    with open(filename, 'w') as f:
+    with open(filename, 'w', newline='') as f:
         labels = list(map(' '.join, np.eye(10, dtype=np.uint).astype(str)))
         for row in ndarray:
             row_str = row.astype(str)
