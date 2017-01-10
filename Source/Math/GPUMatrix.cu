@@ -4480,7 +4480,6 @@ void GPUMatrix<ElemType>::TreePrediction(const GPUMatrix<ElemType>& a, GPUMatrix
     //    fprintf(stderr, "tree score %d %f \n", i, treepreds[i]);
     //}
 
-
     //version 3
     /*size_t treeBlockSize = 512;
     size_t SMSize = sizeof(double)*treeBlockSize;

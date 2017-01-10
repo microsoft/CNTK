@@ -4865,7 +4865,7 @@ __global__ void _treeForwardProp(ElemType* a, ElemType* treepreds, ElemType* fuz
     {
         long iPath = ileaf;
         if (lchild[iPath] != -1 || rchild[iPath] != -1) continue;
-        ElemType tmp = fuzzyB[iPath];
+        ElemType tmp = fuzzyU[iPath];    // here we put leaf node in fuzzyU
         while (parent[iPath] != -1)
         {
             bool isleft = isleftchild[iPath] == 1;
@@ -4909,7 +4909,7 @@ __global__ void _treeBackPropFuzzyU(ElemType* a, ElemType* b, ElemType* outgrad,
     {
         long iPath = ileaf;
         if (lchild[iPath] != -1 || rchild[iPath] != -1) continue;
-        ElemType tmp = fuzzyB[iPath];
+        ElemType tmp = fuzzyU[iPath];
         while (parent[iPath] != -1)
         {
             bool isleft = isleftchild[iPath] == 1;
@@ -4920,6 +4920,7 @@ __global__ void _treeBackPropFuzzyU(ElemType* a, ElemType* b, ElemType* outgrad,
 
         // compute the gradients
         iPath = ileaf;
+        atomicAdd(&b[iPath], tmp / fuzzyU[iPath] * outgrad[iSample]);
         while (parent[iPath] != -1)
         {
             bool isleft = isleftchild[iPath] == 1;
@@ -4960,7 +4961,7 @@ __global__ void _treeBackPropFuzzyB(ElemType* a, ElemType* b, ElemType* outgrad,
     {
         long iPath = ileaf;
         if (lchild[iPath] != -1 || rchild[iPath] != -1) continue;
-        ElemType tmp = fuzzyB[iPath];
+        ElemType tmp = fuzzyU[iPath];
         while (parent[iPath] != -1)
         {
             bool isleft = isleftchild[iPath] == 1;
@@ -4971,7 +4972,7 @@ __global__ void _treeBackPropFuzzyB(ElemType* a, ElemType* b, ElemType* outgrad,
 
         // compute the gradients
         iPath = ileaf;
-        atomicAdd(&b[iPath], tmp / fuzzyB[iPath] * outgrad[iSample]);
+        //atomicAdd(&b[iPath], tmp / fuzzyB[iPath] * outgrad[iSample]);
         while (parent[iPath] != -1)
         {
             bool isleft = isleftchild[iPath] == 1;
@@ -5004,7 +5005,7 @@ __global__ void _treeBackPropEMB(ElemType* a, ElemType* b, ElemType* outgrad, El
     {
         long iPath = ileaf;
         if (lchild[iPath] != -1 || rchild[iPath] != -1) continue;
-        ElemType tmp = fuzzyB[iPath];
+        ElemType tmp = fuzzyU[iPath];
         while (parent[iPath] != -1)
         {
             bool isleft = isleftchild[iPath] == 1;
