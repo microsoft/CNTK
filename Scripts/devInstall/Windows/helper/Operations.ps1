@@ -1,10 +1,11 @@
 ﻿function OpAnaconda3411(
     [parameter(Mandatory=$true)][string] $cache,
-    [parameter(Mandatory=$true)][string] $targetFolder)
+    [parameter(Mandatory=$true)][string] $AnacondaBasePath)
 {
+    $targetFolder = Split-Path $AnacondaBasePath -Parent
+    $prodSubDir = Split-Path $AnacondaBasePath -Leaf
     $prodName = "Anaconda3-4.1.1"
     $prodFile = "Anaconda3-4.1.1-Windows-x86_64.exe"
-    $prodSubDir = "Anaconda3-4.1.1-Windows-x86_64" 
     $targetPath = join-path $targetFolder $prodSubDir
     $downloadSource = "https://repo.continuum.io/archive/Anaconda3-4.1.1-Windows-x86_64.exe"
     $downloadSize = 370055720
@@ -17,13 +18,13 @@
 }
 
 function OpAnacondaEnv34(
-    [parameter(Mandatory=$true)][string] $targetFolder,
+    [parameter(Mandatory=$true)][string] $AnacondaBasePath,
     [parameter(Mandatory=$true)][string] $repoDir,
     [parameter(Mandatory=$true)][string] $reponame)
 {
     $prodName = "Python 3.4 Environment"
-
-    $prodSubDir = "Anaconda3-4.1.1-Windows-x86_64" 
+    $targetFolder = Split-Path $AnacondaBasePath -Parent
+    $prodSubDir = Split-Path $AnacondaBasePath -Leaf
     $targetPath = join-path $targetFolder $prodSubDir
     $envName = "cntkdev-py34"
     $envDir = "envs\$envName"
@@ -128,7 +129,7 @@ function OpMSMPI70SDK(
     $downloadSource = "https://download.microsoft.com/download/D/7/B/D7BBA00F-71B7-436B-80BC-4D22F2EE9862/$remoteFilename";
     $downloadSize = 2285568  
 
-    @( @{Name = "MSMPI SDK70 Installation"; ShortName = "CNTK"; VerifyInfo = "Checking for installed MSMPI 70 SDK"; ActionInfo = "Install MSMPI 70 SDK";
+    @( @{Name = "MSMPI SDK70 Installation"; ShortName = "CNTK"; VerifyInfo = "Checking for installed MSMPI 70 SDK"; ActionInfo = "Installing MSMPI 70 SDK";
          Verification = @( @{Function = "VerifyWinProductVersion"; Match = "^Microsoft MPI SDK \(\d+\."; Version = "7.0.12437.6"; MatchExact = $false } );
          #Verification = @( @{Function = "VerifyWinProductExists"; Match = "^Microsoft MPI SDK \(\d+\."; Compare = "^Microsoft MPI SDK \(7\.0\.12437\.6\)"; MatchExact = $false } );
          Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$localFilename"; ExpectedSize = $downloadSize } );

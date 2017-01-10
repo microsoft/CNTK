@@ -18,21 +18,15 @@
  .PARAMETER localCache
  This optional parameter can be used to specify the directory downloaded components will be stored in
 
- .PARAMETER ServerLocation
- This is an optional parameter. The script can install pre-compiled components, this parameter 
- specifies the location on a server where this componentents are downloaded from.
- This is useful for a team environment to share the components which need to get compiled (Protobuf, Zlib, libzip) 
- 
- .PARAMETER CloneDirectory
- By default the installer should be executed out of the <CntkCloneRoot>\Scripts\devInstall\Windows directory. Out of this 
- location the installer computes the root directory of the CNTK clone. In the case the installer is in a different location,
- the root directory of the CNTK clone can be specified using this parameter
- 
-.EXAMPLE
+ .PARAMETER AnacondaBasePath
+ This is an optional parameter and can be used to specify an already installed Anaconda3 installation.
+ By default a version of Anaconda3 will be installed into [C:\local\Anaconda3-4.1.1-Windows-x86_64]
+
+ .EXAMPLE
  installer.ps1
  
  Run the installer and see what operations would be performed
-.EXAMPLE
+ .EXAMPLE
  installer.ps1 -Execute
  
  Run the installer and install the development tools
@@ -41,10 +35,12 @@
  
  Run the installer, but don't install any GPU specific tools
 .EXAMPLE
- installer.ps1 -Execute -NoGpu -CloneDirectory c:\repos\CNTKAlternate
+ installer.ps1 -Execute -NoGpu 
  
- Run the installer, but don't install any GPU specific tools
 .EXAMPLE
+ .\install.ps1 -Execute -AnacondaBasePath d:\mytools\Anaconda34
+
+ This will install Anaconda in the [d:\mytools\Anaconda34] directory, or reuse this Anaconda installation if the directory exists.
 
 #>
 
@@ -54,8 +50,7 @@ Param(
     [parameter(Mandatory=$false)] [switch] $NoGpu,
     [parameter(Mandatory=$false)] [string] $localCache = "c:\installCacheCntk",
     [parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
-    [parameter(Mandatory=$false)] [string] $ServerLocation,
-    [parameter(Mandatory=$false)] [string] $CloneDirectory)
+    [parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64")
     
 $roboCopyCmd = "robocopy.exe"
 $localDir = $InstallLocation
@@ -139,8 +134,8 @@ Function main
         $operation += OpZlibVS15 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
         $operation += OpZlibVS15Prebuild -cache $localCache -targetFolder $localDir
         $operation += OpOpenCV31 -cache $localCache -targetFolder $localDir
-        $operation += OpAnaconda3411 -cache $localCache -targetFolder $localDir
-        $operation += OpAnacondaEnv34 -targetFolder $localDir -repoDir $repositoryRootDir -repoName $reponame
+        $operation += OpAnaconda3411 -cache $localCache -AnacondaBasePath $AnacondaBasePath
+        $operation += OpAnacondaEnv34 -AnacondaBasePath $AnacondaBasePath -repoDir $repositoryRootDir -repoName $reponame
 
         $operationList = @()
         $operationList += (VerifyOperations $operation)
