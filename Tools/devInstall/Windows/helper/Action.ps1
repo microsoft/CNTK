@@ -695,7 +695,7 @@ function GetBatchBuildProtoBuf(
     [string] $targetDir,
     [string] $repoDirectory)
 {
-    $batchFile = join-path $repoDirectory "Scripts\devInstall\Windows\buildProtoVS15.bat"
+    $batchFile = join-path $repoDirectory "tools\devInstall\Windows\buildProtoVS15.bat"
 @"
 call $batchFile $sourceDir $targetDir
 "@
@@ -707,7 +707,7 @@ function GetBatchBuildZlibBuf(
     [string] $targetDir,
     [string] $repoDirectory)
 {
-    $batchFile = join-path $repoDirectory "Scripts\devInstall\Windows\buildZlibVS15.bat"
+    $batchFile = join-path $repoDirectory "tools\devInstall\Windows\buildZlibVS15.bat"
 
 @"
 call $batchFile $libzipSourceDir $zlibSourceDir $targetDir

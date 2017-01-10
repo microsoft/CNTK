@@ -8,12 +8,6 @@ CNTK on a users system. They are NOT intended to run from this location in the r
 * `install/windows` - A script for installing a Windows CNTK *binary* drop, cf. [here](https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script).
 * `install/linux` - A script for installing a Linux CNTK *binary* drop, cf. [here](https://github.com/Microsoft/CNTK/wiki/Setup-Linux-Binary-Script).
 
-## CNTK Development Environment Installer
-
-The directory `devInstall` contains a Windows scripts which can be used to create an environment for building CNTK from source. The script is intended to run from its location in the repository.
-
-* `devInstall/Windows` - Create a Visual Studio based development environment on Windows
-
 ## CNTK Text format Converters
 
 Two Python Scripts for converting Data to CNTK Text format for using as an input for CNTK Text Format 

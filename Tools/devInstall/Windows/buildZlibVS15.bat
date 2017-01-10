@@ -44,7 +44,7 @@ if errorlevel 1 (
   goto FIN
 )
 
-if not defined %VS140COMNTOOLS% ( 
+if not defined VS140COMNTOOLS ( 
   @echo Environment variable VS140COMNTOOLS not defined.
   @echo Make sure Visual Studion 2015 Update 3 is installed.
   goto FIN
