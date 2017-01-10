@@ -1,9 +1,10 @@
 @REM Copyright (c) Microsoft. All rights reserved.
 @REM Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 @REM
-@REM batch script to build image compression libraries for CNTK
+@REM batch script to build the compression library used by the CNTK image reader
 
 @echo off
+
 if /I "%CMDCMDLINE%" neq ""%COMSPEC%" " (
     @echo.
     @echo Please execute this script from inside a regular Windows command prompt.
@@ -11,21 +12,23 @@ if /I "%CMDCMDLINE%" neq ""%COMSPEC%" " (
     exit /b 0
 )
 
-if "%1"=="" ( goto HELP )
-if "%1"=="-?" ( goto HELP )
-if /I "%1"=="-h" ( goto HELP )
-if /I "%1"=="-help" ( goto HELP )
-if "%2"=="" ( goto HELP )
-if "%3"=="" ( goto HELP )
-if not "%4"=="" ( goto HELP )
+setlocal
 
-SET LIBZIPSOURCEDIR=%~f1
+if "%~1"=="" goto HELP
+if "%~1"=="-?" goto HELP
+if /I "%~1"=="-h" goto HELP
+if /I "%~1"=="-help" goto HELP
+if "%~2"=="" goto HELP
+if "%~3"=="" goto HELP
+if not "%~4"=="" goto HELP
+
+set LIBZIPSOURCEDIR=%~f1
 set ZLIBSOURCEDIR=%~f2
-SET TARGETDIR=%~f3
+set TARGETDIR=%~f3
 
-IF "%LIBZIPSOURCEDIR:~-1%"=="\" SET LIBZIPSOURCEDIR=%LIBZIPSOURCEDIR:~,-1%
-IF "%ZLIBSOURCEDIR:~-1%"=="\" SET ZLIBSOURCEDIR=%ZLIBSOURCEDIR:~,-1%
-IF "%TARGETDIR:~-1%"=="\" SET TARGETDIR=%TARGETDIR:~,-1%
+if "%LIBZIPSOURCEDIR:~-1%"=="\" set LIBZIPSOURCEDIR=%LIBZIPSOURCEDIR:~,-1%
+if "%ZLIBSOURCEDIR:~-1%"=="\" set ZLIBSOURCEDIR=%ZLIBSOURCEDIR:~,-1%
+if "%TARGETDIR:~-1%"=="\" set TARGETDIR=%TARGETDIR:~,-1%
 
 if not exist "%LIBZIPSOURCEDIR%\CMakeLists.txt" (
   @echo Error: "%LIBZIPSOURCEDIR%" not a valid LibZib directory 
@@ -35,15 +38,19 @@ if not exist "%ZLIBSOURCEDIR%\CMakeLists.txt" (
   @echo Error: "%ZLIBSOURCEDIR%" not a valid ZLib directory 
   goto :FIN
 )
+where -q cmake.exe
+if errorlevel 1 (
+  @echo Error: CMAKE.EXE not found in PATH!
+  goto FIN
+)
 
-SET VCDIRECTORY=%VS140COMNTOOLS%
-if "%VCDIRECTORY%"=="" ( 
+if not defined %VS140COMNTOOLS% ( 
   @echo Environment variable VS140COMNTOOLS not defined.
   @echo Make sure Visual Studion 2015 Update 3 is installed.
   goto FIN
 )
-
-IF "%VCDIRECTORY:~-1%"=="\" SET VCDIRECTORY=%VCDIRECTORY:~,-1%
+set VCDIRECTORY=%VS140COMNTOOLS%
+if "%VCDIRECTORY:~-1%"=="\" set VCDIRECTORY=%VCDIRECTORY:~,-1%
 
 if not exist "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" (
   echo Error: "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" not found. 
@@ -51,11 +58,11 @@ if not exist "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" (
   goto FIN
 )
 
-@SET CMAKEGEN="Visual Studio 14 2015 Win64"
+@set CMAKEGEN="Visual Studio 14 2015 Win64"
 
 @echo.
-@echo This will build compression libraries for CNTK using Visual Studio 2015
-@echo -----------------------------------------------------------------------
+@echo This will build cthe compression library used by the CNTK image reader
+@echo ----------------------------------------------------------------------
 @echo The configured settings for the batch file:
 @echo    Visual Studio directory: %VCDIRECTORY%
 @echo    CMake Generator: %CMAKEGEN%
@@ -83,26 +90,22 @@ call "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" amd64
 @cmake -DBUILD_TYPE=Release -P cmake_install.cmake
 @popd
 
-setx ZLIB_PATH %TARGETDIR%
-set ZLIB_PATH=%TARGETDIR%
-
 goto FIN
 
 :HELP
 @echo.
-@echo Use this script to build the image compression libraries for CNTK.
+@echo Use this script to build the the compression library used by the CNTK image reader
 @echo The script requires three parameter
 @echo   Parameter 1: The complete path to the LibZip source directory 
-@echo                i.e: C:\local\src\libzip-1.1.3
+@echo                e.g C:\local\src\libzip-1.1.3
 @echo   Parameter 1: The complete path to the ZLib source directory 
-@echo                i.e: C:\local\src\zlib-1.2.8
+@echo                e.g C:\local\src\zlib-1.2.8
 @echo   Parameter 2: The target path for the created binaries
-@echo                i.e. C:\local\zlib-vs15
-@echo The sript will also set the environment variable ZLIB_PATH to 
-@echo the target directory
+@echo                e.g C:\local\zlib-vs15
 @echo.
 goto FIN
 
 :FIN
+endlocal
 
 REM vim:set expandtab shiftwidth=2 tabstop=2:

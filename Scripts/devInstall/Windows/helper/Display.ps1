@@ -20,7 +20,7 @@ function DisplayStartMessage
 {
 "
 
-This script will setup the CNTK v2 Development Environment on your machine.
+This script will setup the CNTK Development Environment on your machine.
 More help is given by calling get-help .\devInstall.ps1
 
 The script will analyse your machine and will determine which components are required. 
@@ -110,7 +110,7 @@ function DisplayStart()
 
 Function DisplayEnd() 
 {
-
+    # empty by design
 }
 
 function DisplayAfterVerify(

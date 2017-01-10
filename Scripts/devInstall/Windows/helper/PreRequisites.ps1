@@ -34,8 +34,7 @@ function PrereqInfo2013Up5(
 
     Write-Host "
 
-We require the installation of Visual Studio 2013 Update 5 to continue. 
-Please follow the information here [https://support.microsoft.com/en-us/kb/3021976].
+We require the installation of Visual Studio 2013 Update 5 to continue.
 "
 }
 
@@ -60,25 +59,7 @@ function PrereqInfoCuda8(
     FunctionIntro $table
     Write-Host "
 
-Installation of NVidia Cuda 8.0 is a pre-requisite before installation 
-can continue. Please check https://developer.nvidia.com/cuda-downloads] for more 
-details on Cuda download. Please also remember to set the environment variable 
-CUDA_PATH_V8_0 to the Cuda8 installation location.
-"
-return
-}
-
-function PrereqInfoCuDnn51(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
-{
-    FunctionIntro $table
-    Write-Host "
-
-Installation of NVidia CuDNN 4.1 for Cuda 8.0 is a pre-requisite before installation 
-can continue. Please check https://developer.nvidia.com/cudn] for more 
-details on Cuda download. Please also remember to set the environment variable 
-CUDNN_PATH to the CudDnn folder in your installation location.
+Installation of NVidia CUDA 8.0 is a pre-requisite before installation can continue.
 "
 return
 }

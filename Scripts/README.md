@@ -10,7 +10,7 @@ CNTK on a users system. They are NOT intended to run from this location in the r
 
 ## CNTK Development Environment Installer
 
-The directory `devInstall` contains scripts which are used to create setup an environment to build CNTK from source. They are intended to run from this location in the repository.
+The directory `devInstall` contains a Windows scripts which can be used to create an environment for building CNTK from source. The script is intended to run from its location in the repository.
 
 * `devInstall/Windows` - Create a Visual Studio based development environment on Windows
 

@@ -23,31 +23,25 @@
  By default a version of Anaconda3 will be installed into [C:\local\Anaconda3-4.1.1-Windows-x86_64]
 
  .EXAMPLE
- installer.ps1
+ .\devInstall.ps1
  
  Run the installer and see what operations would be performed
  .EXAMPLE
- installer.ps1 -Execute
+ .\devInstall.ps1 -Execute
  
  Run the installer and install the development tools
-.EXAMPLE
- installer.ps1 -Execute -NoGpu
  
- Run the installer, but don't install any GPU specific tools
-.EXAMPLE
- installer.ps1 -Execute -NoGpu 
- 
-.EXAMPLE
- .\install.ps1 -Execute -AnacondaBasePath d:\mytools\Anaconda34
+ .EXAMPLE
+ .\devInstall.ps1 -Execute -AnacondaBasePath d:\mytools\Anaconda34
 
- This will install Anaconda in the [d:\mytools\Anaconda34] directory, or reuse this Anaconda installation if the directory exists.
+ If the directory [d:\mytools\Anaconda34] exists, the installer will assume it contains a complete Anaconda installation. 
+ If the directory doesn't exist, Anaconda will be installed into this directory.
 
 #>
 
 [CmdletBinding()]
 Param(
     [parameter(Mandatory=$false)] [switch] $Execute,
-    [parameter(Mandatory=$false)] [switch] $NoGpu,
     [parameter(Mandatory=$false)] [string] $localCache = "c:\installCacheCntk",
     [parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
     [parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64")
@@ -56,38 +50,25 @@ $roboCopyCmd = "robocopy.exe"
 $localDir = $InstallLocation
 
 
-# Get the current script's directory and Dot-source the a file with common Powershell script function residing in the the current script's directory
+# Get the current script's directory
 $MyDir = Split-Path $MyInvocation.MyCommand.Definition
 
-if ($CloneDirectory) {
-    $reponame = Split-Path $CloneDirectory -Leaf
-    $repositoryRootDir = Split-Path $CloneDirectory
+$CloneDirectory = Split-Path $mydir
+$CloneDirectory = Split-Path $CloneDirectory
+$CloneDirectory = Split-Path $CloneDirectory
 
-    $solutionfile = join-path $clontDirectory "CNTK.SLN"
+$reponame = Split-Path $CloneDirectory -Leaf
+$repositoryRootDir = Split-Path $CloneDirectory
 
-    if (-not (Test-Path -Path $solutionFile -PathType Leaf)) {
-        Write-Warning "[$CloneDirectory] was specified as the location of the CNTK sourcecode directory."
-        Write-Warning "The specified directory is not a valid clone of the CNTK Github project."
-        throw "Terminating install operation"
-    }
+$solutionfile = Join-Path $CloneDirectory "CNTK.SLN"
+
+if (-not (Test-Path -Path $solutionFile -PathType Leaf)) {
+    Write-Warning "The install script was started out of the [$mydir] location. Based on this"
+    Write-Warning "[$CloneDirectory] should be the location of the CNTK sourcecode directory."
+    Write-Warning "The specified directory is not a valid clone of the CNTK Github project."
+    throw "Terminating install operation"
 }
-else {
-    $CloneDirectory = Split-Path $mydir
-    $CloneDirectory = Split-Path $CloneDirectory
-    $CloneDirectory = Split-Path $CloneDirectory
 
-    $reponame = Split-Path $CloneDirectory -Leaf
-    $repositoryRootDir = Split-Path $CloneDirectory
-
-    $solutionfile = join-path $CloneDirectory "CNTK.SLN"
-
-    if (-not (Test-Path -Path $solutionFile -PathType Leaf)) {
-        Write-Warning "The install script was started out of the [$mydir] location. Based on this"
-        Write-Warning "[$CloneDirectory] should be the location of the CNTK sourcecode directory."
-        Write-Warning "The specified directory is not a valid clone of the CNTK Github project."
-        throw "Terminating install operation"
-    }
-}
 
 . "$MyDir\helper\Display"
 . "$MyDir\helper\Common"
@@ -116,12 +97,9 @@ Function main
         $operation += OpScanProgram
         $operation += OpCheckVS15Update3
 
-        if (-not $NoGpu) {
-            $operation += OpCheckCuda8
-
-            $operation += OpNVidiaCudnn5180 -cache $localCache -targetFolder $localDir
-            $operation += OpNvidiaCub141 -cache $localCache -targetFolder $localDir
-        }
+        $operation += OpCheckCuda8
+        $operation += OpNVidiaCudnn5180 -cache $localCache -targetFolder $localDir
+        $operation += OpNvidiaCub141 -cache $localCache -targetFolder $localDir
 
         $operation += OpCMake362 -cache $localCache
         $operation += OpMSMPI70 -cache $localCache

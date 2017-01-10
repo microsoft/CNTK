@@ -24,8 +24,6 @@ function DownloadItem(
         
     Write-Verbose "Calling Operation: [$func]"
     $result = Invoke-Expression $expr 
-
-    return
 }
 
 function DownloadForPlatform(
@@ -63,7 +61,6 @@ function Download(
     else {
         DownloadFileWebClient -SourceFile $source -OutFile $destination
     }
-    return
 }
 
 function LocalCopyFile(
@@ -90,7 +87,6 @@ function LocalCopyFile(
     Write-Host Copying [$source] to local disk ...
     new-item $destination -type File -Force -ErrorAction SilentlyContinue
     copy-Item $source $destination -Force -ErrorAction SilentlyContinue
-    return
 }
 
 function RobocopyFromServer(
@@ -195,7 +191,6 @@ function DownloadFileWebClient(
     [int] $timeout = 600,
     [int] $maxtry = 5)
 {
-    # the scriptblock to invoke a web-request
     $sb ={
             param([string]$uri,[string]$outfile)
             (New-Object System.Net.WebClient).DownloadFile($uri,$outfile) 
@@ -241,43 +236,43 @@ function DownloadFileWebClient(
 
         switch ($jState) {
             "COMPLETED" { 
-                            if ($jError.Count -eq 0) {
-                                Write-Verbose "End binary download!"
+                if ($jError.Count -eq 0) {
+                    Write-Verbose "End binary download!"
 
-                                Remove-Job $job -force -ErrorAction SilentlyContinue
+                    Remove-Job $job -force -ErrorAction SilentlyContinue
 
-                                # we now have the temporary file, we need to rename it
-                                new-item $outFile -type File -Force -ErrorAction SilentlyContinue
-                                move-Item $TempFile $OutFile -Force -ErrorAction SilentlyContinue
+                    # we now have the temporary file, we need to rename it
+                    new-item $outFile -type File -Force -ErrorAction SilentlyContinue
+                    move-Item $TempFile $OutFile -Force -ErrorAction SilentlyContinue
 
-                                if (Test-Path -Path $OutFile) {
-                                    # we have a file with our expected filename, we are in good shape and ready to report success
-                                    # in case the above rename failed, but the target file exist, we clean up a possible dangling TempFile
-                                    # no need to check if this file is really there. we don't care if it succeeds or not
-                                    Remove-Item -path $TempFile -ErrorAction SilentlyContinue
+                    if (Test-Path -Path $OutFile) {
+                        # we have a file with our expected filename, we are in good shape and ready to report success
+                        # in case the above rename failed, but the target file exist, we clean up a possible dangling TempFile
+                        # no need to check if this file is really there. we don't care if it succeeds or not
+                        Remove-Item -path $TempFile -ErrorAction SilentlyContinue
 
-                                    return
-                                }
+                        return
+                    }
 
-                                # we got here because we finished the job, but some operation failed (i.e. the rename above. we can just try again)
-                                Write-Verbose "Job completed but rename operation failed, retrying..."
-                                continue
-                            }
+                    # we got here because we finished the job, but some operation failed (i.e. the rename above. we can just try again)
+                    Write-Verbose "Job completed but rename operation failed, retrying..."
+                    continue
+                }
 
-                            Write-Host "Job Completed with Error: [$jStart] to [$current]"
-                            Write-Host $jError
-                        }
+                Write-Host "Job Completed with Error: [$jStart] to [$current]"
+                Write-Host $jError
+            }
             "RUNNING"   {
-                            Write-Host "Job Timeout: [$jStart] to [$current]"
-                        }
+                Write-Host "Job Timeout: [$jStart] to [$current]"
+            }
             "FAILED"    {
-                            $current = Get-Date
-                            Write-Host "Job Failed: [$jStart] to [$current]"
-                            Write-Host "Error: $jError"
-                        }
+                $current = Get-Date
+                Write-Host "Job Failed: [$jStart] to [$current]"
+                Write-Host "Error: $jError"
+            }
             default     {
-                            Write-Host "Job State: [$Error] - [$jStart] to [$current]"
-                        }
+                Write-Host "Job State: [$Error] - [$jStart] to [$current]"
+            }
         }
         Remove-Job $job -force -ErrorAction SilentlyContinue
     }

@@ -10,40 +10,38 @@ if /I "%CMDCMDLINE%" neq ""%COMSPEC%" " (
     @echo.
     exit /b 0
 )
+setlocal
+if "%~1"=="" goto HELP
+if "%~1"=="-?" goto HELP
+if /I "%~1"=="-h" goto HELP
+if /I "%~1"=="-help" goto HELP
+if "%~2"=="" goto HELP
+if not "%~3"=="" goto HELP
 
-if "%1"=="" ( goto HELP )
-if "%1"=="-?" ( goto HELP )
-if /I "%1"=="-h" ( goto HELP )
-if /I "%1"=="-help" ( goto HELP )
-if "%2"=="" ( goto HELP )
-if not "%3"=="" ( goto HELP )
+set SOURCEDIR=%~f1
+set TARGETDIR=%~f2
 
-SET SOURCEDIR=%~f1
-SET TARGETDIR=%~f2
-
-IF "%SOURCEDIR:~-1%"=="\" SET SOURCEDIR=%SOURCEDIR:~,-1%
-IF "%TARGETDIR:~-1%"=="\" SET TARGETDIR=%TARGETDIR:~,-1%
+if "%SOURCEDIR:~-1%"=="\" set SOURCEDIR=%SOURCEDIR:~,-1%
+if "%TARGETDIR:~-1%"=="\" set TARGETDIR=%TARGETDIR:~,-1%
 
 if not exist "%SOURCEDIR%\build" (
   @echo Error: "%SOURCEDIR%" is not a valid ProtoBuf source directory
   goto FIN
 )
 
-set cmakePath=
-for %%f in ("cmake.exe") do set cmakePath=%%~$PATH:f
-if "%cmakePath%"=="" (
+where -q cmake.exe
+if errorlevel 1 (
   @echo Error: CMAKE.EXE not found in PATH!
   goto FIN
 )
 
-SET VCDIRECTORY=%VS140COMNTOOLS%
-if "%VCDIRECTORY%"=="" ( 
+if not defined %VS140COMNTOOLS% ( 
   @echo Environment variable VS140COMNTOOLS not defined.
   @echo Make sure Visual Studion 2015 Update 3 is installed.
   goto FIN
 )
-
-IF "%VCDIRECTORY:~-1%"=="\" SET VCDIRECTORY=%VCDIRECTORY:~,-1%
+set VCDIRECTORY=%VS140COMNTOOLS%
+if "%VCDIRECTORY:~-1%"=="\" set VCDIRECTORY=%VCDIRECTORY:~,-1%
 
 if not exist "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" (
   echo Error: "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" not found. 
@@ -52,8 +50,8 @@ if not exist "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" (
 )
 
 @echo.
-@echo This will build Protobuf-3.1.0 using Visual Studio 2015
-@echo -------------------------------------------------------
+@echo This will build Protobuf for CNTK using Visual Studio 2015
+@echo ----------------------------------------------------------
 @echo The configured settings for the batch file:
 @echo    Visual Studio directory: %VCDIRECTORY%
 @echo    Protobuf source directory: %SOURCEDIR%
@@ -82,27 +80,20 @@ cd ..
 
 popd
 
-setx PROTOBUF_PATH %TARGETDIR%
-set PROTOBUF_PATH=%TARGETDIR%
-
 goto FIN
-
-
 
 :HELP
 @echo.
 @echo Use this script to build the Protobuf library for CNTK.
 @echo The script requires two parameter
 @echo   Parameter 1: The complete path to the ProtoBuf source directory 
-@echo                i.e: C:\local\src\protobuf-3.1.0
+@echo                e.g. C:\local\src\protobuf-3.1.0
 @echo   Parameter 2: The target path for the created binaries
-@echo                i.e. C:\local\protobuf-3.1.0-vs15
-@echo The sript will also set the environment variable PROTOBUF_PATH to 
-@echo the target directory
+@echo                e.g. C:\local\protobuf-3.1.0-vs15
 @echo.
 goto FIN
 
 :FIN
-
+endlocal
 
 REM vim:set expandtab shiftwidth=2 tabstop=2:
