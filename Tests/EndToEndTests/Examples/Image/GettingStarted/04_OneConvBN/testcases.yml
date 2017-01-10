@@ -1,4 +1,4 @@
-dataDir: ../../../../../../Examples/Image/DataSets
+dataDir: ../../../../../../Examples/Image/DataSets/MNIST
 
 tags:
     # In BVT, run Release GPU

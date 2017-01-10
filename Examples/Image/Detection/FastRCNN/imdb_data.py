@@ -152,6 +152,12 @@ class imdb_data(fastRCNN.imdb):
         if not os.path.exists(bboxesPaths) or not os.path.exists(labelsPaths):
             return None
         bboxes = np.loadtxt(bboxesPaths, np.float32)
+
+        # in case there's only one annotation and numpy read the array as single array,
+        # we need to make sure the input is treated as a multi dimensional array instead of a list/ 1D array
+        if len(bboxes.shape) == 1:
+            bboxes = np.array([bboxes])
+
         labels = readFile(labelsPaths)
 
         #remove boxes marked as 'undecided' or 'exclude'

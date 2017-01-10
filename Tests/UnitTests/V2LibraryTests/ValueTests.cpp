@@ -152,7 +152,7 @@ void ValueCreationNoNDMaskTest(const DeviceDescriptor device, bool readOnly)
     testValue = Value::Create(sampleShape, data, device, readOnly);
     CheckValue(testValue, sampleShape, data, seqLenList);
 
-    // Single sequnce, multiple samples
+    // Single sequence, multiple samples
     seqLenList = {2};
     data = GenerateSequences<ElementType>(seqLenList, sampleShape);
     testValue = Value::Create(sampleShape, data, device, readOnly);
@@ -170,13 +170,13 @@ void ValueCreationNoNDMaskTest(const DeviceDescriptor device, bool readOnly)
     for (int i = 0; i < testRun; i++)
     {
         size_t numberOfSequences = distribution(generator);
-        std::vector<size_t> seqLenList(numberOfSequences, seqLen);
+        std::vector<size_t> seqLenListBatch(numberOfSequences, seqLen);
 
-        data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+        data = GenerateSequences<ElementType>(seqLenListBatch, sampleShape);
         // Create the Value object based on the given data and shape.
         testValue = Value::Create(sampleShape, data, device, readOnly);
         // Check whether the created value matches expected shape and data.
-        CheckValue(testValue, sampleShape, data, seqLenList);
+        CheckValue(testValue, sampleShape, data, seqLenListBatch);
     }
 }
 
@@ -236,11 +236,11 @@ void ValueCreationOneHotNoNDMaskTest(const DeviceDescriptor device, bool readOnl
     for (int i = 0; i < testRun; i++)
     {
         size_t numberOfSequences = distribution(generator);
-        std::vector<size_t> seqLenList(numberOfSequences, seqLen);
+        std::vector<size_t> seqLenListBatch(numberOfSequences, seqLen);
 
-        data = GenerateOneHotSequences(seqLenList, vocabSize);
+        data = GenerateOneHotSequences(seqLenListBatch, vocabSize);
         testValue = Value::Create<ElementType>(vocabSize, data, device, readOnly);
-        CheckValue<ElementType>(testValue, vocabSize, data, seqLenList);
+        CheckValue<ElementType>(testValue, vocabSize, data, seqLenListBatch);
     }
 }
 

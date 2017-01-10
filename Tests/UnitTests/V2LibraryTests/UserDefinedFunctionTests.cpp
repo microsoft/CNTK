@@ -339,9 +339,9 @@ void TestDuplicateVariablesInInputs(size_t dim, const DeviceDescriptor& device)
     // Verify backward prop results
     if (device.Type() != DeviceKind::CPU)
     {
-        NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(DataType::Float, inputShape, DeviceDescriptor::CPUDevice());
-        cpuArrayView->CopyFrom(*inputGradientValue->Data());
-        const float* cpuArrayViewBuffer = cpuArrayView->DataBuffer<float>();
+        NDArrayViewPtr cpuArrayViewBack = MakeSharedObject<NDArrayView>(DataType::Float, inputShape, DeviceDescriptor::CPUDevice());
+        cpuArrayViewBack->CopyFrom(*inputGradientValue->Data());
+        const float* cpuArrayViewBuffer = cpuArrayViewBack->DataBuffer<float>();
         memcpy(inputGradientData.data(), cpuArrayViewBuffer, inputShape.TotalSize() * sizeof(float));
     }
 

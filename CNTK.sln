@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTK", "Source\CNTK\CNTK.vcxproj", "{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -134,8 +134,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ComputationNetworkLib", "So
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SGDLib", "Source\SGDLib\SGDLib.vcxproj", "{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}"
 	ProjectSection(ProjectDependencies) = postProject
-		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
 		{4B442D34-641A-4B37-9A4B-D18DBE28A979} = {4B442D34-641A-4B37-9A4B-D18DBE28A979}
+		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelTraining", "ParallelTraining", "{5E666C53-2D82-49C9-9127-3FDDC321C741}"
@@ -568,6 +568,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Speech", "Speech", "{FB7AF7B9-6BEA-459F-94D9-94D53916D2B6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReaderLib", "Source\Readers\ReaderLib\ReaderLib.vcxproj", "{F0A9637C-20DA-42F0-83D4-23B4704DE602}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4B442D34-641A-4B37-9A4B-D18DBE28A979} = {4B442D34-641A-4B37-9A4B-D18DBE28A979}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AN4", "AN4", "{AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8}"
 EndProject
