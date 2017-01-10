@@ -62,12 +62,19 @@ def nb(tmpdir_factory, request, device_id):
     import subprocess
     from cntk.ops.tests.ops_test_utils import cntk_device
     from cntk.cntk_py import DeviceKind_GPU
+    inPath = getattr(request.module, "notebook")
+    deviceIdsToRun = [-1, 0]
+    try:
+        deviceIdsToRun = getattr(request.module, "notebook_deviceIdsToRun")
+    except AttributeError:
+        pass
     # Pass along device_id type to child process
     if cntk_device(device_id).type() == DeviceKind_GPU:
         os.environ['TEST_DEVICE'] = 'gpu'
     else:
         os.environ['TEST_DEVICE'] = 'cpu'
-    inPath = getattr(request.module, "notebook")
+    if not device_id in deviceIdsToRun:
+        pytest.skip('test not configured to run on device ID {0}'.format(device_id))
     outPath = str(tmpdir_factory.mktemp('notebook').join('out.ipynb'))
     assert os.path.isfile(inPath)
     kernel_name_opt = "--ExecutePreprocessor.kernel_name=python%d" % (sys.version_info[0])
