@@ -259,7 +259,7 @@
                       const std::wstring& name = L"");
 
 
-%ignore CNTK::Unooling; 
+%ignore CNTK::Unpooling; 
 
 %ignore CNTK::BatchNormalization(const Variable& operand, 
                                  const Variable& scale, 
