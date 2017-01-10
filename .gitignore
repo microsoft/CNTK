@@ -194,6 +194,10 @@ Tests/EndToEndTests/UnitTests/MathTests/M.txt
 Tests/EndToEndTests/UnitTests/MathTests/MCPU.txt
 Tests/EndToEndTests/UnitTests/MathTests/MGPU.txt
 Tests/EndToEndTests/UnitTests/MathTests/MS.txt
+Tests/UnitTests/MathTests/M.txt
+Tests/UnitTests/MathTests/MCPU.txt
+Tests/UnitTests/MathTests/MGPU.txt
+Tests/UnitTests/MathTests/MS.txt
 
 Tests/Install/linux/BinaryDrops.tar.gz
 

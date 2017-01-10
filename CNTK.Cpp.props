@@ -23,13 +23,17 @@
     <NoOptBuild>false</NoOptBuild>
     <NoOptBuild Condition="$(Configuration.Contains('NoOpt'))">true</NoOptBuild>
 
-    <NvmlInclude>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
-    <NvmlLibPath>"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
-
     <CudaVersion/>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V8_0)') And '$(CudaVersion)' == ''">8.0</CudaVersion>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V7_5)') And '$(CudaVersion)' == ''">7.5</CudaVersion>
-    <CudaVersion Condition="Exists('$(CUDA_PATH_V7_0)') And '$(CudaVersion)' == ''">7.0</CudaVersion>
+
+    <NvmlInclude />
+    <NvmlInclude Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\include"</NvmlInclude>
+    <NvmlInclude Condition="'$(CudaVersion)' == '8.0'" />
+
+    <NvmlLibPath />
+    <NvmlLibPath Condition="'$(CudaVersion)' == '7.5'">"c:\Program Files\NVIDIA Corporation\GDK\gdk_win7_amd64_release\nvml\lib"</NvmlLibPath>
+    <NvmlLibPath Condition="'$(CudaVersion)' == '8.0'" />
 
     <HasOpenCv>false</HasOpenCv>
     <HasOpenCv Condition="Exists('$(OPENCV_PATH)') Or Exists('$(OPENCV_PATH_V31)')">true</HasOpenCv>
@@ -55,27 +59,27 @@
   </PropertyGroup>
 
   <PropertyGroup>
-	<MathLibrary>MKL</MathLibrary>
-	<CNTKCustomMKLVersion>2</CNTKCustomMKLVersion>
-	<CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
-	<MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>
-	<MathDefine>USE_MKL</MathDefine>
+    <MathLibrary>MKL</MathLibrary>
+    <CNTKCustomMKLVersion>3</CNTKCustomMKLVersion>
+    <CNTKCustomMKLPath>$(CNTK_MKL_PATH)\$(CNTKCustomMKLVersion)</CNTKCustomMKLPath>
+    <MathIncludePath>$(CNTKCustomMKLPath)\include</MathIncludePath>
+    <MathDefine>USE_MKL</MathDefine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' != '1'">
-	<MathLibraryName>CNTK custom MKL Parallel (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
-	<MathLibraryPath>$(CNTKCustomMKLPath)\x64\parallel</MathLibraryPath>
-	<MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
-	<MathDelayLoad>mkl_cntk_p.dll</MathDelayLoad>
-	<MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
-	<UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
+    <MathLibraryName>CNTK custom MKL Parallel (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
+    <MathLibraryPath>$(CNTKCustomMKLPath)\x64\parallel</MathLibraryPath>
+    <MathLinkLibrary>mkl_cntk_p.lib</MathLinkLibrary>
+    <MathDelayLoad>mkl_cntk_p.dll</MathDelayLoad>
+    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
+    <UnitTestDlls>$(OutDir)mkl_cntk_p.dll;$(OutDir)libiomp5md.dll;</UnitTestDlls>
   </PropertyGroup>
   <PropertyGroup Condition="'$(CNTK_MKL_SEQUENTIAL)' == '1'">
-	<MathLibraryName>CNTK custom MKL Sequential (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
-	<MathLibraryPath>$(CNTKCustomMKLPath)\x64\sequential</MathLibraryPath>
-	<MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
-	<MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
-	<MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
-	<UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>
+    <MathLibraryName>CNTK custom MKL Sequential (Version: $(CNTKCustomMKLVersion))</MathLibraryName>
+    <MathLibraryPath>$(CNTKCustomMKLPath)\x64\sequential</MathLibraryPath>
+    <MathLinkLibrary>mkl_cntk_s.lib</MathLinkLibrary>
+    <MathDelayLoad>mkl_cntk_s.dll</MathDelayLoad>
+    <MathPostBuildCopyPattern>$(MathLibraryPath)\*.dll</MathPostBuildCopyPattern>
+    <UnitTestDlls>$(OutDir)mkl_cntk_s.dll;</UnitTestDlls>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(UseZip)">
@@ -100,8 +104,8 @@
     <OpenCvWorld Condition="$(ReleaseBuild)">opencv_world$(OpenCvVersion)</OpenCvWorld>
     <OpenCvWorld Condition="$(DebugBuild)">opencv_world$(OpenCvVersion)d</OpenCvWorld>
     <OpenCvLib>$(OpenCvWorld).lib</OpenCvLib>
-    <OpenCvLibPath>$(OpenCvPath)\x64\vc12\lib</OpenCvLibPath>
-    <OpenCvBinPath>$(OpenCvPath)\x64\vc12\bin</OpenCvBinPath>
+    <OpenCvLibPath>$(OpenCvPath)\x64\vc14\lib</OpenCvLibPath>
+    <OpenCvBinPath>$(OpenCvPath)\x64\vc14\bin</OpenCvBinPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(HasProtobuf)">
@@ -123,12 +127,6 @@
     <CudaDlls>cublas64_75.dll;cusparse64_75.dll;curand64_75.dll;$(CudaRuntimeDll)</CudaDlls>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(CudaVersion)' == '7.0'">
-    <CudaPath>$(CUDA_PATH_V7_0)</CudaPath>
-    <CudaRuntimeDll>cudart64_70.dll</CudaRuntimeDll>
-    <CudaDlls>cublas64_70.dll;cusparse64_70.dll;curand64_70.dll;$(CudaRuntimeDll)</CudaDlls>
-  </PropertyGroup>
-
   <PropertyGroup>
     <CudaLibs>cudart.lib;cublas.lib;cusparse.lib;curand.lib</CudaLibs>
     <CudaInclude>$(CudaPath)\include</CudaInclude>
@@ -139,7 +137,7 @@
 
   <PropertyGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">
     <UseDebugLibraries>$(DebugBuild)</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>$(ReleaseBuild)</WholeProgramOptimization>
     <LinkIncremental>$(DebugBuild)</LinkIncremental>
