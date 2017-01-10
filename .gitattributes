@@ -21,6 +21,7 @@
 *.html text
 *.lyx text
 *.bib text
+*.json text
 .gitkeep text
 KaldiReaderReadme text
 Readme text

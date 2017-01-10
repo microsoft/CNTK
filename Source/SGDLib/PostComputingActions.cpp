@@ -75,6 +75,7 @@ void PostComputingActions<ElemType>::BatchNormalizationStatistics(IDataReader * 
     else
         dataReader->StartMinibatchLoop(mbSize, 0, inputMatrices.GetStreamDescriptions(), totalEpochSize);
 
+    bnNodes = m_net->SortByGlobalEvalOrder(bnNodes);
     for (auto& node : bnNodes)
     {
         let bnNode = static_pointer_cast<BatchNormalizationNode<ElemType>>(node);

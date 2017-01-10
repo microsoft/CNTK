@@ -20,6 +20,8 @@
 #   BUILDER         (user under which the build was done)
 #   BUILDMACHINE    (build machine)
 #   BUILDPATH       (build path)
+#   MPI_NAME        (mpi distribution)
+#   MPI_VERSION     (mpi version)
 
 usage ()
 {
@@ -142,15 +144,17 @@ if [ "$MATHLIB" = "mkl" -a "$MKL_THREADING" = "sequential" ]; then
 fi
 
 # MPI info
-which ompi_info > /dev/null &&
-{
-    MPI_NAME=openmpi
-    MPI_VERSION=`ompi_info --parsable | grep ident | cut -f 2 -d ":"`
-} ||
-{
-    MPI_NAME=mvapich2
-    MPI_VERSION=`mpiname -v`
-}
+MPI_NAME=Unknown
+MPI_VERSION=Unknown
+if hash ${MPI_PATH}/bin/mpirun 2>/dev/null; then
+    if [ -e ${MPI_PATH}/bin/ompi_info ]; then
+        MPI_NAME="Open MPI"
+        MPI_VERSION=`${MPI_PATH}/bin/ompi_info --parsable | grep ident | cut -f 2 -d ":"`
+    elif [ -e ${MPI_PATH}/bin/mpirun_rsh ]; then
+        MPI_NAME=`${MPI_PATH}/bin/mpiname`
+        MPI_VERSION=`${MPI_PATH}/bin/mpiname -v`
+    fi
+fi
 
 # Build machine info
 BUILDER=$USER

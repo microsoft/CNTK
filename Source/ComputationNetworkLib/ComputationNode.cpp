@@ -512,7 +512,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
                                                              const string& sequencePrologue, const string& sequenceEpilogue,
                                                              const string& elementSeparator, const string& sampleSeparator,
                                                              string valueFormatString,
-                                                             bool outputGradient) const
+                                                             bool outputGradient,
+                                                             bool onlyShowAbsSumForDense) const
 {
     // get minibatch matrix -> matData, matRows, matStride
     const Matrix<ElemType>& outputValues = outputGradient ? Gradient() : Value();
@@ -694,34 +695,54 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
         }
         else
         {
-            for (size_t j = 0; j < jend; j++) // loop over output rows     --BUGBUG: row index is 'i'!! Rename these!!
+            if (onlyShowAbsSumForDense)
             {
-                if (j > 0)
-                    fprintfOrDie(f, "%s", sampleSep.c_str());
-                if (j == jstop && jstop < jend - 1) // if jstop == jend-1 we may as well just print the value instead of '...'
+                // the concise version to make matrix comparision easier
+                double absSum = 0;
+                
+                #pragma omp parallel for reduction(+:absSum)
+                for (int i = 0; i < (int)iend; i++) // loop over output rows
                 {
-                    fprintfOrDie(f, "...+%d", (int)(jend - jstop)); // 'nuff said
-                    break;
-                }
-                // inject sample tensor index if we are printing row-wise and it's a tensor
-                if (!transpose && sampleLayout.size() > 1 && !isCategoryLabel) // each row is a different sample dimension
-                {
-                    for (size_t k = 0; k < sampleLayout.size(); k++)
-                        fprintfOrDie(f, "%c%d", k == 0 ? '[' : ',', (int)((j / sampleLayout.GetStrides()[k])) % sampleLayout[k]);
-                    fprintfOrDie(f, "]\t");
-                }
-                // print a row of values
-                for (size_t i = 0; i < iend; i++) // loop over elements
-                {
-                    if (i > 0)
-                        fprintfOrDie(f, "%s", elementSeparator.c_str());
-                    if (i == istop && istop < iend - 1)
+                    double absSumLocal = 0;
+                    for (size_t j = 0; j < jend; j++) // loop over elements
                     {
-                        fprintfOrDie(f, "...+%d", (int)(iend - istop));
+                        absSumLocal += abs(seqData[i * istride + j * jstride]);
+                    }
+                    absSum += absSumLocal;
+                }
+                fprintfOrDie(f, "absSum: %f", absSum);
+            }
+            else
+            {
+                for (size_t j = 0; j < jend; j++) // loop over output rows     --BUGBUG: row index is 'i'!! Rename these!!
+                {
+                    if (j > 0)
+                        fprintfOrDie(f, "%s", sampleSep.c_str());
+                    if (j == jstop && jstop < jend - 1) // if jstop == jend-1 we may as well just print the value instead of '...'
+                    {
+                        fprintfOrDie(f, "...+%d", (int)(jend - jstop)); // 'nuff said
                         break;
                     }
-                    double dval = seqData[i * istride + j * jstride];
-                    print(dval);
+                    // inject sample tensor index if we are printing row-wise and it's a tensor
+                    if (!transpose && sampleLayout.size() > 1 && !isCategoryLabel) // each row is a different sample dimension
+                    {
+                        for (size_t k = 0; k < sampleLayout.size(); k++)
+                            fprintfOrDie(f, "%c%d", k == 0 ? '[' : ',', (int)((j / sampleLayout.GetStrides()[k])) % sampleLayout[k]);
+                        fprintfOrDie(f, "]\t");
+                    }
+                    // print a row of values
+                    for (size_t i = 0; i < iend; i++) // loop over elements
+                    {
+                        if (i > 0)
+                            fprintfOrDie(f, "%s", elementSeparator.c_str());
+                        if (i == istop && istop < iend - 1)
+                        {
+                            fprintfOrDie(f, "...+%d", (int)(iend - istop));
+                            break;
+                        }
+                        double dval = seqData[i * istride + j * jstride];
+                        print(dval);
+                    }
                 }
             }
         }

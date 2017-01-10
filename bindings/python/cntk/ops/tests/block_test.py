@@ -76,3 +76,26 @@ def test_op_as_block(input_shape, output_shape, expected_output_shape, device_id
     unittest_helper(input_op,
                     forward_input, expected_forward, expected_backward,
                     device_id=device_id, precision=precision)
+
+
+def test_combine_op_as_block():
+    # We test using combine as the operation that is encapsulated in a block
+    from .. import combine, placeholder_variable, as_block, input_variable
+
+    f = combine([placeholder_variable()])
+    f = as_block(f, [(f.placeholders[0], placeholder_variable())], 'id')
+
+    x = placeholder_variable()
+    y = placeholder_variable()
+
+    x = f.clone('share', {f.placeholders[0]: x})
+    z = x - y
+
+    # connect to inputs
+    z.replace_placeholders({z.placeholders[0]: input_variable(1), z.placeholders[1]: input_variable(1)})
+
+    # evaluate
+    res = z.eval({z.arguments[0]: [[5.0]], z.arguments[1]: [[3.0]]})
+
+    expected_forward = [[[2.]]]
+    assert np.array_equal(res, expected_forward)

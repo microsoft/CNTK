@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace CNTK
 {
-    public static class CntkBitmapExtensions
+    public static class BitmapExtensions
     {
         /// <summary>
         /// Resizes an image

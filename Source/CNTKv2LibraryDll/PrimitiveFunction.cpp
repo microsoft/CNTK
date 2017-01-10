@@ -113,6 +113,16 @@ namespace CNTK
         if (outputDataType == DataType::Unknown)
             outputDataType = firstKnownInputDataType;
 
+        // Propagate the data type to any input Parameters/Constants with unknown data type
+        if (inferDimensions && (outputDataType != DataType::Unknown))
+        {
+            for (auto& input : inputs)
+            {
+                if ((input.GetDataType() == DataType::Unknown) && (input.IsConstant() || input.IsParameter()))
+                    input.m_dataFields->m_dataType = outputDataType;
+            }
+        }
+
         // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
         if ((op == PrimitiveOpType::SumAll) ||
@@ -145,7 +155,17 @@ namespace CNTK
                     }
                     else
                     {
-                        outputDynamicAxes.push_back(Axis::NewUniqueDynamicAxis(L"whereNodeDynamicAxis"));
+                        std::function<Variable(const Variable&)> GetActualSourceVariable;
+                        GetActualSourceVariable = [&GetActualSourceVariable](const Variable& var) -> Variable {
+                            if (var.BlockFunctionVariableMapping() == Variable())
+                                return var;
+                            else
+                                return GetActualSourceVariable(var.BlockFunctionVariableMapping());
+                        };
+
+                        auto whereNodeConditionSourceVar = GetActualSourceVariable(inputs[0]);
+                        auto whereNodeSequenceAxis = Axis(std::wstring(L"whereNodeDynamicAxis_conditionVar_") + whereNodeConditionSourceVar.Uid());
+                        outputDynamicAxes.push_back(whereNodeSequenceAxis);
                     }
 
                     for (size_t i2 = 1; i2 < inputs[0].DynamicAxes().size(); ++i2)
@@ -635,7 +655,7 @@ namespace CNTK
             dict[blockFunctionCompositeKey] = blockCompositeFunc->SerializeBlockComposite();
             dict[blockFunctionOpNameKey] = OpName();
 
-            auto& blockArgumentsMap = BlockArgumentsMapping();
+            const auto& blockArgumentsMap = BlockArgumentsMapping();
             std::vector<std::wstring> serializedArgumentsMapKeys;
             std::vector<std::wstring> serializedArgumentsMapValues;
             for (auto argumentMapping : blockArgumentsMap)

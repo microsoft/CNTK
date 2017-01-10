@@ -103,7 +103,7 @@ def filterRois(rects, maxWidth, maxHeight, roi_minNrPixels, roi_maxNrPixels,
 
 
 def readRois(roiDir, subdir, imgFilename):
-    roiPath = roiDir + subdir + "/" + imgFilename[:-4] + ".roi.txt"
+    roiPath = os.path.join(roiDir, subdir, imgFilename[:-4] + ".roi.txt")
     rois = np.loadtxt(roiPath, np.int)
     if len(rois) == 4 and type(rois[0]) == np.int32:  # if only a single ROI in an image
         rois = [rois]
@@ -122,10 +122,10 @@ def readGtAnnotation(imgPath):
     return bboxes, labels
 
 def getCntkInputPaths(cntkFilesDir, image_set):
-    cntkImgsListPath = cntkFilesDir + image_set + '.txt'
-    cntkRoiCoordsPath = cntkFilesDir + image_set + '.rois.txt'
-    cntkRoiLabelsPath = cntkFilesDir + image_set + '.roilabels.txt'
-    cntkNrRoisPath = cntkFilesDir + image_set + '.nrRois.txt'
+    cntkImgsListPath = os.path.join(cntkFilesDir, image_set + '.txt')
+    cntkRoiCoordsPath = os.path.join(cntkFilesDir, image_set + '.rois.txt')
+    cntkRoiLabelsPath = os.path.join(cntkFilesDir, image_set + '.roilabels.txt')
+    cntkNrRoisPath = os.path.join(cntkFilesDir, image_set + '.nrRois.txt')
     return cntkImgsListPath, cntkRoiCoordsPath, cntkRoiLabelsPath, cntkNrRoisPath
 
 def roiTransformPadScaleParams(imgWidth, imgHeight, padWidth, padHeight, boResizeImg = True):
@@ -559,7 +559,7 @@ def makeDirectory(directory):
         os.makedirs(directory)
 
 def getFilesInDirectory(directory, postfix = ""):
-    fileNames = [s for s in os.listdir(directory) if not os.path.isdir(directory+"/"+s)]
+    fileNames = [s for s in os.listdir(directory) if not os.path.isdir(os.path.join(directory, s))]
     if not postfix or postfix == "":
         return fileNames
     else:
@@ -646,7 +646,7 @@ def sortDictionary(dictionary, sortIndex=0, reverseSort=False):
 
 def imread(imgPath, boThrowErrorIfExifRotationTagSet = True):
     if not os.path.exists(imgPath):
-        "ERROR: image path does not exist."
+        print("ERROR: image path does not exist.")
         error
 
     rotation = rotationFromExifTag(imgPath)

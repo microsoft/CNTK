@@ -193,7 +193,8 @@ class Function(cntk_py.Function):
              to be performed.
 
         Returns:
-            `bool`: `True` if updates have been performed
+           dict or NumPy Array: Dict with keys of ouput variable names and values of 
+           output variable. A single NumPy array if there is only one output value.
         '''
 
         _, output_map = self.forward(arguments, self.outputs, device=device)
@@ -384,6 +385,18 @@ class Function(cntk_py.Function):
         Name of this function
         '''
         return super(Function, self).name()
+
+    @name.setter
+    def name(self, function_name):
+        '''
+        Sets the name of this Function.
+        Setting the name of a Function is only allowed if the Function does not already have a name.
+        Calling this method, when this Function already has a name, results in an exception.
+
+        Args:
+            function_name (`str`): name for this Function.
+        '''
+        super(Function, self).set_name(function_name)
 
     @property
     def op_name(self):
