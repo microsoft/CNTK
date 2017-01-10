@@ -2130,7 +2130,7 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
 
 
 @typemap
-def parameter(shape=None, init=None, device=None, name=''):
+def parameter(shape=None, init=None, dtype=None, device=None, name=''):
     '''
     It creates a parameter tensor.
 
@@ -2168,7 +2168,7 @@ def parameter(shape=None, init=None, device=None, name=''):
         else:
             data_type = np.float32
     else:
-        data_type = None
+        data_type = dtype
 
     return Parameter(shape, init, data_type, device, name)
 

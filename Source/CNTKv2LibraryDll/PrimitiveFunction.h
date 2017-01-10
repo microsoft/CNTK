@@ -11,6 +11,7 @@
 #include "Utils.h"
 #include "ConvolveGeometry.h"
 #include "ConvolutionalNodes.h"
+#include "Variable.h"
 
 namespace std
 {

@@ -205,6 +205,9 @@ namespace CNTK
     class DistributedLearner;
     typedef std::shared_ptr<DistributedLearner> DistributedLearnerPtr;
 
+    struct VariableFields;
+    typedef std::shared_ptr<VariableFields> VariableFieldsPtr;
+
     namespace Internal
     {
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
@@ -232,6 +235,9 @@ namespace CNTK
 
         CNTK_API void AlwaysAllowSettingDefaultDevice();
         bool IsSettingDefaultDeviceAlwaysAllowed();
+
+        CNTK_API void AllowRenamingFunctions();
+        bool IsRenamingFunctionsAllowed();
 
         CNTK_API void SetAutomaticUnpackingOfPackedValues(bool disable);
         CNTK_API bool IsAutomaticUnpackingOfPackedValuesDisabled();

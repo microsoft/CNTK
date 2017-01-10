@@ -16,7 +16,7 @@ namespace CNTK
     public:
         BlockFunction(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, Dictionary&& attributes, const std::wstring& blockName = L"", const std::wstring& uid = GenerateUid(PrimitiveOpType::Block))
             : PrimitiveFunction(DetermineInputs(composite, argumentsMap, blockName), DetermineOutputs(composite, blockName), std::move(attributes), blockName, uid),
-            m_composite(composite), m_blockOpName(blockOpName), m_compositeArgumentsMap(argumentsMap)
+            m_composite(composite), m_blockOpName(blockOpName)
         {
             auto updatedOutputs = GetOutputVariables(true);
             auto currentOutputs = Outputs();
@@ -30,27 +30,64 @@ namespace CNTK
 
             auto compositeOutputs = composite->Outputs();
             for (size_t i = 0; i < currentOutputs.size(); ++i)
-                m_compositeOutputsMap.insert({ currentOutputs[i], compositeOutputs[i] });
+                currentOutputs[i].m_dataFields->m_blockFunctionVariableMapping = compositeOutputs[i];
         }
 
-        virtual const std::wstring& OpName() const override
-        {
-            return m_blockOpName;
-        }
+        virtual const std::wstring& OpName() const override { return m_blockOpName; }
 
         const FunctionPtr& Composite() const { return m_composite; }
-        const std::vector<std::pair<Variable, Variable>>& CompositeArgumentsMap() const { return m_compositeArgumentsMap; }
-        const std::unordered_map<Variable, Variable>& CompositeOutputsMap() const { return m_compositeOutputsMap; }
+
+        // Mapping from each argument of the composite underlying the block to the corresponding Variable it is mapped to
+        std::vector<std::pair<Variable, Variable>> CompositeArgumentsMap() const
+        {
+            std::unordered_map<Variable, Variable> argumentsMappingAsMap;
+            auto arguments = m_composite->Arguments();
+            for (auto argument : arguments)
+            {
+                if (argument.BlockFunctionVariableMapping() == Variable())
+                    LogicError("BlockFunction (%S) with OpName (%S) does not have a mapping for argument (%S)", Name().c_str(), OpName().c_str(), argument.Name().c_str());
+
+                argumentsMappingAsMap[argument] = argument.BlockFunctionVariableMapping();
+            }
+
+            std::vector<std::pair<Variable, Variable>> argumentsMap;
+            auto blockInputs = Inputs();
+            for (auto blockInput : blockInputs)
+            {
+                auto iter = std::find_if(argumentsMappingAsMap.begin(), argumentsMappingAsMap.end(), [&blockInput](const std::pair<Variable, Variable>& entry) {return entry.second == blockInput; });
+                if (iter != argumentsMappingAsMap.end())
+                    argumentsMap.push_back({iter->first, iter->second});
+            }
+
+            return argumentsMap;
+        }
+
+        // Mapping from each output of the block to the corresponding  output of underlying composite
+        std::unordered_map<Variable, Variable> CompositeOutputsMap() const
+        {
+            std::unordered_map<Variable, Variable> outputsMap;
+            auto outputs = Outputs();
+            for (auto output : outputs)
+            {
+                if (output.BlockFunctionVariableMapping() == Variable())
+                    LogicError("BlockFunction (%S) with OpName (%S) does not have a mapping for output (%S)", Name().c_str(), OpName().c_str(), output.Name().c_str());
+
+                outputsMap[output] = output.BlockFunctionVariableMapping();
+            }
+
+            return outputsMap;
+        }
 
     protected:
         virtual void OnPlaceholdersReplaced(const std::unordered_map<Variable, Variable>& placeholderReplacements,
                                             std::unordered_set<Variable>& replacedPlaceholders) override
         {
             // Substitute any placeholder replacements in the arguments map
-            for (auto& argMapping : m_compositeArgumentsMap)
+            auto arguments = m_composite->Arguments();
+            for (auto argument : arguments)
             {
-                if (replacedPlaceholders.find(argMapping.second) != replacedPlaceholders.end())
-                    argMapping.second = placeholderReplacements.at(argMapping.second);
+                if (replacedPlaceholders.find(argument.BlockFunctionVariableMapping()) != replacedPlaceholders.end())
+                    argument.m_dataFields->m_blockFunctionVariableMapping = placeholderReplacements.at(argument.BlockFunctionVariableMapping());
             }
         }
 
@@ -98,7 +135,10 @@ namespace CNTK
             // We now append the mapped arguments of the composite to the block inputs in the order of the map
             // instead of the original order they appear in the composite itself
             for (auto argumentMapping : argumentsMap)
+            {
+                argumentMapping.first.m_dataFields->m_blockFunctionVariableMapping = argumentMapping.second;
                 blockFunctionInputs.push_back(argumentMapping.second);
+            }
 
             return blockFunctionInputs;
         }
@@ -107,23 +147,25 @@ namespace CNTK
         {
             // We determine the outputs by replacing the arguments of the composite with new placeholders with updated 
             // shape etc. information matching the corresponding mapped input
-            std::vector<std::pair<Variable, Variable>> newArgumentsMap;
+            auto currentArguments = m_composite->Arguments();
             std::unordered_map<Variable, Variable> replacementMap;
-            for (auto argMapping : m_compositeArgumentsMap)
+            for (auto currentArgument : currentArguments)
             {
-                auto newArgument = PlaceholderVariable(argMapping.second.Shape(), argMapping.second.GetDataType(), argMapping.second.Name(), argMapping.second.DynamicAxes());
-                newArgumentsMap.push_back({ newArgument, argMapping.second });
-                replacementMap.insert({ argMapping.first, newArgument });
+                auto currentArgumentMapping = currentArgument.BlockFunctionVariableMapping();
+                auto newArgument = PlaceholderVariable(currentArgumentMapping.Shape(), currentArgumentMapping.GetDataType(), currentArgumentMapping.Name(), currentArgumentMapping.DynamicAxes());
+                newArgument.m_dataFields->m_blockFunctionVariableMapping = currentArgumentMapping;
+
+                replacementMap.insert({ currentArgument, newArgument });
             }
 
             m_composite->ReplacePlaceholders(replacementMap);
-            m_compositeArgumentsMap = std::move(newArgumentsMap);
 
             // Substitute any placeholder replacements in the outputs map
-            for (auto& outputMapping : m_compositeOutputsMap)
+            auto outputs = Outputs();
+            for (auto output : outputs)
             {
-                if (replacementMap.find(outputMapping.second) != replacementMap.end())
-                    outputMapping.second = replacementMap.at(outputMapping.second);
+                if (replacementMap.find(output.BlockFunctionVariableMapping()) != replacementMap.end())
+                    output.m_dataFields->m_blockFunctionVariableMapping = replacementMap.at(output.BlockFunctionVariableMapping());
             }
 
             std::vector<Variable> blockFunctionOutputs;
@@ -139,7 +181,12 @@ namespace CNTK
             std::vector<Variable> blockFunctionOutputs;
             auto compositeOutputs = composite->Outputs();
             for (auto compositeOutput : compositeOutputs)
-                blockFunctionOutputs.push_back(OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), blockName));
+            {
+                auto output = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), blockName);
+                output.m_dataFields->m_blockFunctionVariableMapping = compositeOutput;
+
+                blockFunctionOutputs.push_back(output);
+            }
 
             return blockFunctionOutputs;
         }
@@ -147,14 +194,6 @@ namespace CNTK
     private:
         FunctionPtr m_composite;
         std::wstring m_blockOpName;
-
-        // Mapping from each argument of the composite underlying the block
-        // to the corresponding Variable it is mapped to
-        std::vector<std::pair<Variable, Variable>> m_compositeArgumentsMap;
-
-        // Mapping from each output of the block to the corresponding
-        // output of underlying composite
-        std::unordered_map<Variable, Variable> m_compositeOutputsMap;
 
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 

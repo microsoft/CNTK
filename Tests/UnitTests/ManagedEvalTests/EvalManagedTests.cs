@@ -210,6 +210,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             Assert.AreEqual(bufferSize, vb.Buffer.Length);
             Assert.AreEqual(bufferSize, vb.Indices.Length);
             Assert.AreEqual(colIndicesSize, vb.ColIndices.Length);
+            Assert.AreEqual(colIndicesSize, vb.Size);
         }
 
         [TestMethod]
@@ -310,12 +311,12 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
         [TestMethod]
         public void EvalManagedSparseTimesTest()
         {
-            string modelDefinition = @"deviceId = -1 
+            string modelDefinition = @"deviceId = -1
                 precision = ""float"" traceLevel = 1
                 run=NDLNetworkBuilder
-                NDLNetworkBuilder=[ 
+                NDLNetworkBuilder=[
                 i1 = SparseInput(3)
-                o1 = Times(Constant(2, rows=1, cols=3), i1, tag=""output"") 
+                o1 = Times(Constant(2, rows=1, cols=3), i1, tag=""output"")
                 FeatureNodes = (i1)
                 ]";
 
@@ -345,6 +346,57 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                         Size = 4
                     }
                 };
+
+                // We can call the evaluate method and get back the results...
+                model.ForwardPass(inputBuffer, outputBuffer);
+
+                float[][] expected = { new float[] { 6, 0, 28 } };
+
+                Assert.AreEqual(expected.Length, outputBuffer.Length);
+                for (int idx = 0; idx < expected.Length; idx++)
+                {
+                    CollectionAssert.AreEqual(expected[idx], outputBuffer[idx].Buffer);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void EvalManagedUsingSparseValueBufferTest()
+        {
+            string modelDefinition = @"deviceId = -1
+                precision = ""float"" traceLevel = 1
+                run=NDLNetworkBuilder
+                NDLNetworkBuilder=[
+                i1 = SparseInput(3)
+                o1 = Times(Constant(2, rows=1, cols=3), i1, tag=""output"")
+                FeatureNodes = (i1)
+                ]";
+
+            using (var model = new ModelEvaluationExtendedF())
+            {
+                model.CreateNetwork(modelDefinition);
+
+                VariableSchema outputSchema = model.GetOutputSchema();
+                model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
+
+                var outputDataLength = 3;
+                var outputBuffer = new[]
+                {
+                    new ValueBuffer<float>(outputDataLength)
+                };
+
+                var inputData = new float[] { 1, 2, 3, 5, 6 };
+                var inputIndices = new [] { 0, 2, 2, 1, 2 };
+                var inputColIndices = new [] { 0, 2, 2, 5 };
+
+                var inputBuffer = new[]
+                {
+                    new ValueBuffer<float>(inputData.Length, inputColIndices.Length)
+                };
+
+                inputData.CopyTo(inputBuffer[0].Buffer, 0);
+                inputIndices.CopyTo(inputBuffer[0].Indices, 0);
+                inputColIndices.CopyTo(inputBuffer[0].ColIndices, 0);
 
                 // We can call the evaluate method and get back the results...
                 model.ForwardPass(inputBuffer, outputBuffer);

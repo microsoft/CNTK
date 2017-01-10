@@ -474,10 +474,11 @@ class Value(cntk_py.Value):
         value (None or value that can be cast to NumPy array): the value to
          be converted
         dtype: data type (np.float32 or np.float64)
-        batch: batch input for `var`. It can be
-         * a pure Python structure (list of lists, ...),
-         * a list of NumPy arrays or SciPy sparse CSR matrices
-         * a :class:`Value` object (e.g. returned by :func:`one_hot`)
+        batch: batch input for `var`. 
+         It can be:
+          * a pure Python structure (list of lists, ...),
+          * a list of NumPy arrays or SciPy sparse CSR matrices
+          * a :class:`Value` object (e.g. returned by :func:`one_hot`)
         seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
@@ -514,9 +515,10 @@ class Value(cntk_py.Value):
         Args:
             var (:class:`~cntk.ops.variables.Variable`): input variable into which
              ``batch`` is passed
-            batch: batch input. It can be
-             * a single NumPy array denoting the full minibatch
-             * a list of NumPy arrays or SciPy sparse CSR matrices
+            batch: batch input. 
+             It can be:
+              * a single NumPy array denoting the full minibatch
+              * a list of NumPy arrays or SciPy sparse CSR matrices
             seq_starts (list of `bool`s or None): if None, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a
