@@ -13,7 +13,7 @@ import pytest
 from ..functions import *
 from ...trainer import *
 from ...initializer import glorot_uniform
-from .. import constant, parameter, input_variable, placeholder_variable, times, plus
+from .. import constant, parameter, input_variable, placeholder_variable, times, plus, past_value
 from ... import InferredDimension
 from .ops_test_utils import compare_lists_of_np_arrays
 
@@ -155,3 +155,12 @@ def test_data_type_inference():
 
     x_times_param1 = times(x_float, param1)
     assert (param1.dtype == np.float64)
+
+def test_recurrence_shape_inference():
+    i = input_variable((2,))
+    p = placeholder_variable()
+    p_past = past_value(p)
+    p_past_plus_i = p_past + i
+
+    p_past_plus_i.replace_placeholder(p_past_plus_i.output)
+    assert p_past_plus_i.output.shape == (2,)
