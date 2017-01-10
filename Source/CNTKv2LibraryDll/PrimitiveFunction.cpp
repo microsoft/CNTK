@@ -72,15 +72,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngSeed = L"rngSeed";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngOffset = L"rngOffset";
 
-    /*static*/ std::vector<Variable> PrimitiveFunction::GetOutputVariables(PrimitiveOpType op,
-                                                                           std::vector<Variable>& inputs,
-                                                                           PrimitiveFunction* owner,
-                                                                           Dictionary& functionConfig,
-                                                                           bool inferDimensions,
-                                                                           const std::wstring& functionName)
+    /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
-        if (op == PrimitiveOpType::Combine)
-            return inputs;
 
         // We use the first non-constant input operand's DataType as the output DataType
         // In case there are no non-constant known DataTypes, we just pick the first known operand DataType
@@ -114,6 +107,21 @@ namespace CNTK
         if (outputDataType == DataType::Unknown)
             outputDataType = firstKnownInputDataType;
 
+        // Propagate the data type to any input Parameters/Constants with unknown data type
+        if (inferDimensions && (outputDataType != DataType::Unknown))
+        {
+            for (auto& input : inputs)
+            {
+                if ((input.GetDataType() == DataType::Unknown) && (input.IsConstant() || input.IsParameter()))
+                    input.m_dataFields->m_dataType = outputDataType;
+            }
+        }
+
+        return outputDataType;
+    }
+
+    /*static*/ std::vector<Axis> PrimitiveFunction::GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary& functionConfig)
+    {
         // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
         if ((op == PrimitiveOpType::SumAll) ||
@@ -187,11 +195,70 @@ namespace CNTK
             }
         }
 
-        NDShape outputShape;
-        bool areAnyInputShapesUnknown = (std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return input.Shape().IsUnknown(); }) != inputs.end());
-        if (areAnyInputShapesUnknown)
-            outputShape = NDShape::Unknown;
-        else
+        return outputDynamicAxes;
+    }
+
+    /*static*/ std::vector<Variable> PrimitiveFunction::GetOutputVariables(PrimitiveOpType op,
+                                                                           std::vector<Variable>& inputs,
+                                                                           Dictionary& functionConfig,
+                                                                           bool inferDimensions,
+                                                                           const std::wstring& functionName)
+    {
+        if (op == PrimitiveOpType::Combine)
+            return inputs;
+
+        DataType outputDataType = GetOutputDataType(op, inputs, inferDimensions);
+        std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(op, inputs, functionConfig);
+
+        NDShape outputShape = NDShape::Unknown;
+        bool allInputShapesUnknown = (std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.Shape().IsUnknown(); }) == inputs.end());
+        if (!allInputShapesUnknown && (outputDynamicAxes != Axis::UnknownDynamicAxes()))
+        {
+            switch (op)
+            {
+            // Elementwise operators' shapes are a zip of inputs and can be determined even if some of the input shapes are unknown
+            case PrimitiveOpType::Plus:
+            case PrimitiveOpType::LogPlus:
+            case PrimitiveOpType::Minus:
+            case PrimitiveOpType::ElementTimes:
+            case PrimitiveOpType::Equal:
+            case PrimitiveOpType::NotEqual:
+            case PrimitiveOpType::Less:
+            case PrimitiveOpType::LessEqual:
+            case PrimitiveOpType::Greater:
+            case PrimitiveOpType::GreaterEqual:
+            case PrimitiveOpType::PastValue:
+            case PrimitiveOpType::FutureValue:
+            {
+                assert(inputs.size() == 2);
+                if ((op == PrimitiveOpType::PastValue) || (op == PrimitiveOpType::FutureValue))
+                {
+                    Variable inputOperandVar = inputs[0];
+                    Variable initialStateVar = inputs[1];
+
+                    // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
+                    if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))
+                        LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
+
+                    if (!initialStateVar.DynamicAxes().empty())
+                        LogicError("Currently PastValue/FutureValue Function does not support initial state operand with dynamic axes!");
+                }
+
+                outputShape = BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);
+                break;
+            }
+            case PrimitiveOpType::Clip:
+                assert(inputs.size() == 3);
+                outputShape = NaryElementwiseOpOutputShape(op, inputs, true, inferDimensions);
+                break;
+            case PrimitiveOpType::Select:
+                assert(inputs.size() == 3);
+                outputShape = NaryElementwiseOpOutputShape(op, inputs, true, inferDimensions);
+                break;
+            default:
+                // For all other operations, shapes of all inputs must be known to determine the output shape
+                bool anyInputShapesUnknown = (std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return input.Shape().IsUnknown(); }) != inputs.end());
+                if (!anyInputShapesUnknown)
         {
             switch (op)
             {
@@ -213,8 +280,19 @@ namespace CNTK
             case PrimitiveOpType::Sin:
             case PrimitiveOpType::Cos:
             case PrimitiveOpType::Pass:
-            {
                 assert(inputs.size() == 1);
+                outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
+                break;
+            case PrimitiveOpType::PackedIndex:
+                assert(inputs.size() == 2);
+                outputShape = UnaryElementwiseOpOutputShape(inputs[1].Shape());
+                break;
+            case PrimitiveOpType::ScatterPacked:
+            {
+                assert(inputs.size() == 3);
+                if (inputs[0].DynamicAxes().empty() || inputs[1].DynamicAxes().empty() || inputs[2].DynamicAxes().empty())
+                    InvalidArgument("ScatterPacked requires all its operands to have dynamic axes");
+
                 outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
                 break;
             }
@@ -342,33 +420,6 @@ namespace CNTK
                 assert(inputs.size() == 1);
                 outputShape = {1};
                 break;
-            case PrimitiveOpType::Plus:
-            case PrimitiveOpType::LogPlus:
-            case PrimitiveOpType::Minus:
-            case PrimitiveOpType::ElementTimes:
-            case PrimitiveOpType::Equal:
-            case PrimitiveOpType::NotEqual:
-            case PrimitiveOpType::Less:
-            case PrimitiveOpType::LessEqual:
-            case PrimitiveOpType::Greater:
-            case PrimitiveOpType::GreaterEqual:
-            case PrimitiveOpType::PastValue:
-            case PrimitiveOpType::FutureValue:
-            {
-                assert(inputs.size() == 2);
-                if ((op == PrimitiveOpType::PastValue) || (op == PrimitiveOpType::FutureValue))
-                {
-                    Variable inputOperandVar = inputs[0];
-                    Variable initialStateVar = inputs[1];
-
-                    // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
-                    if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))
-                        owner->LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
-                }
-
-                outputShape = owner->BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);
-                break;
-            }
             case PrimitiveOpType::Times:
             {
                 assert(inputs.size() == 2);
@@ -473,9 +524,6 @@ namespace CNTK
                 outputShape = owner->BatchNormalizationOutputShape(inputs, spatial, inferDimensions);
                 break;
             }
-            case PrimitiveOpType::PackedIndex:
-                outputShape = UnaryElementwiseOpOutputShape(inputs[1].Shape());
-                break;
             case PrimitiveOpType::GatherPacked:
             {
                 bool sourceHasDynamicAxis = !inputs[0].DynamicAxes().empty();
@@ -493,22 +541,6 @@ namespace CNTK
 
                 break;
             }
-            case PrimitiveOpType::ScatterPacked:
-            {
-                if (inputs[0].DynamicAxes().empty() || inputs[1].DynamicAxes().empty() || inputs[2].DynamicAxes().empty())
-                    owner->InvalidArgument("ScatterPacked requires all its operands to have dynamic axes");
-
-                outputShape = inputs[0].Shape();
-                break;
-            }
-            case PrimitiveOpType::Clip:
-                assert(inputs.size() == 3);
-                outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
-                break;
-            case PrimitiveOpType::Select:
-                assert(inputs.size() == 3);
-                    outputShape = owner->NaryElementwiseOpOutputShape(op, inputs, true);
-                break;
             case PrimitiveOpType::Splice:
             {
                 assert(inputs.size() >= 2);
@@ -594,6 +626,8 @@ namespace CNTK
             default:
                 CNTK::LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
                 break;
+                    }
+                }
             }
         }
 
