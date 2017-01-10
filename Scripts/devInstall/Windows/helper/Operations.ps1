@@ -219,48 +219,47 @@ function OpProtoBuf310VS15(
     # the script file can be used to create the compiled protobuf libraries in $targetPath = $targetFolder\$prodSubDir
 
     $prodName = "ProtoBuf 3.1.0 Source"
+    $prodSrcSubdir = "protobuf-3.1.0"
     $prodFile = "protobuf310.zip"
-    $prodName = "protobuf-3.1.0"
     $prodSubDir =  "protobuf-3.1.0-vs15"
     $batchFile = "buildProtoVS15.cmd"
 
     $protoSourceDir = join-path $targetFolder "src"
-    $completeProtoSourceDir = join-Path $protoSourceDir $prodName
+    $targetPath = Join-Path $protoSourceDir $prodSrcSubdir
     $scriptDirectory = join-path $targetFolder "script"
-    $targetPath = join-path $targetFolder $prodSubDir
-    $envVar = "PROTOBUF_PATH"
-    $envValue = $targetPath
+    $buildDir = join-path $targetFolder $prodSubDir
     $downloadSource = "https://github.com/google/protobuf/archive/v3.1.0.zip"
     $downloadSize = 5648581    
 
     @( @{ShortName = "PROTO310VS15"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
-         Verification = @( @{Function = "VerifyDirectory"; Path = $completeProtoSourceDir } );
+         Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath } );
          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize} );
-         Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $protoSourceDir; zipSubTree = $prodName; destinationFolder = $prodName },
+         Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $protoSourceDir; zipSubTree = $prodSrcSubdir; destinationFolder = $prodSrcSubdir },
                      @{Function = "MakeDirectory"; Path = $scriptDirectory },
-                     @{Function = "CreateBuildProtobufBatch"; FileName = "$scriptDirectory\$batchFile"; SourceDir = $completeProtoSourceDir; TargetDir = $targetPath; RepoDirectory = $repoDirectory } );
+                     @{Function = "CreateBuildProtobufBatch"; FileName = "$scriptDirectory\$batchFile"; SourceDir = $targetPath; TargetDir = $buildDir; RepoDirectory = $repoDirectory } );
         } )
 }
 
-function OpProtoBuf310VS15Internal(
-    [parameter(Mandatory=$true)][string] $server,
+function OpProtoBuf310VS15Prebuild(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $targetFolder)
 {
-    $prodName = "ProtoBuf 3.1.0 Prebuild VS2015"
-    $prodFile = "PreBuildProtobuf310vs15.zip"
+    $prodName = "ProtoBuf 3.1.0 VS15 CNTK Prebuild"
+    $prodFile = "protobuf-3.1.0-vs15.zip"
     $prodSubDir =  "protobuf-3.1.0-vs15"
+
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "PROTOBUF_PATH"
     $envValue = $targetPath
-    $downloadSource = "$server\$prodFile"
+    $downloadSource = "https://cntk.ai/binarydrop/prerequisites/protobuf/protobuf-3.1.0-vs15.zip"
+    $downloadSize = 0    
 
     @( @{ShortName = "PROTO310VS15PRE"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{ Function = "Download"; Source = $downloadSource; Destination = "$cache\$prodFile" } );
-         Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; zipSubTree ="protobuf-3.1.0-vs15"; destinationFolder = $prodSubDir },
-                     @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue } );
+         Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize} );
+         Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; zipSubTree = $prodSubDir; destinationFolder = $prodSubDir },
+                     @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue }  );
         } )
 }
 
@@ -325,7 +324,8 @@ function OpZlibVS15(
     $prodName = "zlib / libzip from source"
     $zlibProdName = "zlib-1.2.8"
     $zlibFilename = "zlib128.zip" 
-    $zlibDownloadSource= "https://netix.dl.sourceforge.net/project/libpng/zlib/1.2.8/zlib128.zip"
+    # $zlibDownloadSource = "https://netix.dl.sourceforge.net/project/libpng/zlib/1.2.8/zlib128.zip"
+    $zlibDownloadSource = "https://cntk.ai/binarydrop/prerequisites/zip/zlib128.zip"
     $downloadSizeZlib = 0
     
     $libzipProdName = "libzip-1.1.3"
@@ -342,7 +342,7 @@ function OpZlibVS15(
     $envVar = "ZLIB_PATH"
     $envValue = $targetPath
     
-    @( @{ShortName = "ZLIBVS15"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
+    @( @{ShortName = "ZLIBVS15"; VerifyInfo = "Checking for $prodName in $sourceCodeDir"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = "$sourceCodeDir\$zlibProdName" },
                            @{Function = "VerifyDirectory"; Path = "$sourceCodeDir\$libzipProdName" },
                            @{Function = "VerifyFile"; Path = "$scriptDirectory\$batchFile" } );
@@ -352,6 +352,30 @@ function OpZlibVS15(
                      @{Function = "ExtractAllFromTarGz"; SourceFile =  "$cache\$libzipFilename"; TargzFileName = "$libzipFilename"; destination = $sourceCodeDir },
                      @{Function = "MakeDirectory"; Path = $scriptDirectory },
                      @{Function = "CreateBuildZlibBatch"; FileName = "$scriptDirectory\$batchFile"; zlibSourceDir = (join-path $sourceCodeDir $zlibProdName); libzipSourceDir = (join-path $sourceCodeDir $libzipProdName); TargetDir = $targetPath; RepoDirectory = $repoDirectory } );
+        } )
+}
+
+function OpZlibVS15Prebuild(
+    [parameter(Mandatory=$true)][string] $cache,
+    [parameter(Mandatory=$true)][string] $targetFolder)
+{
+    $prodName = "ZLib VS15 CNTK Prebuild"
+    $prodFile = "zlib-vs15.zip"
+    $prodSubDir =  "zlib-vs15"
+
+
+    $targetPath = join-path $targetFolder $prodSubDir
+    $envVar = "ZLIB_PATH"
+    $envValue = $targetPath
+    $downloadSource = "https://cntk.ai/binarydrop/prerequisites/zip/zlib-vs15.zip"
+    $downloadSize = 0    
+
+    @( @{ShortName = "ZLIBVS15PRE"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
+         Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
+                           @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
+         Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize} );
+         Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; zipSubTree = $prodSubDir; destinationFolder = $prodSubDir },
+                     @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue }  );
         } )
 }
 

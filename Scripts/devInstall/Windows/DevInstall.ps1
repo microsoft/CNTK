@@ -135,22 +135,12 @@ Function main
         $operation += OpCNTKMKL3 -cache $localCache -targetFolder $localDir
         $operation += OpSwig3010 -cache $localCache -targetFolder $localDir
         $operation += OpProtoBuf310VS15 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
+        $operation += OpProtoBuf310VS15Prebuild -cache $localCache -targetFolder $localDir
         $operation += OpZlibVS15 -cache $localCache -targetFolder $localDir -repoDirectory $CloneDirectory
+        $operation += OpZlibVS15Prebuild -cache $localCache -targetFolder $localDir
         $operation += OpOpenCV31 -cache $localCache -targetFolder $localDir
-        if ($ServerLocation) {
-            $operation += OpProtoBuf310VS15Internal -server $ServerLocation -cache $localCache -targetFolder $localDir
-            $operation += OpZLibVS15Internal -server $ServerLocation -cache $localCache -targetFolder $localDir
-        }
         $operation += OpAnaconda3411 -cache $localCache -targetFolder $localDir
         $operation += OpAnacondaEnv34 -targetFolder $localDir -repoDir $repositoryRootDir -repoName $reponame
-
-
-        #$operation += OpGit2101 -cache $localCache
-        #$operation += OpGitClone -targetFolder $repositoryRootDir -targetDir $reponame
-        #$operation += OpSysinternals -cache $localCache -targetFolder $localDir
-        #$operation += OpOpenCVInternal $ServerLocation -cache $localCache -targetFolder $localDir
-        
-
 
         $operationList = @()
         $operationList += (VerifyOperations $operation)

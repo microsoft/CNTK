@@ -42,7 +42,6 @@ function InstallExeForPlatform(
     if (PlatformMatching $platform) {
         InstallExe $table
     }
-    return
 }
 
 function InstallExe(
@@ -154,7 +153,6 @@ function InstallWheel(
     
     Invoke-DosCommand pip (Write-Output install $whl) -maxErrorLevel 0
     $env:PATH = $oldPath 
-    return
 }
 
 function InstallMSI(
@@ -186,8 +184,6 @@ function MakeDirectory(
             New-Item $path -type directory | Out-Null
         }
     }
-    
-    return
 }
 
 function RobocopyFromLocalCache(
@@ -219,7 +215,6 @@ function RobocopySourceDestination(
     $param = "$source $destination $option"
 
     DoProcess -doExecute $Execute -command $roboCopyCmd -param $param -maxErrorLevel 8 -throwOnError $true
-    return
 }
 
 function SetEnvironmentVariable(
@@ -230,7 +225,7 @@ function SetEnvironmentVariable(
     $func    = $table["Function"]
     $name    = $table["EnvVar"]
     $content = $table["Content"]
-    $location = "Machine"
+    $location = "User"
 
     if (-not $Execute) {
         return
@@ -244,7 +239,6 @@ function SetEnvironmentVariable(
     }
 
     SetEnvVar -name "$name" -content "$content" 
-    return
 }
 
 function AddToPath(
@@ -283,7 +277,6 @@ function AddToPath(
     if ($Execute) {
         SetEnvVar -name $env -content "$pathvalue" 
     }
-    return
 }
 
 function ExtractAllFromZipForPlatform(
@@ -422,8 +415,6 @@ set path="$appDir";%PATH% & tar.exe -xz --force-local -f "$destination\$targzFil
     }
 
     Remove-Item "$destination\$targzFileName" -ErrorAction SilentlyContinue
-    
-    return
 }
 
 function CreateBatch(
@@ -479,7 +470,6 @@ function SetRegistryKey(
             }
         }
     }
-    return
 }
 
 function SetRegistryKeyNameData(
@@ -594,7 +584,6 @@ function DoProcess(
     if (-not $throwOnError) {
         if ($ecode -gt $maxErrorLevel) {
             Write-Verbose "Running [start-process $commandString $param] failed with exit code [$ecode]"
-            return
         }
         return
     }
@@ -602,7 +591,6 @@ function DoProcess(
     if ($ecode -gt $maxErrorLevel) {
         throw "Running [start-process $commandString $param] failed with exit code [$ecode]"
     }
-    return
 }
 
 function SetEnvVar(
@@ -637,7 +625,6 @@ function RunPowershellCommand(
     if ($ecode -gt $maxErrorLevel) {
         throw "Running 'powershell.exe $commandString' failed with exit code [$ecode]"
     }
-    return
 }
 
 function Invoke-DosCommand {
