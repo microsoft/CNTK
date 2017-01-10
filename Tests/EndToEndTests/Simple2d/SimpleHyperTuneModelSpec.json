@@ -1,0 +1,49 @@
+# Do not change name of variables
+
+{
+    'HyperParams':
+    [
+        {'lrPerMB': ['Continuous', [0.01, 10, 2], 'LogUniform'],
+         'mbSize':  ['Discrete', [4, 129, 2], 'LogUniform']},
+        {'dpRate':  ['Continuous', [0, 0.5, 0.1], 'Uniform'],
+        'numhidden':  ['Discrete', [16, 128, 2], 'LogUniform']},
+        {'layerTy':  ['Categorical', ['Sigmoid', 'RectifiedLinear'], 'Uniform']}
+    ],
+    
+    
+    # Overall
+    'GP': True,
+    'Additive': True,
+    'Early': True,
+    # 'Test': False,
+    'CustomizedGroup': True,
+
+    # path to filename, will be ignored in later version
+    'ErrName': 'EvalClassificationError',
+    'ErrWhenFailed': 5,
+
+
+    # HyperTune Spec
+    # 'HTMaxEvalTrials': 30,
+    # 'HTTrainingEpochsPerEval': 3,
+
+    # HyperTuneEarly Spec
+    'HTInitialEvalTrials': 32,
+    'HTMaxRound': 4,
+    'HTTrainingEpochsPerEval': [2, 4, 8, 16],
+    'HTSuggestRate': [0.4, 0.3, 0.2, 0.1],
+    'HTNextRate': 0.5,
+    'HTCalibrate': True,
+    'HTCalibrateRatio_M': 0.6,
+    'HTCalibrateRatio_V': 0.6,
+    
+    # Bayes Optimization Spec
+    'BOGridSize': 1000,
+    'BOInitSize': 40,
+    'BOLambdaConst': 0.4,
+    'BOKernelType': 'M52',
+    'BOBaseNoise': 0.02
+
+
+}
+
