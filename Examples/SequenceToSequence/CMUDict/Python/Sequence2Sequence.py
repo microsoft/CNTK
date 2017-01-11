@@ -57,9 +57,35 @@ def create_reader(path, is_training):
 # define the model     #
 ########################
 
+inputAxis=Axis('inputAxis')
+labelAxis=Axis('labelAxis')
+
+def testit(r, with_labels=True):
+    from cntk.blocks import Constant, Type
+    try:
+        r.dump()
+        if with_labels:
+            r.update_signature(Type(3, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
+                               Type(5, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+        else:
+            r.update_signature(Type(3, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
+        r.dump()
+        if with_labels:
+            res = r.eval({r.arguments[0]: [[[0.9, 0.7, 0.8]]]}, {r.arguments[1]: [[[0, 1, 0, 0, 0]]]})
+        else:
+            res = r.eval({r.arguments[0]: [[[0.9, 0.7, 0.8]]]})
+        print(res)
+    except Exception as e:
+        print(e)
+        pass
+    input("hit enter")
+    exit()
+
 def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None, create_aux=False):
-    dh = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
-    dc = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
+    #dh = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
+    #dc = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
+    dh = placeholder_variable(shape=(output_dim), dynamic_axes=inputAxis)
+    dc = placeholder_variable(shape=(output_dim), dynamic_axes=inputAxis)
 
     aux_input = None
     has_aux   = False
@@ -87,6 +113,8 @@ def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_
     h = f_x_h_c.outputs[0]
     c = f_x_h_c.outputs[1]
 
+    testit(combine([h]), False)
+
     return combine([h]), combine([c]), aux_input
 
 def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None):
@@ -103,7 +131,8 @@ def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recu
 
     return (output_h, output_c)
 
-@Function
+
+#@Function
 def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
 
     # Set up sequences...
@@ -115,7 +144,8 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
     label_sequence_start = sequence.first(raw_labels)      # <s>
 
     # Embedding (right now assumes shared embedding and shared vocab size)
-    embedding = parameter(shape=(input_vocab_dim, embedding_dim), init=glorot_uniform(), name='embedding')
+    #embedding = parameter(shape=(input_vocab_dim, embedding_dim), init=glorot_uniform(), name='embedding')
+    embedding = parameter(shape=(-1, embedding_dim), init=glorot_uniform(), name='embedding')
     input_embedded = times(input_sequence, embedding) if use_embedding else input_sequence
     label_embedded = times(label_sequence, embedding) if use_embedding else label_sequence
 
@@ -129,6 +159,8 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
     # to the (i+1)th layer as its input
     encoder_output_h, encoder_output_c = LSTM_stack(input_embedded, num_layers, hidden_dim, 
                                                     recurrence_hook_h=future_value, recurrence_hook_c=future_value)
+
+    testit(encoder_output_h, False)
 
     # Prepare encoder output to be used in decoder
     thought_vector_h = sequence.first(encoder_output_h)
@@ -191,32 +223,14 @@ def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word
 def train(train_reader, valid_reader, vocab, i2w, model, inputs, max_epochs, epoch_size):
 
     from cntk.blocks import Constant, Type
-    #model = Function(model) # temp
-    #model.dump()
 
-    raw_input, raw_labels = inputs
+    model(placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), inputAxis]), placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
 
-    arg_names = [arg.name for arg in model.arguments]
-
-    label_sequence = find_by_name(model, 'label_sequence')
-    #model = model(raw_input, raw_labels)
-    batch_axis = Axis.default_batch_axis()
-    input_seq_axis = Axis('inputAxis')
-    label_seq_axis = Axis('labelAxis')
-
-    input_dynamic_axes = [batch_axis, input_seq_axis]
-    raw_input = Type(
-        shape=(input_vocab_dim), dynamic_axes=input_dynamic_axes)
-
-    label_dynamic_axes = [batch_axis, label_seq_axis]
-    raw_labels = Type(
-        shape=(label_vocab_dim), dynamic_axes=label_dynamic_axes)
-
-    inputs = (raw_input, raw_labels)
-    model.update_signature(raw_input, raw_labels)
     model.dump()
-
-    arg_names = [arg.name for arg in model.arguments]
+    model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
+                           Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+                           #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
+    model.dump()
 
     # do some hooks so that we can direct data to the right place
     label_sequence = find_by_name(model, 'label_sequence')
@@ -520,6 +534,23 @@ if __name__ == '__main__':
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
 
+    # repro for name loss
+    from cntk import plus, as_block
+    from _cntk_py import InferredDimension
+    arg = placeholder_variable()
+    x = times(arg, parameter((InferredDimension,3), init=glorot_uniform()), name='x')
+    x = sequence.first(x)
+    sqr = x*x
+    x1 = sqr.find_by_name('x')
+    sqr2 = as_block(sqr, [(sqr.placeholders[0], placeholder_variable())], 'sqr')
+    sqr2 = combine([sqr2])
+    x2 = sqr2.find_by_name('x')
+
+    stest = sqr2
+    stest.dump()
+    stest = stest.replace_placeholders({stest.arguments[0]: input_variable(13)})
+    stest.dump()
+
     # hook up data
     train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
     valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
@@ -530,7 +561,10 @@ if __name__ == '__main__':
     #model = create_model(inputs)
 
     # train
-    train(train_reader, valid_reader, vocab, i2w, model, inputs, max_epochs=10, epoch_size=908241)
+    try:
+        train(train_reader, valid_reader, vocab, i2w, model, inputs, max_epochs=10, epoch_size=908241)
+    except:
+        x = input("hit enter")
 
     # write
     #model = load_model("model_epoch0.cmf")

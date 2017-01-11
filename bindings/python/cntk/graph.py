@@ -4,36 +4,53 @@
 # for full license information.
 # ==============================================================================
 
-def depth_first_search(node, visitor):
+def depth_first_search(root, visitor, max_depth=None):
     '''
     Generic function that walks through the graph starting at ``node`` and
     uses function ``visitor`` on each node to check whether it should be
     returned.
  
     Args:
-        node (graph node): the node to start the journey from
+        root (Function or Variable): the root to start the journey from
         visitor (Python function or lambda): function that takes a node as
          argument and returns ``True`` if that node should be returned.
     Returns:
         List of functions, for which ``visitor`` was ``True``
     '''
-    stack = [node]
-    accum = []
-    visited = set()
+    stack = [(root,0)] # node, Block depth
+    accum = []         # final result (all unique nodes in a list)
+    visited = set()    # [node]
 
     while stack:
-        node = stack.pop()
+        node, depth = stack.pop()
         if node in visited:
             continue
-
+        if max_depth is None or depth < max_depth:
+            try:
+                # TODO: This is still broken, needs to be cleaned up after debugging/desperate trying-around.
+                composite = node.block_composite
+                # BlockFunction node
+                mapping = node.block_arguments_mapping
+                # redirect the composite's inputs to the true inputs
+                stack.extend([(actual_input, depth) for _, actual_input in mapping]) # traverse into actual composite inputs
+                visited |= {comp_input for comp_input, _ in mapping} # don't traverse into the mapped-away inputs
+                #stack.extend((input, depth+1) for input in composite.root_function.inputs) # and short-circuit the root composite instead
+                stack.append((composite, depth+1))
+                visited.add(node)
+                if visitor(node):
+                    accum.append(node)
+                continue
+                # BlockFunctions are short-circuited until max_depth is hit, and not added to accum[]
+            except:
+                pass
         try:
             # Function node
-            stack.extend(node.root_function.inputs)
+            stack.extend((input, depth) for input in node.root_function.inputs)
         except AttributeError:
             # OutputVariable node
             try:
                 if node.is_output:
-                    stack.append(node.owner)
+                    stack.append((node.owner, depth))
                     visited.add(node)
                     continue
             except AttributeError:
@@ -46,7 +63,7 @@ def depth_first_search(node, visitor):
 
     return accum
 
-def find_all_with_name(node, node_name):
+def find_all_with_name(node, node_name, max_depth=None):
     '''
     Finds functions in the graph starting from ``node`` and doing a depth-first
     search.
@@ -62,9 +79,9 @@ def find_all_with_name(node, node_name):
         :func:`~cntk.ops.functions.Function.find_all_with_name` in class
         :class:`~cntk.ops.functions.Function`.
     '''
-    return depth_first_search(node, lambda x: x.name == node_name)
+    return depth_first_search(node, lambda x: x.name == node_name, max_depth)
 
-def find_by_name(node, node_name):
+def find_by_name(node, node_name, max_depth=None):
     '''
     Finds a function in the graph starting from ``node`` and doing a depth-first
     search. It assumes that the name occurs only once.
@@ -85,7 +102,7 @@ def find_by_name(node, node_name):
         raise ValueError('node name has to be a string. You gave '
                 'a %s'%type(node_name))
 
-    result = depth_first_search(node, lambda x: x.name == node_name)
+    result = depth_first_search(node, lambda x: x.name == node_name, max_depth)
 
     if len(result)>1:
         raise ValueError('found multiple functions matching "%s". '
@@ -96,7 +113,8 @@ def find_by_name(node, node_name):
 
     return result[0]
 
-def output_function_graph(node,dot_file_path=None,png_file_path=None):
+# TODO: This seems to have lots of overlap with depth_first_search() above
+def output_function_graph(node, dot_file_path=None, png_file_path=None):
     '''
     Walks through every node of the graph starting at ``node``,
     creates a network graph, and saves it as a string. If dot_file_name or 

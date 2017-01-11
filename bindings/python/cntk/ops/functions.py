@@ -114,12 +114,10 @@ class Function(cntk_py.Function):
         # END WORKAROUND
 
         # wrap into a block as to ensure ordering of parameters
-        # BUGBUG: clone() on identity() does not seem to work with this. Luckily we don't need BlockFunction for unary functions.
-        #if len(out.placeholders) > 1: # skip for unary functions for now due to identity/clone bug
-        ## BUGBUG: This looses names. So avoid as_block() entirely unless needed; hoping it will not be used for where it matters
-        #    args2 = [placeholder_variable(name=name) for name in arg_names]
-        #    arg_map = list(zip(args,args2))
-        #    out = as_block(out, arg_map, f_name)
+        # BUGBUG: This looses names. So avoid as_block() entirely unless needed; hoping it will not be used for where it matters
+        #args2 = [placeholder_variable(name=name) for name in arg_names]
+        #arg_map = list(zip(args,args2))
+        #out = as_block(out, arg_map, f_name)
 
         # add all members to the Python class
         # TODO: This should really be a dictionary inside BlockFunction
